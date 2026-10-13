@@ -9,8 +9,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -96,6 +98,36 @@ func TestRun_CleanProject(t *testing.T) {
 	}
 	if report.Failed(true) {
 		t.Error("a clean report must not fail, even with strict")
+	}
+}
+
+// #376: a slow doctor run says which check was slow. OnCheck sees every check,
+// in run order, with its duration, and does not change the findings.
+func TestRun_ReportsEachCheckWithItsDuration(t *testing.T) {
+	dir := project(t, map[string]string{".ai-rulez/config.toml": baseConfig, ".ai-rulez/rules/r.md": "# R\n\nbody\n"})
+	generate(t, dir)
+	var names []string
+	var total time.Duration
+
+	report := Run(context.Background(), Options{
+		Load:     loader(dir),
+		LookPath: func(name string) (string, error) { return "/bin/" + name, nil },
+		OnCheck: func(name string, elapsed time.Duration) {
+			names = append(names, name)
+			total += elapsed
+		},
+	})
+
+	if len(report.Findings) != 0 {
+		t.Fatalf("findings = %+v, want none", report.Findings)
+	}
+	want := []string{"config", "policy", "presets", "mcp-env", "mcp-scope", "drift", "gitignore", "documents", "okf",
+		"hooks", "includes", "lock", "llm", "tools", "role-modes"}
+	if !slices.Equal(names, want) {
+		t.Errorf("checks = %v, want %v", names, want)
+	}
+	if total <= 0 {
+		t.Error("the durations must be measured")
 	}
 }
 

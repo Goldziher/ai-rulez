@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/samber/oops"
 
@@ -54,25 +56,40 @@ func driftLoadOptions() []config.LoadOption {
 // checkConfigDrift runs the drift check for one loaded config and prints the
 // differing files. It returns how many differ.
 func checkConfigDrift(cfg *config.Config, rep *driftReport, sink *generator.GitignoreSink) (differing, blocked int, err error) {
+	items, blocked, err := collectConfigDrift(gitutil.WithMemo(cmdContext()), cfg, sink)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, it := range items {
+		rep.add(generator.DriftKind(it.Kind), it.Path, it.Note)
+	}
+	return len(items), blocked, nil
+}
+
+// collectConfigDrift is the comparison for one loaded config; it prints nothing,
+// so recursive runs can do it on several roots at once and report in order. The
+// shared sink only collects patterns (under a mutex, into a set), so the block it
+// judges afterwards does not depend on the order the roots finish in.
+func collectConfigDrift(ctx context.Context, cfg *config.Config, sink *generator.GitignoreSink) (items []driftItem, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
 	attachRecursiveGitignoreSink(gen, cfg, sink)
-	gen.SetContext(gitutil.WithMemo(cmdContext()))
+	gen.SetContext(ctx)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	if err := applyRole(gen); err != nil {
-		return 0, 0, err
+		return nil, 0, err
 	}
 	drift, err := gen.CheckDrift(profile)
 	if err != nil {
-		return 0, 0, err //nolint:wrapcheck // already contextual
+		return nil, 0, err //nolint:wrapcheck // already contextual
 	}
 	for _, d := range drift {
 		if d.Kind == generator.DriftBlocked {
 			blocked++
 		}
-		rep.add(d.Kind, displayDriftPath(cfg, d.Path), d.Note)
+		items = append(items, driftItem{Kind: string(d.Kind), Path: displayDriftPath(cfg, d.Path), Note: d.Note})
 	}
-	return len(drift), blocked, nil
+	return items, blocked, nil
 }
 
 // driftReport collects what a drift check found. The differing files are the
@@ -201,18 +218,77 @@ func runDriftCheckGated(isRecursive bool, gate func(*config.Config) error) int {
 
 // runGate runs the gate on cfg and reports whether it found lock drift or failed.
 func runGate(gate func(*config.Config) error, cfg *config.Config) (drift, failed bool) {
+	drift, failed, err := evalGate(gate, cfg)
+	if err != nil {
+		renderError(os.Stderr, err)
+	}
+	return drift, failed
+}
+
+// evalGate runs the gate and classifies its error without printing it.
+func evalGate(gate func(*config.Config) error, cfg *config.Config) (drift, failed bool, err error) {
 	if gate == nil {
-		return false, false
+		return false, false, nil
 	}
-	err := gate(cfg)
+	err = gate(cfg)
 	if err == nil {
-		return false, false
+		return false, false, nil
 	}
-	renderError(os.Stderr, err)
 	if isLockedDrift(err) {
-		return true, false
+		return true, false, err
 	}
-	return false, true
+	return false, true, err
+}
+
+// driftRoot is what checking one root found. The check runs concurrently with
+// the other roots and prints nothing; the run reports it, in root order, from
+// this record.
+type driftRoot struct {
+	configDir string  // set once the config loaded, for the legacy-layout notice
+	errs      []error // printed to stderr, in order
+	failed    bool
+	gateDrift bool
+	items     []driftItem
+	blocked   int
+}
+
+// checkDriftRoot loads one root, runs the gate and compares its generated files.
+func checkDriftRoot(ctx context.Context, path string, gate func(*config.Config) error, sink *generator.GitignoreSink) driftRoot {
+	var r driftRoot
+	cfg, err := loadProjectFile(ctx, path, driftLoadOptions()...)
+	if err == nil {
+		err = cfg.Validate()
+	}
+	if err != nil {
+		r.errs = append(r.errs, oops.With("config", path).Wrapf(err, "load configuration"))
+		if gate != nil && errors.Is(err, config.ErrLockViolation) {
+			r.gateDrift = true
+		} else {
+			r.failed = true
+		}
+		return r
+	}
+	r.configDir = cfg.ConfigDir
+	gateDrift, gateFailed, gateErr := evalGate(gate, cfg)
+	if gateErr != nil {
+		r.errs = append(r.errs, gateErr)
+	}
+	if gateFailed {
+		r.failed = true
+		return r
+	}
+	r.gateDrift = gateDrift
+	if err := applyGenerateOverrides(cfg); err != nil {
+		r.errs = append(r.errs, oops.With("config", path).Wrapf(err, "check generated files"))
+		r.failed = true
+		return r
+	}
+	r.items, r.blocked, err = collectConfigDrift(ctx, cfg, sink)
+	if err != nil {
+		r.errs = append(r.errs, oops.With("config", path).Wrapf(err, "check generated files"))
+		r.failed, r.items, r.blocked = true, nil, 0
+	}
+	return r
 }
 
 func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) error) int {
@@ -221,47 +297,34 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return 0
 	}
+	// One memo for every root: the roots of a monorepo ask git the same questions,
+	// and a read-only check can share one listing of the index between them.
+	ctx := gitutil.WithSharedIndex(cmdContext())
 	total, totalBlocked, failed, gateDrift := 0, 0, 0, 0
 	// The roots share one managed block at the repository toplevel; each adds its
 	// patterns here and the block is judged once, after the last root.
 	sink := openRecursiveGitignoreSink()
-	for _, path := range paths {
-		cfg, err := loadProjectFile(cmdContext(), path, driftLoadOptions()...)
-		if err == nil {
-			err = cfg.Validate()
-		}
-		if err != nil {
-			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "load configuration"))
-			if gate != nil && errors.Is(err, config.ErrLockViolation) {
-				gateDrift++
-			} else {
+	forEachRoot(paths, func(path string) driftRoot { return checkDriftRoot(ctx, path, gate, sink) },
+		func(i int, path string, r driftRoot, elapsed time.Duration) {
+			if r.configDir != "" {
+				warnLegacyLayout(r.configDir)
+			}
+			for _, e := range r.errs {
+				renderError(os.Stderr, e)
+			}
+			for _, it := range r.items {
+				rep.add(generator.DriftKind(it.Kind), it.Path, it.Note)
+			}
+			total += len(r.items)
+			totalBlocked += r.blocked
+			if r.failed {
 				failed++
 			}
-			continue
-		}
-		warnLegacyLayout(cfg.ConfigDir)
-		drift, gateFailed := runGate(gate, cfg)
-		if gateFailed {
-			failed++
-			continue
-		}
-		if drift {
-			gateDrift++
-		}
-		if err := applyGenerateOverrides(cfg); err != nil {
-			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "check generated files"))
-			failed++
-			continue
-		}
-		n, blocked, err := checkConfigDrift(cfg, rep, sink)
-		if err != nil {
-			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "check generated files"))
-			failed++
-			continue
-		}
-		total += n
-		totalBlocked += blocked
-	}
+			if r.gateDrift {
+				gateDrift++
+			}
+			reportRootProgress(i, len(paths), path, elapsed)
+		})
 	if failed > 0 {
 		return 1
 	}

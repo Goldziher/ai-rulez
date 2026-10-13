@@ -255,6 +255,12 @@ If using multiple `.ai-rulez/` directories in a monorepo, use the `--recursive` 
 ai-rulez generate --recursive
 ```
 
+### Speed on large repositories
+
+`generate --recursive`, `generate --check --recursive` and `validate --recursive` process the roots concurrently, on at most `GOMAXPROCS` workers. Results are reported in path order whatever the finishing order, so the output and the exit code are the same on every run. Each root prints a `[3/12] svc/.ai-rulez/config.toml (1.2s)` line on stderr as it is reported; `--quiet` and `--format json` silence it. Warnings that a root's load logs itself (for example the pre-OKF layout notice) are written as they happen and can interleave between roots.
+
+A read-only recursive check (`generate --check`, `validate`) also shares one listing of the git index between the roots of a repository, instead of asking git whether each root's config is tracked once per root. The cost of a git call grows with the number of tracked files, so this matters most in repositories with tens of thousands of them. Pass `--debug` to see where time goes; `ai-rulez doctor --debug` logs the duration of each check.
+
 **Root configuration** (`/.ai-rulez/config.toml`):
 
 ```toml

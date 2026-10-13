@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
@@ -189,6 +190,17 @@ func applyRepoRoot() error {
 	return nil
 }
 
+// strictTreeMu serializes loads through strictTreeCache, whose memo is not safe
+// for concurrent use. Roots of one repository linted side by side queue behind the
+// first load and then read the cached tree, so the index is still read once.
+var strictTreeMu sync.Mutex
+
+func loadStrictTree(ctx context.Context, base string) (*lint.Tree, error) {
+	strictTreeMu.Lock()
+	defer strictTreeMu.Unlock()
+	return strictTreeCache.LoadContext(ctx, base) //nolint:wrapcheck // the caller wraps it
+}
+
 // strictLint lints one loaded root.
 func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if validateLintProfile != "" {
@@ -202,7 +214,7 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if problems := lint.ValidateSettings(cfg.Lint); len(problems) > 0 {
 		return nil, oops.Errorf("invalid [lint] settings: %v", problems)
 	}
-	tree, err := strictTreeCache.LoadContext(ctx, cfg.BaseDir)
+	tree, err := loadStrictTree(ctx, cfg.BaseDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
@@ -587,7 +599,7 @@ func warnFrontmatter(ctx context.Context, cfg *config.Config) {
 	if cfg == nil || cfg.Content == nil {
 		return
 	}
-	tree, err := strictTreeCache.LoadContext(ctx, cfg.BaseDir)
+	tree, err := loadStrictTree(ctx, cfg.BaseDir)
 	if err != nil {
 		return
 	}

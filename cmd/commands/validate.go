@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
@@ -196,33 +199,39 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 			return 1
 		}
 	}
-	for _, configPath := range configFiles {
-		cfg, err := validateConfigFile(configPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
-			renderError(os.Stderr, err)
-			failed = append(failed, configPath)
-			if errors.Is(err, config.ErrPolicyLoosens) {
-				loosened++
+	// The roots are checked concurrently over one shared view of the git index;
+	// everything they print is reported here, in root order.
+	ctx := gitutil.WithSharedIndex(cmdContext())
+	forEachRoot(configFiles, func(configPath string) validatedRoot { return validateRoot(ctx, configPath) },
+		func(i int, configPath string, r validatedRoot, elapsed time.Duration) {
+			defer reportRootProgress(i, len(configFiles), configPath, elapsed)
+			if r.cfg != nil {
+				warnLegacyLayout(r.cfg.ConfigDir)
 			}
-			continue
-		}
-		progress.PrintIfNotQuiet("✅ %s\n", configPath)
-		if !validateStrict {
-			warnUnpinned(cfg)
-			warnFrontmatter(cmdContext(), cfg)
-		}
-		if validateStrict {
-			report, lerr := strictLint(cmdContext(), cfg)
-			if lerr != nil {
+			if r.err != nil {
 				fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
-				renderError(os.Stderr, lerr)
+				renderError(os.Stderr, r.err)
 				failed = append(failed, configPath)
-				continue
+				if errors.Is(r.err, config.ErrPolicyLoosens) {
+					loosened++
+				}
+				return
 			}
-			reports, cfgs = append(reports, report), append(cfgs, cfg)
-		}
-	}
+			warnWorktreeMarketplace(r.cfg)
+			progress.PrintIfNotQuiet("✅ %s\n", configPath)
+			if !validateStrict {
+				warnUnpinned(r.cfg)
+				warnFrontmatter(cmdContext(), r.cfg)
+				return
+			}
+			if r.lintErr != nil {
+				fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
+				renderError(os.Stderr, r.lintErr)
+				failed = append(failed, configPath)
+				return
+			}
+			reports, cfgs = append(reports, r.report), append(cfgs, r.cfg)
+		})
 	strictCode := 0
 	if validateStrict {
 		strictCode = reportStrict(reports, cfgs)
@@ -273,30 +282,62 @@ func warnNestedRootsNotChecked(cfg *config.Config) {
 // validateConfigFile applies the same checks as single-root validate (schema,
 // then structural validation) to one config file.
 func validateConfigFile(configPath string) (*config.Config, error) {
-	cfg, err := loadProjectFile(cmdContext(), configPath, pluginLoadOptions(false)...)
+	cfg, err := checkConfigFile(cmdContext(), configPath)
+	if cfg != nil {
+		warnLegacyLayout(cfg.ConfigDir)
+	}
 	if err != nil {
 		return nil, err
 	}
-	warnLegacyLayout(cfg.ConfigDir)
+	warnWorktreeMarketplace(cfg)
+	return cfg, nil
+}
+
+// validatedRoot is what validating one root of a recursive run produced. It is
+// built concurrently with the other roots and reported afterwards, in root order.
+type validatedRoot struct {
+	cfg     *config.Config // set once the config loaded, even when err is set
+	err     error
+	report  *lint.Report // strict runs only
+	lintErr error
+}
+
+// validateRoot checks one root, and under --strict lints it.
+func validateRoot(ctx context.Context, configPath string) validatedRoot {
+	var r validatedRoot
+	r.cfg, r.err = checkConfigFile(ctx, configPath)
+	if r.err == nil && validateStrict {
+		r.report, r.lintErr = strictLint(ctx, r.cfg)
+	}
+	return r
+}
+
+// checkConfigFile is validateConfigFile without the notices: it prints nothing.
+// cfg is set as soon as the config loaded, so the caller can warn about its
+// layout even when a later check fails.
+func checkConfigFile(ctx context.Context, configPath string) (*config.Config, error) {
+	cfg, err := loadProjectFile(ctx, configPath, pluginLoadOptions(false)...)
+	if err != nil {
+		return nil, err
+	}
 	if err := schema.ValidateFile(configPath); err != nil {
-		return nil, schemaFailure(cfg, err)
+		return cfg, schemaFailure(cfg, err)
 	}
 	if err := validateLocalOverlay(cfg); err != nil {
-		return nil, schemaFailure(cfg, err)
+		return cfg, schemaFailure(cfg, err)
 	}
 	cfg.DeferMalformedFrontmatter = validateStrict
 	if err := cfg.Validate(); err != nil {
-		return nil, err
+		return cfg, err
 	}
 	if err := checkLocalIncludes(cfg); err != nil {
-		return nil, err
+		return cfg, err
 	}
 	if !validateStrict { // a strict run reports the attempts as AR74x findings
 		if err := policyGate(cfg); err != nil {
-			return nil, err
+			return cfg, err
 		}
 	}
-	warnWorktreeMarketplace(cfg)
 	return cfg, nil
 }
 
