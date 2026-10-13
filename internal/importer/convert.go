@@ -175,6 +175,10 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 	if !filepath.IsAbs(c.intoAbs) {
 		c.intoAbs = filepath.Join(abs, c.intoAbs)
 	}
+	if agentsInto(c.intoAbs) {
+		// .agents and its .ai-rulez state subfolder name the same target.
+		c.intoAbs = config.LayoutOf(c.intoAbs).ConfigDir
+	}
 	if err := validateConvertOptions(opts); err != nil {
 		return nil, err
 	}
@@ -191,6 +195,9 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 	})
 	if err != nil {
 		return nil, err
+	}
+	if agentsInto(c.intoAbs) {
+		dropInPlace(c.plan)
 	}
 	if err := c.checkPlan(generatedFrom, importers, abs); err != nil {
 		return nil, err
@@ -318,7 +325,7 @@ func ignoreLocalTree(log logger.Logger, abs, intoAbs string, files map[string][]
 	if !inside {
 		return nil
 	}
-	pattern := path.Join(filepath.ToSlash(rel), localDir) + "/"
+	pattern := path.Join(filepath.ToSlash(rel), diskRel(intoAbs, localDir)) + "/"
 	if err := gitignore.EnsureEntries(log, abs, []string{pattern}); err != nil {
 		return oops.Hint("Add "+pattern+" to .gitignore by hand: it holds personal content").Wrapf(err, "ignore the local tree")
 	}
@@ -569,7 +576,7 @@ func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Repor
 		return "", nil
 	}
 
-	cfgPath := filepath.Join(intoAbs, configTOML)
+	cfgPath := filepath.Join(intoAbs, diskRel(intoAbs, configTOML))
 	data, err := os.ReadFile(cfgPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		return ActionCreate, nil
@@ -615,7 +622,7 @@ func v3ConfigPresent(intoAbs string, plan *Plan, report *Report, files map[strin
 		if _, err := os.Lstat(filepath.Join(intoAbs, name)); err != nil {
 			continue
 		}
-		if _, err := os.Lstat(filepath.Join(intoAbs, configTOML)); err == nil {
+		if _, err := os.Lstat(filepath.Join(intoAbs, diskRel(intoAbs, configTOML))); err == nil {
 			continue
 		}
 		delete(files, configTOML)
@@ -731,8 +738,9 @@ func classify(report *Report, files map[string][]byte, intoAbs string, force boo
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
-	for _, rel := range paths {
-		if rel == configTOML {
+	for _, planned := range paths {
+		rel := diskRel(intoAbs, planned)
+		if planned == configTOML {
 			if cfgAction != "" {
 				report.Files = append(report.Files, FileAction{Path: rel, Action: cfgAction})
 			}
@@ -742,7 +750,7 @@ func classify(report *Report, files map[string][]byte, intoAbs string, force boo
 		action := ActionCreate
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
-		case err == nil && bytes.Equal(existing, files[rel]):
+		case err == nil && bytes.Equal(existing, files[planned]):
 			action = ActionUnchanged
 		case force:
 			action = ActionOverwrite
@@ -802,8 +810,8 @@ func checkTargets(abs, intoAbs string, files map[string][]byte) error {
 	}
 	sort.Strings(rels)
 	rels = append(rels, ".")
-	for _, rel := range rels {
-		full := filepath.Join(intoAbs, filepath.FromSlash(rel))
+	for _, planned := range rels {
+		full := filepath.Join(intoAbs, filepath.FromSlash(diskRel(intoAbs, planned)))
 		sub, err := filepath.Rel(base, full)
 		if err != nil {
 			return oops.With("path", full).Wrapf(err, "resolve target path")
@@ -944,12 +952,16 @@ func (t *writeTxn) writeOne(target, rel string, data []byte, execs map[string]bo
 // run leaves the project as it was; anything it could not undo is reported.
 func writeFiles(report *Report, files map[string][]byte, execs map[string]bool, intoAbs string) error {
 	var txn writeTxn
+	planned := make(map[string]string, len(files)) // path below intoAbs -> path in the planned tree
+	for rel := range files {
+		planned[diskRel(intoAbs, rel)] = rel
+	}
 	for _, f := range report.Files {
 		if f.Action != ActionCreate && f.Action != ActionOverwrite && f.Action != ActionMerge {
 			continue
 		}
 		target := filepath.Join(intoAbs, filepath.FromSlash(f.Path))
-		err := txn.writeOne(target, f.Path, files[f.Path], execs)
+		err := txn.writeOne(target, planned[f.Path], files[planned[f.Path]], execs)
 		if err == nil {
 			continue
 		}
@@ -986,7 +998,7 @@ func recordImported(c *conversion) error {
 	if err != nil {
 		return err
 	}
-	return generator.WriteConvertRecord(c.intoAbs, files)
+	return generator.WriteConvertRecord(stateAbs(c.intoAbs), files)
 }
 
 // collectImported reads the regular files at rels (a directory: every regular

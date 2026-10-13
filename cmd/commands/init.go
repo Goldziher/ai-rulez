@@ -45,6 +45,7 @@ func init() {
 	InitCmd.Flags().StringVar(&domainsFlag, "domains", "", "Comma-separated list of domain directories to create")
 	InitCmd.Flags().BoolVar(&skipContentFlag, "skip-content", false, "Skip creating example content files")
 	InitCmd.Flags().StringVar(&fromFlag, "from", "", "Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor')")
+	InitCmd.Flags().String("source", "", "Where the content lives: ai-rulez (the .ai-rulez tree, default) or agents (AGENTS.md and .agents/, configured in .agents/ai-rulez.toml)")
 	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation")
 	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts (never replaces an existing configuration directory; see --force)")
 	InitCmd.Flags().Bool("force", false, "Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp>")
@@ -61,6 +62,13 @@ func initConfigDir() string {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
+	source, err := initSource(cmd)
+	if err != nil {
+		return failMsg("Invalid --source", err)
+	}
+	if source == initSourceAgents {
+		return runInitAgents(cmd, args)
+	}
 	projectName := getProjectName(args)
 	configDir := initConfigDir()
 
@@ -102,7 +110,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		noteHandWrittenFiles(filepath.Dir(abs))
 	}
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusCreated, Type: "config", Name: projectName, Path: configDir,
+		Status: statusCreated, Type: typeConfig, Name: projectName, Path: configDir,
 	}, true)
 }
 

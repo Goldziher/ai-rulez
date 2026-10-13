@@ -11,6 +11,9 @@ agents_md = true    # the default
 # agents_md = false # per-tool files
 ```
 
+`AGENTS.md` and `.agents/skills` can also be the project's own source instead of ai-rulez's output: with
+`source = "agents"` ai-rulez reads them and never writes them. See [.agents as a source](agents-source.md).
+
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).

@@ -1263,12 +1263,15 @@ ai-rulez init [project-name] [flags]
 | `--domains`      | string  | (none)  | Comma-separated list of domain names to create                       |
 | `--skip-content` | boolean | false   | Skip creating example content files                                  |
 | `--from`         | string  | (none)  | Import from existing tool files, such as `auto` or `.claude,.cursor` |
+| `--source`       | string  | `ai-rulez` | `agents` starts a project whose content is `AGENTS.md` and `.agents/` (writes `.agents/ai-rulez.toml`, no `.ai-rulez` tree); see [.agents as a source](agents-source.md) |
 | `--setup-hooks`  | boolean | false   | Configure Git hooks after initialization                             |
 | `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts (never replaces an existing directory) |
 | `--force`               | boolean | false   | Replace an existing configuration directory; the old one is kept as `<dir>.bak-<timestamp>` |
 | `--format`              | string  | text    | `json` prints `{"status": "created", "type": "config", "name": <project>, "path": <dir>}` |
 
 The global `--config-dir` (default `.ai-rulez`; use `.config/ai-rulez` for the `.config/` convention) names the directory to scaffold. The created directory is printed on stdout; the file listing and next steps go to stderr, where `-q` hides them. The replace prompt is on stderr.
+
+With `--source agents`, `init` writes `.agents/ai-rulez.toml` (or `config.toml` with `source = "agents"` in the directory `--config-dir` names) and a starter `AGENTS.md` when the project has none. It scaffolds no content directories and never moves `.agents` aside: an existing configuration file is replaced only with `--force`, which keeps it as `<file>.bak-<timestamp>`. `--from` then converts the named tool files into `.agents` (the same as `convert --into .agents`).
 
 `--setup-hooks` detects an existing lefthook, pre-commit, or husky setup and adds ai-rulez to it in
 place; if none of the three is present it logs a message and does nothing rather than failing. The two YAML configurations (`lefthook.yml`,

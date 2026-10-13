@@ -25,13 +25,19 @@ func initConvertOptions(workingDir, configDir string, write bool) importer.Conve
 // source that cannot be imported (nothing found, a blocked scan) is reported
 // before the existing configuration directory is removed.
 func previewInitImport(ctx context.Context, workingDir string) error {
+	return previewInitImportInto(ctx, workingDir, importer.DefaultConfigDir)
+}
+
+// previewInitImportInto is previewInitImport for the config directory named
+// into (.agents for the agents source).
+func previewInitImportInto(ctx context.Context, workingDir, into string) error {
 	scratch, err := os.MkdirTemp("", "ai-rulez-init-*")
 	if err != nil {
 		return oops.Wrapf(err, "create scratch directory")
 	}
 	defer removeScratch(scratch)
 
-	opts := initConvertOptions(workingDir, filepath.Join(scratch, importer.DefaultConfigDir), false)
+	opts := initConvertOptions(workingDir, filepath.Join(scratch, into), false)
 	report, err := importer.Convert(ctx, opts)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual

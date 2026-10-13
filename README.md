@@ -137,7 +137,7 @@ each row, and is the source of truth for test status.
 | [Agent Plugins](docs/agent-plugins.md) (agent-plugins.org) | supported | `generate --plugin`, `publish --emit agent-plugins` | `validate --strict` (AR9O codes) |
 | [ARD](docs/ard.md) (Agentic Resource Discovery, a proposal) | supported | `publish --emit ard` | `validate` (entry schema, URN grammar) |
 | [Agent Skills](docs/skills.md) (agentskills.io) | supported | `generate` | `validate` (frontmatter checks; partial) |
-| [AGENTS.md](docs/agents-md.md) | supported | `generate` | `validate` |
+| [AGENTS.md](docs/agents-md.md), also as the [source](docs/agents-source.md) with `source = "agents"` | supported | `generate` | `validate` |
 | [llms.txt](docs/llms-txt.md) | supported | the `llms-txt` preset | `validate` |
 | MCP server config | supported | `generate` | `validate` (partial) |
 | MCP server card | partial (experimental extension, pinned `526201b`) | `publish --emit mcp-server-card`, `publish --emit ard` | conformance tests only |
