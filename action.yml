@@ -3,6 +3,9 @@ description: >-
   Downloads a released ai-rulez binary (sha256-verified against the release's checksums.txt),
   caches it and adds it to PATH, so later steps can call `ai-rulez` directly. No Go toolchain,
   Node or Python needed. Needs bash and curl (present on every GitHub-hosted runner).
+branding:
+  icon: check-square
+  color: blue
 
 inputs:
   version:
@@ -61,7 +64,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
       run: |
         set -euo pipefail
-        # action_path is <repo>/.github/actions/setup-ai-rulez; the script lives three levels up.
+        # This action lives at the repository root, so action_path is the checkout root itself.
         action_path="$ACTION_PATH"
         cache_dir="$AI_RULEZ_CACHE_DIR"
         if command -v cygpath >/dev/null 2>&1; then
@@ -69,7 +72,7 @@ runs:
           cache_dir="$(cygpath -u "$AI_RULEZ_CACHE_DIR")"
         fi
         export AI_RULEZ_CACHE_DIR="$cache_dir"
-        script="$(cd "$action_path/../../../scripts/pre-commit" && pwd)/run-ai-rulez.sh"
+        script="$(cd "$action_path/scripts/pre-commit" && pwd)/run-ai-rulez.sh"
         binary_path="$(bash "$script")"
         dir="$(dirname "$binary_path")"
         native_dir="$dir"

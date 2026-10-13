@@ -241,37 +241,6 @@ ai-rulez validate --strict
 </details>
 
 <details>
-<summary><strong>GitHub Actions</strong></summary>
-
-[`.github/actions/setup-ai-rulez`](.github/actions/setup-ai-rulez) downloads a sha256-verified release binary, caches
-it and adds it to `PATH` — no Go toolchain, Node or Python needed in the job. `version` is optional and defaults to
-`latest`:
-
-```yaml
-name: ai-rulez
-on:
-  pull_request:
-  push:
-    branches: [main]
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: Goldziher/ai-rulez/.github/actions/setup-ai-rulez@main   # pin a release tag once one contains the action (it is newer than v5.1.0)
-        # with:
-        #   version: 5.1.0   # optional; omit (or "latest") to always use the newest release
-      - run: ai-rulez generate --check   # the committed output matches the sources
-      - run: ai-rulez validate --strict  # content and security checks, warnings fail
-      - run: ai-rulez lock --check        # pins were updated when the sources were
-```
-
-See [CI usage](docs/lockfile.md#ci-usage) for the lock-check-vs-generate-check distinction and a scheduled
-"outdated sources" report job.
-
-</details>
-
-<details>
 <summary><strong>Day-to-day commands</strong></summary>
 
 ```bash
@@ -446,3 +415,44 @@ In a monorepo, `ai-rulez generate --recursive` and `ai-rulez validate --recursiv
 Or run `ai-rulez init --setup-hooks` while initializing a repo to wire hooks in automatically.
 
 </details>
+
+## GitHub Actions
+
+ai-rulez ships its own composite Action ([`action.yml`](action.yml) at the repository root), so any workflow can
+`uses: Goldziher/ai-rulez@<ref>` directly — no subpath. It downloads a release binary, verifies its sha256 against
+the release's `checksums.txt`, caches it (keyed by OS, arch and the resolved version) and adds it to `PATH`. No Go
+toolchain, Node or Python needed in the job. It reuses the same `scripts/pre-commit/run-ai-rulez.sh`
+download-and-verify logic the pre-commit hooks above use, so the two stay in sync.
+
+| | |
+| --- | --- |
+| **Input** `version` | `X.Y.Z`, `vX.Y.Z`, or `latest` (default). Optional — omit it to always use the newest release. |
+| **Output** `version` | The resolved version, without the leading `v`. |
+| **Output** `path` | Absolute path to the installed `ai-rulez` binary. |
+
+<details>
+<summary><strong>Show workflow</strong></summary>
+
+```yaml
+name: ai-rulez
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Goldziher/ai-rulez@main   # pin a release tag once one exists past v5.1.0 (the tag predates action.yml)
+        # with:
+        #   version: 5.1.0   # optional; omit (or "latest") to always use the newest release
+      - run: ai-rulez generate --check   # the committed output matches the sources
+      - run: ai-rulez validate --strict  # content and security checks, warnings fail
+      - run: ai-rulez lock --check        # pins were updated when the sources were
+```
+
+</details>
+
+See [CI usage](docs/lockfile.md#ci-usage) for the lock-check-vs-generate-check distinction and a scheduled
+"outdated sources" report job.
