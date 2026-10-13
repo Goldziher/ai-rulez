@@ -67,7 +67,8 @@ func globRule(name string, globs ...string) config.ContentFile {
 }
 
 func TestBazNestedDirs(t *testing.T) {
-	cfg := bazProject(t, "services/api", "services/web", ".ai-rulez/rules", "scoped")
+	cfg := bazProject(t, "services/api", "services/web", ".ai-rulez/rules", "scoped", "svc/web", "svc/.ai-rulez")
+	require.NoError(t, os.WriteFile(filepath.Join(cfg.BaseDir, "svc", ".ai-rulez", "config.toml"), []byte("version = \"5.0\"\n"), 0o600))
 	cfg.Scopes = []config.ScopeConfig{{Path: "scoped"}}
 
 	tests := []struct {
@@ -86,6 +87,7 @@ func TestBazNestedDirs(t *testing.T) {
 		{"negated only stays at root", globRule("r", "!services/api/**"), nil},
 		{"negation beside a positive glob", globRule("r", "services/api/**", "!services/api/legacy/**"), []string{"services/api"}},
 		{"config dir is never a target", globRule("r", ".ai-rulez/rules/**"), nil},
+		{"nested root is left to its own run", globRule("r", "svc/web/**"), nil},
 		{"scope dir is left to the scope", globRule("r", "scoped/**"), nil},
 		{"escaping glob", globRule("r", "../x/**"), nil},
 	}

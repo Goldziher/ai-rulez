@@ -262,8 +262,9 @@ func BazInlinedUnscoped(content *config.ContentTree, cfg *config.Config) []strin
 }
 
 // BazConfigDirItems names the path-scoped rules and context items baz selects
-// whose globs point into the configuration directory or .git/, where a nested
-// AGENTS.md is never written (it would be read back as a source file). They stay
+// whose globs point into the configuration directory, .git/ or another nested
+// ai-rulez root, where a nested AGENTS.md is never written (it would be read back
+// as a source file or collide with that root's own). They stay
 // in the root AGENTS.md, or are left out of every AGENTS.md when
 // rules.baz_unscoped = "skip" applies. skipped reports which.
 func BazConfigDirItems(content *config.ContentTree, cfg *config.Config) (names []string, skipped bool) {
@@ -284,7 +285,7 @@ func BazConfigDirItems(content *config.ContentTree, cfg *config.Config) (names [
 			if strings.HasPrefix(glob, "!") {
 				continue
 			}
-			if bazConfigDir(bazScopeDir(glob, cfg), cfg) {
+			if dir := bazScopeDir(glob, cfg); bazConfigDir(dir, cfg) || (dir != "" && bazInNestedRoot(dir, cfg)) {
 				names = append(names, cf.Name)
 				break
 			}
@@ -299,6 +300,22 @@ func BazConfigDirItems(content *config.ContentTree, cfg *config.Config) (names [
 func bazConfigDir(dir string, cfg *config.Config) bool {
 	for _, segment := range strings.Split(path.Clean(dir), "/") {
 		if segment == ".git" || segment == ".ai-rulez" || (cfg.ConfigDirName != "" && segment == cfg.ConfigDirName) {
+			return true
+		}
+	}
+	return false
+}
+
+// bazInNestedRoot reports whether dir is, or is below, another ai-rulez root
+// nested under the project (a directory holding its own configuration). That
+// root owns the files below it: a root-run AGENTS.md there would be reported as
+// an orphan by the nested run and overwrite its own, so the item stays in the
+// root file and every generate mode renders the same bytes (#395).
+func bazInNestedRoot(dir string, cfg *config.Config) bool {
+	cur := cfg.BaseDir
+	for _, segment := range strings.Split(path.Clean(dir), "/") {
+		cur = filepath.Join(cur, segment)
+		if config.ResolveConfigDirName(cur) != "" {
 			return true
 		}
 	}
@@ -454,7 +471,7 @@ func bazDirUsable(dir string, cfg *config.Config) bool {
 	// A nested AGENTS.md inside a configuration directory would be read back as
 	// a source file (a rule or agent named AGENTS) on the next run; .git holds
 	// no project files.
-	if bazConfigDir(dir, cfg) {
+	if bazConfigDir(dir, cfg) || bazInNestedRoot(dir, cfg) {
 		return false
 	}
 	for _, scope := range cfg.Scopes {

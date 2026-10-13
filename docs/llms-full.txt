@@ -10026,7 +10026,8 @@ below another listed one is covered by it). The item stays in the root `AGENTS.m
 presets write it, when:
 
 - any positive glob has no directory (`**/*.py`, `*.md`), or only negated globs are set;
-- a directory does not exist in the project, is a `[[scopes]]` path, is inside the configuration directory, `.git`, or
+- a directory does not exist in the project, is a `[[scopes]]` path, is inside the configuration directory, `.git` or
+  another ai-rulez root nested in the project (that root owns its directory; `generate` warns and names the rule), or
   escapes the project root;
 - `baz_scoped = "root"`.
 
