@@ -65,13 +65,21 @@ func snapshot(t *testing.T, root string) map[string]string {
 			}
 			return nil
 		}
-		data, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
-		}
 		rel, relErr := filepath.Rel(root, path)
 		if relErr != nil {
 			return relErr
+		}
+		if d.Type()&fs.ModeSymlink != 0 {
+			target, linkErr := os.Readlink(path)
+			if linkErr != nil {
+				return linkErr
+			}
+			out[filepath.ToSlash(rel)] = "-> " + target
+			return nil
+		}
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
 		}
 		out[filepath.ToSlash(rel)] = string(data)
 		return nil
@@ -275,5 +283,42 @@ func TestToolsThatReadAgentsMDGetNoCopyOfIt(t *testing.T) {
 			assert.Contains(t, after["GEMINI.md"], "Use tabs.", "Gemini's settings list only GEMINI.md in this mode")
 			assert.NotContains(t, after[".github/copilot-instructions.md"], "Use tabs.", "Copilot reads AGENTS.md itself")
 		})
+	}
+}
+
+func TestOutputsThroughASymlinkedDirectoryNeverReachTheSource(t *testing.T) {
+	tests := []struct {
+		name   string
+		link   string
+		target string
+		source string
+	}{
+		{"rules folder", ".claude/rules", "../.agents/rules", ".agents/rules/always.md"},
+		{"one skill", ".claude/skills/review", "../../.agents/skills/review", ".agents/skills/review/SKILL.md"},
+	}
+	for _, tt := range tests {
+		for _, layout := range layouts {
+			t.Run(tt.name+"/"+layout.name, func(t *testing.T) {
+				// Arrange
+				root := setup(t, layout.cfgPath, layout.cfgBody)
+				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(root, tt.link)), 0o755))
+				require.NoError(t, os.Symlink(tt.target, filepath.Join(root, tt.link)))
+				before := snapshot(t, root)
+
+				// Act
+				generate(t, root)
+				after := snapshot(t, root)
+
+				// Assert
+				for rel := range sourceFiles {
+					assert.Equal(t, before[rel], after[rel], "%s must not change", rel)
+				}
+				for rel := range after {
+					if _, existed := before[rel]; !existed && strings.HasPrefix(rel, ".agents/") {
+						assert.True(t, strings.HasPrefix(rel, ".agents/.ai-rulez/"), "unexpected %s", rel)
+					}
+				}
+			})
+		}
 	}
 }
