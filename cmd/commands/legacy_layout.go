@@ -10,7 +10,13 @@ import (
 // with the commands that write the sources (add, remove), so a user reading a
 // legacy tree is told once per command that it is deprecated.
 func warnLegacyLayout(configDir string) {
-	if config.IsLegacyLayout(configDir) {
+	if legacyLayoutApplies(configDir) {
 		logger.Info(config.LegacyLayoutMessage, "path", configDir)
 	}
+}
+
+// legacyLayoutApplies is false for a project whose content lives in AGENTS.md and
+// .agents: the notice is about the .ai-rulez tree, which that source does not read.
+func legacyLayoutApplies(configDir string) bool {
+	return !config.LayoutOf(configDir).Agents && config.IsLegacyLayout(configDir)
 }
