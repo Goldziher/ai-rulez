@@ -15,6 +15,7 @@ go test ./tests/conformance/
 | --- | --- | --- |
 | `schemas/agent-plugins/1.0.0`, `1.1.0` | Agent Plugins 1.0.0 (published), 1.1.0 (draft) | <https://github.com/agentplugins/agent-plugins-spec> at commit `ff8ab5e392cc87bd88d87c060815a87490e51003` |
 | `schemas/ard` | ARD 0.91 (proposal), entry schema | <https://github.com/ards-project/ard-spec> at commit `b76f235a8f461876ad4f1e77abd0eb0eb302b48d` |
+| `schemas/mcp-server-card` | MCP Server Card (SEP-2127, Final), `schema.json` of the experimental server-card extension (Apache-2.0); the file declares only `$defs`, so the tests reference `#/$defs/ServerCard` | <https://github.com/modelcontextprotocol/experimental-ext-server-card> at commit `526201bbc80231daa40ffcdecfc9da4e54e5dc93` |
 | `schemas/cyclonedx/1.6` | CycloneDX 1.6, with its SPDX-license and JSF dependencies | <https://github.com/CycloneDX/specification>, `schema/bom-1.6.schema.json`, `spdx.schema.json`, `jsf-0.82.schema.json` |
 | `schemas/spdx/2.3` | SPDX 2.3.1 JSON schema | <https://github.com/spdx/spdx-spec>, the SPDX 2.3 JSON schema (`spdx-schema.json`) |
 | `schemas/in-toto/statement-v1.schema.json` | in-toto Statement v1 | Hand-written from <https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md>. Upstream publishes no JSON Schema. |
@@ -32,7 +33,7 @@ The product embeds its own copies of the Agent Plugins, ARD and CycloneDX/SPDX s
 1. Fetch the new file from the upstream source in the table, into the directory named there. Keep the file byte for byte;
    do not reformat it.
 2. Update the commit or version in the table above, in `docs/standards.md`, and in the owning package
-   (`SchemaSourceCommit` in `internal/agentplugins/schema.go`, `SchemaCommit` and `SchemaSHA256` in `internal/ard/schema.go`).
+   (`SchemaSourceCommit` in `internal/agentplugins/schema.go`, `SchemaCommit` and `SchemaSHA256` in `internal/ard/schema.go`, `SpecCommit` in `internal/mcpcard/mcpcard.go`).
 3. Copy the file over the product's embedded copy, then run `shasum -a 256` on it and update the digest in
    `schemas_test.go` and in the owning package's own pin test.
 4. Run `go test ./tests/conformance/ ./internal/agentplugins/ ./internal/ard/ ./internal/sbom/`. A failure is either a
