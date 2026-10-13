@@ -55,7 +55,9 @@ func (g *Generator) UnignoredOutputs(profile string) ([]UnignoredOutput, error) 
 	}
 	deliberate := map[string]UnignoredOutput{}
 	for _, o := range overridden {
-		deliberate[o.Pattern] = UnignoredOutput{Pattern: o.Pattern, Rule: o.Rule, Source: o.Source}
+		if o.Protected {
+			deliberate[o.Pattern] = UnignoredOutput{Pattern: o.Pattern, Rule: o.Rule, Source: o.Source}
+		}
 	}
 	var missing []UnignoredOutput
 	for i, pattern := range patterns {

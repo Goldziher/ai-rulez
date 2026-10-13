@@ -1722,6 +1722,13 @@ machine-local or secret output (`*.local.*`, `config.local.*`, `.ai-rulez/local/
 secrets) is also left out of the block, with a warning; generation still refuses to write a secret-bearing MCP config
 that ends up unignored. Outside a git repository, or when git is unavailable, every entry is added.
 
+Your lines are yours. ai-rulez edits only between `# BEGIN ai-rulez` and `# END ai-rulez`; every byte outside
+the block stays as it was, blank lines included (nothing is inserted under `# END ai-rulez`). A negation of a
+directory entry (`!.claude/skills/`, `!/.claude/skills/`) is honored the same way as one of a file entry
+(`!CLAUDE.md`): the entry is left out of the block. `ai-rulez doctor` does not report an output you re-included this
+way, since `generate` leaves it alone; it still reports a machine-local or secret output a rule un-ignores, and says
+that `generate` will not re-ignore it.
+
 Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
 when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
 no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
@@ -1732,6 +1739,35 @@ excluded through `.git/info/exclude` instead. See [Local Configuration](local-ov
 
 `gitignore` defaults to `false`, so generated files are normally committed; set it to `true` when the team
 keeps generated output out of git and regenerates it locally.
+
+##### `gitignore_exclude`
+
+Keeps generated outputs you commit on purpose out of the managed `.gitignore` block, while every other entry stays
+managed. Use it instead of a hand-written `!pattern` after the block.
+
+```toml
+gitignore = true
+gitignore_exclude = ["AGENTS.md", "**/CLAUDE.md", ".claude/skills/", ".claude/agents/", ".mcp.json"]
+```
+
+Entries use gitignore notation, matched against the patterns the block would list: an entry without `/`
+(`AGENTS.md`, `*.md`) matches at any depth, one with a `/` is anchored at the root, `**` crosses directories
+(`**/AGENTS.md` also reaches the nested `svc/AGENTS.md` of a `[[scopes]]` entry), and a trailing `/` names a directory
+and covers what is below it. An entry is a plain pattern: an empty one, a comment or a `!negation` fails validation.
+The knob has no effect unless the block is written (`gitignore = true` or `generate --gitignore`); `gitignore` itself stays a
+plain boolean. Machine-local and secret outputs (`*.local.*`, `config.local.*`, `.ai-rulez/local/`,
+`.ai-rulez/.generated-manifest.local.json`, an MCP config holding secrets) are never excluded; an entry that only
+reaches them is ignored with a warning. In a recursive run each root applies its own list to its own outputs.
+Excluded paths are not reported by `ai-rulez doctor`.
+
+`generate` warns instead of letting the block quietly win or lose:
+
+- A tracked file matches a line of the block: git keeps tracking it, but new files next to it (a new skill under
+  `.claude/skills/`) are ignored and need `git add -f`. The warning names the files and the fix, a `gitignore_exclude`
+  entry or `git rm --cached`, and calls out an unanchored `AGENTS.md`/`CLAUDE.md` line that also hides every nested
+  root's file.
+- A `!pattern` of yours un-ignores a line the block would list: it wins, as documented above, and the warning names the
+  negation's `file:line`. A `gitignore_exclude` entry for the path states the intent and silences it.
 
 ##### `compact`
 
@@ -7594,6 +7630,18 @@ backend = ["api", "database"]
 ```
 
 By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.
+
+##### The shared `.gitignore` block
+
+With `gitignore = true`, a recursive run writes one managed block at the git toplevel holding every root's patterns
+(`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check` verifies that block once after the
+last root. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
+root. To commit generated files instead, list them in each root's [`gitignore_exclude`](configuration.md#gitignore_exclude);
+a root applies its list to its own outputs, so a project that commits everything repeats
+`gitignore_exclude = ["**/AGENTS.md", "**/CLAUDE.md", ".claude/"]` in each config. When the block hides a file git
+tracks (a root-anchored `!.claude/rules/*.md` of yours does not reach a nested root's `svc/.claude/rules/x.md`),
+`generate` warns once for the whole recursive block and names the nested path.
+
 
 ---
 
@@ -19733,7 +19781,7 @@ Generate output files from the current configuration.
 - `config_file` (optional, string): Path to the root configuration file
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
 - `dry_run` (optional, boolean): Preview changes without writing files
-- `check` (optional, boolean): Write nothing and report the generated files that differ from what the sources render (`generate --check`). The result is `{"status", "roots", "blocked", "differing": [{"kind", "path"}]}`, and drift is an error result, as the command exits 2
+- `check` (optional, boolean): Write nothing and report the generated files that differ from what the sources render (`generate --check`). The result is `{"status", "roots", "blocked", "differing": [{"kind", "path", "note"?}]}`, and drift is an error result, as the command exits 2
 - `offline` (optional, boolean): Never use the network; includes and installed skills come from the lock and the cache (`--offline`)
 - `profile` (optional, string): Profile to generate, or a comma-separated list to compose several (`--profile`)
 - `role` (optional, string): Generate the slice of content a role selects (`--role`); mutually exclusive with `profile`
@@ -25297,6 +25345,7 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
 | `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit; `generate` overwrites it, so the edit is lost |
 | `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it. Without a manifest (CI, a fresh checkout) a generated file whose source was removed is still reported: a file under an output directory that carries a `Content-Hash` header and that no output emits is an orphan |
+| `missing: .gitignore (managed block)` / `stale: .gitignore (managed block)` | The managed `.gitignore` block (see [`gitignore`](configuration.md#gitignore)) is absent, or lacks an entry `generate` would add, or `generate` would remove it. Lines outside the block are never judged. A recursive run checks the one shared block at the repository toplevel, once every root is read; in `--format json` the item is `{"kind", "path": ".gitignore", "note": "managed block"}` |
 | `blocked: <path>` | A machine-local input (overlay or `local/` tree) would change this file and `generate` refuses to write it because it is tracked or not git-ignored; the same refusal `generate` and `generate --dry-run` report. `--allow-local-drift` lifts it |
 
 With a machine-local overlay or `local/` content, `--check` classifies the outputs like `generate` does, so files that `generate` keeps for the local inputs and that are in sync are not reported. `--check` does not print the summary of rules whose activation a tool cannot express; `generate` prints it.
@@ -31117,6 +31166,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`claude`**: Claude Code options: `[claude.settings]` (`manage`, `managed` entries of `.claude/settings.json`) and `[claude.skills]` (`hide_from_menu`)
 - **`codex`**: Codex options, such as `project_doc_max_bytes` for the `AGENTS.md` size warning
 - **`codex_skills_dir`**: Directory the `codex` preset writes skills to (default `.agents/skills`)
+- **`gitignore_exclude`**: Patterns kept out of the managed `.gitignore` block, for outputs you commit; see [Configuration](configuration.md#gitignore_exclude)
 - **`bundle_exclude`**: Extra patterns left out when skill and command resources are copied or listed
 - **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
 - **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)

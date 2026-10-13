@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sort"
@@ -65,7 +66,7 @@ func (s *GitignoreSink) Add(log logger.Logger, prefix string, patterns []string)
 	}
 	sort.Strings(prefixed)
 	if err := gitignore.EnsureEntries(log, s.toplevel, prefixed); err != nil {
-		return oops.With("path", filepath.Join(s.toplevel, ".gitignore")).Wrapf(err, "write the shared .gitignore block")
+		return oops.With("path", filepath.Join(s.toplevel, gitignoreFileName)).Wrapf(err, "write the shared .gitignore block")
 	}
 	return nil
 }
@@ -98,11 +99,11 @@ func (s *GitignoreSink) Drift(log logger.Logger) (Drift, bool) {
 		patterns = append(patterns, p)
 	}
 	sort.Strings(patterns)
-	data, err := gitutil.ReadIgnoreFileOrEmpty(log, filepath.Join(s.toplevel, ".gitignore"))
+	data, err := gitutil.ReadIgnoreFileOrEmpty(log, filepath.Join(s.toplevel, gitignoreFileName))
 	if err != nil && !os.IsNotExist(err) {
 		return Drift{}, false
 	}
-	return managedBlockDrift(".gitignore", string(data), dropUserPatterns(patterns, string(data)))
+	return managedBlockDrift(gitignoreFileName, string(data), dropUserPatterns(patterns, string(data)))
 }
 
 // Write rewrites the toplevel managed block to exactly the patterns this run
@@ -125,7 +126,7 @@ func (s *GitignoreSink) Write(log logger.Logger) error {
 	if gitignore.IsSymlink(s.toplevel) {
 		return gitignore.ReplaceViaExclude(log, s.toplevel, patterns) //nolint:wrapcheck // already contextual
 	}
-	path := filepath.Join(s.toplevel, ".gitignore")
+	path := filepath.Join(s.toplevel, gitignoreFileName)
 	data, err := gitutil.ReadIgnoreFileOrEmpty(log, path)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.With("path", path).Wrapf(err, "read .gitignore")
@@ -139,9 +140,13 @@ func (s *GitignoreSink) Write(log logger.Logger) error {
 		}
 		return dropManagedBlock(path, content) //nolint:wrapcheck // already contextual
 	}
-	if err := gitutil.WriteFileAtomic(path, []byte(gitignoreWithBlock(content, kept)), 0o644); err != nil {
+	updated := gitignoreWithBlock(content, kept)
+	if err := gitutil.WriteFileAtomic(path, []byte(updated), 0o644); err != nil {
 		return oops.With("path", path).Wrapf(err, "write .gitignore")
 	}
+	// The whole recursive block is on disk: a root-anchored negation did not
+	// reach the nested roots, so this is where a nested tracked file shows up.
+	warnTrackedByBlock(log.Warn, trackedBlockWarnings(context.Background(), gitutil.Git{}, s.toplevel, updated))
 	return nil
 }
 
@@ -164,9 +169,9 @@ func joinGitignorePrefix(prefix, pattern string) string {
 // toplevel block of a recursive run, else the file beside the config.
 func (g *Generator) managedGitignorePath() string {
 	if g.gitignoreSink != nil {
-		return filepath.Join(g.gitignoreSink.TopLevel(), ".gitignore")
+		return filepath.Join(g.gitignoreSink.TopLevel(), gitignoreFileName)
 	}
-	return filepath.Join(g.config.BaseDir, ".gitignore")
+	return filepath.Join(g.config.BaseDir, gitignoreFileName)
 }
 
 // SetGitignoreSink makes this generator collect its managed patterns into sink

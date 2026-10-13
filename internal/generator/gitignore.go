@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +13,9 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
+
+// gitignoreFileName is the ignore file ai-rulez keeps its managed block in.
+const gitignoreFileName = ".gitignore"
 
 // localInputRels lists the project-relative machine-local inputs that exist: the
 // overlay files and the local/ content tree. They are guarded like outputs, so a
@@ -151,6 +155,9 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	g.addLocalSourcePatterns(paths, includeCommitted)
 	if includeCommitted {
 		g.addManifestPatterns(paths)
+		if len(g.config.GitignoreExclude) > 0 {
+			g.dropExcludedPatterns(paths, g.protectedGitignorePatterns(outputs))
+		}
 	}
 
 	return paths
@@ -325,7 +332,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	if g.gitignoreSink != nil {
 		return g.collectToGitignoreSink(outputs)
 	}
-	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
+	gitignorePath := filepath.Join(g.config.BaseDir, gitignoreFileName)
 
 	// Patterns git does not already cover: not ignored by a user rule, and not
 	// deliberately un-ignored by one.
@@ -368,6 +375,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 
 	g.log().Debug("Updated .gitignore", "entries", len(sortedPaths))
+	warnTrackedByBlock(g.warnOnce, trackedBlockWarnings(g.ctx, g.git(), g.config.BaseDir, newContent))
 	return nil
 }
 
@@ -393,7 +401,7 @@ func (g *Generator) gitignoreDrift(outputs []config.OutputFile) (Drift, bool) {
 	if gitignore.IsSymlink(g.config.BaseDir) {
 		return Drift{}, false // git does not read it, and generate writes the exclude file instead
 	}
-	existing, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, ".gitignore"))
+	existing, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, gitignoreFileName))
 	if err != nil && !os.IsNotExist(err) {
 		return Drift{}, false
 	}
@@ -402,7 +410,7 @@ func (g *Generator) gitignoreDrift(outputs []config.OutputFile) (Drift, bool) {
 		needed, _ := g.neededGitignorePatterns(outputs)
 		paths = dropUserPatterns(needed, string(existing))
 	}
-	return managedBlockDrift(".gitignore", string(existing), paths)
+	return managedBlockDrift(gitignoreFileName, string(existing), paths)
 }
 
 // managedBlockDrift compares content with the managed block holding paths. No
@@ -456,6 +464,14 @@ func blockHoldsAll(content string, paths []string) bool {
 // the machine-local or secret output is now committable.
 func (g *Generator) warnUnignoredProtected(overridden []unignoredProtected) {
 	for _, o := range overridden {
+		if !o.Protected {
+			// A negation the user wrote on purpose; naming the pattern in
+			// gitignore_exclude says the same and silences this.
+			g.warnOnce("A .gitignore rule un-ignores "+o.Pattern+", which the managed block would list; ai-rulez leaves it out",
+				"rule", o.Rule, "at", fmt.Sprintf("%s:%d", o.Source, o.Line),
+				"fix", fmt.Sprintf("add %q to gitignore_exclude to commit it on purpose", o.Pattern))
+			continue
+		}
 		g.log().Warn("A .gitignore rule un-ignores a machine-local or secret output; ai-rulez will not re-ignore it",
 			"path", o.Pattern, "rule", o.Rule, "source", o.Source)
 	}

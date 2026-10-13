@@ -337,6 +337,17 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	}
 	// A merged document that still holds what an earlier run wrote and this one
 	// no longer does (a role or setting that was removed) is rewritten by generate.
+	drift = append(drift, g.unmergeDrift(outputs)...)
+	if d, ok := g.checkGitignore(outputs, linked); ok {
+		drift = append(drift, d)
+	}
+	sortDrift(drift)
+	return &ApplyResult{Drift: drift}, nil
+}
+
+// unmergeDrift reports the merged documents generate would rewrite or delete.
+func (g *Generator) unmergeDrift(outputs []config.OutputFile) []Drift {
+	var drift []Drift
 	for _, edit := range g.planUnmerge(outputs, false) {
 		kind := DriftStale
 		if edit.delete {
@@ -344,11 +355,7 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		}
 		drift = append(drift, Drift{Path: edit.rel, Kind: kind})
 	}
-	if d, ok := g.checkGitignore(outputs, linked); ok {
-		drift = append(drift, d)
-	}
-	sortDrift(drift)
-	return &ApplyResult{Drift: drift}, nil
+	return drift
 }
 
 // checkGitignore is the managed .gitignore block as a generated output: it
