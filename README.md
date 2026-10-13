@@ -52,6 +52,10 @@ repository can loosen.
 | **Govern** | A content-pinning lock, reviewer approvals, Sigstore signing, an organization policy and an SBOM. | `lock`, `approve`, `sign`, `verify --attestation`, `sbom` | [Trust model](docs/trust-model.md) |
 | **Publish** | Reproducible, checksummed release artifacts to GitHub releases, npm, OCI and marketplaces. | `publish` | [Publish](docs/publish.md) |
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/quickstart.gif" alt="ai-rulez init and generate: one .ai-rulez source becomes the native files of four AI tools" width="820" />
+</p>
+
 ## Supported tools
 
 ai-rulez ships 52 built-in presets — one per AI coding assistant, CLI agent or IDE integration — each writing that
@@ -279,7 +283,17 @@ Pi packages are opt-in with `[plugin] runtimes = ["pi"]`: skills and prompt temp
 from Git or npm. Publishing to npm preserves Pi and OpenCode runtime metadata while using the
 configured scope and plugin name for the released package.
 
+`verify --plugin` reports a hand-edited or stray file in a bundle as drift, and `generate --plugin` restores it:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/plugin-drift.gif" alt="ai-rulez verify --plugin reporting changed and extra files in a plugin bundle, then generate --plugin restoring it" width="820" />
+</p>
+
 ## Validate
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/validate.gif" alt="ai-rulez validate --strict flags a defect, --explain describes it, and generate --check fails on drift" width="820" />
+</p>
 
 <details>
 <summary><strong>Show commands</strong></summary>
@@ -317,6 +331,16 @@ An organization [policy](docs/policy.md) sets tighten-only floors a repository c
 - **MCP server.** `ai-rulez mcp` lets an assistant manage the configuration; with `--serve-skills` one server serves
   skills on demand and the config tools together (`--read-only` keeps only the read-only tools).
   See [MCP server](docs/mcp-server.md).
+  Served skills cost nothing until an assistant asks for them:
+
+  <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/skills-mcp.gif" alt="ai-rulez tokens before and after serving skills over MCP, then find_skill and load_skill" width="780" />
+
+- **Monorepos.** Nested roots each carry their own `.ai-rulez/`; `generate --recursive` and
+  `validate --recursive` walk them all, and `tokens --budget` gates what every session loads.
+  See [Monorepos](docs/monorepo.md).
+
+  <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/monorepo.gif" alt="ai-rulez generate --recursive over two nested roots, recursive validation, and a token budget check" width="780" />
+
 - **Telemetry.** Item-load records with an optional OTLP export. See [telemetry](docs/telemetry.md).
 - **Evals and improve.** `ai-rulez eval` scores skills; `improve` (experimental) optimizes them behind a held-out eval
   gate. See [evals](docs/evals.md) and [improve](docs/improve.md).

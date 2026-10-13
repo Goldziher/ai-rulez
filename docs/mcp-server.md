@@ -4,6 +4,12 @@ The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to p
 
 **You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
 
+With `--serve-skills` the same server also serves your skills on demand, so they stop costing tokens in every session:
+
+<p align="center">
+  <img src="assets/skills-mcp.gif" alt="ai-rulez tokens before and after serving skills over MCP, then find_skill and load_skill" width="820" />
+</p>
+
 ---
 
 ## Configuration Examples

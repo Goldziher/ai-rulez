@@ -5,6 +5,10 @@ further and checks that the instruction content actually *works*: globs that sel
 references that point nowhere, hooks that cannot run. Each problem is a finding with a stable code, a severity
 and a `file:line`.
 
+<p align="center">
+  <img src="assets/validate.gif" alt="ai-rulez validate --strict flags a defect, --explain describes it, and generate --check fails on drift" width="820" />
+</p>
+
 ```bash
 ai-rulez validate --strict                       # text report, exit 2 on errors
 ai-rulez validate --strict --format json         # machine-readable
