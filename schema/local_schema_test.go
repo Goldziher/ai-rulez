@@ -47,6 +47,10 @@ func TestValidateLocalFile(t *testing.T) {
 		{name: "scope identified by path accepted", body: "[[scopes]]\npath = \"svc\"\nprofile = \"p\""},
 		{name: "scope identified by name accepted", body: "[[scopes]]\nname = \"api\"\nremove = true"},
 		{name: "scope without name or path rejected", body: "[[scopes]]\nprofile = \"p\"", wantErr: true},
+		{name: "plugin definition removed by name", body: "[[plugins_authoring]]\nname = \"a\"\nremove = true"},
+		{name: "marketplace plugin removed by name", body: "[marketplace]\n[[marketplace.plugins]]\nname = \"a\"\nremove = true"},
+		{name: "marketplace definition accepts remove", body: "[[marketplaces_authoring]]\nname = \"pub\"\nremove = true"},
+		{name: "plugin definition without name rejected", body: "[[plugins_authoring]]\nremove = true", wantErr: true},
 		{name: "unknown key rejected", body: "bogus = 1", wantErr: true},
 		{name: "remove must be boolean", body: "[[includes]]\nname = \"a\"\nremove = \"yes\"", wantErr: true},
 	}

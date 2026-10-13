@@ -29,6 +29,8 @@ const (
 	docKeyHeader    = "header"
 
 	docKeyDefaultLayers = "default_layers"
+	docKeyMarketplace   = "marketplace"
+	docKeyMktPlugins    = "plugins"
 )
 
 // namedListKeys are the top-level list keys merged entry-by-entry. The value
@@ -42,6 +44,9 @@ var namedListKeys = map[string]bool{
 	"scopes":           true,
 	"roles":            false,
 	"verifiers":        false,
+	// Producer-side definitions: several plugins and marketplaces from one root.
+	"plugins_authoring":      false,
+	"marketplaces_authoring": false,
 }
 
 // mapValuedKeys are top-level tables merged per key.
@@ -192,6 +197,13 @@ func mergeTopLevelKey(merged map[string]any, lv any, key, src string) ([]string,
 		return w, nil
 	case key == docKeyBuiltins:
 		merged[key] = lv
+	case key == docKeyMarketplace:
+		out, w, err := mergeMarketplace(sv, lv, src)
+		if err != nil {
+			return nil, err
+		}
+		merged[key] = out
+		return w, nil
 	case mapValuedKeys[key]:
 		out, err := mergeMapKey(key, sv, lv, src)
 		if err != nil {
@@ -243,6 +255,61 @@ func mergeMapKey(key string, shared, local any, src string) (any, error) {
 			Errorf("shared config key %s has type %T, expected table", key, shared)
 	}
 	return mergeMaps(sm, lm), nil
+}
+
+// mergeMarketplace merges the [marketplace] table per key, except its
+// [[marketplace.plugins]] list, which merges entry by entry on name (remove = true
+// drops one) so a layer can add, override or drop a plugin without restating the rest.
+func mergeMarketplace(shared, local any, src string) (merged any, warnings []string, err error) {
+	lm, ok := local.(map[string]any)
+	if !ok {
+		return nil, nil, oops.
+			Hint("Key marketplace must be a table").
+			Errorf("%s key marketplace has type %T, expected table", src, local)
+	}
+	var sm map[string]any
+	if shared != nil {
+		if sm, ok = shared.(map[string]any); !ok {
+			return nil, nil, oops.
+				Hint("Key marketplace must be a table").
+				Errorf("shared config key marketplace has type %T, expected table", shared)
+		}
+	}
+	localPlugins, hasLocal := lm[docKeyMktPlugins]
+	if !hasLocal {
+		out, err := mergeMapKey(docKeyMarketplace, shared, local, src)
+		return out, nil, err
+	}
+	sharedPlugins, hasShared := sm[docKeyMktPlugins]
+	list, warnings, err := mergeNamedList("marketplace.plugins", sharedPlugins, hasShared, localPlugins, false, src)
+	if err != nil {
+		return nil, nil, err
+	}
+	rest := make(map[string]any, len(lm))
+	for k, v := range lm {
+		if k != docKeyMktPlugins {
+			rest[k] = v
+		}
+	}
+	var base any
+	if sm != nil {
+		trimmed := make(map[string]any, len(sm))
+		for k, v := range sm {
+			if k != docKeyMktPlugins {
+				trimmed[k] = v
+			}
+		}
+		base = trimmed
+	}
+	out, err := mergeMapKey(docKeyMarketplace, base, rest, src)
+	if err != nil {
+		return nil, nil, err
+	}
+	table, _ := out.(map[string]any)
+	if hasShared || len(list) > 0 {
+		table[docKeyMktPlugins] = list
+	}
+	return table, warnings, nil
 }
 
 // mergeValue merges maps per key (recursively); anything else, including

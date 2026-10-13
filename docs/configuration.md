@@ -1896,8 +1896,9 @@ default_layers = ["lint", "mcp"]
 `--format json`. Errors for a layer name the layer file (`unknown key(s) in layer config.lint.toml: bogus`).
 
 Layers merge like the local overlay: tables merge per key, named lists (`mcp_servers`, `installed_skills`, `plugins`,
-`includes`, `marketplaces`, `scopes`, `roles`, `verifiers`) merge entry by entry on `name`, and any other value is
-replaced. `[governance]` and `[signing]` are shared policy and are ignored in a layer. A layered configuration is a
+`includes`, `marketplaces`, `scopes`, `roles`, `verifiers`, `plugins_authoring`, `marketplaces_authoring`) merge entry by
+entry on `name` (`remove = true` drops one), `[[marketplace.plugins]]` merges the same way inside the `[marketplace]`
+table, and any other value is replaced. `[governance]` and `[signing]` are shared policy and are ignored in a layer. A layered configuration is a
 merged view and is never written back by a command that edits `config.toml`.
 
 ## Local overlay
