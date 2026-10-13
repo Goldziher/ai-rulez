@@ -2152,6 +2152,11 @@ spec = "1.1.0"                 # Agent Plugins version: "1.0.0" (default) or "1.
 | `include_evals` | `false` | Bundle each skill's `evals/` directory and the project-level `evals/` tree |
 | `skills_dir_owned` | `false` | Declare the bundle's skills directory fully owned: `verify --plugin` reports entries it did not generate as `extra` and `generate --plugin` removes them |
 
+To publish several plugins from one root, use `[[plugins_authoring]]` instead of `[plugin]` (and
+`[[marketplaces_authoring]]` for several marketplace indexes); see
+[Several plugins from one root](plugins.md#several-plugins-from-one-root). A definition file
+`.ai-rulez/plugins/<name>.toml` or `.ai-rulez/marketplaces/<name>.toml` holds one entry's keys.
+
 Sub-tables: `[plugin.author]` (`name`, `email`, `url`), `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`,
 `[plugin.codex]` (`manifest` = `legacy`, `root` or `both`; `marketplace`), `[plugin.cursor]`, `[plugin.gemini]`,
 `[plugin.kimi]`, `[plugin.hermes]` and `[plugin.interface]`.
@@ -3076,13 +3081,31 @@ AI_RULEZ_LAYERS=ai,custom ai-rulez generate   # custom layers after ai, so its i
 ai-rulez config layers                        # list the layers and which are active
 ```
 
-The layers come from `AI_RULEZ_LAYERS`, a comma-separated list, or from `AI_RULEZ_PROFILE` when that is not set, so one
-value can pick a profile and the layers named like it. The `--profile` flag does not select layers. A name with no
-file is skipped (so `default` and profile names without a layer are harmless); `local` is reserved for the overlay.
+Layers become active in this order, each merged over the one before:
+
+1. `default_layers` in `config.toml`: committed, always active, no environment variable needed. A layer listed there must
+   have its `config.<name>.toml`; a missing file is an error that names it. The key is read from `config.toml` only and
+   is ignored (with a warning) inside a layer or the local overlay.
+2. `AI_RULEZ_LAYERS`, a comma-separated list, or `AI_RULEZ_PROFILE` when that is not set, so one value can pick a profile
+   and the layers named like it. The `--profile` flag does not select layers. A name with no file is skipped (so
+   `default` and profile names without a layer are harmless).
+3. `config.local.toml`, the machine-local overlay, always last. `local` is a reserved layer name.
+
+A name repeated across these keeps its first position. Use `default_layers` to give a team-owned concern (lint
+allow-lists, builtin exclusions, MCP servers) its own file and CODEOWNERS entry:
+
+```toml
+# .ai-rulez/config.toml
+default_layers = ["lint", "mcp"]
+```
+
+`ai-rulez config layers` prints every layer with its position and origin (`default`, `env`), in text and with
+`--format json`. Errors for a layer name the layer file (`unknown key(s) in layer config.lint.toml: bogus`).
 
 Layers merge like the local overlay: tables merge per key, named lists (`mcp_servers`, `installed_skills`, `plugins`,
-`includes`, `marketplaces`, `scopes`, `roles`, `verifiers`) merge entry by entry on `name`, and any other value is
-replaced. `[governance]` and `[signing]` are shared policy and are ignored in a layer. A layered configuration is a
+`includes`, `marketplaces`, `scopes`, `roles`, `verifiers`, `plugins_authoring`, `marketplaces_authoring`) merge entry by
+entry on `name` (`remove = true` drops one), `[[marketplace.plugins]]` merges the same way inside the `[marketplace]`
+table, and any other value is replaced. `[governance]` and `[signing]` are shared policy and are ignored in a layer. A layered configuration is a
 merged view and is never written back by a command that edits `config.toml`.
 
 #### Local overlay
@@ -4209,6 +4232,14 @@ and ignores unknown fields; the [Agent Skills specification](https://agentskills
 `paths` (or `globs`) on a skill makes Claude Code and Cursor load it only when matching files are in play. Patterns use
 the same syntax as rule `paths`. The other tools ignore the key.
 
+#### Hooks that run bundled scripts
+
+A skill's `hooks` frontmatter runs commands while the skill is active. Claude Code sets `${CLAUDE_SKILL_DIR}` (also
+`$CLAUDE_SKILL_DIR`) to the skill's own directory, so `command: "${CLAUDE_SKILL_DIR}/scripts/check.sh"` reaches a
+script bundled with the skill whatever the working directory is. `validate --strict` resolves the path against the
+skill's directory: a missing file is `AR501`, and a script run directly (not through `bash` or another launcher)
+without the executable bit is `AR502`. The variable is a skill's own; it is not resolved in agent or command hooks.
+
 #### Dynamic loading (`delivery`)
 
 `delivery` decides how a skill reaches the agent: `static` (default) writes it into every harness skill tree, `served`
@@ -4230,7 +4261,7 @@ harness that cannot call MCP tools keeps served skills as static files (warning 
 `[[mcp_servers]]` entry running `ai-rulez mcp --serve-skills` (warning `AR993`). See
 [Dynamic skill loading](mcp-server.md#dynamic-skill-loading).
 
-A `served` skill is delivered over MCP, so none of its files are written to a harness skill tree: a skill whose
+A `served` skill is delivered over MCP, so none of its files are written to the skill tree of a harness that can call MCP tools, including the shared `.agents/skills` tree: a skill whose
 SKILL.md runs a bundled `scripts/` or `assets/` file by relative path cannot run it (`AR9R0` warns). Use
 `delivery: both` for a skill that ships such files, so the files stay on disk while other harnesses or roles still
 find the skill by search. A client that must keep the skill served can still fetch the files: `list_skill_resources`
@@ -6745,7 +6776,7 @@ Local configuration belongs to one checkout. Instructions and skills that should
 repository (including ones that do not use ai-rulez) go to your home directories instead; see
 [User-level configuration](user-scope.md).
 
-Local configuration has two layers. Both are gitignored unconditionally, even when `gitignore = false`.
+Local configuration has two layers (not to be confused with the committed `config.<name>.toml` layers, which `default_layers` activates for everyone; see [Layered configuration](configuration.md#layered-configuration)). Both are gitignored unconditionally, even when `gitignore = false`.
 
 | Layer | Location | Holds |
 | ----- | -------- | ----- |
@@ -8278,7 +8309,11 @@ agents_md = true    # the default
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).
-- Skills without `targets` go into one `.agents/skills/<name>/SKILL.md` tree.
+- Skills without `targets` go into one `.agents/skills/<name>/SKILL.md` tree. The tree follows each skill's
+  [`delivery`](skills.md#dynamic-loading-delivery) like a preset's own tree: `served` skills (and their `scripts/` and
+  `assets/`) are left out and the `dynamic-skills` stub is added, `static` and `both` skills are written. When every
+  preset reading the tree can call MCP tools the served skills are left out; when one cannot (`xum`, `hermes`, ...) the
+  tree keeps them, since that preset has no other way to see them, and still gets the stub.
 - Presets that read these files stop writing their root file (`GEMINI.md`, `.hermes.md`, ...), their copy of
   `AGENTS.md` and their own skills directory.
 - Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
@@ -10611,6 +10646,13 @@ Publication to npm with `pi-package` enables discovery in the [Pi package catalo
 Git installation needs no registry. No Pi marketplace JSON is generated; Pi-only multi-plugin
 publishing is not supported by the current publisher, which requires a Claude marketplace index.
 
+##### Symlinks in a skill directory
+
+A skill directory is copied whole into the bundle, and a symlink inside it follows the same policy as plain
+`generate` (see [Symlinks in content](configuration.md#symlinks-in-content)): a link whose resolved target is
+inside the project is followed and its content copied, with the target's mode; any other link is skipped with a
+warning that names the link and the reason. A link is never dropped silently.
+
 ##### Shared resources across skills
 
 Skills in one plugin often share the same reference docs and templates. `[plugin] shared_resources`
@@ -10818,6 +10860,11 @@ treated as hand-written.
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
 sidecar without modifying or regenerating the package.
 
+The sidecar also records whether each output is executable (`"mode": "0755"`, else `"0644"`), and `verify --plugin` reports a
+file whose executable bit differs as drift of kind `mode`, so a bundled script that lost it (a zip round trip,
+`core.fileMode=false`) is caught before it ships and fails with "permission denied". A sidecar written by an
+earlier release records no modes; it still verifies, and the next `generate --plugin` adds them.
+
 Reusable hook catalogs can run plugin checks across mixed repositories with
 `ai-rulez generate --recursive --plugin --if-configured` and
 `ai-rulez verify --recursive --plugin --if-configured`. Both commands exit successfully
@@ -10854,7 +10901,7 @@ correct root variable (`${CURSOR_PLUGIN_ROOT:-.}` for Cursor hooks, and so on).
 Each hook action requires exactly one of `command` or `script`:
 
 - **`command`**: An executable that already exists in the consumer's environment. Passed through verbatim.
-- **`script`**: A project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The bundled script is addressable as `${PLUGIN_ROOT}/hooks/<basename>` and survives a fresh clone before generation has run. Use `script` for self-contained bootstrap hooks.
+- **`script`**: A project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The bundled script is addressable as `${PLUGIN_ROOT}/hooks/<basename>` and survives a fresh clone before generation has run. Without `args` the command is written double-quoted (`"${CLAUDE_PLUGIN_ROOT}/hooks/<basename>"`) so an install path with a space does not split it; with `args` the handler is exec form and the path is written bare. Use `script` for self-contained bootstrap hooks.
 
 Additional fields:
 
@@ -10957,6 +11004,111 @@ The check looks only under the plugin's own root, never in a parent directory. A
 root `plugin.json` is on the list (Codex prefers it as the manifest); a root
 `CLAUDE.md` was considered and is not, because Claude Code does not load a
 `CLAUDE.md` from a plugin root as context.
+
+#### Several plugins from one root
+
+One root can define any number of plugins, each selecting its own skills, commands, agents,
+MCP servers and hooks from the root's sources, and `generate --plugin` and `verify --plugin`
+process them all in one run. The nested-root layout above is not needed for this; use it only
+when each plugin should be its own ai-rulez project.
+
+```toml
+# .ai-rulez/config.toml
+[[plugins_authoring]]
+name = "macos-notifications"
+version = "1.2.0"
+description = "Desktop notifications."
+runtimes = ["claude"]
+skills = ["notify-*"]            # root content, by name or glob
+commands = ["notify"]
+mcp_servers = ["moon-ear"]       # names of root [[mcp_servers]]; none by default
+[plugins_authoring.author]
+name = "Tooling"
+
+[[plugins_authoring]]
+name = "moon-ear"
+runtimes = ["claude", "codex"]
+skills = ["moon-*"]
+agents = ["helper"]
+domains = ["audio"]              # a domain's skills, commands and agents
+```
+
+An entry bundles **only** what it selects: an empty selector means nothing, so no skill is
+copied into every plugin by accident. Fields: `name`, `description`, `version`, `category`,
+`keywords`, `default_enabled`, `runtimes`, `skills`, `commands`, `agents`, `domains`,
+`mcp_servers`, `hooks` (the `[[hooks]]` shape), `author`, `license`, `homepage`,
+`repository` and `relevance`. Every plugin is written to `plugins/<name>/` (under the
+marketplace's `output_dir`) and listed in a marketplace index, named after the project when
+no marketplace is declared; see [Several marketplaces](#several-marketplaces-from-one-root).
+
+`[[marketplace.plugins]]` entries are the same definition, nested in the `[marketplace]`
+block, and accept the same fields. Use one spelling per plugin. `[plugin]` (one bundle of the
+whole root) cannot be combined with `[[plugins_authoring]]`: move its metadata into an entry
+that selects the root content (`skills = ["*"]`).
+
+To give each definition its own file, and its own CODEOWNERS entry, put it in
+`.ai-rulez/plugins/<name>.toml` with the entry's keys at the top level. The file loads by
+default; `name` may be omitted, and when present it must equal the file name:
+
+```toml
+# .ai-rulez/plugins/moon-ear.toml
+runtimes = ["claude", "codex"]
+skills = ["moon-*"]
+```
+
+A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
+[Layered configuration](configuration.md#layered-configuration)) can add an entry, override
+one by `name`, or drop it with `remove = true` without restating the others; the same holds
+for `[[marketplace.plugins]]`.
+
+Selecting one plugin: `generate --plugin --plugin-name moon-ear` writes only that plugin's
+bundle and leaves the marketplace indexes alone (a partial index would not match the full
+one); `verify --plugin --plugin-name moon-ear` checks only it. `verify --plugin --format json`
+adds a `plugins` array with each plugin's status, and each entry of `drift` names its
+`plugin` and `marketplace`.
+
+Not available per definition yet: the runtime-specific tables of `[plugin]` (`[plugin.codex]`,
+`[plugin.pi]`, `[plugin.interface]`, ...), `include`, `shared_resources` and `content_root`.
+A plugin that needs them stays a `[plugin]` in its own nested root.
+
+##### Several marketplaces from one root
+
+Each `[[marketplaces_authoring]]` entry is one marketplace index that lists plugin definitions
+by name, so one plugin can be offered by several marketplaces:
+
+```toml
+[[marketplaces_authoring]]
+name = "acme-public"
+description = "Published plugins"
+plugins = ["macos-notifications", "moon-ear"]   # names of plugin definitions; empty lists nothing
+output_dir = "marketplaces/public"
+
+[[marketplaces_authoring]]
+name = "acme-internal"
+plugins = ["moon-ear"]
+output_dir = "marketplaces/internal"
+cursor_index = true
+```
+
+`generate --plugin` writes, per marketplace, `<output_dir>/.claude-plugin/marketplace.json` (plus
+the Codex index when a listed plugin targets Codex, and the Cursor index with `cursor_index`),
+its own provenance sidecar, and `<output_dir>/plugins/<name>/` for each plugin it lists, so
+each directory can be published on its own. A plugin listed by two marketplaces is written
+into both. `output_dir` must be unique; two marketplaces, or two plugins, writing one path
+is an error. `[marketplace]` and `[[marketplaces_authoring]]` cannot be combined. With only
+`[[plugins_authoring]]` and no marketplace, one index named after the project lists them all.
+
+`generate --plugin --marketplace-name acme-public` renders one marketplace with its plugins,
+and `verify --plugin --marketplace-name acme-public` checks it. `verify --plugin --format json`
+adds `plugins` and `marketplaces` arrays with a status for each, and the `drift` entries name
+both, so a failing run says which marketplace drifted.
+
+One file per marketplace works like it does for plugins: `.ai-rulez/marketplaces/<name>.toml`
+holds the entry's keys at the top level, and the file name must equal `name`. A layer adds,
+overrides or removes (`remove = true`) a marketplace by `name`.
+
+`publish` reads the Claude index closest to the project root, so with several marketplaces it
+publishes only that one; publishing each marketplace separately is not supported yet.
 
 #### Domain content and per-domain plugins
 
@@ -11209,6 +11361,9 @@ Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
 (`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`, `package_name`, `skills_entry`; see
 [Pi packages](#pi-packages)).
+
+`[[plugins_authoring]]`: one plugin definition (see [Several plugins from one root](#several-plugins-from-one-root));
+`[[marketplaces_authoring]]`: `name`, `description`, `owner`, `plugins` (names), `output_dir`, `cursor_index`.
 
 `[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
 `[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see
@@ -12022,7 +12177,7 @@ stdout.
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
-| AR001 | `secret-detected` | error | A credential pattern (AWS, GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
+| AR001 | `secret-detected` | error | A credential pattern (AWS access key ids `AKIA`/`ASIA` and AWS secret access keys, which have no prefix and are matched only as a 40-character value assigned to a name containing `aws_secret_access_key` with `=` or `:`, so an arbitrary 40-character string is not reported; GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
 | AR002 | `hidden-characters` | error | Zero-width, bidirectional-control, Unicode tag or other invisible characters (hangul and braille blanks, variation selectors, U+206A to U+206F, line and paragraph separators, the combining grapheme joiner). A joiner between two non-ASCII characters, an emoji presentation selector, and a leading byte order mark are fine |
 | AR003 | `html-comment-instruction` | warning | An HTML comment, invisible when rendered, with instruction-like text (`curl`, `eval`, `run:`, "secretly", injection phrases) |
 | AR004 | `prompt-injection-phrase` | warning | Text that tries to override earlier instructions or hide actions from the user ("ignore previous instructions", "do not tell the user", ...) |
@@ -12041,7 +12196,7 @@ stdout.
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `armis/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
 | AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too. The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
-| AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file, or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
+| AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file (in a skill also `${CLAUDE_SKILL_DIR}/...`, resolved against the skill's own directory), or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit (fixable) |
 | AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |
 | AR504 | `hook-source-missing` | error | A `script` of a top-level `[[hooks]]` entry in `config.toml` does not exist |
@@ -12093,13 +12248,13 @@ stdout.
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
 | AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`) and the skills MCP call forms (`load_skill(x)`, `load_skill(name: "x")`, `get_skill x`, `read_skill_file x`; a single code span `load_skill x` is the recommended fix and is not reported); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
-| AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
+| AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output, its own skill tree or the shared `.agents/skills` tree it reads (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
 | AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped). Not reported for a harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) |
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
 | AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
 | AR989 | `served-file-unscannable` | warning / error | A served skill file (authored skills included) is binary (a NUL byte, invalid UTF-8) or larger than 512 KiB, so the security scan cannot read it. For a remote source (`trust = "error"`) the file is not served; a `SKILL.md` that cannot be scanned is an error and the skill is refused |
-| AR9R0 | `served-skill-bundled-files` | warning | A served skill ships files under `scripts/` or `assets/`, which are not written to any harness's skill tree; a relative path into them (the form SKILL.md usually uses) resolves to nothing. `references/` are exempt (readable over MCP with `list_skill_resources`/`load_skill`). Set `delivery: both` to keep the files on disk, or fetch them over MCP and write them out yourself (see [Served files](mcp-server.md#served-files-scripts-and-assets) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR9R0 | `served-skill-bundled-files` | warning | A served skill ships files under `scripts/` or `assets/`, which are not written to the skill tree of a harness that can call MCP (the shared `.agents/skills` tree included); a relative path into them (the form SKILL.md usually uses) resolves to nothing. `references/` are exempt (readable over MCP with `list_skill_resources`/`load_skill`). Set `delivery: both` to keep the files on disk, or fetch them over MCP and write them out yourself (see [Served files](mcp-server.md#served-files-scripts-and-assets) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a skill whose `delivery` is `both` and whose frontmatter sets `disable-model-invocation: true` (or `disable_model_invocation`), by a bare name or `Skill(...)`; the Skill tool refuses a DMI skill, so the model then declines the workflow. A file-path pointer and a `load_skill`/`find_skill` pointer are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR971 | `role-reference-unknown` | error | A `[[roles]]` entry lists a domain that does not exist, or an include, exclude or `skill_mode` entry that matches no item (or matches only in a domain the role does not select). See [Roles](roles.md) |
 | AR972 | `role-extends-invalid` | error | A role extends an unknown role, itself, or takes part in a cycle, or extends a role that itself extends another (inheritance is one level deep) |
@@ -12178,6 +12333,7 @@ stdout.
 | AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
 | AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
 | AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, a root `plugin.json` (Codex prefers it as the manifest), and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
+| AR9T1 | `plugin-selector-unmatched` | warning | A `skills`, `commands`, `agents` or `domains` selector of a plugin definition (`[[plugins_authoring]]` or `[[marketplace.plugins]]`) matches nothing, so the plugin bundles less than intended and a plugin left empty is dropped; under `--strict` the warning fails the run (see [Authoring Plugins](plugins.md#several-plugins-from-one-root)) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -12257,7 +12413,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
-| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
+| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -12991,10 +13147,12 @@ skill/command namespace collisions, plugin hook `script` existence, unresolved i
 - Name references are matched by pattern, so prose such as ``the skill `argument-hint` `` reports AR301; use
   `known_names` or an inline ignore for intentional cases.
 - Hook checks read `.claude/settings.json` only. A command that runs a `$CLAUDE_PROJECT_DIR/...` file is resolved
-  (AR501, AR502), and so is the script given to a common interpreter (`sh`, `bash`, `zsh`, `dash`, `python`,
+  (AR501, AR502). In a skill's `hooks` frontmatter, a path behind `${CLAUDE_SKILL_DIR}` (or `$CLAUDE_SKILL_DIR`), the
+  variable Claude Code sets to the skill's directory, is resolved against that directory the same way; agents and
+  commands do not have the variable, so it is not resolved there. The script given to a common interpreter is resolved too (`sh`, `bash`, `zsh`, `dash`, `python`,
   `python3`, `node`, `ruby`, `perl`, also behind `env` or `VAR=value`): `bash ./x.sh`, `sh x.sh`, `bash -e x.sh` and
   `/usr/bin/env bash x.sh` report AR501 when the file is missing. The execute bit is not checked for a launched script,
-  and inline code (`bash -c`, `node -e`), absolute paths and paths with a variable are skipped. A bare relative path
+  and inline code (`bash -c`, `node -e`), absolute paths and paths with any other variable are skipped. A bare relative path
   without a launcher is resolved only in agent, skill and command frontmatter.
 - Anchors use GitHub-style heading slugs.
 - The MCP command check depends on the `PATH` of the machine running the command.
@@ -13031,7 +13189,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR018 | `fake-directive-tag` | warning | A literal `<system>`, `</system>`, `<override>` tag (with or without attributes) or a chat-template token (`<\|im_start\|>`, `<<SYS>>`, `[INST]`) in prose. `<instructions>`, `<rules>`, `<example>` and `<system-reminder>` are legitimate structure and pass, as does anything in a code span or fence |
 | AR019 | `agent-config-tamper` | info | Text that tells the agent to write, edit, append to or update `MEMORY.md`, `SOUL.md`, `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`, `.clinerules` or `.claude/settings.json`, so an instruction persists past the session. Info because projects legitimately say "update AGENTS.md"; with `scan_imports` the level of imported content applies. Lines that mention `ai-rulez` or carry "never", "instead of", "by hand" and similar are skipped |
 | AR020 | `self-propagation` | warning | Text that tells the agent to add or copy "this instruction" into all, every, each or other skills, files, rules, projects or sessions (worm-style propagation) |
-| AR021 | `unpinned-package-exec` | warning | A command that runs a package without pinning it: `npx -y pkg` / `--yes` with no `@version` (and any `@latest` or other moving tag), `bunx`, `pnpm dlx`, `uvx pkg` or `pipx run pkg` without `==version`, `pip install` from a URL or a `git+` requirement without an `@<commit>` pin, `go run pkg@latest`. Pinned forms pass, and so does an interactive `npx pkg`. Read in inline code, fenced shell, scripts and prose lines that start with the command; skipped under `references/`, `examples/`, `templates/` and on lines that describe a bad example. A prose mention with no pin at all of the project's own package (`name` in the config, as in "also usable via `uvx <name>`") is a description of a publishing channel and is not reported; the same text with a moving tag, or inside a fenced shell block, is. Also read in the `command` of a hook in the frontmatter of an agent, skill or command. Shares its pin predicate with AR012 |
+| AR021 | `unpinned-package-exec` | warning | A command that runs a package without pinning it: `npx -y pkg` / `--yes` with no `@version` (and any `@latest` or other moving tag), `bunx`, `pnpm dlx`, `uvx pkg` or `pipx run pkg` without `==version`, `pip install` from a URL or a `git+` requirement without an `@<commit>` pin, `go run pkg@latest`. Pinned forms pass, and so does an interactive `npx pkg`. Read in inline code, fenced shell, scripts and prose lines that start with the command; skipped inside example regions (including files matched by `[lint] example_paths`, e.g. `**/references/**`) and on lines that describe a bad example. A skill's `references/` and `scripts/` files are read like `SKILL.md`; `examples/` and `templates/` are not skill resource directories and are never scanned. A prose mention with no pin at all of the project's own package (`name` in the config, as in "also usable via `uvx <name>`") is a description of a publishing channel and is not reported; the same text with a moving tag, or inside a fenced shell block, is. Also read in the `command` of a hook in the frontmatter of an agent, skill or command. Shares its pin predicate with AR012 |
 | AR022 | `destructive-command` | warning | `rm -r` of `/`, `~`, `$HOME`, `*`, `.` or `./*`, `dd of=/dev/sdX`, `mkfs` on a device, a force push to `main`/`master`, `DROP DATABASE`, a fork bomb. Cleanup of a named directory (`rm -rf ./dist`, `node_modules`, `"$TMPDIR/build"`) and `sudo` alone do not match; the same suppression as AR021 applies, including a "Dangerous commands" heading or "never run ..." text |
 | AR029 | `stealth-command` | error | A command that erases history or evidence: `history -c`/`-d`, `unset HISTFILE`, `HISTFILE=/dev/null`, `HISTSIZE=0`, `set +o history`, `shred` of a path, truncating or removing a `*_history` file, `chattr +i`. No legitimate skill does this, so it is never suppressed by surrounding text; use an inline ignore for a security-training document |
 | AR027 | `unknown-dotdir-read` | off | A read command (`cat`, `head`, `less`, `base64`, `grep`, ...) on `~/.<dir>/` or `$HOME/.<dir>/` where `<dir>` is neither a credential family of AR006 nor a known tool directory (`.claude`, `.cursor`, `.codex`, `.cache`, `.config`, `.npm`, ...). A catch-all for credential locations the table does not know; turn it on with `[lint.severity] AR027 = "info"` |
@@ -13572,8 +13730,8 @@ a hook command points at a repo file that does not exist
 
 - Default severity: `error`
 - Analyzer: `hooks` (scope `bundle`)
-- Why: A hook whose command points at a missing file fails on every event it is registered for.
-- Bad: `"command": "$CLAUDE_PROJECT_DIR/.claude/hooks/lint.sh"` with no such file
+- Why: A hook whose command points at a missing file fails on every event it is registered for. In a skill's `hooks` frontmatter `${CLAUDE_SKILL_DIR}` (or `$CLAUDE_SKILL_DIR`) is the skill's own directory, and the path after it is resolved against that directory.
+- Bad: `"command": "$CLAUDE_PROJECT_DIR/.claude/hooks/lint.sh"` with no such file, or `${CLAUDE_SKILL_DIR}/scripts/check.sh` with no such file in the skill
 - Good: Commit the script, or correct the path
 
 ##### AR502 hook-not-executable
@@ -15475,6 +15633,16 @@ a single-plugin bundle whose root is the repository root ships a default host co
 - Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory. A root `plugin.json` is on the list because Codex prefers it as the manifest; a root `CLAUDE.md` was considered and left off, because Claude Code does not load a `CLAUDE.md` from a plugin root as context (`claude plugin validate` warns about one).
 - Bad: A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: "./"`
 - Good: Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root
+
+##### AR9T1 plugin-selector-unmatched
+
+a skills, commands, agents or domains selector of a plugin definition matches nothing, so the plugin bundles less than intended (a plugin that ends up empty is dropped)
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A plugin definition picks root content by name or glob and domains by name. A selector that matches nothing is almost always a typo or a skill that was renamed, and generate --plugin silently bundles less (or, when every selector misses, drops the plugin with a warning). Under --strict the warning fails the run.
+- Bad: [[plugins_authoring]] name = "notify" skills = ["notfy-*"] where no skill matches the glob
+- Good: Fix the selector, or remove it from the definition
 
 <!-- rules:end -->
 
@@ -19052,7 +19220,7 @@ rewrites them), and the test fails when they are stale.
 | `get_skill` | skills | returns a served skill with provenance and digests to a client that only speaks tools |
 | `list_skill_resources` | skills | lists the files of a served skill for a client that has no skill:// resource support |
 | `load_skill` | skills | reads one served skill file under the session budget; the CLI reads the file from disk |
-| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI; `encoding: base64` and `offset`/`length` read binary and large files |
+| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI |
 | `update_rule` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 | `search_skills` | skills | lexical listing for a client that only speaks tools; the ranker the CLI `search` shares is find_skill |
 | `update_skill` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
@@ -19232,7 +19400,8 @@ into generated frontmatter.
 - A skill whose delivery is `served` is not written to any preset's skill tree. `static` and `both` skills are.
 - When any skill is `served` or `both`, or a `[[skill_sources]]` entry is configured (its skills are served,
   never written), one stub skill named `dynamic-skills` is added to the root skills of
-  every preset whose harness can call MCP tools. A skill you author with that name, at the root or in a domain
+  every preset whose harness can call MCP tools. With `agents_md` on, the presets that read the shared
+  `.agents/skills` tree (codex, cursor, gemini, copilot, opencode, zed, ...) get the stub in that tree. A skill you author with that name, at the root or in a domain
   that is active, is used instead of the stub; if several are authored, a warning asks you to rename all but one.
   `[delivery.stub]` customises the generated stub's description and text, see
   [Configuration: `[delivery.stub]`](configuration.md#deliverystub).
@@ -25321,6 +25490,8 @@ ai-rulez generate [flags]
 | `--env`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
 | `--env-file`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
+| `--plugin-name`                 | string  |               | With `--plugin`, only the plugin of this name (repeatable); the marketplace indexes are left alone. For a root with several plugin definitions |
+| `--marketplace-name`            | string  |               | With `--plugin`, only the marketplace of this name, its index and its plugins (repeatable) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
 | `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
 | `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell); always, do not warn about new hook and MCP commands (same as `AI_RULEZ_ACK_COMMANDS=1`) |
@@ -25562,6 +25733,8 @@ ai-rulez verify (--attestation | --approvals | --self | --plugin) [flags]
 | `--recursive`  | boolean | false              | Find and verify plugin producers recursively               |
 | `--if-configured`     | boolean | false              | Succeed without work when no plugin producer is configured |
 | `--if-generated`      | boolean | false              | With `--plugin`, succeed without work when the bundle has not been generated yet |
+| `--plugin-name`       | string  |                    | With `--plugin`, only this plugin (repeatable); with `--format json`, `plugins` and `marketplaces` list every plugin and marketplace of the root with a status, and each `drift` entry names its plugin and marketplace |
+| `--marketplace-name`  | string  |                    | With `--plugin`, only this marketplace and its plugins (repeatable) |
 | `--profile`    | string  | configured default | Profile used when the plugin was generated                 |
 | `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
 | `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |
@@ -25610,7 +25783,7 @@ Verify every plugin producer and marketplace in a repository:
 ai-rulez verify --recursive --plugin --if-configured
 ```
 
-Exit codes: `0` the bundle matches its sources, `1` the check could not run (invalid configuration, no plugin configuration, no mode given), `2` a bundle file is missing, stale, obsolete, a symlink, unrecorded inside a generated skill directory, or fails its provenance hash. On drift, text output lists each drifted path with its kind (`changed`, `missing`, `stale-source`, `obsolete`, `extra`, `symlink`) before the error. `--plugin --format json` prints `{schema_version, status: ok|skipped|drift, configs, error?, drift?}`, where `drift` is an array of `{path, kind}` (project-relative paths); the failure is also on stderr. `stale-source` names a provenance sidecar that no longer matches its bundle. `verify --recursive --plugin` reports the failure without a `drift` list.
+Exit codes: `0` the bundle matches its sources, `1` the check could not run (invalid configuration, no plugin configuration, no mode given), `2` a bundle file is missing, stale, obsolete, a symlink, lost or gained its executable bit, unrecorded inside a generated skill directory, or fails its provenance hash. On drift, text output lists each drifted path with its kind (`changed`, `missing`, `stale-source`, `obsolete`, `extra`, `symlink`, `mode`) before the error. `--plugin --format json` prints `{schema_version, status: ok|skipped|drift, configs, error?, drift?}`, where `drift` is an array of `{path, kind}` (project-relative paths); the failure is also on stderr. `stale-source` names a provenance sidecar that no longer matches its bundle; `mode` names a file whose content is right but whose executable bit differs from the one `generate --plugin` sets (a hook or skill script that lost it in a zip round trip or under `core.fileMode=false`). `verify --recursive --plugin` reports the failure without a `drift` list.
 
 When a `[plugin]` block exists but no bundle was generated, `verify --plugin` fails with `plugin bundle not generated; run `ai-rulez generate --plugin``. `--if-configured` only skips a project with no plugin configuration; add `--if-generated` to also skip until the bundle exists.
 
@@ -28342,10 +28515,12 @@ ai-rulez generate --locked
 | `--gitignore` | bool |  | Update .gitignore files to include generated output patterns |
 | `--if-configured` | bool |  | Skip plugin generation when no plugin authoring configuration is present |
 | `--locked` | bool |  | Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI) |
+| `--marketplace-name` | string list |  | With --plugin: only the marketplace of this name, its index and its plugins (repeatable) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-self-mcp` | bool |  | Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it) |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only |
 | `--plugin` | bool |  | Generate distributable plugin bundles and a marketplace index from the [plugin] block |
+| `--plugin-name` | string list |  | With --plugin: only the plugin of this name (repeatable); the marketplace indexes are left alone |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
@@ -31057,9 +31232,11 @@ ai-rulez verify --self
 | `--if-generated` | bool |  | Skip plugin verification when the plugin bundle has not been generated yet |
 | `--issuer` | string |  | With --attestation: the OIDC issuer of --identity |
 | `--lock` | bool |  | With --attestation: verify the lock attestation (the default and only subject) |
+| `--marketplace-name` | string list |  | With --plugin: only the marketplace of this name, its index and its plugins (repeatable) |
 | `--no-state` | bool |  | With --attestation: do not read or update the per-user rollback state |
 | `--online` | bool |  | With --approvals: also check review-linked approvals against the forge (needs the network and a token) |
 | `--plugin` | bool |  | Verify generated plugin bundles using provenance hashes |
+| `--plugin-name` | string list |  | With --plugin: only the plugin of this name (repeatable); the marketplace indexes are left alone |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
