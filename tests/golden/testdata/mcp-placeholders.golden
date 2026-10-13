@@ -168,7 +168,6 @@ risk (advisory, never fails the run): critical (score 100/100)
   ... and 4 more item(s)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
-INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 (no change)
 --- home tree

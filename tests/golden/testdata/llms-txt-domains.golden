@@ -136,7 +136,6 @@ risk (advisory, never fails the run): critical (score 88/100)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
-INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c

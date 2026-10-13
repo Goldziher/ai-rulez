@@ -122,7 +122,6 @@ risk (advisory, never fails the run): medium (score 48/100)
   ... and 1 more item(s)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
-INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1047 65dc88f5bc08b2eefc9f449a62bde3126985c6eeec07fe63fe6f7cdb05b3da53
