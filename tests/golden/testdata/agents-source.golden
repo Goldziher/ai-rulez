@@ -1,0 +1,155 @@
+# scenario agents-source
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=8
+INFO  Generating with configuration profile=default
+INFO  Generation complete files=9
+--- project tree
+.agents/ dir 0755
+.agents/.ai-rulez/ dir 0755
+.agents/.ai-rulez/.generated-manifest.json file 0644 613 2b2226bb533f4076bad831a7adc82c132c0a7f4cb181435343672d4813a28653
+.agents/.ai-rulez/.generated-manifest.local.json file 0644 580 f9d4e635b4d03ed5a123bfccacbf9309d0ee224d1ea0e03170909226aff94cdb
+.agents/agents/ dir 0755
+.agents/agents/reviewer.md file 0644 73 8b68584d457c5a199c8dd39210934bf6927dd600f101c7f6606dab8d1acc45b6
+.agents/ai-rulez.toml file 0644 88 34049ed918dc6c714bf1c58063b2251ef08c4b2e73d9da844685aa3a0778646f
+.agents/rules/ dir 0755
+.agents/rules/go-style.md file 0644 73 580506478420b601fb21ee4388caeae4661e4c6b5a684e67a7d59997e3e1aa35
+.agents/skills/ dir 0755
+.agents/skills/review/ dir 0755
+.agents/skills/review/SKILL.md file 0644 115 f904a095cf3daa25df1fdead7106af5d6ad5ecf1374aa8c765dfd1fe1545fa6e
+.agents/skills/review/references/ dir 0755
+.agents/skills/review/references/checklist.md file 0644 36 1e9c21bd7b005d5ef6a3b6fb4a5235adf69f33ae9695e69ad9666e80ac58d218
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/reviewer.md file 0644 176 8437b48f7805a60a34a990f315c886ac21d33c552ce2900b98b7d1debfeba292
+.claude/rules/ dir 0755
+.claude/rules/go-style.md file 0644 248 d87870caf172a90603a7eaadbe1f5d069a33622273e59285d1c532a7c6d62c62
+.claude/skills/ dir 0755
+.claude/skills/review/ dir 0755
+.claude/skills/review/SKILL.md file 0644 418 30b4e7b28c8bb9d73b4bf4c72b6a3421fb47f87608c60cdb52faa8a30dbd70e8
+.claude/skills/review/references/ dir 0755
+.claude/skills/review/references/checklist.md file 0644 36 1e9c21bd7b005d5ef6a3b6fb4a5235adf69f33ae9695e69ad9666e80ac58d218
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/reviewer.toml file 0644 119 53bfa11fc96814e1f3453d8eb794058b9e56b98181c4607ca53ab31fc60998b5
+.cursor/ dir 0755
+.cursor/agents/ dir 0755
+.cursor/agents/reviewer.md file 0644 176 8437b48f7805a60a34a990f315c886ac21d33c552ce2900b98b7d1debfeba292
+.cursor/rules/ dir 0755
+.cursor/rules/go-style.mdc file 0644 281 b0341f7e89046d96c132bc2681da2918d9a40df12bfd63489bf838a00a8b8a1d
+.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
+AGENTS.md file 0644 51 45bba3fb38bfbd7ecb5707e748f0df06a9cb0d9ff766ae4b628ef7382f266138
+CLAUDE.md file 0644 393 06d5092b1509bd9277788ab14969b9ee2933340ef86822cdc3eea6f1eacd233e
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=8
+INFO  Generating with configuration profile=default
+INFO  Generation complete files=9
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=8
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez clean --yes
+exit: 0
+--- stdout
+Clean plan (profile default)
+  remove file: .claude/agents/reviewer.md
+  remove file: .claude/rules/go-style.md
+  remove file: .claude/skills/review/SKILL.md
+  remove file: .claude/skills/review/references/checklist.md
+  remove file: .codex/agents/reviewer.toml
+  remove file: .cursor/agents/reviewer.md
+  remove file: .cursor/rules/go-style.mdc
+  remove file: .mcp.json
+  remove file: CLAUDE.md
+  remove dir (if empty): .cursor/rules
+  remove dir (if empty): .cursor/agents
+  remove dir (if empty): .cursor
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .claude/skills/review/references
+  remove dir (if empty): .claude/skills/review
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove manifest: .agents/.ai-rulez/.generated-manifest.json
+  remove local manifest: .agents/.ai-rulez/.generated-manifest.local.json
+--- stderr
+INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=8
+Removed generated files: 9 files, 11 directories
+--- project tree
+.agents/ dir 0755
+.agents/agents/ dir 0755
+.agents/agents/reviewer.md file 0644 73 8b68584d457c5a199c8dd39210934bf6927dd600f101c7f6606dab8d1acc45b6
+>>>>
+---
+description: Reviews changes
+---
+
+Review the change for correctness.
+<<<<
+.agents/ai-rulez.toml file 0644 88 34049ed918dc6c714bf1c58063b2251ef08c4b2e73d9da844685aa3a0778646f
+>>>>
+version = "5.0"
+name = "demo"
+gitignore = false
+presets = ["claude", "cursor", "codex"]
+<<<<
+.agents/rules/ dir 0755
+.agents/rules/go-style.md file 0644 73 580506478420b601fb21ee4388caeae4661e4c6b5a684e67a7d59997e3e1aa35
+>>>>
+---
+description: Go style
+globs: ["**/*.go"]
+---
+
+Wrap errors with oops.
+<<<<
+.agents/skills/ dir 0755
+.agents/skills/review/ dir 0755
+.agents/skills/review/SKILL.md file 0644 115 f904a095cf3daa25df1fdead7106af5d6ad5ecf1374aa8c765dfd1fe1545fa6e
+>>>>
+---
+name: review
+description: Review a change before it merges
+---
+
+# Review
+
+Read the diff first, then the tests.
+<<<<
+.agents/skills/review/references/ dir 0755
+.agents/skills/review/references/checklist.md file 0644 36 1e9c21bd7b005d5ef6a3b6fb4a5235adf69f33ae9695e69ad9666e80ac58d218
+>>>>
+- Is it tested?
+- Is it documented?
+<<<<
+AGENTS.md file 0644 51 45bba3fb38bfbd7ecb5707e748f0df06a9cb0d9ff766ae4b628ef7382f266138
+>>>>
+# Demo
+
+Use tabs. Run `task test` before you push.
+<<<<
+--- home tree
+(no change)

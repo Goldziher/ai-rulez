@@ -97,12 +97,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	edits := g.planUnmerge(outputs, true)
 	plan.Files = append(plan.Files, deletedPaths(edits)...)
 	plan.Unmerged = editedPaths(edits)
-	plan.Files = existingSortedUnique(plan.Files)
-	if !g.userMode {
-		// Whatever the manifest lists, AGENTS.md and .agents are the source of an
-		// "agents" project; clean never removes them, not even with --include-edited.
-		plan.Files = slices.DeleteFunc(plan.Files, g.isAgentsSource)
-	}
+	plan.Files = g.withoutAgentsSource(existingSortedUnique(plan.Files))
 
 	// Scoped rule files sit in subfolders of the root rules folders that are not
 	// outputs themselves; the folders this removal empties are part of the plan.
@@ -153,6 +148,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	if plan.LocalManifestPath != "" {
 		g.removeStaleFile(plan.LocalManifestPath)
 	}
+	g.removeEmptyAgentsStateDir()
 	g.cleanGitignore(opts, plan)
 
 	return plan, nil

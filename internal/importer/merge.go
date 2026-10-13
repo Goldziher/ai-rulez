@@ -75,7 +75,7 @@ func (p *Plan) retarget(oldRel, newRel string) {
 // differsOnDisk reports whether any file of the item exists with other content.
 func differsOnDisk(it *Item, intoAbs, domain string) (bool, error) {
 	for _, f := range it.Files() {
-		existing, err := os.ReadFile(filepath.Join(intoAbs, filepath.FromSlash(placed(domain, f.Path))))
+		existing, err := os.ReadFile(filepath.Join(intoAbs, filepath.FromSlash(diskRel(intoAbs, placed(domain, f.Path)))))
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
 		case err != nil:
@@ -104,7 +104,7 @@ func freeName(it Item, intoAbs, domain string, taken map[string]bool) (string, b
 		if taken[try.Rel()] {
 			continue
 		}
-		if _, err := os.Lstat(filepath.Join(intoAbs, filepath.FromSlash(placed(domain, try.Rel())))); err != nil {
+		if _, err := os.Lstat(filepath.Join(intoAbs, filepath.FromSlash(diskRel(intoAbs, placed(domain, try.Rel()))))); err != nil {
 			return candidate, true
 		}
 		if differs, err := differsOnDisk(&try, intoAbs, domain); err == nil && !differs {

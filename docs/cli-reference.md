@@ -1443,6 +1443,7 @@ ai-rulez init --domains backend,frontend --yes
 | `--from` | string |  | Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor') |
 | `--setup-hooks` | bool |  | Automatically configure git hooks for ai-rulez validation |
 | `--skip-content` | bool |  | Skip creating example content files |
+| `--source` | string |  | Where the content lives: ai-rulez (the .ai-rulez tree, default) or agents (AGENTS.md and .agents/, configured in .agents/ai-rulez.toml) |
 | `--yes` / `-y` | bool |  | Automatically answer yes to prompts (never replaces an existing configuration directory; see --force) |
 
 ## `ai-rulez list`

@@ -189,7 +189,7 @@ create it on first use. Overlay files are validated against `schema/ai-rules-loc
 
 | Key kind | Keys | Rule |
 | -------- | ---- | ---- |
-| Scalars | `name`, `description`, `default`, `gitignore`, `compact`, `agents_md`, `codex_skills_dir`, ... | Local value wins |
+| Scalars | `name`, `description`, `default`, `gitignore`, `compact`, `source`, `agents_md`, `codex_skills_dir`, ... | Local value wins |
 | Lists | Any list not named below (`hooks`, `skill_sources`, `bundle_exclude`, the values of `profiles`, ...) | Local list replaces the shared list |
 | Tables | `profiles`, `header`, `defaults`, `mcp`, `rules`, `plugin`, `marketplace`, `placement`, `claude`, `lint`, `permissions`, `guard`, `role_manifest`, `lock`, `llm` | Merged per key, recursively; local keys win and lists inside replace the shared list. A table key that is not a table locally (including `null`) is an error |
 | Other tables | `domains`, `skills`, `okf`, `usage`, `telemetry`, `codex` | Merged per key like the tables above (a non-table local value replaces the shared one instead of erroring) |

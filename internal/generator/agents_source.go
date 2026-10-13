@@ -2,6 +2,7 @@ package generator
 
 import (
 	"path/filepath"
+	"slices"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
@@ -40,6 +41,25 @@ func isAgentsSourcePath(cfg *config.Config, abs string) bool {
 // before the source was switched) and may be retired like any generated file.
 func (g *Generator) isAgentsSource(abs string) bool {
 	return isAgentsSourcePath(g.config, abs) && !g.looksGenerated(abs)
+}
+
+// withoutAgentsSource drops from files (absolute paths) the source of an "agents"
+// project: whatever a manifest lists, clean never removes AGENTS.md or .agents,
+// not even with --include-edited. User scope has no such source.
+func (g *Generator) withoutAgentsSource(files []string) []string {
+	if g.userMode {
+		return files
+	}
+	return slices.DeleteFunc(files, g.isAgentsSource)
+}
+
+// removeEmptyAgentsStateDir removes the state folder beside .agents/ai-rulez.toml
+// once clean has emptied it: it holds only what ai-rulez writes, so an empty one
+// is clutter.
+func (g *Generator) removeEmptyAgentsStateDir() {
+	if g.config.AgentsLayout && !g.userMode {
+		g.removeEmptyDir(g.config.ConfigDir)
+	}
 }
 
 // dropAgentsSourceOutputs removes, from every preset, the outputs that would

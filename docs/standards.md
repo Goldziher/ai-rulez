@@ -28,6 +28,16 @@ Status values:
 | OKF | v0.2 | not covered here | Native format ([page](okf.md)) | `internal/okf` | Tracked in [#281](https://github.com/Goldziher/ai-rulez/issues/281). |
 | OpenTelemetry (OTLP) | n/a | not covered here | Export only ([page](telemetry.md)) | n/a | No document we write is validated against an OTLP schema. |
 
+## Standards first, extensions second
+
+Future ai-rulez versions will always follow the AGENTS.md and Agent Skills standards. With `source = "agents"` the
+root `AGENTS.md` and `.agents/skills/<name>/SKILL.md` are read as those standards define them. The folders ai-rulez
+adds beside them (`.agents/rules`, `agents`, `checks`, `commands`, `context` and `domains`) are extensions, named after
+what they hold so that a later version of a standard supersedes them. Rules, agents and checks follow the
+Antigravity and Amp conventions; `commands`, `context` and `domains` are ai-rulez's own. See
+[.agents as a source](agents-source.md); `TestGenerateTranslatesTheSourceAndLeavesItAlone` and the `agents-source`
+goldens back the claim that the standards' files are read and never rewritten.
+
 ## Reading a status
 
 A conformant status says the documents the tests produce validate. It does not say every possible configuration does:

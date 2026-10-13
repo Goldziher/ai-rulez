@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
@@ -282,7 +283,7 @@ func lockConverted(ctx context.Context) int {
 		os.Stdout = os.Stderr
 		defer func() { os.Stdout = saved }()
 	}
-	return writeLockAtContext(ctx, filepath.Join(into, "config.toml"), "", nil)
+	return writeLockAtContext(ctx, config.LayoutOf(into).ConfigFile, "", nil)
 }
 
 func normalizeStatuses(in []string) []string {

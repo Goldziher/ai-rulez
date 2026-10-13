@@ -11,6 +11,7 @@ func allScenarios() []scenario {
 	}
 	all = append(all, otherScenarios()...)
 	all = append(all, llmsTxtScenarios()...)
+	all = append(all, agentsSourceScenarios()...)
 	return all
 }
 

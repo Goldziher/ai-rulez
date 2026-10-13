@@ -19,6 +19,7 @@ func authoringCapabilities() []Capability {
 	return []Capability{
 		{
 			ID: "init", Kind: Paired, CLI: []string{"init"}, Tool: "init_project",
+			Flags: []FlagPair{{Flag: "source"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"config-dir", "domains", "setup-hooks", "skip-content", "from", "force"},
 					Reason: "init seeds a project interactively or from a source; init_project writes the minimal config.toml and refuses to overwrite"},

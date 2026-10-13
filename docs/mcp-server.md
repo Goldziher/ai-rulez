@@ -1086,6 +1086,7 @@ to overwrite an existing configuration.
 - `with_agents` (optional, boolean): Also create a sample agent, `agents/code-reviewer.md`. `agents/` itself is always created.
 - `all_providers` (optional, boolean): Enable the curated set of tool presets
 - `popular_providers` (optional, boolean): Same curated set — a shortcut for `all_providers`
+- `source` (optional, string): `ai-rulez` (default) or `agents`. With `agents` it writes `.agents/ai-rulez.toml` and a starter `AGENTS.md` (when there is none) instead of the `.ai-rulez/` layout; see [.agents as a source](agents-source.md)
 - `working_directory` (optional, string): Directory to operate in
 
 #### `get_version`

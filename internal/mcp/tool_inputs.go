@@ -101,6 +101,7 @@ type initIn struct {
 	WithAgents       bool     `json:"with_agents,omitempty" jsonschema:"Include sample agent configurations"`
 	AllProviders     bool     `json:"all_providers,omitempty" jsonschema:"Enable all supported providers"`
 	PopularProviders bool     `json:"popular_providers,omitempty" jsonschema:"Enable a curated list of popular providers"`
+	Source           string   `json:"source,omitempty" jsonschema:"Where the content lives: 'ai-rulez' (the .ai-rulez tree, default) or 'agents' (AGENTS.md and .agents/, configured in .agents/ai-rulez.toml)"`
 	workDirArg
 }
 

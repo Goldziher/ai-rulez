@@ -53,10 +53,34 @@ When both files exist, `.agents/ai-rulez.toml` is used and the other is ignored.
   `AGENTS.md` and `.agents/skills`) is not fed its own output. The ignored files are named in a warning; delete them or
   replace them with hand-written files.
 
+## Not covered
+
+- A nested `<scope>/AGENTS.md` is generated for `[[scopes]]` in the `ai-rulez` source and is never written here; as a
+  source only the root `AGENTS.md` is read.
+- `AGENTS.md` is one context file. Splitting it at its headings (`convert --split-headings` for a copied file) has no
+  equivalent for a file that is read in place.
+- Hooks, MCP servers, permissions, presets, profiles and roles stay in the TOML configuration: no standard defines
+  them, and no ai-rulez extension folder exists for them.
+
 ## Validating
 
 `ai-rulez validate` checks `source` (`"ai-rulez"` or `"agents"`; `source = "ai-rulez"` contradicts a configuration in
 `.agents/ai-rulez.toml`) and the content it reads.
+
+## Starting a project
+
+- `ai-rulez init --source agents` writes `.agents/ai-rulez.toml` and, when the project has none, a starter `AGENTS.md`.
+  It creates no `.ai-rulez` tree and no example content: the content directories belong to the standards. With
+  `--config-dir .ai-rulez` the configuration goes to `.ai-rulez/config.toml` with `source = "agents"` instead. An
+  existing configuration is only replaced with `--force`, which keeps the old file as `<file>.bak-<timestamp>`; the
+  `.agents` directory itself is never moved aside. The MCP tool `init_project` takes the same `source` argument.
+- `ai-rulez init --source agents --from CLAUDE.md,.cursor` and `ai-rulez convert --into .agents` move other tools'
+  files into the layout above. What the agents source already reads where it is (the root `AGENTS.md`, everything
+  under `.agents`) is left in place and reported as such, the configuration goes to `.agents/ai-rulez.toml` and
+  personal content to `.agents/.ai-rulez/local`. The files the tools wrote are never modified; the first `generate`
+  replaces them.
+- To go back to the `.ai-rulez` tree, set `source = "ai-rulez"` in `.ai-rulez/config.toml` and move the files back (or
+  run `convert --from native` over the generated tool files).
 
 ## What generate writes
 

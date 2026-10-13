@@ -919,6 +919,14 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		return ToolError(err)
 	}
 
+	switch source := request.GetString("source", ""); source {
+	case "", config.SourceAIRulez:
+	case config.SourceAgents:
+		return initAgentsProject(ctx, request, baseDir, projectName, presets)
+	default:
+		return ToolError(fmt.Errorf("unknown source %q: use %q or %q", source, config.SourceAIRulez, config.SourceAgents))
+	}
+
 	// The same V4 TOML layout `ai-rulez init` creates.
 	aiRulesDir := filepath.Join(baseDir, ".ai-rulez")
 	configPath := filepath.Join(aiRulesDir, "config.toml")
@@ -945,6 +953,38 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 
 	return ToolSuccess(map[string]interface{}{
 		keyMessage: "Project initialized successfully",
+		keyPath:    configPath,
+	})
+}
+
+// initAgentsProject initializes a project whose content is AGENTS.md and .agents:
+// .agents/ai-rulez.toml and, when the project has none, a starter AGENTS.md. It
+// never overwrites either.
+func initAgentsProject(ctx context.Context, request *ToolRequest, baseDir, projectName string, presets []string) (*mcp.CallToolResult, error) {
+	agentsDir := filepath.Join(baseDir, config.AgentsDirName)
+	configPath := filepath.Join(agentsDir, config.AgentsConfigFilename)
+	if _, err := os.Stat(configPath); err == nil {
+		return ToolError(fmt.Errorf("%s already exists; init_project does not overwrite a configuration", configPath))
+	}
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+		return ToolError(fmt.Errorf("failed to create %s: %w", config.AgentsDirName, err))
+	}
+	if err := os.WriteFile(configPath, []byte(templates.InitAgentsConfigTOML(projectName, presets, true)), 0o644); err != nil {
+		return ToolError(fmt.Errorf("failed to write config file: %w", err))
+	}
+	agentsMD := filepath.Join(baseDir, config.AgentsMDFilename)
+	if _, err := os.Lstat(agentsMD); err != nil {
+		if err := os.WriteFile(agentsMD, []byte(templates.InitAgentsMD(projectName)), 0o644); err != nil {
+			return ToolError(fmt.Errorf("failed to write %s: %w", config.AgentsMDFilename, err))
+		}
+	}
+	if request.GetBool("with_agents", false) {
+		if err := addSampleAgent(ctx, baseDir); err != nil {
+			return ToolError(err)
+		}
+	}
+	return ToolSuccess(map[string]interface{}{
+		keyMessage: "Project initialized successfully (source = agents)",
 		keyPath:    configPath,
 	})
 }

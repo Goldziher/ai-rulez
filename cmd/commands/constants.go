@@ -36,6 +36,7 @@ const (
 	kindSkill     = "skill"
 	kindCommand   = "command"
 	presetClaude  = "claude"
+	typeConfig    = "config"
 	labelChanged  = "changed"
 )
 
