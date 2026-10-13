@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **The compact generated header keeps its wording for every default project.** The `STRUCTURE:` line was reworded for all projects, which changed every compact-header `Content-Hash`; only an `.agents` source project uses the prefixed directory names now.
 - **Interrupting a recursive `validate` or `generate --check` stops it from starting more roots, and loggers made with attributes or groups share one write lock.** The workers kept taking roots after Ctrl-C, and the run now exits 1 naming the interruption instead of reporting the roots it did read as the whole result. Child loggers (`With`, `WithGroup`) each had their own lock on the shared stderr stream, so concurrent records could interleave.
 - **A recursive `validate --strict` loads the git trees of different repositories in parallel.** The tree cache held its lock for the whole load, so roots of separate repositories queued behind each other; now only roots of one repository share a load.
 - **The shared git index listing of a recursive run no longer answers where `git ls-files -- :(literal)` would differ.** A path below a submodule now goes to git (as before the listing), which fails closed there.

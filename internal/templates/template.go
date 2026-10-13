@@ -247,12 +247,18 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 		"Content: " + fmt.Sprintf("rules=%d, sections=%d, agents=%d", data.RuleCount, data.SectionCount, data.AgentCount),
 	}
 
+	// The default layout keeps its historical wording: the line feeds the
+	// Content-Hash, so rewording it would drift every existing project.
+	structure := "  " + source + ", rules/, context/, skills/, agents/ (root)"
+	if data != nil && data.Config != nil && data.Config.UsesAgentsSource() {
+		structure = "  " + source + ", " + dir + "rules/, " + dir + "context/, " + dir + "skills/, " + dir + "agents/ (root)"
+	}
 	banner = append(banner,
 		"",
 		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in "+dir,
 		"",
 		"STRUCTURE:",
-		"  "+source+", "+dir+"rules/, context/, skills/, agents/ (root)",
+		structure,
 		"  "+dir+"domains/{name}/ (profile-specific)",
 		"",
 		"AI AGENT INSTRUCTIONS:",

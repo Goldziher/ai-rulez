@@ -696,3 +696,13 @@ func TestCustomHeaderIgnoredWhenBlank(t *testing.T) {
 	assert.Contains(t, templates.GenerateHeader(data), "WHAT IS AI-RULEZ",
 		"blank text falls back to the style banner")
 }
+
+// TestBuildCompactHeader_DefaultStructureLineIsStable pins the wording the
+// Content-Hash of every existing project covers.
+func TestBuildCompactHeader_DefaultStructureLineIsStable(t *testing.T) {
+	data := createTemplateData("MyProject", timestampedConfig("MyProject", "compact"))
+
+	header := templates.GenerateHeader(data)
+
+	assert.Contains(t, header, "\n  .ai-rulez/config.toml, rules/, context/, skills/, agents/ (root)\n")
+}
