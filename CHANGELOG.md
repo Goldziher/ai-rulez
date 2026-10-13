@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **With `source = "agents"`, `.github/copilot-instructions.md` no longer repeats the text of `AGENTS.md`.** The exclusion of tools that read `AGENTS.md` themselves was dropped for a root file several presets share, so Copilot still got a copy; the file is now negated directly when every configured preset writing it reads `AGENTS.md`. Gemini CLI is no longer treated as a reader, since `agents_md` is off and its settings load only `GEMINI.md`.
 - **`generate --plugin` no longer writes into the `.agents` source.** With `source = "agents"` the Codex index `.agents/plugins/marketplace.json` (and any bundle placed under `.agents`) silently replaced a hand-written file; plugin outputs on `AGENTS.md` or under `.agents/` are now skipped with a warning.
 - **`validate` no longer reports OKF findings twice when the `[okf]` bundle is the configuration directory under another spelling.** A relative path, a trailing separator or a symlink to it defeated the comparison.
 - **A plugin sidecar generated on Windows records no file modes.** It recorded `0644` for every file (Windows has no executable bit), so `verify --plugin` on Linux reported `mode` drift for each script ([#403](https://github.com/Goldziher/ai-rulez/issues/403)).

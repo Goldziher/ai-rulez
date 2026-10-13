@@ -6901,7 +6901,7 @@ yours: a second `generate` leaves every byte of them alone, and `generate --chec
 - The text of your root `AGENTS.md` is one of those context items (`agents`), so a tool without native `AGENTS.md`
   support, such as Claude Code or Gemini, gets it inside its own file. A tool that loads `AGENTS.md` itself (Codex,
   Cursor, Copilot and the others in the [tool matrix](agents-md.md)) is left out of that item, so it never sees the
-  text twice. Such a tool receives your rules, agents and commands only where it has a place for them: Codex has no
+  text twice. Gemini CLI is not one of them in this source: `agents_md` is off, so its settings list only `GEMINI.md`, and `GEMINI.md` carries the text. A root file two presets share (`.github/copilot-instructions.md` for `copilot` and `copilot-cli`) omits the text only when every configured preset writing it reads `AGENTS.md`. Such a tool receives your rules, agents and commands only where it has a place for them: Codex has no
   rules folder, so it reads your `AGENTS.md` and `.agents/skills` and nothing more. Put what every tool must follow
   in `AGENTS.md`.
 - `generate --plugin` follows the same rule: a plugin output that would land on `AGENTS.md` or under `.agents/`
