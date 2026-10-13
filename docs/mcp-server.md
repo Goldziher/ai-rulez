@@ -1021,7 +1021,7 @@ Generate output files from the current configuration.
 - `config_file` (optional, string): Path to the root configuration file
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
 - `dry_run` (optional, boolean): Preview changes without writing files
-- `check` (optional, boolean): Write nothing and report the generated files that differ from what the sources render (`generate --check`). The result is `{"status", "roots", "blocked", "differing": [{"kind", "path"}]}`, and drift is an error result, as the command exits 2
+- `check` (optional, boolean): Write nothing and report the generated files that differ from what the sources render (`generate --check`). The result is `{"status", "roots", "blocked", "differing": [{"kind", "path", "note"?}]}`, and drift is an error result, as the command exits 2
 - `offline` (optional, boolean): Never use the network; includes and installed skills come from the lock and the cache (`--offline`)
 - `profile` (optional, string): Profile to generate, or a comma-separated list to compose several (`--profile`)
 - `role` (optional, string): Generate the slice of content a role selects (`--role`); mutually exclusive with `profile`

@@ -74,7 +74,9 @@ func TestCheckDrift_MergedDocumentOwnership(t *testing.T) {
 			if tt.stale {
 				assert.Equal(t, []Drift{{Path: ".mcp.json", Kind: DriftStale}}, drift)
 			} else {
-				assert.Empty(t, drift)
+				// An edited document is no longer whole-owned, so generate would
+				// also start ignoring the local manifest: the block, not the document.
+				assert.NotContains(t, driftPaths(drift), ".mcp.json")
 			}
 		})
 	}

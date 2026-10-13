@@ -46,6 +46,9 @@ const (
 type Drift struct {
 	Path string    `json:"path"` // slash-separated, relative to the project root
 	Kind DriftKind `json:"kind"`
+	// Note says which part of Path drifted when it is not the whole file: the
+	// managed block of a .gitignore.
+	Note string `json:"note,omitempty"`
 }
 
 // outputState classifies one rendered file against the disk without writing

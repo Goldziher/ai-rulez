@@ -53,8 +53,9 @@ func driftLoadOptions() []config.LoadOption {
 
 // checkConfigDrift runs the drift check for one loaded config and prints the
 // differing files. It returns how many differ.
-func checkConfigDrift(cfg *config.Config, rep *driftReport) (differing, blocked int, err error) {
+func checkConfigDrift(cfg *config.Config, rep *driftReport, sink *generator.GitignoreSink) (differing, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
+	attachRecursiveGitignoreSink(gen, cfg, sink)
 	gen.SetContext(gitutil.WithMemo(cmdContext()))
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
@@ -69,7 +70,7 @@ func checkConfigDrift(cfg *config.Config, rep *driftReport) (differing, blocked 
 		if d.Kind == generator.DriftBlocked {
 			blocked++
 		}
-		rep.add(d.Kind, displayDriftPath(cfg, d.Path))
+		rep.add(d.Kind, displayDriftPath(cfg, d.Path), d.Note)
 	}
 	return len(drift), blocked, nil
 }
@@ -86,6 +87,7 @@ type driftReport struct {
 type driftItem struct {
 	Kind string `json:"kind"`
 	Path string `json:"path"`
+	Note string `json:"note,omitempty"`
 }
 
 // driftDocument is the `generate --check --format json` document.
@@ -112,9 +114,13 @@ func (r *driftReport) writeJSON(status string, roots, blocked int) {
 	_ = jsondoc.Write(r.out.Stdout(), driftDocument{Status: status, Roots: roots, Blocked: blocked, Differing: items}) //nolint:errcheck // stdout write failure has nowhere to be reported
 }
 
-func (r *driftReport) add(kind generator.DriftKind, path string) {
+func (r *driftReport) add(kind generator.DriftKind, path, note string) {
 	if r.json {
-		r.items = append(r.items, driftItem{Kind: string(kind), Path: path})
+		r.items = append(r.items, driftItem{Kind: string(kind), Path: path, Note: note})
+		return
+	}
+	if note != "" {
+		r.out.Result("%s: %s (%s)\n", kind, path, note)
 		return
 	}
 	r.out.Result("%s: %s\n", kind, path)
@@ -123,17 +129,23 @@ func (r *driftReport) add(kind generator.DriftKind, path string) {
 // displayDriftPath shows a project-relative path relative to the working
 // directory, so a nested root reads as svc/CLAUDE.md.
 func displayDriftPath(cfg *config.Config, rel string) string {
-	abs, err := filepath.Abs(filepath.Join(cfg.BaseDir, filepath.FromSlash(rel)))
+	return displayDriftAbs(filepath.Join(cfg.BaseDir, filepath.FromSlash(rel)), rel)
+}
+
+// displayDriftAbs shows abs relative to the working directory, or fallback when
+// no relative form exists.
+func displayDriftAbs(abs, fallback string) string {
+	abs, err := filepath.Abs(abs)
 	if err != nil {
-		return rel
+		return fallback
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
-		return rel
+		return fallback
 	}
 	out, err := filepath.Rel(cwd, abs)
 	if err != nil {
-		return rel
+		return fallback
 	}
 	return filepath.ToSlash(out)
 }
@@ -175,7 +187,7 @@ func runDriftCheckGated(isRecursive bool, gate func(*config.Config) error) int {
 		renderError(os.Stderr, err)
 		return 1
 	}
-	n, blocked, err := checkConfigDrift(cfg, rep)
+	n, blocked, err := checkConfigDrift(cfg, rep, nil)
 	if err != nil {
 		renderError(os.Stderr, err)
 		return 1
@@ -210,6 +222,9 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 		return 0
 	}
 	total, totalBlocked, failed, gateDrift := 0, 0, 0, 0
+	// The roots share one managed block at the repository toplevel; each adds its
+	// patterns here and the block is judged once, after the last root.
+	sink := openRecursiveGitignoreSink()
 	for _, path := range paths {
 		cfg, err := loadProjectFile(cmdContext(), path, driftLoadOptions()...)
 		if err == nil {
@@ -238,7 +253,7 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 			failed++
 			continue
 		}
-		n, blocked, err := checkConfigDrift(cfg, rep)
+		n, blocked, err := checkConfigDrift(cfg, rep, sink)
 		if err != nil {
 			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "check generated files"))
 			failed++
@@ -249,6 +264,12 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 	}
 	if failed > 0 {
 		return 1
+	}
+	// A root that failed left its patterns out, so the block is only judged when
+	// every root was read (generate rewrites it under the same condition).
+	if d, ok := sink.Drift(logger.Std()); ok {
+		rep.add(d.Kind, displayDriftAbs(filepath.Join(sink.TopLevel(), filepath.FromSlash(d.Path)), d.Path), d.Note)
+		total++
 	}
 	if total == 0 && gateDrift > 0 {
 		rep.writeJSON(statusDrift, len(paths), totalBlocked)
