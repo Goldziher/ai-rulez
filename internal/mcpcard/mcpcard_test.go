@@ -204,7 +204,9 @@ func TestNamespaces(t *testing.T) {
 	}
 	repo := []struct{ in, want string }{
 		{"acme/skills", "io.github.acme"},
-		{"git.acme.test/acme/skills", "test.acme.git"},
+		{"git.acme.test/acme/skills", "test.acme.git.acme"},
+		{"github.com/acme/skills", "io.github.acme"},
+		{"GitHub.com/Acme/skills", "io.github.acme"},
 		{"", ""},
 		{"skills", ""},
 	}

@@ -272,7 +272,7 @@ func NamespaceFromDomain(domain string) string {
 }
 
 // NamespaceFromRepo is the namespace of a repository: owner/name (GitHub) is
-// io.github.owner, host/owner/name is the reversed host. It is empty when the
+// io.github.owner, github.com/owner/name is io.github.owner, and host/owner/name another host's reversed host followed by the owner. It is empty when the
 // repository is not one of those.
 func NamespaceFromRepo(repo string) string {
 	parts := strings.Split(repo, "/")
@@ -286,7 +286,13 @@ func NamespaceFromRepo(repo string) string {
 		if parts[0] == "" {
 			return ""
 		}
-		return NamespaceFromDomain(parts[0])
+		if strings.EqualFold(parts[0], "github.com") {
+			return "io.github." + strings.ToLower(parts[1])
+		}
+		if parts[1] == "" {
+			return ""
+		}
+		return NamespaceFromDomain(parts[0]) + "." + strings.ToLower(parts[1])
 	}
 	return ""
 }
