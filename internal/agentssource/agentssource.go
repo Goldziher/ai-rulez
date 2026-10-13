@@ -30,12 +30,12 @@ func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*con
 	var generated []string
 	screen := func(files []config.ContentFile) []config.ContentFile {
 		kept := files[:0:0]
-		for _, f := range files {
-			if isGenerated(view, f.Path) {
-				generated = append(generated, displayPath(cfg.BaseDir, f.Path))
+		for i := range files {
+			if isGenerated(view, files[i].Path) {
+				generated = append(generated, displayPath(cfg.BaseDir, files[i].Path))
 				continue
 			}
-			kept = append(kept, f)
+			kept = append(kept, files[i])
 		}
 		return kept
 	}
@@ -67,23 +67,23 @@ func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*con
 		cfg.Warn(config.AgentsMDFilename+" "+note.Reason, "source", config.SourceAgents)
 	}
 	taken := map[string]bool{}
-	for _, f := range tree.Context {
-		taken[f.Name] = true
+	for i := range tree.Context {
+		taken[tree.Context[i].Name] = true
 	}
-	for _, item := range md.Items {
-		name := item.Name
+	for i := range md.Items {
+		name := md.Items[i].Name
 		for taken[name] {
 			name += "-md"
 		}
 		taken[name] = true
-		tree.Context = append([]config.ContentFile{contextFile(cfg, name, item)}, tree.Context...)
+		tree.Context = append([]config.ContentFile{contextFile(cfg, name, &md.Items[i])}, tree.Context...)
 	}
 	return tree, nil
 }
 
 // contextFile turns an AGENTS.md item into a context file, parsing the
 // frontmatter it may carry like any other content file.
-func contextFile(cfg *config.Config, name string, item importer.Item) config.ContentFile {
+func contextFile(cfg *config.Config, name string, item *importer.Item) config.ContentFile {
 	meta, body, malformed := config.ParseFrontmatterChecked(string(item.Main))
 	return config.ContentFile{
 		Name:                 name,

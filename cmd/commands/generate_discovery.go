@@ -123,20 +123,7 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *discoveredConfigs
 
 	name := d.Name()
 
-	// Config directory at any depth: ".ai-rulez" by default, or the value of
-	// --config-dir (which may itself be a nested path such as .config/ai-rulez).
-	if isConfigDirPath(path) {
-		recordConfigDir(path, out, spinner)
-		return filepath.SkipDir
-	}
-
-	// Project-level .config/ai-rulez/ convention. Handled explicitly (and
-	// pruned) so the walk never descends into other tools' .config/ subtrees.
-	// A sibling .ai-rulez/ wins, matching the non-recursive precedence.
-	if configDir == "" && name == configConventionRoot {
-		if findConfigInDir(filepath.Join(filepath.Dir(path), defaultConfigDirName)) == "" {
-			recordConfigDir(filepath.Join(path, configConventionSubdir), out, spinner)
-		}
+	if recordedConfigLocation(path, name, out, spinner) {
 		return filepath.SkipDir
 	}
 
@@ -163,6 +150,39 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *discoveredConfigs
 	return nil
 }
 
+// recordedConfigLocation records the configuration that the directory at path
+// is or holds and reports whether path is such a location (the walk then does
+// not descend into it).
+//
+//   - .agents: a configuration kept in .agents/ai-rulez.toml (the "agents"
+//     source). Only the default discovery looks: an explicit --config-dir is
+//     honored exactly.
+//   - the config directory at any depth: ".ai-rulez" by default, or the value of
+//     --config-dir (which may itself be a nested path such as .config/ai-rulez).
+//     A sibling .agents/ai-rulez.toml takes precedence and was recorded already.
+//   - the project-level .config/ai-rulez/ convention. Handled explicitly (and
+//     pruned) so the walk never descends into other tools' .config/ subtrees. A
+//     sibling .ai-rulez/ or .agents/ai-rulez.toml wins, matching the
+//     non-recursive precedence.
+func recordedConfigLocation(path, name string, out *discoveredConfigs, spinner *progress.Bar) bool {
+	switch {
+	case configDir == "" && name == config.AgentsDirName:
+		recordAgentsConfig(path, out, spinner)
+	case isConfigDirPath(path):
+		if configDir != "" || !agentsConfigBeside(path) {
+			recordConfigDir(path, out, spinner)
+		}
+	case configDir == "" && name == configConventionRoot:
+		sibling := filepath.Join(filepath.Dir(path), defaultConfigDirName)
+		if findConfigInDir(sibling) == "" && !agentsConfigBeside(sibling) {
+			recordConfigDir(filepath.Join(path, configConventionSubdir), out, spinner)
+		}
+	default:
+		return false
+	}
+	return true
+}
+
 func targetConfigDirName() string {
 	if configDir != "" {
 		return configDir
@@ -178,6 +198,27 @@ func isConfigDirPath(path string) bool {
 	target := filepath.ToSlash(targetConfigDirName())
 	rel := filepath.ToSlash(path)
 	return rel == target || strings.HasSuffix(rel, "/"+target)
+}
+
+// agentsConfigBeside reports whether the directory beside dir (its sibling in the
+// project) holds .agents/ai-rulez.toml, which wins over dir's own configuration.
+func agentsConfigBeside(dir string) bool {
+	info, err := os.Stat(filepath.Join(filepath.Dir(dir), config.AgentsDirName, config.AgentsConfigFilename))
+	return err == nil && !info.IsDir()
+}
+
+// recordAgentsConfig appends .agents/ai-rulez.toml to out when the .agents
+// directory at dir holds one. Any other .agents directory belongs to some other
+// tool and is not a root.
+func recordAgentsConfig(dir string, out *discoveredConfigs, spinner *progress.Bar) {
+	file := filepath.Join(dir, config.AgentsConfigFilename)
+	if info, err := os.Stat(file); err != nil || info.IsDir() {
+		return
+	}
+	out.configs = append(out.configs, file)
+	if err := spinner.Add(1); err != nil {
+		logger.Debug("Failed to update spinner", "error", err)
+	}
 }
 
 // recordConfigDir appends dir's config file to out when one exists and bumps

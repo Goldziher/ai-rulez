@@ -75,6 +75,7 @@ const (
 	CheckLock      = "lock"
 	CheckIncludes  = "includes"
 	CheckTools     = "tools"
+	CheckSource    = "source"
 )
 
 // Finding is one diagnostic.
@@ -169,6 +170,7 @@ func Run(ctx context.Context, o Options) *Report {
 		{"config", checkConfig},
 		{"policy", checkPolicy},
 		{"presets", checkPresets},
+		{"source", checkSource},
 		{"mcp-env", checkMCPEnv},
 		{"mcp-scope", checkMCPScope},
 		{"drift", checkDrift},

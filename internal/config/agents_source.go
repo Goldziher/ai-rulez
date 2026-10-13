@@ -2,8 +2,10 @@ package config
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 
+	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )
 
@@ -27,6 +29,8 @@ const (
 	AgentsConfigFilename = "ai-rulez.toml"
 	// AgentsMDFilename is the root instruction file the "agents" source reads.
 	AgentsMDFilename = "AGENTS.md"
+	// sourceKey is the config key that selects the source.
+	sourceKey = "source"
 	// agentsStateDirName holds the manifest, lock and local state of a project
 	// whose configuration lives in .agents/ai-rulez.toml.
 	agentsStateDirName = ".ai-rulez"
@@ -54,6 +58,17 @@ func (c *Config) SourceDir() string {
 	return c.ConfigDir
 }
 
+// AuthoredRoot is the directory the project's own content is addressed from, and
+// the one a content file must lie in to count as authored here rather than
+// imported: the project root for the "agents" source (AGENTS.md and .agents sit
+// beside the config directory), the configuration directory otherwise.
+func (c *Config) AuthoredRoot() string {
+	if c.UsesAgentsSource() && c.BaseDir != "" {
+		return c.BaseDir
+	}
+	return c.ConfigDir
+}
+
 // ConfigPath is the main configuration file. It is not always inside ConfigDir:
 // .agents/ai-rulez.toml sits beside the .agents/.ai-rulez state directory that
 // ConfigDir names.
@@ -62,6 +77,61 @@ func (c *Config) ConfigPath() string {
 		return c.ConfigFilePath
 	}
 	return filepath.Join(c.ConfigDir, c.ConfigFile)
+}
+
+// Layout says where the pieces of a project live, given the config directory a
+// command was pointed at (.ai-rulez, .config/ai-rulez or .agents). The CRUD
+// commands and the MCP server use it to write content, the config file and the
+// machine-local tree to the right place without loading the project.
+type Layout struct {
+	// ConfigDir is the directory that holds the main config file.
+	ConfigDir string
+	// ConfigFile is the main config file.
+	ConfigFile string
+	// ContentDir holds the rules, context, skills, agents, commands, checks and
+	// domains directories: .agents for the "agents" source, ConfigDir otherwise.
+	ContentDir string
+	// StateDir holds the manifest, lock, local/ and config.local.toml.
+	StateDir string
+	// Agents is true when the content is read from AGENTS.md and .agents.
+	Agents bool
+}
+
+// LayoutOf resolves the layout of the config directory configDir. It reads the
+// config file only to learn its `source`; an unreadable file means the default.
+func LayoutOf(configDir string) Layout {
+	if base, ok := agentsLayoutBase(configDir); ok {
+		agents := filepath.Join(base, AgentsDirName)
+		return Layout{
+			ConfigDir: agents, ConfigFile: filepath.Join(agents, AgentsConfigFilename),
+			ContentDir: agents, StateDir: filepath.Join(agents, agentsStateDirName), Agents: true,
+		}
+	}
+	l := Layout{
+		ConfigDir: configDir, ConfigFile: filepath.Join(configDir, configTOMLFilename),
+		ContentDir: configDir, StateDir: configDir,
+	}
+	if readSource(l.ConfigFile) == SourceAgents {
+		l.ContentDir = filepath.Join(ProjectBaseDir(configDir), AgentsDirName)
+		l.Agents = true
+	}
+	return l
+}
+
+// readSource returns the `source` key of the TOML file at path, "" when it is
+// missing or the file cannot be read.
+func readSource(path string) string {
+	data, err := os.ReadFile(path) //nolint:gosec // the project's own config file
+	if err != nil {
+		return ""
+	}
+	var doc struct {
+		Source string `toml:"source"`
+	}
+	if toml.Unmarshal(data, &doc) != nil {
+		return ""
+	}
+	return doc.Source
 }
 
 // agentsLayoutBase returns the project directory when dir names the .agents

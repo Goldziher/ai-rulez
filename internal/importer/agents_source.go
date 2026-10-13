@@ -30,9 +30,9 @@ func ReadAgentsMD(fsys fs.FS, opt Options) AgentsMD {
 	}
 	r.flushProblems(p)
 	var out AgentsMD
-	for _, it := range p.Items {
-		if it.Kind == KindContext {
-			out.Items = append(out.Items, it)
+	for i := range p.Items {
+		if p.Items[i].Kind == KindContext {
+			out.Items = append(out.Items, p.Items[i])
 		}
 	}
 	out.Notes = p.Findings

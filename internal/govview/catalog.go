@@ -231,7 +231,7 @@ func allCatalogItems(cfg *config.Config) []config.RoleItem {
 }
 
 func relToConfig(cfg *config.Config, p string) string {
-	if rel, err := filepath.Rel(cfg.ConfigDir, p); err == nil && !safefs.RelEscapes(rel) {
+	if rel, err := filepath.Rel(cfg.AuthoredRoot(), p); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(p)

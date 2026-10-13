@@ -57,3 +57,38 @@ When both files exist, `.agents/ai-rulez.toml` is used and the other is ignored.
 
 `ai-rulez validate` checks `source` (`"ai-rulez"` or `"agents"`; `source = "ai-rulez"` contradicts a configuration in
 `.agents/ai-rulez.toml`) and the content it reads.
+
+## What generate writes
+
+`generate` translates the source to every tool except `.agents` itself. It drops every output that would land on
+`AGENTS.md`, a scope's `AGENTS.md`, or anything under `.agents/` (the skills tree, and the `.agents/rules`,
+`.agents/checks` and settings files some presets write), and says so in one info line. The files in those places are
+yours: a second `generate` leaves every byte of them alone, and `generate --check` stays clean.
+
+- `CLAUDE.md` is still generated: it is the shim that imports `@AGENTS.md`, so Claude Code reads your file.
+- Tools that read `AGENTS.md` and `.agents/skills` themselves (Codex, Cursor, Copilot, Gemini through
+  `context.fileName`, and the others in the [tool matrix](agents-md.md)) read the originals and need nothing written.
+- Rules, agents, commands and checks keep going to each tool's own folders (`.claude/rules`, `.cursor/rules`, ...).
+  An always-on rule or context file that exists only under `.agents/rules` or `.agents/context` has no `AGENTS.md`
+  to be inlined into, so it reaches the tools that have a rules folder only when it is scoped. Keep always-on
+  instructions in `AGENTS.md`, or set `agents_md = false` to give every tool its own full file (`AGENTS.md` and
+  `.agents` are still never written).
+- A generated header in `AGENTS.md` or a file under `.agents` marks it as output of an earlier run: it is never read
+  as source, and `generate` retires it like any generated leftover.
+
+## Commands
+
+- `clean` removes what `generate` wrote and never `AGENTS.md` or anything under `.agents`, not even with
+  `--include-edited` and whatever an old manifest lists.
+- `lock` and the lock checks pin `AGENTS.md` and the `.agents` tree; `ai-rulez.lock` is written to
+  `.agents/.ai-rulez/` (or beside the `.ai-rulez/config.toml`).
+- `generate --watch` watches `AGENTS.md` and `.agents`.
+- `add`, `remove` and `list` (and the MCP create, update and delete tools) work on `.agents/rules`,
+  `.agents/skills`, `.agents/domains/<name>` and the rest; the machine-local variants keep their files in the state
+  directory (`.agents/.ai-rulez/local`), which is gitignored. Profile, include and installed-skill changes are
+  saved to the configuration file in use.
+- `doctor` warns about a `.ai-rulez/config.toml` that `.agents/ai-rulez.toml` shadows, about `.ai-rulez` content
+  that `source = "agents"` does not read, and about generated files left in the source.
+- The `[guard]` hook keeps agents out of generated files only: `AGENTS.md` and `.agents` stay editable, and its
+  message points at them.
+- `generate --recursive`, `validate --recursive` and the MCP recursive tools find a nested `.agents/ai-rulez.toml`.

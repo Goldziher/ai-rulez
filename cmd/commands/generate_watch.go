@@ -234,7 +234,15 @@ func watchIgnore(path string) bool {
 func watchTargets(cfg *config.Config) []watch.Target {
 	var targets []watch.Target
 	if cfg != nil && cfg.ConfigDir != "" {
-		targets = append(targets, watch.Target{Path: cfg.ConfigDir})
+		if cfg.UsesAgentsSource() {
+			// The content is AGENTS.md and .agents; a config in .agents/ai-rulez.toml
+			// (and its state directory) is inside the watched .agents already.
+			targets = append(targets, watch.Target{Path: filepath.Join(cfg.BaseDir, config.AgentsDirName)},
+				watch.Target{Path: filepath.Join(cfg.BaseDir, config.AgentsMDFilename), File: true})
+		}
+		if !cfg.AgentsLayout {
+			targets = append(targets, watch.Target{Path: cfg.ConfigDir})
+		}
 		targets = append(targets, includeTargets(cfg)...)
 		return targets
 	}

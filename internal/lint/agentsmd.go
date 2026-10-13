@@ -15,9 +15,9 @@ const CodeClaudeMDShadow = "AR9Q0"
 // reads the shared AGENTS.md through this import.
 const agentsMDImport = "@AGENTS.md"
 
-// configLayouts returns the two places a nested root's configuration can live.
+// configLayouts returns the places a nested root's configuration can live.
 func configLayouts() []string {
-	return []string{".ai-rulez/config.toml", ".config/ai-rulez/config.toml"}
+	return []string{".agents/ai-rulez.toml", ".ai-rulez/config.toml", ".config/ai-rulez/config.toml"}
 }
 
 func registerAgentsMD(s *ruleSet) {

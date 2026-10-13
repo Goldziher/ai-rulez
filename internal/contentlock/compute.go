@@ -225,11 +225,20 @@ func (c *collector) configRoot() string {
 	return c.cfg.BaseDir
 }
 
+// sourceRoot is the AuthoredRoot, falling back to the project root.
+func (c *collector) sourceRoot() string {
+	if root := c.cfg.AuthoredRoot(); root != "" {
+		return root
+	}
+	return c.cfg.BaseDir
+}
+
 func (c *collector) relToConfig(p string) (string, bool) {
-	if c.cfg.ConfigDir == "" {
+	root := c.cfg.AuthoredRoot()
+	if root == "" {
 		return filepath.ToSlash(p), true
 	}
-	rel, err := filepath.Rel(c.cfg.ConfigDir, p)
+	rel, err := filepath.Rel(root, p)
 	if err != nil || safefs.RelEscapes(rel) {
 		return "", false
 	}
@@ -254,9 +263,9 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	}
 	mode := ModeRegular
 	if info, statErr := os.Stat(cf.Path); statErr == nil {
-		mode = c.modes.mode(c.configRoot(), cf.Path, info)
+		mode = c.modes.mode(c.sourceRoot(), cf.Path, info)
 	}
-	leaves := contentLeaves(c.modes, c.configRoot(), cf, primary, mode)
+	leaves := contentLeaves(c.modes, c.sourceRoot(), cf, primary, mode)
 	leaves = c.addFrontmatterHookScripts(kind, id, primary, leaves)
 	digest, err := TreeDigest(kind, leaves)
 	if err != nil {

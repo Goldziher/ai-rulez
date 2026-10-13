@@ -463,8 +463,12 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 			return nil
 		}
 		name := d.Name()
+		if useConventionFallback && name == config.AgentsDirName {
+			dirs = appendAgentsProject(dirs, path)
+			return filepath.SkipDir
+		}
 		if strings.HasSuffix(filepath.ToSlash(path), target) {
-			if dirHasRecursiveConfig(path) {
+			if ownsRecursiveConfig(path, useConventionFallback) {
 				dirs = append(dirs, projectDirAbove(path, configDirName))
 			}
 			return filepath.SkipDir
@@ -483,12 +487,36 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 	return dirs, err
 }
 
+// ownsRecursiveConfig reports whether the config directory at path holds the
+// configuration of its project: it has a config file, and under the default
+// discovery no .agents/ai-rulez.toml beside it takes precedence.
+func ownsRecursiveConfig(path string, defaultDiscovery bool) bool {
+	return dirHasRecursiveConfig(path) && (!defaultDiscovery || !agentsConfigBeside(path))
+}
+
+// appendAgentsProject adds the project that owns the .agents directory at path
+// when it holds a configuration (the "agents" source); any other .agents
+// directory belongs to some other tool.
+func appendAgentsProject(dirs []string, path string) []string {
+	if info, err := os.Stat(filepath.Join(path, config.AgentsConfigFilename)); err == nil && !info.IsDir() {
+		return append(dirs, filepath.Dir(path))
+	}
+	return dirs
+}
+
+// agentsConfigBeside reports whether the project that owns the config directory
+// at path also holds .agents/ai-rulez.toml, which wins over it.
+func agentsConfigBeside(path string) bool {
+	info, err := os.Stat(filepath.Join(filepath.Dir(path), config.AgentsDirName, config.AgentsConfigFilename))
+	return err == nil && !info.IsDir()
+}
+
 // conventionConfigProject reports the project directory owning a
 // `.config/ai-rulez/` config found at dotConfigPath, unless a sibling
 // `.ai-rulez/` config takes precedence.
 func conventionConfigProject(dotConfigPath string) (string, bool) {
 	projectDir := filepath.Dir(dotConfigPath)
-	if dirHasRecursiveConfig(filepath.Join(projectDir, ".ai-rulez")) {
+	if dirHasRecursiveConfig(filepath.Join(projectDir, ".ai-rulez")) || agentsConfigBeside(filepath.Join(projectDir, ".ai-rulez")) {
 		return "", false
 	}
 	return projectDir, dirHasRecursiveConfig(filepath.Join(dotConfigPath, "ai-rulez"))

@@ -78,6 +78,29 @@ func TestWatchTargets(t *testing.T) {
 				{Path: abs},
 			},
 		},
+		{
+			name: "agents source in .agents watches the standards, not the state directory twice",
+			cfg: &config.Config{
+				BaseDir: base, ConfigDir: filepath.Join(base, ".agents", ".ai-rulez"), ConfigFile: "ai-rulez.toml",
+				AgentsLayout: true,
+			},
+			want: []watch.Target{
+				{Path: filepath.Join(base, ".agents")},
+				{Path: filepath.Join(base, "AGENTS.md"), File: true},
+			},
+		},
+		{
+			name: "source key in the .ai-rulez config also watches the config directory",
+			cfg: &config.Config{
+				BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"), ConfigFile: "config.toml",
+				Source: config.SourceAgents,
+			},
+			want: []watch.Target{
+				{Path: filepath.Join(base, ".agents")},
+				{Path: filepath.Join(base, "AGENTS.md"), File: true},
+				{Path: filepath.Join(base, ".ai-rulez")},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

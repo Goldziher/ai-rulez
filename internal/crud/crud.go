@@ -62,9 +62,10 @@ type Operator interface {
 
 // OperatorImpl implements the Operator interface
 type OperatorImpl struct {
-	baseDir    string // project directory that owns the config directory
-	aiRulezDir string // config directory: .ai-rulez/ or .config/ai-rulez/
-	dirName    string // slash-separated aiRulezDir below baseDir when chosen explicitly (NewOperatorAt); "" means discover
+	baseDir    string        // project directory that owns the config directory
+	aiRulezDir string        // config directory: .ai-rulez/, .config/ai-rulez/ or .agents/
+	layout     config.Layout // where the content, config file and machine-local state live
+	dirName    string        // slash-separated aiRulezDir below baseDir when chosen explicitly (NewOperatorAt); "" means discover
 	filesMgr   *FileManager
 	local      bool        // route config mutations to the config.local.* overlay (see Local)
 	env        ambient.Env // environment for ~ and $VAR in local include paths; nil is the real one
@@ -107,10 +108,12 @@ func NewOperator(baseDir string) (*OperatorImpl, error) {
 			Wrapf(err, ".ai-rulez directory not found")
 	}
 
+	layout := config.LayoutOf(aiRulezDir)
 	return &OperatorImpl{
 		baseDir:    baseDir,
 		aiRulezDir: aiRulezDir,
-		filesMgr:   NewFileManager(aiRulezDir),
+		layout:     layout,
+		filesMgr:   NewFileManager(layout.ContentDir),
 	}, nil
 }
 
@@ -134,15 +137,17 @@ func NewOperatorAt(configDir string) (*OperatorImpl, error) {
 			Wrapf(statErr, "config directory not found")
 	}
 	base := config.ProjectBaseDir(abs)
-	rel, err := filepath.Rel(base, abs)
+	layout := config.LayoutOf(abs)
+	rel, err := filepath.Rel(base, layout.ConfigDir)
 	if err != nil {
 		return nil, oops.With("path", abs).Wrapf(err, "resolve config directory")
 	}
 	return &OperatorImpl{
 		baseDir:    base,
-		aiRulezDir: abs,
+		aiRulezDir: layout.ConfigDir,
+		layout:     layout,
 		dirName:    filepath.ToSlash(rel),
-		filesMgr:   NewFileManager(abs),
+		filesMgr:   NewFileManager(layout.ContentDir),
 	}, nil
 }
 

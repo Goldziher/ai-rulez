@@ -131,6 +131,12 @@ func kindLabel(k Kind) string {
 // relative to the config directory, prefixed with its name (".ai-rulez/…" or
 // ".config/ai-rulez/…"), or the base name when the file lies elsewhere.
 func sourceLabel(p string, cfg *config.Config) string {
+	if cfg != nil && cfg.UsesAgentsSource() && cfg.BaseDir != "" && p != "" {
+		// The source sits in the project itself: the label is the project-relative path.
+		if rel, err := filepath.Rel(cfg.BaseDir, p); err == nil && !safefs.RelEscapes(rel) {
+			return filepath.ToSlash(rel)
+		}
+	}
 	if cfg != nil && cfg.ConfigDir != "" && p != "" {
 		if rel, err := filepath.Rel(cfg.ConfigDir, p); err == nil && !safefs.RelEscapes(rel) {
 			name := cfg.ConfigDirName

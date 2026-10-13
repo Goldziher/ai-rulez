@@ -24,13 +24,13 @@ const (
 func (op *OperatorImpl) Local() *OperatorImpl {
 	local := *op
 	local.local = true
-	local.filesMgr = NewFileManager(filepath.Join(op.aiRulezDir, localContentDir))
+	local.filesMgr = NewFileManager(filepath.Join(op.layout.StateDir, localContentDir))
 	local.filesMgr.private = true
-	local.filesMgr.root = op.aiRulezDir
+	local.filesMgr.root = op.layout.StateDir
 	// Content written here may hold secrets: fail closed unless the tree is
 	// ignored first.
 	local.filesMgr.guard = func() error {
-		return gitignore.EnsureEntries(op.log, op.baseDir, config.LocalGitignorePatterns(op.aiRulezDir)) //nolint:wrapcheck // already contextual
+		return gitignore.EnsureEntries(op.log, op.baseDir, config.LocalGitignorePatterns(op.layout.StateDir)) //nolint:wrapcheck // already contextual
 	}
 	return &local
 }

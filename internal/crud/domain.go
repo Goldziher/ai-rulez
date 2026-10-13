@@ -103,7 +103,7 @@ func (op *OperatorImpl) CheckDomainRemovable(ctx context.Context, name string) e
 
 // ListDomains scans the domains directory and returns information about all domains
 func (op *OperatorImpl) ListDomains(ctx context.Context) ([]DomainInfo, error) {
-	domainsDir := filepath.Join(op.aiRulezDir, "domains")
+	domainsDir := filepath.Join(op.layout.ContentDir, "domains")
 
 	// If domains directory doesn't exist, return empty list
 	if !op.filesMgr.PathExists(domainsDir) {
