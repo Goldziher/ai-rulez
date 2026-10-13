@@ -28,7 +28,7 @@ func (op *OperatorImpl) refreshIndexes(ctx context.Context) error {
 	if op.local || !op.isBundle() {
 		return nil
 	}
-	if err := okfbridge.RefreshIndexes(ctx, op.aiRulezDir); err != nil {
+	if err := okfbridge.RefreshIndexes(ctx, op.layout.ContentDir); err != nil {
 		return oops.Hint("The file was written; run 'ai-rulez migrate okf' to rebuild the index.md files.").Wrapf(err, "refresh index.md files")
 	}
 	return nil
@@ -37,7 +37,7 @@ func (op *OperatorImpl) refreshIndexes(ctx context.Context) error {
 // isBundle reports whether the configuration directory is an OKF bundle: it has a
 // root index.md.
 func (op *OperatorImpl) isBundle() bool {
-	info, err := os.Stat(filepath.Join(op.aiRulezDir, okf.IndexFile))
+	info, err := os.Stat(filepath.Join(op.layout.ContentDir, okf.IndexFile))
 	return err == nil && !info.IsDir()
 }
 
@@ -49,7 +49,7 @@ func (op *OperatorImpl) ConfigDir() string { return op.aiRulezDir }
 // operator.
 func (op *OperatorImpl) ConfigFile() string {
 	if op.local {
-		return filepath.Join(op.aiRulezDir, "config.local.toml")
+		return filepath.Join(op.layout.StateDir, "config.local.toml")
 	}
-	return filepath.Join(op.aiRulezDir, "config.toml")
+	return op.layout.ConfigFile
 }

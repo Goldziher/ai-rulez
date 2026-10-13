@@ -660,7 +660,7 @@ func (r *runner) collect() {
 	if c == nil {
 		return
 	}
-	configDir, _ := filepath.Abs(r.cfg.ConfigDir) //nolint:errcheck // falls back to empty
+	configDir, _ := filepath.Abs(r.cfg.AuthoredRoot()) //nolint:errcheck // falls back to empty
 	r.addTree(configDir, "", c.Rules, c.Context, c.Skills, c.Agents, c.Commands, c.Checks)
 	names := make([]string, 0, len(c.Domains))
 	for n := range c.Domains {

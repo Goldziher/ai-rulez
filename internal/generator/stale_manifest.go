@@ -148,6 +148,9 @@ func (g *Generator) staleVerdictFor(relPath, absPath string, digests, assets map
 		g.log().Warn("Skipping generated manifest path outside project", "path", relPath)
 		return staleKeep
 	}
+	if !g.userMode && g.isAgentsSource(absPath) {
+		return staleKeep // AGENTS.md and .agents are the source, never a leftover
+	}
 	if g.userMode && !g.userManifestEntryOK(relPath, absPath) {
 		return staleKeep
 	}

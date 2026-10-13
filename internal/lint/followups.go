@@ -235,7 +235,8 @@ func (r *runner) checkCollapsed() {
 	if r.cfg.Content == nil {
 		return
 	}
-	configDir, _ := filepath.Abs(r.cfg.ConfigDir) //nolint:errcheck // falls back to empty
+	configDir, _ := filepath.Abs(r.cfg.SourceDir())   //nolint:errcheck // falls back to empty
+	authored, _ := filepath.Abs(r.cfg.AuthoredRoot()) //nolint:errcheck // falls back to empty
 	allow := map[string]bool{}
 	for _, a := range r.lc.AllowOverrides {
 		allow[strings.ToLower(strings.TrimSpace(a))] = true
@@ -246,18 +247,11 @@ func (r *runner) checkCollapsed() {
 		if allow[name] {
 			continue
 		}
-		allowed := false
-		for _, p := range paths {
-			scope := scopeOf(p, configDir)
-			if scope != "" && allow[scope+"/"+name] {
-				allowed = true
-			}
-		}
-		if allowed {
+		if collapseAllowed(allow, name, paths, configDir, authored) {
 			continue
 		}
 		anchor := dup.Winner
-		if abs, err := filepath.Abs(anchor); err != nil || !filepath.IsAbs(dup.Winner) || !safefs.Within(configDir, abs) {
+		if abs, err := filepath.Abs(anchor); err != nil || !filepath.IsAbs(dup.Winner) || !safefs.Within(authored, abs) {
 			anchor = dup.Losers[0]
 		}
 		abs, _ := filepath.Abs(anchor) //nolint:errcheck // display only
@@ -302,6 +296,23 @@ func (r *runner) labelPaths(paths []string) string {
 		out[i] = r.labelPath(p)
 	}
 	return strings.Join(out, ", ")
+}
+
+// collapseAllowed reports whether lint.allow_overrides lists a copy of name by its
+// scope (a domain, "import"...). sourceDir is where the scopes are rooted;
+// authored is the project's own content root, which also holds the root
+// AGENTS.md of an "agents" source outside .agents.
+func collapseAllowed(allow map[string]bool, name string, paths []string, sourceDir, authored string) bool {
+	for _, p := range paths {
+		scope := scopeOf(p, sourceDir)
+		if scope == "import" && filepath.IsAbs(p) && safefs.Within(authored, p) {
+			scope = ""
+		}
+		if scope != "" && allow[scope+"/"+name] {
+			return true
+		}
+	}
+	return false
 }
 
 // scopeOf names where a copy lives: its domain, "builtin" for an embedded file,

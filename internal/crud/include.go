@@ -138,7 +138,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 // and saves it, without loading the project: no include is resolved and nothing
 // is fetched, so a configuration the loader refuses can still be repaired.
 func (op *OperatorImpl) editSharedConfig(edit func(cfg *config.Config) error) error {
-	path := filepath.Join(op.aiRulezDir, "config.toml")
+	path := op.layout.ConfigFile
 	data, err := os.ReadFile(path) //nolint:gosec // G304: the project's own config file
 	if err != nil {
 		return oops.With("path", path).Wrapf(err, "read config")

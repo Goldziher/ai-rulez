@@ -876,10 +876,11 @@ func treeFiles(t *ContentTree, kind string) []ContentFile {
 }
 
 func (c *Config) relToConfigDir(p string) string {
-	if p == "" || c.ConfigDir == "" {
+	root := c.AuthoredRoot()
+	if p == "" || root == "" {
 		return filepath.ToSlash(p)
 	}
-	if rel, err := filepath.Rel(c.ConfigDir, p); err == nil && !safefs.RelEscapes(rel) {
+	if rel, err := filepath.Rel(root, p); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(p)

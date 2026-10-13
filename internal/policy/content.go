@@ -88,7 +88,7 @@ func (c *contentApplier) imported(path string) bool {
 	// A configuration loaded from a relative directory carries relative paths:
 	// compare absolute forms so none of them reads as "not imported".
 	path = absPath(path)
-	if c.cfg.ConfigDir == "" || !safefs.Within(absPath(c.cfg.ConfigDir), path) {
+	if c.cfg.AuthoredRoot() == "" || !safefs.Within(absPath(c.cfg.AuthoredRoot()), path) {
 		return true
 	}
 	for i := range c.cfg.Includes {
@@ -101,7 +101,7 @@ func (c *contentApplier) imported(path string) bool {
 			root = filepath.Join(c.cfg.BaseDir, root)
 		}
 		root = absPath(root)
-		if safefs.Within(root, path) && !safefs.Within(absPath(c.cfg.ConfigDir), root) {
+		if safefs.Within(root, path) && !safefs.Within(absPath(c.cfg.AuthoredRoot()), root) {
 			return true
 		}
 	}

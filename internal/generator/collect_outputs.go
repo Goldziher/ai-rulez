@@ -148,6 +148,9 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 		return nil, err
 	}
 
+	// The "agents" source reads AGENTS.md and .agents; nothing may be written there.
+	g.dropAgentsSourceOutputs(allOutputs, &tempCfg)
+
 	return &presetRender{byPreset: allOutputs, profile: activeProfile, content: contentTree, run: run}, nil
 }
 

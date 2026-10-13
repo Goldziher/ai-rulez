@@ -74,7 +74,7 @@ func swallowedKeyIn(path, parent, display string, body map[string]any) error {
 // (an include, a skill source), so a value that is no source name stays an
 // unknown key of its table rather than a swallowed top-level setting.
 func looksLikeTopLevelValue(key string, value any) bool {
-	if key != "source" {
+	if key != sourceKey {
 		return true
 	}
 	name, ok := value.(string)
