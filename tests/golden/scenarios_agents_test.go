@@ -10,6 +10,7 @@ func agentsSourceFiles(configPath, configBody string) map[string]string {
 			"# Review\n\nRead the diff first, then the tests.\n",
 		".agents/skills/review/references/checklist.md": "- Is it tested?\n- Is it documented?\n",
 		".agents/rules/go-style.md":                     "---\ndescription: Go style\nglobs: [\"**/*.go\"]\n---\n\nWrap errors with oops.\n",
+		".agents/rules/always.md":                       "---\ndescription: Always on\n---\n\nKeep functions small.\n",
 		".agents/agents/reviewer.md":                    "---\ndescription: Reviews changes\n---\n\nReview the change for correctness.\n",
 	}
 }

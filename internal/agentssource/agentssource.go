@@ -85,6 +85,13 @@ func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*con
 // frontmatter it may carry like any other content file.
 func contextFile(cfg *config.Config, name string, item *importer.Item) config.ContentFile {
 	meta, body, malformed := config.ParseFrontmatterChecked(string(item.Main))
+	if readers := agentsMDReaders(cfg); len(readers) > 0 && (meta == nil || len(meta.Targets) == 0) {
+		// A tool that loads AGENTS.md itself needs no copy of it in its own files.
+		if meta == nil {
+			meta = &config.Metadata{}
+		}
+		meta.Targets = readers
+	}
 	return config.ContentFile{
 		Name:                 name,
 		Path:                 filepath.Join(cfg.BaseDir, config.AgentsMDFilename),
@@ -92,6 +99,21 @@ func contextFile(cfg *config.Config, name string, item *importer.Item) config.Co
 		Metadata:             meta,
 		MalformedFrontmatter: malformed,
 	}
+}
+
+// agentsMDReaders lists, as negated targets, the configured presets that read
+// the root AGENTS.md on their own.
+func agentsMDReaders(cfg *config.Config) []string {
+	var out []string
+	for i := range cfg.Presets {
+		if !cfg.Presets[i].IsBuiltIn() {
+			continue
+		}
+		if consumer, ok := config.SharedOutputConsumerFor(cfg.Presets[i].BuiltIn); ok && consumer.Reads(config.SharedAgentsMD) {
+			out = append(out, "!"+cfg.Presets[i].BuiltIn)
+		}
+	}
+	return out
 }
 
 // isGenerated reports whether the file at path carries the generated header.

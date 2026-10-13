@@ -596,7 +596,7 @@ source = "ai-rulez"  # Default: the .ai-rulez content tree
 `"agents"` reads the open standards instead of the `.ai-rulez` content tree: the root `AGENTS.md`, Agent Skills in
 `.agents/skills/<name>/SKILL.md`, and the ai-rulez layout under `.agents/` for what the standards lack. ai-rulez
 translates that content to every other tool and never writes `AGENTS.md` or anything under `.agents/`. A configuration
-kept in `.agents/ai-rulez.toml` implies `source = "agents"`. See [`.agents` as a source](agents-source.md).
+kept in `.agents/ai-rulez.toml` implies `source = "agents"`. It forces per-tool files (`agents_md` off) and rejects an explicit `agents_md = true`. See [`.agents` as a source](agents-source.md).
 
 ### `agents_md`
 

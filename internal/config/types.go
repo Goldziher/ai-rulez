@@ -161,6 +161,9 @@ type Config struct {
 	// Run is the state of the generation in progress; nil outside one.
 	Run        *RunState `yaml:"-" json:"-" toml:"-"`
 	ConfigFile string    `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
+	// agentsMDOptIn records an explicit agents_md = true in the main config file,
+	// which the agents source rejects (see validateSource).
+	agentsMDOptIn bool
 	// ConfigFilePath is the absolute path of the main config file; it differs from
 	// ConfigDir/ConfigFile for a configuration kept in .agents/ai-rulez.toml.
 	ConfigFilePath string `yaml:"-" json:"-" toml:"-"`

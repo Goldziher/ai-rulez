@@ -46,6 +46,7 @@ func TestAgentsSourceLifecycle(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"), "init --source agents creates no .ai-rulez tree")
 	writeAgentsFile(t, dir, "AGENTS.md", e2eAgentsMD)
 	writeAgentsFile(t, dir, ".agents/skills/review/SKILL.md", e2eSkill)
+	writeAgentsFile(t, dir, ".agents/rules/always.md", "---\ndescription: Always on\n---\n\nALWAYS_ON_BODY keep functions small.\n")
 	writeAgentsFile(t, dir, ".agents/ai-rulez.toml",
 		"version = \"5.0\"\nname = \"demo\"\ngitignore = false\npresets = [\"claude\", \"cursor\", \"codex\"]\n")
 
@@ -54,8 +55,10 @@ func TestAgentsSourceLifecycle(t *testing.T) {
 	require.Equal(t, 0, first.ExitCode, first.Stderr)
 	assert.Equal(t, e2eAgentsMD, readAgentsFile(t, dir, "AGENTS.md"))
 	assert.Equal(t, e2eSkill, readAgentsFile(t, dir, ".agents/skills/review/SKILL.md"))
-	assert.Contains(t, readAgentsFile(t, dir, "CLAUDE.md"), "@AGENTS.md")
+	assert.Contains(t, readAgentsFile(t, dir, "CLAUDE.md"), "Use tabs.", "CLAUDE.md is the full file with the text of AGENTS.md")
+	assert.NotContains(t, readAgentsFile(t, dir, "CLAUDE.md"), "@AGENTS.md")
 	assert.FileExists(t, filepath.Join(dir, ".claude", "skills", "review", "SKILL.md"))
+	assert.Contains(t, readAgentsFile(t, dir, ".claude/rules/always.md"), "ALWAYS_ON_BODY", "an always-on .agents rule reaches Claude")
 	assert.Contains(t, first.Stderr+first.Stdout, "AGENTS.md and .agents/ are the source")
 
 	// a second run changes nothing and --check agrees
