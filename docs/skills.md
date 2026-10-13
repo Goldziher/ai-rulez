@@ -71,6 +71,14 @@ and ignores unknown fields; the [Agent Skills specification](https://agentskills
 `paths` (or `globs`) on a skill makes Claude Code and Cursor load it only when matching files are in play. Patterns use
 the same syntax as rule `paths`. The other tools ignore the key.
 
+## Hooks that run bundled scripts
+
+A skill's `hooks` frontmatter runs commands while the skill is active. Claude Code sets `${CLAUDE_SKILL_DIR}` (also
+`$CLAUDE_SKILL_DIR`) to the skill's own directory, so `command: "${CLAUDE_SKILL_DIR}/scripts/check.sh"` reaches a
+script bundled with the skill whatever the working directory is. `validate --strict` resolves the path against the
+skill's directory: a missing file is `AR501`, and a script run directly (not through `bash` or another launcher)
+without the executable bit is `AR502`. The variable is a skill's own; it is not resolved in agent or command hooks.
+
 ## Dynamic loading (`delivery`)
 
 `delivery` decides how a skill reaches the agent: `static` (default) writes it into every harness skill tree, `served`

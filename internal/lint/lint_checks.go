@@ -85,6 +85,13 @@ var projectVarRe = sync.OnceValue(func() *regexp.Regexp {
 	return regexp.MustCompile(`(?:\$\{CLAUDE_PROJECT_DIR\}|\$CLAUDE_PROJECT_DIR)"?/([^\s"';&|)]+)`)
 })
 
+// skillDirVarRe matches a path under the skill's own directory,
+// ${CLAUDE_SKILL_DIR}/scripts/x.sh or $CLAUDE_SKILL_DIR/scripts/x.sh, in a
+// frontmatter hook command.
+var skillDirVarRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?:\$\{CLAUDE_SKILL_DIR\}|\$CLAUDE_SKILL_DIR)"?/([^\s"';&|)]+)`)
+})
+
 type hookFile struct {
 	Hooks map[string][]struct {
 		Hooks []struct {
