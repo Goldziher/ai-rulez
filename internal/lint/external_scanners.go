@@ -72,7 +72,7 @@ func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
 	}
 	pol := policyOf(cfg.Lint)
 	var out []ScannerInfo
-	resolved := resolveScanners(cfg.Lint, cfg.Plugin != nil || cfg.Marketplace != nil)
+	resolved := resolveScanners(cfg.Lint, cfg.Plugin != nil || cfg.Marketplace != nil || cfg.HasPluginSet())
 	for i := range resolved {
 		sc := &resolved[i]
 		info := ScannerInfo{

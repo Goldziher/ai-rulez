@@ -263,7 +263,7 @@ func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string
 		gen.SetContext(ctx)
 		return gen
 	}
-	if (cfg.Plugin != nil || cfg.Marketplace != nil) && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
+	if (cfg.Plugin != nil || cfg.Marketplace != nil || cfg.HasPluginSet()) && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
 		drift, driftErr := newGenerator().PluginVersionDrift("")
 		if driftErr != nil {
 			logger.Warn("Skipped the plugin version drift check", "error", driftErr)

@@ -266,7 +266,7 @@ type Config struct {
 // HasPluginAuthoring reports whether the configuration produces a plugin or a
 // multi-plugin marketplace. Consumer-side [[plugins]] declarations do not count.
 func (c *Config) HasPluginAuthoring() bool {
-	return c.Plugin != nil || (c.Marketplace != nil && (len(c.Marketplace.Members) > 0 || c.Marketplace.HasDomainPlugins()))
+	return c.Plugin != nil || c.HasPluginSet()
 }
 
 // ScopeConfig configures an additional scoped output root for directory-aware

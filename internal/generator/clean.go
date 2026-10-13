@@ -295,8 +295,7 @@ func (g *Generator) cleanRetiredCommand(abs string, plan *CleanPlan) bool {
 // bundle has no manifest entry, so that equality is the proof; an edited file is
 // kept with a warning.
 func (g *Generator) pluginCleanTargets(profile string) (files, dirs []string) {
-	mkt := g.config.Marketplace
-	if g.userMode || (g.config.Plugin == nil && (mkt == nil || (len(mkt.Members) == 0 && !mkt.HasDomainPlugins()))) {
+	if g.userMode || (g.config.Plugin == nil && !g.config.HasPluginSet()) {
 		return nil, nil
 	}
 	outputs, err := g.collectPluginOutputs(profile)

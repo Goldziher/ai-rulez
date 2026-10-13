@@ -152,7 +152,7 @@ func (r *runner) checkExternalConfig() {
 
 // scanners resolves the configured scanners: preset members, then entries.
 func (r *runner) scanners() []resolvedScanner {
-	return resolveScanners(&r.lc, r.cfg.Plugin != nil || r.cfg.Marketplace != nil)
+	return resolveScanners(&r.lc, r.cfg.Plugin != nil || r.cfg.Marketplace != nil || r.cfg.HasPluginSet())
 }
 
 func argvSize(argv []string) int {

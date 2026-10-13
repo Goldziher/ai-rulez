@@ -185,8 +185,8 @@ func knownKeys(path string) []string {
 		return nil
 	}
 	var keys []string
-	for i := 0; i < t.NumField(); i++ {
-		if name := tagKey(t.Field(i)); name != "" {
+	for _, f := range structFields(t) {
+		if name := tagKey(f); name != "" {
 			keys = append(keys, name)
 		}
 	}
@@ -209,12 +209,27 @@ func fieldByKey(t reflect.Type, key string) (reflect.StructField, bool) {
 	if t.Kind() != reflect.Struct {
 		return reflect.StructField{}, false
 	}
-	for i := 0; i < t.NumField(); i++ {
-		if tagKey(t.Field(i)) == key {
-			return t.Field(i), true
+	for _, f := range structFields(t) {
+		if tagKey(f) == key {
+			return f, true
 		}
 	}
 	return reflect.StructField{}, false
+}
+
+// structFields lists the fields of t, with the fields of an embedded struct that
+// carries no key of its own (PluginDefaults) in place: TOML reads them inline.
+func structFields(t reflect.Type) []reflect.StructField {
+	var out []reflect.StructField
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if f.Anonymous && tagKey(f) == "" && derefType(f.Type).Kind() == reflect.Struct {
+			out = append(out, structFields(derefType(f.Type))...)
+			continue
+		}
+		out = append(out, f)
+	}
+	return out
 }
 
 // tagKey is the TOML key of a struct field, "" for a field that is not a key.

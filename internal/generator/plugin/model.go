@@ -272,6 +272,24 @@ func resolveMCP(p *config.PluginAuthoring, cfg *config.Config, runtimes []string
 	return out
 }
 
+// resolveNamedMCP maps the named root MCP servers to the canonical launch shape.
+// A name with no resolved server is skipped here; the generator rejects it before
+// a manifest is built.
+func resolveNamedMCP(cfg *config.Config, names, runtimes []string) []config.PluginMCPLaunch {
+	if len(names) == 0 {
+		return nil
+	}
+	picked := make(map[string]*config.MCPServer, len(names))
+	for _, name := range names {
+		if s, ok := cfg.MCPServers[name]; ok {
+			picked[name] = s
+		}
+	}
+	scoped := *cfg
+	scoped.MCPServers = picked
+	return resolveMCP(&config.PluginAuthoring{}, &scoped, runtimes)
+}
+
 // ResolveMarketInfo builds MarketInfo from a standalone [marketplace] block,
 // used for a monorepo root that has no [plugin] block of its own.
 func ResolveMarketInfo(mkt *config.MarketplaceAuthoring) MarketInfo {

@@ -29,7 +29,10 @@ verify checks signatures and provenance. It does not report drift: run
 "ai-rulez generate --check" to find generated files that differ from their
 sources (hand edits, deleted files and sources that changed since the last
 generate). With --plugin, generated plugin bundles are checked against their
-provenance hashes (--format json prints {schema_version, status, configs}).
+provenance hashes (--format json prints {schema_version, status, configs}; for a root that
+defines several plugins or marketplaces it also lists each plugin and marketplace with its
+status, and each drifted path names its plugin and marketplace). --plugin-name and
+--marketplace-name limit the check to some of them.
 
 With --attestation, verify instead checks the Sigstore bundle that "ai-rulez sign
 --lock" wrote against the lock and the [signing] policy, offline: the signature,
@@ -86,6 +89,9 @@ longer holds).`,
 			return fail(errVerifyNeedsMode)
 		}
 		out := outFor(cmd)
+		if err := checkPluginSelectors(true, verifyRecursive); err != nil {
+			return fail(err)
+		}
 		if verifyRecursive {
 			return finishPluginVerify(out, runRecursivePluginVerify())
 		}
@@ -100,16 +106,23 @@ longer holds).`,
 			logger.Info("Skipping plugin verification: no plugin authoring configuration")
 			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifySkipped, Configs: 0})
 		}
-		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
+		gen := limitPlugins(generator.NewGenerator(cfg))
+		if err := gen.VerifyPlugin(profile); err != nil {
 			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated")
 				return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifySkipped, Configs: 1})
 			}
-			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyDrift, Configs: 1, Drift: generator.PluginDriftOf(err), err: failWithCode(pluginVerifyExitCode(err), err)})
+			drift := generator.PluginDriftOf(err)
+			plugins, marketplaces := gen.PluginStatuses(drift)
+			return finishPluginVerify(out, pluginVerifyDoc{
+				Status: pluginVerifyDrift, Configs: 1, Drift: drift, Plugins: plugins, Marketplaces: marketplaces,
+				err: failWithCode(pluginVerifyExitCode(err), err),
+			})
 		}
 		warnRootComponents(cfg)
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
-		return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyOK, Configs: 1})
+		plugins, marketplaces := gen.PluginStatuses(nil)
+		return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyOK, Configs: 1, Plugins: plugins, Marketplaces: marketplaces})
 	},
 }
 
@@ -136,7 +149,11 @@ type pluginVerifyDoc struct {
 	// Drift names each path that differs and how: changed, missing,
 	// stale-source, obsolete, extra or symlink.
 	Drift []generator.PluginDrift `json:"drift,omitempty"`
-	err   error
+	// Plugins and Marketplaces give the outcome per plugin and per marketplace of a
+	// root that defines several; both are absent for a single [plugin].
+	Plugins      []generator.PluginStatus      `json:"plugins,omitempty"`
+	Marketplaces []generator.MarketplaceStatus `json:"marketplaces,omitempty"`
+	err          error
 }
 
 // finishPluginVerify prints the --format json document of a plugin verification
@@ -173,7 +190,14 @@ func printPluginDrift(w io.Writer, drift []generator.PluginDrift) {
 	}
 	writef(w, "Drifted plugin outputs:\n")
 	for _, item := range drift {
-		writef(w, "  %-12s %s\n", item.Kind, item.Path)
+		owner := item.Plugin
+		if owner == "" {
+			owner = item.Marketplace
+		}
+		if owner != "" {
+			owner = " (" + owner + ")"
+		}
+		writef(w, "  %-12s %s%s\n", item.Kind, item.Path, owner)
 	}
 	writef(w, "\n")
 }
@@ -224,6 +248,7 @@ func warnRootComponents(cfg *config.Config) {
 
 func init() {
 	VerifyCmd.Flags().BoolVar(&verifyPlugin, "plugin", false, "Verify generated plugin bundles using provenance hashes")
+	addPluginSelectorFlags(VerifyCmd.Flags())
 	VerifyCmd.Flags().BoolVar(&verifyIfConfigured, "if-configured", false, "Skip plugin verification when no plugin authoring configuration is present")
 	VerifyCmd.Flags().BoolVar(&verifyIfGenerated, "if-generated", false, "Skip plugin verification when the plugin bundle has not been generated yet")
 	specRecursive.Bool(VerifyCmd.Flags(), &verifyRecursive, "Verify plugin outputs for configurations recursively")

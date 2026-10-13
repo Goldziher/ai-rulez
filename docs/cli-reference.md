@@ -1076,10 +1076,12 @@ ai-rulez generate --locked
 | `--gitignore` | bool |  | Update .gitignore files to include generated output patterns |
 | `--if-configured` | bool |  | Skip plugin generation when no plugin authoring configuration is present |
 | `--locked` | bool |  | Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI) |
+| `--marketplace-name` | string list |  | With --plugin: only the marketplace of this name, its index and its plugins (repeatable) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-self-mcp` | bool |  | Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it) |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only |
 | `--plugin` | bool |  | Generate distributable plugin bundles and a marketplace index from the [plugin] block |
+| `--plugin-name` | string list |  | With --plugin: only the plugin of this name (repeatable); the marketplace indexes are left alone |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
@@ -3791,9 +3793,11 @@ ai-rulez verify --self
 | `--if-generated` | bool |  | Skip plugin verification when the plugin bundle has not been generated yet |
 | `--issuer` | string |  | With --attestation: the OIDC issuer of --identity |
 | `--lock` | bool |  | With --attestation: verify the lock attestation (the default and only subject) |
+| `--marketplace-name` | string list |  | With --plugin: only the marketplace of this name, its index and its plugins (repeatable) |
 | `--no-state` | bool |  | With --attestation: do not read or update the per-user rollback state |
 | `--online` | bool |  | With --approvals: also check review-linked approvals against the forge (needs the network and a token) |
 | `--plugin` | bool |  | Verify generated plugin bundles using provenance hashes |
+| `--plugin-name` | string list |  | With --plugin: only the plugin of this name (repeatable); the marketplace indexes are left alone |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
