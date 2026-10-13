@@ -26,8 +26,6 @@ const (
 // conformance tests.
 type mcpServerCard struct{}
 
-func init() { register(mcpServerCard{}) }
-
 func (mcpServerCard) Name() string   { return MCPServerCardEmitter }
 func (mcpServerCard) Status() string { return StatusVerified }
 

@@ -291,7 +291,7 @@ rewrites them), and the test fails when they are stale.
 | `get_skill` | skills | returns a served skill with provenance and digests to a client that only speaks tools |
 | `list_skill_resources` | skills | lists the files of a served skill for a client that has no skill:// resource support |
 | `load_skill` | skills | reads one served skill file under the session budget; the CLI reads the file from disk |
-| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI; `encoding: base64` and `offset`/`length` read binary and large files |
+| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI |
 | `update_rule` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 | `search_skills` | skills | lexical listing for a client that only speaks tools; the ranker the CLI `search` shares is find_skill |
 | `update_skill` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
