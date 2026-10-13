@@ -3,6 +3,10 @@
 Get AI-Rulez running in 5 minutes. This page covers the first two lifecycle stages, author and generate, then validates the
 result; [Next steps](#next-steps) points to bundling, publishing and governance.
 
+<p align="center">
+  <img src="assets/quickstart.gif" alt="ai-rulez init and generate: one .ai-rulez source becomes the native files of four AI tools" width="820" />
+</p>
+
 ## Step 1: Initialize Your Project
 
 Create a new configuration:

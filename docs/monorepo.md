@@ -4,6 +4,10 @@ For large projects with multiple teams, organize your `.ai-rulez/` configuration
 
 This guide outlines best practices for managing AI context at scale.
 
+<p align="center">
+  <img src="assets/monorepo.gif" alt="ai-rulez generate --recursive over two nested roots, recursive validation, and a token budget check" width="820" />
+</p>
+
 ---
 
 ## The Core Strategy: Domain-Based Organization

@@ -10,6 +10,10 @@ their own tools — reaching users who never run ai-rulez.
 Your skills, commands, and agents are the payload; the `[plugin]` block adds the
 packaging metadata.
 
+<p align="center">
+  <img src="assets/plugin-drift.gif" alt="ai-rulez verify --plugin reporting changed and extra files in a plugin bundle, then generate --plugin restoring it" width="820" />
+</p>
+
 !!! note "Authoring vs. installing"
 The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
 (authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
