@@ -188,3 +188,34 @@ func (s *RecursiveGenerateSuite) TestRecursiveParallelOutputMatchesSerial() {
 		s.Equal(parallelOutputs[path], got, "output for %s changed between parallel and serial runs", path)
 	}
 }
+
+// A root rule scoped into a nested ai-rulez root stays in the root AGENTS.md, so
+// generate, generate --recursive and generate --check --recursive agree (#395).
+func (s *RecursiveGenerateSuite) TestBazRootRuleScopedIntoNestedRoot() {
+	root, svc := s.workingDir, filepath.Join(s.workingDir, "svc")
+	for _, dir := range []string{filepath.Join(svc, "web"), filepath.Join(svc, ".ai-rulez", "rules"), filepath.Join(root, ".ai-rulez", "rules")} {
+		s.NoError(os.MkdirAll(dir, 0o755))
+	}
+	testutil.WriteFile(s.T(), filepath.Join(svc, "web"), "f", "x")
+	testutil.WriteFile(s.T(), filepath.Join(root, ".ai-rulez"), "config.toml",
+		"version = \"5.0\"\nname = \"root\"\npresets = [\"baz\"]\ngitignore = false\n[rules]\nbaz_scoped = \"nested\"\n")
+	testutil.WriteFile(s.T(), filepath.Join(root, ".ai-rulez", "rules"), "web.md",
+		"---\npaths:\n  - \"svc/web/**\"\n---\nROOT_RULE_WEB\n")
+	testutil.WriteFile(s.T(), filepath.Join(svc, ".ai-rulez"), "config.toml",
+		"version = \"5.0\"\nname = \"svc\"\npresets = [\"baz\"]\ngitignore = false\n")
+	testutil.WriteFile(s.T(), filepath.Join(svc, ".ai-rulez", "rules"), "a.md", "SVC_RULE\n")
+
+	nested := filepath.Join(svc, "web", "AGENTS.md")
+	rootFile := filepath.Join(root, "AGENTS.md")
+
+	testutil.RunCLIExpectSuccess(s.T(), root, "generate")
+	s.False(testutil.FileExists(s.T(), nested), "root-only generate must not write inside another root")
+	rootOnly := testutil.ReadFile(s.T(), rootFile)
+	s.Contains(rootOnly, "ROOT_RULE_WEB")
+
+	testutil.RunCLIExpectSuccess(s.T(), root, "generate", "--recursive")
+	s.False(testutil.FileExists(s.T(), nested), "recursive generate must not write inside another root")
+	s.Equal(rootOnly, testutil.ReadFile(s.T(), rootFile), "root and recursive runs render the same root AGENTS.md")
+
+	testutil.RunCLIExpectSuccess(s.T(), root, "generate", "--check", "--recursive")
+}

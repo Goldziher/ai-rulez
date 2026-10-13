@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **A baz rule whose glob points inside a nested ai-rulez root stays in the root `AGENTS.md`.** `generate` wrote `svc/web/AGENTS.md` for it while the nested root's own run reported it as an orphan, so `generate --check --recursive` failed on every run; the rule is now inlined into the root file in every mode and `generate` warns naming it ([#395](https://github.com/Goldziher/ai-rulez/issues/395)).
+
 ## [5.1.0] - 2026-10-12
 
 ### Added

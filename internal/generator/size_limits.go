@@ -308,6 +308,6 @@ func (g *Generator) warnBazConfigDirItems() {
 	if skipped {
 		where = "rules.baz_unscoped = \"skip\" leaves it out of every AGENTS.md"
 	}
-	g.log().Warn("baz cannot nest path-scoped rules whose glob points into .ai-rulez/ or .git/: "+strings.Join(names, ", ")+"; "+where,
-		"hint", "scope the rule to a directory outside the configuration directory, or load it without nesting")
+	g.log().Warn("baz cannot nest path-scoped rules whose glob points into .ai-rulez/, .git/ or another ai-rulez root: "+strings.Join(names, ", ")+"; "+where,
+		"hint", "scope the rule to a directory outside the configuration directory and nested roots, or load it without nesting")
 }
