@@ -180,7 +180,7 @@ func generateOnce(ctx context.Context, loadOpts ...config.LoadOption) (*config.C
 	if err := cfg.Validate(); err != nil {
 		return cfg, err //nolint:wrapcheck // already contextual
 	}
-	if err := applyGenerateOverrides(cfg); err != nil {
+	if err := applyGenerateOverrides(ctx, cfg); err != nil {
 		return cfg, err
 	}
 	if err := importGate(ctx, cfg); err != nil {

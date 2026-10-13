@@ -115,7 +115,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 // generateLoaded is the single-project run once its configuration is loaded and
 // checked: overrides, gates, preflight, then the plan, the preview or the write.
 func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config) error {
-	if err := applyGenerateOverrides(cfg); err != nil {
+	if err := applyGenerateOverrides(ctx, cfg); err != nil {
 		return fail(err)
 	}
 	warnLegacyLayout(cfg.ConfigDir)
@@ -225,7 +225,7 @@ func loadGenerateConfig(ctx context.Context) (*config.Config, error) {
 
 	// The organization policy clamped the configuration at load; refuse to
 	// generate from one that tried to loosen it.
-	if err := policyGate(cfg); err != nil {
+	if err := policyGate(ctx, cfg); err != nil {
 		return nil, fail(err)
 	}
 
@@ -389,8 +389,8 @@ const (
 	configConventionSubdir = "ai-rulez"
 )
 
-func applyGenerateOverrides(cfg *config.Config) error {
-	applyGitignoreOverride(cfg)
+func applyGenerateOverrides(ctx context.Context, cfg *config.Config) error {
+	applyGitignoreOverride(ctx, cfg)
 	if noSelfMCP {
 		cfg.SetSelfServer(false)
 	}
@@ -411,12 +411,12 @@ func applyGenerateOverrides(cfg *config.Config) error {
 // recursive path it never silently overrides an explicit `gitignore = false`:
 // the flag would otherwise rewrite every root's policy, and those roots commit
 // their outputs on purpose. Such a root is left alone, with a warning naming it.
-func applyGitignoreOverride(cfg *config.Config) {
+func applyGitignoreOverride(ctx context.Context, cfg *config.Config) {
 	if !updateGitignore {
 		return
 	}
 	if recursive && cfg.Gitignore != nil && !*cfg.Gitignore {
-		logger.Warn("--gitignore does not override this root's explicit gitignore = false; its outputs stay committed",
+		logger.FromContext(ctx).Warn("--gitignore does not override this root's explicit gitignore = false; its outputs stay committed",
 			"root", cfg.BaseDir)
 		return
 	}

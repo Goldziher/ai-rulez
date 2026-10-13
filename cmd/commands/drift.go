@@ -200,7 +200,7 @@ func runDriftCheckGated(isRecursive bool, gate func(*config.Config) error) int {
 	if gateErr {
 		return 1
 	}
-	if err := applyGenerateOverrides(cfg); err != nil {
+	if err := applyGenerateOverrides(cmdContext(), cfg); err != nil {
 		renderError(os.Stderr, err)
 		return 1
 	}
@@ -250,11 +250,13 @@ type driftRoot struct {
 	gateDrift bool
 	items     []driftItem
 	blocked   int
+	notes     *rootNotes // what the root's work logged, printed in root order
 }
 
 // checkDriftRoot loads one root, runs the gate and compares its generated files.
 func checkDriftRoot(ctx context.Context, path string, gate func(*config.Config) error, sink *generator.GitignoreSink) driftRoot {
 	var r driftRoot
+	ctx, r.notes = withRootNotes(ctx)
 	cfg, err := loadProjectFile(ctx, path, driftLoadOptions()...)
 	if err == nil {
 		err = cfg.Validate()
@@ -278,7 +280,7 @@ func checkDriftRoot(ctx context.Context, path string, gate func(*config.Config) 
 		return r
 	}
 	r.gateDrift = gateDrift
-	if err := applyGenerateOverrides(cfg); err != nil {
+	if err := applyGenerateOverrides(ctx, cfg); err != nil {
 		r.errs = append(r.errs, oops.With("config", path).Wrapf(err, "check generated files"))
 		r.failed = true
 		return r
@@ -306,6 +308,7 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 	sink := openRecursiveGitignoreSink()
 	forEachRoot(paths, func(path string) driftRoot { return checkDriftRoot(ctx, path, gate, sink) },
 		func(i int, path string, r driftRoot, elapsed time.Duration) {
+			r.notes.flush(logger.Std(), os.Stderr)
 			if r.configDir != "" {
 				warnLegacyLayout(r.configDir)
 			}

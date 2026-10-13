@@ -319,7 +319,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 	warnLegacyLayout(cfg.ConfigDir)
 
 	// The organization policy applies to every root, not only a single one.
-	if err := policyGate(cfg); err != nil {
+	if err := policyGate(ctx, cfg); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
@@ -339,7 +339,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 		return 0, err
 	}
 
-	if err := applyGenerateOverrides(cfg); err != nil {
+	if err := applyGenerateOverrides(ctx, cfg); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
