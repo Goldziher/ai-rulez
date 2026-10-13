@@ -3,7 +3,6 @@
 background cmd/commands/policy.go 1
 background internal/approval/owners.go 1
 background internal/approval/policy.go 1
-background internal/config/content_symlink.go 1
 background internal/config/load_options.go 1
 background internal/config/loader_scan.go 4
 background internal/config/local_overlay.go 1

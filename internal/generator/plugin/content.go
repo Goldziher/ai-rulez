@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -94,6 +95,7 @@ func passthroughSkill(m *Manifest, content *config.ContentFile, destinationDir s
 		destination: destinationDir,
 		evals:       includeEvals,
 		project:     m.Config,
+		ctx:         m.Ctx,
 		own:         map[string]bool{},
 		visited:     map[string]bool{},
 	}
@@ -118,6 +120,7 @@ type skillWalk struct {
 	destination string
 	evals       bool // copy the evals/ directory too
 	project     *config.Config
+	ctx         context.Context
 	outputs     []config.OutputFile
 	own         map[string]bool // bundle-relative paths collected, slash-separated
 	visited     map[string]bool // real paths of the directories being walked, against link cycles
@@ -147,12 +150,15 @@ func (w *skillWalk) visit(dir string, viaLink bool) error {
 
 func (w *skillWalk) visitEntry(dir string, entry os.DirEntry, viaLink bool) error {
 	path := filepath.Join(dir, entry.Name())
+	if viaLink && !w.project.AdmitLinkedEntry(w.ctx, path) {
+		return nil // a credential file or .git behind an admitted directory link
+	}
 	linked := entry.Type()&os.ModeSymlink != 0
 	isDir, isFile := entry.IsDir(), entry.Type().IsRegular()
 	if linked {
 		// The policy plain generate applies to a skill resource: an in-project
 		// link is followed, any other is refused with a warning naming the file.
-		info, ok := w.project.AdmitProjectSymlink(path)
+		info, ok := w.project.AdmitProjectSymlink(w.ctx, path)
 		if !ok {
 			return nil
 		}

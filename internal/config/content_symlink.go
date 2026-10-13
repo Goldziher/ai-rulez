@@ -124,10 +124,31 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 // inside the repository root and is not a credential file. Otherwise it is
 // refused, a warning names the path and the reason, and ok is false. Plain
 // generate and generate --plugin share this one policy.
-func (c *Config) AdmitProjectSymlink(path string) (info os.FileInfo, ok bool) {
-	s := newProjectScanner(context.Background(), c.ViewFor(filepath.Dir(path)))
+func (c *Config) AdmitProjectSymlink(ctx context.Context, path string) (info os.FileInfo, ok bool) {
+	s := newProjectScanner(ctx, c.ViewFor(filepath.Dir(path)))
 	s.log = c.Log()
 	return s.admit(path)
+}
+
+// skipSensitiveLinked reports whether path, an entry met below a followed
+// directory link, is a credential file or lives under .git/. It is warned about
+// and left out of the bundle; nothing it holds is read.
+func (s *contentScanner) skipSensitiveLinked(path string) bool {
+	reason := sensitiveTarget(s.v.Root(), path)
+	if reason == "" {
+		return false
+	}
+	s.logger().Warn("skipping file behind a symlinked directory", "path", path, "reason", reason)
+	return true
+}
+
+// AdmitLinkedEntry reports whether path, an entry met below a followed
+// directory link while bundling content, may be bundled: a credential file or
+// anything under .git/ is skipped with a warning.
+func (c *Config) AdmitLinkedEntry(ctx context.Context, path string) bool {
+	s := newProjectScanner(ctx, c.ViewFor(filepath.Dir(path)))
+	s.log = c.Log()
+	return !s.skipSensitiveLinked(path)
 }
 
 // checkConfigFileInside refuses a config file (config.toml, config.local.toml)

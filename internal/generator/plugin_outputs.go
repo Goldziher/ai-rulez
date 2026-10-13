@@ -455,7 +455,12 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	tempCfg.Content = contentTree
 	tempCfg.MCPServers = mcpServers
 
-	return plugin.BuildManifest(&tempCfg, contentTree)
+	manifest, err := plugin.BuildManifest(&tempCfg, contentTree)
+	if err != nil {
+		return nil, err
+	}
+	manifest.Ctx = g.ctx
+	return manifest, nil
 }
 
 // warnIgnoredPlugins warns that [[plugins]] no longer writes any file. v4 wrote
@@ -732,7 +737,9 @@ func (g *Generator) collectTargetOutputs(t *config.MarketplaceTarget, planned []
 		}
 		matched[p.Name] = true
 		g.ownerDirs = append(g.ownerDirs, ownerDir{dir: p.Dir(root), plugin: p.Name, marketplace: t.Name})
-		bundle, err := plugin.GenerateMember(plugin.BuildDomainManifest(cfg, p), p.Dir(root))
+		domainManifest := plugin.BuildDomainManifest(cfg, p)
+		domainManifest.Ctx = g.ctx
+		bundle, err := plugin.GenerateMember(domainManifest, p.Dir(root))
 		if err != nil {
 			return nil, oops.With("plugin", p.Name).Wrapf(err, "generate domain plugin bundle")
 		}

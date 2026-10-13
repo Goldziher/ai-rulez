@@ -10,6 +10,7 @@
 package plugin
 
 import (
+	"context"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -23,6 +24,9 @@ import (
 // Manifest is the resolved, runtime-agnostic plugin model. It is built once
 // from the config + content tree and consumed by every runtime renderer.
 type Manifest struct {
+	// Ctx bounds the git questions bundling a skill asks. The generator sets it;
+	// nil runs them unbounded.
+	Ctx context.Context
 	Name        string
 	DisplayName string
 	Description string
