@@ -203,7 +203,7 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 	// The roots are checked concurrently over one shared view of the git index;
 	// everything they print is reported here, in root order.
 	ctx := gitutil.WithSharedIndex(cmdContext())
-	forEachRootBounded(recursiveValidateWorkers(), configFiles, func(configPath string) validatedRoot { return validateRoot(ctx, configPath) },
+	forEachRootBounded(ctx, recursiveValidateWorkers(), configFiles, func(configPath string) validatedRoot { return validateRoot(ctx, configPath) },
 		func(i int, configPath string, r validatedRoot, elapsed time.Duration) {
 			defer reportRootProgress(i, len(configFiles), configPath, elapsed)
 			r.notes.flush(logger.Std(), os.Stderr)
@@ -234,6 +234,10 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 			}
 			reports, cfgs = append(reports, r.report), append(cfgs, r.cfg)
 		})
+	if err := ctx.Err(); err != nil {
+		renderError(os.Stderr, oops.Wrapf(err, "validate interrupted before every root was checked"))
+		return 1
+	}
 	strictCode := 0
 	if validateStrict {
 		strictCode = reportStrict(reports, cfgs)

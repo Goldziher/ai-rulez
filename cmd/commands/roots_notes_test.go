@@ -90,7 +90,7 @@ func TestRecursiveDrift_WarningsAreReportedInRootOrder(t *testing.T) {
 		rec := &recordingLogger{}
 		var out bytes.Buffer
 		ctx := context.Background()
-		forEachRoot(paths, func(p string) driftRoot { return checkDriftRoot(ctx, p, nil, nil) },
+		forEachRoot(ctx, paths, func(p string) driftRoot { return checkDriftRoot(ctx, p, nil, nil) },
 			func(_ int, _ string, r driftRoot, _ time.Duration) {
 				require.NotNil(t, r.notes)
 				r.notes.flush(rec, &out)

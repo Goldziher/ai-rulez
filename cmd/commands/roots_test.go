@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"sync/atomic"
@@ -23,7 +24,7 @@ func TestForEachRoot_EmitsInInputOrderWhateverTheFinishOrder(t *testing.T) {
 	var seen []string
 
 	// Act
-	forEachRoot(paths, func(p string) string {
+	forEachRoot(context.Background(), paths, func(p string) string {
 		var i int
 		_, err := fmt.Sscanf(p, "root%d", &i)
 		assert.NoError(t, err)
@@ -51,7 +52,7 @@ func TestForEachRoot_RunsEachRootOnceWithinTheWorkerBound(t *testing.T) {
 
 	// Act
 	total := 0
-	forEachRoot(paths, func(string) int {
+	forEachRoot(context.Background(), paths, func(string) int {
 		cur := running.Add(1)
 		for {
 			old := peak.Load()
@@ -72,13 +73,13 @@ func TestForEachRoot_RunsEachRootOnceWithinTheWorkerBound(t *testing.T) {
 }
 
 func TestForEachRoot_NoPathsDoesNothing(t *testing.T) {
-	forEachRoot(nil, func(string) int { t.Fatal("work called"); return 0 },
+	forEachRoot(context.Background(), nil, func(string) int { t.Fatal("work called"); return 0 },
 		func(int, string, int, time.Duration) { t.Fatal("emit called") })
 }
 
 func TestForEachRoot_ReportsElapsedTime(t *testing.T) {
 	var got time.Duration
-	forEachRoot([]string{"a"}, func(string) int { time.Sleep(5 * time.Millisecond); return 0 },
+	forEachRoot(context.Background(), []string{"a"}, func(string) int { time.Sleep(5 * time.Millisecond); return 0 },
 		func(_ int, _ string, _ int, elapsed time.Duration) { got = elapsed })
 	assert.GreaterOrEqual(t, got, 5*time.Millisecond)
 }
@@ -114,7 +115,7 @@ func TestForEachRootBounded_RunsOneRootAtATimeWithALimitOfOne(t *testing.T) {
 
 	// Act
 	var order []string
-	forEachRootBounded(1, paths, func(p string) string {
+	forEachRootBounded(context.Background(), 1, paths, func(p string) string {
 		cur := running.Add(1)
 		for {
 			old := peak.Load()
@@ -141,7 +142,7 @@ func TestRecursiveValidateWorkers(t *testing.T) {
 		want   int
 	}{
 		{"without --external the pool is GOMAXPROCS", false, runtime.GOMAXPROCS(0)},
-		{"--external serialises the roots", true, 1},
+		{"--external serializes the roots", true, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,4 +153,34 @@ func TestRecursiveValidateWorkers(t *testing.T) {
 			assert.Equal(t, tt.want, recursiveValidateWorkers())
 		})
 	}
+}
+
+func TestForEachRoot_StopsDispatchingOnceTheContextIsCancelled(t *testing.T) {
+	// Arrange: one worker, and the first root cancels the run.
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	paths := make([]string, 20)
+	for i := range paths {
+		paths[i] = fmt.Sprint(i)
+	}
+	var worked atomic.Int32
+	var emitted []string
+
+	// Act
+	forEachRootBounded(ctx, 1, paths, func(p string) string {
+		worked.Add(1)
+		cancel()
+		return p
+	}, func(_ int, p string, _ string, _ time.Duration) { emitted = append(emitted, p) })
+
+	// Assert
+	assert.Equal(t, int32(1), worked.Load(), "no root starts after the cancellation")
+	assert.Equal(t, []string{"0"}, emitted, "the root that ran is still reported, in order")
+}
+
+func TestForEachRoot_AlreadyCancelledRunsNothing(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	forEachRoot(ctx, []string{"a", "b"}, func(string) int { t.Fatal("work called"); return 0 },
+		func(int, string, int, time.Duration) { t.Fatal("emit called") })
 }
