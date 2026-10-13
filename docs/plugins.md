@@ -469,7 +469,7 @@ correct root variable (`${CURSOR_PLUGIN_ROOT:-.}` for Cursor hooks, and so on).
 Each hook action requires exactly one of `command` or `script`:
 
 - **`command`**: An executable that already exists in the consumer's environment. Passed through verbatim.
-- **`script`**: A project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The bundled script is addressable as `${PLUGIN_ROOT}/hooks/<basename>` and survives a fresh clone before generation has run. Use `script` for self-contained bootstrap hooks.
+- **`script`**: A project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The bundled script is addressable as `${PLUGIN_ROOT}/hooks/<basename>` and survives a fresh clone before generation has run. Without `args` the command is written double-quoted (`"${CLAUDE_PLUGIN_ROOT}/hooks/<basename>"`) so an install path with a space does not split it; with `args` the handler is exec form and the path is written bare. Use `script` for self-contained bootstrap hooks.
 
 Additional fields:
 
