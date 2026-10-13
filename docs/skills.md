@@ -100,7 +100,7 @@ harness that cannot call MCP tools keeps served skills as static files (warning 
 `[[mcp_servers]]` entry running `ai-rulez mcp --serve-skills` (warning `AR993`). See
 [Dynamic skill loading](mcp-server.md#dynamic-skill-loading).
 
-A `served` skill is delivered over MCP, so none of its files are written to a harness skill tree: a skill whose
+A `served` skill is delivered over MCP, so none of its files are written to the skill tree of a harness that can call MCP tools, including the shared `.agents/skills` tree: a skill whose
 SKILL.md runs a bundled `scripts/` or `assets/` file by relative path cannot run it (`AR9R0` warns). Use
 `delivery: both` for a skill that ships such files, so the files stay on disk while other harnesses or roles still
 find the skill by search. And do not combine `both` with `disable-model-invocation: true` and point at the skill by

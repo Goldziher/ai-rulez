@@ -38,9 +38,13 @@ func (g *Generator) PresetsMissingStub(profile string) ([]string, error) {
 		return nil, nil
 	}
 	var missing []string
+	sharedStub := hasStub(render.byPreset[sharedOutputsKey])
 	for preset, outputs := range render.byPreset {
-		if !config.HarnessSupportsMCP(preset) || !providers.BuiltinRendersSkills(preset) {
+		if preset == sharedOutputsKey || !config.HarnessSupportsMCP(preset) || !providers.BuiltinRendersSkills(preset) {
 			continue // no MCP to call, or no skills rendered for a stub to sit in
+		}
+		if sharedStub && presetReadsSharedSkills(preset) {
+			continue // the stub sits in the shared .agents/skills tree the preset reads
 		}
 		if !hasStub(outputs) {
 			missing = append(missing, preset)
@@ -48,6 +52,13 @@ func (g *Generator) PresetsMissingStub(profile string) ([]string, error) {
 	}
 	sort.Strings(missing)
 	return missing, nil
+}
+
+// presetReadsSharedSkills reports whether the built-in preset reads the shared
+// .agents/skills tree.
+func presetReadsSharedSkills(preset string) bool {
+	consumer, ok := config.SharedOutputConsumerFor(preset)
+	return ok && consumer.Reads(config.SharedAgentSkills)
 }
 
 func hasStub(outputs []config.OutputFile) bool {

@@ -293,6 +293,39 @@ func (c *Config) ContentForPreset(preset string) *ContentTree {
 	if !HarnessSupportsMCP(preset) {
 		return tree
 	}
+	return c.withStub(c.withoutServed(tree))
+}
+
+// ContentForSharedSkills returns the content tree of the shared .agents/skills
+// tree, which one render serves to every preset in readers, so it follows the
+// readers together. When all of them can call MCP it is what ContentForPreset
+// gives each of them: served skills left out, the stub added. When none can, it
+// is the full tree. When they differ, a harness without MCP must still find the
+// served skills as files, so the tree keeps them and gains the stub for the
+// harnesses that can call it.
+func (c *Config) ContentForSharedSkills(readers []string) *ContentTree {
+	tree := c.Content
+	if tree == nil || c.ServeMode || !c.hasServedSkills(tree) {
+		return tree
+	}
+	mcp := 0
+	for _, r := range readers {
+		if HarnessSupportsMCP(r) {
+			mcp++
+		}
+	}
+	switch {
+	case mcp == 0:
+		return tree
+	case mcp == len(readers):
+		return c.withStub(c.withoutServed(tree))
+	default:
+		return c.withStub(tree)
+	}
+}
+
+// withoutServed copies tree without the skills whose delivery is served.
+func (c *Config) withoutServed(tree *ContentTree) *ContentTree {
 	out := *tree
 	out.Skills = c.keepStatic(tree.Skills, "")
 	out.Domains = make(map[string]*Domain, len(tree.Domains))
@@ -301,9 +334,16 @@ func (c *Config) ContentForPreset(preset string) *ContentTree {
 		kept.Skills = c.keepStatic(d.Skills, name)
 		out.Domains[name] = &kept
 	}
+	return &out
+}
+
+// withStub adds the dynamic-skills stub to a copy of tree's root skills unless
+// a skill of that name already exists.
+func (c *Config) withStub(tree *ContentTree) *ContentTree {
+	out := *tree
 	switch authored := c.authoredStubCount(&out); {
 	case authored == 0:
-		out.Skills = append(out.Skills, c.dynamicSkillsStub())
+		out.Skills = append(append([]ContentFile(nil), out.Skills...), c.dynamicSkillsStub())
 	case authored > 1:
 		c.warnDuplicateStub(authored)
 	}
