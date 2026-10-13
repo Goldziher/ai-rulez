@@ -758,6 +758,8 @@ hashes = "full"
   *Migrate:* scripts that scraped the `INFO ... successfully` lines read the path from stdout or use `--format json`.
 - **`show` and `edit` complete the verbs** (`list`, `show`, `add`, `edit`, `remove`): `ai-rulez show rule style`,
   `ai-rulez edit rule style --content ...`. They are the CLI side of the MCP `read_*` and `update_*` tools.
+- **A bare unknown `builtins` entry fails `validate`.** `builtins = ["rsut"]` was ignored; it now fails with the valid
+  choices (unknown `!exclusions` still warn). *Migrate:* fix or remove the entry.
 - **Group commands print help.** `ai-rulez list` with no subcommand used to exit 1 with "specify what to list"; like
   `add`, `remove`, `domain`, `profile`, `include`, `skill`, `builtins` and `migrate` it now prints its help and exits 0.
 - **Stricter content names and values** (also for the MCP tools): a name must not end in `.md`, contain whitespace or
@@ -1097,6 +1099,9 @@ Unknown subcommands (`telemetry bogus`) exit `1`. When a command covers several 
   refused with a warning that is shown even with `--quiet`, and `ai-rulez validate` reports it as an error. Symlinks
   in includes (git or local), installed skills, skill sources and OKF bundles are never followed and are skipped with
   a warning (an installed skill with a symlinked `SKILL.md` is refused). `init --from` never follows symlinks.
+  A credential file (`.env`, `.npmrc`, `id_rsa`, ...) or anything under `.git/` met inside a followed directory link is
+  skipped with a warning, in `generate` and `generate --plugin` alike, so a link to `docs/` or to the project root never
+  bundles one.
   Repository content read at load time is capped at 8 MiB per file; a larger file is an error.
 - **`scan` is security-only.** `ai-rulez scan` runs only the `security` analyzer's checks. Hook and config findings
   (`AR504`, `AR9K0`, ...) that used to appear in its report belong to `validate --strict`.
@@ -1729,6 +1734,10 @@ directory entry (`!.claude/skills/`, `!/.claude/skills/`) is honored the same wa
 way, since `generate` leaves it alone; it still reports a machine-local or secret output a rule un-ignores, and says
 that `generate` will not re-ignore it.
 
+The machine-local manifest, `.ai-rulez/.generated-manifest.local.json`, is the one entry that is always written: it
+is ignored whenever it exists in a repository (and whenever a run writes it), even with `gitignore = false`, without
+adding `.ai-rulez/local/` or the overlay patterns.
+
 Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
 when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
 no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
@@ -1747,7 +1756,7 @@ managed. Use it instead of a hand-written `!pattern` after the block.
 
 ```toml
 gitignore = true
-gitignore_exclude = ["AGENTS.md", "**/CLAUDE.md", ".claude/skills/", ".claude/agents/", ".mcp.json"]
+gitignore_exclude = ["AGENTS.md", "**/CLAUDE.md", ".claude/skills/", ".claude/agents/", ".opencode/skills/"]
 ```
 
 Entries use gitignore notation, matched against the patterns the block would list: an entry without `/`
@@ -2297,6 +2306,9 @@ builtins = false
 ```toml
 builtins = ["rust", "python", "pyo3", "security", "git-workflow", "default-commands"]
 ```
+
+An unknown positive entry (a typo such as `builtins = ["rsut"]`) fails `validate` and the load with the valid
+choices; unknown `!exclusions` stay warnings.
 
 ###### Scope a builtin to a profile
 
@@ -10863,7 +10875,9 @@ sidecar without modifying or regenerating the package.
 The sidecar also records whether each output is executable (`"mode": "0755"`, else `"0644"`), and `verify --plugin` reports a
 file whose executable bit differs as drift of kind `mode`, so a bundled script that lost it (a zip round trip,
 `core.fileMode=false`) is caught before it ships and fails with "permission denied". A sidecar written by an
-earlier release records no modes; it still verifies, and the next `generate --plugin` adds them.
+earlier release records no modes; it still verifies, and the next `generate --plugin` adds them. A sidecar written on
+Windows records no modes either, because its file systems have no executable bit; regenerate on Linux or macOS if
+the bundle ships scripts.
 
 Reusable hook catalogs can run plugin checks across mixed repositories with
 `ai-rulez generate --recursive --plugin --if-configured` and
@@ -11056,7 +11070,8 @@ runtimes = ["claude", "codex"]
 skills = ["moon-*"]
 ```
 
-A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
+A key the entry does not know, or a `plugins/` or `marketplaces/` path that cannot be listed, fails the load
+with an error naming the file. A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
 [Layered configuration](configuration.md#layered-configuration)) can add an entry, override
 one by `name`, or drop it with `remove = true` without restating the others; the same holds
 for `[[marketplace.plugins]]`.
@@ -11094,7 +11109,8 @@ cursor_index = true
 the Codex index when a listed plugin targets Codex, and the Cursor index with `cursor_index`),
 its own provenance sidecar, and `<output_dir>/plugins/<name>/` for each plugin it lists, so
 each directory can be published on its own. A plugin listed by two marketplaces is written
-into both. `output_dir` must be unique; two marketplaces, or two plugins, writing one path
+into both. `output_dir` must be unique and no marketplace's directory may sit inside another's (an empty
+`output_dir` is the project root, which holds every other directory); two marketplaces, or two plugins, writing one path
 is an error. `[marketplace]` and `[[marketplaces_authoring]]` cannot be combined. With only
 `[[plugins_authoring]]` and no marketplace, one index named after the project lists them all.
 
@@ -11628,7 +11644,7 @@ publish does.
 | Plugin | `application/vnd.ai-rulez.plugin+json` (override with `plugin_type`) | `url`: the release archive |
 
 Exactly one of `url` and `data` is set. Environment values and header values of an MCP server never reach the manifest (a card lists header names only), and a
-server URL with credentials or without https is refused. With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
+server URL with credentials or without https is refused. A server whose URL has a query, a fragment or an unresolved `${...}` placeholder is skipped with a warning, because such a URL is published verbatim and often carries a key. With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
 `ard.json`, so hosting is a copy of the output directory. Only root skills are listed.
 
 The spec registers no plugin type, so the plugin type is ai-rulez's own vendor type until one exists; the conformance tool
@@ -11740,7 +11756,7 @@ becomes `docs.json`:
   value is a `${VAR}` reference. A URL with credentials is refused.
 - **Name.** `<namespace>/<server>`, where the server part has any character outside letters, digits, `.`, `_` and `-`
   replaced by `-`. The namespace is the emitter option `namespace`, else the reversed `[ard]` publisher (`acme.example`
-  is `example.acme`), else derived from the repository (`owner/name` on GitHub is `io.github.owner`).
+  is `example.acme`), else derived from the repository (`owner/name` and `github.com/owner/name` are `io.github.owner`; `host/owner/name` on another host is the reversed host followed by the owner, such as `test.acme.git.acme`).
 - **Version.** The emitter option `version`, else the plugin version, else `0.0.0`.
 - **Description.** The server's description cut to the schema's 100 characters, or `MCP server <name>` without one.
 
@@ -25516,7 +25532,7 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
 | `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit; `generate` overwrites it, so the edit is lost |
 | `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it. Without a manifest (CI, a fresh checkout) a generated file whose source was removed is still reported: a file under an output directory that carries a `Content-Hash` header and that no output emits is an orphan |
-| `missing: .gitignore (managed block)` / `stale: .gitignore (managed block)` | The managed `.gitignore` block (see [`gitignore`](configuration.md#gitignore)) is absent, or lacks an entry `generate` would add, or `generate` would remove it. Lines outside the block are never judged. A recursive run checks the one shared block at the repository toplevel, once every root is read; in `--format json` the item is `{"kind", "path": ".gitignore", "note": "managed block"}` |
+| `missing: .gitignore (managed block)` / `stale: .gitignore (managed block)` | The managed `.gitignore` block (see [`gitignore`](configuration.md#gitignore)) is absent, or does not hold exactly the entries `generate` would write (a missing entry, or a line inside the block that `generate` would remove, is drift), or `generate` would remove it. Lines outside the block are never judged. When `.gitignore` is a symlink, git does not read it and `generate` keeps the entries in `.git/info/exclude`; `--check` judges that file's `ai-rulez` block the same way and names it as `.git/info/exclude`. A recursive run checks the one shared block at the repository toplevel, once every root is read; in `--format json` the item is `{"kind", "path": ".gitignore", "note": "managed block"}` |
 | `blocked: <path>` | A machine-local input (overlay or `local/` tree) would change this file and `generate` refuses to write it because it is tracked or not git-ignored; the same refusal `generate` and `generate --dry-run` report. `--allow-local-drift` lifts it |
 
 With a machine-local overlay or `local/` content, `--check` classifies the outputs like `generate` does, so files that `generate` keeps for the local inputs and that are in sync are not reported. `--check` does not print the summary of rules whose activation a tool cannot express; `generate` prints it.
