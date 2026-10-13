@@ -412,6 +412,14 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 // the config is a marketplace root ([marketplace].members or domain plugins), it
 // instead renders each plugin's bundle plus the aggregate marketplace index.
 func (g *Generator) collectPluginOutputs(profile string) ([]config.OutputFile, error) {
+	outputs, err := g.renderPluginOutputs(profile)
+	if err != nil {
+		return nil, err
+	}
+	return g.withoutAgentsSourcePluginOutputs(outputs), nil
+}
+
+func (g *Generator) renderPluginOutputs(profile string) ([]config.OutputFile, error) {
 	if g.config.HasPluginSet() {
 		return g.collectPluginSetOutputs(profile)
 	}

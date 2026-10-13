@@ -120,6 +120,9 @@ together they share one root `plugin.json`; the Codex overlay is only written wh
 is part of the bundle. The single-plugin Codex index uses `source = { source = "local", path = "./" }`.
 Codex documents that a marketplace may list one plugin and that paths start with `./` and stay inside
 the marketplace root; `./` itself as the plugin path was not exercised against a running Codex.
+With `source = "agents"` the `.agents` directory belongs to the project: `generate --plugin` skips
+`.agents/plugins/marketplace.json` with a warning instead of writing it (see
+[.agents as a source](agents-source.md#what-generate-writes)).
 
 ### Copilot
 

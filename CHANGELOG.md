@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`generate --plugin` no longer writes into the `.agents` source.** With `source = "agents"` the Codex index `.agents/plugins/marketplace.json` (and any bundle placed under `.agents`) silently replaced a hand-written file; plugin outputs on `AGENTS.md` or under `.agents/` are now skipped with a warning.
 - **`validate` no longer reports OKF findings twice when the `[okf]` bundle is the configuration directory under another spelling.** A relative path, a trailing separator or a symlink to it defeated the comparison.
 - **A plugin sidecar generated on Windows records no file modes.** It recorded `0644` for every file (Windows has no executable bit), so `verify --plugin` on Linux reported `mode` drift for each script ([#403](https://github.com/Goldziher/ai-rulez/issues/403)).
 - **`generate --check` judges the managed `.gitignore` block as a set and follows a symlinked `.gitignore`.** A block with a line `generate` would remove was reported in sync; it is now drift, as is a missing entry. With a symlinked `.gitignore` (git does not read it) `--check` reported nothing; it now compares the `ai-rulez` block in `.git/info/exclude`. Outside a git repository `--check` also counts machine-local outputs that `generate` puts in `.gitignore`.
