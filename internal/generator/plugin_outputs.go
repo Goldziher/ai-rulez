@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -96,6 +97,9 @@ const (
 	PluginDriftExtra = "extra"
 	// PluginDriftSymlink: a recorded output that is a symlink, not a regular file.
 	PluginDriftSymlink = "symlink"
+	// PluginDriftMode: the content is right but the executable bit differs from
+	// the one generate would set (and the sidecar recorded).
+	PluginDriftMode = "mode"
 )
 
 // PluginDrift is one path where a plugin bundle differs from its sources, with
@@ -204,7 +208,7 @@ func (g *Generator) verifyPluginProvenance(expected []config.OutputFile) error {
 		for _, member := range marketplace.Members {
 			if err := plugin.VerifyProvenance(filepath.Join(g.config.BaseDir, member)); err != nil {
 				return asPluginDrift(oops.With("member", member).Wrapf(err, "verify member plugin bundle"),
-					g.staleSource(filepath.Join(g.config.BaseDir, member)))
+					g.provenanceDrift(filepath.Join(g.config.BaseDir, member), err))
 			}
 		}
 	}
@@ -212,9 +216,20 @@ func (g *Generator) verifyPluginProvenance(expected []config.OutputFile) error {
 		return g.domainProvenanceDrift(expected)
 	}
 	if err := plugin.VerifyProvenance(g.config.BaseDir); err != nil {
-		return asPluginDrift(err, g.staleSource(g.config.BaseDir))
+		return asPluginDrift(err, g.provenanceDrift(g.config.BaseDir, err))
 	}
 	return nil
+}
+
+// provenanceDrift is the drift entry for a VerifyProvenance failure of the bundle
+// at bundleDir: the file whose mode differs, or else the stale sidecar.
+func (g *Generator) provenanceDrift(bundleDir string, err error) PluginDrift {
+	var mode *plugin.ModeDriftError
+	if errors.As(err, &mode) {
+		path := filepath.Join(bundleDir, filepath.FromSlash(mode.Path))
+		return PluginDrift{Path: filepath.ToSlash(g.convertToRelativePath(path)), Kind: PluginDriftMode}
+	}
+	return g.staleSource(bundleDir)
 }
 
 // staleSource is the drift entry for a bundle whose provenance sidecar fails.
@@ -232,7 +247,7 @@ func (g *Generator) domainProvenanceDrift(expected []config.OutputFile) error {
 		}
 		dir := filepath.Dir(g.absOutputPath(output.Path))
 		if err := plugin.VerifyProvenance(dir); err != nil {
-			return asPluginDrift(oops.With("bundle", dir).Wrapf(err, "verify domain plugin bundle"), g.staleSource(dir))
+			return asPluginDrift(oops.With("bundle", dir).Wrapf(err, "verify domain plugin bundle"), g.provenanceDrift(dir, err))
 		}
 	}
 	return nil
@@ -261,7 +276,15 @@ func (g *Generator) verifyPluginOutputs(expected []config.OutputFile) []PluginDr
 			expectedBytes = []byte(output.Content)
 		}
 		if !bytes.Equal(actual, expectedBytes) {
+			if filepath.Base(output.Path) == plugin.ProvenanceFileName && plugin.SidecarMatchesWithoutModes(expectedBytes, actual) {
+				continue // written before modes were recorded; the next generate adds them
+			}
 			drift = append(drift, PluginDrift{Path: rel, Kind: PluginDriftChanged})
+			continue
+		}
+		if info, statErr := os.Stat(output.Path); statErr == nil && runtime.GOOS != "windows" &&
+			(output.Mode^info.Mode())&0o111 != 0 {
+			drift = append(drift, PluginDrift{Path: rel, Kind: PluginDriftMode})
 		}
 	}
 	return drift

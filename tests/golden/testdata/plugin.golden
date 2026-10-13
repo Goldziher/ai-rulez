@@ -110,7 +110,7 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  MCP server references a path missing from the plugin source; it will not be published server=golden path=run.sh
 INFO  Plugin generation complete files=58
 --- project tree
-+ .ai-rulez-generated.json file 0644 8877 001c8eda84f1343b8d9dd1bd95318a51bc09fb94def97d75e1460295288014cf
++ .ai-rulez-generated.json file 0644 10131 9c444387fec8b54c79071da935a3f563ca02ca27f4529642b0c32595f08b977c
 + .claude-plugin/ dir 0755
 + .claude-plugin/marketplace.json file 0644 455 9fee42c377261ea5e7d3498990d65dfdc3a09163aba6f8bb441b0a71c22c8c7b
 + .claude-plugin/plugin.json file 0644 353 7bf36ab0c4b77f9ee94cae078988c89ba2161ee34f564dfb9b030bbe0da4b0de
@@ -239,7 +239,7 @@ WARN  MCP server references a path missing from the plugin source; it will not b
 INFO  Generated plugin artifacts are valid path=$ROOT
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez-generated.json file 0644 8877 001c8eda84f1343b8d9dd1bd95318a51bc09fb94def97d75e1460295288014cf
+.ai-rulez-generated.json file 0644 10131 9c444387fec8b54c79071da935a3f563ca02ca27f4529642b0c32595f08b977c
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
