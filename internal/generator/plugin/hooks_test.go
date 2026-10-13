@@ -59,14 +59,14 @@ func TestRenderHooksFile_BundlesScriptNextToHooksJSON(t *testing.T) {
 			runtime:     config.PluginRuntimeClaude,
 			hooksJSON:   "hooks/hooks.json",
 			wantScript:  "hooks/bootstrap.sh",
-			wantCommand: "${CLAUDE_PLUGIN_ROOT}/hooks/bootstrap.sh",
+			wantCommand: `"${CLAUDE_PLUGIN_ROOT}/hooks/bootstrap.sh"`,
 		},
 		{
 			name:        "cursor uses its hook root variable",
 			runtime:     config.PluginRuntimeCursor,
 			hooksJSON:   ".cursor-plugin/hooks/hooks.json",
 			wantScript:  ".cursor-plugin/hooks/bootstrap.sh",
-			wantCommand: "${CURSOR_PLUGIN_ROOT:-.}/hooks/bootstrap.sh",
+			wantCommand: `"${CURSOR_PLUGIN_ROOT:-.}/hooks/bootstrap.sh"`,
 		},
 	}
 
@@ -184,4 +184,24 @@ func firstHookAction(t *testing.T, data []byte) map[string]any {
 	action, ok := actions[0].(map[string]any)
 	require.True(t, ok)
 	return action
+}
+
+func TestHookCommand_QuotesShellFormScriptOnly(t *testing.T) {
+	tests := []struct {
+		name    string
+		action  config.HookAction
+		runtime string
+		want    string
+	}{
+		{"claude script without args is quoted", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeClaude, `"${CLAUDE_PLUGIN_ROOT}/hooks/a.sh"`},
+		{"cursor script without args is quoted", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeCursor, `"${CURSOR_PLUGIN_ROOT:-.}/hooks/a.sh"`},
+		{"gemini script without args is quoted", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeGemini, `"${extensionPath}/hooks/a.sh"`},
+		{"script with args is exec form and stays bare", config.HookAction{Script: "scripts/a.sh", Args: []string{"x"}}, config.PluginRuntimeClaude, "${CLAUDE_PLUGIN_ROOT}/hooks/a.sh"},
+		{"declared command is passed through", config.HookAction{Command: "echo hi"}, config.PluginRuntimeClaude, "echo hi"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, hookCommand(&tc.action, tc.runtime))
+		})
+	}
 }

@@ -56,10 +56,17 @@ type hookGroupDoc struct {
 // hooks/<basename> by bundleHookScripts); a declared Command is passed through
 // verbatim. Both go through the runtime's root rewrite. Slash-joined on purpose:
 // the result is a command string a runtime interprets, not a host filesystem path.
+// A script without args runs through a shell, so its path is double-quoted: an
+// install path with a space would otherwise split the command (AR963). With args
+// the handler is exec form, where the command is a bare executable path and a
+// quote would be part of the file name.
 func hookCommand(action *config.HookAction, runtime string) string {
 	command := action.Command
 	if action.Script != "" {
 		command = rootVarCanonical + "/" + path.Join(hooksDirName, path.Base(filepath.ToSlash(action.Script)))
+		if len(action.Args) == 0 {
+			command = `"` + command + `"`
+		}
 	}
 	return rewriteHookRoot(command, runtime)
 }
