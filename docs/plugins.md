@@ -443,7 +443,9 @@ sidecar without modifying or regenerating the package.
 The sidecar also records whether each output is executable (`"mode": "0755"`, else `"0644"`), and `verify --plugin` reports a
 file whose executable bit differs as drift of kind `mode`, so a bundled script that lost it (a zip round trip,
 `core.fileMode=false`) is caught before it ships and fails with "permission denied". A sidecar written by an
-earlier release records no modes; it still verifies, and the next `generate --plugin` adds them.
+earlier release records no modes; it still verifies, and the next `generate --plugin` adds them. A sidecar written on
+Windows records no modes either, because its file systems have no executable bit; regenerate on Linux or macOS if
+the bundle ships scripts.
 
 Reusable hook catalogs can run plugin checks across mixed repositories with
 `ai-rulez generate --recursive --plugin --if-configured` and

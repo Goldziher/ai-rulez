@@ -143,3 +143,23 @@ func TestMarkdownProvenancePreservesFrontmatterWhitespace(t *testing.T) {
 		assert.Equal(t, body, restored, "blank lines after frontmatter must round-trip")
 	}
 }
+
+func TestModeFor(t *testing.T) {
+	tests := []struct {
+		name string
+		goos string
+		mode os.FileMode
+		want string
+	}{
+		{"executable on linux", "linux", 0o755, "0755"},
+		{"plain file on linux", "linux", 0o644, "0644"},
+		{"executable on darwin", "darwin", 0o700, "0755"},
+		{"windows reports a fake 0666", "windows", 0o666, ""},
+		{"windows reports a fake 0777", "windows", 0o777, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, modeFor(tt.goos, config.OutputFile{Mode: tt.mode}))
+		})
+	}
+}
