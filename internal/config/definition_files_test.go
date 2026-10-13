@@ -67,6 +67,14 @@ func TestDefinitionFiles_LoadByDefault(t *testing.T) {
 			wantErrParts: []string{"marketplaces/public.toml", "bogus"},
 		},
 		{
+			name: "a definitions path that cannot be listed is an error, not an empty set",
+			files: map[string]string{
+				"config.toml": definitionMain,
+				"plugins":     "a file where the directory should be",
+			},
+			wantErrParts: []string{"plugins"},
+		},
+		{
 			name: "a plugin defined inline and in a file is an error naming both",
 			files: map[string]string{
 				"config.toml":         definitionMain + "\n[[plugins_authoring]]\nname = \"notify\"\nskills = [\"x\"]\n",

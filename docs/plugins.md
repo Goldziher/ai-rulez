@@ -636,7 +636,8 @@ runtimes = ["claude", "codex"]
 skills = ["moon-*"]
 ```
 
-A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
+A key the entry does not know, or a `plugins/` or `marketplaces/` path that cannot be listed, fails the load
+with an error naming the file. A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
 [Layered configuration](configuration.md#layered-configuration)) can add an entry, override
 one by `name`, or drop it with `remove = true` without restating the others; the same holds
 for `[[marketplace.plugins]]`.

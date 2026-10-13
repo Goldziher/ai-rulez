@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"io/fs"
 	"maps"
 	"path/filepath"
 	"reflect"
@@ -47,8 +49,11 @@ func readDefinitionFiles(v workspace.View, configDir string) (plugins, marketpla
 func readDefinitionDir(v workspace.View, configDir, sub string, shape reflect.Type, kind string) ([]definitionFile, error) {
 	dir := filepath.Join(configDir, sub)
 	entries, err := v.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil // no directory means no definitions
+	}
 	if err != nil {
-		return nil, nil //nolint:nilerr // no directory means no definitions
+		return nil, oops.With("path", dir).Wrapf(err, "read %s definitions directory %s", kind, sub)
 	}
 	var out []definitionFile
 	for _, e := range entries {

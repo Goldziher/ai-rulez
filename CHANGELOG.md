@@ -19,6 +19,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **A `plugins/` or `marketplaces/` directory that cannot be listed fails the load, and unknown keys in a definition file are errors.** Any `ReadDir` failure (a permission error, a file where the directory should be) was read as "no definitions" and the plugins vanished silently. Unknown keys in `.ai-rulez/plugins/*.toml` and `.ai-rulez/marketplaces/*.toml` already fail the load with the file and key named; they are not ignored like unknown keys in `config.toml` layers.
 - **A leading `/` in a `gitignore_exclude` entry anchors it at the root.** `/AGENTS.md` also excluded `svc/AGENTS.md`; it now names only the root file, as in a `.gitignore`.
 - **The server card namespace derived from `github.com/owner/name` is `io.github.owner`, and other hosts add the owner.** It was `com.github`, shared by every repository on GitHub, and `host/owner/name` dropped the owner.
 - **A remote MCP server URL with a query, fragment or `${...}` placeholder is no longer written into the server card and ARD manifest.** `?api_key=...` or `?token=${TOKEN}` was published verbatim; the server is now skipped with a warning that does not repeat the URL.
