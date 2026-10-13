@@ -160,11 +160,24 @@ func displayDriftAbs(abs, fallback string) string {
 	if err != nil {
 		return fallback
 	}
-	out, err := filepath.Rel(cwd, abs)
+	out, err := filepath.Rel(realPath(cwd), realPath(abs))
 	if err != nil {
 		return fallback
 	}
 	return filepath.ToSlash(out)
+}
+
+// realPath resolves symlinks (and, on Windows, 8.3 short names) in the longest
+// existing prefix of p, so two spellings of one directory compare equal.
+func realPath(p string) string {
+	if resolved, err := filepath.EvalSymlinks(p); err == nil {
+		return resolved
+	}
+	dir, base := filepath.Split(filepath.Clean(p))
+	if dir == "" || dir == p {
+		return p
+	}
+	return filepath.Join(realPath(filepath.Clean(dir)), base)
 }
 
 // runDriftCheck checks a single root (-C/--config-dir or discovery) or every root under the working
