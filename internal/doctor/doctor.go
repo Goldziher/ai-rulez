@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
@@ -128,6 +130,9 @@ type Options struct {
 	// harnesses' user and local MCP files (for example ~/.claude.json) outside
 	// the project. It is off by default so a run never reads outside the project.
 	ReadUserMCP bool
+	// OnCheck, when set, is called after each check with its name and how long it
+	// took, in run order. It is how a slow run says where the time went.
+	OnCheck func(name string, elapsed time.Duration)
 }
 
 // state is what the checks share.
@@ -157,25 +162,32 @@ func Run(ctx context.Context, o Options) *Report {
 	if s.cfg != nil {
 		report.Root = s.cfg.BaseDir
 	}
-	checks := []check{
-		checkConfig,
-		checkPolicy,
-		checkPresets,
-		checkMCPEnv,
-		checkMCPScope,
-		checkDrift,
-		checkGitignore,
-		checkDocuments,
-		checkOKF,
-		checkHooks,
-		checkIncludes,
-		checkLock,
-		checkLLM,
-		checkTools,
-		checkRoleModes,
+	checks := []struct {
+		name string
+		run  check
+	}{
+		{"config", checkConfig},
+		{"policy", checkPolicy},
+		{"presets", checkPresets},
+		{"mcp-env", checkMCPEnv},
+		{"mcp-scope", checkMCPScope},
+		{"drift", checkDrift},
+		{"gitignore", checkGitignore},
+		{"documents", checkDocuments},
+		{"okf", checkOKF},
+		{"hooks", checkHooks},
+		{"includes", checkIncludes},
+		{"lock", checkLock},
+		{"llm", checkLLM},
+		{"tools", checkTools},
+		{"role-modes", checkRoleModes},
 	}
 	for _, c := range checks {
-		report.Findings = append(report.Findings, c(ctx, s)...)
+		start := ambient.Clock(nil).Now()
+		report.Findings = append(report.Findings, c.run(ctx, s)...)
+		if o.OnCheck != nil {
+			o.OnCheck(c.name, ambient.Clock(nil).Now().Sub(start))
+		}
 	}
 	sort.SliceStable(report.Findings, func(i, j int) bool {
 		return report.Findings[i].Severity.rank() < report.Findings[j].Severity.rank()

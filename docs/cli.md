@@ -1386,6 +1386,8 @@ With a machine-local overlay or `local/` content, `--check` classifies the outpu
 
 Exit codes: `0` nothing differs, `1` the check could not run (configuration invalid, a nested root failed to load, or an environment variable an MCP server references is unset: `--check` renders the outputs and needs the same secrets as `generate`), `2` at least one file differs. A trailing-newline-only difference is not reported, because `generate` normalizes it. With `[header] hashes = "none"` there is no hash to compare, so every difference is `stale`. `--check` cannot be combined with `--dry-run`, `--plugin` (use `verify --plugin`) or `--gitignore`.
 
+With `--recursive` the roots are compared concurrently (at most `GOMAXPROCS` at a time) over one shared listing of the git index, and the differing files and errors are reported in root order, so the output and exit code do not depend on which root finishes first. A `[n/N] path (time)` line per root goes to stderr; `--quiet` and `--format json` silence it.
+
 #### Watch mode
 
 `generate --watch` generates once, then keeps running and regenerates whenever the sources change. It watches `.ai-rulez/` recursively (subdirectories created later included), the machine-local overlay files, the config file, and every `includes` / `local_override` source that is a local path. Remote includes are not polled.
@@ -1689,6 +1691,8 @@ ai-rulez doctor [--strict] [--format json] [--profile <name>] [--no-local]
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
 | `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
+
+With `--debug`, `doctor` logs one `Doctor check finished` line per check with its name and duration, to find the slow one.
 
 When outputs cannot be rendered at all (for example because an MCP placeholder is unset), `drift` says so and the `gitignore` check is skipped; the `mcp-env` finding names the cause.
 
@@ -2135,7 +2139,7 @@ ai-rulez validate [flags]
 
 | Flag                  | Type    | Description                                          |
 | --------------------- | ------- | ---------------------------------------------------- |
-| `--recursive`  | boolean | Validate every discovered config; exits non-zero if any is invalid |
+| `--recursive`  | boolean | Validate every discovered config, concurrently and reported in path order, with a `[n/N] path (time)` progress line per root on stderr (silenced by `--quiet` and a structured `--format`); exits non-zero if any is invalid |
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
 | `--config-only`       | boolean | Check the configuration file only and skip the content checks (dead globs, links, references, hooks, size). See [Strict validation](strict-validation.md) |
 | `--strict`            | boolean | Fail on warnings as well as errors (the same as `--fail-on warning`); cannot be combined with `--config-only` or another `--fail-on` |
