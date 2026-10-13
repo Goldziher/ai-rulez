@@ -82,44 +82,118 @@ func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.
 // evals/ directory is copied only when includeEvals is set: eval cases are
 // authoring material, not something consumers of the bundle need. Each
 // [plugin] shared_resources directory is copied in afterwards, and SKILL.md's
-// links to it are rewritten to the in-skill copy.
+// links to it are rewritten to the in-skill copy. A symlink inside the skill
+// directory is followed or refused under the policy plain generate applies to
+// skill resources (config.Config.AdmitProjectSymlink).
 func passthroughSkill(m *Manifest, content *config.ContentFile, destinationDir string, includeEvals bool) ([]config.OutputFile, error) {
 	if content.Path == "" || strings.HasPrefix(content.Path, "builtin://") {
 		return nil, nil
 	}
-	sourceDir := filepath.Dir(content.Path)
-	var outputs []config.OutputFile
-	own := map[string]bool{}
-	err := filepath.WalkDir(sourceDir, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return oops.With("path", path).Wrapf(walkErr, "walk skill directory")
-		}
-		if !entry.Type().IsRegular() {
-			return nil
-		}
-		relativePath, err := filepath.Rel(sourceDir, path)
-		if err != nil {
-			return oops.With("path", path).Wrapf(err, "resolve skill file path")
-		}
-		if !includeEvals && isEvalsPath(relativePath) {
-			return nil
-		}
-		out, err := passthroughFile(sourceDir, relativePath, filepath.Join(destinationDir, relativePath))
-		if err != nil {
-			return err
-		}
-		outputs = append(outputs, out)
-		own[filepath.ToSlash(relativePath)] = true
-		return nil
-	})
-	if err != nil {
+	walk := &skillWalk{
+		sourceDir:   filepath.Dir(content.Path),
+		destination: destinationDir,
+		evals:       includeEvals,
+		project:     m.Config,
+		own:         map[string]bool{},
+		visited:     map[string]bool{},
+	}
+	if walk.project == nil {
+		walk.project = &config.Config{BaseDir: m.SourceDir}
+	}
+	if err := walk.visit(walk.sourceDir, false); err != nil {
 		return nil, err
 	}
+	outputs, own := walk.outputs, walk.own
 	if err := appendSharedResources(m, content.Name, destinationDir, own, &outputs); err != nil {
 		return nil, err
 	}
 	rewriteSharedLinks(m, filepath.Join(destinationDir, skillManifestName), outputs)
 	return outputs, nil
+}
+
+// skillWalk collects the files of one skill directory, following the symlinks
+// the project policy admits.
+type skillWalk struct {
+	sourceDir   string
+	destination string
+	evals       bool // copy the evals/ directory too
+	project     *config.Config
+	outputs     []config.OutputFile
+	own         map[string]bool // bundle-relative paths collected, slash-separated
+	visited     map[string]bool // real paths of the directories being walked, against link cycles
+}
+
+// visit collects the files under dir. viaLink is set below a followed directory
+// link, whose files live outside the skill directory.
+func (w *skillWalk) visit(dir string, viaLink bool) error {
+	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+		if w.visited[resolved] {
+			return nil // a link cycle inside the project
+		}
+		w.visited[resolved] = true
+		defer delete(w.visited, resolved)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return oops.With("path", dir).Wrapf(err, "walk skill directory")
+	}
+	for _, entry := range entries {
+		if err := w.visitEntry(dir, entry, viaLink); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (w *skillWalk) visitEntry(dir string, entry os.DirEntry, viaLink bool) error {
+	path := filepath.Join(dir, entry.Name())
+	linked := entry.Type()&os.ModeSymlink != 0
+	isDir, isFile := entry.IsDir(), entry.Type().IsRegular()
+	if linked {
+		// The policy plain generate applies to a skill resource: an in-project
+		// link is followed, any other is refused with a warning naming the file.
+		info, ok := w.project.AdmitProjectSymlink(path)
+		if !ok {
+			return nil
+		}
+		isDir, isFile = info.IsDir(), info.Mode().IsRegular()
+	}
+	switch {
+	case isDir:
+		return w.visit(path, viaLink || linked)
+	case isFile:
+		return w.copyFile(path, linked || viaLink)
+	}
+	return nil
+}
+
+// copyFile collects one file. outside is set for a file reached through an
+// admitted link: it lives outside the skill directory, inside the project.
+func (w *skillWalk) copyFile(path string, outside bool) error {
+	relativePath, err := filepath.Rel(w.sourceDir, path)
+	if err != nil {
+		return oops.With("path", path).Wrapf(err, "resolve skill file path")
+	}
+	if !w.evals && isEvalsPath(relativePath) {
+		return nil
+	}
+	destination := filepath.Join(w.destination, relativePath)
+	var out config.OutputFile
+	if outside {
+		var info os.FileInfo
+		if info, err = os.Stat(path); err != nil {
+			return oops.With("path", path).Wrapf(err, "stat symlinked skill file")
+		}
+		out, err = passthroughLinkedFile(path, destination, info)
+	} else {
+		out, err = passthroughFile(w.sourceDir, relativePath, destination)
+	}
+	if err != nil {
+		return err
+	}
+	w.outputs = append(w.outputs, out)
+	w.own[filepath.ToSlash(relativePath)] = true
+	return nil
 }
 
 // appendSharedResources copies each [plugin] shared_resources directory into the
@@ -261,6 +335,18 @@ func passthroughFile(sourceDir, srcPath, dstPath string) (config.OutputFile, err
 	data, err := os.ReadFile(abs)
 	if err != nil {
 		return config.OutputFile{}, oops.With("path", abs).Wrapf(err, "read passthrough file")
+	}
+	return config.OutputFile{Path: dstPath, RawContent: data, Mode: info.Mode().Perm()}, nil
+}
+
+// passthroughLinkedFile reads the file a symlink that the project policy admitted
+// resolves to, and returns an OutputFile writing its bytes verbatim to dstPath
+// with the target's mode. The caller has already checked the target is inside the
+// project, so unlike passthroughFile no further containment check is made here.
+func passthroughLinkedFile(path, dstPath string, info os.FileInfo) (config.OutputFile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "read symlinked skill file")
 	}
 	return config.OutputFile{Path: dstPath, RawContent: data, Mode: info.Mode().Perm()}, nil
 }
