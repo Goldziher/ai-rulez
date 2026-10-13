@@ -19,6 +19,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`validate` no longer reports OKF findings twice when the `[okf]` bundle is the configuration directory under another spelling.** A relative path, a trailing separator or a symlink to it defeated the comparison.
 - **A plugin sidecar generated on Windows records no file modes.** It recorded `0644` for every file (Windows has no executable bit), so `verify --plugin` on Linux reported `mode` drift for each script ([#403](https://github.com/Goldziher/ai-rulez/issues/403)).
 - **`generate --check` judges the managed `.gitignore` block as a set and follows a symlinked `.gitignore`.** A block with a line `generate` would remove was reported in sync; it is now drift, as is a missing entry. With a symlinked `.gitignore` (git does not read it) `--check` reported nothing; it now compares the `ai-rulez` block in `.git/info/exclude`. Outside a git repository `--check` also counts machine-local outputs that `generate` puts in `.gitignore`.
 - **`validate` rejects a marketplace `output_dir` that sits inside another's.** Only identical directories were refused, so `out` and `out/inner` (or an empty `output_dir` beside any other) wrote one marketplace's index and bundles into the other's tree.
