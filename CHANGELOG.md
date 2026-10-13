@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **`builtins` accepts a positive `domain/name` to load a single item of a pack, and `builtin:domain/name` works in profiles.** A positive `domain/name` was read as a pack called `domain/name` and silently ignored; it now loads only that item (still applied after `!domain`, so `["security/secrets-handling", "!security"]` keeps just that item; `domain` wins over `domain/name`). A root `!domain/name` is now honored for packs loaded through `builtin:<pack>`. Behavior change: an unknown positive entry (`builtins = ["nope"]`, a typo in an item) now fails `validate` with the valid choices instead of being ignored; unknown exclusions remain warnings. `builtins show` labels its item names as `builtins` identifiers. Fixes #399.
+
 ### Added
 
 - **A root-level `action.yml` lets any workflow `uses: Goldziher/ai-rulez@<ref>` directly.** It installs a sha256-verified release binary, resolving `latest` or a pinned version, caches the download and adds `ai-rulez` to `PATH`; `scripts/pre-commit/run-ai-rulez.sh` gained `AI_RULEZ_RESOLVE_ONLY=1`, which prints the resolved binary's path instead of running it.

@@ -259,7 +259,7 @@ ai-rulez generate --profile full-stack
 
 ### Builtin Packs Per Profile
 
-A builtin pack can be scoped to one profile by referencing it as `builtin:<name>` in that
+A builtin pack, or a single item of one (`builtin:<name>/<item>`), can be scoped to one profile by referencing it as `builtin:<name>` in that
 profile's domain list:
 
 ```toml

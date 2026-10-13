@@ -1,6 +1,11 @@
 package config
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
@@ -24,6 +29,47 @@ func warnUnknownBuiltinExclusions(log logger.Logger, names []string) {
 	}
 }
 
+// itemSelected reports whether a pack item loads: "!domain/name" always removes it,
+// and a pack limited to chosen items loads only those.
+func itemSelected(domain, name string, only map[string]map[string]bool, excluded map[string]bool) bool {
+	if excluded[domain+"/"+name] {
+		return false
+	}
+	allowed := only[domain]
+	return allowed == nil || allowed[name]
+}
+
+// itemCount is the number of content files a builtin domain holds.
+func (d *Domain) itemCount() int {
+	return len(d.Rules) + len(d.Context) + len(d.Skills) + len(d.Agents) + len(d.Commands)
+}
+
+// validateBuiltins rejects positive entries of the builtins list ("domain" or
+// "domain/name") that name nothing real. Unlike an unknown exclusion, which only
+// leaves content in place, an unresolved selection silently drops content the
+// author asked for, so it is an error that names the valid choices.
+func (c *Config) validateBuiltins() error {
+	if c.Builtins == nil || !c.Builtins.IsEnabled() || c.Builtins.IsAll() || c.Builtins.IsNone() {
+		return nil
+	}
+	unknown := builtins.UnknownSelections(c.Builtins.GetNames())
+	if len(unknown) == 0 {
+		return nil
+	}
+	var problems []string
+	for _, u := range unknown {
+		msg := fmt.Sprintf("%q (valid: %s)", u.Spec, strings.Join(u.Valid, ", "))
+		if u.Suggestion != "" {
+			msg = fmt.Sprintf("%q, did you mean %q? (valid: %s)", u.Spec, u.Suggestion, strings.Join(u.Valid, ", "))
+		}
+		problems = append(problems, msg)
+	}
+	return oops.
+		With("field", "builtins").
+		Hint("Use a pack from `ai-rulez builtins list` or an item as `<pack>/<item>` (`ai-rulez builtins show <pack>` lists items)").
+		Errorf("builtins names unknown packs or items: %s", strings.Join(problems, "; "))
+}
+
 // loadBuiltins resolves and loads builtin domains into the config content tree.
 // Builtins have the lowest priority: they are injected into domains that don't already exist.
 // If a domain already exists (from local content or includes), the builtin is skipped.
@@ -41,34 +87,63 @@ func loadBuiltins(config *Config) {
 		}
 	}
 
+	var rootExclusions map[string]bool
 	if config.Builtins.IsEnabled() && !config.Builtins.IsNone() {
+		rootExclusions = builtins.ExcludedRules(config.Builtins.GetNames())
 		warnUnknownBuiltinExclusions(config.Log(), config.Builtins.GetNames())
 
-		var resolved []string
+		selection := builtins.Selection{}
 		if config.Builtins.IsAll() {
-			resolved = builtins.ResolveAll()
+			selection.Domains = builtins.ResolveAll()
 		} else {
-			resolved = builtins.ResolveBuiltins(config.Builtins.GetNames())
+			selection = builtins.ResolveSelection(config.Builtins.GetNames())
 		}
-		if len(resolved) > 0 {
-			config.Log().Debug("Loading builtins", "count", len(resolved), "names", resolved)
-			loadBuiltinDomains(config, resolved, builtins.ExcludedRules(config.Builtins.GetNames()), false)
+		if len(selection.Domains) > 0 {
+			config.Log().Debug("Loading builtins", "count", len(selection.Domains), "names", selection.Domains)
+			loadBuiltinDomains(config, selection.Domains, selection.Only, rootExclusions, false)
 		}
 	}
 
-	for _, name := range config.ProfileBuiltinRefs() {
-		if _, exists := config.Content.Domains[name]; exists {
-			continue
-		}
-		loadBuiltinDomains(config, []string{name}, nil, true)
+	// A global selection (even item by item) already owns its domain, so it wins
+	// over a profile reference to the same pack. Root "!domain/name" exclusions
+	// apply to profile-scoped packs too.
+	whole, only := groupProfileBuiltinRefs(config.ProfileBuiltinRefs())
+	for _, name := range whole {
+		loadBuiltinDomains(config, []string{name}, nil, rootExclusions, true)
+	}
+	for name, items := range only {
+		loadBuiltinDomains(config, []string{name}, map[string]map[string]bool{name: items}, rootExclusions, true)
 	}
 }
 
+// groupProfileBuiltinRefs splits "builtin:" references (prefix already removed) into
+// packs loaded whole and packs limited to the items named for them. A whole-pack
+// reference wins over item references to the same pack.
+func groupProfileBuiltinRefs(refs []string) (whole []string, only map[string]map[string]bool) {
+	only = make(map[string]map[string]bool)
+	for _, ref := range refs {
+		domain, item, qualified := strings.Cut(ref, "/")
+		if !qualified {
+			whole = append(whole, domain)
+			continue
+		}
+		if only[domain] == nil {
+			only[domain] = make(map[string]bool)
+		}
+		only[domain][item] = true
+	}
+	for _, domain := range whole {
+		delete(only, domain)
+	}
+	return whole, only
+}
+
 // loadBuiltinDomains loads each named builtin pack into config.Content.Domains,
-// skipping names a local or include domain already owns. When scoped is true the
-// domain is tagged BuiltinScoped so profile resolution confines it to the
-// profiles that reference it.
-func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[string]bool, scoped bool) {
+// skipping names a local or include domain already owns. A pack with an entry in
+// only loads just those items; ruleExclusions ("domain/name") always removes an
+// item. When scoped is true the domain is tagged BuiltinScoped so profile
+// resolution confines it to the profiles that reference it.
+func loadBuiltinDomains(config *Config, names []string, only map[string]map[string]bool, ruleExclusions map[string]bool, scoped bool) {
 	for _, name := range names {
 		// Skip if domain already exists (local content has higher priority)
 		if _, exists := config.Content.Domains[name]; exists {
@@ -93,8 +168,8 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 
 		for _, entry := range entries {
 			// Skip individual builtin content files excluded via "!domain/name".
-			if ruleExclusions[name+"/"+entry.Name] {
-				config.Log().Debug("Excluding builtin content", "domain", name, "name", entry.Name)
+			if !itemSelected(name, entry.Name, only, ruleExclusions) {
+				config.Log().Debug("Skipping builtin content", "domain", name, "name", entry.Name)
 				continue
 			}
 
@@ -125,6 +200,9 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 			}
 		}
 
+		if only[name] != nil && domain.itemCount() == 0 {
+			continue
+		}
 		config.Content.Domains[name] = domain
 		config.Log().Debug("Loaded builtin domain",
 			"name", name,
