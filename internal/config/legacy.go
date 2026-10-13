@@ -78,6 +78,9 @@ func FindLegacyConfig(baseDir string) string {
 // findLegacyConfig is FindLegacyConfig reading through v; baseDir is absolute.
 func findLegacyConfig(v workspace.View, absDir string) string {
 	for _, dirName := range configDirCandidates {
+		if dirName == AgentsDirName {
+			continue // .agents holds other tools' files; ai-rulez never kept a V3 config there
+		}
 		configDir := filepath.Join(absDir, filepath.FromSlash(dirName))
 		if hasConfigFile(v, configDir) {
 			return ""

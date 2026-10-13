@@ -279,7 +279,7 @@ func (g *Generator) sharedConfig() (*config.Config, error) {
 	if g.config.ConfigDir == "" || g.config.ConfigFile == "" {
 		return nil, oops.Errorf("the config file location is unknown, so roles.json cannot be built from the shared sources")
 	}
-	path := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
+	path := g.config.ConfigPath()
 	shared, err := config.LoadConfigFromFile(g.ctx, path,
 		g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
 	if err != nil {

@@ -139,7 +139,7 @@ func (g *Generator) renderBaseline(profile string) ([]config.OutputFile, string,
 	if g.config.ConfigDir == "" || g.config.ConfigFile == "" {
 		return nil, "", oops.Errorf("the config file location is unknown")
 	}
-	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
+	cfgPath := g.config.ConfigPath()
 	cfg, err := config.LoadConfigFromFile(g.ctx, cfgPath,
 		g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
 	if err != nil {

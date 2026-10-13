@@ -247,7 +247,7 @@ func mcpUserScopeFindings(cfg *config.Config) []lint.Finding {
 	for _, f := range findings {
 		file := f.Path
 		if file == "" {
-			file = filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+			file = cfg.ConfigPath()
 		}
 		message := f.Message
 		if f.Hint != "" {

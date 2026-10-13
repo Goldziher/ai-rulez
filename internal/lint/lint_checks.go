@@ -19,7 +19,7 @@ func (r *runner) configFilePath() string {
 	if r.cfg.ConfigFile == "" {
 		return ""
 	}
-	p, _ := filepath.Abs(filepath.Join(r.cfg.ConfigDir, r.cfg.ConfigFile)) //nolint:errcheck // display only
+	p, _ := filepath.Abs(r.cfg.ConfigPath()) //nolint:errcheck // display only
 	return p
 }
 

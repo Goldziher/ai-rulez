@@ -3998,6 +3998,12 @@
       },
       "type": "object"
     },
+    "source": {
+      "default": "ai-rulez",
+      "description": "Where the content is read from. 'ai-rulez' (default) reads the .ai-rulez content tree. 'agents' reads the open standards: the root AGENTS.md and the .agents directory (Agent Skills in .agents/skills/<name>/SKILL.md, plus the ai-rulez layout .agents/rules, agents, checks, commands, context and domains/<name>), and never writes to AGENTS.md or .agents. A configuration kept in .agents/ai-rulez.toml implies 'agents'; hooks, MCP servers, permissions and presets stay in the TOML.",
+      "enum": ["ai-rulez", "agents"],
+      "type": "string"
+    },
     "telemetry": {
       "additionalProperties": false,
       "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",

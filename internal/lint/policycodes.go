@@ -2,7 +2,6 @@ package lint
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -176,7 +175,7 @@ func (r *runner) checkPolicy() {
 	if r.cfg == nil || r.cfg.PolicyOutcome == nil {
 		return
 	}
-	fallback := filepath.Join(r.cfg.ConfigDir, r.cfg.ConfigFile)
+	fallback := r.cfg.ConfigPath()
 	for _, v := range r.cfg.PolicyOutcome.Violations {
 		file := v.File
 		if file == "" {

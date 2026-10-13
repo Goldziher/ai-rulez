@@ -54,7 +54,7 @@ func checkConfig(_ context.Context, s *state) []Finding {
 	cfg := s.cfg
 	var out []Finding
 	if cfg.ConfigFile != "" {
-		path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+		path := cfg.ConfigPath()
 		if err := schema.ValidateFile(path); err != nil {
 			for _, f := range errorFinding(CheckConfig, SeverityError, err, path) {
 				f.Message = strings.TrimPrefix(f.Message, "- ")

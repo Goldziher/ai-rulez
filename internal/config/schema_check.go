@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -64,7 +63,7 @@ func (f SchemaFinding) String() string {
 func SchemaFindings(cfg *Config) ([]SchemaFinding, error) {
 	var out []SchemaFinding
 	if cfg.ConfigFile != "" {
-		path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+		path := cfg.ConfigPath()
 		found, err := findingsOf(path, schema.ValidateFile(path))
 		if err != nil {
 			return nil, err

@@ -1,8 +1,6 @@
 package lint
 
 import (
-	"path/filepath"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
@@ -31,7 +29,7 @@ func (r *runner) checkARD() {
 	if r.cfg.ConfigDir == "" {
 		return
 	}
-	file := filepath.Join(r.cfg.ConfigDir, r.cfg.ConfigFile)
+	file := r.cfg.ConfigPath()
 	if r.cfg.ARD == nil {
 		if p := r.cfg.Publish; p != nil {
 			for _, e := range p.Emitters {

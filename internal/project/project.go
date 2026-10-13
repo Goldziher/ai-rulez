@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/agentssource"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
@@ -29,7 +30,9 @@ const gitTokenKey = "git_token"
 // The OKF include scan runs the default security rules, so an OKF include is
 // refused content a skill would be refused.
 func Resolvers() config.Resolvers {
-	return includes.Resolvers(viper.GetString(gitTokenKey), lint.OKFScanner(nil))
+	r := includes.Resolvers(viper.GetString(gitTokenKey), lint.OKFScanner(nil))
+	r.Agents = agentssource.Read
+	return r
 }
 
 // Options returns opts preceded by the resolvers and the registry of this process

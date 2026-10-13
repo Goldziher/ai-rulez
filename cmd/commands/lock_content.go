@@ -107,7 +107,7 @@ func sharedConfig(ctx context.Context, cfg *config.Config) (*config.Config, erro
 	if cfg.LocalOverlay == nil && cfg.LocalContent == nil {
 		return cfg, nil
 	}
-	path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+	path := cfg.ConfigPath()
 	if _, err := os.Stat(path); err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}

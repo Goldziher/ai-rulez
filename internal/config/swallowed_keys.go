@@ -57,7 +57,7 @@ func swallowedKeyIn(path, parent, display string, body map[string]any) error {
 		return nil // a free-form map, or a table the config does not know
 	}
 	for _, key := range slices.Sorted(maps.Keys(body)) {
-		if !topLevelKeyOutsideItsTable(parent, key) {
+		if !topLevelKeyOutsideItsTable(parent, key) || !looksLikeTopLevelValue(key, body[key]) {
 			continue
 		}
 		return oops.With("path", path).
@@ -67,4 +67,16 @@ func swallowedKeyIn(path, parent, display string, body map[string]any) error {
 				"table and ignored; move `%s` above the first [table]", key, display, key)
 	}
 	return nil
+}
+
+// looksLikeTopLevelValue reports whether the value of key reads as the top-level
+// setting of that name. Most keys do; "source" is also a field of other tables
+// (an include, a skill source), so a value that is no source name stays an
+// unknown key of its table rather than a swallowed top-level setting.
+func looksLikeTopLevelValue(key string, value any) bool {
+	if key != "source" {
+		return true
+	}
+	name, ok := value.(string)
+	return ok && (name == SourceAgents || name == SourceAIRulez)
 }

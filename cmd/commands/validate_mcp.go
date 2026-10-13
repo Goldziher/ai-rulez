@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"path/filepath"
 	"sync"
 
 	"github.com/samber/oops"
@@ -34,7 +33,7 @@ func (v *mcpValidator) validate(ctx context.Context, cfg *config.Config, p handl
 		return nil, err
 	}
 	if cfg.ConfigFile != "" {
-		if err := schema.ValidateFile(filepath.Join(cfg.ConfigDir, cfg.ConfigFile)); err != nil {
+		if err := schema.ValidateFile(cfg.ConfigPath()); err != nil {
 			return nil, schemaFailure(cfg, err)
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -75,7 +74,7 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	for code, sev := range r.Policy.Lint.SeverityFloor {
 		a.out.SeverityFloor[code] = sev
 	}
-	a.file = filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+	a.file = cfg.ConfigPath()
 	if cfg.ConfigDir != "" && cfg.ConfigFile != "" {
 		if data, err := os.ReadFile(a.file); err == nil { //nolint:gosec // the project's own config file
 			a.text = strings.Split(string(data), "\n")

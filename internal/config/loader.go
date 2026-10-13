@@ -44,10 +44,10 @@ const (
 )
 
 // configDirCandidates lists the supported directory-based config locations,
-// relative to a project base directory, in precedence order: the tool-specific
-// .ai-rulez/ first (backward compatible), then the project-level
-// .config/ai-rulez/ convention.
-var configDirCandidates = []string{aiRulezDirName, altConfigDirName}
+// relative to a project base directory, in precedence order: .agents/ (when it
+// holds ai-rulez.toml, the "agents" source), the tool-specific .ai-rulez/
+// (backward compatible), then the project-level .config/ai-rulez/ convention.
+var configDirCandidates = []string{AgentsDirName, aiRulezDirName, altConfigDirName}
 
 // ResolveConfigDirName returns the first config directory candidate that exists
 // under baseDir and contains a config file, or "" when none is present. The
@@ -75,6 +75,9 @@ func resolveConfigDirName(v workspace.View, absDir string) string {
 // layout it skips past the generic .config/ wrapper so generated outputs are
 // rooted in the project, not in .config/.
 func ProjectBaseDir(configDir string) string {
+	if base, ok := agentsLayoutBase(configDir); ok {
+		return base
+	}
 	parent := filepath.Dir(configDir)
 	if filepath.Base(parent) == ".config" {
 		return filepath.Dir(parent)
@@ -108,6 +111,9 @@ type ResolveInstalledSkillsCallback func(ctx context.Context, cfg *Config) ([]Co
 type Resolvers struct {
 	Includes ResolveIncludesCallback
 	Skills   ResolveInstalledSkillsCallback
+	// Agents completes the content tree of the "agents" source (AGENTS.md and
+	// generated-file screening); only a project with that source needs it.
+	Agents AgentsSourceReader
 }
 
 // LoadConfig loads a configuration from the specified base directory.
@@ -138,6 +144,9 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 		configDirName = aiRulezDirName
 	}
 	configDir := filepath.Join(absDir, filepath.FromSlash(configDirName))
+	if IsAgentsConfigDir(configDir) {
+		return loadAgentsLayout(ctx, v, absDir, lo)
+	}
 
 	if info, err := v.Stat(configDir); err != nil {
 		if os.IsNotExist(err) {
@@ -196,6 +205,9 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 	if isLegacyConfigName(filepath.Base(absPath)) {
 		return nil, newLegacyConfigError(absPath)
 	}
+	if filepath.Base(absPath) == AgentsConfigFilename && filepath.Base(filepath.Dir(absPath)) == AgentsDirName {
+		return loadAgentsLayout(ctx, v, ProjectBaseDir(filepath.Dir(absPath)), lo)
+	}
 	if isLocalConfigFilename(filepath.Base(absPath)) {
 		return nil, oops.
 			With("path", absPath).
@@ -243,6 +255,9 @@ func absoluteConfigPath(path string, lo loadOptions) (string, error) {
 // directory's own config.toml when it has one, otherwise a project discovery
 // from that path.
 func loadConfigFromDir(ctx context.Context, v workspace.View, absPath string, lo loadOptions, opts []LoadOption) (*Config, error) {
+	if base, ok := agentsLayoutBase(absPath); ok {
+		return loadAgentsLayout(ctx, v, base, lo)
+	}
 	if legacy := legacyConfigIn(v, absPath); legacy != "" && !hasConfigFile(v, absPath) {
 		return nil, newLegacyConfigError(legacy)
 	}
@@ -266,7 +281,36 @@ func looksLikeProjectRoot(v workspace.View, dir string) bool {
 }
 
 func hasConfigFile(v workspace.View, dir string) bool {
-	return v.IsRegularFile(filepath.Join(dir, configTOMLFilename))
+	return v.IsRegularFile(filepath.Join(dir, configFileNameIn(dir)))
+}
+
+// loadAgentsLayout loads the project at baseDir whose configuration is
+// .agents/ai-rulez.toml. ConfigDir is .agents/.ai-rulez: the manifest, lock,
+// machine-local content and config.local.toml stay in a subfolder of their own
+// instead of loose among the standard's files.
+func loadAgentsLayout(ctx context.Context, v workspace.View, baseDir string, lo loadOptions) (*Config, error) {
+	agentsDir := filepath.Join(baseDir, AgentsDirName)
+	stateDir := filepath.Join(agentsDir, agentsStateDirName)
+	mainPath := filepath.Join(agentsDir, AgentsConfigFilename)
+	if !v.Exists(mainPath) {
+		return nil, oops.
+			With("config_dir", agentsDir).
+			With("toml_path", mainPath).
+			Hint(fmt.Sprintf("Create %s/%s\nRun 'ai-rulez init --source agents' to initialize configuration", AgentsDirName, AgentsConfigFilename)).
+			Errorf("no config file found (tried %s/%s)", AgentsDirName, AgentsConfigFilename)
+	}
+	cfg, err := loadConfigTOML(v, mainPath)
+	if err != nil {
+		return nil, err
+	}
+	cfg.ConfigFile = AgentsConfigFilename
+	cfg, err = withLocalOverlay(v, cfg, mainPath, stateDir, lo) //nolint:contextcheck // the overlay tracking probe is a bounded local git call with its own timeout
+	if err != nil {
+		return nil, err
+	}
+	cfg.ConfigFilePath = mainPath
+	cfg.AgentsLayout = true
+	return finishLoadConfig(ctx, v, cfg, baseDir, stateDir, lo)
 }
 
 // checkLegacyVersion reports the migration error of a config that still carries
@@ -299,6 +343,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.LockPolicy = lo.lockPolicy
 	config.frontmatterErrors = lo.frontmatterErrors
 	config.RulesDirs = &RulesDirSet{}
+	if config.ConfigFilePath == "" {
+		config.ConfigFilePath = filepath.Join(configDir, config.ConfigFile)
+	}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 	config.RootRel = rootRelInRepo(baseDir)
 	config.NestedRoot = nestedInRepo(baseDir)
@@ -332,7 +379,13 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	scanner.git = gitutil.New(loadHost(lo).Runner)
 	scanner.log = lo.host.Log
 	scanner.snapshots.anchor = filepath.Clean(configDir)
-	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
+	var contentTree *ContentTree
+	var err error
+	if config.UsesAgentsSource() {
+		contentTree, err = loadAgentsSource(ctx, scanner, config, lo)
+	} else {
+		contentTree, err = scanContentTree(scanner, configDir, config.BundleExclude)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -580,6 +633,7 @@ func loadConfigTOML(v workspace.View, path string) (*Config, error) {
 // Config must appear here (TestTomlConfigCoversConfig).
 type tomlConfig struct {
 	Schema                string                  `toml:"schema"`
+	Source                string                  `toml:"source"`
 	Version               string                  `toml:"version"`
 	Name                  string                  `toml:"name"`
 	Description           string                  `toml:"description"`
@@ -688,6 +742,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 
 	cfg := &Config{
 		Schema:                raw.Schema,
+		Source:                raw.Source,
 		Version:               raw.Version,
 		Name:                  raw.Name,
 		Description:           raw.Description,
@@ -811,6 +866,9 @@ func SaveConfig(cfg *Config, configDir string) error {
 	}
 
 	targetPath := filepath.Join(configDir, configTOMLFilename)
+	if IsAgentsConfigDir(configDir) {
+		targetPath = filepath.Join(agentsDirOf(configDir), AgentsConfigFilename)
+	}
 	data, err := MarshalTOML(cfg)
 	if err != nil {
 		return oops.With("path", targetPath).Wrapf(err, "marshal config to TOML")

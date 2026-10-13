@@ -151,6 +151,13 @@ func checkSegments(segs []string) error {
 }
 
 func mainConfigFileName(configDir string) string {
+	if IsAgentsConfigDir(configDir) {
+		// The main file is .agents/ai-rulez.toml; the state directory sits beside it.
+		if safefs.IsFile(filepath.Join(agentsDirOf(configDir), AgentsConfigFilename)) {
+			return AgentsConfigFilename
+		}
+		return ""
+	}
 	for _, name := range []string{configTOMLFilename} {
 		if safefs.IsFile(filepath.Join(configDir, name)) {
 			return name
@@ -224,6 +231,16 @@ func OpenLocalDoc(configDir, mainConfigFile string) (*LocalDoc, error) {
 }
 
 func openLocalDoc(configDir, mainConfigFile string, lock bool) (*LocalDoc, error) {
+	if IsAgentsConfigDir(configDir) {
+		// The overlay and its lock live in .agents/.ai-rulez, the main file is its sibling.
+		configDir = filepath.Join(agentsDirOf(configDir), agentsStateDirName)
+		if mainConfigFile != "" {
+			mainConfigFile = filepath.Join("..", mainConfigFile)
+		}
+		if err := os.MkdirAll(configDir, 0o755); err != nil && lock {
+			return nil, oops.With("path", configDir).Wrapf(err, "create the .agents state directory")
+		}
+	}
 	if lock && mainConfigFile == "" {
 		return nil, oops.Hint("Run 'ai-rulez init' first").Errorf("no main config file found in %s", configDir)
 	}
