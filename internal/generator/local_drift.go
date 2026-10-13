@@ -468,13 +468,12 @@ func (g *Generator) excludeMarkers() (begin, end string) {
 	return "# BEGIN ai-rulez local: " + key, "# END ai-rulez local: " + key
 }
 
-// syncMachineExcludes makes .git/info/exclude hold exactly this project's
-// overlay-derived local-only paths, inside its own marked block (removed when
-// there are none). Paths git's exclude file cannot express fall back to the
-// managed .gitignore block. plan may be nil: a run with no local inputs removes
-// a block left by an earlier run.
-func (g *Generator) syncMachineExcludes(plan *localPlan) error {
-	exclude := g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir)
+// machineExcludePatterns is the read-only half of syncMachineExcludes: the
+// exclude file ("" outside a repository) and the patterns this project's block
+// holds. A path git's exclude file cannot take is marked in plan.inGitignore,
+// which is how the managed .gitignore block learns to hold it.
+func (g *Generator) machineExcludePatterns(plan *localPlan) (exclude string, patterns []string) {
+	exclude = g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir)
 	if exclude == "" {
 		if plan != nil && len(plan.machineLocal) > 0 {
 			for rel := range plan.machineLocal {
@@ -482,11 +481,10 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 			}
 			g.log().Warn("Not a git repository; ignoring machine-local outputs through .gitignore instead of .git/info/exclude")
 		}
-		return nil
+		return "", nil
 	}
 
 	top := g.git().TopLevelContext(g.ctx, g.config.BaseDir)
-	var patterns []string
 	if plan != nil {
 		for rel := range plan.machineLocal {
 			repoRel := gitutil.RepoRelative(top, filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
@@ -499,6 +497,19 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 		}
 	}
 	sort.Strings(patterns)
+	return exclude, patterns
+}
+
+// syncMachineExcludes makes .git/info/exclude hold exactly this project's
+// overlay-derived local-only paths, inside its own marked block (removed when
+// there are none). Paths git's exclude file cannot express fall back to the
+// managed .gitignore block. plan may be nil: a run with no local inputs removes
+// a block left by an earlier run.
+func (g *Generator) syncMachineExcludes(plan *localPlan) error {
+	exclude, patterns := g.machineExcludePatterns(plan)
+	if exclude == "" {
+		return nil
+	}
 
 	data, err := gitutil.ReadIgnoreFile(exclude)
 	if err != nil && !os.IsNotExist(err) {

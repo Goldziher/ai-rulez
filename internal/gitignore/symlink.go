@@ -40,6 +40,46 @@ func ensureViaExclude(log logger.Logger, baseDir string, patterns []string) erro
 	return writeExcludeFallback(log, baseDir, patterns, true)
 }
 
+// ExcludeBlockStatus is the read-only half of ReplaceViaExclude: whether the
+// project's block in .git/info/exclude exists and whether it holds exactly
+// patterns (an empty list wants no block). inRepo is false outside a git
+// repository, where there is no exclude file to judge.
+func ExcludeBlockStatus(baseDir string, patterns []string) (hasBlock, exact, inRepo bool) {
+	exclude := gitutil.InfoExcludePath(baseDir)
+	if exclude == "" {
+		return false, true, false
+	}
+	data, err := gitutil.ReadIgnoreFile(exclude)
+	if err != nil && !os.IsNotExist(err) {
+		return false, true, false
+	}
+	content := string(data)
+	begin, end := FallbackMarkers(baseDir)
+	hasBlock = strings.Contains(content, begin) && strings.Contains(content, end)
+	have := blockEntries(content, begin, end)
+	want := map[string]bool{}
+	prefix := gitutil.RepoRelative(gitutil.TopLevel(baseDir), baseDir)
+	for _, p := range patterns {
+		if p = strings.TrimSpace(p); p != "" && !strings.ContainsAny(p, "\r\n") {
+			if a := anchored(prefix, p); a != "" {
+				want[a] = true
+			}
+		}
+	}
+	if len(want) == 0 {
+		return hasBlock, !hasBlock, true
+	}
+	if len(want) != len(have) {
+		return hasBlock, false, true
+	}
+	for e := range want {
+		if !have[e] {
+			return hasBlock, false, true
+		}
+	}
+	return hasBlock, true, true
+}
+
 func writeExcludeFallback(log logger.Logger, baseDir string, patterns []string, keep bool) error {
 	exclude := gitutil.InfoExcludePath(baseDir)
 	if exclude == "" {

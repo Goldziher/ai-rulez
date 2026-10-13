@@ -19,6 +19,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`generate --check` judges the managed `.gitignore` block as a set and follows a symlinked `.gitignore`.** A block with a line `generate` would remove was reported in sync; it is now drift, as is a missing entry. With a symlinked `.gitignore` (git does not read it) `--check` reported nothing; it now compares the `ai-rulez` block in `.git/info/exclude`. Outside a git repository `--check` also counts machine-local outputs that `generate` puts in `.gitignore`.
 - **`validate` rejects a marketplace `output_dir` that sits inside another's.** Only identical directories were refused, so `out` and `out/inner` (or an empty `output_dir` beside any other) wrote one marketplace's index and bundles into the other's tree.
 - **`AR9T1` points at the plugin's own definition.** It anchored on the first `name = "<plugin>"` line of `config.toml`, which could be a marketplace or another table, and ignored `.ai-rulez/plugins/<name>.toml`; it now reports the plugin's table or its definition file.
 - **A `plugins/` or `marketplaces/` directory that cannot be listed fails the load, and unknown keys in a definition file are errors.** Any `ReadDir` failure (a permission error, a file where the directory should be) was read as "no definitions" and the plugins vanished silently. Unknown keys in `.ai-rulez/plugins/*.toml` and `.ai-rulez/marketplaces/*.toml` already fail the load with the file and key named; they are not ignored like unknown keys in `config.toml` layers.
