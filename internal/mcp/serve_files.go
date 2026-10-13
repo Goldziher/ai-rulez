@@ -69,9 +69,28 @@ func (f *CatalogFile) metaFields() map[string]any {
 
 const interpNode = "node"
 
-var extensionInterpreters = map[string]string{
-	".sh": "sh", ".bash": "bash", ".zsh": "zsh", ".py": "python3", ".js": interpNode, ".mjs": interpNode,
-	".cjs": interpNode, ".rb": "ruby", ".pl": "perl", ".php": "php", ".ps1": "pwsh",
+func extensionInterpreter(ext string) string {
+	switch ext {
+	case ".sh":
+		return "sh"
+	case ".bash":
+		return "bash"
+	case ".zsh":
+		return "zsh"
+	case ".py":
+		return "python3"
+	case ".js", ".mjs", ".cjs":
+		return interpNode
+	case ".rb":
+		return "ruby"
+	case ".pl":
+		return "perl"
+	case ".php":
+		return "php"
+	case ".ps1":
+		return "pwsh"
+	}
+	return ""
 }
 
 // interpreterHint is how to run a file: its shebang line, else the interpreter
@@ -88,7 +107,7 @@ func interpreterHint(rel string, content []byte) string {
 	if !utf8.Valid(content) {
 		return ""
 	}
-	return extensionInterpreters[strings.ToLower(path.Ext(rel))]
+	return extensionInterpreter(strings.ToLower(path.Ext(rel)))
 }
 
 // fileWindow is the byte range of a file one read returns.

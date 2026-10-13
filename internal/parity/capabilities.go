@@ -179,6 +179,7 @@ func buildCapabilities() []Capability {
 					Reason: "gates that turn drift into an exit code or overwrite files; an agent runs generate_outputs check for drift and never forces"},
 				{Names: []string{"env", "env-file"}, Reason: "pass secrets from the caller's environment; a tool call must not accept them"},
 				{Names: []string{"user", "plugin", "gitignore"}, Reason: "write outside the project tree or into user scope; not exposed to tools"},
+				{Names: []string{"plugin-name", "marketplace-name"}, Reason: "select plugins for --plugin, which is not exposed to tools"},
 			},
 		},
 		{

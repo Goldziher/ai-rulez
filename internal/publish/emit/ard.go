@@ -68,7 +68,11 @@ type ARDInput struct {
 // https://<publisher>/.well-known/ard.json; see docs/ard.md.
 type ardEmitter struct{}
 
-func init() { register(ardEmitter{}) }
+// init registers the ARD emitter and the MCP server card emitter that shares its builders.
+func init() {
+	register(ardEmitter{})
+	register(mcpServerCard{})
+}
 
 func (ardEmitter) Name() string   { return ARDEmitter }
 func (ardEmitter) Status() string { return StatusVerified }
