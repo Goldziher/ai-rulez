@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@9ed0576675002330bb3d5446ac603b70a6f096ee # v1
+    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@7bb3390acdfa67fe900d36d3eba1e2bca2032ef7 # v1
 
   lint:
     name: Lint
