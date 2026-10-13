@@ -665,7 +665,7 @@
       "type": "object"
     },
     "gitignore_exclude": {
-      "description": "Ignore patterns left out of the managed .gitignore block, for generated outputs the project commits on purpose (for example AGENTS.md, **/CLAUDE.md, .claude/skills/, .mcp.json). Gitignore notation: an entry without '/' matches at any depth, '**' crosses directories, a trailing '/' names a directory and covers what is below it. Machine-local and secret outputs are never excluded. Each root applies its own list to its own outputs. Has no effect unless the block is written",
+      "description": "Ignore patterns left out of the managed .gitignore block, for generated outputs the project commits on purpose (for example AGENTS.md, **/CLAUDE.md, .claude/skills/, .opencode/skills/). Gitignore notation: an entry without '/' matches at any depth, '**' crosses directories, a trailing '/' names a directory and covers what is below it. Machine-local and secret outputs are never excluded. Each root applies its own list to its own outputs. Has no effect unless the block is written",
       "items": {
         "type": "string"
       },

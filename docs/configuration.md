@@ -527,6 +527,10 @@ directory entry (`!.claude/skills/`, `!/.claude/skills/`) is honored the same wa
 way, since `generate` leaves it alone; it still reports a machine-local or secret output a rule un-ignores, and says
 that `generate` will not re-ignore it.
 
+The machine-local manifest, `.ai-rulez/.generated-manifest.local.json`, is the one entry that is always written: it
+is ignored whenever it exists in a repository (and whenever a run writes it), even with `gitignore = false`, without
+adding `.ai-rulez/local/` or the overlay patterns.
+
 Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
 when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
 no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
@@ -545,7 +549,7 @@ managed. Use it instead of a hand-written `!pattern` after the block.
 
 ```toml
 gitignore = true
-gitignore_exclude = ["AGENTS.md", "**/CLAUDE.md", ".claude/skills/", ".claude/agents/", ".mcp.json"]
+gitignore_exclude = ["AGENTS.md", "**/CLAUDE.md", ".claude/skills/", ".claude/agents/", ".opencode/skills/"]
 ```
 
 Entries use gitignore notation, matched against the patterns the block would list: an entry without `/`
@@ -1095,6 +1099,9 @@ builtins = false
 ```toml
 builtins = ["rust", "python", "pyo3", "security", "git-workflow", "default-commands"]
 ```
+
+An unknown positive entry (a typo such as `builtins = ["rsut"]`) fails `validate` and the load with the valid
+choices; unknown `!exclusions` stay warnings.
 
 #### Scope a builtin to a profile
 

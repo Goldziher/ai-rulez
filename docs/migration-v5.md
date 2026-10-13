@@ -209,6 +209,8 @@ hashes = "full"
   *Migrate:* scripts that scraped the `INFO ... successfully` lines read the path from stdout or use `--format json`.
 - **`show` and `edit` complete the verbs** (`list`, `show`, `add`, `edit`, `remove`): `ai-rulez show rule style`,
   `ai-rulez edit rule style --content ...`. They are the CLI side of the MCP `read_*` and `update_*` tools.
+- **A bare unknown `builtins` entry fails `validate`.** `builtins = ["rsut"]` was ignored; it now fails with the valid
+  choices (unknown `!exclusions` still warn). *Migrate:* fix or remove the entry.
 - **Group commands print help.** `ai-rulez list` with no subcommand used to exit 1 with "specify what to list"; like
   `add`, `remove`, `domain`, `profile`, `include`, `skill`, `builtins` and `migrate` it now prints its help and exits 0.
 - **Stricter content names and values** (also for the MCP tools): a name must not end in `.md`, contain whitespace or
