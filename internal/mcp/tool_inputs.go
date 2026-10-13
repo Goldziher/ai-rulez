@@ -232,7 +232,7 @@ type installSkillIn struct {
 type updateConfigIn struct {
 	Name                  string            `json:"name,omitempty" jsonschema:"Project name"`
 	Description           string            `json:"description,omitempty" jsonschema:"Project description"`
-	Builtins              []string          `json:"builtins,omitempty" jsonschema:"List of builtin names to enable (replaces current builtins setting)"`
+	Builtins              []string          `json:"builtins,omitempty" jsonschema:"List of builtin names to enable (replaces current builtins setting). 'domain/name' loads only that item of a pack, '!domain' removes a pack, '!domain/name' removes one item"`
 	Gitignore             bool              `json:"gitignore,omitempty" jsonschema:"Whether to update .gitignore when generating outputs"`
 	AgentsMD              bool              `json:"agents_md,omitempty" jsonschema:"Render always-on rules and context once into a shared AGENTS.md and skills once into .agents/skills for tools that read them"`
 	DefaultEffort         string            `json:"default_effort,omitempty" jsonschema:"Default reasoning effort for Claude Code subagents (low, medium, high, xhigh, max, inherit). Empty string clears the default."`
@@ -245,7 +245,7 @@ type updateConfigIn struct {
 
 type addProfileIn struct {
 	Name    string   `json:"name" jsonschema:"Profile name (unique identifier)"`
-	Domains []string `json:"domains" jsonschema:"List of domain names to include in the profile. A builtin pack is referenced as 'builtin:<name>' and is scoped to this profile."`
+	Domains []string `json:"domains" jsonschema:"List of domain names to include in the profile. A builtin pack is referenced as 'builtin:<name>' (or one item as 'builtin:<name>/<item>') and is scoped to this profile."`
 	overlayArg
 	workDirArg
 }

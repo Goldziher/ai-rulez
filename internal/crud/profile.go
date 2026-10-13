@@ -93,7 +93,7 @@ func validateProfileDomains(cfg *config.Config, profile string, domains []string
 			continue
 		}
 		if builtins.HasRefPrefix(domain) {
-			if !builtins.IsValid(domain) {
+			if !builtins.ResolvesRef(domain) {
 				return oops.
 					With("profile", profile).
 					With("builtin", domain).

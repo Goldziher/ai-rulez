@@ -26,6 +26,7 @@ func (c *Config) Validate() error {
 		c.validateSkillDescriptions,
 		c.validateFrontmatter,
 		c.validateChecks,
+		c.validateBuiltins,
 		c.validateOKF,
 		c.validateLLMsTxt,
 		c.validateInstalledSkills,
@@ -703,11 +704,11 @@ func (c *Config) validateProfiles() error {
 				continue
 			}
 			ref := builtins.TrimRefPrefix(domain)
-			if !builtins.IsValid(ref) {
+			if !builtins.ResolvesRef(ref) {
 				return oops.
 					With("field", fmt.Sprintf("profiles.%s", name)).
 					With("builtin", domain).
-					Hint("Use a name from `ai-rulez builtins list`, or drop the 'builtin:' prefix to reference a local domain").
+					Hint("Use a name from `ai-rulez builtins list` or a pack item as `builtin:<pack>/<item>` (`ai-rulez builtins show <pack>` lists items), or drop the 'builtin:' prefix to reference a local domain").
 					Errorf("profile %q references unknown builtin %q", name, ref)
 			}
 		}
@@ -831,7 +832,7 @@ func (c *Config) warnMissingDomainReferences() {
 			if name == "" || name == ProfileDomainWildcard {
 				continue
 			}
-			referencedDomains[builtins.TrimRefPrefix(name)] = true
+			referencedDomains[builtins.RefDomain(name)] = true
 		}
 	}
 

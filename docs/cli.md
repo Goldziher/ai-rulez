@@ -1037,7 +1037,8 @@ List all built-in domains embedded in the `ai-rulez` binary.
 
 ### `ai-rulez builtins show <name> [flags]`
 
-Show the full rules, context, skills, agents, and commands for a built-in domain.
+Show the full rules, context, skills, agents, and commands for a built-in domain. The item names are the identifiers
+`builtins` accepts as `<domain>/<name>` (load only that item) and `!<domain>/<name>` (drop it).
 
 **Arguments:**
 
@@ -2224,7 +2225,8 @@ or a value outside an enum fails rather than being silently dropped. The structu
 - `version` is `"5.0"` (`"4.0"` and older are rejected; `ai-rulez migrate v5` upgrades them)
 - `name` is present and non-empty
 - All preset names are valid
-- A `builtin:<name>` reference in a profile names a real builtin
+- A `builtin:<name>` or `builtin:<name>/<item>` reference in a profile names a real builtin or pack item
+- A positive `builtins` entry (`<name>` or `<name>/<item>`) names a real builtin or pack item
 - `default`, if set, names an existing profile
 - **A profile referencing a domain not present in the content tree is a warning, not a failure** (and
   is downgraded to a debug hint when includes are configured, since the domain may come from an include)

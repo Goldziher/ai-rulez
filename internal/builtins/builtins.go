@@ -167,49 +167,11 @@ func ResolveAll() []string {
 	return names
 }
 
-// ResolveBuiltins takes the user's builtins list and returns the final set of builtin names to load.
-// Auto-includes are added unless explicitly excluded with "!" prefix.
+// ResolveBuiltins takes the user's builtins list and returns the final set of
+// builtin names to load: the auto-includes, the explicit packs and the packs
+// selected item by item, minus "!" exclusions. See ResolveSelection.
 func ResolveBuiltins(builtins []string) []string {
-	// Track explicit exclusions
-	excluded := make(map[string]bool)
-	explicit := make(map[string]bool)
-
-	for _, name := range builtins {
-		if strings.HasPrefix(name, "!") {
-			spec := strings.TrimPrefix(name, "!")
-			// "!domain/rule" is a per-rule exclusion (see ExcludedRules); it must
-			// not disable the whole domain, so skip it for domain resolution.
-			if strings.Contains(spec, "/") {
-				continue
-			}
-			excluded[spec] = true
-		} else {
-			explicit[name] = true
-		}
-	}
-
-	// Start with auto-includes (unless excluded)
-	result := make(map[string]bool)
-	for name := range autoIncludeDomains {
-		if !excluded[name] {
-			result[name] = true
-		}
-	}
-
-	// Add explicit includes
-	for name := range explicit {
-		if !excluded[name] {
-			result[name] = true
-		}
-	}
-
-	// Convert to sorted slice
-	names := make([]string, 0, len(result))
-	for name := range result {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return ResolveSelection(builtins).Domains
 }
 
 // ExcludedRules parses per-rule builtin exclusions of the form "!domain/name"

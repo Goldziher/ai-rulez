@@ -150,6 +150,7 @@ func outputShowFormatted(w io.Writer, name string, entries []builtins.ContentEnt
 
 	writef(w, "Domain: %s\n", name)
 	writef(w, "Category: %s\n", domain.Category)
+	writef(w, "Item names below are builtins identifiers: %[1]s/<name> loads only that item, !%[1]s/<name> drops it.\n", name)
 
 	// Group entries by type
 	grouped := map[string][]builtins.ContentEntry{}

@@ -288,7 +288,7 @@
       "type": "object"
     },
     "builtins": {
-      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown name is reported as a warning during generation, not a schema error.",
+      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/name' to exclude one item (rule, skill, agent, command or context file) while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). A positive 'domain/name' (e.g., 'docker/container-standards') loads only that item of the pack; 'domain' wins over 'domain/name', and the item still applies after '!domain' (['security/secrets-handling', '!security'] loads only that item). '!domain/name' always removes the item. Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown positive entry (pack or item) fails validation and names the valid choices; an unknown exclusion is only a warning.",
       "oneOf": [
         {
           "description": "true = enable all builtins, false = disable all (including auto-includes)",
@@ -2847,7 +2847,7 @@
         },
         "type": "array"
       },
-      "description": "Named profiles mapping profile names to lists of domain entries. An entry is a local or included domain name, a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`, loaded only for the profiles that name it), `*` for every domain the config knows, or `!name` to exclude one. A profile made only of exclusions is invalid: start it with `*`.",
+      "description": "Named profiles mapping profile names to lists of domain entries. An entry is a local or included domain name, a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`, loaded only for the profiles that name it) or one pack item as `builtin:<pack>/<item>` (e.g. `builtin:docker/container-standards`), `*` for every domain the config knows, or `!name` to exclude one. A profile made only of exclusions is invalid: start it with `*`.",
       "type": "object"
     },
     "publish": {

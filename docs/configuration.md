@@ -1066,7 +1066,7 @@ backend = ["backend", "builtin:docker"]
 frontend = ["frontend"]
 ```
 
-`backend` sees the `docker` pack; `frontend` does not. This works even when the root
+`backend` sees the `docker` pack; `frontend` does not. `builtin:docker/container-standards` scopes just that item. This works even when the root
 `builtins` field is absent or set to `false`, because a profile reference is an explicit
 opt-in. A pack the root `builtins` field already enables stays global — the prefix selects
 a pack, it does not un-globalize one. Prefixing also keeps a builtin (`builtin:rust`) from
@@ -1096,16 +1096,43 @@ on every request. On a tree with 32 agents the roster measures about 1,100 alway
 `ai-rulez tokens` reports it as the `agents_delegation` line so you can see the figure for your own
 tree before deciding.
 
-#### Exclude specific rules from a builtin domain
+#### Exclude specific items from a builtin domain
 
-When using the array form of `builtins`, you can exclude a single rule from a domain while keeping the rest:
+When using the array form of `builtins`, you can exclude a single item from a domain while keeping the rest:
 
 ```toml
 builtins = ["git-workflow", "!git-workflow/commit-messages"]
 ```
 
-This loads all rules from `git-workflow` except the `commit-messages` rule. The syntax is `!domain/rule`.
-Per-rule exclusion only works with array form; `builtins = true` does not support per-rule exclusion.
+This loads everything from `git-workflow` except the `commit-messages` rule. The syntax is `!domain/name`, and
+`name` matches an item of any type (rule, skill, agent, command or context file) by its bare name;
+`ai-rulez builtins show <domain>` lists the names. The exclusion also applies to a pack loaded through a
+`builtin:<domain>` profile reference. Per-item selection only works with the array form; `builtins = true` is a
+boolean, so use the array form with explicit pack names instead.
+
+#### Select a single item from a builtin domain
+
+A positive `domain/name` loads only that item of the pack:
+
+```toml
+builtins = ["!ai-governance", "!agent-delegation", "!security", "!git-workflow", "!code-quality",
+            "!testing", "!token-efficiency", "docker/container-standards"]
+```
+
+This emits the `container-standards` skill and nothing else; `docker` is not loaded as a pack. The rules, in order:
+
+- `domain/name` loads only that item of a pack that is not otherwise loaded whole.
+- `!domain` removes the pack, and a `domain/name` entry still applies afterwards, in either order:
+  `["security/secrets-handling", "!security"]` loads only `secrets-handling`.
+- `domain` wins over `domain/name`: the whole pack loads. An auto-included pack (`security`) loads whole unless it is
+  excluded with `!domain`.
+- `!domain/name` always removes the item, whichever entry selected it.
+- A positive entry that names no pack or item (`builtins = ["nope"]`, `"docker/container-standard"`) fails
+  `validate` with the valid choices and a did-you-mean. An unknown *exclusion* stays a warning.
+
+In a profile, `builtin:<domain>/<name>` scopes one item the same way (`default = ["builtin:docker/container-standards"]`);
+`builtin:<domain>` wins over item references to the same pack. A pack the root `builtins` field selects, even item by
+item, stays global and wins over a profile reference to the same pack.
 
 #### Available Built-in Domains
 
@@ -1203,7 +1230,7 @@ already inside a specific activity — writing a test, writing an error path, wr
 skill, because its description can name that trigger and its body then costs nothing until it fires.
 
 Exclusions still work exactly the same for these now-skill entries. `!domain` drops a whole domain and
-`!domain/name` drops a single rule/skill within it (array form of `builtins` only):
+`!domain/name` drops a single item within it (array form of `builtins` only):
 
 ```toml
 builtins = ["rust", "security", "!security/owasp-quick-reference"]
@@ -2366,7 +2393,8 @@ The structural checks cover:
 - `version` is `"5.0"`
 - `name` is present and non-empty
 - All preset names are valid
-- `builtin:<name>` references in profiles name a real builtin
+- `builtin:<name>` and `builtin:<name>/<item>` references in profiles name a real builtin or pack item
+- Positive `builtins` entries (`<name>` or `<name>/<item>`) name a real builtin or pack item
 - Profile references resolve (a missing domain is a warning, not a failure)
 - File paths are valid
 - MCP server definitions are well-formed

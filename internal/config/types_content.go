@@ -219,7 +219,7 @@ func (c *Config) selectContent(content *ContentTree, profileDomains []string, ac
 	// selects an on-disk or include domain and never widens a scoped builtin
 	// into a profile that did not ask for it.
 	for _, ref := range profileDomains {
-		name := builtins.TrimRefPrefix(ref)
+		name := builtins.RefDomain(ref)
 		domain, ok := content.Domains[name]
 		if !ok {
 			continue

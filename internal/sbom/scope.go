@@ -64,7 +64,7 @@ func (s *scope) selectProfile(cfg *config.Config) error {
 	}
 	s.domains = map[string]bool{}
 	for _, ref := range cfg.GetProfileDomains(s.profile) {
-		s.domains[builtins.TrimRefPrefix(ref)] = true
+		s.domains[builtins.RefDomain(ref)] = true
 	}
 	return nil
 }
