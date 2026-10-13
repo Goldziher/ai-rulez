@@ -2,15 +2,55 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
+
+// ModeDriftError is returned by VerifyProvenance when a recorded output has the
+// right content but its executable bit differs from the one the sidecar
+// recorded. Path is bundle-relative with forward slashes.
+type ModeDriftError struct {
+	Path string
+	Want os.FileMode
+	Got  os.FileMode
+}
+
+func (e *ModeDriftError) Error() string {
+	return fmt.Sprintf("generated plugin output %q mode mismatch: expected %04o, got %04o", e.Path, e.Want, e.Got)
+}
+
+// execBitDiffers reports whether the executable bits of want and got differ.
+func execBitDiffers(want, got os.FileMode) bool { return (want^got)&0o111 != 0 }
+
+// modeDrift returns the mode difference of one output, or nil when its sidecar
+// record has no mode (an older release), the platform has no executable bit, or
+// the bit matches.
+func modeDrift(path, outputPath, recorded string) error {
+	if recorded == "" || runtime.GOOS == "windows" {
+		return nil
+	}
+	want, err := strconv.ParseUint(recorded, 8, 32)
+	if err != nil {
+		return nil //nolint:nilerr // an unreadable record is treated like an older sidecar
+	}
+	info, err := os.Stat(outputPath)
+	if err != nil {
+		return nil //nolint:nilerr // the read that follows reports a missing file
+	}
+	if execBitDiffers(os.FileMode(want), info.Mode()) {
+		return &ModeDriftError{Path: path, Want: os.FileMode(want).Perm(), Got: info.Mode().Perm()}
+	}
+	return nil
+}
 
 // VerifyProvenance verifies every generated output recorded in a plugin
 // bundle's provenance sidecar. Comment-safe generated headers are removed
@@ -52,6 +92,9 @@ func VerifyProvenance(baseDir string) error {
 				expected.ContentHash,
 				actual,
 			)
+		}
+		if err := modeDrift(filepath.ToSlash(path), outputPath, expected.Mode); err != nil {
+			return err
 		}
 		paths = append(paths, filepath.ToSlash(path))
 	}

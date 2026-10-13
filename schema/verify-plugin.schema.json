@@ -33,7 +33,7 @@
             "type": "string"
           },
           "kind": {
-            "enum": ["changed", "missing", "stale-source", "obsolete", "extra", "symlink"]
+            "enum": ["changed", "missing", "stale-source", "obsolete", "extra", "symlink", "mode"]
           }
         }
       }

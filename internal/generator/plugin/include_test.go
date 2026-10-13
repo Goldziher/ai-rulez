@@ -220,7 +220,12 @@ func TestGenerate_IncludeIsRecordedAndVerified(t *testing.T) {
 		if body == nil {
 			body = []byte(o.Content)
 		}
-		require.NoError(t, os.WriteFile(o.Path, body, 0o644))
+		mode := o.Mode.Perm()
+		if mode == 0 {
+			mode = 0o644
+		}
+		require.NoError(t, os.WriteFile(o.Path, body, mode))
+		require.NoError(t, os.Chmod(o.Path, mode)) // as generate writes it, umask aside
 	}
 
 	launcher, ok := byPath["scripts/mcp-launch.sh"]

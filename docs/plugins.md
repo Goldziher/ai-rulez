@@ -440,6 +440,11 @@ treated as hand-written.
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
 sidecar without modifying or regenerating the package.
 
+The sidecar also records whether each output is executable (`"mode": "0755"`, else `"0644"`), and `verify --plugin` reports a
+file whose executable bit differs as drift of kind `mode`, so a bundled script that lost it (a zip round trip,
+`core.fileMode=false`) is caught before it ships and fails with "permission denied". A sidecar written by an
+earlier release records no modes; it still verifies, and the next `generate --plugin` adds them.
+
 Reusable hook catalogs can run plugin checks across mixed repositories with
 `ai-rulez generate --recursive --plugin --if-configured` and
 `ai-rulez verify --recursive --plugin --if-configured`. Both commands exit successfully

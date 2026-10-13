@@ -23,6 +23,21 @@ const (
 
 type provenanceOutput struct {
 	ContentHash string `json:"content_hash"`
+	// Mode is "0755" for an executable file and "0644" otherwise. Only the
+	// executable bit is recorded, so a umask or an editor changing other
+	// permission bits does not change the sidecar. verify compares it, so a bundle
+	// that lost the bit (a zip round trip, core.fileMode=false) is reported. A
+	// sidecar from an older release has none, and its outputs are then not
+	// checked against the sidecar.
+	Mode string `json:"mode,omitempty"`
+}
+
+// outputMode is the mode string recorded for an output.
+func outputMode(output config.OutputFile) string {
+	if output.Mode&0o111 != 0 {
+		return "0755"
+	}
+	return "0644"
 }
 
 type provenanceDocument struct {
@@ -80,7 +95,7 @@ func addProvenance(outputs []config.OutputFile, baseDir string, headers bool, ma
 		if keys := managedPaths[relativePath]; len(keys) > 0 {
 			body = managedSubdocument(body, keys)
 		}
-		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(body)}
+		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(body), Mode: outputMode(output)}
 		paths = append(paths, relativePath)
 		if output.PluginInclude {
 			includes = append(includes, relativePath)
@@ -322,4 +337,25 @@ func StripProvenance(path string, body []byte) []byte {
 		return slices.Concat(head[:len(head)-1], tail)
 	}
 	return slices.Concat(head, tail)
+}
+
+// SidecarMatchesWithoutModes reports whether actual is the sidecar expected
+// would be had it been written by a release that did not record modes. A bundle
+// generated before modes were recorded differs from the regenerated sidecar in
+// that field alone, which is no reason to fail verification: the next generate
+// upgrades it.
+func SidecarMatchesWithoutModes(expected, actual []byte) bool {
+	var document provenanceDocument
+	if err := unmarshalProvenance(expected, &document); err != nil {
+		return false
+	}
+	for path, out := range document.Outputs {
+		out.Mode = ""
+		document.Outputs[path] = out
+	}
+	legacy, err := jsonOutput(provenanceFileName, document)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(legacy.RawContent, actual)
 }
