@@ -374,6 +374,7 @@ func (g *Generator) checkGitignore(outputs []config.OutputFile, linked map[strin
 	}
 	g.markSensitiveOutputs(outputs)
 	g.planLocalManifest(outputs)
+	g.machineExcludePatterns(g.plan) // which machine-local paths the block has to hold
 	return g.gitignoreDrift(outputs)
 }
 

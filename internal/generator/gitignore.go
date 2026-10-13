@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -399,7 +400,12 @@ func (g *Generator) gitignoreDrift(outputs []config.OutputFile) (Drift, bool) {
 		return Drift{}, false
 	}
 	if gitignore.IsSymlink(g.config.BaseDir) {
-		return Drift{}, false // git does not read it, and generate writes the exclude file instead
+		// Git does not read it, and generate writes the exclude file instead.
+		var paths []string
+		if managed {
+			paths, _ = g.neededGitignorePatterns(outputs)
+		}
+		return excludeBlockDrift(g.config.BaseDir, paths)
 	}
 	existing, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, gitignoreFileName))
 	if err != nil && !os.IsNotExist(err) {
@@ -413,9 +419,26 @@ func (g *Generator) gitignoreDrift(outputs []config.OutputFile) (Drift, bool) {
 	return managedBlockDrift(gitignoreFileName, string(existing), paths)
 }
 
+// excludeFileName is the file that stands in for a symlinked .gitignore.
+const excludeFileName = ".git/info/exclude"
+
+// excludeBlockDrift judges the project's block in .git/info/exclude, which
+// generate keeps instead of a symlinked .gitignore, against paths.
+func excludeBlockDrift(baseDir string, paths []string) (Drift, bool) {
+	hasBlock, exact, inRepo := gitignore.ExcludeBlockStatus(baseDir, paths)
+	switch {
+	case !inRepo || exact:
+		return Drift{}, false
+	case !hasBlock:
+		return Drift{Path: excludeFileName, Kind: DriftMissing, Note: gitignoreDriftNote}, true
+	}
+	return Drift{Path: excludeFileName, Kind: DriftStale, Note: gitignoreDriftNote}, true
+}
+
 // managedBlockDrift compares content with the managed block holding paths. No
-// paths means the block should not be there; a block that lacks one of paths,
-// or none at all, is drift.
+// paths means the block should not be there; a block that differs from paths in
+// either direction (a missing entry, or one generate would remove), or none at
+// all, is drift.
 func managedBlockDrift(rel, content string, paths []string) (Drift, bool) {
 	hasBlock := strings.Contains(content, gitignore.BeginMarker) || strings.Contains(content, gitignore.OldHeader)
 	if len(paths) == 0 {
@@ -427,16 +450,15 @@ func managedBlockDrift(rel, content string, paths []string) (Drift, bool) {
 	if !hasBlock {
 		return Drift{Path: rel, Kind: DriftMissing, Note: gitignoreDriftNote}, true
 	}
-	if strings.Contains(content, gitignore.BeginMarker) && blockHoldsAll(content, paths) {
+	if strings.Contains(content, gitignore.BeginMarker) && blockEquals(content, paths) {
 		return Drift{}, false
 	}
 	return Drift{Path: rel, Kind: DriftStale, Note: gitignoreDriftNote}, true
 }
 
-// blockHoldsAll reports whether the managed block of content lists every one of
-// paths. Extra lines do not count: --check asks whether generate would add what
-// is missing, which is what lets an ignored output slip into git.
-func blockHoldsAll(content string, paths []string) bool {
+// blockEquals reports whether the managed block of content lists exactly paths.
+// generate rewrites the whole block, so a line it would drop is drift too.
+func blockEquals(content string, paths []string) bool {
 	inBlock := map[string]bool{}
 	in := false
 	for _, line := range strings.Split(content, "\n") {
@@ -446,17 +468,16 @@ func blockHoldsAll(content string, paths []string) bool {
 		case gitignore.EndMarker:
 			in = false
 		default:
-			if in {
+			if in && trimmed != "" {
 				inBlock[trimmed] = true
 			}
 		}
 	}
+	want := make(map[string]bool, len(paths))
 	for _, p := range paths {
-		if !inBlock[p] {
-			return false
-		}
+		want[p] = true
 	}
-	return true
+	return maps.Equal(inBlock, want)
 }
 
 // warnUnignoredProtected reports the protected patterns a user rule

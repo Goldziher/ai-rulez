@@ -89,7 +89,7 @@ func (s *GitignoreSink) Collect(prefix string, patterns []string) {
 // Drift reports whether Write would change the toplevel block, given the
 // patterns Collect gathered from every root. The path is relative to the toplevel.
 func (s *GitignoreSink) Drift(log logger.Logger) (Drift, bool) {
-	if s == nil || s.toplevel == "" || gitignore.IsSymlink(s.toplevel) {
+	if s == nil || s.toplevel == "" {
 		return Drift{}, false
 	}
 	s.mu.Lock()
@@ -99,6 +99,9 @@ func (s *GitignoreSink) Drift(log logger.Logger) (Drift, bool) {
 		patterns = append(patterns, p)
 	}
 	sort.Strings(patterns)
+	if gitignore.IsSymlink(s.toplevel) {
+		return excludeBlockDrift(s.toplevel, patterns)
+	}
 	data, err := gitutil.ReadIgnoreFileOrEmpty(log, filepath.Join(s.toplevel, gitignoreFileName))
 	if err != nil && !os.IsNotExist(err) {
 		return Drift{}, false

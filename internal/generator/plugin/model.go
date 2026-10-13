@@ -26,7 +26,7 @@ import (
 type Manifest struct {
 	// Ctx bounds the git questions bundling a skill asks. The generator sets it;
 	// nil runs them unbounded.
-	Ctx context.Context
+	Ctx         context.Context
 	Name        string
 	DisplayName string
 	Description string
