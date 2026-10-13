@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,14 +79,30 @@ func TestWatch_DiscardsABuildTheFilesChangedUnder(t *testing.T) {
 type guardLog struct {
 	refused chan struct{}
 	once    sync.Once
+	mu      sync.Mutex
+	lines   []string
 }
 
 func newGuardLog() *guardLog { return &guardLog{refused: make(chan struct{})} }
 
-func (l *guardLog) Debug(string, ...any) {}
-func (l *guardLog) Info(string, ...any)  {}
-func (l *guardLog) Error(string, ...any) {}
-func (l *guardLog) Warn(_ string, args ...any) {
+func (l *guardLog) record(msg string, args []any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.lines = append(l.lines, fmt.Sprint(append([]any{msg}, args...)...))
+}
+
+// dump returns what the watcher logged, for a failure message.
+func (l *guardLog) dump() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return strings.Join(l.lines, "\n")
+}
+
+func (l *guardLog) Debug(msg string, args ...any) { l.record(msg, args) }
+func (l *guardLog) Info(msg string, args ...any)  { l.record(msg, args) }
+func (l *guardLog) Error(msg string, args ...any) { l.record(msg, args) }
+func (l *guardLog) Warn(msg string, args ...any) {
+	l.record(msg, args)
 	for _, a := range args {
 		if s, ok := a.(string); ok && strings.Contains(s, "a save in progress") {
 			l.once.Do(func() { close(l.refused) })
@@ -146,11 +163,14 @@ func TestWatch_KeepsTheServedSkillWhileItsFileIsMidSave(t *testing.T) {
 			require.True(t, served, "the skill is still served")
 			assert.Equal(t, "Core conventions", core.Description, "the previous version keeps serving")
 			writeFile(t, root, ".ai-rulez/skills/core/SKILL.md", skillFile("core", "Core conventions, saved", "delivery: served\n"))
-			require.Eventually(t, func() bool {
+			picked := assert.Eventually(t, func() bool {
 				core, ok := srv.Catalog().Lookup("core")
 				other, _ := srv.Catalog().Lookup("other")
 				return ok && core.Description == "Core conventions, saved" && other != nil && other.Description == "Other skill, edited"
 			}, 30*time.Second, 10*time.Millisecond, "the completed save is picked up")
+			if !picked {
+				t.Fatalf("the completed save was not picked up; the watcher logged:\n%s", log.dump())
+			}
 		})
 	}
 }
