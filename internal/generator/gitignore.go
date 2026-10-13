@@ -64,7 +64,7 @@ func (g *Generator) ignoreLocalInputs() error {
 // local/ content tree, the local manifest, the overlay and whichever of its lock
 // and temp files exist. It is empty when the project has no local inputs.
 func (g *Generator) localInputPatterns() []string {
-	if !g.hasLocalGitignoreTargets() {
+	if !g.hasLocalInputTargets() {
 		return nil
 	}
 	patterns := []string{
@@ -82,7 +82,23 @@ func (g *Generator) localInputPatterns() []string {
 // .ai-rulez/local/ source subtree). The local manifest counts: besides local
 // outputs it records what ai-rulez merged into hand-authored documents.
 func (g *Generator) hasLocalGitignoreTargets() bool {
+	return g.hasLocalInputTargets() || g.localManifestIgnorable()
+}
+
+// hasLocalInputTargets is hasLocalGitignoreTargets without a manifest that only
+// sits on disk: a manifest of digests alone implies no overlay or local/ tree.
+func (g *Generator) hasLocalInputTargets() bool {
 	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || g.localManifestPending
+}
+
+// localManifestIgnorable reports whether the machine-local manifest is written
+// this run or already on disk. Either way it holds this machine's claims and
+// digests and is ignored, whatever `gitignore` says. A manifest that only sits
+// on disk is ignored inside a repository only: elsewhere there is nothing to
+// stage, and a .gitignore would be noise.
+func (g *Generator) localManifestIgnorable() bool {
+	return g.localManifestPending ||
+		(pathIsFile(g.localManifestPath()) && g.git().IsRepoContext(g.ctx, g.config.BaseDir))
 }
 
 // localGitignorePatternsOnDisk lists the machine-local ignore patterns for the
@@ -181,6 +197,10 @@ func (g *Generator) addLocalSourcePatterns(paths map[string]bool, includeCommitt
 	// config-dir skip that normally protects .ai-rulez/.
 	for _, p := range g.localInputPatterns() {
 		paths[p] = true
+	}
+	// The manifest alone does not make .ai-rulez/local/ or the overlay targets.
+	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" && g.localManifestIgnorable() {
+		paths[rel] = true
 	}
 	// With managed ignores on, the directory is covered even before it exists:
 	// `telemetry record` creates files in it between two generates, and they

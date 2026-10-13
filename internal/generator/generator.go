@@ -232,7 +232,9 @@ func (g *Generator) ignoreBeforeWriting(outputs []config.OutputFile) (bool, erro
 // early pass already wrote the same block unless writing skipped a hand-written
 // file, which drops that file's entry.
 func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bool) {
-	if ignoredEarly && len(g.skippedPaths) == 0 {
+	// A manifest the early pass could not know about (first run, digests only) is
+	// on disk by now and still needs its entry.
+	if ignoredEarly && len(g.skippedPaths) == 0 && (g.localManifestPending || !g.localManifestIgnorable()) {
 		return
 	}
 	if g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets() {
