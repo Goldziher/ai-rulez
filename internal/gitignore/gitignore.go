@@ -47,15 +47,13 @@ func ReplaceFencedBlock(content, newBlock string) string {
 	if out != "" {
 		out += "\n"
 	}
-	// Keep the tail byte for byte, dropping only the blank lines that sat
-	// directly under the fence.
-	if tail := strings.TrimLeft(strings.Join(after, "\n"), "\n"); tail != "" {
-		if out != "" {
-			out += "\n"
-		}
-		out += tail
+	// Keep the tail byte for byte: the user's blank lines, and their absence, are
+	// theirs. Only when nothing precedes the tail do its leading blank lines go.
+	tail := strings.Join(after, "\n")
+	if out == "" {
+		tail = strings.TrimLeft(tail, "\n")
 	}
-	return out
+	return out + tail
 }
 
 // PatternsOutsideFence returns the set of trimmed, non-comment, non-empty

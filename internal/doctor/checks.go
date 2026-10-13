@@ -279,12 +279,19 @@ func checkGitignore(ctx context.Context, s *state) []Finding {
 		return errorFinding(CheckGitignore, SeverityWarning, err, "")
 	}
 	out := make([]Finding, 0, len(missing))
-	for _, pattern := range missing {
-		out = append(out, Finding{
-			Check: CheckGitignore, Severity: SeverityWarning, Path: pattern,
+	for _, o := range missing {
+		f := Finding{
+			Check: CheckGitignore, Severity: SeverityWarning, Path: o.Pattern,
 			Message: "generated output is not ignored by git",
 			Hint:    "run `ai-rulez generate` to update the managed .gitignore block",
-		})
+		}
+		if o.Rule != "" {
+			// generate never re-ignores a machine-local or secret output a rule
+			// un-ignores, so running it would change nothing.
+			f.Message = "machine-local or secret output is un-ignored by " + o.Rule + " (" + o.Source + ")"
+			f.Hint = "remove that rule: `ai-rulez generate` does not re-ignore it"
+		}
+		out = append(out, f)
 	}
 	return out
 }

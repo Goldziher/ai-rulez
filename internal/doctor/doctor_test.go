@@ -248,6 +248,26 @@ func TestCheckGitignore(t *testing.T) {
 	}
 }
 
+func TestCheckGitignore_HonoursHumanNegations(t *testing.T) {
+	// Arrange: the user re-includes a file and a directory generate would list.
+	cfg := strings.Replace(baseConfig, "gitignore = false", "gitignore = true", 1)
+	dir := project(t, map[string]string{
+		".ai-rulez/config.toml":       cfg,
+		".ai-rulez/skills/s/SKILL.md": "---\nname: s\ndescription: d\n---\n\nbody\n",
+		".gitignore":                  "!CLAUDE.md\n!.claude/skills/\n",
+	})
+	gitInit(t, dir)
+	generate(t, dir)
+
+	// Act
+	got := byCheck(run(t, dir), CheckGitignore)
+
+	// Assert
+	if len(got) != 0 {
+		t.Fatalf("findings = %+v, want none: generate leaves a deliberately un-ignored output alone", got)
+	}
+}
+
 func TestCheckGitignore_OffAndOutsideRepo(t *testing.T) {
 	// gitignore = false: committed outputs are meant to be tracked.
 	dir := project(t, map[string]string{".ai-rulez/config.toml": baseConfig})

@@ -46,6 +46,18 @@ func TestReplaceFencedBlock(t *testing.T) {
 			want:     block + "\n*.log\n\n\n",
 		},
 		{
+			name:     "no blank line is injected between the fence and the lines under it",
+			content:  "node_modules/\n\n" + BeginMarker + "\nold.md\n" + EndMarker + "\n!CLAUDE.md\n!.claude/skills/\n",
+			newBlock: block,
+			want:     "node_modules/\n\n" + block + "!CLAUDE.md\n!.claude/skills/\n",
+		},
+		{
+			name:     "dropping the fence keeps the lines under it as they were",
+			content:  "node_modules/\n" + BeginMarker + "\nold.md\n" + EndMarker + "\n!CLAUDE.md\n",
+			newBlock: "",
+			want:     "node_modules/\n!CLAUDE.md\n",
+		},
+		{
 			name:     "a duplicate fence collapses back to one",
 			content:  "node_modules/\n\n" + BeginMarker + "\nold.md\n" + EndMarker + "\n\n*.log\n" + BeginMarker + "\nstale.md\n" + EndMarker + "\ndist/\n",
 			newBlock: block,
