@@ -97,6 +97,31 @@ func TestBuild_StdioServersAreSkippedWithANote(t *testing.T) {
 	assert.Contains(t, notes[1], `"bare"`)
 }
 
+func TestBuild_URLWithQueryOrFragmentIsSkippedWithANote(t *testing.T) {
+	tests := []struct{ name, url string }{
+		{"api key in the query", "https://a.test/mcp?api_key=SECRETVALUE"},
+		{"placeholder in the query", "https://a.test/mcp?token=${TOKEN}"},
+		{"fragment", "https://a.test/mcp#SECRETVALUE"},
+		{"empty query marker", "https://a.test/mcp?"},
+		{"placeholder in the path", "https://a.test/${TENANT}/mcp"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			servers := []Server{remote("leaky", tt.url), remote("docs", "https://docs.test/mcp")}
+
+			cards, notes, err := Build(servers, Options{Namespace: "test.acme", Version: "1.0.0"})
+
+			require.NoError(t, err)
+			require.Len(t, cards, 1)
+			assert.Equal(t, "test.acme/docs", cards[0].Name)
+			require.Len(t, notes, 1)
+			assert.Contains(t, notes[0], `"leaky"`)
+			assert.NotContains(t, notes[0], "SECRETVALUE")
+			assert.NotContains(t, notes[0], "TOKEN")
+		})
+	}
+}
+
 func TestBuild_HeadersCarryNamesAndNeverValues(t *testing.T) {
 	s := remote("docs", "https://docs.acme.test/mcp")
 	s.Headers = []Header{{Name: "X-Region"}, {Name: "Authorization", Secret: true}}

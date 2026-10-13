@@ -123,7 +123,8 @@ func (c Card) Map() (map[string]any, error) {
 }
 
 // Build returns the card of every remote server, sorted by name, and a note for
-// each server skipped because it is not remote. Servers that are remote but
+// each server skipped because it is not remote or its url has a query, a fragment
+// or an unresolved placeholder. Servers that are remote but
 // unusable (an unknown transport, a bad or credential-bearing URL, a name used
 // twice) fail the build, with every problem reported.
 func Build(servers []Server, opts Options) ([]Card, []string, error) {
@@ -150,6 +151,10 @@ func Build(servers []Server, opts Options) ([]Card, []string, error) {
 		}
 		if !remote {
 			notes = append(notes, `MCP server "`+s.Name+`" is stdio: a server card describes remote servers only, so it has none`)
+			continue
+		}
+		if why := unpublishableURL(s.URL); why != "" {
+			notes = append(notes, `MCP server "`+s.Name+`" is skipped: its url `+why+`, and a server card is public`)
 			continue
 		}
 		if err := checkURL(s, opts.HTTPSOnly); err != nil {
@@ -190,6 +195,19 @@ func remoteType(s *Server) (typ string, remote bool, err error) {
 		return TypeSSE, true, nil
 	}
 	return "", false, oops.Errorf("MCP server %q has the unknown transport %q", s.Name, s.Transport)
+}
+
+// unpublishableURL says why a url cannot be written into a public card as it
+// is: a query or fragment usually carries a key, and an unresolved ${...}
+// placeholder would be published verbatim. "" means it can.
+func unpublishableURL(raw string) string {
+	switch {
+	case strings.Contains(raw, "${"):
+		return "holds an unresolved ${...} placeholder"
+	case strings.ContainsAny(raw, "?#"):
+		return "has a query or fragment, which may carry a credential"
+	}
+	return ""
 }
 
 func checkURL(s *Server, httpsOnly bool) error {
