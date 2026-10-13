@@ -40,6 +40,9 @@ type Config struct {
 	Builtins         *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	Compact          *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
 	AgentsMD         bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
+	// Source selects where the content is read from: "ai-rulez" (default, the
+	// .ai-rulez content tree) or "agents" (AGENTS.md and .agents/, see agents_source.go).
+	Source string `yaml:"source,omitempty" json:"source,omitempty" toml:"source,omitempty"`
 	// BundleExclude adds patterns to DefaultBundleExcludes: skill and command
 	// resources matching one are not listed in SKILL.md or copied.
 	BundleExclude []string `yaml:"bundle_exclude,omitempty" json:"bundle_exclude,omitempty" toml:"bundle_exclude,omitempty"` //nolint:tagliatelle
@@ -156,9 +159,15 @@ type Config struct {
 	PolicyOutcome *PolicyOutcome `yaml:"-" json:"-" toml:"-"`
 
 	// Run is the state of the generation in progress; nil outside one.
-	Run        *RunState    `yaml:"-" json:"-" toml:"-"`
-	ConfigFile string       `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
-	Content    *ContentTree `yaml:"-" json:"-" toml:"-"`
+	Run        *RunState `yaml:"-" json:"-" toml:"-"`
+	ConfigFile string    `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
+	// ConfigFilePath is the absolute path of the main config file; it differs from
+	// ConfigDir/ConfigFile for a configuration kept in .agents/ai-rulez.toml.
+	ConfigFilePath string `yaml:"-" json:"-" toml:"-"`
+	// AgentsLayout is set when the configuration was read from .agents/ai-rulez.toml,
+	// which selects the "agents" source (ConfigDir is then .agents/.ai-rulez).
+	AgentsLayout bool         `yaml:"-" json:"-" toml:"-"`
+	Content      *ContentTree `yaml:"-" json:"-" toml:"-"`
 	// LocalContent holds machine-local override content scanned from
 	// .ai-rulez/local/ (rules + context only). It is kept strictly separate
 	// from Content so it never lands in committed output; it is emitted only to

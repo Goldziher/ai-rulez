@@ -30,6 +30,7 @@ type tomlPresetDoc struct {
 // struct's custom (YAML/JSON-only) marshalers.
 type tomlOutput struct {
 	Schema                string                  `toml:"schema,omitempty"`
+	Source                string                  `toml:"source,omitempty"`
 	Version               string                  `toml:"version"`
 	Name                  string                  `toml:"name"`
 	Description           string                  `toml:"description,omitempty"`
@@ -138,6 +139,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 
 	return tomlOutput{
 		Schema:                cfg.Schema,
+		Source:                cfg.Source,
 		Version:               cfg.Version,
 		Name:                  cfg.Name,
 		Description:           cfg.Description,

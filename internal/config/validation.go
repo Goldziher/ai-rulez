@@ -18,6 +18,7 @@ func (c *Config) Validate() error {
 	checks := []func() error{
 		c.validateVersion,
 		c.validateName,
+		c.validateSource,
 		c.validateContentProblems,
 		c.validatePresets,
 		c.validateCodexSkillsDir,

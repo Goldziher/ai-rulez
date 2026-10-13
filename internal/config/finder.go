@@ -22,7 +22,7 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 	// supplied --config-dir is honored exactly and never expanded.
 	dirNames := []string{configDirName}
 	if configDirName == aiRulezDirName {
-		dirNames = append(dirNames, altConfigDirName)
+		dirNames = []string{AgentsDirName, aiRulezDirName, altConfigDirName}
 	}
 	configNames := configNamesForDirNames(dirNames)
 
@@ -90,7 +90,7 @@ func IsConfigDirAncestor(path, configDirName string) bool {
 func configNamesForDirNames(dirNames []string) []string {
 	names := make([]string, 0, len(dirNames))
 	for _, dirName := range dirNames {
-		names = append(names, dirName+"/"+configTOMLFilename)
+		names = append(names, dirName+"/"+configFileNameIn(dirName))
 	}
 	return names
 }

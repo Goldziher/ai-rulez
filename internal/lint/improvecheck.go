@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"path/filepath"
 	"strings"
 )
 
@@ -13,7 +12,7 @@ func (r *runner) checkImproveConfig() {
 	if t == nil || r.cfg.ConfigDir == "" {
 		return
 	}
-	file := filepath.Join(r.cfg.ConfigDir, r.cfg.ConfigFile)
+	file := r.cfg.ConfigPath()
 	var keys []string
 	if strings.TrimSpace(t.Optimizer) != "" {
 		keys = append(keys, "optimizer")

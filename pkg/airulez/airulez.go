@@ -38,6 +38,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/agentssource"
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -358,11 +359,14 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	if !o.WithLocal {
 		opts = append(opts, config.WithoutLocal())
 	}
+	resolvers := config.Resolvers{}
 	if o.Remote {
-		opts = append(opts, config.WithResolvers(includes.Resolvers(o.GitToken, lint.OKFScanner(nil))))
+		resolvers = includes.Resolvers(o.GitToken, lint.OKFScanner(nil))
 	} else {
 		opts = append(opts, config.WithoutRemote())
 	}
+	resolvers.Agents = agentssource.Read
+	opts = append(opts, config.WithResolvers(resolvers))
 	// A Project plans and writes outputs: an enforced ai-rulez.lock ([lock]
 	// enforce, on whenever the lock exists) is required, as by `generate`.
 	cfg, err := config.LoadConfig(ctx, ".", append(opts[:len(opts):len(opts)], config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true}))...)

@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
@@ -41,7 +40,7 @@ func (r *runner) checkTelemetry() {
 	if t == nil || r.cfg.ConfigDir == "" {
 		return
 	}
-	file := filepath.Join(r.cfg.ConfigDir, r.cfg.ConfigFile)
+	file := r.cfg.ConfigPath()
 	for _, problem := range t.Validate() {
 		r.add(CodeTelemetryConfigInvalid, file, 1, "%s", problem)
 	}

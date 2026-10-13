@@ -207,7 +207,7 @@ func firstNonEmptyString(values ...string) string {
 // sharedPluginView is a generator over the same configuration loaded without the
 // config.local.* overlay and the local/ tree, the view `generate --plugin` renders.
 func (g *Generator) sharedPluginView() (*Generator, error) {
-	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
+	cfgPath := g.config.ConfigPath()
 	cfg, err := config.LoadConfigFromFile(g.ctx, cfgPath,
 		g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
 	if err != nil {

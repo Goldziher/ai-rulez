@@ -77,7 +77,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		// Validate the raw file against the JSON schema first so a key the
 		// struct would silently drop (and a value outside an enum) is reported.
 		if cfg.ConfigFile != "" {
-			configPath := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+			configPath := cfg.ConfigPath()
 			if err := schema.ValidateFile(configPath); err != nil {
 				return fail(schemaFailure(cfg, err))
 			}
@@ -261,7 +261,7 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 // they do the other notices, and the exit code is unchanged. --recursive never
 // calls it: that run checks every root.
 func warnNestedRootsNotChecked(cfg *config.Config) {
-	current := filepath.Clean(filepath.Join(cfg.ConfigDir, cfg.ConfigFile))
+	current := filepath.Clean(cfg.ConfigPath())
 	nested := 0
 	for _, path := range findConfigFilesRecursively() {
 		abs, err := filepath.Abs(path)

@@ -23,8 +23,9 @@ You can either directly edit files with your editor or use CRUD commands for pro
 
 When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
 
-1. `.ai-rulez/config.toml` — the tool-specific directory (default)
-2. `.config/ai-rulez/config.toml` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
+1. `.agents/ai-rulez.toml` — the configuration of a project whose content is [`.agents` and `AGENTS.md`](agents-source.md)
+2. `.ai-rulez/config.toml` — the tool-specific directory (default)
+3. `.config/ai-rulez/config.toml` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
 
 `config.toml` is the only config format read, and its `version` must be `"5.0"`. A project that has only a
 `config.yaml`, `config.yml` or `config.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), a flat `ai-rulez.yaml`
@@ -32,7 +33,7 @@ When no explicit path is given, the CLI discovers configuration by walking up fr
 error that names the file; run `ai-rulez migrate v5` to convert it (a 2.x or 3.x project goes through ai-rulez 4.x
 first). See [Migrating to v5](migration-v5.md).
 
-`.ai-rulez/` wins when both directory layouts exist at the same level. `--config <file>` selects an exact file, and `--config-dir <path>` selects a non-default directory (for example `--config-dir .config/ai-rulez`). To scaffold the `.config/` layout, run `ai-rulez init --config-dir .config/ai-rulez`; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/` instead of `.ai-rulez/`.
+`.agents/ai-rulez.toml` wins over `.ai-rulez/` when both exist at the same level, and `.ai-rulez/` wins over `.config/ai-rulez/`. `--config <file>` selects an exact file, and `--config-dir <path>` selects a non-default directory (for example `--config-dir .config/ai-rulez`). To scaffold the `.config/` layout, run `ai-rulez init --config-dir .config/ai-rulez`; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/` instead of `.ai-rulez/`.
 
 ## Checks `generate` runs before it writes
 
@@ -582,6 +583,20 @@ compact = false  # Default: include Priority lines
 
 When `true`, generated presets (CLAUDE.md, GEMINI.md, copilot-instructions.md, etc.) omit the per-rule
 `**Priority:**` lines, reducing file size for large rule sets. Applies to all configured presets.
+
+### `source`
+
+Where the content is read from.
+
+```toml
+source = "ai-rulez"  # Default: the .ai-rulez content tree
+# source = "agents"  # AGENTS.md and the .agents directory
+```
+
+`"agents"` reads the open standards instead of the `.ai-rulez` content tree: the root `AGENTS.md`, Agent Skills in
+`.agents/skills/<name>/SKILL.md`, and the ai-rulez layout under `.agents/` for what the standards lack. ai-rulez
+translates that content to every other tool and never writes `AGENTS.md` or anything under `.agents/`. A configuration
+kept in `.agents/ai-rulez.toml` implies `source = "agents"`. See [`.agents` as a source](agents-source.md).
 
 ### `agents_md`
 

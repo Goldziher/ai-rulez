@@ -1,0 +1,47 @@
+package importer
+
+import (
+	"io/fs"
+)
+
+// agentsMDFile is the root instruction file the "agents" source reads.
+const agentsMDFile = "AGENTS.md"
+
+// AgentsMD is the root AGENTS.md read as the source of the "agents" source.
+type AgentsMD struct {
+	// Items are the context items the file yields: one, or one per H2 section
+	// with Options.SplitHeadings.
+	Items []Item
+	// Notes say why the file was not used: a generated AGENTS.md is output of an
+	// earlier run and never source, a symlink is not followed, an empty file has
+	// nothing to read.
+	Notes []Finding
+}
+
+// ReadAgentsMD reads the root AGENTS.md of the tree fsys is rooted at. It goes
+// through the same reader and screening as `convert`: the file must be a regular
+// file within the size limits, and a file carrying the generated header is
+// refused so ai-rulez output is never read back as source.
+func ReadAgentsMD(fsys fs.FS, opt Options) AgentsMD {
+	p := &Plan{}
+	r := newReader(fsys)
+	if _, ok := r.exists(agentsMDFile); ok {
+		nativeImporter{}.importRootFile(p, r, agentsMDFile, opt)
+	}
+	r.flushProblems(p)
+	var out AgentsMD
+	for _, it := range p.Items {
+		if it.Kind == KindContext {
+			out.Items = append(out.Items, it)
+		}
+	}
+	out.Notes = p.Findings
+	return out
+}
+
+// IsGenerated reports whether data, read from file, is ai-rulez output: it
+// carries the generated header or banner of a preset. It is the check `convert`
+// applies, exported for the "agents" source.
+func IsGenerated(file string, data []byte) bool {
+	return isGenerated(file, data)
+}
