@@ -46,10 +46,18 @@ func readDefinitionFiles(v workspace.View, configDir string) (plugins, marketpla
 	return plugins, marketplaces, nil
 }
 
+// isNonDirectory reports whether path exists and is not a directory. Windows
+// reports listing a file as "path not found", which must not read as an absent
+// directory.
+func isNonDirectory(v workspace.View, path string) bool {
+	info, err := v.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
 func readDefinitionDir(v workspace.View, configDir, sub string, shape reflect.Type, kind string) ([]definitionFile, error) {
 	dir := filepath.Join(configDir, sub)
 	entries, err := v.ReadDir(dir)
-	if errors.Is(err, fs.ErrNotExist) {
+	if errors.Is(err, fs.ErrNotExist) && !isNonDirectory(v, dir) {
 		return nil, nil // no directory means no definitions
 	}
 	if err != nil {
