@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcpcard"
 )
 
 func ardFixture() *ARDInput {
@@ -51,7 +52,7 @@ func TestARD_EntriesForSkillsServersAndPlugins(t *testing.T) {
 	for _, e := range doc.Entries {
 		byID[e["identifier"].(string)] = e
 	}
-	require.Len(t, byID, 5)
+	require.Len(t, byID, 4)
 
 	deploy := byID["urn:air:acme.test:conventions:deploy"]
 	assert.Equal(t, "application/ai-skill+md", deploy["type"])
@@ -63,10 +64,11 @@ func TestARD_EntriesForSkillsServersAndPlugins(t *testing.T) {
 	docs := byID["urn:air:acme.test:conventions:docs"]
 	assert.Equal(t, "application/mcp-server-card+json", docs["type"])
 	assert.NotContains(t, docs, "url")
-	assert.Equal(t, map[string]any{"name": "docs", "description": "Search the docs.",
-		"transport": map[string]any{"type": "streamable-http", "url": "https://docs.acme.test/mcp"}}, docs["data"])
-	local := byID["urn:air:acme.test:conventions:local-tools"]["data"].(map[string]any)["transport"]
-	assert.Equal(t, map[string]any{"type": "stdio", "command": "npx", "args": []any{"-y", "tools"}}, local)
+	assert.Equal(t, map[string]any{
+		"$schema": mcpcard.SchemaURL, "name": "test.acme/docs", "description": "Search the docs.", "version": "1.4.0",
+		"remotes": []any{map[string]any{"type": "streamable-http", "url": "https://docs.acme.test/mcp"}},
+	}, docs["data"])
+	assert.NotContains(t, byID, "urn:air:acme.test:conventions:local-tools", "a card describes remote servers only")
 
 	plugin := byID["urn:air:acme.test:conventions:acme-conventions"]
 	assert.Equal(t, ard.DefaultMediaTypePlugin, plugin["type"])
@@ -79,8 +81,9 @@ func TestARD_EntriesForSkillsServersAndPlugins(t *testing.T) {
 	for _, f := range findings {
 		noQueries = append(noQueries, f.Message)
 	}
-	assert.Len(t, noQueries, 2, "the two servers have no representative queries: %v", noQueries)
+	require.Len(t, noQueries, 2, "the remote server has no representative queries and the stdio one is skipped: %v", noQueries)
 	assert.Contains(t, noQueries[0], ard.CodeQueries)
+	assert.Contains(t, noQueries[1], `"local-tools" is stdio`)
 }
 
 func TestARD_ConfiguredQueriesOverrideDerivedOnes(t *testing.T) {
@@ -91,7 +94,7 @@ func TestARD_ConfiguredQueriesOverrideDerivedOnes(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, string(files[0].Data), "search the acme docs")
-	assert.Len(t, findings, 1)
+	assert.Len(t, findings, 1, "only the skipped stdio server is left to report")
 }
 
 func TestARD_BaseURLHostsTheSkillFiles(t *testing.T) {
@@ -165,7 +168,7 @@ func TestARDModel_ForLint(t *testing.T) {
 	m, files, err := ARDModel(in)
 
 	require.NoError(t, err)
-	assert.Len(t, m.Resources, 5)
+	assert.Len(t, m.Resources, 4)
 	assert.Len(t, files, 2)
 	findings, err := ard.Check(m)
 	require.NoError(t, err)

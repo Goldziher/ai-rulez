@@ -2,11 +2,13 @@ package commands
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcpcard"
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
@@ -33,6 +35,15 @@ func ardInput(cfg *config.Config, repoPath string, updatedAt time.Time) *pemit.A
 			in.Skills = append(in.Skills, ardSkill(cfg, f, repoPath, prompts))
 		}
 	}
+	in.Servers = mcpCardServers(cfg)
+	return in
+}
+
+// mcpCardServers are the enabled MCP servers of the project and the plugin, for
+// the ard and mcp-server-card emitters. Environment and header values are not
+// carried, only the header names and whether the value is a credential.
+func mcpCardServers(cfg *config.Config) []mcpcard.Server {
+	var out []mcpcard.Server
 	seen := map[string]bool{}
 	servers := cfg.EffectiveMCPServers()
 	for i := range servers {
@@ -41,8 +52,9 @@ func ardInput(cfg *config.Config, repoPath string, updatedAt time.Time) *pemit.A
 			continue
 		}
 		seen[s.Name] = true
-		in.Servers = append(in.Servers, pemit.ARDServer{
+		out = append(out, mcpcard.Server{
 			Name: s.Name, Description: s.Description, Transport: s.GetTransport(), URL: s.URL, Command: s.Command, Args: s.Args,
+			Headers: cardHeaders(s.Headers, s.SecretHeaderKeys),
 		})
 	}
 	if cfg.Plugin != nil {
@@ -51,12 +63,26 @@ func ardInput(cfg *config.Config, repoPath string, updatedAt time.Time) *pemit.A
 				continue
 			}
 			seen[s.Name] = true
-			in.Servers = append(in.Servers, pemit.ARDServer{
+			out = append(out, mcpcard.Server{
 				Name: s.Name, Transport: s.Transport, URL: s.URL, Command: s.Command, Args: s.Args,
 			})
 		}
 	}
-	return in
+	return out
+}
+
+// cardHeaders names the headers of a server. A header is secret when its name
+// is credential-like, it was marked secret, or its value is a ${VAR} reference.
+func cardHeaders(headers map[string]string, secret []string) []mcpcard.Header {
+	out := make([]mcpcard.Header, 0, len(headers))
+	for name, value := range headers {
+		out = append(out, mcpcard.Header{
+			Name:   name,
+			Secret: config.IsSensitiveHeaderName(name) || slices.Contains(secret, name) || strings.Contains(value, "${"),
+		})
+	}
+	slices.SortFunc(out, func(a, b mcpcard.Header) int { return strings.Compare(a.Name, b.Name) })
+	return out
 }
 
 func ardSkill(cfg *config.Config, f *config.ContentFile, repoPath string, prompts map[string][]string) pemit.ARDSkill {

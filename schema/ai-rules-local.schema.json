@@ -2871,7 +2871,8 @@
                   "aws-agent-registry",
                   "kiro-steering",
                   "agent-plugins",
-                  "ard"
+                  "ard",
+                  "mcp-server-card"
                 ],
                 "type": "string"
               },

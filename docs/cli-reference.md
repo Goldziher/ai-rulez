@@ -2091,7 +2091,7 @@ ai-rulez publish --to github-release --execute --yes
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dist` | string | `dist` | Directory the artifacts are written to |
 | `--dry-run` / `-n` | bool |  | Run preflight and print the artifacts and commands without writing or running anything |
-| `--emit` | string list |  | Run an emitter (repeatable): cursor-team-marketplace, agent-plugins, ard, port, aws-agent-registry, kiro-steering |
+| `--emit` | string list |  | Run an emitter (repeatable): cursor-team-marketplace, agent-plugins, ard, mcp-server-card, port, aws-agent-registry, kiro-steering |
 | `--execute` | bool |  | Run the upload (needs --to and --yes) |
 | `--experimental` | bool |  | Allow emitters whose format is not verified against vendor documentation |
 | `--force` | bool |  | With --execute, replace the assets of an existing GitHub release or the artifact an existing OCI tag points at, instead of refusing |

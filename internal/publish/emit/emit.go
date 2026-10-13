@@ -16,6 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcpcard"
 )
 
 // Emitter statuses. An experimental emitter writes a format that is documented
@@ -88,6 +89,9 @@ type Input struct {
 	Rules []Doc
 	// ARD is the [ard] table and the resources of the ard emitter; nil for the others.
 	ARD *ARDInput
+	// Servers are the project's enabled MCP servers, for the mcp-server-card
+	// emitter; the ard emitter reads ARD.Servers.
+	Servers []mcpcard.Server
 	// Options are the emitter's own settings ([[publish.emitters]] options).
 	Options map[string]string
 }

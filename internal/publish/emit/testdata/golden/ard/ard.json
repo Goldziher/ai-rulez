@@ -47,33 +47,18 @@
       "displayName": "docs",
       "type": "application/mcp-server-card+json",
       "data": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
         "description": "Search the docs.",
-        "name": "docs",
-        "transport": {
-          "type": "streamable-http",
-          "url": "https://docs.acme.test/mcp"
-        }
+        "name": "test.acme/docs",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://docs.acme.test/mcp"
+          }
+        ],
+        "version": "1.4.0"
       },
       "description": "Search the docs.",
-      "updatedAt": "2026-10-07T12:00:00Z"
-    },
-    {
-      "identifier": "urn:air:acme.test:conventions:local-tools",
-      "displayName": "local-tools",
-      "type": "application/mcp-server-card+json",
-      "data": {
-        "description": "Local helper.",
-        "name": "local-tools",
-        "transport": {
-          "args": [
-            "-y",
-            "tools"
-          ],
-          "command": "npx",
-          "type": "stdio"
-        }
-      },
-      "description": "Local helper.",
       "updatedAt": "2026-10-07T12:00:00Z"
     },
     {

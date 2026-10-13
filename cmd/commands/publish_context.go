@@ -395,6 +395,12 @@ func (pc *publishContext) emitRequestFor(tag string) *publish.EmitRequest {
 	if slices.Contains(pc.opts.emitters, pemit.ARDEmitter) {
 		base.ARD = ardInput(pc.cfg, pc.repoPath, time.Unix(pc.mtime, 0).UTC())
 	}
+	if slices.Contains(pc.opts.emitters, pemit.MCPServerCardEmitter) {
+		base.Servers = mcpCardServers(pc.cfg)
+		if a := pc.cfg.ARD; a != nil && base.ARD == nil {
+			base.ARD = &pemit.ARDInput{Publisher: a.Publisher}
+		}
+	}
 	return &publish.EmitRequest{Names: pc.opts.emitters, Experimental: pc.opts.experimental, Base: base, Options: pc.opts.emitOptions}
 }
 

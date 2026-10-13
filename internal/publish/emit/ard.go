@@ -10,6 +10,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcpcard"
 )
 
 // ARDEmitter is the name of the Agentic Resource Discovery emitter.
@@ -22,8 +23,6 @@ const (
 	ardDefaultGit = "github.com"
 	ardRawHost    = "raw.githubusercontent.com"
 	ardAgentTag   = "agent-plugins"
-	ardStdio      = "stdio"
-	ardHTTP       = "streamable-http"
 	ardMaxQueries = ard.MaxQueries
 )
 
@@ -43,15 +42,8 @@ type ARDSkill struct {
 }
 
 // ARDServer is an MCP server as the ard emitter lists it. Environment values
-// and headers are deliberately not carried: the manifest is public.
-type ARDServer struct {
-	Name, Description string
-	// Transport is stdio, http or sse.
-	Transport string
-	URL       string
-	Command   string
-	Args      []string
-}
+// and header values are deliberately not carried: the manifest is public.
+type ARDServer = mcpcard.Server
 
 // ARDInput is the [ard] table and the resources the ard emitter lists.
 type ARDInput struct {
@@ -82,7 +74,7 @@ func (ardEmitter) Name() string   { return ARDEmitter }
 func (ardEmitter) Status() string { return StatusVerified }
 
 func (ardEmitter) Emit(in Input) ([]File, []Finding, error) {
-	m, files, err := ARDModel(in)
+	m, files, notes, err := ardModel(in)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,6 +82,7 @@ func (ardEmitter) Emit(in Input) ([]File, []Finding, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	findings = append(findings, findingsOf(notes)...)
 	files = append(files, File{Path: ardManifest, Data: data})
 	out, err := finish(files)
 	return out, findings, err
@@ -128,9 +121,16 @@ func ardBuildError(m ard.Model, cause error) error {
 // ARDModel maps the input to the model the ard library builds and the skill files
 // that go with it. It is what `validate --strict` checks and `publish` emits.
 func ARDModel(in Input) (ard.Model, []File, error) {
+	m, files, _, err := ardModel(in)
+	return m, files, err
+}
+
+// ardModel is ARDModel plus a note for each MCP server left out because a
+// server card describes remote servers only.
+func ardModel(in Input) (ard.Model, []File, []string, error) {
 	a := in.ARD
 	if a == nil {
-		return ard.Model{}, nil, oops.Hint("add an [ard] table with publisher and namespace").
+		return ard.Model{}, nil, nil, oops.Hint("add an [ard] table with publisher and namespace").
 			Errorf("%s: the ard emitter needs an [ard] table", ard.CodeNotDeclared)
 	}
 	m := ard.Model{Publisher: a.Publisher, Namespace: a.Namespace, UpdatedAt: a.UpdatedAt}
@@ -140,6 +140,7 @@ func ARDModel(in Input) (ard.Model, []File, error) {
 	var (
 		files   []File
 		errs    []error
+		notes   []string
 		perName = map[string][]string{}
 	)
 	skills := slices.Clone(a.Skills)
@@ -161,16 +162,23 @@ func ARDModel(in Input) (ard.Model, []File, error) {
 			files = append(files, File{Path: ardSkillsDir + "/" + s.Name + "/" + ardSkillFile, Data: []byte(s.Body)})
 		}
 	}
-	for i := range a.Servers {
-		s := &a.Servers[i]
-		card, err := ardServerCard(s)
+	cards, serverNotes, err := mcpcard.Build(a.Servers, mcpcard.Options{
+		Namespace: mcpcard.NamespaceFromDomain(a.Publisher), Version: in.Version, HTTPSOnly: true,
+	})
+	if err != nil {
+		errs = append(errs, oops.Errorf("%s: %w", ard.CodeEntry, err))
+	}
+	notes = append(notes, serverNotes...)
+	for _, c := range cards {
+		data, err := c.Map()
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
+		_, name, _ := strings.Cut(c.Name, "/")
 		m.Resources = append(m.Resources, ard.Resource{
-			Kind: ard.KindMCPServer, Name: s.Name, Description: s.Description, Data: card,
-			RepresentativeQueries: ardQueries(a, s.Name, ard.QuerySources{}),
+			Kind: ard.KindMCPServer, Name: name, Description: c.Description, Data: data,
+			RepresentativeQueries: ardQueries(a, name, ard.QuerySources{}),
 		})
 	}
 	packages := map[string]bool{}
@@ -198,9 +206,9 @@ func ARDModel(in Input) (ard.Model, []File, error) {
 		m.Resources = append(m.Resources, r)
 	}
 	if len(errs) > 0 {
-		return ard.Model{}, nil, errors.Join(errs...)
+		return ard.Model{}, nil, nil, errors.Join(errs...)
 	}
-	return m, files, nil
+	return m, files, notes, nil
 }
 
 // ardQueries is the configured override of a resource, or the derived queries.
@@ -226,53 +234,6 @@ func roundRobin(skills []ARDSkill, perName map[string][]string) []string {
 		if !took {
 			break
 		}
-	}
-	return out
-}
-
-func ardServerCard(s *ARDServer) (map[string]any, error) {
-	transport := map[string]any{}
-	switch strings.ToLower(s.Transport) {
-	case "", ardStdio:
-		transport["type"] = ardStdio
-		if s.URL != "" {
-			transport["type"] = ardHTTP
-		}
-	case "http", ardHTTP:
-		transport["type"] = ardHTTP
-	case "sse":
-		transport["type"] = "sse"
-	default:
-		return nil, oops.Errorf("%s: MCP server %q has the unknown transport %q", ard.CodeEntry, s.Name, s.Transport)
-	}
-	if transport["type"] == ardStdio {
-		if s.Command != "" {
-			transport["command"] = s.Command
-		}
-		if len(s.Args) > 0 {
-			transport["args"] = anyStrings(s.Args)
-		}
-	} else {
-		u, err := url.Parse(s.URL)
-		switch {
-		case err != nil || u.Host == "" || u.Scheme != "https":
-			return nil, oops.Errorf("%s: MCP server %q: the url must be an absolute https URL", ard.CodeEntry, s.Name)
-		case u.User != nil:
-			return nil, oops.Errorf("%s: MCP server %q: the url holds credentials, and the manifest is public", ard.CodeEntry, s.Name)
-		}
-		transport["url"] = s.URL
-	}
-	card := map[string]any{"name": s.Name, "transport": transport}
-	if s.Description != "" {
-		card["description"] = s.Description
-	}
-	return card, nil
-}
-
-func anyStrings(in []string) []any {
-	out := make([]any, len(in))
-	for i, v := range in {
-		out[i] = v
 	}
 	return out
 }

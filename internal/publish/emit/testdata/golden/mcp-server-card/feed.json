@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+  "name": "io.github.acme/feed",
+  "description": "Release feed.",
+  "version": "1.4.0",
+  "remotes": [
+    {
+      "type": "sse",
+      "url": "https://feed.acme.test/sse"
+    }
+  ]
+}

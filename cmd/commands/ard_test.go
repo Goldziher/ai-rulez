@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,12 +107,51 @@ func TestPublish_EmitsTheARDManifest(t *testing.T) {
 	want, err := os.ReadFile(golden)
 	require.NoError(t, err)
 	assert.Equal(t, string(want), got, "run UPDATE_GOLDEN=1 go test ./cmd/commands -run TestPublish_EmitsTheARDManifest and review the diff")
-	for _, leaked := range []string{"TOKEN", "secret-value", "Authorization"} {
-		assert.NotContains(t, got, leaked, "env values and headers never reach the public manifest")
+	for _, leaked := range []string{"TOKEN", "secret-value", "Bearer"} {
+		assert.NotContains(t, got, leaked, "env and header values never reach the public manifest")
 	}
 	found, err := ard.Validate([]byte(got))
 	require.NoError(t, err)
 	assert.False(t, ard.HasErrors(found), "%+v", found)
+}
+
+func TestPublishEmit_WritesOneServerCardPerRemoteServer(t *testing.T) {
+	// Arrange
+	ardProject(t)
+	publishEmit = []string{"mcp-server-card"}
+	publishEmitOut = filepath.Join(t.TempDir(), "cards")
+	t.Setenv("SOURCE_DATE_EPOCH", "1790000000")
+	var out bytes.Buffer
+	var err error
+
+	// Act
+	_, _ = capture(t, func() { err = runPublishEmit(context.Background(), &out, "mcp-server-card") })
+
+	// Assert
+	require.NoError(t, err)
+	files := readDist(t, publishEmitOut)
+	require.Len(t, files, 1, "the stdio server has no card")
+	card := files["docs.json"]
+	assert.Contains(t, card, `"name": "test.acme/docs"`, "the namespace is the reversed [ard] publisher")
+	assert.Contains(t, card, `"version": "1.4.0"`)
+	assert.Contains(t, card, `"isSecret": true`)
+	for _, leaked := range []string{"TOKEN", "secret-value", "Bearer", "local-tools"} {
+		assert.NotContains(t, card, leaked)
+	}
+}
+
+func TestPublish_EmitsTheServerCardsNextToTheARDManifest(t *testing.T) {
+	root := ardProject(t)
+	publishEmit = []string{"ard", "mcp-server-card"}
+	t.Setenv("SOURCE_DATE_EPOCH", "1790000000")
+
+	_, err := runPublishCapture(t)
+
+	require.NoError(t, err)
+	dist := readDist(t, filepath.Join(root, "dist"))
+	var card map[string]any
+	require.NoError(t, json.Unmarshal([]byte(dist["emit/mcp-server-card/docs.json"]), &card))
+	assert.Contains(t, dist["emit/ard/ard.json"], `"name": "test.acme/docs"`, "the ARD embed and the standalone card agree")
 }
 
 func TestPublish_ARDManifestIsTheSameOnEveryRun(t *testing.T) {
@@ -171,8 +211,8 @@ func TestStrictValidate_LintsTheARDManifest(t *testing.T) {
 
 	got := ardCodes(strictFindings(t), "AR9S")
 
-	// the local-tools server has nothing to derive queries from
-	assert.Equal(t, map[string]lint.Severity{lint.CodeARDQueries: lint.SeverityWarning}, got)
+	// local-tools is stdio, which a server card cannot describe, so it is not listed
+	assert.Empty(t, got)
 }
 
 func TestStrictValidate_ReportsARDProblems(t *testing.T) {
