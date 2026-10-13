@@ -10,8 +10,8 @@ import (
 
 // The MCP server configuration ai-rulez publishes is the mcp.json of an Agent
 // Plugins package, checked against the official mcp.schema.json in
-// agentplugins_test.go. This test pins the shape of each transport. No schema
-// is vendored for an MCP server card yet; docs/standards.md lists it as planned.
+// agentplugins_test.go. This test pins the shape of each transport. The
+// MCP server card has its own test in mcpcard_test.go.
 func TestMCPServerEntriesUseTheSchemaTransportTypes(t *testing.T) {
 	// Arrange
 	dir := project(t, map[string]string{
