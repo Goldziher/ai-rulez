@@ -2,12 +2,17 @@
 
 # run-ai-rulez.sh ensures an ai-rulez binary is available without requiring Go,
 # downloads a released binary if needed, and then executes it with the provided arguments.
+#
+# AI_RULEZ_RESOLVE_ONLY=1 skips execution: it prints the resolved binary's path on stdout and
+# exits 0 once the binary is available, so a caller (the setup-ai-rulez Action) can add its
+# directory to PATH instead of running a single command through this script.
 
 set -euo pipefail
 
 AI_RULEZ_VERSION="${AI_RULEZ_VERSION:-v5.1.0}"
 AI_RULEZ_BINARY="${AI_RULEZ_BINARY:-}"
 AI_RULEZ_CACHE_DIR="${AI_RULEZ_CACHE_DIR:-$HOME/.cache/ai-rulez/pre-commit}"
+AI_RULEZ_RESOLVE_ONLY="${AI_RULEZ_RESOLVE_ONLY:-0}"
 
 if [[ -n "$AI_RULEZ_BINARY" ]]; then
   # An explicit binary that cannot run is an error, not a reason to run a different one.
@@ -111,6 +116,11 @@ else
     trap - EXIT
     cleanup
   fi
+fi
+
+if [[ "$AI_RULEZ_RESOLVE_ONLY" == "1" ]]; then
+  printf '%s\n' "$BINARY_PATH"
+  exit 0
 fi
 
 exec "$BINARY_PATH" "$@"

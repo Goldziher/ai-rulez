@@ -1,0 +1,80 @@
+name: Set up ai-rulez
+description: >-
+  Downloads a released ai-rulez binary (sha256-verified against the release's checksums.txt),
+  caches it and adds it to PATH, so later steps can call `ai-rulez` directly. No Go toolchain,
+  Node or Python needed. Needs bash and curl (present on every GitHub-hosted runner).
+
+inputs:
+  version:
+    description: "ai-rulez version to install: X.Y.Z, vX.Y.Z, or latest"
+    required: false
+    default: latest
+
+outputs:
+  version:
+    description: "The resolved ai-rulez version, without the leading v"
+    value: ${{ steps.setup.outputs.version }}
+  path:
+    description: "Absolute path to the installed ai-rulez binary"
+    value: ${{ steps.setup.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the requested version
+      id: resolve
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        tag="$INPUT_VERSION"
+        if [ -z "$tag" ] || [ "$tag" = "latest" ]; then
+          resolved="$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+            https://github.com/Goldziher/ai-rulez/releases/latest 2>/dev/null || true)"
+          tag="${resolved##*/}"
+          case "$tag" in
+          v*) ;;
+          *)
+            echo "::error::could not resolve the latest ai-rulez release" >&2
+            exit 1
+            ;;
+          esac
+        else
+          case "$tag" in v*) ;; *) tag="v$tag" ;; esac
+        fi
+        echo "tag=$tag" >>"$GITHUB_OUTPUT"
+
+    - name: Cache the ai-rulez download
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ runner.temp }}/ai-rulez-setup
+        key: ai-rulez-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.tag }}
+
+    - name: Install ai-rulez and add it to PATH
+      id: setup
+      shell: bash
+      env:
+        AI_RULEZ_VERSION: ${{ steps.resolve.outputs.tag }}
+        AI_RULEZ_RESOLVE_ONLY: "1"
+        AI_RULEZ_CACHE_DIR: ${{ runner.temp }}/ai-rulez-setup
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        # action_path is <repo>/.github/actions/setup-ai-rulez; the script lives three levels up.
+        action_path="$ACTION_PATH"
+        cache_dir="$AI_RULEZ_CACHE_DIR"
+        if command -v cygpath >/dev/null 2>&1; then
+          action_path="$(cygpath -u "$ACTION_PATH")"
+          cache_dir="$(cygpath -u "$AI_RULEZ_CACHE_DIR")"
+        fi
+        export AI_RULEZ_CACHE_DIR="$cache_dir"
+        script="$(cd "$action_path/../../../scripts/pre-commit" && pwd)/run-ai-rulez.sh"
+        binary_path="$(bash "$script")"
+        dir="$(dirname "$binary_path")"
+        native_dir="$dir"
+        if command -v cygpath >/dev/null 2>&1; then native_dir="$(cygpath -w "$dir")"; fi
+        echo "$native_dir" >>"$GITHUB_PATH"
+        echo "version=${AI_RULEZ_VERSION#v}" >>"$GITHUB_OUTPUT"
+        echo "path=$binary_path" >>"$GITHUB_OUTPUT"
+        echo "ai-rulez ${AI_RULEZ_VERSION} installed at $binary_path" >&2

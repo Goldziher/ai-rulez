@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`.github/actions/setup-ai-rulez` installs a sha256-verified release binary in a workflow.** It resolves `latest` or a pinned version, caches the download and adds `ai-rulez` to `PATH`; `scripts/pre-commit/run-ai-rulez.sh` gained `AI_RULEZ_RESOLVE_ONLY=1`, which prints the resolved binary's path instead of running it.
+
 ## [5.1.0] - 2026-10-12
 
 ### Added
