@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **A live reload no longer restores a served catalog that is missing a skill saved a moment earlier.** The catalog cache was keyed after the configuration load, so a save finishing in between cached the half-saved render under the finished file's key. The cache is now written only when the files did not change during the build.
+- **`generate --check` names the toplevel `.gitignore` relative to the real working directory.** A directory reached through a symlink or a Windows short name made the path climb out and back in.
+- **On Windows, `plugins/` or `marketplaces/` being a file is reported instead of read as no definitions.** Windows lists a file as path-not-found.
+
 ## [5.2.0] - 2026-10-14
 
 ### Added
