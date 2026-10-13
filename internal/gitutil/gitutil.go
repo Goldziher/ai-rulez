@@ -91,7 +91,7 @@ func (g Git) TrackedAmongContext(ctx context.Context, dir string, paths []string
 	paths = g.trackedFromSharedIndex(ctx, dir, paths, tracked)
 	for start := 0; start < len(paths); start += pathChunk {
 		end := min(start+pathChunk, len(paths))
-		args := append([]string{"ls-files", "-z", "--"}, literalSpecs(paths[start:end])...)
+		args := append([]string{lsFilesCmd, "-z", "--"}, literalSpecs(paths[start:end])...)
 		out, _, err := g.run(ctx, dir, nil, args...)
 		if err != nil {
 			return nil, err
@@ -269,7 +269,7 @@ func (g Git) fillIgnoreMirror(ctx context.Context, dir, top, mirror string, rewr
 
 	// Tracked and untracked-but-not-ignored files cover every .gitignore git
 	// would read; one inside an ignored directory is never consulted anyway.
-	out, _, err := g.run(ctx, top, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ":(glob)**/.gitignore")
+	out, err := g.ignoreFileListing(ctx, top)
 	if err != nil {
 		return err
 	}

@@ -188,7 +188,8 @@ func TestRunRecursiveDrift_ListsTheIndexOnce(t *testing.T) {
 	_, _ = capture(t, func() { require.Equal(t, 0, runDriftCheck(true)) })
 
 	listings := lsFilesCalls(calls()[before:])
-	assert.LessOrEqual(t, len(listings), 1, "one ls-files for %d roots, got %v", rootCount, listings)
+	// One listing of the tracked files and one of the .gitignore files, not one of each per root.
+	assert.LessOrEqual(t, len(listings), 2, "got %v", listings)
 }
 
 func TestRunRecursiveValidate_ListsTheIndexOncePerPurpose(t *testing.T) {

@@ -12,6 +12,11 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
+const (
+	lsFilesCmd = "ls-files"
+	cachedFlag = "--cached"
+)
+
 // Memo remembers the answers to the structural questions asked of a repository
 // (is dir in a work tree, where is its top level, where is info/exclude, which
 // git directories): the same few questions are asked of the same directory many
@@ -36,6 +41,7 @@ type Memo struct {
 type indexListing struct {
 	mu    sync.Mutex
 	files map[string]bool
+	raw   []byte // the output of a listing kept as it came (see ignoreFileListing)
 	done  bool
 }
 
@@ -162,8 +168,8 @@ func (g Git) trackedFromSharedIndex(ctx context.Context, dir string, paths []str
 	if top == "" || err != nil {
 		return paths
 	}
-	files := memo.listing(memoKey{dir: top, args: "ls-files", runner: r}).read(func() (map[string]bool, bool) {
-		out, _, err := g.run(ctx, top, nil, "ls-files", "-z")
+	files := memo.listing(memoKey{dir: top, args: lsFilesCmd, runner: r}).read(func() (map[string]bool, bool) {
+		out, _, err := g.run(ctx, top, nil, lsFilesCmd, "-z")
 		if err != nil {
 			return nil, false
 		}
@@ -190,6 +196,34 @@ func (g Git) trackedFromSharedIndex(ctx context.Context, dir string, paths []str
 		}
 	}
 	return rest
+}
+
+// ignoreFileListing lists the .gitignore files below top that git would read
+// (tracked, or untracked and not ignored). With a shared index in ctx the roots
+// of one repository take the listing once; the answer is the raw -z output.
+func (g Git) ignoreFileListing(ctx context.Context, top string) ([]byte, error) {
+	args := []string{lsFilesCmd, "-z", cachedFlag, "--others", "--exclude-standard", "--", ":(glob)**/.gitignore"}
+	memo := memoFrom(ctx)
+	if memo == nil || !memo.shared {
+		out, _, err := g.run(ctx, top, nil, args...)
+		return out, err
+	}
+	r, ok := g.memoRunner()
+	if !ok {
+		out, _, err := g.run(ctx, top, nil, args...)
+		return out, err
+	}
+	l := memo.listing(memoKey{dir: top, args: "ignore-files", runner: r})
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.done {
+		out, _, err := g.run(ctx, top, nil, args...)
+		if err != nil {
+			return nil, err
+		}
+		l.raw, l.done = out, true
+	}
+	return l.raw, nil
 }
 
 // insideDir reports whether the slash path p names something below the

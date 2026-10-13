@@ -127,8 +127,8 @@ func (g Git) StagedChangesContext(ctx context.Context, dir string) ([]Change, er
 // target (a revision or --cached) and joins them on the new path.
 func (g Git) diffChanges(ctx context.Context, dir, target string) ([]Change, error) {
 	targetArgs := []string{target, "--"}
-	if target == "--cached" {
-		targetArgs = []string{"--cached", "HEAD", "--"}
+	if target == cachedFlag {
+		targetArgs = []string{cachedFlag, "HEAD", "--"}
 	}
 	return g.diffChangesArgs(ctx, dir, targetArgs)
 }
