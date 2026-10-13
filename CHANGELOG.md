@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`AR001` now detects the AWS secret access key.** Only the access key id (`AKIA`/`ASIA`) was reported; a 40-character value assigned to a name containing `aws_secret_access_key` (any case, `=` or `:`, optionally quoted) is now a finding with the value masked, and is redacted before text goes to a model or a publish step ([#409](https://github.com/Goldziher/ai-rulez/issues/409)).
 - **The AR021 documentation no longer claims `references/` is skipped.** A skill's `references/` files are scanned like `SKILL.md` (exempt them with `[lint] example_paths = ["**/references/**"]`); `examples/` and `templates/` are not scanned at all ([#410](https://github.com/Goldziher/ai-rulez/issues/410)).
 
 ### Added

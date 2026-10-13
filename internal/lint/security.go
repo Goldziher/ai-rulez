@@ -20,11 +20,13 @@ type secretPattern struct {
 	re   *regexp.Regexp
 	// stems are literals every match contains; nil runs the pattern on every text.
 	stems []string
+	// fold compares stems without case.
+	fold bool
 }
 
 // mayMatch reports whether s holds a stem of p.
 func (p secretPattern) mayMatch(s string) bool {
-	return p.stems == nil || containsAnyStem(s, false, p.stems)
+	return p.stems == nil || containsAnyStem(s, p.fold, p.stems)
 }
 
 // builtinSecrets are the credential shapes shared with the model layer's refuse-to-send check
@@ -32,7 +34,7 @@ func (p secretPattern) mayMatch(s string) bool {
 var builtinSecrets = func() []secretPattern {
 	out := make([]secretPattern, 0, len(secretpat.Builtin))
 	for _, p := range secretpat.Builtin {
-		out = append(out, secretPattern{name: p.Name, re: p.Re, stems: p.Stems})
+		out = append(out, secretPattern{name: p.Name, re: p.Re, stems: p.Stems, fold: p.Fold})
 	}
 	return out
 }()
@@ -350,7 +352,7 @@ func (r *runner) scanSecrets(abs string, no int, line string) {
 		if !p.mayMatch(line) {
 			continue
 		}
-		if m := p.re.FindString(line); m != "" {
+		if m := secretpat.FindValue(p.re, line); m != "" {
 			hit(p.name, m)
 		}
 	}

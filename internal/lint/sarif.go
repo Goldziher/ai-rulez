@@ -382,7 +382,7 @@ func isInvisibleRune(r rune) bool {
 func maskSecrets(s string) string {
 	for _, p := range builtinSecrets {
 		if p.mayMatch(s) {
-			s = p.re.ReplaceAllStringFunc(s, maskSecret)
+			s = secretpat.ReplaceValueFunc(p.re, s, maskSecret)
 		}
 	}
 	if !secretpat.MayHaveGenericCredential(s) {
