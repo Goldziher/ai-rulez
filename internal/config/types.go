@@ -22,7 +22,8 @@ type Config struct {
 	Name        string   `yaml:"name" json:"name" toml:"name"`
 	Description string   `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
 	Presets     []Preset `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
-	// DefaultLayers names config.<name>.toml files beside config.toml that are always
+	// DefaultLayers names config.<name>.toml files beside config.toml (in .agents/.ai-rulez/
+	// for an .agents project) that are always
 	// merged over it, in order, before the layers AI_RULEZ_LAYERS names. A listed layer
 	// with no file is an error. The key is ignored inside a layer.
 	DefaultLayers []string            `yaml:"default_layers,omitempty" json:"default_layers,omitempty" toml:"default_layers,omitempty"` //nolint:tagliatelle

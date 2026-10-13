@@ -19389,7 +19389,7 @@ rewrites them), and the test fails when they are stale.
 | `catalog diff` | compares two catalogs through git subprocesses |
 | `edit check` | partial field edits and stdin input; update_check is the whole-item replacement for a tool client |
 | `edit command` | partial field edits and stdin input; update_command is the whole-item replacement for a tool client |
-| `config layers` | lists the config.<name>.toml files beside config.toml and which are active; a tool client reads the merged settings through read_config |
+| `config layers` | lists the config.<name>.toml files beside config.toml (in .agents/.ai-rulez/ for an .agents project) and which are active; a tool client reads the merged settings through read_config |
 | `edit context` | partial field edits and stdin input; update_context is the whole-item replacement for a tool client |
 | `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
