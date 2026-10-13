@@ -118,6 +118,18 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 	return tinfo, true
 }
 
+// AdmitProjectSymlink applies the symlink policy the project's own content is
+// loaded under to path, a symlink met while bundling content: it is followed
+// (the target's FileInfo is returned) only when its fully resolved target stays
+// inside the repository root and is not a credential file. Otherwise it is
+// refused, a warning names the path and the reason, and ok is false. Plain
+// generate and generate --plugin share this one policy.
+func (c *Config) AdmitProjectSymlink(path string) (info os.FileInfo, ok bool) {
+	s := newProjectScanner(context.Background(), c.ViewFor(filepath.Dir(path)))
+	s.log = c.Log()
+	return s.admit(path)
+}
+
 // checkConfigFileInside refuses a config file (config.toml, config.local.toml)
 // that is a symlink whose fully resolved target is outside the repository root,
 // the same boundary content symlinks get. A committed config must not read a

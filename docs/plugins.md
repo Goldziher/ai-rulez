@@ -226,6 +226,13 @@ Publication to npm with `pi-package` enables discovery in the [Pi package catalo
 Git installation needs no registry. No Pi marketplace JSON is generated; Pi-only multi-plugin
 publishing is not supported by the current publisher, which requires a Claude marketplace index.
 
+### Symlinks in a skill directory
+
+A skill directory is copied whole into the bundle, and a symlink inside it follows the same policy as plain
+`generate` (see [Symlinks in content](configuration.md#symlinks-in-content)): a link whose resolved target is
+inside the project is followed and its content copied, with the target's mode; any other link is skipped with a
+warning that names the link and the reason. A link is never dropped silently.
+
 ### Shared resources across skills
 
 Skills in one plugin often share the same reference docs and templates. `[plugin] shared_resources`
