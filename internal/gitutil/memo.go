@@ -3,6 +3,8 @@ package gitutil
 import (
 	"context"
 	"errors"
+	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -17,10 +19,24 @@ import (
 // cached unless the caller put a Memo there with WithMemo, and the answers live
 // exactly as long as that context, so a command that creates or removes a
 // repository starts over with a new one. Questions about history (HEAD, refs,
-// file lists) are never memoised.
+// file lists) are never memoised; the one exception is the tracked-file listing
+// WithSharedIndex opts into.
 type Memo struct {
 	mu sync.Mutex
 	m  map[memoKey]memoVal
+
+	// shared is set by WithSharedIndex: the index listings below are kept.
+	shared   bool
+	listings map[memoKey]*indexListing
+}
+
+// indexListing is one repository's tracked files, read once. mu is held while
+// it is read, so concurrent askers wait for the one listing instead of taking
+// their own; a failed read is not kept, the next asker tries again.
+type indexListing struct {
+	mu    sync.Mutex
+	files map[string]bool
+	done  bool
 }
 
 // memoKey names a question. The runner is part of it: two Git values over
@@ -44,6 +60,33 @@ func WithMemo(ctx context.Context) context.Context {
 		return ctx
 	}
 	return context.WithValue(ctx, memoCtxKey{}, &Memo{m: make(map[memoKey]memoVal)})
+}
+
+// WithSharedIndex is WithMemo that also keeps each repository's tracked-file
+// listing, so every question of the form "does git track this file" asked of
+// that repository during the operation (TrackedAmongContext) is answered from
+// one `git ls-files` instead of one index read each. Use it only for an
+// operation that does not stage or unstage files, such as a read-only check
+// over several roots of one repository: the listing is not refreshed.
+func WithSharedIndex(ctx context.Context) context.Context {
+	if m := memoFrom(ctx); m != nil && m.shared {
+		return ctx
+	}
+	return context.WithValue(ctx, memoCtxKey{}, &Memo{
+		m: make(map[memoKey]memoVal), shared: true, listings: make(map[memoKey]*indexListing),
+	})
+}
+
+// listing returns the entry for the repository top, creating it when new.
+func (m *Memo) listing(key memoKey) *indexListing {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	l, ok := m.listings[key]
+	if !ok {
+		l = &indexListing{}
+		m.listings[key] = l
+	}
+	return l
 }
 
 func memoFrom(ctx context.Context) *Memo {
@@ -98,4 +141,73 @@ func (g Git) revParse(ctx context.Context, dir string, args ...string) ([]byte, 
 	memo.m[key] = memoVal{out, err}
 	memo.mu.Unlock()
 	return out, err
+}
+
+// trackedFromSharedIndex answers, from the context's shared index listing, which
+// of paths git tracks, records the tracked ones in tracked and returns the paths
+// it could not answer: all of them without a shared index, and any path that
+// leaves dir (".." or absolute), which the listing of dir's repository cannot
+// speak for.
+func (g Git) trackedFromSharedIndex(ctx context.Context, dir string, paths []string, tracked map[string]bool) []string {
+	memo := memoFrom(ctx)
+	if memo == nil || !memo.shared {
+		return paths
+	}
+	r, ok := g.memoRunner()
+	if !ok {
+		return paths
+	}
+	top := g.TopLevelContext(ctx, dir)
+	prefixOut, err := g.revParse(ctx, dir, "--show-prefix")
+	if top == "" || err != nil {
+		return paths
+	}
+	files := memo.listing(memoKey{dir: top, args: "ls-files", runner: r}).read(func() (map[string]bool, bool) {
+		out, _, err := g.run(ctx, top, nil, "ls-files", "-z")
+		if err != nil {
+			return nil, false
+		}
+		set := make(map[string]bool)
+		for _, name := range strings.Split(string(out), "\x00") {
+			if name != "" {
+				set[filepath.ToSlash(name)] = true
+			}
+		}
+		return set, true
+	})
+	if files == nil {
+		return paths
+	}
+	prefix := strings.TrimSpace(string(prefixOut))
+	var rest []string
+	for _, p := range paths {
+		if !insideDir(p) {
+			rest = append(rest, p)
+			continue
+		}
+		if files[prefix+p] {
+			tracked[p] = true
+		}
+	}
+	return rest
+}
+
+// insideDir reports whether the slash path p names something below the
+// directory it is relative to, spelled the way git prints it.
+func insideDir(p string) bool {
+	return p != "" && path.Clean(p) == p && p != "." && p != ".." && !strings.HasPrefix(p, "../") && !path.IsAbs(p)
+}
+
+// read returns the listing, taking it with load the first time; nil when load fails.
+func (l *indexListing) read(load func() (map[string]bool, bool)) map[string]bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.done {
+		files, ok := load()
+		if !ok {
+			return nil
+		}
+		l.files, l.done = files, true
+	}
+	return l.files
 }
