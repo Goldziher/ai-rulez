@@ -15,6 +15,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -102,18 +103,55 @@ func contextFile(cfg *config.Config, name string, item *importer.Item) config.Co
 }
 
 // agentsMDReaders lists, as negated targets, the configured presets that read
-// the root AGENTS.md on their own.
+// the root AGENTS.md on their own. A preset whose root file is shared with
+// another preset (copilot and copilot-cli write one .github/copilot-instructions.md)
+// cannot be excluded by name: the shared file renders identically for all of
+// them, so the name is ignored there. The file itself is negated instead, and
+// only when every configured preset writing it reads AGENTS.md.
 func agentsMDReaders(cfg *config.Config) []string {
+	reads := map[string]bool{}
+	for i := range cfg.Presets {
+		if cfg.Presets[i].IsBuiltIn() && readsAgentsMD(cfg.Presets[i].BuiltIn) {
+			reads[cfg.Presets[i].BuiltIn] = true
+		}
+	}
 	var out []string
 	for i := range cfg.Presets {
-		if !cfg.Presets[i].IsBuiltIn() {
+		name := cfg.Presets[i].BuiltIn
+		if !reads[name] {
 			continue
 		}
-		if consumer, ok := config.SharedOutputConsumerFor(cfg.Presets[i].BuiltIn); ok && consumer.Reads(config.SharedAgentsMD) {
-			out = append(out, "!"+cfg.Presets[i].BuiltIn)
+		out = append(out, "!"+name)
+		consumer, _ := config.SharedOutputConsumerFor(name)
+		if root := consumer.OwnRootFile; root != "" && sharedRootFullyRead(cfg, root, reads) {
+			out = append(out, "!"+root)
 		}
 	}
 	return out
+}
+
+// readsAgentsMD reports whether the preset loads the root AGENTS.md itself in
+// this source. Gemini does not: agents_md is off, so its settings list only
+// GEMINI.md as a context file and AGENTS.md stays unread.
+func readsAgentsMD(preset string) bool {
+	if preset == string(config.PresetGemini) {
+		return false
+	}
+	consumer, ok := config.SharedOutputConsumerFor(preset)
+	return ok && consumer.Reads(config.SharedAgentsMD)
+}
+
+// sharedRootFullyRead reports whether every configured preset that writes the
+// root file reads AGENTS.md, so leaving the text out of that file loses nothing.
+func sharedRootFullyRead(cfg *config.Config, rootFile string, reads map[string]bool) bool {
+	for _, owner := range rulefiles.RootOwners(rootFile) {
+		for i := range cfg.Presets {
+			if cfg.Presets[i].IsBuiltIn() && cfg.Presets[i].BuiltIn == owner && !reads[owner] {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // isGenerated reports whether the file at path carries the generated header.

@@ -258,3 +258,22 @@ func TestCleanKeepsSourceListedInAnOldManifest(t *testing.T) {
 		assert.Equal(t, content, after[rel], "%s survives", rel)
 	}
 }
+
+func TestToolsThatReadAgentsMDGetNoCopyOfIt(t *testing.T) {
+	for _, layout := range layouts {
+		t.Run(layout.name, func(t *testing.T) {
+			// Arrange
+			body := strings.Replace(layout.cfgBody, `["claude", "cursor", "codex"]`, `["claude", "copilot", "gemini"]`, 1)
+			root := setup(t, layout.cfgPath, body)
+
+			// Act
+			generate(t, root)
+			after := snapshot(t, root)
+
+			// Assert
+			assert.Contains(t, after["CLAUDE.md"], "Use tabs.", "Claude does not read AGENTS.md")
+			assert.Contains(t, after["GEMINI.md"], "Use tabs.", "Gemini's settings list only GEMINI.md in this mode")
+			assert.NotContains(t, after[".github/copilot-instructions.md"], "Use tabs.", "Copilot reads AGENTS.md itself")
+		})
+	}
+}
