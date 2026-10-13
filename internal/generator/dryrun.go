@@ -31,7 +31,8 @@ func (g *Generator) DryRun(profile string) ([]string, error) {
 	return res.Lines, nil
 }
 
-// planLines lists the directories and files a run would create. A file whose
+// planLines lists the files a run would write. Directories are not listed:
+// a run creates one only to hold a file it writes. A file whose
 // rendering already matches the disk is listed as unchanged, one that was
 // edited by hand as edited (generate keeps it until its sources change), and a
 // file the overwrite guard would leave alone is not listed, because it is not written.
@@ -47,7 +48,6 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 			continue
 		}
 		if output.IsDir {
-			lines = append(lines, "create-dir: "+relPath)
 			continue
 		}
 		if g.linkedOutputs[filepath.ToSlash(relPath)] {

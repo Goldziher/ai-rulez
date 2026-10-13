@@ -2879,3 +2879,22 @@ func TestMarkSensitiveOutputs_MCPConfigNamingASecretKeyIsSensitive(t *testing.T)
 	assert.True(t, outputs[0].Sensitive)
 	assert.False(t, outputs[1].Sensitive)
 }
+
+func TestGenerator_DryRunListsNoDirectories(t *testing.T) {
+	// Arrange
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "context", "c.md"), "hello\n")
+	cfg, err := config.LoadConfig(context.Background(), dir)
+	require.NoError(t, err)
+
+	// Act
+	lines, err := NewGenerator(cfg).DryRun("default")
+
+	// Assert
+	require.NoError(t, err)
+	for _, line := range lines {
+		assert.NotContains(t, line, "create-dir", "a real run creates no directory on its own")
+	}
+	assert.NoDirExists(t, filepath.Join(dir, ".claude"))
+}

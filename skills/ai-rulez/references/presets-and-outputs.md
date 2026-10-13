@@ -163,4 +163,4 @@ Generation no longer treats assistant directories as fully owned. Stale cleanup 
 - The manifest lives at `<config-dir>/.generated-manifest.json`.
 - Only files listed in the previous manifest can be deleted as stale.
 - User-owned files in `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.devin/`, `.cline/`, `.agents/`, `.opencode/`, `.junie/`, and custom output directories are preserved.
-- `ai-rulez generate --dry-run` prints `write-file`, `create-dir`, and `delete-stale` entries without changing the filesystem.
+- `ai-rulez generate --dry-run` prints `write-file`, `unchanged`, `edited` and `delete-stale` entries without changing the filesystem.
