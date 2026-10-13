@@ -1353,6 +1353,8 @@ ai-rulez generate [flags]
 | `--env`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
 | `--env-file`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
+| `--plugin-name`                 | string  |               | With `--plugin`, only the plugin of this name (repeatable); the marketplace indexes are left alone. For a root with several plugin definitions |
+| `--marketplace-name`            | string  |               | With `--plugin`, only the marketplace of this name, its index and its plugins (repeatable) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
 | `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
 | `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell); always, do not warn about new hook and MCP commands (same as `AI_RULEZ_ACK_COMMANDS=1`) |
@@ -1594,6 +1596,8 @@ ai-rulez verify (--attestation | --approvals | --self | --plugin) [flags]
 | `--recursive`  | boolean | false              | Find and verify plugin producers recursively               |
 | `--if-configured`     | boolean | false              | Succeed without work when no plugin producer is configured |
 | `--if-generated`      | boolean | false              | With `--plugin`, succeed without work when the bundle has not been generated yet |
+| `--plugin-name`       | string  |                    | With `--plugin`, only this plugin (repeatable); with `--format json`, `plugins` and `marketplaces` list every plugin and marketplace of the root with a status, and each `drift` entry names its plugin and marketplace |
+| `--marketplace-name`  | string  |                    | With `--plugin`, only this marketplace and its plugins (repeatable) |
 | `--profile`    | string  | configured default | Profile used when the plugin was generated                 |
 | `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
 | `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |

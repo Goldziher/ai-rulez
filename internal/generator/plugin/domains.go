@@ -40,6 +40,15 @@ type PlannedPlugin struct {
 	Skills   []config.ContentFile
 	Commands []config.ContentFile
 	Agents   []config.ContentFile
+	// MCPServers names the root MCP servers the plugin bundles; Hooks are the
+	// hook groups it ships. Both come from the definition and default to none.
+	MCPServers []string
+	Hooks      []config.HookGroup
+	// Author, License, Homepage and Repository override the [plugin] block's.
+	Author     *config.Author
+	License    string
+	Homepage   string
+	Repository string
 }
 
 // Source is the plugin's marketplace source, relative to the marketplace root.
@@ -136,7 +145,8 @@ func includeDomainContent(tree *config.ContentTree, patterns []string) (skills, 
 // warning.
 func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedPlugin, error) {
 	mkt := cfg.Marketplace
-	if !mkt.HasDomainPlugins() || tree == nil {
+	defs := cfg.PluginDefinitions()
+	if (!mkt.HasDomainPlugins() && len(defs) == 0) || tree == nil {
 		return nil, nil
 	}
 	byName := map[string]PlannedPlugin{}
@@ -146,39 +156,12 @@ func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedP
 		return nil, err
 	}
 
-	if fd := mkt.FromDomains; fd.IsEnabled() {
-		for _, domain := range sortedDomainNames(tree) {
-			if len(fd.Include) > 0 && !matchesAny(fd.Include, domain) {
-				continue
-			}
-			if matchesAny(fd.Exclude, domain) {
-				continue
-			}
-			d := tree.Domains[domain]
-			if d.Builtin {
-				continue
-			}
-			name := fd.NamePrefix + strings.ToLower(domain)
-			if !domainPluginName.MatchString(name) {
-				return nil, oops.With("domain", domain).With("plugin", name).
-					Hint("Rename the domain directory or exclude it with from_domains.exclude").
-					Errorf("domain %q does not form a valid plugin name %q", domain, name)
-			}
-			p := PlannedPlugin{
-				Name:        name,
-				Description: fmt.Sprintf("Skills, commands and agents of the %s domain.", domain),
-				Domains:     []string{domain},
-				Skills:      bundleable(d.Skills),
-				Commands:    bundleable(d.Commands),
-				Agents:      bundleable(d.Agents),
-			}
-			applyDefaults(&p, &fd.PluginDefaults, cfg, rootVersion)
-			byName[name] = p
-		}
+	if err := planFromDomains(cfg, tree, fromDomains(mkt), rootVersion, byName); err != nil {
+		return nil, err
 	}
 
-	for i := range mkt.Plugins {
-		p, err := planDeclared(cfg, tree, &mkt.Plugins[i], rootVersion)
+	for i := range defs {
+		p, err := planDeclared(cfg, tree, defs[i], rootVersion)
 		if err != nil {
 			return nil, err
 		}
@@ -198,8 +181,56 @@ func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedP
 	return plan, nil
 }
 
+// planFromDomains adds one plugin per selected domain to byName.
+func planFromDomains(cfg *config.Config, tree *config.ContentTree, fd *config.DomainPluginsConfig, rootVersion string, byName map[string]PlannedPlugin) error {
+	if !fd.IsEnabled() {
+		return nil
+	}
+	for _, domain := range sortedDomainNames(tree) {
+		if len(fd.Include) > 0 && !matchesAny(fd.Include, domain) {
+			continue
+		}
+		if matchesAny(fd.Exclude, domain) {
+			continue
+		}
+		d := tree.Domains[domain]
+		if d.Builtin {
+			continue
+		}
+		name := fd.NamePrefix + strings.ToLower(domain)
+		if !domainPluginName.MatchString(name) {
+			return oops.With("domain", domain).With("plugin", name).
+				Hint("Rename the domain directory or exclude it with from_domains.exclude").
+				Errorf("domain %q does not form a valid plugin name %q", domain, name)
+		}
+		p := PlannedPlugin{
+			Name:        name,
+			Description: fmt.Sprintf("Skills, commands and agents of the %s domain.", domain),
+			Domains:     []string{domain},
+			Skills:      bundleable(d.Skills),
+			Commands:    bundleable(d.Commands),
+			Agents:      bundleable(d.Agents),
+		}
+		applyDefaults(&p, &fd.PluginDefaults, cfg, rootVersion)
+		byName[name] = p
+	}
+	return nil
+}
+
+// fromDomains is the [marketplace.from_domains] block, nil without a marketplace.
+func fromDomains(mkt *config.MarketplaceAuthoring) *config.DomainPluginsConfig {
+	if mkt == nil {
+		return nil
+	}
+	return mkt.FromDomains
+}
+
 func planDeclared(cfg *config.Config, tree *config.ContentTree, decl *config.MarketplacePlugin, rootVersion string) (PlannedPlugin, error) {
-	p := PlannedPlugin{Name: decl.Name, Description: decl.Description, Relevance: decl.Relevance}
+	p := PlannedPlugin{
+		Name: decl.Name, Description: decl.Description, Relevance: decl.Relevance,
+		MCPServers: decl.MCPServers, Hooks: decl.Hooks, Author: decl.Author,
+		License: decl.License, Homepage: decl.Homepage, Repository: decl.Repository,
+	}
 	seenS, seenC, seenA := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	for _, domain := range sortedDomainNames(tree) {
 		if !matchesAny(decl.Domains, domain) {
@@ -276,8 +307,10 @@ func firstNonEmpty(values ...string) string {
 }
 
 // BuildDomainManifest builds the Manifest of one planned plugin. Author,
-// license, homepage and repository come from the [plugin] block when present.
-// The plugin bundles no MCP servers or hooks.
+// license, homepage and repository come from the definition, else from the
+// [plugin] block when present. The plugin bundles the MCP servers and hooks its
+// definition names and nothing else; cfg.MCPServers must hold the resolved
+// servers when the definition names any.
 func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 	m := &Manifest{
 		Name:        p.Name,
@@ -289,6 +322,12 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		Skills:      p.Skills,
 		Commands:    p.Commands,
 		Agents:      p.Agents,
+		Hooks:       p.Hooks,
+		MCP:         resolveNamedMCP(cfg, p.MCPServers, p.Runtimes),
+		Author:      p.Author,
+		License:     p.License,
+		Homepage:    p.Homepage,
+		Repository:  p.Repository,
 		Market:      ResolveMarketInfo(cfg.Marketplace),
 		Config:      cfg,
 		SourceDir:   cfg.BaseDir,
@@ -297,10 +336,12 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		m.IncludeEvals = root.IncludeEvals
 		m.EvalsDir = evalsDir(cfg, root)
 		m.EvalsPerSkillOnly = true
-		m.Author = root.Author
-		m.Homepage = root.Homepage
-		m.Repository = root.Repository
-		m.License = root.License
+		if m.Author == nil {
+			m.Author = root.Author
+		}
+		m.Homepage = firstNonEmpty(m.Homepage, root.Homepage)
+		m.Repository = firstNonEmpty(m.Repository, root.Repository)
+		m.License = firstNonEmpty(m.License, root.License)
 		m.Spec = root.Spec
 		m.Codex = root.Codex
 		m.Cursor = root.Cursor
@@ -363,8 +404,7 @@ func BundleMembership(cfg *config.Config, tree *config.ContentTree, plan []Plann
 			add(commands, plan[i].Commands[j].Name, plan[i].Name)
 		}
 	}
-	mkt := cfg.Marketplace
-	if cfg.Plugin != nil && (mkt == nil || (len(mkt.Members) == 0 && !mkt.HasDomainPlugins())) {
+	if cfg.Plugin != nil && !cfg.HasPluginSet() {
 		rootSkills, rootCommands, _ := includeDomainContent(tree, cfg.Plugin.IncludeDomains)
 		for i := range rootSkills {
 			add(skills, rootSkills[i].Name, cfg.Plugin.Name)

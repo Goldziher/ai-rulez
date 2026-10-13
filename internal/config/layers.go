@@ -121,7 +121,7 @@ func withLayers(v workspace.View, cfg *Config, mainPath, configDir string, lo lo
 			return nil, nil, nil, err
 		}
 		if doc == nil {
-			if doc, err = readConfigDoc(v, mainPath); err != nil {
+			if doc, err = readMainDoc(v, mainPath, configDir); err != nil {
 				return nil, nil, nil, err
 			}
 		}

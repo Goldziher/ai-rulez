@@ -104,7 +104,7 @@ func (r *runner) singlePluginRootIsRepoRoot() bool {
 	if p == nil {
 		return false
 	}
-	if mkt := r.cfg.Marketplace; mkt != nil && (len(mkt.Members) > 0 || mkt.HasDomainPlugins()) {
+	if r.cfg.HasPluginSet() {
 		return false
 	}
 	for _, rt := range p.ResolvedRuntimes() {

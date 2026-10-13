@@ -61,6 +61,13 @@ type Generator struct {
 	// memberRuntimes, when not empty, limits every [marketplace] member's bundle to these runtimes
 	// (WithMemberRuntimes).
 	memberRuntimes []string
+	// pluginNames and marketplaceNames limit a plugin run to some plugins or
+	// marketplaces (WithPluginNames, WithMarketplaceNames).
+	pluginNames      []string
+	marketplaceNames []string
+	// ownerDirs records, for the latest plugin-set collection, which plugin and
+	// marketplace each output directory belongs to (VerifyPlugin names them).
+	ownerDirs []ownerDir
 	// lockRender renders for ai-rulez.lock: MCP placeholders stay as written, so a
 	// pinned output carries no secret and no checkout path.
 	lockRender bool

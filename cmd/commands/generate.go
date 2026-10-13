@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -38,6 +39,10 @@ var (
 	generateFrozen     bool
 	generateRole       string
 	generateEmitPlan   string
+	// pluginNames and marketplaceNames limit --plugin runs (generate and verify)
+	// to some plugins or marketplaces of a root that defines several.
+	pluginNames      []string
+	marketplaceNames []string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -81,6 +86,7 @@ func init() {
 		"Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent")
 	addYesFlag(GenerateCmd.Flags(), &assumeYes, "With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
+	addPluginSelectorFlags(GenerateCmd.Flags())
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 }
 
@@ -144,7 +150,10 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 
 	out := outFor(cmd)
 	if pluginMode {
-		return runPluginGenerate(out, gen)
+		if err := checkPluginSelectors(pluginMode, recursive); err != nil {
+			return fail(err)
+		}
+		return runPluginGenerate(out, limitPlugins(gen))
 	}
 
 	if dryRun {
@@ -278,6 +287,35 @@ func printDryRun(gen *generator.Generator, indent string) error {
 		out.Resultln(indent + line)
 	}
 	return gen.DryRunBlocked() //nolint:wrapcheck // already contextual
+}
+
+// addPluginSelectorFlags registers --plugin-name and --marketplace-name, which limit
+// a --plugin run to some of the plugins or marketplaces a root defines.
+func addPluginSelectorFlags(f *pflag.FlagSet) {
+	f.StringArrayVar(&pluginNames, "plugin-name", nil,
+		"With --plugin: only the plugin of this name (repeatable); the marketplace indexes are left alone")
+	f.StringArrayVar(&marketplaceNames, "marketplace-name", nil,
+		"With --plugin: only the marketplace of this name, its index and its plugins (repeatable)")
+}
+
+// checkPluginSelectors rejects --plugin-name and --marketplace-name without --plugin
+// (or with --recursive, where each root has its own plugins).
+func checkPluginSelectors(plugin, recursive bool) error {
+	if len(pluginNames) == 0 && len(marketplaceNames) == 0 {
+		return nil
+	}
+	if !plugin {
+		return oops.Errorf("--plugin-name and --marketplace-name only apply to --plugin")
+	}
+	if recursive {
+		return oops.Errorf("--plugin-name and --marketplace-name cannot be combined with --recursive")
+	}
+	return nil
+}
+
+// limitPlugins applies the --plugin-name and --marketplace-name selection to gen.
+func limitPlugins(gen *generator.Generator) *generator.Generator {
+	return gen.WithPluginNames(pluginNames).WithMarketplaceNames(marketplaceNames)
 }
 
 // runPluginGenerate handles `generate --plugin`: it renders (or, with --dry-run,

@@ -950,6 +950,11 @@ spec = "1.1.0"                 # Agent Plugins version: "1.0.0" (default) or "1.
 | `include_evals` | `false` | Bundle each skill's `evals/` directory and the project-level `evals/` tree |
 | `skills_dir_owned` | `false` | Declare the bundle's skills directory fully owned: `verify --plugin` reports entries it did not generate as `extra` and `generate --plugin` removes them |
 
+To publish several plugins from one root, use `[[plugins_authoring]]` instead of `[plugin]` (and
+`[[marketplaces_authoring]]` for several marketplace indexes); see
+[Several plugins from one root](plugins.md#several-plugins-from-one-root). A definition file
+`.ai-rulez/plugins/<name>.toml` or `.ai-rulez/marketplaces/<name>.toml` holds one entry's keys.
+
 Sub-tables: `[plugin.author]` (`name`, `email`, `url`), `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`,
 `[plugin.codex]` (`manifest` = `legacy`, `root` or `both`; `marketplace`), `[plugin.cursor]`, `[plugin.gemini]`,
 `[plugin.kimi]`, `[plugin.hermes]` and `[plugin.interface]`.

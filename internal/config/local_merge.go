@@ -305,7 +305,7 @@ func mergeMarketplace(shared, local any, src string) (merged any, warnings []str
 	if err != nil {
 		return nil, nil, err
 	}
-	table, _ := out.(map[string]any)
+	table, _ := out.(map[string]any) //nolint:errcheck // mergeMapKey returns a table
 	if hasShared || len(list) > 0 {
 		table[docKeyMktPlugins] = list
 	}

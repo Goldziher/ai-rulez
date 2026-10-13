@@ -39,7 +39,7 @@ const maxDriftFiles = 3
 // result is empty.
 func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, error) {
 	g.diagnostics()
-	if g.config.Plugin == nil && g.config.Marketplace == nil {
+	if g.config.Plugin == nil && g.config.Marketplace == nil && !g.config.HasPluginSet() {
 		return nil, nil
 	}
 	// generate --plugin never reads machine-local inputs (a bundle is distributable),

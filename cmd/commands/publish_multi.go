@@ -26,8 +26,7 @@ const (
 // isMultiPlugin reports whether the project publishes several plugins: a
 // [marketplace] with members or domain plugins.
 func isMultiPlugin(cfg *config.Config) bool {
-	m := cfg.Marketplace
-	return m != nil && (len(m.Members) > 0 || m.HasDomainPlugins())
+	return cfg.HasPluginSet()
 }
 
 // findClaudeIndex returns the Claude marketplace index among the bundle files

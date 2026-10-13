@@ -19,15 +19,12 @@ const (
 	schemaTypeKey     = "type"
 	schemaNameKey     = "name"
 	schemaRequiredKey = "required"
+	schemaDescKey     = "description"
 )
 
 // removableListKeys are the named lists whose overlay entries may carry
 // `remove = true`.
 var removableListKeys = []string{"mcp_servers", "plugins", "includes", "installed_skills", "marketplaces", "scopes", "roles", "plugins_authoring", "marketplaces_authoring"}
-
-// removableDefs are the shared definitions whose items accept `remove`: the
-// plugin and marketplace definition entries, also used by marketplace.plugins.
-var removableDefs = []string{"pluginDefinition", "marketplaceDefinition"}
 
 // DeriveLocalSchema derives the overlay schema from the main config schema:
 // nothing is required, list entries accept `remove`, and presets accept
@@ -57,7 +54,7 @@ func DeriveLocalSchema(main []byte) ([]byte, error) {
 		}
 	}
 	restoreIdentityRequired(props, identity)
-	if err := addDefinitionRemove(doc); err != nil {
+	if err := addMarketplacePluginsRemove(props); err != nil {
 		return nil, err
 	}
 	if err := addPresetDrop(props); err != nil {
@@ -128,39 +125,36 @@ func dropRequired(v any) {
 }
 
 func addRemoveField(props map[string]any, key string) error {
-	list, _ := props[key].(map[string]any)     //nolint:errcheck // nil map is handled below
-	items, _ := list["items"].(map[string]any) //nolint:errcheck // nil map is handled below
-	if _, byRef := items["$ref"]; byRef {
-		return nil // the entry shape is a shared definition, handled by addDefinitionRemove
-	}
+	list, _ := props[key].(map[string]any)                  //nolint:errcheck // nil map is handled below
+	items, _ := list["items"].(map[string]any)              //nolint:errcheck // nil map is handled below
 	itemProps, _ := items[propertiesField].(map[string]any) //nolint:errcheck // nil map is handled below
 	if itemProps == nil {
 		return oops.Errorf("main schema property %s has no item properties", key)
 	}
 	itemProps["remove"] = map[string]any{
 		schemaTypeKey: "boolean",
-		"description": "Set to true to delete the shared entry with the same name",
+		schemaDescKey: "Set to true to delete the shared entry with the same name",
 	}
 	return nil
 }
 
-// addDefinitionRemove lets entries of the shared plugin and marketplace
-// definitions carry `remove` and keeps `name` required on them (dropRequired
-// stripped it), so an overlay entry can be matched to a shared one.
-func addDefinitionRemove(doc map[string]any) error {
-	defs, _ := doc["$defs"].(map[string]any) //nolint:errcheck // nil map is handled below
-	for _, name := range removableDefs {
-		def, _ := defs[name].(map[string]any)                //nolint:errcheck // nil map is handled below
-		defProps, _ := def[propertiesField].(map[string]any) //nolint:errcheck // nil map is handled below
-		if defProps == nil {
-			return oops.Errorf("main schema definition %s has no properties", name)
-		}
-		defProps["remove"] = map[string]any{
-			schemaTypeKey: "boolean",
-			"description": "Set to true to delete the shared entry with the same name",
-		}
-		def["required"] = []any{schemaNameKey}
+// addMarketplacePluginsRemove lets the entries of [[marketplace.plugins]], a list
+// nested in the [marketplace] table, carry `remove` and keeps `name` required on
+// them (dropRequired stripped it), so an overlay entry can be matched to a shared one.
+func addMarketplacePluginsRemove(props map[string]any) error {
+	marketplace, _ := props["marketplace"].(map[string]any)    //nolint:errcheck // nil map is handled below
+	mProps, _ := marketplace[propertiesField].(map[string]any) //nolint:errcheck // nil map is handled below
+	plugins, _ := mProps["plugins"].(map[string]any)           //nolint:errcheck // nil map is handled below
+	items, _ := plugins["items"].(map[string]any)              //nolint:errcheck // nil map is handled below
+	itemProps, _ := items[propertiesField].(map[string]any)    //nolint:errcheck // nil map is handled below
+	if itemProps == nil {
+		return oops.Errorf("main schema marketplace.plugins has no item properties")
 	}
+	itemProps["remove"] = map[string]any{
+		schemaTypeKey: "boolean",
+		schemaDescKey: "Set to true to delete the shared entry with the same name",
+	}
+	items["required"] = []any{schemaNameKey}
 	return nil
 }
 

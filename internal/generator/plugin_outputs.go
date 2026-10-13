@@ -104,9 +104,15 @@ const (
 
 // PluginDrift is one path where a plugin bundle differs from its sources, with
 // the kind of difference. Path is project-relative with forward slashes.
+//
+// For a root that defines several plugins or marketplaces, Plugin and Marketplace
+// name the ones the path belongs to (a path in a bundle names both; a marketplace
+// index names the marketplace only). They are empty for a single [plugin].
 type PluginDrift struct {
-	Path string `json:"path"`
-	Kind string `json:"kind"`
+	Path        string `json:"path"`
+	Kind        string `json:"kind"`
+	Plugin      string `json:"plugin,omitempty"`
+	Marketplace string `json:"marketplace,omitempty"`
 }
 
 type pluginDriftError struct {
@@ -156,8 +162,50 @@ func checkPluginGenerated(expected []config.OutputFile) error {
 }
 
 // VerifyPlugin verifies the generated plugin bundles against their provenance
-// sidecars without regenerating or modifying files.
+// sidecars without regenerating or modifying files. Each drifted path of a root
+// that defines several plugins names its plugin and marketplace.
 func (g *Generator) VerifyPlugin(profile string) error {
+	err := g.verifyPlugin(profile)
+	var drift pluginDriftError
+	if errors.As(err, &drift) && g.config.HasPluginSet() {
+		drift.drift = g.tagDrift(drift.drift)
+		return drift
+	}
+	return err
+}
+
+// ownerDir is a directory a plugin or a marketplace index is written to.
+type ownerDir struct {
+	dir         string
+	plugin      string
+	marketplace string
+}
+
+// tagDrift fills Plugin and Marketplace on each entry from the directories the
+// last collection wrote: the deepest directory holding the path owns it.
+func (g *Generator) tagDrift(items []PluginDrift) []PluginDrift {
+	out := make([]PluginDrift, len(items))
+	for i, item := range items {
+		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(item.Path))
+		best := -1
+		for j, owner := range g.ownerDirs {
+			rel, err := filepath.Rel(owner.dir, abs)
+			if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				continue
+			}
+			if best < 0 || len(owner.dir) > len(g.ownerDirs[best].dir) {
+				best = j
+			}
+		}
+		if best >= 0 {
+			item.Plugin, item.Marketplace = g.ownerDirs[best].plugin, g.ownerDirs[best].marketplace
+		}
+		out[i] = item
+	}
+	return out
+}
+
+func (g *Generator) verifyPlugin(profile string) error {
 	g.diagnostics() // the run's warnings share one collector from the start
 	expected, obsolete, err := g.resolvePluginOutputs(profile)
 	if err != nil {
@@ -212,7 +260,7 @@ func (g *Generator) verifyPluginProvenance(expected []config.OutputFile) error {
 			}
 		}
 	}
-	if marketplace := g.config.Marketplace; marketplace != nil && marketplace.HasDomainPlugins() {
+	if g.hasPlannedPlugins() {
 		return g.domainProvenanceDrift(expected)
 	}
 	if err := plugin.VerifyProvenance(g.config.BaseDir); err != nil {
@@ -364,13 +412,13 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 // the config is a marketplace root ([marketplace].members or domain plugins), it
 // instead renders each plugin's bundle plus the aggregate marketplace index.
 func (g *Generator) collectPluginOutputs(profile string) ([]config.OutputFile, error) {
-	if mkt := g.config.Marketplace; mkt != nil && (len(mkt.Members) > 0 || mkt.HasDomainPlugins()) {
-		return g.collectMonorepoOutputs(mkt, profile)
+	if g.config.HasPluginSet() {
+		return g.collectPluginSetOutputs(profile)
 	}
 
 	if g.config.Plugin == nil {
 		return nil, oops.
-			Hint("Add a [plugin] block (or a [marketplace] with members) to your config").
+			Hint("Add a [plugin] block, [[plugins_authoring]] entries, or a [marketplace] with members, plugins or from_domains to your config").
 			Errorf("no [plugin] block configured; nothing to generate with --plugin")
 	}
 
@@ -430,25 +478,61 @@ func (g *Generator) warnLegacyFiles() {
 	}
 }
 
-// stalePluginDirs lists the generated domain-plugin directories whose plugin is
-// no longer planned (its domain disappeared, or its declaration was removed).
-// Only directories carrying ai-rulez's provenance sidecar qualify. The plan is
-// made over the unfiltered content tree: a profile that leaves a domain out
-// must not delete the plugin another profile generated for it.
+// stalePluginDirs lists the generated plugin directories whose plugin is no
+// longer planned for its marketplace (its domain disappeared, or its declaration
+// was removed). Only directories carrying ai-rulez's provenance sidecar qualify.
+// The plan is made over the unfiltered content tree: a profile that leaves a
+// domain out must not delete the plugin another profile generated for it. A run
+// limited to some plugins removes nothing.
 func (g *Generator) stalePluginDirs() ([]string, error) {
-	mkt := g.config.Marketplace
-	if mkt == nil || !mkt.HasDomainPlugins() {
+	if len(g.pluginNames) > 0 || !g.hasPlannedPlugins() {
 		return nil, nil
 	}
 	planned, err := plugin.PlanDomainPlugins(g.config, g.config.Content)
 	if err != nil {
 		return nil, err
 	}
-	keep := make(map[string]bool, len(planned))
-	for i := range planned {
-		keep[planned[i].Name] = true
+	targets, err := g.selectedTargets()
+	if err != nil {
+		return nil, err
 	}
-	return plugin.StalePluginDirs(g.marketplaceRoot(mkt), keep)
+	var stale []string
+	for i := range targets {
+		t := &targets[i]
+		keep := map[string]bool{}
+		listed := listedPlugins(planned, t)
+		for i := range listed {
+			keep[listed[i].Name] = true
+		}
+		dirs, err := plugin.StalePluginDirs(g.targetRoot(t), keep)
+		if err != nil {
+			return nil, err
+		}
+		stale = append(stale, dirs...)
+	}
+	return stale, nil
+}
+
+// hasPlannedPlugins reports whether the root generates plugins from the content
+// tree (from_domains, [[marketplace.plugins]] or [[plugins_authoring]]) rather
+// than only from members.
+func (g *Generator) hasPlannedPlugins() bool {
+	return g.config.Marketplace.HasDomainPlugins() || len(g.config.PluginDefinitions()) > 0
+}
+
+// listedPlugins is the part of the plan a marketplace target lists: all of it
+// for the single [marketplace] block, else the plugins the target names.
+func listedPlugins(planned []plugin.PlannedPlugin, t *config.MarketplaceTarget) []plugin.PlannedPlugin {
+	if t.Plugins == nil {
+		return planned
+	}
+	var out []plugin.PlannedPlugin
+	for i := range planned {
+		if slices.Contains(t.Plugins, planned[i].Name) {
+			out = append(out, planned[i])
+		}
+	}
+	return out
 }
 
 // removeStalePluginDirs deletes the generated files of each stale plugin
@@ -469,60 +553,289 @@ func (g *Generator) removeStalePluginDirs(dirs []string) {
 	}
 }
 
-// marketplaceRoot is the directory the marketplace index is written to:
-// [marketplace].output_dir for domain plugins, the project root otherwise.
-func (g *Generator) marketplaceRoot(mkt *config.MarketplaceAuthoring) string {
-	if mkt.OutputDir == "" {
+// targetRoot is the directory a marketplace index and its plugins/<name>/ bundles
+// are written to: the target's output_dir, else the project root.
+func (g *Generator) targetRoot(t *config.MarketplaceTarget) string {
+	if t.OutputDir == "" {
 		return g.config.BaseDir
 	}
-	return filepath.Join(g.config.BaseDir, mkt.OutputDir)
+	return filepath.Join(g.config.BaseDir, t.OutputDir)
 }
 
-// collectMonorepoOutputs renders every member plugin under its source directory,
-// every domain plugin under <output_dir>/plugins/<name>, and emits the aggregate
-// root marketplace index. Each member is an independent ai-rulez project loaded
-// from <baseDir>/<member>.
-func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, profile string) ([]config.OutputFile, error) {
-	var outputs []config.OutputFile
-	entries := make([]plugin.MemberEntry, 0, len(mkt.Members))
+// selectedTargets returns the marketplace indexes this run writes: all of them, or
+// the ones WithMarketplaceNames limits it to. An unknown name is an error naming the
+// marketplaces that exist.
+func (g *Generator) selectedTargets() ([]config.MarketplaceTarget, error) {
+	targets := g.config.MarketplaceTargets()
+	if len(g.marketplaceNames) == 0 {
+		return targets, nil
+	}
+	var picked []config.MarketplaceTarget
+	have := make([]string, 0, len(targets))
+	for i := range targets {
+		have = append(have, targets[i].Name)
+		if slices.Contains(g.marketplaceNames, targets[i].Name) {
+			picked = append(picked, targets[i])
+		}
+	}
+	for _, want := range g.marketplaceNames {
+		if !slices.Contains(have, want) {
+			return nil, oops.With("marketplace", want).
+				Errorf("no marketplace named %q (marketplaces: %s)", want, strings.Join(have, ", "))
+		}
+	}
+	return picked, nil
+}
 
-	for _, member := range mkt.Members {
-		memberOutputs, entry, err := g.collectMemberOutputs(member)
+// WithPluginNames limits generate --plugin and verify --plugin to the named plugins
+// (members and planned plugins). The marketplace indexes are left alone, since a
+// partial index would not match the full one. It returns g.
+func (g *Generator) WithPluginNames(names []string) *Generator {
+	g.pluginNames = append([]string(nil), names...)
+	return g
+}
+
+// WithMarketplaceNames limits generate --plugin and verify --plugin to the named
+// marketplaces (their indexes and plugin bundles). It returns g.
+func (g *Generator) WithMarketplaceNames(names []string) *Generator {
+	g.marketplaceNames = append([]string(nil), names...)
+	return g
+}
+
+// pluginSelected reports whether the plugin takes part in this run.
+func (g *Generator) pluginSelected(name string) bool {
+	return len(g.pluginNames) == 0 || slices.Contains(g.pluginNames, name)
+}
+
+// collectPluginSetOutputs renders every plugin of a root that defines several:
+// the monorepo members under their source directories, the planned plugins (from
+// from_domains, [[marketplace.plugins]] and [[plugins_authoring]]) under
+// <output_dir>/plugins/<name>, and one index per marketplace.
+func (g *Generator) collectPluginSetOutputs(profile string) ([]config.OutputFile, error) {
+	targets, err := g.selectedTargets()
+	if err != nil {
+		return nil, err
+	}
+	var planned []plugin.PlannedPlugin
+	if g.hasPlannedPlugins() {
+		if planned, err = g.planDomainPlugins(profile); err != nil {
+			return nil, err
+		}
+	}
+	cfg, err := g.pluginSetConfig(planned)
+	if err != nil {
+		return nil, err
+	}
+	var outputs []config.OutputFile
+	matched := map[string]bool{}
+	g.ownerDirs = nil
+	for i := range targets {
+		targetOutputs, err := g.collectTargetOutputs(&targets[i], planned, cfg, matched)
 		if err != nil {
 			return nil, err
 		}
-		outputs = append(outputs, memberOutputs...)
-		entries = append(entries, entry)
+		outputs = append(outputs, targetOutputs...)
+	}
+	for _, want := range g.pluginNames {
+		if !matched[want] {
+			return nil, oops.With("plugin", want).
+				Hint("Plugins: "+strings.Join(g.pluginNamesOf(planned), ", ")).
+				Errorf("no plugin named %q (plugins: %s)", want, strings.Join(g.pluginNamesOf(planned), ", "))
+		}
+	}
+	if err := checkDuplicateOutputs(outputs); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
+// pluginNamesOf lists the planned plugin names and the monorepo members' paths.
+func (g *Generator) pluginNamesOf(planned []plugin.PlannedPlugin) []string {
+	var names []string
+	if m := g.config.Marketplace; m != nil {
+		names = append(names, m.Members...)
+	}
+	for i := range planned {
+		names = append(names, planned[i].Name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// pluginSetConfig is the configuration the planned plugins' manifests are built
+// from: with the MCP servers their definitions name resolved. A definition that
+// names a server the root does not define is an error.
+func (g *Generator) pluginSetConfig(planned []plugin.PlannedPlugin) (*config.Config, error) {
+	need := false
+	for i := range planned {
+		for _, name := range planned[i].MCPServers {
+			if _, ok := g.config.MCPServers[name]; !ok {
+				return nil, oops.With("plugin", planned[i].Name).With("server", name).
+					Errorf("plugin %q bundles MCP server %q, which is not defined (servers: %s)",
+						planned[i].Name, name, strings.Join(sortedServerNames(g.config), ", "))
+			}
+			need = true
+		}
+	}
+	if !need {
+		return g.config, nil
+	}
+	if err := g.resolveMCPEnvForPlugin(); err != nil {
+		return nil, err
+	}
+	return g.config, nil
+}
+
+func sortedServerNames(cfg *config.Config) []string {
+	names := make([]string, 0, len(cfg.MCPServers))
+	for name := range cfg.MCPServers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// collectTargetOutputs renders one marketplace: the members of the single
+// [marketplace] block, the plugins it lists and its index files.
+func (g *Generator) collectTargetOutputs(t *config.MarketplaceTarget, planned []plugin.PlannedPlugin, cfg *config.Config, matched map[string]bool) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
+	var entries []plugin.MemberEntry
+	g.ownerDirs = append(g.ownerDirs, ownerDir{dir: g.targetRoot(t), marketplace: t.Name})
+	if t.Classic != nil {
+		for _, member := range t.Classic.Members {
+			memberOutputs, entry, err := g.collectMemberOutputs(member)
+			if err != nil {
+				return nil, err
+			}
+			if !g.pluginSelected(entry.Name) {
+				continue
+			}
+			matched[entry.Name] = true
+			g.ownerDirs = append(g.ownerDirs, ownerDir{
+				dir: filepath.Join(g.config.BaseDir, member), plugin: entry.Name, marketplace: t.Name})
+			outputs = append(outputs, memberOutputs...)
+			entries = append(entries, entry)
+		}
 	}
 	codexEntries := slices.Clone(entries) // members are always Codex-capable
+	root := g.targetRoot(t)
+	codex := len(entries) > 0 || (t.Classic != nil && len(t.Classic.Members) > 0)
 
-	root := g.marketplaceRoot(mkt)
-	codex := len(mkt.Members) > 0
-	if mkt.HasDomainPlugins() {
-		bundles, domainEntries, err := g.collectDomainPluginOutputs(profile, root)
-		if err != nil {
-			return nil, err
+	listed, err := g.listedOrError(t, planned)
+	if err != nil {
+		return nil, err
+	}
+	for i := range listed {
+		p := &listed[i]
+		if !g.pluginSelected(p.Name) {
+			continue
 		}
-		outputs = append(outputs, bundles...)
-		entries = append(entries, domainEntries...)
-		for i := range domainEntries {
-			if domainEntries[i].Codex {
-				codex = true
-				codexEntries = append(codexEntries, domainEntries[i])
-			}
+		matched[p.Name] = true
+		g.ownerDirs = append(g.ownerDirs, ownerDir{dir: p.Dir(root), plugin: p.Name, marketplace: t.Name})
+		bundle, err := plugin.GenerateMember(plugin.BuildDomainManifest(cfg, p), p.Dir(root))
+		if err != nil {
+			return nil, oops.With("plugin", p.Name).Wrapf(err, "generate domain plugin bundle")
+		}
+		outputs = append(outputs, bundle...)
+		entry := plugin.MemberEntryFor(p)
+		entries = append(entries, entry)
+		if entry.Codex {
+			codex = true
+			codexEntries = append(codexEntries, entry)
 		}
 	}
+	if err := checkDuplicatePlugins(t.Name, entries); err != nil {
+		return nil, err
+	}
+	if len(g.pluginNames) > 0 {
+		return outputs, nil // a partial index would not match the full one
+	}
+	return g.withMarketplaceIndex(t, outputs, entries, codexEntries, codex)
+}
 
-	market := plugin.ResolveMarketInfo(mkt)
-	if market.Owner == nil && mkt.HasDomainPlugins() && g.config.Plugin != nil {
+// listedOrError returns the planned plugins a target lists. A marketplace that
+// names a plugin the plan does not produce (no definition, or one that bundles
+// nothing) is an error.
+func (g *Generator) listedOrError(t *config.MarketplaceTarget, planned []plugin.PlannedPlugin) ([]plugin.PlannedPlugin, error) {
+	listed := listedPlugins(planned, t)
+	if t.Plugins == nil {
+		return listed, nil
+	}
+	have := make([]string, 0, len(planned))
+	for i := range planned {
+		have = append(have, planned[i].Name)
+	}
+	for _, name := range t.Plugins {
+		if !slices.Contains(have, name) {
+			return nil, oops.With("marketplace", t.Name).With("plugin", name).
+				Errorf("marketplace %q lists plugin %q, which no plugin definition provides or which bundles no content (plugins: %s)",
+					t.Name, name, strings.Join(have, ", "))
+		}
+	}
+	return listed, nil
+}
+
+// checkDuplicatePlugins rejects two plugins of one marketplace with one name,
+// naming where each comes from.
+func checkDuplicatePlugins(marketplace string, entries []plugin.MemberEntry) error {
+	seen := make(map[string]string, len(entries))
+	for i := range entries {
+		e := &entries[i]
+		if first, dup := seen[e.Name]; dup {
+			return oops.With("marketplace", marketplace).With("plugin", e.Name).
+				Hint("Rename one of them; plugin names are unique within a marketplace").
+				Errorf("marketplace %q has two plugins named %q: %s and %s", marketplace, e.Name, first, e.Source)
+		}
+		seen[e.Name] = e.Source
+	}
+	return nil
+}
+
+// checkDuplicateOutputs rejects two outputs written to one path: two plugins (or
+// two marketplaces) that would overwrite each other's files.
+func checkDuplicateOutputs(outputs []config.OutputFile) error {
+	seen := make(map[string]bool, len(outputs))
+	for i := range outputs {
+		o := &outputs[i]
+		if o.IsDir {
+			continue
+		}
+		path := filepath.Clean(o.Path)
+		if seen[path] {
+			return oops.With("path", path).
+				Hint("Give each plugin a distinct name and each marketplace a distinct output_dir").
+				Errorf("two plugin outputs are written to %s", path)
+		}
+		seen[path] = true
+	}
+	return nil
+}
+
+// withMarketplaceIndex adds a marketplace's index files and provenance sidecar to
+// the bundle outputs.
+func (g *Generator) withMarketplaceIndex(t *config.MarketplaceTarget, outputs []config.OutputFile, entries, codexEntries []plugin.MemberEntry, codex bool) ([]config.OutputFile, error) {
+	root := g.targetRoot(t)
+	market := plugin.MarketInfo{Name: t.Name, Description: t.Description, Owner: t.Owner}
+	if t.Classic != nil {
+		market = plugin.ResolveMarketInfo(t.Classic)
+	}
+	if market.Owner == nil && g.config.Plugin != nil && (t.Classic == nil || g.hasPlannedPlugins()) {
 		market.Owner = g.config.Plugin.Author // Claude Code requires an owner
+	}
+	if market.Owner == nil {
+		for _, def := range g.config.PluginDefinitions() {
+			if def.Author != nil && slices.ContainsFunc(entries, func(e plugin.MemberEntry) bool { return e.Name == def.Name }) {
+				market.Owner = def.Author
+				break
+			}
+		}
 	}
 	marketplaceOutput, err := plugin.RenderMonorepoMarketplace(market, entries, root)
 	if err != nil {
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
 	rootFiles := []config.OutputFile{marketplaceOutput}
-	extraIndexes, err := g.renderExtraMarketplaces(mkt, market, entries, codexEntries, root, codex)
+	extraIndexes, err := g.renderExtraMarketplaces(t.CursorIndex, market, entries, codexEntries, root, codex)
 	if err != nil {
 		return nil, err
 	}
@@ -535,9 +848,9 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 }
 
 // renderExtraMarketplaces renders the non-Claude marketplace indexes of a
-// monorepo or domain-plugin root: the Codex index when some plugin ships a Codex
-// bundle, and the Cursor index when [marketplace] cursor_index is set.
-func (g *Generator) renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries, codexEntries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
+// plugin-set root: the Codex index when some plugin ships a Codex bundle, and
+// the Cursor index when cursor_index is set.
+func (g *Generator) renderExtraMarketplaces(cursorIndex bool, market plugin.MarketInfo, entries, codexEntries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
 	var files []config.OutputFile
 	if codex {
 		out, err := plugin.RenderCodexMonorepoMarketplace(market, codexEntries, root)
@@ -546,7 +859,7 @@ func (g *Generator) renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, ma
 		}
 		files = append(files, out)
 	}
-	if mkt.CursorIndex {
+	if cursorIndex {
 		out, err := plugin.RenderCursorMarketplace(g.log(), market, entries, root)
 		if err != nil {
 			return nil, oops.Wrapf(err, "render Cursor marketplace")
@@ -670,27 +983,6 @@ func limitMemberRuntimes(memberCfg *config.Config, member string, requested []st
 	return nil
 }
 
-// collectDomainPluginOutputs renders every planned domain plugin under
-// <root>/plugins/<name> and returns their marketplace entries.
-func (g *Generator) collectDomainPluginOutputs(profile, root string) ([]config.OutputFile, []plugin.MemberEntry, error) {
-	planned, err := g.planDomainPlugins(profile)
-	if err != nil {
-		return nil, nil, err
-	}
-	var outputs []config.OutputFile
-	entries := make([]plugin.MemberEntry, 0, len(planned))
-	for i := range planned {
-		p := &planned[i]
-		bundle, err := plugin.GenerateMember(plugin.BuildDomainManifest(g.config, p), p.Dir(root))
-		if err != nil {
-			return nil, nil, oops.With("plugin", p.Name).Wrapf(err, "generate domain plugin bundle")
-		}
-		outputs = append(outputs, bundle...)
-		entries = append(entries, plugin.MemberEntryFor(p))
-	}
-	return outputs, entries, nil
-}
-
 // warnUnbundledPluginOnly warns about skills and commands that placement keeps
 // out of .claude/skills although no configured plugin bundles them, which would
 // make them unreachable.
@@ -761,4 +1053,59 @@ func (g *Generator) planDomainPlugins(profile string) ([]plugin.PlannedPlugin, e
 		return nil, err
 	}
 	return plugin.PlanDomainPlugins(g.config, tree)
+}
+
+// PluginStatus is the verification result of one plugin of a root that defines
+// several, as `verify --plugin --format json` reports it.
+type PluginStatus struct {
+	Name        string `json:"name"`
+	Marketplace string `json:"marketplace,omitempty"`
+	Status      string `json:"status"`
+}
+
+// MarketplaceStatus is the verification result of one marketplace: drift when its
+// index or any plugin it lists drifted.
+type MarketplaceStatus struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+// Verification outcomes of a plugin or marketplace.
+const (
+	PluginStatusOK    = "ok"
+	PluginStatusDrift = "drift"
+)
+
+// PluginStatuses reports, after VerifyPlugin, every plugin and marketplace of a
+// root that defines several, each ok or drift given the drift VerifyPlugin found.
+// A root with a single [plugin] has none.
+func (g *Generator) PluginStatuses(drift []PluginDrift) (plugins []PluginStatus, marketplaces []MarketplaceStatus) {
+	if !g.config.HasPluginSet() {
+		return nil, nil
+	}
+	status := func(hit bool) string {
+		if hit {
+			return PluginStatusDrift
+		}
+		return PluginStatusOK
+	}
+	for _, owner := range g.ownerDirs {
+		if owner.plugin == "" {
+			continue
+		}
+		hit := slices.ContainsFunc(drift, func(d PluginDrift) bool {
+			return d.Plugin == owner.plugin && d.Marketplace == owner.marketplace
+		})
+		plugins = append(plugins, PluginStatus{Name: owner.plugin, Marketplace: owner.marketplace, Status: status(hit)})
+	}
+	seen := map[string]bool{}
+	for _, owner := range g.ownerDirs {
+		if seen[owner.marketplace] {
+			continue
+		}
+		seen[owner.marketplace] = true
+		hit := slices.ContainsFunc(drift, func(d PluginDrift) bool { return d.Marketplace == owner.marketplace })
+		marketplaces = append(marketplaces, MarketplaceStatus{Name: owner.marketplace, Status: status(hit)})
+	}
+	return plugins, marketplaces
 }

@@ -585,6 +585,111 @@ root `plugin.json` is on the list (Codex prefers it as the manifest); a root
 `CLAUDE.md` was considered and is not, because Claude Code does not load a
 `CLAUDE.md` from a plugin root as context.
 
+## Several plugins from one root
+
+One root can define any number of plugins, each selecting its own skills, commands, agents,
+MCP servers and hooks from the root's sources, and `generate --plugin` and `verify --plugin`
+process them all in one run. The nested-root layout above is not needed for this; use it only
+when each plugin should be its own ai-rulez project.
+
+```toml
+# .ai-rulez/config.toml
+[[plugins_authoring]]
+name = "macos-notifications"
+version = "1.2.0"
+description = "Desktop notifications."
+runtimes = ["claude"]
+skills = ["notify-*"]            # root content, by name or glob
+commands = ["notify"]
+mcp_servers = ["moon-ear"]       # names of root [[mcp_servers]]; none by default
+[plugins_authoring.author]
+name = "Tooling"
+
+[[plugins_authoring]]
+name = "moon-ear"
+runtimes = ["claude", "codex"]
+skills = ["moon-*"]
+agents = ["helper"]
+domains = ["audio"]              # a domain's skills, commands and agents
+```
+
+An entry bundles **only** what it selects: an empty selector means nothing, so no skill is
+copied into every plugin by accident. Fields: `name`, `description`, `version`, `category`,
+`keywords`, `default_enabled`, `runtimes`, `skills`, `commands`, `agents`, `domains`,
+`mcp_servers`, `hooks` (the `[[hooks]]` shape), `author`, `license`, `homepage`,
+`repository` and `relevance`. Every plugin is written to `plugins/<name>/` (under the
+marketplace's `output_dir`) and listed in a marketplace index, named after the project when
+no marketplace is declared; see [Several marketplaces](#several-marketplaces-from-one-root).
+
+`[[marketplace.plugins]]` entries are the same definition, nested in the `[marketplace]`
+block, and accept the same fields. Use one spelling per plugin. `[plugin]` (one bundle of the
+whole root) cannot be combined with `[[plugins_authoring]]`: move its metadata into an entry
+that selects the root content (`skills = ["*"]`).
+
+To give each definition its own file, and its own CODEOWNERS entry, put it in
+`.ai-rulez/plugins/<name>.toml` with the entry's keys at the top level. The file loads by
+default; `name` may be omitted, and when present it must equal the file name:
+
+```toml
+# .ai-rulez/plugins/moon-ear.toml
+runtimes = ["claude", "codex"]
+skills = ["moon-*"]
+```
+
+A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
+[Layered configuration](configuration.md#layered-configuration)) can add an entry, override
+one by `name`, or drop it with `remove = true` without restating the others; the same holds
+for `[[marketplace.plugins]]`.
+
+Selecting one plugin: `generate --plugin --plugin-name moon-ear` writes only that plugin's
+bundle and leaves the marketplace indexes alone (a partial index would not match the full
+one); `verify --plugin --plugin-name moon-ear` checks only it. `verify --plugin --format json`
+adds a `plugins` array with each plugin's status, and each entry of `drift` names its
+`plugin` and `marketplace`.
+
+Not available per definition yet: the runtime-specific tables of `[plugin]` (`[plugin.codex]`,
+`[plugin.pi]`, `[plugin.interface]`, ...), `include`, `shared_resources` and `content_root`.
+A plugin that needs them stays a `[plugin]` in its own nested root.
+
+### Several marketplaces from one root
+
+Each `[[marketplaces_authoring]]` entry is one marketplace index that lists plugin definitions
+by name, so one plugin can be offered by several marketplaces:
+
+```toml
+[[marketplaces_authoring]]
+name = "acme-public"
+description = "Published plugins"
+plugins = ["macos-notifications", "moon-ear"]   # names of plugin definitions; empty lists nothing
+output_dir = "marketplaces/public"
+
+[[marketplaces_authoring]]
+name = "acme-internal"
+plugins = ["moon-ear"]
+output_dir = "marketplaces/internal"
+cursor_index = true
+```
+
+`generate --plugin` writes, per marketplace, `<output_dir>/.claude-plugin/marketplace.json` (plus
+the Codex index when a listed plugin targets Codex, and the Cursor index with `cursor_index`),
+its own provenance sidecar, and `<output_dir>/plugins/<name>/` for each plugin it lists, so
+each directory can be published on its own. A plugin listed by two marketplaces is written
+into both. `output_dir` must be unique; two marketplaces, or two plugins, writing one path
+is an error. `[marketplace]` and `[[marketplaces_authoring]]` cannot be combined. With only
+`[[plugins_authoring]]` and no marketplace, one index named after the project lists them all.
+
+`generate --plugin --marketplace-name acme-public` renders one marketplace with its plugins,
+and `verify --plugin --marketplace-name acme-public` checks it. `verify --plugin --format json`
+adds `plugins` and `marketplaces` arrays with a status for each, and the `drift` entries name
+both, so a failing run says which marketplace drifted.
+
+One file per marketplace works like it does for plugins: `.ai-rulez/marketplaces/<name>.toml`
+holds the entry's keys at the top level, and the file name must equal `name`. A layer adds,
+overrides or removes (`remove = true`) a marketplace by `name`.
+
+`publish` reads the Claude index closest to the project root, so with several marketplaces it
+publishes only that one; publishing each marketplace separately is not supported yet.
+
 ## Domain content and per-domain plugins
 
 A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins
@@ -836,6 +941,9 @@ Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
 (`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`, `package_name`, `skills_entry`; see
 [Pi packages](#pi-packages)).
+
+`[[plugins_authoring]]`: one plugin definition (see [Several plugins from one root](#several-plugins-from-one-root));
+`[[marketplaces_authoring]]`: `name`, `description`, `owner`, `plugins` (names), `output_dir`, `cursor_index`.
 
 `[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
 `[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see

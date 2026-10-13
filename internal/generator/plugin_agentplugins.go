@@ -19,7 +19,7 @@ func (g *Generator) AgentPluginFindings(profile string) ([]lint.AgentPluginFindi
 	if g.config.Plugin == nil {
 		return nil, nil
 	}
-	if mkt := g.config.Marketplace; mkt != nil && (len(mkt.Members) > 0 || mkt.HasDomainPlugins()) {
+	if g.config.HasPluginSet() {
 		return nil, nil
 	}
 	if g.config.HasLocalInputs() && g.config.ConfigDir != "" && g.config.ConfigFile != "" {

@@ -34,7 +34,42 @@
           },
           "kind": {
             "enum": ["changed", "missing", "stale-source", "obsolete", "extra", "symlink", "mode"]
+          },
+          "plugin": {
+            "description": "The plugin the path belongs to, for a root that defines several plugins or marketplaces.",
+            "type": "string"
+          },
+          "marketplace": {
+            "description": "The marketplace the path belongs to (a marketplace index names only this).",
+            "type": "string"
           }
+        }
+      }
+    },
+    "plugins": {
+      "description": "Each plugin of a root that defines several plugins or marketplaces, with its outcome. Absent for a single [plugin].",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "marketplace": { "type": "string" },
+          "status": { "enum": ["ok", "drift"] }
+        }
+      }
+    },
+    "marketplaces": {
+      "description": "Each marketplace of such a root with its outcome: drift when its index or any plugin it lists drifted.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "enum": ["ok", "drift"] }
         }
       }
     }
