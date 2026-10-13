@@ -19,6 +19,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **A leading `/` in a `gitignore_exclude` entry anchors it at the root.** `/AGENTS.md` also excluded `svc/AGENTS.md`; it now names only the root file, as in a `.gitignore`.
 - **The server card namespace derived from `github.com/owner/name` is `io.github.owner`, and other hosts add the owner.** It was `com.github`, shared by every repository on GitHub, and `host/owner/name` dropped the owner.
 - **A remote MCP server URL with a query, fragment or `${...}` placeholder is no longer written into the server card and ARD manifest.** `?api_key=...` or `?token=${TOKEN}` was published verbatim; the server is now skipped with a warning that does not repeat the URL.
 - **A directory symlink in a skill no longer bundles the credentials behind it.** Files and subdirectories reached through a followed link (`references/ref -> docs/`, or a link to the project root) skipped the credential check a linked file gets, so `docs/.env`, a nested `id_rsa` or `.git/` was copied into the output of `generate` and `generate --plugin`; they are now skipped with a warning.

@@ -35,7 +35,7 @@ func (g *Generator) dropExcludedPatterns(paths map[string]bool, protected map[st
 // gitignoreExcludes reports whether a gitignore_exclude entry names the managed
 // ignore pattern. Both use gitignore notation: an entry without a slash
 // ("AGENTS.md", "*.md") matches the last path segment at any depth, one with a
-// slash is anchored at the root, "**" crosses directories, a trailing "/" names a
+// slash (leading or inside) is anchored at the root, "**" crosses directories, a trailing "/" names a
 // directory, and an entry for a directory covers what is below it.
 func gitignoreExcludes(entry, pattern string) bool {
 	entry = strings.TrimSpace(entry)
@@ -49,7 +49,8 @@ func gitignoreExcludes(entry, pattern string) bool {
 	if body == "" || pBody == "" {
 		return false
 	}
-	if !strings.Contains(body, "/") {
+	anchored := strings.HasPrefix(strings.TrimPrefix(entry, "./"), "/")
+	if !anchored && !strings.Contains(body, "/") {
 		return (globMatch(body, path.Base(pBody)) && (pDir || !eDir)) || coversAncestor(body, pBody)
 	}
 	re := globRegexp(body)

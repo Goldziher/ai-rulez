@@ -37,6 +37,8 @@ func TestGitignoreExcludes(t *testing.T) {
 		{"glob does not cross directories", ".claude/*.md", ".claude/rules/go.md", false},
 		{"leading dot slash is notation", "./.mcp.json", ".mcp.json", true},
 		{"leading slash anchors", "/AGENTS.md", "AGENTS.md", true},
+		{"leading slash does not reach nested files", "/AGENTS.md", "svc/AGENTS.md", false},
+		{"leading slash on a directory stays at the root", "/skills/", "svc/skills/", false},
 		{"unrelated", ".cursor/", ".claude/skills/", false},
 		{"empty entry", "", "AGENTS.md", false},
 	}
