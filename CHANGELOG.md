@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **The AR021 documentation no longer claims `references/` is skipped.** A skill's `references/` files are scanned like `SKILL.md` (exempt them with `[lint] example_paths = ["**/references/**"]`); `examples/` and `templates/` are not scanned at all ([#410](https://github.com/Goldziher/ai-rulez/issues/410)).
+
 ### Added
 
 - **Served skills that bundle scripts can now be used over MCP.** `list_skill_resources`, `load_skill`, `get_skill` and the `skills/list`, `skills/get` and `resources/list` metadata report each file's `mode`, `executable` and an `interpreter` hint; `load_skill` adds `files_access` saying the files are not on disk and how to fetch and run them; and `read_skill_file` takes `encoding: base64`, `offset` and `length`, so binary assets and large files no longer fail with "is binary" and are read in chunks of at most 256 KiB under the session budget. A `materialize_skill` tool is not added; the docs give the client-side recipe ([#405](https://github.com/Goldziher/ai-rulez/issues/405)).
