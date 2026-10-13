@@ -349,7 +349,14 @@ func sameDir(a, b string) bool {
 	if a == "" || b == "" {
 		return false
 	}
-	return filepath.Clean(a) == filepath.Clean(b)
+	if ai, err := os.Stat(a); err == nil {
+		if bi, err := os.Stat(b); err == nil {
+			return os.SameFile(ai, bi) // symlinks, relative paths and case-folding file systems
+		}
+	}
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	return errA == nil && errB == nil && absA == absB
 }
 
 // analyzerSelection is the analyzer allow-list of a run: --analyzer, else
