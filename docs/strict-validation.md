@@ -56,7 +56,7 @@ stdout.
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
-| AR001 | `secret-detected` | error | A credential pattern (AWS, GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
+| AR001 | `secret-detected` | error | A credential pattern (AWS access key ids `AKIA`/`ASIA` and AWS secret access keys, which have no prefix and are matched only as a 40-character value assigned to a name containing `aws_secret_access_key` with `=` or `:`, so an arbitrary 40-character string is not reported; GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
 | AR002 | `hidden-characters` | error | Zero-width, bidirectional-control, Unicode tag or other invisible characters (hangul and braille blanks, variation selectors, U+206A to U+206F, line and paragraph separators, the combining grapheme joiner). A joiner between two non-ASCII characters, an emoji presentation selector, and a leading byte order mark are fine |
 | AR003 | `html-comment-instruction` | warning | An HTML comment, invisible when rendered, with instruction-like text (`curl`, `eval`, `run:`, "secretly", injection phrases) |
 | AR004 | `prompt-injection-phrase` | warning | Text that tries to override earlier instructions or hide actions from the user ("ignore previous instructions", "do not tell the user", ...) |

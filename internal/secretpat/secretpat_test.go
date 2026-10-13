@@ -9,6 +9,7 @@ import (
 // with the pattern it guards on all of them.
 func samples() []string {
 	return []string{
+		"export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "Aws_Secret_Access_Key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
 		"AKIAIOSFODNN7EXAMPLE", "ASIAIOSFODNN7EXAMPLE", "akiaiosfodnn7example",
 		"ghp_0123456789abcdefghijklmnopqrstuvwxyzAB", "gho_0123456789abcdefghijklmnopqrstuvwxyzAB", "ghx_0123456789abcdefghijklmnopqrstuvwxyzAB",
 		"github_pat_0123456789abcdefghijklmnop", "xoxb-1234567890-abcdef", "AIzaSyA-0123456789abcdefghijklmnopqrstuv",

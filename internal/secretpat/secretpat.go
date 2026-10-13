@@ -16,6 +16,8 @@ type Pattern struct {
 	// rejects text without one, which skips the regular expression search on the
 	// great majority of text. Nil means no pre-check.
 	Stems []string
+	// Fold makes the Stems comparison ignore ASCII case, for a pattern compiled with (?i).
+	Fold bool
 }
 
 // MayMatch reports whether s holds a stem of p, so Re could match it.
@@ -24,11 +26,51 @@ func (p Pattern) MayMatch(s string) bool {
 		return true
 	}
 	for _, st := range p.Stems {
-		if strings.Contains(s, st) {
+		if p.Fold && indexFold(s, st) >= 0 || !p.Fold && strings.Contains(s, st) {
 			return true
 		}
 	}
 	return false
+}
+
+// FindValue returns the secret in the first match of re in s: the first capture group when the
+// pattern has one (a context-anchored pattern captures only the value, not the name before it),
+// otherwise the whole match. It is "" when re does not match.
+func FindValue(re *regexp.Regexp, s string) string {
+	m := re.FindStringSubmatch(s)
+	if m == nil {
+		return ""
+	}
+	if len(m) > 1 {
+		return m[1]
+	}
+	return m[0]
+}
+
+// ReplaceValue replaces the secret of every match of re in s with mask: the first capture group
+// when the pattern has one, so the name before the value and the character after it stay, and
+// the whole match otherwise.
+func ReplaceValue(re *regexp.Regexp, s, mask string) string {
+	return ReplaceValueFunc(re, s, func(string) string { return mask })
+}
+
+// ReplaceValueFunc is ReplaceValue with the replacement computed from the secret.
+func ReplaceValueFunc(re *regexp.Regexp, s string, mask func(secret string) string) string {
+	if re.NumSubexp() == 0 {
+		return re.ReplaceAllStringFunc(s, mask)
+	}
+	var b strings.Builder
+	last := 0
+	for _, loc := range re.FindAllStringSubmatchIndex(s, -1) {
+		if loc[2] < 0 {
+			continue
+		}
+		b.WriteString(s[last:loc[2]])
+		b.WriteString(mask(s[loc[2]:loc[3]]))
+		last = loc[3]
+	}
+	b.WriteString(s[last:])
+	return b.String()
 }
 
 // Builtin is the credential shapes the security scan recognizes.
@@ -41,17 +83,21 @@ func (p Pattern) MayMatch(s string) bool {
 // false positive costs nothing, leaking a true one does. They therefore also run
 // this list, and the two never need the same numbers.
 var Builtin = []Pattern{
-	{"AWS access key id", regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`), []string{"AKIA", "ASIA"}},
-	{"GitHub token", regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{36,}\b`), []string{"ghp_", "gho_", "ghu_", "ghs_", "ghr_"}},
-	{"npm access token", regexp.MustCompile(`\bnpm_[A-Za-z0-9]{36}\b`), []string{"npm_"}},
-	{"GitHub fine-grained token", regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`), []string{"github_pat_"}},
-	{"Slack token", regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}\b`), []string{"xox"}},
-	{"Google API key", regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`), []string{"AIza"}},
-	{"Stripe live key", regexp.MustCompile(`\b[sr]k_live_[0-9A-Za-z]{24,}\b`), []string{"k_live_"}},
-	{"Anthropic API key", regexp.MustCompile(`\bsk-ant-[A-Za-z0-9_-]{20,}\b`), []string{"sk-ant-"}},
-	{"OpenAI API key", regexp.MustCompile(`\bsk-(?:proj-)?[A-Za-z0-9_-]{40,}\b`), []string{"sk-"}},
-	{"private key block", regexp.MustCompile(`-{5}BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-{5}`), []string{"-----BEGIN "}},
-	{"JSON web token", regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`), []string{"eyJ"}},
+	{"AWS access key id", regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`), []string{"AKIA", "ASIA"}, false},
+	// The AWS secret access key has no prefix of its own, so it is matched only when assigned to a
+	// name containing aws_secret_access_key (any case, = or :, value optionally quoted); an
+	// arbitrary 40-character string is not a finding. Group 1 is the value.
+	{"AWS secret access key", regexp.MustCompile(`(?i)aws_secret_access_key["']?\s*[:=]\s*["']?([A-Za-z0-9/+]{40})(?:[^A-Za-z0-9/+]|$)`), []string{"aws_secret_access_key"}, true},
+	{"GitHub token", regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{36,}\b`), []string{"ghp_", "gho_", "ghu_", "ghs_", "ghr_"}, false},
+	{"npm access token", regexp.MustCompile(`\bnpm_[A-Za-z0-9]{36}\b`), []string{"npm_"}, false},
+	{"GitHub fine-grained token", regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`), []string{"github_pat_"}, false},
+	{"Slack token", regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}\b`), []string{"xox"}, false},
+	{"Google API key", regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`), []string{"AIza"}, false},
+	{"Stripe live key", regexp.MustCompile(`\b[sr]k_live_[0-9A-Za-z]{24,}\b`), []string{"k_live_"}, false},
+	{"Anthropic API key", regexp.MustCompile(`\bsk-ant-[A-Za-z0-9_-]{20,}\b`), []string{"sk-ant-"}, false},
+	{"OpenAI API key", regexp.MustCompile(`\bsk-(?:proj-)?[A-Za-z0-9_-]{40,}\b`), []string{"sk-"}, false},
+	{"private key block", regexp.MustCompile(`-{5}BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-{5}`), []string{"-----BEGIN "}, false},
+	{"JSON web token", regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`), []string{"eyJ"}, false},
 }
 
 // GenericCredential matches `password = "..."` style assignments; the value (group 1) must mix
@@ -115,7 +161,7 @@ func HasLetterAndDigit(s string) bool {
 func Redact(s, mask string) string {
 	for _, p := range Builtin {
 		if p.MayMatch(s) {
-			s = p.Re.ReplaceAllString(s, mask)
+			s = ReplaceValue(p.Re, s, mask)
 		}
 	}
 	if !MayHaveGenericCredential(s) {

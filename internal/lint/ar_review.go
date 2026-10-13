@@ -102,7 +102,7 @@ const secretRedaction = "[REDACTED:" + CodeSecretDetected + "]"
 func RedactSecrets(s string) string {
 	for _, p := range builtinSecrets {
 		if p.mayMatch(s) {
-			s = p.re.ReplaceAllString(s, secretRedaction)
+			s = secretpat.ReplaceValue(p.re, s, secretRedaction)
 		}
 	}
 	if !secretpat.MayHaveGenericCredential(s) {

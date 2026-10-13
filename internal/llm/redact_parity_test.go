@@ -21,6 +21,7 @@ func TestRedactSecretsShouldMaskEveryShapeTheSecurityScanCatches(t *testing.T) {
 		{"private key block", "-----BEGIN RSA PRIVATE KEY-----\nMIIEow"},
 		{"stripe live key", "sk_" + "live_" + "0123456789abcdefghijklmn"},
 		{"json web token", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"},
+		{"aws secret access key", "export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
 		{"quoted generic credential", `password = "s3cr3tPassw0rdValue1234"`},
 	}
 	for _, tc := range tests {
