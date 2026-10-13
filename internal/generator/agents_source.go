@@ -92,3 +92,24 @@ func (g *Generator) dropAgentsSourceOutputs(allOutputs map[string][]config.Outpu
 		g.log().Info("source = agents: AGENTS.md and .agents/ are the source and are not written", "skipped", dropped)
 	}
 }
+
+// withoutAgentsSourcePluginOutputs drops, from the plugin outputs, the paths of
+// the "agents" source (the Codex index .agents/plugins/marketplace.json, or a
+// bundle placed under .agents). They are the project's own files, so a plugin
+// run never overwrites them; each skipped path is named in a warning.
+func (g *Generator) withoutAgentsSourcePluginOutputs(outputs []config.OutputFile) []config.OutputFile {
+	if !g.config.UsesAgentsSource() || g.userMode {
+		return outputs
+	}
+	kept := outputs[:0:0]
+	for i := range outputs {
+		abs := g.absOutputPath(outputs[i].Path)
+		if isAgentsSourcePath(g.config, abs) {
+			g.warnOnce("source = agents: not writing "+g.relSlash(abs)+" (AGENTS.md and .agents/ are the source and are never written)",
+				"hint", "point the plugin output elsewhere, or keep that file by hand")
+			continue
+		}
+		kept = append(kept, outputs[i])
+	}
+	return kept
+}

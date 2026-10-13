@@ -99,6 +99,10 @@ yours: a second `generate` leaves every byte of them alone, and `generate --chec
   text twice. Such a tool receives your rules, agents and commands only where it has a place for them: Codex has no
   rules folder, so it reads your `AGENTS.md` and `.agents/skills` and nothing more. Put what every tool must follow
   in `AGENTS.md`.
+- `generate --plugin` follows the same rule: a plugin output that would land on `AGENTS.md` or under `.agents/`
+  (the Codex index `.agents/plugins/marketplace.json` from `[plugin.codex] marketplace = true`, or a bundle whose
+  `output_dir` is inside `.agents`) is skipped with a warning naming the path, so a hand-written file is never
+  overwritten. Point the plugin output elsewhere, or keep that file by hand.
 - A generated header in `AGENTS.md` or a file under `.agents` marks it as output of an earlier run: it is never read
   as source, and `generate` retires it like any generated leftover.
 
