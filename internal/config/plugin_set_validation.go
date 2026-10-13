@@ -132,6 +132,17 @@ func (c *Config) validateMarketplaceDefinitions() error {
 				Hint("Give each marketplace its own output_dir").
 				Errorf("marketplaces %q and %q write to the same output_dir %q", other, m.Name, dir)
 		}
+		for otherDir, other := range byDir {
+			outer, inner, outerName, innerName := otherDir, dir, other, m.Name
+			if dirInside(otherDir, dir) {
+				outer, inner, outerName, innerName = dir, otherDir, m.Name, other
+			} else if !dirInside(dir, otherDir) {
+				continue
+			}
+			return oops.With("field", "marketplaces_authoring.output_dir").With("value", m.OutputDir).
+				Hint("Give each marketplace a directory outside the others (an empty output_dir is the project root)").
+				Errorf("marketplace %q writes to %q, inside the output_dir %q of marketplace %q", innerName, inner, outer, outerName)
+		}
 		byDir[dir] = m.Name
 		if len(m.Plugins) == 0 {
 			return oops.With("field", "marketplaces_authoring.plugins").
@@ -153,6 +164,12 @@ func (c *Config) validateMarketplaceDefinitions() error {
 		}
 	}
 	return nil
+}
+
+// dirInside reports whether dir, a cleaned slash path, is below outer; "." is the
+// project root and holds every other directory.
+func dirInside(dir, outer string) bool {
+	return dir != outer && (outer == "." || strings.HasPrefix(dir, outer+"/"))
 }
 
 func validateMarketplaceName(name string) error {

@@ -675,7 +675,8 @@ cursor_index = true
 the Codex index when a listed plugin targets Codex, and the Cursor index with `cursor_index`),
 its own provenance sidecar, and `<output_dir>/plugins/<name>/` for each plugin it lists, so
 each directory can be published on its own. A plugin listed by two marketplaces is written
-into both. `output_dir` must be unique; two marketplaces, or two plugins, writing one path
+into both. `output_dir` must be unique and no marketplace's directory may sit inside another's (an empty
+`output_dir` is the project root, which holds every other directory); two marketplaces, or two plugins, writing one path
 is an error. `[marketplace]` and `[[marketplaces_authoring]]` cannot be combined. With only
 `[[plugins_authoring]]` and no marketplace, one index named after the project lists them all.
 

@@ -170,6 +170,77 @@ output_dir = "out/"
 			wantErr: []string{`marketplaces "one" and "two"`, "output_dir"},
 		},
 		{
+			name: "one output_dir inside another",
+			tail: `
+[[plugins_authoring]]
+name = "a"
+skills = ["x"]
+
+[[marketplaces_authoring]]
+name = "one"
+plugins = ["a"]
+output_dir = "out/inner"
+
+[[marketplaces_authoring]]
+name = "two"
+plugins = ["a"]
+output_dir = "out"
+`,
+			wantErr: []string{`"one"`, `"two"`, "inside"},
+		},
+		{
+			name: "the project root as output_dir holds every other directory",
+			tail: `
+[[plugins_authoring]]
+name = "a"
+skills = ["x"]
+
+[[marketplaces_authoring]]
+name = "one"
+plugins = ["a"]
+
+[[marketplaces_authoring]]
+name = "two"
+plugins = ["a"]
+output_dir = "out"
+`,
+			wantErr: []string{`"one"`, `"two"`, "inside"},
+		},
+		{
+			name: "sibling output_dirs sharing a name prefix are valid",
+			tail: `
+[[plugins_authoring]]
+name = "a"
+skills = ["x"]
+
+[[marketplaces_authoring]]
+name = "one"
+plugins = ["a"]
+output_dir = "out"
+
+[[marketplaces_authoring]]
+name = "two"
+plugins = ["a"]
+output_dir = "out-2"
+`,
+		},
+		{
+			name: "a plugin named twice in [[marketplace.plugins]]",
+			tail: `
+[marketplace]
+name = "m"
+
+[[marketplace.plugins]]
+name = "a"
+skills = ["x"]
+
+[[marketplace.plugins]]
+name = "a"
+skills = ["y"]
+`,
+			wantErr: []string{`marketplace "m" lists duplicate plugin "a"`},
+		},
+		{
 			name: "an unsafe marketplace output_dir",
 			tail: `
 [[plugins_authoring]]
