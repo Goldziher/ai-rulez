@@ -35,6 +35,9 @@ func isValidPluginRuntime(name string) bool {
 
 // validatePluginAuthoring checks the [plugin] authoring block when present.
 func (c *Config) validatePluginAuthoring() error {
+	if err := c.checkPluginSpellings(); err != nil {
+		return err
+	}
 	p := c.Plugin
 	if p == nil {
 		return nil
@@ -555,6 +558,9 @@ func (c *Config) validateMarketplaceAuthoring() error {
 	if err := c.validateOutputOptions(); err != nil {
 		return err
 	}
+	if err := c.validatePluginSet(); err != nil {
+		return err
+	}
 	m := c.Marketplace
 	if m == nil {
 		return nil
@@ -589,7 +595,10 @@ func (c *Config) validateMarketplaceAuthoring() error {
 		}
 		seen[member] = true
 	}
-	return m.validateDomainPlugins()
+	if err := m.validateDomainPlugins(); err != nil {
+		return err
+	}
+	return c.validateClassicMarketplaceHasPlugins()
 }
 
 // validatePluginRuntimeRules applies the per-runtime rules: Codex metadata, the

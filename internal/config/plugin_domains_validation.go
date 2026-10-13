@@ -54,7 +54,7 @@ func (m *MarketplaceAuthoring) validateDomainPlugins() error {
 	}
 	seen := make(map[string]bool, len(m.Plugins))
 	for i := range m.Plugins {
-		if err := m.Plugins[i].validate(); err != nil {
+		if err := m.Plugins[i].validate("marketplace.plugins"); err != nil {
 			return err
 		}
 		if seen[m.Plugins[i].Name] {
@@ -119,17 +119,17 @@ func (d *PluginDefaults) validate(field, marketplace string) error {
 	return nil
 }
 
-func (p *MarketplacePlugin) validate() error {
+func (p *MarketplacePlugin) validate(field string) error {
 	if err := validatePluginName(p.Name); err != nil {
-		return oops.With("field", "marketplace.plugins.name").Wrapf(err, "marketplace plugin")
+		return oops.With("field", field+".name").Wrapf(err, "plugin definition")
 	}
 	if len(p.Domains) == 0 && len(p.Skills) == 0 && len(p.Commands) == 0 && len(p.Agents) == 0 {
-		return oops.With("field", "marketplace.plugins").
+		return oops.With("field", field).
 			Hint("Select content with domains, skills, commands or agents").
-			Errorf("marketplace plugin %q selects no content", p.Name)
+			Errorf("plugin %q selects no content (%s)", p.Name, field)
 	}
 	for field, patterns := range map[string][]string{
-		fieldDomains: p.Domains, fieldSkills: p.Skills, "commands": p.Commands, "agents": p.Agents,
+		fieldDomains: p.Domains, fieldSkills: p.Skills, commandsDir: p.Commands, agentsDir: p.Agents,
 	} {
 		if err := validatePatterns("marketplace.plugins."+field, patterns); err != nil {
 			return err
