@@ -657,7 +657,7 @@ func catalogName(s *generator.ServedSkill) string {
 func servedFromSource(res *skillsource.Resolved, sk skillsource.Skill) generator.ServedSkill {
 	files := make([]generator.ServedSkillFile, 0, len(sk.Files))
 	for _, f := range sk.Files {
-		files = append(files, generator.ServedSkillFile{RelPath: f.Path, Content: f.Content})
+		files = append(files, generator.ServedSkillFile{RelPath: f.Path, Content: f.Content, Mode: f.Mode})
 	}
 	source := res.Spec.Redacted()
 	if res.Spec.Path != "" {

@@ -291,7 +291,7 @@ rewrites them), and the test fails when they are stale.
 | `get_skill` | skills | returns a served skill with provenance and digests to a client that only speaks tools |
 | `list_skill_resources` | skills | lists the files of a served skill for a client that has no skill:// resource support |
 | `load_skill` | skills | reads one served skill file under the session budget; the CLI reads the file from disk |
-| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI |
+| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI; `encoding: base64` and `offset`/`length` read binary and large files |
 | `update_rule` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 | `search_skills` | skills | lexical listing for a client that only speaks tools; the ranker the CLI `search` shares is find_skill |
 | `update_skill` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
@@ -353,7 +353,8 @@ When the filters remove every skill, the start-up warning names each filter and 
 - **Tools** for clients that only speak tools, all annotated read-only: `search_skills(query, limit, domain)`
   ranks by name, keywords (frontmatter `keywords`), description and domain, lexically and
   deterministically (an empty query lists everything); `get_skill(name)` returns `SKILL.md` plus
-  provenance and per-file digests; `read_skill_file(uri)` returns a supporting file.
+  provenance and per-file digests; `read_skill_file(uri, encoding, offset, length)` returns a supporting file
+  (see [Served files](#served-files-scripts-and-assets)).
 - **The authoring surface**: the same tools, prompts and `ai-rulez://` resources as plain `ai-rulez mcp`
   (create, update, delete, validate, generate, reports), so the one server both serves skills and edits
   the project. With `--read-only` only the read-only tools are registered.
@@ -427,8 +428,9 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   not be there when the pointer is a path.
 - **Bundled files need `delivery: both`.** A `served` skill's `scripts/` and `assets/` are never written to
   disk, so a relative path into them (`scripts/foo.py`, the form SKILL.md usually uses) resolves to nothing;
-  `AR9R0` warns. Set `delivery: both` when SKILL.md tells the agent to run a bundled script, or reach the file
-  through `list_skill_resources`/`load_skill`. `references/` are readable over MCP either way.
+  `AR9R0` warns. Set `delivery: both` when SKILL.md tells the agent to run a bundled script, or fetch the file
+  over MCP and write it out first ([Served files](#served-files-scripts-and-assets)). `references/` are readable
+  over MCP either way.
 - **`disable-model-invocation` plus `both` is a trap.** `both` keeps the skill's file on disk, but
   `disable-model-invocation: true` hides the skill from the Skill tool, which refuses it and tells the model not
   to reproduce the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) then
@@ -631,8 +633,8 @@ ai-rulez mcp --serve-skills --daemon             # the sessions that share one c
 | Tool | Arguments | Result |
 | ---- | --------- | ------ |
 | `find_skill` | `task` (required), `limit` (default 5, max 20), `role` | Ranked matches: name, description, score, domain, digest. With a role, `in_role` and the role's skills first. |
-| `load_skill` | `name` (required), `path`, `budget_bytes` | The file (`SKILL.md` by default), `provenance`, `digest`, and an index of the skill's other files. |
-| `list_skill_resources` | `name` (required) | Every file of the skill with path, URI, size, MIME type and digest, without loading them. |
+| `load_skill` | `name` (required), `path`, `budget_bytes` | The file (`SKILL.md` by default), `provenance`, `digest`, an index of the skill's other files with their `mode`, and `files_access` (where the files live and how to use them) when the skill has any. |
+| `list_skill_resources` | `name` (required), `offset` | Every file of the skill with path, URI, size, MIME type, digest, `mode`, `executable` and an `interpreter` hint, without loading them. |
 
 `search_skills`, `get_skill` and `read_skill_file`, the `skill://` resources, `skills/list` and `skills/get` keep
 working as described above. All tools are annotated read-only.
@@ -674,6 +676,35 @@ working as described above. All tools are annotated read-only.
   result's `uri` is the URI of the file loaded (`skill://<name>/<path>`). Binary files are read with `resources/read`.
 - **Provenance.** Every result carries `provenance`: `digest` (served bytes), `lock_digest` (what the lock pins),
   `locked`, `source`, `ref`, `pinned`, `commit` for a source skill, `delivery`, and `scan_warnings`.
+
+### Served files: scripts and assets
+
+A served skill's files are held by the server; none is written to disk. To use a bundled script or asset a client
+fetches it, writes it out and restores its mode.
+
+- **Mode and interpreter.** `list_skill_resources`, the `resources` index of `load_skill`, `get_skill` and
+  `read_skill_file` report per file `mode` (octal permission bits such as `"0755"`; `"0644"` when the source mode
+  is unknown), `executable` (any execute bit) and, for a file with a shebang or a known extension (`.sh`, `.py`,
+  `.js`, ...), an `interpreter` hint (the shebang line, or `sh`, `python3`, `node`, ...). `skills/list`,
+  `skills/get` and `resources/list` carry the same under `_meta` as `io.modelcontextprotocol.skills/mode`,
+  `.../executable` and `.../interpreter`; the existing `uri`, `digest` and `size` fields are unchanged, and the
+  mode is not part of any digest or of `ai-rulez.lock`.
+- **`files_access`.** `load_skill` adds this note when the skill has files besides `SKILL.md`: they are not on
+  disk, fetch them with `read_skill_file`, restore the executable bit, or set `delivery = "both"` and run
+  `ai-rulez generate`.
+- **`read_skill_file(uri, encoding, offset, length)`.** `encoding` is `text` (default for text files) or `base64`
+  (default for a binary file, which used to fail). A call returns at most 256 KiB, so a large file is read in
+  chunks: `offset` and `length` are byte positions, the reply carries `size`, `offset`, `bytes` and, while more
+  remains, `truncated` and `next_offset`. A text chunk never splits a UTF-8 character. Every returned byte is
+  charged to the session budget like `resources/read`. Files the security scan cannot read are still refused
+  where `AR989` refuses them today; nothing here serves them.
+- **Recipe to materialise a skill.** For each entry of `list_skill_resources` (page with `next_offset`): create the
+  parent directory under a directory you own, refusing any `path` that is absolute or contains `..`; read the
+  file with `read_skill_file {uri, encoding: "base64", offset}` until `next_offset` is absent, concatenating the
+  decoded chunks; write the bytes and `chmod` to `mode`.
+  Resolve `SKILL.md` relative paths against that directory. A tool that does this inside the server
+  (`materialize_skill`) is not provided: this server mode registers no tool that writes, and a safe writer needs a
+  project root and an overwrite policy it does not have.
 
 ### Skill sources
 

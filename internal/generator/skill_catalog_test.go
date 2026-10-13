@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -105,6 +106,26 @@ func TestServedSkills_SupportingFilesAndKeywords(t *testing.T) {
 	assert.Equal(t, []string{"SKILL.md", "references/r.md", "scripts/run.sh"}, rels)
 	assert.Equal(t, []string{"first"}, alpha.Keywords)
 	assert.Equal(t, ".ai-rulez/skills/alpha/SKILL.md", alpha.Source)
+}
+
+func TestServedSkills_CarryFileModes(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no execute bit")
+	}
+	root := servedSkillsProject(t)
+	script := filepath.Join(root, ".ai-rulez", "skills", "alpha", "scripts", "run.sh")
+	require.NoError(t, os.Chmod(script, 0o755))
+	cfg, err := config.LoadConfig(context.Background(), root)
+	require.NoError(t, err)
+	_, served, err := NewGenerator(cfg).ServedSkills("backend", "claude")
+	require.NoError(t, err)
+
+	modes := map[string]os.FileMode{}
+	for _, f := range served[0].Files {
+		modes[f.RelPath] = f.Mode
+	}
+	assert.Equal(t, os.FileMode(0o755), modes["scripts/run.sh"], "the executable bit survives")
+	assert.Equal(t, os.FileMode(0o644), modes["references/r.md"])
 }
 
 func TestServedSkills_UnknownProfileFails(t *testing.T) {

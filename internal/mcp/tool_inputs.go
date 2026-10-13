@@ -309,7 +309,10 @@ type getSkillIn struct {
 }
 
 type readSkillFileIn struct {
-	URI string `json:"uri" jsonschema:"skill://<name>/<path> URI from get_skill or skills/list"`
+	URI      string `json:"uri" jsonschema:"skill://<name>/<path> URI from get_skill or skills/list"`
+	Encoding string `json:"encoding,omitempty" jsonschema:"text or base64 (default: text, base64 for a binary file)"`
+	Offset   int    `json:"offset,omitempty" jsonschema:"First byte to read (see next_offset in the result)"`
+	Length   int    `json:"length,omitempty" jsonschema:"Bytes to read (default and maximum 262144)"`
 }
 
 // Report tools.

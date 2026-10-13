@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -219,7 +220,7 @@ func (s *Server) registerSkillTools() {
 	}, s.getSkillHandler)
 	addTool[readSkillFileIn](s, toolSpec{
 		name: "read_skill_file", title: "Read Skill File",
-		description: "Read a supporting file of a served skill by its skill:// URI",
+		description: fmt.Sprintf("Read a supporting file of a served skill by its skill:// URI. Text files come back as text, binary files as base64 (or pass encoding: base64). A read returns at most %d bytes: continue at next_offset with offset. The result carries the file mode, executable and an interpreter hint.", maxReadChunkBytes),
 		annotations: readOnlyAnnotations(), output: skillOut{},
 	}, s.readSkillFileHandler)
 }
@@ -277,16 +278,47 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("no served skill file %q", uri))
 	}
-	if !utf8.Valid(file.Content) {
-		return handlers.ToolError(fmt.Errorf("%s is binary; read it with resources/read", uri))
+	encoding := strings.ToLower(strings.TrimSpace(req.GetString("encoding", "")))
+	isText := utf8.Valid(file.Content)
+	switch encoding {
+	case "":
+		encoding = encodingText
+		if !isText {
+			encoding = encodingBase64
+		}
+	case encodingText:
+		if !isText {
+			return handlers.ToolError(fmt.Errorf("%s is binary; pass encoding: base64", uri))
+		}
+	case encodingBase64:
+	default:
+		return handlers.ToolError(fmt.Errorf("encoding %q is not supported; use text or base64", encoding))
 	}
-	session, _ := s.sessionInfo(req)
-	if err := s.chargeRead(session, len(file.Content)); err != nil {
+	win, err := readWindow(file.Content, int(req.GetNumber("offset", 0)), int(req.GetNumber("length", 0)), encoding == encodingText)
+	if err != nil {
 		return handlers.ToolError(err)
 	}
-	return handlers.ToolSuccess(map[string]any{
-		keyURI: file.URI, keyDigest: file.Digest, keySize: file.Size, "content": string(file.Content),
-	})
+	chunk := file.Content[win.start:win.end]
+	session, _ := s.sessionInfo(req)
+	if err := s.chargeRead(session, len(chunk)); err != nil {
+		return handlers.ToolError(err)
+	}
+	out := map[string]any{
+		keyURI: file.URI, keyDigest: file.Digest, keySize: file.Size, "encoding": encoding,
+		"offset": win.start, "bytes": len(chunk),
+	}
+	for k, v := range file.fileModeFields() {
+		out[k] = v
+	}
+	if encoding == encodingBase64 {
+		out["content"] = base64.StdEncoding.EncodeToString(chunk)
+	} else {
+		out["content"] = string(chunk)
+	}
+	if win.end < len(file.Content) {
+		out["truncated"], out["next_offset"] = true, win.end
+	}
+	return handlers.ToolSuccess(out)
 }
 
 func domainLabel(domain string) string {
@@ -322,7 +354,17 @@ func skillSummary(s *CatalogSkill, score int) map[string]any {
 }
 
 func fileEntry(f *CatalogFile) map[string]any {
-	return map[string]any{keyURI: f.URI, keyDigest: f.Digest, keySize: f.Size}
+	out := map[string]any{keyURI: f.URI, keyDigest: f.Digest, keySize: f.Size}
+	for k, v := range f.fileModeFields() {
+		out[k] = v
+	}
+	return out
+}
+
+// extensionFileEntry is a resource entry of skills/list and skills/get: the
+// fields it always had, plus the file mode under the extension's _meta prefix.
+func extensionFileEntry(f *CatalogFile) map[string]any {
+	return map[string]any{keyURI: f.URI, keyDigest: f.Digest, keySize: f.Size, "_meta": f.metaFields()}
 }
 
 // skillEntry renders a skills/list or skills/get entry per SEP-2640.
@@ -335,7 +377,7 @@ func skillEntry(s *CatalogSkill, limit int) map[string]any {
 	}
 	resources := make([]map[string]any, 0, n)
 	for i := range n {
-		resources = append(resources, fileEntry(&s.Files[i]))
+		resources = append(resources, extensionFileEntry(&s.Files[i]))
 	}
 	entry := map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, keyResources: resources}
 	if n < len(s.Files) {

@@ -47,6 +47,8 @@ type File struct {
 	// Path is relative to the skill directory, slash-separated.
 	Path    string
 	Content []byte
+	// Mode is the file's permission bits.
+	Mode fs.FileMode
 }
 
 // Skill is one skill found in a source.
@@ -181,7 +183,7 @@ func readSkill(log logger.Logger, dir, sourceRoot string) ([]File, error) {
 		if dir == sourceRoot && cacheMetaNames[rel] {
 			return nil
 		}
-		files = append(files, File{Path: filepath.ToSlash(rel), Content: data})
+		files = append(files, File{Path: filepath.ToSlash(rel), Content: data, Mode: info.Mode().Perm()})
 		return nil
 	})
 	if err != nil {
