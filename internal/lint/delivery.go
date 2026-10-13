@@ -210,6 +210,8 @@ func servedPathPointer(l bodyLine, name string) bool {
 // path into a script or asset — the form SKILL.md usually uses — has no file on
 // disk to resolve. references are left out: they are readable over MCP through
 // list_skill_resources/load_skill, so they are not the trap this rule covers.
+// Scripts and assets can be fetched too (read_skill_file, with their mode), but
+// still have to be written out before they run, which the message says.
 func (r *runner) checkServedBundledFiles(served map[string]bool) {
 	for i := range r.items {
 		it := &r.items[i]
@@ -221,7 +223,7 @@ func (r *runner) checkServedBundledFiles(served map[string]bool) {
 			continue
 		}
 		r.add(CodeServedBundledFiles, it.abs, r.deliveryLine(it),
-			"%s is served, so its bundled %s are not written to any skill tree and a relative path into them does not resolve. Set delivery: both to keep the files on disk, or reach them through list_skill_resources/load_skill",
+			"%s is served, so its bundled %s are not written to any skill tree and a relative path into them does not resolve. Set delivery: both to keep the files on disk, or fetch them over MCP with read_skill_file (base64 for binary) and restore the mode that list_skill_resources reports",
 			itemID(kindSkill, it.cf), strings.Join(kinds, "/"))
 	}
 }

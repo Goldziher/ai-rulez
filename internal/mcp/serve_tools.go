@@ -28,12 +28,12 @@ func (s *Server) registerServeTools() {
 	}, s.findSkillHandler)
 	addTool[loadSkillIn](s, toolSpec{
 		name: toolLoadSkill, title: "Load Skill",
-		description: "Load a skill: its SKILL.md (or one supporting file via path), provenance with digests, and an index of the skill's other files. Each session has a byte budget.",
+		description: "Load a skill: its SKILL.md (or one supporting file via path), provenance with digests, and an index of the skill's other files with their mode. Supporting files are not on disk: files_access says how to fetch them (read_skill_file) and restore the executable bit. Each session has a byte budget.",
 		annotations: readOnlyAnnotations(), output: skillOut{},
 	}, s.loadSkillHandler)
 	addTool[listSkillResourcesIn](s, toolSpec{
 		name: toolListSkillResources, title: "List Skill Resources",
-		description: fmt.Sprintf("List the files of a skill (references, scripts, assets) with size and digest, without loading them; at most %d files are listed per call, see next_offset", maxListedResources),
+		description: fmt.Sprintf("List the files of a skill (references, scripts, assets) with size, digest, mode, executable and an interpreter hint, without loading them; at most %d files are listed per call, see next_offset", maxListedResources),
 		annotations: readOnlyAnnotations(), output: skillOut{},
 	}, s.listSkillResourcesHandler)
 }
@@ -121,7 +121,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		return handlers.ToolError(fmt.Errorf("skill %q has no file %q; list_skill_resources shows its files", skill.Name, rel))
 	}
 	if !utf8.Valid(file.Content) {
-		return handlers.ToolError(fmt.Errorf("%s is binary; read it with resources/read on %s", rel, file.URI))
+		return handlers.ToolError(fmt.Errorf("%s is binary; fetch it with read_skill_file {uri: %q, encoding: base64} or resources/read", rel, file.URI))
 	}
 	content := string(file.Content)
 	truncated := false
@@ -140,19 +140,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		t(SessionTelemetry{Skill: skill.Name, Digest: skill.Digest, Session: session, Client: client, Resource: rel != skillMarkdown, Role: s.serve.opts.Role})
 	}
 
-	resourcesTruncated := false
-	resources := make([]map[string]any, 0, min(len(skill.Files), maxListedResources))
-	for i := range skill.Files {
-		if skill.Files[i].RelPath == rel {
-			continue
-		}
-		if len(resources) == maxListedResources {
-			resourcesTruncated = true
-			break
-		}
-		f := &skill.Files[i]
-		resources = append(resources, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, keyDigest: f.Digest})
-	}
+	resources, resourcesTruncated := resourceIndex(skill, rel)
 	out := skillSummary(skill, 0)
 	delete(out, "files")
 	out["path"] = rel
@@ -162,6 +150,9 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	out["truncated"] = truncated
 	out["file_digest"] = file.Digest
 	out[keyResources] = resources
+	if len(skill.Files) > 1 {
+		out["files_access"] = filesAccessNote
+	}
 	if resourcesTruncated {
 		out["resources_truncated"] = true // list_skill_resources pages through the rest
 	}
@@ -175,6 +166,27 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	return handlers.ToolSuccess(out)
 }
 
+// resourceIndex lists the files of a skill other than skip, at most
+// maxListedResources of them, each with its mode; the bool reports a cut list.
+func resourceIndex(skill *CatalogSkill, skip string) ([]map[string]any, bool) {
+	resources := make([]map[string]any, 0, min(len(skill.Files), maxListedResources))
+	for i := range skill.Files {
+		f := &skill.Files[i]
+		if f.RelPath == skip {
+			continue
+		}
+		if len(resources) == maxListedResources {
+			return resources, true
+		}
+		entry := map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, keyDigest: f.Digest}
+		for k, v := range f.fileModeFields() {
+			entry[k] = v
+		}
+		resources = append(resources, entry)
+	}
+	return resources, false
+}
+
 func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
 	skill, err := s.lookupServed(req.GetString(keyName, ""))
 	if err != nil {
@@ -185,7 +197,11 @@ func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.Tool
 	files := make([]map[string]any, 0, end-offset)
 	for i := offset; i < end; i++ {
 		f := &skill.Files[i]
-		files = append(files, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, "mime": f.MIME, keyDigest: f.Digest})
+		entry := map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, "mime": f.MIME, keyDigest: f.Digest}
+		for k, v := range f.fileModeFields() {
+			entry[k] = v
+		}
+		files = append(files, entry)
 	}
 	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, keyResources: files, "total": len(skill.Files)}
 	if end < len(skill.Files) {

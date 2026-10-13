@@ -35,7 +35,7 @@ import (
 const (
 	// serveCacheVersion is bumped when the entry format changes. Rendering that
 	// changes what the catalog holds is caught by the binary version in the key.
-	serveCacheVersion = 1
+	serveCacheVersion = 2
 	// serveCacheFileName is the one entry file per project; its stored key says
 	// which build it holds.
 	serveCacheFileName = "catalog.json"
@@ -386,6 +386,7 @@ type catalogFileDTO struct {
 	Digest  string `json:"digest"`
 	Size    int    `json:"size"`
 	MIME    string `json:"mime"`
+	Mode    uint32 `json:"mode,omitempty"`
 	Content []byte `json:"content"`
 }
 
@@ -465,7 +466,7 @@ func skillToDTO(s *CatalogSkill) catalogSkillDTO {
 	}
 	for i := range s.Files {
 		f := &s.Files[i]
-		d.Files = append(d.Files, catalogFileDTO{URI: f.URI, RelPath: f.RelPath, Digest: f.Digest, Size: f.Size, MIME: f.MIME, Content: f.Content})
+		d.Files = append(d.Files, catalogFileDTO{URI: f.URI, RelPath: f.RelPath, Digest: f.Digest, Size: f.Size, MIME: f.MIME, Mode: uint32(f.Mode), Content: f.Content})
 	}
 	return d
 }
@@ -522,7 +523,7 @@ func (d catalogSkillDTO) toSkill() *CatalogSkill {
 	}
 	for i := range d.Files {
 		f := &d.Files[i]
-		s.Files = append(s.Files, CatalogFile{URI: f.URI, RelPath: f.RelPath, Digest: f.Digest, Size: f.Size, MIME: f.MIME, Content: f.Content})
+		s.Files = append(s.Files, CatalogFile{URI: f.URI, RelPath: f.RelPath, Digest: f.Digest, Size: f.Size, MIME: f.MIME, Mode: os.FileMode(f.Mode), Content: f.Content})
 	}
 	return s
 }

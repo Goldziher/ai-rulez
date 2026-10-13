@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -51,6 +52,8 @@ type CatalogFile struct {
 	Digest  string // sha256:<hex>
 	Size    int
 	MIME    string
+	// Mode is the permission bits the file had at the source (0o644 when unknown).
+	Mode    os.FileMode
 	Content []byte
 }
 
@@ -266,6 +269,7 @@ func newCatalogSkill(log logger.Logger, src *generator.ServedSkill) (*CatalogSki
 			Digest:  contentlock.FileDigest(leaf),
 			Size:    len(f.Content),
 			MIME:    mimeFor(f.RelPath, f.Content),
+			Mode:    f.Mode.Perm(),
 			Content: f.Content,
 		})
 	}

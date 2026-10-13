@@ -191,6 +191,13 @@ type skillOut struct {
 	Truncated  bool           `json:"truncated,omitempty" jsonschema:"True when the content or list was cut"`
 	Resources  []any          `json:"resources,omitempty" jsonschema:"Supporting files"`
 	Provenance map[string]any `json:"provenance,omitempty" jsonschema:"Where the skill came from and whether the lock vouches for it"`
+
+	Encoding    string `json:"encoding,omitempty" jsonschema:"read_skill_file: text or base64"`
+	Mode        string `json:"mode,omitempty" jsonschema:"read_skill_file: octal permission bits of the file, for example 0755"`
+	Executable  bool   `json:"executable,omitempty" jsonschema:"read_skill_file: true when the file has an execute bit"`
+	Interpreter string `json:"interpreter,omitempty" jsonschema:"read_skill_file: shebang or extension hint for running the file"`
+	NextOffset  int    `json:"next_offset,omitempty" jsonschema:"Offset to pass to continue a chunked read or a paged list"`
+	FilesAccess string `json:"files_access,omitempty" jsonschema:"load_skill: where the skill's files live and how to fetch and run them"`
 }
 
 // Report documents mirror the CLI's --format json output.

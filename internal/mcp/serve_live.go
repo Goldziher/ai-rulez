@@ -52,16 +52,20 @@ func (s *Server) Replace(next *Catalog) {
 func (s *Server) registerSkillFiles(skill *CatalogSkill) {
 	for i := range skill.Files {
 		file := &skill.Files[i]
+		meta := sdkmcp.Meta{
+			skillsMetaPrefix + "digest": file.Digest,
+			"ai-rulez/skill-digest":     skill.Digest,
+		}
+		for k, v := range file.metaFields() {
+			meta[k] = v
+		}
 		s.mcpServer.AddResource(&sdkmcp.Resource{
 			URI:         file.URI,
 			Name:        skill.Name + "/" + file.RelPath,
 			Description: skill.Description,
 			MIMEType:    file.MIME,
 			Size:        int64(file.Size),
-			Meta: sdkmcp.Meta{
-				skillsMetaPrefix + "digest": file.Digest,
-				"ai-rulez/skill-digest":     skill.Digest,
-			},
+			Meta:        meta,
 		}, s.readResource)
 	}
 }

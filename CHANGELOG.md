@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added
 
+- **Served skills that bundle scripts can now be used over MCP.** `list_skill_resources`, `load_skill`, `get_skill` and the `skills/list`, `skills/get` and `resources/list` metadata report each file's `mode`, `executable` and an `interpreter` hint; `load_skill` adds `files_access` saying the files are not on disk and how to fetch and run them; and `read_skill_file` takes `encoding: base64`, `offset` and `length`, so binary assets and large files no longer fail with "is binary" and are read in chunks of at most 256 KiB under the session budget. A `materialize_skill` tool is not added; the docs give the client-side recipe ([#405](https://github.com/Goldziher/ai-rulez/issues/405)).
 - **A root-level `action.yml` lets any workflow `uses: Goldziher/ai-rulez@<ref>` directly.** It installs a sha256-verified release binary, resolving `latest` or a pinned version, caches the download and adds `ai-rulez` to `PATH`; `scripts/pre-commit/run-ai-rulez.sh` gained `AI_RULEZ_RESOLVE_ONLY=1`, which prints the resolved binary's path instead of running it.
 
 ### Fixed

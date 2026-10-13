@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -24,6 +25,9 @@ type ServedSkillFile struct {
 	// RelPath is the path relative to the skill directory, "/"-separated.
 	RelPath string
 	Content []byte
+	// Mode is the permission bits the file has on disk (0o755 for a script
+	// that is executable); zero means unknown and is served as 0o644.
+	Mode os.FileMode
 }
 
 // ServedSkill is one skill of the effective set for a profile and preset, with
@@ -173,7 +177,7 @@ func skillResourceFiles(outputs []config.OutputFile, dir string) []ServedSkillFi
 		if err != nil || safefs.RelEscapes(rel) || rel == skillEntryFile {
 			continue
 		}
-		files = append(files, ServedSkillFile{RelPath: filepath.ToSlash(rel), Content: res.RawContent})
+		files = append(files, ServedSkillFile{RelPath: filepath.ToSlash(rel), Content: res.RawContent, Mode: res.Mode.Perm()})
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].RelPath < files[j].RelPath })
 	return files
