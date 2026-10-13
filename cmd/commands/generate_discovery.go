@@ -443,7 +443,7 @@ func runRecursiveGenerate() int {
 	// run's union would drop them. A dry run and plugin bundles write nothing, so
 	// they must not touch .gitignore either.
 	if sink != nil && !dryRun && !pluginMode && len(failed) == 0 {
-		if err := sink.Write(logger.Std()); err != nil {
+		if err := sink.Write(cmdContext(), gitutil.Git{}.WithLog(logger.Std())); err != nil {
 			logger.Warn("Failed to write the shared .gitignore block", "error", err)
 		}
 	}

@@ -109,11 +109,13 @@ func (s *GitignoreSink) Drift(log logger.Logger) (Drift, bool) {
 // Write rewrites the toplevel managed block to exactly the patterns this run
 // collected, dropping what an earlier run left behind (a removed root or
 // output) and removing the block when nothing is left. It runs once, after
-// every root has been processed.
-func (s *GitignoreSink) Write(log logger.Logger) error {
+// every root has been processed. git asks which files the block would hide and
+// reports through its log.
+func (s *GitignoreSink) Write(ctx context.Context, git gitutil.Git) error {
 	if s == nil || s.toplevel == "" {
 		return nil
 	}
+	log := logger.Or(git.Log)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -146,7 +148,7 @@ func (s *GitignoreSink) Write(log logger.Logger) error {
 	}
 	// The whole recursive block is on disk: a root-anchored negation did not
 	// reach the nested roots, so this is where a nested tracked file shows up.
-	warnTrackedByBlock(log.Warn, trackedBlockWarnings(context.Background(), gitutil.Git{}, s.toplevel, updated))
+	warnTrackedByBlock(log.Warn, trackedBlockWarnings(ctx, git, s.toplevel, updated))
 	return nil
 }
 
