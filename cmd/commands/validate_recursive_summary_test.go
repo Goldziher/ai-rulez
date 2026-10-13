@@ -23,8 +23,8 @@ func nestedBrokenLinkWorkspace(t *testing.T) string {
 	t.Helper()
 	root := twoRoots(t, validRootConfig)
 	writeFile(t, filepath.Join(root, "b", ".ai-rulez", "rules", "bad.md"), brokenLinkRule)
-	strictTreeCache = lint.Loader{}
-	t.Cleanup(func() { strictTreeCache = lint.Loader{} })
+	strictTreeCache = &lint.Loader{}
+	t.Cleanup(func() { strictTreeCache = &lint.Loader{} })
 	progress.SetQuiet(false)
 	return root
 }

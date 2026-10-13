@@ -19,7 +19,7 @@ func resetStrictFlags(t *testing.T) {
 		validateStrict, validateFormat, validateFailOn, validateOutput = false, "", "", ""
 		validateBaseline, validateUpdateBaseline, validateBaselineReason, validateStrictBaseline, validateToday = "", false, "", false, ""
 		validateLintProfile, validateSince, validateChanged, validateAnalyzers = "", "", false, nil
-		strictTreeCache = lint.Loader{}
+		strictTreeCache = &lint.Loader{}
 	})
 	validateStrict = true
 }

@@ -83,7 +83,7 @@ func (v *mcpValidator) borrowFlags(p handlers.ValidateParams) (restore func()) {
 		validateFailOn = failOnWarning
 	}
 	validateConfigOnly, validateStrict = p.ConfigOnly, !p.ConfigOnly
-	strictTreeCache = lint.Loader{}
+	strictTreeCache = &lint.Loader{}
 	strictSecurityOnly = p.SecurityOnly
 	return func() {
 		strictSecurityOnly = savedSecurity

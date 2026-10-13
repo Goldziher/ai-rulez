@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
@@ -63,7 +62,7 @@ var (
 	validateMCPUserScope bool
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
-	strictTreeCache    lint.Loader
+	strictTreeCache    = &lint.Loader{}
 )
 
 // strictOnlyFlagSet reports whether any flag that only means something with
@@ -186,18 +185,11 @@ func applyRepoRoot() error {
 		return oops.Hint("point --repo-root at a git work tree (git must be installed), or omit it to use the "+
 			"configuration's directory").Errorf("--repo-root %q is not inside a git repository", root)
 	}
-	strictTreeCache = lint.Loader{Root: abs}
+	strictTreeCache = &lint.Loader{Root: abs}
 	return nil
 }
 
-// strictTreeMu serializes loads through strictTreeCache, whose memo is not safe
-// for concurrent use. Roots of one repository linted side by side queue behind the
-// first load and then read the cached tree, so the index is still read once.
-var strictTreeMu sync.Mutex
-
 func loadStrictTree(ctx context.Context, base string) (*lint.Tree, error) {
-	strictTreeMu.Lock()
-	defer strictTreeMu.Unlock()
 	return strictTreeCache.LoadContext(ctx, base) //nolint:wrapcheck // the caller wraps it
 }
 

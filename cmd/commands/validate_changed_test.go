@@ -43,7 +43,7 @@ func TestChangedOnlyNarrowsFindings(t *testing.T) {
 	root := changedRepo(t)
 	cfg := loadStrictProject(t, root)
 	run := func() lint.Combined {
-		strictTreeCache = lint.Loader{}
+		strictTreeCache = &lint.Loader{}
 		report := lintProject(t, cfg)
 		require.NoError(t, narrowToChanged(context.Background(), []*lint.Report{report}, []*config.Config{cfg}))
 		return lint.Combine([]*lint.Report{report})
@@ -165,7 +165,7 @@ func TestChangedOnlyFollowsTransitiveDependents(t *testing.T) {
 	t.Cleanup(func() { validateSinceDepth = "1" })
 	run := func(depth string) lint.Combined {
 		validateSinceDepth = depth
-		strictTreeCache = lint.Loader{}
+		strictTreeCache = &lint.Loader{}
 		cfg := loadStrictProject(t, root)
 		report := lintProject(t, cfg)
 		require.NoError(t, narrowToChanged(context.Background(), []*lint.Report{report}, []*config.Config{cfg}))
