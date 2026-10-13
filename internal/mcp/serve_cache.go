@@ -291,6 +291,8 @@ func (st *ServeSetup) serveCache(cfg *config.Config) *serveCache {
 type cachePlan struct {
 	cache *serveCache
 	key   string
+	// inputs is the content fingerprint the key was made from.
+	inputs string
 }
 
 // cachePlan prepares a build's cache lookup: only a plain serving build is
@@ -308,7 +310,20 @@ func (st *ServeSetup) cachePlan(b *built, bo buildOptions) *cachePlan {
 	if err != nil {
 		return nil
 	}
-	return &cachePlan{cache: cache, key: serveCacheKey(roots, st, b.sources)}
+	return &cachePlan{cache: cache, key: serveCacheKey(roots, st, b.sources), inputs: roots}
+}
+
+// inputsSettled reports whether the files a build read are the files its key
+// names: none changed between the fingerprint taken before the configuration
+// load and now, nor between the key and now. A catalog rendered while a save was
+// in progress is then never stored under the key of the finished save.
+func (st *ServeSetup) inputsSettled(b *built, plan *cachePlan, loadedFrom string) bool {
+	now, err := st.projectFingerprint()
+	if err != nil || now != loadedFrom {
+		return false
+	}
+	inputs, err := st.cacheFingerprint(b.cfg, b)
+	return err == nil && inputs == plan.inputs
 }
 
 // cacheable reports whether a build's catalog may be cached: only a plain

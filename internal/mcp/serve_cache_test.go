@@ -214,3 +214,28 @@ func TestServeCacheKey_ViewFilterAndSourceResolutionChangeTheKey(t *testing.T) {
 	assert.Equal(t, serveCacheKey(fp, &ServeSetup{}, one), serveCacheKey(fp, &ServeSetup{}, one))
 	assert.NotEqual(t, serveCacheKey(fp, &ServeSetup{}, one), serveCacheKey(fp, &ServeSetup{}, two))
 }
+
+// A save that completes between the configuration load and the cache key must
+// not leave the catalog rendered from the half-saved file under the key of the
+// finished one: the next build would restore a catalog without the skill.
+func TestServeCache_ASaveFinishingDuringTheBuildIsNotCached(t *testing.T) {
+	// Arrange
+	root := cacheProject(t)
+	path := filepath.Join(root, ".ai-rulez", "skills", "a", "SKILL.md")
+	require.NoError(t, os.WriteFile(path, []byte("---\ndescription: Skill a"), 0o644))
+	st := &ServeSetup{WorkDir: root, NoWatch: true, ServeCacheDir: t.TempDir()}
+	st.afterLoad = func() {
+		st.afterLoad = nil
+		require.NoError(t, os.WriteFile(path, []byte(skillFile("a", "Skill a", "")), 0o644))
+	}
+
+	// Act
+	first, err := st.build(context.Background(), buildOptions{admit: true})
+	require.NoError(t, err)
+	second, err := st.build(context.Background(), buildOptions{admit: true})
+	require.NoError(t, err)
+
+	// Assert
+	assert.Equal(t, []string{"b"}, catalogNames(first.catalog), "the build read the half-saved file")
+	assert.Equal(t, []string{"a", "b"}, catalogNames(second.catalog), "the finished save is not shadowed by a cached stale catalog")
+}

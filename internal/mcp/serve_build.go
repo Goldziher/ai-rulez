@@ -109,6 +109,10 @@ type ServeSetup struct {
 	// own command line into it. Empty derives an identity from the setup's own
 	// fields, for library callers and tests.
 	DaemonIdentity string
+
+	// afterLoad, when set, runs after a build loaded the configuration (tests
+	// edit files at that point).
+	afterLoad func()
 }
 
 // built is one build of the catalog with what produced it.
@@ -208,6 +212,12 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 	if st.NoWatch {
 		return "", nil
 	}
+	return st.projectFingerprint()
+}
+
+// projectFingerprint fingerprints the configuration directory and the local
+// --source directories.
+func (st *ServeSetup) projectFingerprint() (string, error) {
 	wd := st.workDir()
 	var roots []string
 	if name := config.ResolveConfigDirName(wd); name != "" {
@@ -273,9 +283,15 @@ func (st *ServeSetup) loadProject(ctx context.Context, bo buildOptions) (*loaded
 }
 
 func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error) {
+	// Fingerprint before loading: the load reads the skill files, and a catalog
+	// rendered from files that changed since must not be cached.
+	loadedFrom, _ := st.projectFingerprint() //nolint:errcheck // an unreadable fingerprint only disables caching below
 	project, err := st.loadProject(ctx, bo)
 	if err != nil {
 		return nil, err
+	}
+	if st.afterLoad != nil {
+		st.afterLoad()
 	}
 	cfg, lock := project.cfg, project.lock
 	// A serving build refuses only the served skills the policy denies; the
@@ -337,7 +353,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		return nil, err
 	}
 	b.catalog = admitted
-	if plan != nil {
+	if plan != nil && st.inputsSettled(b, plan, loadedFrom) {
 		entry := &serveCacheEntry{Empty: b.empty, Authored: authoredToDTO(authored), Raw: catalogToDTO(raw), Admitted: catalogToDTO(admitted)}
 		if err := plan.cache.store(plan.key, entry); err != nil {
 			st.logger().Debug("Could not write the serve catalog cache", "error", err.Error())
