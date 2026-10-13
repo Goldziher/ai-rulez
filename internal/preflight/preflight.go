@@ -339,7 +339,16 @@ func Remember(cfg *config.Config) {
 // Header is the first line of the printed summary.
 func Header(cfg *config.Config, count int) string {
 	return fmt.Sprintf("Warning: generate will write %d new or changed command(s) that your tools will run (from %s):",
-		count, Sanitize(filepath.Join(cfg.ConfigDir, "config.toml")))
+		count, Sanitize(configFileOf(cfg)))
+}
+
+// configFileOf is the main config file in use: .agents/ai-rulez.toml for a
+// project configured there, config.toml in the config directory otherwise.
+func configFileOf(cfg *config.Config) string {
+	if cfg.ConfigFilePath == "" && cfg.ConfigFile == "" {
+		return filepath.Join(cfg.ConfigDir, "config.toml")
+	}
+	return cfg.ConfigPath()
 }
 
 // Footer is the last line of the printed summary.

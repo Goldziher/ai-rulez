@@ -139,6 +139,27 @@ func configDirLabel(data *TemplateData) string {
 	return name
 }
 
+// headerLocations returns the config file path (the header's Source) and the
+// content directory (with a trailing slash) the header names. For the "agents"
+// source the content is AGENTS.md and .agents/, and the config file is wherever
+// the project keeps it (.agents/ai-rulez.toml or .ai-rulez/config.toml), not the
+// state directory beside it.
+func headerLocations(data *TemplateData, configFile string) (source, contentDir string) {
+	dir := configDirLabel(data) + "/"
+	if data == nil || data.Config == nil || !data.Config.UsesAgentsSource() {
+		return dir + configFile, dir
+	}
+	prefix := ""
+	if rel := strings.Trim(filepath.ToSlash(data.Config.RootRel), "/"); rel != "" && rel != "." {
+		prefix = rel + "/"
+	}
+	source = dir + configFile
+	if rel, err := filepath.Rel(data.Config.BaseDir, data.Config.ConfigPath()); err == nil && !strings.HasPrefix(rel, "..") {
+		source = prefix + filepath.ToSlash(rel)
+	}
+	return source, prefix + config.AgentsDirName + "/"
+}
+
 // defaultMCPCommand is what the header names when there is no configuration to
 // derive the server launch from (a preview).
 const defaultMCPCommand = "npx -y ai-rulez@latest mcp"
@@ -154,12 +175,12 @@ func headerMCPCommand(data *TemplateData) (string, bool) {
 }
 
 func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	dir := configDirLabel(data) + "/"
+	source, dir := headerLocations(data, configPath)
 	banner := slices.Concat([]string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
 		"Project: " + data.ProjectName,
 	}, timestampLines(timestamp), []string{
-		"Source: " + dir + configPath,
+		"Source: " + source,
 		"Target: " + outputPath,
 		"Content: rules=" + fmt.Sprint(data.RuleCount) + ", sections=" + fmt.Sprint(data.SectionCount) + ", agents=" + fmt.Sprint(data.AgentCount),
 	})
@@ -171,7 +192,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"",
 		".AI-RULEZ FOLDER ORGANIZATION",
 		"Root content (always included):",
-		"  "+dir+"config.toml    Main configuration (presets, profiles)",
+		"  "+source+"    Main configuration (presets, profiles)",
 		"  "+dir+"rules/         Mandatory rules for AI assistants",
 		"  "+dir+"context/       Reference documentation",
 		"  "+dir+"skills/        Specialized AI prompts",
@@ -190,7 +211,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"2. ALWAYS edit files in "+dir+" instead:",
 		"   - Add/modify rules: "+dir+"rules/*.md",
 		"   - Add/modify context: "+dir+"context/*.md",
-		"   - Update config: "+dir+"config.toml",
+		"   - Update config: "+source,
 		"   - Domain-specific: "+dir+"domains/{name}/rules/*.md",
 		"",
 	)
@@ -218,11 +239,11 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 }
 
 func buildCompactHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	dir := configDirLabel(data) + "/"
+	source, dir := headerLocations(data, configPath)
 	banner := []string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName + timestampSuffix(timestamp),
-		"Source: " + dir + configPath + " | Target: " + outputPath,
+		"Source: " + source + " | Target: " + outputPath,
 		"Content: " + fmt.Sprintf("rules=%d, sections=%d, agents=%d", data.RuleCount, data.SectionCount, data.AgentCount),
 	}
 
@@ -231,12 +252,12 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in "+dir,
 		"",
 		"STRUCTURE:",
-		"  "+dir+"config.toml, rules/, context/, skills/, agents/ (root)",
+		"  "+source+", "+dir+"rules/, context/, skills/, agents/ (root)",
 		"  "+dir+"domains/{name}/ (profile-specific)",
 		"",
 		"AI AGENT INSTRUCTIONS:",
 		"✗ NEVER edit "+outputPath+" (auto-generated)",
-		"✓ EDIT "+dir+"rules/*.md, "+dir+"context/*.md, "+dir+"config.toml",
+		"✓ EDIT "+dir+"rules/*.md, "+dir+"context/*.md, "+source,
 	)
 	if mcp, ok := headerMCPCommand(data); ok {
 		banner = append(banner, "✓ USE MCP server: "+mcp+" (provides CRUD tools)")
@@ -251,12 +272,12 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 }
 
 func buildMinimalHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	dir := configDirLabel(data) + "/"
+	source, dir := headerLocations(data, configPath)
 	banner := slices.Concat([]string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName,
 	}, timestampLines(timestamp), []string{
-		"Source: " + dir + configPath,
+		"Source: " + source,
 	})
 
 	banner = append(banner,

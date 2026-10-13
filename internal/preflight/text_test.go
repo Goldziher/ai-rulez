@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func TestSanitize(t *testing.T) {
@@ -77,4 +79,28 @@ func TestDisplayTruncates(t *testing.T) {
 	got := Display(strings.Repeat("a ", 200), 20)
 	assert.True(t, strings.HasSuffix(got, "..."))
 	assert.LessOrEqual(t, len([]rune(got)), 23)
+}
+
+func TestHeaderNamesTheConfigFileInUse(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  config.Config
+		want string
+	}{
+		{"default tree", config.Config{ConfigDir: "/p/.ai-rulez", ConfigFile: "config.toml"}, "/p/.ai-rulez/config.toml"},
+		{
+			"config in .agents",
+			config.Config{AgentsLayout: true, ConfigDir: "/p/.agents/.ai-rulez", ConfigFile: "ai-rulez.toml", ConfigFilePath: "/p/.agents/ai-rulez.toml"},
+			"/p/.agents/ai-rulez.toml",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			header := Header(&tt.cfg, 2)
+
+			// Assert
+			assert.Contains(t, header, "(from "+tt.want+")")
+		})
+	}
 }

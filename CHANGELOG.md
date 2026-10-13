@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **With `source = "agents"`, the generated header and the new-commands warning name the real source.** The header said `Source: .agents/.ai-rulez/ai-rulez.toml` and "modify .agents/.ai-rulez/ content" (or `.ai-rulez/`), and the warning named a `config.toml` that does not exist; they now name `.agents/ai-rulez.toml` (or `.ai-rulez/config.toml`) and `.agents/`.
 - **`source = "agents"` projects no longer get the legacy-layout notice, and `migrate okf` refuses them.** The notice named the unread `.ai-rulez` tree, and `migrate okf` would have rewritten it (and made `index.md` files there) instead of the `.agents` content.
 - **With `source = "agents"`, an output below a symlinked directory no longer writes into the source.** `.claude/rules -> ../.agents/rules` or `.claude/skills/foo -> ../../.agents/skills/foo` bypassed the filter that keeps `generate` off `.agents`; paths are now resolved through symlinks first and such outputs are dropped with a warning.
 - **`AR981` names the drifted file in an `.agents` project.** The path was joined to the state directory (`.agents/.ai-rulez/.agents/rules/x.md`) instead of the project root.

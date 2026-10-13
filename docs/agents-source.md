@@ -106,6 +106,9 @@ yours: a second `generate` leaves every byte of them alone, and `generate --chec
   (the Codex index `.agents/plugins/marketplace.json` from `[plugin.codex] marketplace = true`, or a bundle whose
   `output_dir` is inside `.agents`) is skipped with a warning naming the path, so a hand-written file is never
   overwritten. Point the plugin output elsewhere, or keep that file by hand.
+- The generated header's `Source:` line and its "modify ... content" text name the file and folder you edit
+  (`.agents/ai-rulez.toml` or `.ai-rulez/config.toml`, and `.agents/`), as does the warning that lists the new hook and
+  MCP commands a run will write.
 - A generated header in `AGENTS.md` or a file under `.agents` marks it as output of an earlier run: it is never read
   as source, and `generate` retires it like any generated leftover.
 
