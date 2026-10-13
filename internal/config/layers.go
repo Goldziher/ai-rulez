@@ -108,7 +108,7 @@ func withLayers(v workspace.View, cfg *Config, mainPath, configDir string, lo lo
 			if ref.origin == LayerOriginDefault {
 				return nil, nil, nil, oops.
 					With("path", path).
-					Hint("Create "+file+" beside config.toml or remove "+ref.name+" from default_layers").
+					Hint("Create "+path+" or remove "+ref.name+" from default_layers").
 					Errorf("default_layers names layer %q but %s does not exist", ref.name, file)
 			}
 			continue

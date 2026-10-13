@@ -150,3 +150,17 @@ func TestReadWorksForASourceKeyInTheAIRulezConfig(t *testing.T) {
 	assert.Equal(t, []string{"agents"}, names(cfg.Content.Context))
 	assert.False(t, cfg.AgentsLayout)
 }
+
+func TestSymlinkedAGENTSMDIsNeverFollowed(t *testing.T) {
+	// Arrange: unlike a file under .agents, the root AGENTS.md is not read through a link, even inside the project
+	root := t.TempDir()
+	write(t, root, ".agents/ai-rulez.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	write(t, root, "docs/agents.md", "# Real\n\nText.\n")
+	require.NoError(t, os.Symlink("docs/agents.md", filepath.Join(root, "AGENTS.md")))
+
+	// Act
+	cfg := load(t, root)
+
+	// Assert
+	assert.NotContains(t, names(cfg.Content.Context), "agents")
+}

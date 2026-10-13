@@ -26,7 +26,8 @@ machine-local overlay.
 	layersCmd := &cobra.Command{
 		Use:   "layers",
 		Short: "List the config.<name>.toml layers and which are active",
-		Long: `Layers split the configuration into config.<name>.toml files beside config.toml.
+		Long: `Layers split the configuration into config.<name>.toml files beside config.toml
+	(for a project configured in .agents/ai-rulez.toml: in .agents/.ai-rulez/, next to config.local.toml).
 	The active layers are merged over config.toml in the order they are named, so a later
 	layer wins; config.local.toml is applied last. Layers named in default_layers of
 	config.toml are always active (origin "default", a missing file is an error); AI_RULEZ_LAYERS
@@ -79,7 +80,7 @@ func writeConfigLayers(w io.Writer, configDir string, active []string, origins m
 		return err //nolint:wrapcheck // stdout write
 	}
 	if len(rows) == 0 {
-		_, err := fmt.Fprintln(w, "No layers: add config.<name>.toml files beside config.toml.")
+		_, err := fmt.Fprintln(w, "No layers: add config.<name>.toml files to "+configDir+".")
 		return err //nolint:wrapcheck // stdout write
 	}
 	for _, row := range rows {

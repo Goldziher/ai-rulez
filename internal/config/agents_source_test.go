@@ -2,10 +2,12 @@ package config
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -285,4 +287,55 @@ func TestLegacyScanIgnoresForeignAgentsFiles(t *testing.T) {
 
 	// Assert
 	assert.Empty(t, legacy, ".agents holds other tools' files; a config.json there is not a V3 ai-rulez config")
+}
+
+func TestLayersOfAnAgentsProjectLiveInTheStateDirectory(t *testing.T) {
+	tests := []struct {
+		name      string
+		layerPath string
+		wantName  string
+	}{
+		{"state directory", ".agents/.ai-rulez/config.team.toml", "layered"},
+		{"beside ai-rulez.toml", ".agents/config.team.toml", "x"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeAgentsFile(t, root, ".agents/ai-rulez.toml", agentsTestConfig)
+			writeAgentsFile(t, root, tt.layerPath, "name = \"layered\"\n")
+
+			// Act
+			cfg, err := LoadConfig(context.Background(), root, WithLayers("team"), WithResolvers(Resolvers{Agents: keepTree}))
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantName, cfg.Name)
+		})
+	}
+}
+
+func TestMissingDefaultLayerNamesTheDirectoryItGoesIn(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	writeAgentsFile(t, root, ".agents/ai-rulez.toml", agentsTestConfig+"default_layers = [\"team\"]\n")
+
+	// Act
+	_, err := LoadConfig(context.Background(), root, WithResolvers(Resolvers{Agents: keepTree}))
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, oopsHint(err), filepath.Join(".agents", ".ai-rulez", "config.team.toml"))
+}
+
+func oopsHint(err error) string {
+	var oe oops.OopsError
+	if errors.As(err, &oe) {
+		return oe.Hint()
+	}
+	return ""
+}
+
+func keepTree(_ context.Context, _ *Config, tree *ContentTree) (*ContentTree, error) {
+	return tree, nil
 }
