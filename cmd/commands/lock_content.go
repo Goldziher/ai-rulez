@@ -163,7 +163,7 @@ func lockDriftFor(ctx context.Context, cfg *config.Config) []lint.LockDrift {
 		case contentlock.ScopeSource:
 			p := lockRel
 			if c.Path != "" {
-				p = filepath.ToSlash(filepath.Join(configRel, c.Path))
+				p = filepath.ToSlash(filepath.Join(relToBase(cfg, cfg.AuthoredRoot()), c.Path))
 			}
 			out = append(out, lint.LockDrift{Path: p, Message: c.Line() + " since " + lockfile.FileName + " was written"})
 		case contentlock.ScopeLock:

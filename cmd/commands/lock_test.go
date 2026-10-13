@@ -470,3 +470,40 @@ func TestGenerateLockedWithoutALockSaysSoOnce(t *testing.T) {
 	assert.Contains(t, hint, "`ai-rulez lock`")
 	assert.NotContains(t, hint, "lock --diff", "--diff cannot work without a lock")
 }
+
+func TestLockDriftForNamesTheDriftedFileInAnAgentsProject(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfgPath string
+		cfg     string
+	}{
+		{"config in .agents", ".agents/ai-rulez.toml", lockProjectConfig + "\n[lock]\nenforce = true\n"},
+		{"source key in .ai-rulez", ".ai-rulez/config.toml", lockProjectConfig + "\nsource = \"agents\"\n\n[lock]\nenforce = true\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := lockProject(t, "")
+			require.NoError(t, os.RemoveAll(filepath.Join(root, ".ai-rulez")))
+			writeFile(t, filepath.Join(root, tt.cfgPath), tt.cfg)
+			writeFile(t, filepath.Join(root, "AGENTS.md"), "# Demo\n\nUse tabs.\n")
+			writeFile(t, filepath.Join(root, ".agents", "rules", "style.md"), "# Style\nUse tabs.\n")
+			require.Equal(t, 0, writeLockAt("", "", nil))
+
+			// Act
+			writeFile(t, filepath.Join(root, ".agents", "rules", "style.md"), "# Style\nchanged\n")
+			cfg, err := loadForLock("")
+			require.NoError(t, err)
+			drift := lockDriftFor(t.Context(), cfg)
+
+			// Assert
+			var paths []string
+			for _, d := range drift {
+				if !d.Output {
+					paths = append(paths, d.Path)
+				}
+			}
+			assert.Equal(t, []string{".agents/rules/style.md"}, paths)
+		})
+	}
+}
