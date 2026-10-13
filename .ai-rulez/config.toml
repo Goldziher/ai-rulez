@@ -3,7 +3,7 @@ name = "AI-Rulez"
 description = "Standards-compliant lifecycle tool for agent knowledge and capabilities."
 gitignore = true
 
-presets = ["claude", "codex", "hermes", "opencode"]
+presets = ["claude", "codex", "opencode", "zed"]
 
 builtins = ["go", "security", "git-workflow", "code-quality", "testing", "default-commands"]
 

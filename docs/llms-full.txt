@@ -198,6 +198,10 @@ Source: https://goldziher.github.io/ai-rulez/quick-start/
 Get AI-Rulez running in 5 minutes. This page covers the first two lifecycle stages, author and generate, then validates the
 result; [Next steps](#next-steps) points to bundling, publishing and governance.
 
+<p align="center">
+  <img src="assets/quickstart.gif" alt="ai-rulez init and generate: one .ai-rulez source becomes the native files of four AI tools" width="820" />
+</p>
+
 #### Step 1: Initialize Your Project
 
 Create a new configuration:
@@ -7280,6 +7284,10 @@ For large projects with multiple teams, organize your `.ai-rulez/` configuration
 
 This guide outlines best practices for managing AI context at scale.
 
+<p align="center">
+  <img src="assets/monorepo.gif" alt="ai-rulez generate --recursive over two nested roots, recursive validation, and a token budget check" width="820" />
+</p>
+
 ---
 
 #### The Core Strategy: Domain-Based Organization
@@ -10307,6 +10315,10 @@ their own tools — reaching users who never run ai-rulez.
 Your skills, commands, and agents are the payload; the `[plugin]` block adds the
 packaging metadata.
 
+<p align="center">
+  <img src="assets/plugin-drift.gif" alt="ai-rulez verify --plugin reporting changed and extra files in a plugin bundle, then generate --plugin restoring it" width="820" />
+</p>
+
 !!! note "Authoring vs. installing"
 The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
 (authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
@@ -11804,6 +11816,10 @@ Source: https://goldziher.github.io/ai-rulez/strict-validation/
 further and checks that the instruction content actually *works*: globs that select nothing, links and
 references that point nowhere, hooks that cannot run. Each problem is a finding with a stable code, a severity
 and a `file:line`.
+
+<p align="center">
+  <img src="assets/validate.gif" alt="ai-rulez validate --strict flags a defect, --explain describes it, and generate --check fails on drift" width="820" />
+</p>
 
 ```bash
 ai-rulez validate --strict                       # text report, exit 2 on errors
@@ -18587,6 +18603,12 @@ Source: https://goldziher.github.io/ai-rulez/mcp-server/
 The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `.ai-rulez/` configuration. Since V4 uses a file-based approach with inline MCP configuration, you define servers directly in `config.toml`, and the MCP server provides read, CRUD, validation, and generation tools for AI assistants.
 
 **You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
+
+With `--serve-skills` the same server also serves your skills on demand, so they stop costing tokens in every session:
+
+<p align="center">
+  <img src="assets/skills-mcp.gif" alt="ai-rulez tokens before and after serving skills over MCP, then find_skill and load_skill" width="820" />
+</p>
 
 ---
 

@@ -131,6 +131,31 @@ cached_binary() {
   xberg_assert_output "path ai-rulez generate --dry-run"
 }
 
+@test "AI_RULEZ_RESOLVE_ONLY=1 prints the PATH binary's location instead of running it" {
+  xberg_stub ai-rulez 'echo "should not run"; exit 1'
+  xberg_stub_curl_offline
+  export AI_RULEZ_RESOLVE_ONLY=1
+
+  run "$SCRIPT" generate
+
+  xberg_assert_status 0
+  xberg_assert_output "$XBERG_STUB_BIN/ai-rulez"
+}
+
+@test "AI_RULEZ_RESOLVE_ONLY=1 downloads, verifies and caches, then prints the path without running" {
+  make_release darwin arm64
+  write_checksums
+  export AI_RULEZ_RESOLVE_ONLY=1
+
+  run "$SCRIPT"
+
+  xberg_assert_status 0
+  xberg_assert_output_contains "Downloading ai-rulez v9.8.7 for darwin/arm64..."
+  xberg_assert_output_contains "$(cached_binary darwin-arm64)"
+  [[ "$output" != *"fake ai-rulez:"* ]]
+  [ -x "$(cached_binary darwin-arm64)" ]
+}
+
 @test "a missing binary is downloaded, checksum-verified, cached and run" {
   make_release darwin arm64
   write_checksums
