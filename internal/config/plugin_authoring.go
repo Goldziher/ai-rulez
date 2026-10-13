@@ -701,9 +701,35 @@ type MarketplacePlugin struct {
 	Skills   []string `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
 	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty" toml:"commands,omitempty"`
 	Agents   []string `yaml:"agents,omitempty" json:"agents,omitempty" toml:"agents,omitempty"`
+	// MCPServers names root [[mcp_servers]] the plugin bundles. Empty bundles none.
+	MCPServers []string `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"` //nolint:tagliatelle
+	// Hooks are the lifecycle hooks the plugin ships. Empty ships none.
+	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
+	// Author, License, Homepage and Repository fall back to the [plugin] block.
+	Author     *Author `yaml:"author,omitempty" json:"author,omitempty" toml:"author,omitempty"`
+	License    string  `yaml:"license,omitempty" json:"license,omitempty" toml:"license,omitempty"`
+	Homepage   string  `yaml:"homepage,omitempty" json:"homepage,omitempty" toml:"homepage,omitempty"`
+	Repository string  `yaml:"repository,omitempty" json:"repository,omitempty" toml:"repository,omitempty"`
 	// Relevance tells Claude Code when to suggest the plugin.
 	Relevance      *PluginRelevance `yaml:"relevance,omitempty" json:"relevance,omitempty" toml:"relevance,omitempty"`
 	PluginDefaults `yaml:",inline"`
+}
+
+// MarketplaceDefinition is one [[marketplaces_authoring]] entry: a marketplace
+// index that lists plugin definitions by name. Several can come from one root,
+// each with its own index and provenance sidecar. Distinct from the consumer
+// MarketplaceConfig and from the single [marketplace] block.
+type MarketplaceDefinition struct {
+	Name        string  `yaml:"name" json:"name" toml:"name"`
+	Description string  `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	Owner       *Author `yaml:"owner,omitempty" json:"owner,omitempty" toml:"owner,omitempty"`
+	// Plugins are the names of the plugin definitions ([[plugins_authoring]] or
+	// [[marketplace.plugins]]) the index lists. An empty list lists nothing.
+	Plugins []string `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
+	// OutputDir is the project-relative directory holding the index and its
+	// plugins/<name>/ bundles. Empty means the project root. Unique per marketplace.
+	OutputDir   string `yaml:"output_dir,omitempty" json:"output_dir,omitempty" toml:"output_dir,omitempty"`       //nolint:tagliatelle
+	CursorIndex bool   `yaml:"cursor_index,omitempty" json:"cursor_index,omitempty" toml:"cursor_index,omitempty"` //nolint:tagliatelle
 }
 
 // PluginRelevance is the marketplace entry's relevance object: when Claude Code

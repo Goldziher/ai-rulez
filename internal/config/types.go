@@ -49,13 +49,18 @@ type Config struct {
 	CodexSkillsDir string              `yaml:"codex_skills_dir,omitempty" json:"codex_skills_dir,omitempty" toml:"codex_skills_dir,omitempty"` //nolint:tagliatelle
 	Plugins        []PluginConfig      `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
 	Marketplaces   []MarketplaceConfig `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
-	Scopes         []ScopeConfig       `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
-	MCP            *MCPConfig          `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
-	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
-	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
-	OKF            *OKFConfig          `yaml:"okf,omitempty" json:"okf,omitempty" toml:"okf,omitempty"`
-	LLMsTxt        *LLMsTxtConfig      `yaml:"llms_txt,omitempty" json:"llms_txt,omitempty" toml:"llms_txt,omitempty"` //nolint:tagliatelle
-	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
+	// PluginsAuthoring and MarketplacesAuthoring are the producer-side definitions
+	// of several plugins and several marketplace indexes from one root. They are
+	// distinct from the consumer-side Plugins and Marketplaces above.
+	PluginsAuthoring      []MarketplacePlugin     `yaml:"plugins_authoring,omitempty" json:"plugins_authoring,omitempty" toml:"plugins_authoring,omitempty"`                //nolint:tagliatelle
+	MarketplacesAuthoring []MarketplaceDefinition `yaml:"marketplaces_authoring,omitempty" json:"marketplaces_authoring,omitempty" toml:"marketplaces_authoring,omitempty"` //nolint:tagliatelle
+	Scopes                []ScopeConfig           `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
+	MCP                   *MCPConfig              `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
+	Rules                 *RulesConfig            `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
+	Lint                  *LintConfig             `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
+	OKF                   *OKFConfig              `yaml:"okf,omitempty" json:"okf,omitempty" toml:"okf,omitempty"`
+	LLMsTxt               *LLMsTxtConfig          `yaml:"llms_txt,omitempty" json:"llms_txt,omitempty" toml:"llms_txt,omitempty"` //nolint:tagliatelle
+	Usage                 *UsageConfig            `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
 	// Roles map a job to a slice of the shared content (see roles.go); RoleManifest
 	// is the [role_manifest] table, kept apart because [[roles]] is an array.
 	Roles        []RoleConfig        `yaml:"roles,omitempty" json:"roles,omitempty" toml:"roles,omitempty"`

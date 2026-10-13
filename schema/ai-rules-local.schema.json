@@ -19,11 +19,190 @@
       "enum": ["static", "served", "both"],
       "type": "string"
     },
+    "marketplaceDefinition": {
+      "additionalProperties": false,
+      "description": "One marketplace index listing plugin definitions by name.",
+      "properties": {
+        "cursor_index": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "output_dir": {
+          "description": "Project-relative directory holding the index and its plugins/<name>/ bundles. Empty means the project root. Unique per marketplace.",
+          "type": "string"
+        },
+        "owner": {
+          "$ref": "#/$defs/authorEntity"
+        },
+        "plugins": {
+          "description": "Names of the plugin definitions (plugins_authoring or marketplace.plugins) the index lists. An empty list lists nothing.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "remove": {
+          "description": "Set to true to delete the shared entry with the same name",
+          "type": "boolean"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
     "patternList": {
       "items": {
         "type": "string"
       },
       "type": "array"
+    },
+    "pluginDefinition": {
+      "additionalProperties": false,
+      "description": "One plugin definition: the content it bundles by name or glob (an empty selector bundles nothing), its runtimes and metadata. Used by marketplace.plugins and plugins_authoring.",
+      "properties": {
+        "agents": {
+          "$ref": "#/$defs/patternList",
+          "description": "Root agents (names or globs) to bundle."
+        },
+        "author": {
+          "$ref": "#/$defs/authorEntity"
+        },
+        "category": {
+          "type": "string"
+        },
+        "commands": {
+          "$ref": "#/$defs/patternList",
+          "description": "Root commands (names or globs) to bundle."
+        },
+        "default_enabled": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "domains": {
+          "$ref": "#/$defs/patternList",
+          "description": "Domains (names or globs) whose content the plugin bundles."
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "hooks": {
+          "description": "Lifecycle hooks the plugin ships; same shape as the top-level hooks.",
+          "items": {
+            "$ref": "#/properties/hooks/items"
+          },
+          "type": "array"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "license": {
+          "type": "string"
+        },
+        "mcp_servers": {
+          "description": "Names of root mcp_servers the plugin bundles. Empty bundles none.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "relevance": {
+          "additionalProperties": false,
+          "description": "When Claude Code suggests the plugin. At least one signal is required.",
+          "properties": {
+            "signals": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "properties": {
+                "cli": {
+                  "items": {
+                    "maxLength": 64,
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                "cwd": {
+                  "items": {
+                    "maxLength": 256,
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                "files_read": {
+                  "items": {
+                    "maxLength": 256,
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                "hosts": {
+                  "items": {
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "maxItems": 20,
+                  "type": "array"
+                },
+                "manifest_deps": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "file": {
+                        "type": "string"
+                      },
+                      "pattern": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "topic": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "remove": {
+          "description": "Set to true to delete the shared entry with the same name",
+          "type": "boolean"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "runtimes": {
+          "$ref": "#/$defs/pluginRuntimes"
+        },
+        "skills": {
+          "$ref": "#/$defs/patternList",
+          "description": "Root skills (names or globs) to bundle."
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
     },
     "pluginRuntimes": {
       "items": {
@@ -1934,116 +2113,7 @@
         "plugins": {
           "description": "Plugins declared by hand from domains and root content. An entry named like a from_domains plugin replaces it.",
           "items": {
-            "additionalProperties": false,
-            "properties": {
-              "agents": {
-                "$ref": "#/$defs/patternList",
-                "description": "Root agents (names or globs) to bundle."
-              },
-              "category": {
-                "type": "string"
-              },
-              "commands": {
-                "$ref": "#/$defs/patternList",
-                "description": "Root commands (names or globs) to bundle."
-              },
-              "default_enabled": {
-                "type": "boolean"
-              },
-              "description": {
-                "type": "string"
-              },
-              "domains": {
-                "$ref": "#/$defs/patternList",
-                "description": "Domains (names or globs) whose content the plugin bundles."
-              },
-              "keywords": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "name": {
-                "type": "string"
-              },
-              "relevance": {
-                "additionalProperties": false,
-                "description": "When Claude Code suggests the plugin. At least one signal is required.",
-                "properties": {
-                  "signals": {
-                    "additionalProperties": false,
-                    "minProperties": 1,
-                    "properties": {
-                      "cli": {
-                        "items": {
-                          "maxLength": 64,
-                          "type": "string"
-                        },
-                        "maxItems": 10,
-                        "type": "array"
-                      },
-                      "cwd": {
-                        "items": {
-                          "maxLength": 256,
-                          "type": "string"
-                        },
-                        "maxItems": 10,
-                        "type": "array"
-                      },
-                      "files_read": {
-                        "items": {
-                          "maxLength": 256,
-                          "type": "string"
-                        },
-                        "maxItems": 10,
-                        "type": "array"
-                      },
-                      "hosts": {
-                        "items": {
-                          "maxLength": 128,
-                          "type": "string"
-                        },
-                        "maxItems": 20,
-                        "type": "array"
-                      },
-                      "manifest_deps": {
-                        "items": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "file": {
-                              "type": "string"
-                            },
-                            "pattern": {
-                              "type": "string"
-                            }
-                          },
-                          "type": "object"
-                        },
-                        "maxItems": 10,
-                        "type": "array"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "topic": {
-                    "maxLength": 64,
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
-              "runtimes": {
-                "$ref": "#/$defs/pluginRuntimes"
-              },
-              "skills": {
-                "$ref": "#/$defs/patternList",
-                "description": "Root skills (names or globs) to bundle."
-              },
-              "version": {
-                "type": "string"
-              }
-            },
-            "type": "object"
+            "$ref": "#/$defs/pluginDefinition"
           },
           "type": "array"
         }
@@ -2077,6 +2147,13 @@
         },
         "required": ["name"],
         "type": "object"
+      },
+      "type": "array"
+    },
+    "marketplaces_authoring": {
+      "description": "Several marketplace indexes from one root, each listing plugin definitions by name. Cannot be combined with [marketplace]. Merges by name across layers.",
+      "items": {
+        "$ref": "#/$defs/marketplaceDefinition"
       },
       "type": "array"
     },
@@ -2734,6 +2811,13 @@
         },
         "required": ["name"],
         "type": "object"
+      },
+      "type": "array"
+    },
+    "plugins_authoring": {
+      "description": "Several plugin definitions from one root, generated and verified in one `generate --plugin` / `verify --plugin` run. Cannot be combined with [plugin]. Merges by name across layers; remove = true drops an entry.",
+      "items": {
+        "$ref": "#/$defs/pluginDefinition"
       },
       "type": "array"
     },
