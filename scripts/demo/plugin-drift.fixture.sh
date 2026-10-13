@@ -29,9 +29,9 @@ skills_dir_owned = true
 TOML
 
 skill() {
-	local id="$1" title="$2" desc="$3" body="$4"
-	mkdir -p ".ai-rulez/skills/$id"
-	cat >".ai-rulez/skills/$id/SKILL.md" <<MD
+  local id="$1" title="$2" desc="$3" body="$4"
+  mkdir -p ".ai-rulez/skills/$id"
+  cat >".ai-rulez/skills/$id/SKILL.md" <<MD
 ---
 type: Playbook
 title: $title
@@ -43,7 +43,7 @@ x-ai-rulez:
 
 $body
 MD
-	printf '# Concepts\n\n* [%s](SKILL.md) - %s\n' "$title" "$desc" >".ai-rulez/skills/$id/index.md"
+  printf '# Concepts\n\n* [%s](SKILL.md) - %s\n' "$title" "$desc" >".ai-rulez/skills/$id/index.md"
 }
 
 skill code-review "Code Review" "Use when reviewing a pull request for correctness and style." "Read the diff first, then check tests and naming."
