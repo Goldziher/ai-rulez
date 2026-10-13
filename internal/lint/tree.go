@@ -222,10 +222,12 @@ func (t *Tree) matchAny(g globMatcher, baseRel string) bool {
 }
 
 // Loader memoizes trees so linting many roots of one repository reads the git
-// index once.
+// index once. It is safe for concurrent use; hold it by pointer, since it
+// contains a mutex.
 type Loader struct {
 	// Root overrides the repository root for every tree (see LoadTreeAt).
 	Root  string
+	mu    sync.Mutex
 	cache map[string]*Tree
 }
 
@@ -239,6 +241,10 @@ func (l *Loader) Load(base string) (*Tree, error) {
 func (l *Loader) LoadContext(ctx context.Context, base string) (*Tree, error) {
 	// The probes below ask the same structural questions of base twice.
 	ctx = gitutil.WithMemo(ctx)
+	// Concurrent roots of one repository queue behind the first load and then
+	// read the cached tree, so the index is still read once.
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	if l.cache == nil {
 		l.cache = map[string]*Tree{}
 	}

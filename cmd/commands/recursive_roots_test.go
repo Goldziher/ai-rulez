@@ -60,10 +60,10 @@ func gitMonorepo(t *testing.T, n int) string {
 	require.NoError(t, gitutil.CommandNoContext(root, "init", "-q").Run())
 	chdir(t, root)
 	progress.SetQuiet(true)
-	strictTreeCache = lint.Loader{}
+	strictTreeCache = &lint.Loader{}
 	t.Cleanup(func() {
 		progress.SetQuiet(false)
-		strictTreeCache = lint.Loader{}
+		strictTreeCache = &lint.Loader{}
 		pluginMode, dryRun, profile, validateStrict = false, false, "", false
 	})
 	pluginMode, dryRun, profile = false, false, ""

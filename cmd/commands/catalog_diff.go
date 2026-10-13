@@ -236,7 +236,7 @@ func shortCommit(c string) string {
 func buildRevisionCatalog(ctx context.Context, cfg *config.Config, repoRoot string) (*govview.CatalogDocV2, error) {
 	if strictTreeCache.Root == "" {
 		prev := strictTreeCache
-		strictTreeCache = lint.Loader{Root: repoRoot}
+		strictTreeCache = &lint.Loader{Root: repoRoot}
 		defer func() { strictTreeCache = prev }()
 	}
 	return buildDiffCatalog(ctx, cfg)

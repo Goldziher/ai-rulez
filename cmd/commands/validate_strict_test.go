@@ -163,7 +163,7 @@ func TestApplyRepoRoot_RefusesADirectoryOutsideGit(t *testing.T) {
 	oldRoot, oldCache := validateRepoRoot, strictTreeCache
 	t.Cleanup(func() { validateRepoRoot, strictTreeCache = oldRoot, oldCache })
 	t.Setenv(repoRootEnv, "")
-	strictTreeCache = lint.Loader{}
+	strictTreeCache = &lint.Loader{}
 	validateRepoRoot = t.TempDir()
 
 	// Act
