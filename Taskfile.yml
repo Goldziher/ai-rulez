@@ -259,6 +259,16 @@ tasks:
     cmds:
       - HARNESS_VERIFY=1 go test ./internal/lint -run TestHarnessVerify -count=1 -v
 
+  demo:record:
+    desc: "Re-record the README terminal demos with vhs (all, or name them: task demo:record -- validate); uses the ai-rulez on PATH"
+    cmds:
+      - bash scripts/demo/run.sh record {{.CLI_ARGS}}
+
+  demo:check:
+    desc: "Parse every demo tape and check each committed GIF exists and is at most 1 MiB"
+    cmds:
+      - bash scripts/demo/run.sh check
+
   clean:
     desc: "Clean build artifacts"
     cmds:
