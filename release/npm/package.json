@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "5.1.1",
+  "version": "5.2.0",
   "description": "Standards-compliant lifecycle tool for agent knowledge and capabilities. Author rules, skills, agents and MCP servers once; generate for 52 harnesses; bundle as OKF, Agent Plugins and ARD; validate against each standard; govern with signing, approvals and policy; publish.",
   "keywords": [
     "agent-plugins",

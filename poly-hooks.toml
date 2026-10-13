@@ -11,14 +11,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "pnpm"
 check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.1.1"
-install = "pnpm dlx ai-rulez@5.1.1 version"
+run = "pnpm dlx ai-rulez@5.2.0"
+install = "pnpm dlx ai-rulez@5.2.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.1.1"
-install = "uvx ai-rulez==5.1.1 version"
+run = "uvx ai-rulez==5.2.0"
+install = "uvx ai-rulez==5.2.0 version"
 
 [[hooks.paths]]
 channel = "system"
@@ -36,14 +36,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "pnpm"
 check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.1.1"
-install = "pnpm dlx ai-rulez@5.1.1 version"
+run = "pnpm dlx ai-rulez@5.2.0"
+install = "pnpm dlx ai-rulez@5.2.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.1.1"
-install = "uvx ai-rulez==5.1.1 version"
+run = "uvx ai-rulez==5.2.0"
+install = "uvx ai-rulez==5.2.0 version"
 
 [[hooks.paths]]
 channel = "system"
@@ -61,14 +61,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "pnpm"
 check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.1.1"
-install = "pnpm dlx ai-rulez@5.1.1 version"
+run = "pnpm dlx ai-rulez@5.2.0"
+install = "pnpm dlx ai-rulez@5.2.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.1.1"
-install = "uvx ai-rulez==5.1.1 version"
+run = "uvx ai-rulez==5.2.0"
+install = "uvx ai-rulez==5.2.0 version"
 
 [[hooks.paths]]
 channel = "system"
@@ -86,14 +86,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "pnpm"
 check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.1.1"
-install = "pnpm dlx ai-rulez@5.1.1 version"
+run = "pnpm dlx ai-rulez@5.2.0"
+install = "pnpm dlx ai-rulez@5.2.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.1.1"
-install = "uvx ai-rulez==5.1.1 version"
+run = "uvx ai-rulez==5.2.0"
+install = "uvx ai-rulez==5.2.0 version"
 
 [[hooks.paths]]
 channel = "system"
@@ -111,14 +111,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "pnpm"
 check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.1.1"
-install = "pnpm dlx ai-rulez@5.1.1 version"
+run = "pnpm dlx ai-rulez@5.2.0"
+install = "pnpm dlx ai-rulez@5.2.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.1.1"
-install = "uvx ai-rulez==5.1.1 version"
+run = "uvx ai-rulez==5.2.0"
+install = "uvx ai-rulez==5.2.0 version"
 
 [[hooks.paths]]
 channel = "system"
