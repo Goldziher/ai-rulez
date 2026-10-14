@@ -268,11 +268,18 @@ func (s *GitSource) sparsePathSpec() string {
 // directory, so loads of the same remote at different commits would replace each
 // other's files mid-read; the whole fetch, from refreshing the checkout to
 // scanning and digesting it, therefore runs under a per-cacheDir mutex. Loads of
-// different remotes do not wait for each other.
+// different remotes do not wait for each other. A sibling advisory lock also
+// serializes separate CLI processes sharing the same cache. ~keep
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	mu := lockForFetch(s.cacheDir)
 	mu.Lock()
 	defer mu.Unlock()
+
+	release, err := lockFetchCache(ctx, s.cacheDir)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 
 	tree, err := s.fetch(ctx)
 	if err != nil {
