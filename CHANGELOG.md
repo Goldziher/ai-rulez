@@ -16,6 +16,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`schema/validate-report.schema.json` declares the finding key `file`, not `path`.** `validate --format json` and `scan --format json` have always emitted `file`; the schema described a key that never appeared. A test now compares the keys findings emit with the schema, and checks that SARIF carries `source` in `results[].properties`.
 - **The refusal to lint a home or filesystem-root directory no longer suggests `--path` or `--glob`.** Those flags do not lift the refusal; the hint now says to run the command from inside a project directory.
 - **A nested `AGENTS.md` in a directory named with glob metacharacters is scoped to that directory only.** `app[1]/AGENTS.md` produced the scope `app[1]/**`, which matches `app1`; the directory name is now escaped (`app\[1\]/**`).
 - **Nested `AGENTS.md` item names no longer depend on the walk or on `.gitignore`.** Directories whose slugs collide (`a/b`, `a-b`, `a b`; `app[1]`, `app1`) or sanitize to nothing got `-md` or numeric suffixes that changed when an unrelated directory was added or ignored, which churned the outputs and the lock. They now carry a short hash of their path, decided over all directories found before `.gitignore` is applied.
