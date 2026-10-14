@@ -29,7 +29,7 @@ func TestPolyCatalogChecksSourceAndGeneratedDrift(t *testing.T) {
 		case "ai-rulez-check":
 			found[hook.ID] = true
 			require.Equal(t, []string{"generate", "--check", "--no-local"}, hook.Args)
-			require.Contains(t, hook.Files, "**/AGENTS.md")
+			require.Equal(t, []string{"**"}, hook.Files)
 		case "ai-rulez-plugin-verify":
 			found[hook.ID] = true
 			require.Contains(t, hook.Files, "plugin/**")
