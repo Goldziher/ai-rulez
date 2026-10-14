@@ -25,7 +25,7 @@ func fixture() Input {
 			Keywords: []string{"conventions"}, Runtimes: []string{"claude", "cursor"},
 			BundleFile: "acme-conventions-1.4.0.tar.gz", BundleDigest: "sha256:" + strings.Repeat("a", 64),
 			Files: []File{
-				{Path: ".claude-plugin/plugin.json", Data: []byte("{}\n")},
+				{Path: ".claude-plugin/plugin.json", Data: []byte("{\"name\":\"acme-conventions\"}\n")},
 				{Path: ".cursor-plugin/plugin.json", Data: []byte("{\"name\":\"acme-conventions\"}\n")},
 				{Path: "skills/deploy/SKILL.md", Data: []byte(skillMD)},
 			},

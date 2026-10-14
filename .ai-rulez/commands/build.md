@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: Build
-description: Build the project
+description: Build the ai-rulez binary and the project
 x-ai-rulez:
   kind: command
   id: build
