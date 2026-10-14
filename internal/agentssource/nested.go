@@ -2,6 +2,8 @@ package agentssource
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"io/fs"
 	"path"
 	"strings"
@@ -22,6 +24,10 @@ const (
 	nestedMaxEntries = 100000
 	// nestedPrefix starts the name of a nested AGENTS.md item: agents-<dir slug>.
 	nestedPrefix = "agents-"
+	// nestedUnnamed is the slug utils.SanitizeName gives a name with nothing left.
+	nestedUnnamed = "unnamed"
+	// nestedHashBytes is how many bytes of the path hash are kept in a name (8 hex digits).
+	nestedHashBytes = 4
 )
 
 // nestedFile is a nested AGENTS.md found by the walk.
@@ -94,6 +100,7 @@ func readNested(ctx context.Context, cfg *config.Config, fsys fs.FS, taken map[s
 	if len(found) == 0 {
 		return nil
 	}
+	slugs := nestedSlugs(found)
 	ignored := ignoredNested(ctx, cfg, found)
 	var out []config.ContentFile
 	for _, f := range found {
@@ -110,8 +117,7 @@ func readNested(ctx context.Context, cfg *config.Config, fsys fs.FS, taken map[s
 			cfg.Warn(file+" "+note.Reason, "source", config.SourceAgents)
 		}
 		for i := range md.Items {
-			base := nestedPrefix + utils.SanitizeName(strings.ReplaceAll(f.dir, "/", "-"))
-			md.Items[i].Name = base
+			md.Items[i].Name = slugs[f.dir]
 			name := itemNames(md.Items[i:i+1], taken)[0]
 			out = append(out, contextFile(cfg, name, &md.Items[i], file, f.dir))
 		}
@@ -133,4 +139,28 @@ func ignoredNested(ctx context.Context, cfg *config.Config, found []nestedFile) 
 		return nil
 	}
 	return ignored
+}
+
+// nestedSlugs names every nested directory found, before .gitignore is applied,
+// so a name does not change with the ignore state or with unrelated directories:
+// agents-<dir slug>, plus a short hash of the slash path when another directory
+// sanitizes to the same slug or the slug is empty (a/b, a-b and "a b" all slug to a-b).
+func nestedSlugs(found []nestedFile) map[string]string {
+	slugOf := make(map[string]string, len(found))
+	uses := map[string]int{}
+	for _, f := range found {
+		slug := utils.SanitizeName(strings.ReplaceAll(f.dir, "/", "-"))
+		slugOf[f.dir] = slug
+		uses[slug]++
+	}
+	out := make(map[string]string, len(found))
+	for _, f := range found {
+		slug := slugOf[f.dir]
+		if uses[slug] > 1 || slug == nestedUnnamed {
+			sum := sha256.Sum256([]byte(f.dir))
+			slug += "-" + hex.EncodeToString(sum[:nestedHashBytes])
+		}
+		out[f.dir] = nestedPrefix + slug
+	}
+	return out
 }
