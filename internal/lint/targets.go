@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
 
 // Targets are files a run lints in addition to (or, in a repository without a
@@ -352,6 +353,33 @@ func (c *candidates) walk(top, dir string) {
 	})
 }
 
+// walkProject adds the files below dir (relative to top; "" is the top itself),
+// skipping the directories a project walk skips (.git, dependency and build
+// directories, hidden directories) below dir. dir itself is walked even when it
+// is such a directory, since the user named it. The walk stops once the
+// candidates exceed maxTargetFiles, which the caller reports.
+func (c *candidates) walkProject(top, dir string) {
+	root := filepath.Join(top, dir)
+	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
+		if err != nil {
+			return nil //nolint:nilerr // best effort
+		}
+		if d.IsDir() {
+			if p != root && walkutil.ShouldSkipDir(d.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if len(c.rels) > maxTargetFiles {
+			return filepath.SkipAll
+		}
+		if rel, rerr := filepath.Rel(top, p); rerr == nil {
+			c.add(filepath.ToSlash(rel))
+		}
+		return nil
+	})
+}
+
 // expandPath returns the files --path p selects: the file itself, or the
 // candidates below a directory.
 func (c *candidates) expandPath(tree *Tree, cwd, p string) (rels []string, isDir bool, err error) {
@@ -383,7 +411,12 @@ func (c *candidates) expandPath(tree *Tree, cwd, p string) (rels []string, isDir
 	if prefix != "" {
 		prefix += "/"
 	}
-	c.walk(tree.Top, filepath.FromSlash(rel))
+	if !tree.Git {
+		// In git the candidates already hold the tracked and the untracked files git
+		// does not ignore, so ignored dependency trees and .git stay out. Outside
+		// git, walk the directory but skip what a project walk skips.
+		c.walkProject(tree.Top, filepath.FromSlash(rel))
+	}
 	var out []string
 	for _, f := range c.rels {
 		if strings.HasPrefix(f, prefix) {

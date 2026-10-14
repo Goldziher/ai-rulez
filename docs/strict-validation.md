@@ -122,7 +122,10 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
 - **One file, one spelling.** On a case-insensitive file system (the default on macOS and Windows) `--path agents.md`
   is the file `AGENTS.md`: it is classified by the spelling stored on disk and is linted once, however it is named.
 - **Untracked files count.** A directory or glob takes the tracked files and the untracked files that git does not
-  ignore. An explicit file path is linted even when git ignores it.
+  ignore, so `--path .` never lints an ignored `node_modules` or reads `.git`, and an ignored tree does not count
+  against the 20,000-file limit. Outside git the directory is walked and the usual dependency, build, cache and
+  hidden directories below it are skipped (the directory you name is always walked, even `.claude`). An explicit
+  file path is linted even when git ignores it.
 - **Recognized by content, not by location.** A plugin manifest (a `name` and a `version`), a marketplace (a
   `plugins` list with an `owner` or a `source` per plugin), a hook file (a `hooks` object of matcher groups) and an
   MCP file (`mcpServers`) are recognized wherever they are, and get the same checks (`AR963`, `AR507`, the `AR6xx`
