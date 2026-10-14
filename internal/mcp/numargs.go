@@ -27,3 +27,13 @@ func intArg(req *handlers.ToolRequest, key string, def int) (int, error) {
 	}
 	return int(v), nil
 }
+
+// limitArg reads a count argument where zero or below means "use def", the
+// semantics find_skill, search_skills and budget_bytes always had. A NaN, an
+// infinity, a fraction or a value beyond the int range is rejected like intArg.
+func limitArg(req *handlers.ToolRequest, key string, def int) (int, error) {
+	if v := req.GetNumber(key, float64(def)); v <= 0 {
+		return def, nil
+	}
+	return intArg(req, key, def)
+}

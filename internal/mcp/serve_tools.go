@@ -43,9 +43,9 @@ func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	if task == "" {
 		return handlers.ToolError(fmt.Errorf("task is required: describe what you are about to do"))
 	}
-	limit := int(req.GetNumber("limit", defaultFindLimit))
-	if limit <= 0 {
-		limit = defaultFindLimit
+	limit, err := limitArg(req, "limit", defaultFindLimit)
+	if err != nil {
+		return handlers.ToolError(err)
 	}
 	limit = min(limit, maxFindLimit)
 
@@ -125,8 +125,12 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	}
 	content := string(file.Content)
 	truncated := false
-	if limit := int(req.GetNumber("budget_bytes", 0)); limit > 0 && len(content) > limit {
-		content, truncated = truncateUTF8(content, limit), true
+	budget, err := limitArg(req, "budget_bytes", 0)
+	if err != nil {
+		return handlers.ToolError(err)
+	}
+	if budget > 0 && len(content) > budget {
+		content, truncated = truncateUTF8(content, budget), true
 	}
 
 	session, client := s.sessionInfo(req)
