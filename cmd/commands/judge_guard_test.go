@@ -24,6 +24,7 @@ func TestJudgeRefusesTheHomeDirectoryOutsideAProject(t *testing.T) {
 			// Arrange
 			dir := judgeProject(t, map[string]string{"other/AGENTS.md": "# another project\n", "AGENTS.md": "# home\n"})
 			t.Setenv("HOME", dir)
+			t.Setenv("USERPROFILE", dir) // os.UserHomeDir on Windows
 			rig := newJudgeRig(t)
 
 			// Act
