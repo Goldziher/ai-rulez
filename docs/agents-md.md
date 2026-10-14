@@ -13,7 +13,8 @@ agents_md = true    # the default
 
 `AGENTS.md` and `.agents/skills` can also be the project's own source instead of ai-rulez's output: with
 `source = "agents"` ai-rulez reads them and never writes them. See [.agents as a source](agents-source.md); with
-`agents_md_split = true` it reads `AGENTS.md` as one context item per `##` heading, and an `AGENTS.md` in a
+`agents_md_split = true` it reads `AGENTS.md` as one context item per `##` heading (the MCP `read_context`,
+`update_context` and `delete_context` then act on that one section, never the whole file), and an `AGENTS.md` in a
 subdirectory is read as context scoped to that directory.
 
 What changes:

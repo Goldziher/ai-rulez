@@ -95,6 +95,13 @@ agents_md_split = true
   in `AGENTS.md`. The file is replaced atomically with its mode and line endings (LF, CRLF) and a leading BOM kept;
   `remove` refuses a symlinked `AGENTS.md` and a file with lone CR line endings, and writes nothing when the file
   changed while the section was being cut out.
+- `show context <item>` and the MCP `read_context` return only that item: the section from its `##` heading line to the
+  line before the next heading (the text before the first heading for `agents`). `edit context <item>` and the MCP
+  `update_context` replace that section with the content you send, which is the whole section as `show` prints it,
+  heading line included; the rest of the file stays byte for byte, the write is atomic and the file's line endings,
+  mode and BOM are kept. Content that would add or drop a `##` heading, rename the section or be empty is refused and
+  `AGENTS.md` is left alone, as is a symlinked `AGENTS.md`. Without the setting the item `agents` is the whole file:
+  `show` and `read_context` return all of it, and `edit`, `update_context` and `remove` refuse (it is your file).
 - The setting needs `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`); `validate` rejects it
   otherwise. `AGENTS.md` itself is still never written by `generate`.
 

@@ -1309,6 +1309,10 @@ Update an existing context file.
 
 **Response:** Similar to create_rule
 
+With `source = "agents"` and `agents_md_split = true`, an item of `AGENTS.md` (`agents`, `agents-<heading slug>`) is
+updated in place: `content` replaces that one section, heading line included, atomically, and content that would add,
+drop or rename a `##` heading is refused. The unsplit item `agents` is the whole file and is refused.
+
 #### `read_context`
 
 Read a context file.
@@ -1319,6 +1323,9 @@ Read a context file.
 - `domain` (optional, string): Domain name
 - `local` (optional, boolean): Read from `.ai-rulez/local/`
 - `working_directory` (optional, string): Directory to operate in
+
+For an item of `AGENTS.md` (`source = "agents"`) the result is that item only: its section with
+`agents_md_split = true`, the whole file for the unsplit item `agents`. `path` is `AGENTS.md`.
 
 #### `delete_context`
 

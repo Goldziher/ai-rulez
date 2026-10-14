@@ -26,6 +26,14 @@ func readFileContent(ctx context.Context, op *crud.OperatorImpl, domain, fileTyp
 
 	for _, f := range files {
 		if f.Name == name {
+			if op.IsAgentsMDItem(domain, fileType, name) {
+				// An item of AGENTS.md: its own section (the whole file when unsplit), not the file.
+				content, err := op.ReadAgentsMDItem(name)
+				if err != nil {
+					return "", "", err
+				}
+				return content, normalizePath(f.Path), nil
+			}
 			content, err := op.ReadFileContent(f.Path)
 			if err != nil {
 				return "", "", err
