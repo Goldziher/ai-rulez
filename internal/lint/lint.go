@@ -149,6 +149,7 @@ type runner struct {
 	host         ambient.Host
 	planned      PlannedFiles // what a run would write, for the traps (WithPlanned)
 	targets      *Targets     // files linted besides the content tree (WithTargets)
+	outputs      []OutputFile // generated files linted besides the authored content (WithOutputs)
 	cwdResolved  string       // cwd with its symlinks resolved, see display
 	cwdOnce      sync.Once
 	sev          map[string]Severity
@@ -357,6 +358,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 			r.checkItem(&r.items[i])
 		}
 	}
+	r.checkOutputs()
 	r.unit(depUnitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
 	r.unit(unitOf("mcp-command", AnalyzerMCP), r.checkMCP)
 	r.unit(depUnitOf("settings-hooks", AnalyzerHooks), func() { r.checkHooks(baseAbs) })

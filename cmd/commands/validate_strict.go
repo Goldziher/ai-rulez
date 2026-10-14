@@ -71,13 +71,13 @@ func strictOnlyFlagSet() bool {
 	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
 		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
 		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != "" || validateVerifiers ||
-		validateMCPUserScope || targetFlagsSet()
+		validateMCPUserScope || lintInputFlagsSet()
 }
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
 	if !validateStrict && strictOnlyFlagSet() {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers, --mcp-user-scope, --path, --glob and the baseline flags need the content checks: drop --config-only")
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers, --mcp-user-scope, --path, --glob, --outputs and the baseline flags need the content checks: drop --config-only")
 	}
 	if len(validateAllowEgress) > 0 && !validateExtern {
 		return oops.Errorf("--allow-egress requires --external")
@@ -227,6 +227,9 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	}
 	if targets != nil {
 		opts = append(opts, lint.WithTargets(targets))
+	}
+	if outputsRequested(cfg) {
+		opts = append(opts, lint.WithOutputs(generatedOutputFiles(ctx, cfg)))
 	}
 	scanner, err := scannerOptions()
 	if err != nil {

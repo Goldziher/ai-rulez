@@ -248,6 +248,10 @@ type FindingMeta struct {
 	ScannerFailOn string
 	// Analyzer and Scope classify the rule that produced the finding.
 	Analyzer, Scope string
+	// Source says where the file of the finding comes from when it is not
+	// authored content: "output" for a generated file linted with --outputs.
+	// Empty for authored content.
+	Source string
 	// Fix is the mechanical correction, when one exists.
 	Fix *Fix
 	// Hop says how far the finding's file is from the changed set in a
@@ -257,6 +261,15 @@ type FindingMeta struct {
 	// bucket joins the fingerprint, so a baselined finding fires again once the
 	// measurement has grown well past what was accepted.
 	Metric int
+}
+
+// Source says where the finding's file comes from: "output" for a generated
+// file, "" for authored content.
+func (f *Finding) Source() string {
+	if f.Meta == nil {
+		return ""
+	}
+	return f.Meta.Source
 }
 
 func (f *Finding) meta() *FindingMeta {
@@ -312,6 +325,7 @@ type findingJSON struct {
 	VerifiedOn   string   `json:"verified_on,omitempty"`
 	Hint         string   `json:"hint,omitempty"`
 	Hop          string   `json:"hop,omitempty"`
+	Source       string   `json:"source,omitempty"`
 }
 
 // MarshalJSON flattens Meta's reportable fields next to the core ones.
@@ -327,6 +341,7 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 		out.Accepted, out.AcceptReason = f.Meta.Accepted, f.Meta.AcceptReason
 		out.Analyzer, out.Scope = f.Meta.Analyzer, f.Meta.Scope
 		out.Hop = f.Meta.Hop
+		out.Source = f.Meta.Source
 	}
 	return json.Marshal(out) //nolint:wrapcheck // plain struct
 }

@@ -1483,6 +1483,10 @@
           },
           "type": "array"
         },
+        "lint_outputs": {
+          "description": "Also lint the generated files (the bytes generate writes) with the security, references and descriptions analyzers; findings carry source \"output\". The same as validate --outputs.",
+          "type": "boolean"
+        },
         "load_budgets": {
           "additionalProperties": {
             "minimum": 1,

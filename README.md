@@ -303,6 +303,7 @@ ai-rulez validate                        # config plus content checks, exit 2 on
 ai-rulez validate --explain AR001        # what a rule checks and how to suppress it
 ai-rulez validate --format sarif --output ai-rulez.sarif
 ai-rulez validate --path catalog --glob "plugins/**/*.json"   # also lint files outside .ai-rulez/
+ai-rulez validate --outputs              # also lint the generated files; each problem is reported once
 ai-rulez validate --strict               # in any repo: with no config it lints AGENTS.md, SKILL.md, .claude/, .agents/
 ai-rulez okf validate docs/okf           # lint any OKF bundle, ai-rulez's or a third party's
 ai-rulez generate --check                # generated files still match their sources
