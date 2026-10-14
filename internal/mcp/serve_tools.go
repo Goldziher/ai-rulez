@@ -192,7 +192,11 @@ func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.Tool
 	if err != nil {
 		return handlers.ToolError(err)
 	}
-	offset := min(max(int(req.GetNumber("offset", 0)), 0), len(skill.Files))
+	requested, err := intArg(req, "offset", 0)
+	if err != nil {
+		return handlers.ToolError(err)
+	}
+	offset := min(requested, len(skill.Files))
 	end := min(offset+maxListedResources, len(skill.Files))
 	files := make([]map[string]any, 0, end-offset)
 	for i := offset; i < end; i++ {
