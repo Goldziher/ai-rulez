@@ -54,6 +54,9 @@ type TargetSpec struct {
 	// Generated also collects the targets that carry the generated header, as
 	// outputs to lint (Targets.Generated), instead of skipping them.
 	Generated bool
+	// Lenient reports a named file that cannot be read or is over the size limit in
+	// Targets.Skipped instead of failing the run, so one such file does not stop a list.
+	Lenient bool
 }
 
 // Empty reports whether the spec names nothing.
@@ -86,6 +89,9 @@ type Targets struct {
 	// Skipped lists the files that were picked but not linted, with the reason,
 	// so nothing a user asked for is dropped without a word.
 	Skipped []SkippedTarget
+	// GeneratedRels lists the picked files that carry the generated header, however
+	// they were picked: a directory only counts them in SkippedInDirs.
+	GeneratedRels []string
 	// SkippedInDirs counts the files below a --path directory that are not
 	// content (a directory lints the kinds it recognizes and says how many it left).
 	SkippedInDirs int
@@ -161,8 +167,11 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 		case out.plain != nil:
 			res.Plain = append(res.Plain, *out.plain)
 		default:
-			if out.fatal && picked[rel] == pickPath {
+			if out.fatal && picked[rel] == pickPath && !spec.Lenient {
 				unreadable = append(unreadable, rel+" ("+out.reason+")")
+			}
+			if out.generated {
+				res.GeneratedRels = append(res.GeneratedRels, rel)
 			}
 			if !spec.Generated || !out.generated { // --outputs lints a generated file as an output
 				res.noteSkipped(rel, picked[rel], out)

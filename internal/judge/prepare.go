@@ -22,6 +22,8 @@ const (
 	// SkipUnreadable is for a file the caller could not read safely: a symlink,
 	// a file that is not regular, or one over the size limit.
 	SkipUnreadable = "unreadable"
+	// SkipGenerated is for a file that carries the ai-rulez generated header.
+	SkipGenerated = "generated"
 )
 
 // PrepareOptions tunes Prepare.

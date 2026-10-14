@@ -180,10 +180,14 @@ func (d judgeDeps) run(cmd *cobra.Command, args []string, f *judgeFlags) error {
 		cmd.PrintErrf("judging %d files with %s via %s (file content is sent there; spend capped at %s)\n",
 			p.est.Files, p.lc.FullModel(), judgeHostLabel(report.EgressHost), judgeCapLabel(p.lc.MaxCostUSD))
 	}
-	report.Files = gradeJudgeFiles(ctx, client, p.rubric, p.files, f.minScore)
+	var used judgeUsage
+	report.Files, used = gradeJudgeFiles(ctx, client, p.lc, p.rubric, p.files, f.minScore)
+	report.Summary.Calls, report.Summary.Tokens, report.Summary.CostUSD = used.calls, used.tokens, used.costUSD
 	if client != nil {
-		spent := client.Spent()
-		report.Summary.Calls, report.Summary.Tokens, report.Summary.CostUSD = spent.Calls, spent.Tokens, spent.CostUSD
+		// With a cap the budget middleware counts every settled call; without one there is none.
+		if spent := client.Spent(); spent.Calls > 0 {
+			report.Summary.Calls, report.Summary.Tokens, report.Summary.CostUSD = spent.Calls, spent.Tokens, spent.CostUSD
+		}
 	}
 	report.tally()
 	if err := report.write(cmd.OutOrStdout(), f.asJSON); err != nil {
@@ -282,7 +286,7 @@ func (d judgeDeps) preflight(root string, lc llm.Config, f *judgeFlags, est judg
 		}
 		if est.CostUSD > lc.MaxCostUSD {
 			return oops.Hint("Raise --max-cost, judge fewer files, or pick a cheaper model").
-				Errorf("the worst-case cost $%.4f of judging %d files exceeds --max-cost $%.2f", est.CostUSD, est.Files, lc.MaxCostUSD)
+				Errorf("the worst-case cost $%.4f of judging %d files exceeds --max-cost $%.4f", est.CostUSD, est.Files, lc.MaxCostUSD)
 		}
 	}
 	return nil
@@ -303,8 +307,10 @@ func planJudgeFiles(files []judge.Prepared) []judgeFileReport {
 // gradeJudgeFiles judges the files in order. A failure that every later call
 // would share (key, budget, consent) stops the run and marks the rest; any other
 // failure is that file's alone.
-func gradeJudgeFiles(ctx context.Context, c llm.Client, rubric judge.Rubric, files []judge.Prepared, minScore float64) []judgeFileReport {
+func gradeJudgeFiles(ctx context.Context, c llm.Client, lc llm.Config, rubric judge.Rubric, files []judge.Prepared, minScore float64) ([]judgeFileReport, judgeUsage) {
 	out := planJudgeFiles(files)
+	var used judgeUsage
+	pricing := llm.NewPricing(lc)
 	stopped := false
 	for i, p := range files {
 		if p.Skip != "" {
@@ -320,11 +326,26 @@ func gradeJudgeFiles(ctx context.Context, c llm.Client, rubric judge.Rubric, fil
 			stopped = stopsRun(err)
 			continue
 		}
+		used.add(pricing, lc.FullModel(), res.Usage)
 		score := res.Verdict.Score
 		passed := score >= minScore && !math.IsNaN(score)
 		out[i].Status, out[i].Score, out[i].Passed, out[i].Rationale = judgeStatusJudged, &score, &passed, res.Verdict.Rationale
 	}
-	return out
+	return out, used
+}
+
+// judgeUsage is what the answered calls of a run used, counted here because the
+// budget middleware that would count it only exists when a cap is set.
+type judgeUsage struct {
+	calls, tokens int
+	costUSD       float64
+}
+
+func (u *judgeUsage) add(pricing llm.Pricing, model string, usage llm.Usage) {
+	u.calls++
+	u.tokens += usage.PromptTokens + usage.CompletionTokens
+	cost, _ := pricing.Cost(model, usage)
+	u.costUSD += cost
 }
 
 // stopsRun reports whether err would repeat for every later file.
@@ -409,5 +430,5 @@ func judgeCapLabel(maxCost float64) string {
 	if maxCost <= 0 {
 		return "no cap"
 	}
-	return fmt.Sprintf("$%.2f", maxCost)
+	return fmt.Sprintf("$%.4f", maxCost)
 }

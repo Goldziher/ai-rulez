@@ -31,6 +31,9 @@ const (
 // judgeSource is a file chosen for judging.
 type judgeSource struct {
 	rel, abs string
+	// skip is a judge.Skip* kind and reason the file is not read at all: the
+	// project scan already left it out (generated, over 2 MiB, binary).
+	skip, reason string
 }
 
 // judgeConventionRoots are the places, besides AGENTS.md at any depth, whose
@@ -71,18 +74,51 @@ func resolveJudgeSources(ctx context.Context, cwd string, paths []string, lim li
 		seen[f.Rel] = true
 		files = append(files, judgeSource{rel: f.Rel, abs: f.Abs})
 	}
-	sort.Slice(files, func(i, j int) bool { return files[i].rel < files[j].rel })
 	if err := checkJudgeSourceCount(len(files), cwd, paths); err != nil {
 		return "", nil, err
 	}
+	files = append(files, skippedJudgeSources(targets, paths, seen)...)
+	sort.Slice(files, func(i, j int) bool { return files[i].rel < files[j].rel })
 	return tree.Top, files, nil
+}
+
+// skippedJudgeSources are the picked files the project scan left out, with the
+// reason: a file that cannot be read or is too large, a binary file, and (for
+// named paths and directories) a generated file. A run with no paths leaves a
+// generated file out silently, since the project's own AGENTS.md may be one.
+func skippedJudgeSources(targets *lint.Targets, paths []string, seen map[string]bool) []judgeSource {
+	var out []judgeSource
+	add := func(rel, kind, reason string) {
+		if !seen[rel] {
+			seen[rel] = true
+			out = append(out, judgeSource{rel: rel, skip: kind, reason: reason})
+		}
+	}
+	for _, s := range targets.Skipped {
+		kind := judge.SkipUnreadable
+		switch {
+		case s.Reason == "binary file":
+			kind = judge.SkipBinary
+		case strings.HasPrefix(s.Reason, "generated file"):
+			kind = judge.SkipGenerated
+		}
+		if len(paths) > 0 || kind == judge.SkipUnreadable {
+			add(s.Rel, kind, "not judged: "+s.Reason)
+		}
+	}
+	if len(paths) > 0 {
+		for _, rel := range targets.GeneratedRels {
+			add(rel, judge.SkipGenerated, "not judged: generated file (judge its sources)")
+		}
+	}
+	return out
 }
 
 // judgeTargetSpec is what the lint target discovery is asked for: the named
 // paths, or by convention AGENTS.md and the agent content directories below the
 // working directory.
 func judgeTargetSpec(tree *lint.Tree, cwd string, paths []string) lint.TargetSpec {
-	spec := lint.TargetSpec{Cwd: cwd, Paths: paths}
+	spec := lint.TargetSpec{Cwd: cwd, Paths: paths, Lenient: true}
 	if len(paths) > 0 {
 		return spec
 	}
@@ -134,6 +170,10 @@ func isDefaultJudgeTarget(rel string) bool {
 func prepareJudgeFiles(sources []judgeSource, redact bool, secrets []string) []judge.Prepared {
 	out := make([]judge.Prepared, 0, len(sources))
 	for _, s := range sources {
+		if s.skip != "" {
+			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Skip: s.skip, SkipReason: s.reason})
+			continue
+		}
 		data, reason := readJudgeSource(s.abs)
 		if reason != "" {
 			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Skip: judge.SkipUnreadable, SkipReason: reason})
