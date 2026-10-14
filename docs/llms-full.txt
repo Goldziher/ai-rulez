@@ -10864,7 +10864,11 @@ optional `metadata`, `plugins[]` with `name` and a relative `source` directory).
 (`!{...}`) and file (`@{...}`) injections are not translated.
 
 Skills and their supporting assets are copied **verbatim** from your source. Commands are converted
-where the runtime needs another format, including Gemini commands and Pi prompt templates.
+where the runtime needs another format, including Gemini commands and Pi prompt templates. The one exception
+is content written in Open Knowledge Format (frontmatter with `type:` and an `x-ai-rulez:` block): in every
+runtime's bundle the `SKILL.md`, command or agent file gets native frontmatter instead, with `type`, `title`
+and `x-ai-rulez` removed and the entries of `x-ai-rulez.metadata` (`name`, `description`, `license`, ...) at the
+top level, so the host can read them. The body and your source file are not changed.
 
 ##### Pi packages
 
@@ -11310,6 +11314,12 @@ The check looks only under the plugin's own root, never in a parent directory. A
 root `plugin.json` is on the list (Codex prefers it as the manifest); a root
 `CLAUDE.md` was considered and is not, because Claude Code does not load a
 `CLAUDE.md` from a plugin root as context.
+
+The `agent-plugins` and `copilot` runtimes write the shared root `plugin.json` (and the root `mcp.json` when the
+plugin declares MCP servers), which Codex also reads. `AR9T0` therefore treats those two runtimes like the Codex
+`root` layout: with either of them in `runtimes`, a root `plugin.json` or `mcp.json` that ai-rulez writes is
+recognized as part of the bundle and not reported, even when Codex is on the `legacy` layout (before, only the Codex
+`root` layout counted, so these files were reported as shipped by accident).
 
 #### Several plugins from one root
 
