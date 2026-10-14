@@ -77,9 +77,15 @@ func TestAIRulezBasicCommands(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:        "Generate without config",
+			args:        []string{"generate"},
+			expectError: true,
+		},
+		{
+			// validate lints what the directory holds when there is no configuration.
 			name:        "Validate without config",
 			args:        []string{"validate"},
-			expectError: true,
+			expectError: false,
 		},
 	}
 

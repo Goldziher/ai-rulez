@@ -52,11 +52,19 @@ func (s *ExitCodeSuite) run(args ...string) int {
 
 func (s *ExitCodeSuite) TestNoConfigurationIsExitOne() {
 	for _, args := range []string{
-		"validate", "validate --config-only", "generate", "generate --check", "verify --attestation", "doctor", "tokens", "cost",
-		"scan", "catalog", "roles list", "lock --check", "lock --diff", "okf validate",
+		"validate --config-only", "generate", "generate --check", "verify --attestation", "tokens", "cost",
+		"catalog", "roles list", "lock --check", "lock --diff", "okf validate",
 		"verifiers run", "migrate v5", "clean",
 	} {
 		s.Equal(exitCannot, s.run(strings.Fields(args)...), args)
+	}
+}
+
+// validate, scan and doctor lint what the project holds when it has no
+// configuration (see lint_targets_e2e_test.go); an empty directory is clean.
+func (s *ExitCodeSuite) TestNoConfigurationIsCleanForTheLintCommands() {
+	for _, args := range []string{"validate", "validate --strict", "scan", "doctor"} {
+		s.Equal(0, s.run(strings.Fields(args)...), args)
 	}
 }
 

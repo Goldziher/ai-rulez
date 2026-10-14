@@ -56,6 +56,9 @@ func baselinePathFor(cfg *config.Config) string {
 	if cfg == nil || cfg.ConfigDir == "" {
 		return ""
 	}
+	if info, err := os.Stat(cfg.ConfigDir); cfg.Implicit && (err != nil || !info.IsDir()) {
+		return "" // no configuration directory to keep a baseline in: --baseline <file> names one
+	}
 	return filepath.Join(cfg.ConfigDir, lint.BaselineFile)
 }
 

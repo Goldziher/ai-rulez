@@ -43,3 +43,16 @@ type policyLoosening struct{ err error }
 func (e policyLoosening) Error() string        { return e.err.Error() }
 func (e policyLoosening) Unwrap() error        { return e.err }
 func (e policyLoosening) Is(target error) bool { return target == ErrPolicyLoosens }
+
+// ErrNoConfig marks a project that has no configuration: no config file in the
+// directory searched. The read-only commands (validate, scan, doctor, okf
+// validate) lint such a project through LoadImplicit; generate, clean and lock
+// need a configuration and tell the user to run `ai-rulez init`.
+var ErrNoConfig = errors.New("no ai-rulez configuration found")
+
+// noConfig carries ErrNoConfig without changing the message of the error it wraps.
+type noConfig struct{ err error }
+
+func (e noConfig) Error() string        { return e.err.Error() }
+func (e noConfig) Unwrap() error        { return e.err }
+func (e noConfig) Is(target error) bool { return target == ErrNoConfig }

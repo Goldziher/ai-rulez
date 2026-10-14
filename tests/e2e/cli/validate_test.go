@@ -163,10 +163,12 @@ func (s *ValidateCLITestSuite) TestValidateInvalidSchema() {
 	result.AssertStderrContains(s.T(), "Error")
 }
 
-func (s *ValidateCLITestSuite) TestValidateMissingConfig() {
-	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
+// A project with no configuration is linted through an implicit one; only the
+// commands that need a configuration fail (see TestGenerateWithoutConfig).
+func (s *ValidateCLITestSuite) TestValidateMissingConfigLintsDetectedFiles() {
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
-	result.AssertStderrContains(s.T(), ".ai-rulez directory not found")
+	result.AssertStderrContains(s.T(), "no ai-rulez config found; linting detected files")
 }
 
 func (s *ValidateCLITestSuite) TestValidateNonExistentConfig() {

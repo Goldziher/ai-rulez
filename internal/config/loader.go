@@ -153,11 +153,11 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 			if legacy := findLegacyConfig(v, absDir); legacy != "" {
 				return nil, newLegacyConfigError(legacy)
 			}
-			return nil, oops.
+			return nil, noConfig{oops.
 				With("path", configDir).
 				With("base_dir", baseDir).
 				Hint(fmt.Sprintf("Create %s/ directory in %s\nRun 'ai-rulez init' to initialize configuration", configDirName, baseDir)).
-				Errorf("%s directory not found", configDirName)
+				Errorf("%s directory not found", configDirName)}
 		}
 		return nil, oops.
 			With("path", configDir).
@@ -293,11 +293,11 @@ func loadAgentsLayout(ctx context.Context, v workspace.View, baseDir string, lo 
 	stateDir := filepath.Join(agentsDir, agentsStateDirName)
 	mainPath := filepath.Join(agentsDir, AgentsConfigFilename)
 	if !v.Exists(mainPath) {
-		return nil, oops.
+		return nil, noConfig{oops.
 			With("config_dir", agentsDir).
 			With("toml_path", mainPath).
 			Hint(fmt.Sprintf("Create %s/%s\nRun 'ai-rulez init --source agents' to initialize configuration", AgentsDirName, AgentsConfigFilename)).
-			Errorf("no config file found (tried %s/%s)", AgentsDirName, AgentsConfigFilename)
+			Errorf("no config file found (tried %s/%s)", AgentsDirName, AgentsConfigFilename)}
 	}
 	cfg, err := loadConfigTOML(v, mainPath)
 	if err != nil {
@@ -586,11 +586,11 @@ func loadConfigFile(v workspace.View, configDir string, lo loadOptions) (*Config
 		return nil, newLegacyConfigError(legacy)
 	}
 
-	return nil, oops.
+	return nil, noConfig{oops.
 		With("config_dir", configDir).
 		With("toml_path", tomlPath).
 		Hint(fmt.Sprintf("Create %s in %s\nRun 'ai-rulez init' to initialize configuration", configTOMLFilename, configDir)).
-		Errorf("no config file found (tried %s)", configTOMLFilename)
+		Errorf("no config file found (tried %s)", configTOMLFilename)}
 }
 
 func loadConfigFilePath(v workspace.View, path string, lo loadOptions) (*Config, error) {

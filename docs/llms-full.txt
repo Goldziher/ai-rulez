@@ -12454,6 +12454,30 @@ stdout.
 - **Prose, not code.** Fenced code blocks and inline code spans are ignored for links; backticked tokens are only
   read as paths or slash commands.
 
+#### Without a configuration file
+
+`validate`, `scan` and `doctor` work in a repository that has no `.ai-rulez/config.toml` (or `.agents/ai-rulez.toml`):
+nothing needs to be initialized to lint what a project already holds. When no configuration is found in the working
+directory or above, they print `no ai-rulez config found; linting detected files` on stderr and use an implicit
+configuration: no presets, includes, hooks or MCP servers, the default `[lint]` settings, and the git toplevel (else the
+working directory) as the project root.
+
+The content set is found by convention, and everything found is treated as hand-written:
+
+- `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`, at the root and in subdirectories (context);
+- every `SKILL.md`, wherever it is (a skill, with its `references/`, `scripts/` and `assets/`);
+- `.claude/{skills,agents,commands,rules}`, `.agents/**` and `.cursor/rules`;
+- an `.ai-rulez/` content tree even without a `config.toml`;
+- `.claude-plugin/plugin.json` and `marketplace.json`, `hooks/hooks.json`, `.claude/settings.json` hooks and `.mcp.json`.
+
+Untracked files that git does not ignore count; a file that carries the ai-rulez generated header is an output and is
+left out. With `--path` or `--glob` only the files you name are linted. Exit codes are the
+same as with a configuration. The baseline defaults to a file only when `.ai-rulez/` exists, so pass `--baseline <file>`
+to keep one; `--update-baseline` without a directory or a file is an error. Nothing is ever written, and a home or
+filesystem-root directory outside git is refused instead of walked. `generate`, `clean` and `lock` still need a
+configuration and fail with `run ai-rulez init`, and so does `validate --config-only`, which checks a configuration
+file. `okf validate <dir>` never needed one.
+
 #### Files outside the content tree
 
 `validate` and `scan` lint the content tree of the configuration. Three inputs add files outside it, for example a

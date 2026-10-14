@@ -90,6 +90,13 @@ func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*c
 	return refusalsReported(ctx, cfg, err)
 }
 
+// loadProjectImplicit is the implicit configuration of a project that has none,
+// under the same policy as the other loaders.
+func loadProjectImplicit(ctx context.Context, dir string, opts ...config.LoadOption) (*config.Config, error) {
+	cfg, err := project.LoadImplicit(config.WithPolicyContext(ctx, activePolicy), dir, withCLILockPolicy(opts)...)
+	return refusalsReported(ctx, cfg, err)
+}
+
 func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
 	cfg, err := project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, withCLILockPolicy(opts)...)
 	cfg, err = refusalsReported(ctx, cfg, err)

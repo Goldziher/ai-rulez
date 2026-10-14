@@ -63,6 +63,7 @@ func targetFlagsSet() bool {
 // when nothing is targeted.
 func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree) (*lint.Targets, error) {
 	paths, globs := lintTargetFlags()
+	explicit := len(paths)+len(globs) > 0
 	if cfg.Lint != nil {
 		for _, p := range cfg.Lint.Paths {
 			if !filepath.IsAbs(p) {
@@ -71,7 +72,7 @@ func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree
 			paths = append(paths, p)
 		}
 	}
-	spec := lint.TargetSpec{Paths: paths, Globs: globs, Cwd: workingDir()}
+	spec := lint.TargetSpec{Paths: paths, Globs: globs, Cwd: workingDir(), Detect: cfg.Implicit && !explicit}
 	if validateRecursive {
 		spec.Under = tree.Rel(cfg.BaseDir)
 	}

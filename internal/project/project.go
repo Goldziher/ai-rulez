@@ -58,3 +58,9 @@ func LoadDir(ctx context.Context, baseDir, configDirName string, opts ...config.
 func LoadFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
 	return config.LoadConfigFromFile(ctx, path, Options(opts...)...) //nolint:wrapcheck // already contextual
 }
+
+// LoadImplicit is config.LoadImplicit with the process options: the
+// configuration of a project that has none, for the read-only commands.
+func LoadImplicit(ctx context.Context, baseDir string, opts ...config.LoadOption) (*config.Config, error) {
+	return config.LoadImplicit(ctx, baseDir, Options(opts...)...) //nolint:wrapcheck // already contextual
+}

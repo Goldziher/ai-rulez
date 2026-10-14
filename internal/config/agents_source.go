@@ -63,7 +63,7 @@ func (c *Config) SourceDir() string {
 // imported: the project root for the "agents" source (AGENTS.md and .agents sit
 // beside the config directory), the configuration directory otherwise.
 func (c *Config) AuthoredRoot() string {
-	if c.UsesAgentsSource() && c.BaseDir != "" {
+	if (c.UsesAgentsSource() || c.Implicit) && c.BaseDir != "" {
 		return c.BaseDir
 	}
 	return c.ConfigDir
@@ -73,6 +73,9 @@ func (c *Config) AuthoredRoot() string {
 // .agents/ai-rulez.toml sits beside the .agents/.ai-rulez state directory that
 // ConfigDir names.
 func (c *Config) ConfigPath() string {
+	if c.Implicit {
+		return "" // an implicit configuration has no file
+	}
 	if c.ConfigFilePath != "" {
 		return c.ConfigFilePath
 	}

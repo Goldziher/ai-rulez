@@ -214,7 +214,13 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
 	sel := analyzerSelection(cfg)
-	opts := append(governanceLintOptions(ctx, cfg, sel), contentLintOptions(ctx, cfg, sel)...)
+	var opts []lint.Option
+	if !cfg.Implicit { // nothing to render, lock, publish or verify without a configuration
+		opts = append(governanceLintOptions(ctx, cfg, sel), contentLintOptions(ctx, cfg, sel)...)
+	}
+	if cfg.Implicit && targetFlagsSet() {
+		cfg.Content = &config.ContentTree{} // the named files only, not the detected ones
+	}
 	targets, err := resolveLintTargets(ctx, cfg, tree)
 	if err != nil {
 		return nil, err

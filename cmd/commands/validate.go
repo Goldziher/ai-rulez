@@ -43,6 +43,12 @@ security rules (see the [lint] config table).
 Pass --config-only to check the configuration file alone. Pass --strict to make
 warnings fail the run (the same as --fail-on warning).
 
+A project with no configuration file is linted too: the files that follow a
+convention (AGENTS.md, CLAUDE.md, SKILL.md, .claude/, .agents/, .cursor/rules,
+plugin manifests, hooks and MCP files) are taken as hand-written and checked,
+and nothing is written. --path and --glob replace that detection with the files
+you name; generate, clean and lock still need a configuration.
+
 Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 2 findings at or above --fail-on (default error).`,
 	Aliases: []string{"val"},
@@ -69,7 +75,11 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			return exitStatus(runRecursiveValidate())
 		}
 
-		cfg, err := loadConfigForCommand(ctx, config.WithFrontmatterErrors())
+		load := loadLintConfig
+		if !validateStrict {
+			load = loadConfigForCommand // --config-only checks a configuration file: without one there is nothing to check
+		}
+		cfg, err := load(ctx, config.WithFrontmatterErrors())
 		if err != nil {
 			return fail(err)
 		}
@@ -107,6 +117,11 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		}
 
 		warnWorktreeMarketplace(cfg)
+		if cfg.Implicit {
+			// No configuration: there is no root to compare nested roots with and no
+			// "valid configuration" to announce; the lint report is the result.
+			return exitStatus(runStrictSingle(cfg))
+		}
 		// A non-recursive run checks one root: name the nested roots it skips so a
 		// CI that omits --recursive does not silently pass over them.
 		warnNestedRootsNotChecked(cfg)
