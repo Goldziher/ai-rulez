@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -126,10 +127,15 @@ func runRemoveItem(cmd *cobra.Command, name, ftype, label string) error {
 		return fail(err)
 	}
 	path := op.ContentPath(removeDomain, ftype, name)
+	section := op.IsAgentsMDItem(removeDomain, ftype, name)
 	if err := op.RemoveFile(ctx, removeDomain, ftype, name); err != nil {
 		return failMsg("Failed to remove "+label, err)
 	}
-	out.Info("%s removed successfully\n", strings.ToUpper(label[:1])+label[1:])
+	if section {
+		out.Info("Section %s removed from %s\n", name, filepath.Base(path))
+	} else {
+		out.Info("%s removed successfully\n", strings.ToUpper(label[:1])+label[1:])
+	}
 	return reportChange(out, out.JSON(), changeResult{
 		Status: statusRemoved, Type: label, Name: name, Domain: removeDomain, Path: path, Local: removeLocal,
 	}, true)

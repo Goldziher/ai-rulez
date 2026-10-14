@@ -243,8 +243,12 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 }
 
 // ContentPath is what RemoveFile deletes for the item: the file, or the whole
-// directory for a skill. It does not check that the item exists.
+// directory for a skill, or AGENTS.md for an item of it (a section is cut out
+// of that file; no file of its own exists). It does not check that the item exists.
 func (op *OperatorImpl) ContentPath(domain, ftype, name string) string {
+	if op.IsAgentsMDItem(domain, ftype, name) {
+		return filepath.Join(op.baseDir, config.AgentsMDFilename)
+	}
 	if ftype == ContentTypeSkills {
 		return filepath.Join(op.filesMgr.GetSkillsPath(domain), name)
 	}
@@ -257,7 +261,7 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 		return err
 	}
 
-	if op.isAgentsMDItem(domain, ftype, name) {
+	if op.IsAgentsMDItem(domain, ftype, name) {
 		return op.removeAgentsMDItem(name) // a section of the author's AGENTS.md, not a file of its own
 	}
 
@@ -311,7 +315,7 @@ func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name 
 	}
 
 	// Check if file/skill exists
-	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) && !op.isAgentsMDItem(domain, ftype, name) {
+	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) && !op.IsAgentsMDItem(domain, ftype, name) {
 		filePath := filepath.ToSlash(op.filesMgr.GetFilePath(domain, ftype, name))
 		hint := "Check the name; nothing of that name exists."
 		if files, err := op.ListFiles(ctx, domain, ftype); err == nil {

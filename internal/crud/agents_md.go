@@ -32,8 +32,8 @@ func (op *OperatorImpl) contextFileNames() map[string]bool {
 	return taken
 }
 
-// isAgentsMDItem reports whether name is an item of AGENTS.md in this scope.
-func (op *OperatorImpl) isAgentsMDItem(domain, ftype, name string) bool {
+// IsAgentsMDItem reports whether name is an item of AGENTS.md in this scope.
+func (op *OperatorImpl) IsAgentsMDItem(domain, ftype, name string) bool {
 	return op.readsAgentsMD(domain, ftype) && slices.Contains(op.agentsMDNames(), name)
 }
 
