@@ -119,10 +119,11 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		if err != nil {
 			return nil, err
 		}
-		source, err := NewSkillGitSourceIn(cfg.Host, skillConf.Name, skillConf.Source, skillPath, ref, accessToken)
+		source, err := NewSkillGitSourceIn(cfg.Host, skillConf.Name, skillConf.Source, skillPath, w.Ref, accessToken)
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
 		}
+		source.ref = ref
 		source.pin, source.baseDir, source.state = p, baseDir, stateFor(cfg)
 		return source.DiscoverSkills(ctx, skillConf.Include, skillConf.Exclude, skillConf.NamePrefix)
 

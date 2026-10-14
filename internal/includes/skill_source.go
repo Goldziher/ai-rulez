@@ -21,11 +21,10 @@ const (
 	skillMarkerFile  = "SKILL.md"
 )
 
-// getSkillCacheDir returns the cache directory for an installed skill: its name
-// plus a short hash of the normalized URL, so two projects that install
-// different skills under one name never share (or overwrite) a cache.
-func getSkillCacheDir(host ambient.Host, skillName, repoURL string) (string, error) {
-	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
+// getSkillCacheDir isolates repository, sparse path and configured ref so one
+// project cannot overwrite another project's pinned skill cache. ~keep
+func getSkillCacheDir(host ambient.Host, skillName, repoURL, path, ref string) (string, error) {
+	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL) + "\x00" + path + "\x00" + ref))
 	dir := SafeCacheName(skillName) + "-" + hex.EncodeToString(sum[:])[:cacheHashLen]
 	return config.CacheDirIn(host.Env, skillCachePrefix, dir) //nolint:wrapcheck // already contextual
 }
@@ -38,7 +37,7 @@ type SkillGitSource struct {
 	repoURL     string
 	originalURL string
 	path        string // path within repo to skill directory (e.g., "skills/kreuzberg")
-	ref         string
+	ref         string // Fetch ref; the configured request determines cacheDir separately. ~keep
 	cacheDir    string
 	accessToken string
 	pin         *pin             // ai-rulez.lock entry this skill must match (nil: unpinned)
@@ -63,7 +62,7 @@ func NewSkillGitSourceIn(host ambient.Host, name, repoURL, path, ref, accessToke
 		return nil, err
 	}
 
-	cacheDir, err := getSkillCacheDir(host, name, repoURL)
+	cacheDir, err := getSkillCacheDir(host, name, repoURL, path, ref)
 	if err != nil {
 		return nil, oops.With("skill_name", name).Wrapf(err, "failed to determine cache directory")
 	}

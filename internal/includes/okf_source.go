@@ -53,10 +53,11 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 		if err != nil {
 			return nil, err
 		}
-		src, err := NewOKFGitSourceIn(r.host(), c.Name, source, c.Path, ref, r.baseDir, c.Include, r.accessToken)
+		src, err := NewOKFGitSourceIn(r.host(), c.Name, source, c.Path, w.Ref, r.baseDir, c.Include, r.accessToken)
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for OKF include '%s'", c.Name)
 		}
+		src.ref = ref
 		src.pin = p
 		src.okfScan = r.okfScan
 		src.state = stateFor(r.cfg)

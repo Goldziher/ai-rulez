@@ -247,7 +247,7 @@ func TestOKFInclude_GitRunsHardenedAndScrubbed(t *testing.T) {
 // okfCachedFile is the cached copy of the fixture's shared document.
 func okfCachedFile(t *testing.T, f *okfLockFixture) string {
 	t.Helper()
-	dir, err := getIncludeCacheDir(ambient.Host{}, "kb", "file://"+filepath.ToSlash(f.remote))
+	dir, err := getIncludeCacheDir(ambient.Host{}, "kb", "file://"+filepath.ToSlash(f.remote), "kb", "v1")
 	require.NoError(t, err)
 	return filepath.Join(dir, "kb", "decisions", "shared.md")
 }

@@ -253,7 +253,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 			includeConf.Name,
 			includeConf.Source,
 			includeConf.Path,
-			ref,
+			w.Ref,
 			r.baseDir,
 			includeConf.Include,
 			r.accessToken,
@@ -261,6 +261,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for include '%s'", includeConf.Name)
 		}
+		source.ref = ref
 		source.pin, source.state = p, stateFor(r.cfg)
 		return source, nil
 	default:

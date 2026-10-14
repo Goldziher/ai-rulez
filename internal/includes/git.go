@@ -100,12 +100,10 @@ func invalidateScan(aiRulezDir string) {
 // private to the user running ai-rulez.
 const cacheDirMode = 0o700
 
-// getIncludeCacheDir returns the cache directory for an include: its name plus a
-// short hash of the normalized URL, so two includes that share a name but point
-// at different repositories (in different projects) never share a cache, and one
-// project's fetch cannot seed another's.
-func getIncludeCacheDir(host ambient.Host, sourceName, repoURL string) (string, error) {
-	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
+// getIncludeCacheDir isolates repository, sparse path and configured ref so one
+// project cannot overwrite another project's pinned cache. ~keep
+func getIncludeCacheDir(host ambient.Host, sourceName, repoURL, path, ref string) (string, error) {
+	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL) + "\x00" + path + "\x00" + ref))
 	dir := SafeCacheName(sourceName) + "-" + hex.EncodeToString(sum[:])[:cacheHashLen]
 	return config.CacheDirIn(host.Env, "includes", dir) //nolint:wrapcheck // already contextual
 }
@@ -127,7 +125,7 @@ func SafeCacheName(name string) string {
 	return "include"
 }
 
-// cacheHashLen is the length of the URL hash that ends a cache directory name.
+// cacheHashLen fixes the cache-name suffix recognized by CacheDirMatches. ~keep
 const cacheHashLen = 12
 
 // CacheDirMatches reports whether seg is the cache directory name of the
@@ -153,8 +151,8 @@ type GitSource struct {
 	repoURL     string // Normalized HTTPS URL
 	originalURL string // Original URL (may be SSH format)
 	path        string // Path within repo to .ai-rulez/ (optional, defaults to root)
-	ref         string // branch, tag, or commit (optional, defaults to main/master)
-	cacheDir    string // ~/.cache/ai-rulez/includes/{name}-{url hash}/
+	ref         string // Fetch ref; the configured request determines cacheDir separately. ~keep
+	cacheDir    string // ~/.cache/ai-rulez/includes/{name}-{source hash}/
 	include     []string
 	accessToken string
 	pin         *pin              // ai-rulez.lock entry this source must match (nil: unpinned)
@@ -183,7 +181,7 @@ func NewGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string,
 	}
 
 	// Create cache directory in system cache location
-	cacheDir, err := getIncludeCacheDir(host, name, repoURL)
+	cacheDir, err := getIncludeCacheDir(host, name, repoURL, path, ref)
 	if err != nil {
 		return nil, oops.
 			With("source_name", name).
@@ -264,11 +262,9 @@ func (s *GitSource) sparsePathSpec() string {
 
 // Fetch downloads content from git repository and returns the content tree.
 //
-// Safe for concurrent invocation. One checkout per remote URL lives in the cache
-// directory, so loads of the same remote at different commits would replace each
-// other's files mid-read; the whole fetch, from refreshing the checkout to
-// scanning and digesting it, therefore runs under a per-cacheDir mutex. Loads of
-// different remotes do not wait for each other. A sibling advisory lock also
+// The whole fetch, including scanning and digesting, runs under a per-cacheDir
+// mutex so refreshes of one source cannot replace files mid-read. Independent
+// source identities do not wait for each other. A sibling advisory lock also
 // serializes separate CLI processes sharing the same cache. ~keep
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	mu := lockForFetch(s.cacheDir)
