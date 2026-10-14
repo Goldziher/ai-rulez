@@ -110,7 +110,7 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  MCP server references a path missing from the plugin source; it will not be published server=golden path=run.sh
 INFO  Plugin generation complete files=58
 --- project tree
-+ .ai-rulez-generated.json file 0644 10131 417fdf4119e62cdc0cedb2b82e891ba3a8f00b023ca3f83ecdaab45da937f583
++ .ai-rulez-generated.json file 0644 10131 4a3928b4fa70d9f4215c9930651c751051115fcfd5c2c862ff749c76ddc4bc08
 + .claude-plugin/ dir 0755
 + .claude-plugin/marketplace.json file 0644 455 9fee42c377261ea5e7d3498990d65dfdc3a09163aba6f8bb441b0a71c22c8c7b
 + .claude-plugin/plugin.json file 0644 353 7bf36ab0c4b77f9ee94cae078988c89ba2161ee34f564dfb9b030bbe0da4b0de
@@ -118,100 +118,100 @@ INFO  Plugin generation complete files=58
 + .codex-plugin/plugin.json file 0644 574 489bff7458997e2badccbb65eac3bee1f30ba558d0b5940b6d936fdefcee1584
 + .cursor-plugin/ dir 0755
 + .cursor-plugin/commands/ dir 0755
-+ .cursor-plugin/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-+ .cursor-plugin/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
++ .cursor-plugin/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
++ .cursor-plugin/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
 + .cursor-plugin/plugin.json file 0644 358 c46e224092e2aadcef0727ac49b18a10c75cc1d25b59ffdac2ec886eddae205a
 + .cursor-plugin/skills/ dir 0755
 + .cursor-plugin/skills/deployer/ dir 0755
-+ .cursor-plugin/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
++ .cursor-plugin/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 + .cursor-plugin/skills/reviewer/ dir 0755
-+ .cursor-plugin/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
++ .cursor-plugin/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 + .cursor-plugin/skills/reviewer/references/ dir 0755
-+ .cursor-plugin/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
++ .cursor-plugin/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 + .cursor-plugin/skills/reviewer/scripts/ dir 0755
 + .cursor-plugin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .factory-plugin/ dir 0755
 + .factory-plugin/plugin.json file 0644 219 1232f3edb9a8738e20a60077e0e39563c9dc98846edfbe3f503ae4df674bdb5c
 + .hermes/ dir 0755
 + .hermes/package/ dir 0755
-+ .hermes/package/pyproject.toml file 0644 534 1e5a9ecca210e1b9e456ace6a66b49859eef7043c84d7b09fc6acf9937f59964
++ .hermes/package/pyproject.toml file 0644 886 bbd01a1553495516ba075934c6c87a2200d9f68bfaaeb5b15bab4439faddf07a
 + .hermes/package/src/ dir 0755
 + .hermes/package/src/golden_plugin_hermes_plugin/ dir 0755
-+ .hermes/package/src/golden_plugin_hermes_plugin/__init__.py file 0644 384 02c23cf26540f028de62aeab63b4f04ed671d8df04dbcb328acef91604ca7aeb
++ .hermes/package/src/golden_plugin_hermes_plugin/__init__.py file 0644 384 c475addd7159bf450e976185342c892a5f4bcabd54912e9d1317a1f8b0ea1a6b
 + .hermes/package/src/golden_plugin_hermes_plugin/agents/ dir 0755
-+ .hermes/package/src/golden_plugin_hermes_plugin/agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-+ .hermes/package/src/golden_plugin_hermes_plugin/agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
++ .hermes/package/src/golden_plugin_hermes_plugin/agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
++ .hermes/package/src/golden_plugin_hermes_plugin/agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 + .hermes/package/src/golden_plugin_hermes_plugin/commands/ dir 0755
-+ .hermes/package/src/golden_plugin_hermes_plugin/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-+ .hermes/package/src/golden_plugin_hermes_plugin/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
-+ .hermes/package/src/golden_plugin_hermes_plugin/hermes.py file 0644 788 5345e747d18d2b6d83c8bc59b334abe79d183092354904a94d9f897374597867
++ .hermes/package/src/golden_plugin_hermes_plugin/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
++ .hermes/package/src/golden_plugin_hermes_plugin/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
++ .hermes/package/src/golden_plugin_hermes_plugin/hermes.py file 0644 788 5c07f1459895eef025d00d31a64fbbd3746824de9b90f82521196e3dab2238c5
 + .hermes/package/src/golden_plugin_hermes_plugin/plugin.yaml file 0644 104 1a806b55b2696c6ad4ff43532abdc732cad0dfc4621b9408531b5a4abdf383e9
 + .hermes/package/src/golden_plugin_hermes_plugin/skills/ dir 0755
 + .hermes/package/src/golden_plugin_hermes_plugin/skills/deployer/ dir 0755
-+ .hermes/package/src/golden_plugin_hermes_plugin/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
++ .hermes/package/src/golden_plugin_hermes_plugin/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 + .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/ dir 0755
-+ .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
++ .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 + .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/references/ dir 0755
-+ .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
++ .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 + .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/scripts/ dir 0755
 + .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .hermes/plugins/ dir 0755
 + .hermes/plugins/golden-plugin/ dir 0755
-+ .hermes/plugins/golden-plugin/__init__.py file 0644 384 02c23cf26540f028de62aeab63b4f04ed671d8df04dbcb328acef91604ca7aeb
++ .hermes/plugins/golden-plugin/__init__.py file 0644 384 c475addd7159bf450e976185342c892a5f4bcabd54912e9d1317a1f8b0ea1a6b
 + .hermes/plugins/golden-plugin/agents/ dir 0755
-+ .hermes/plugins/golden-plugin/agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-+ .hermes/plugins/golden-plugin/agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
++ .hermes/plugins/golden-plugin/agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
++ .hermes/plugins/golden-plugin/agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 + .hermes/plugins/golden-plugin/commands/ dir 0755
-+ .hermes/plugins/golden-plugin/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-+ .hermes/plugins/golden-plugin/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
-+ .hermes/plugins/golden-plugin/hermes.py file 0644 788 5345e747d18d2b6d83c8bc59b334abe79d183092354904a94d9f897374597867
++ .hermes/plugins/golden-plugin/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
++ .hermes/plugins/golden-plugin/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
++ .hermes/plugins/golden-plugin/hermes.py file 0644 788 5c07f1459895eef025d00d31a64fbbd3746824de9b90f82521196e3dab2238c5
 + .hermes/plugins/golden-plugin/plugin.yaml file 0644 104 1a806b55b2696c6ad4ff43532abdc732cad0dfc4621b9408531b5a4abdf383e9
 + .hermes/plugins/golden-plugin/skills/ dir 0755
 + .hermes/plugins/golden-plugin/skills/deployer/ dir 0755
-+ .hermes/plugins/golden-plugin/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
++ .hermes/plugins/golden-plugin/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 + .hermes/plugins/golden-plugin/skills/reviewer/ dir 0755
-+ .hermes/plugins/golden-plugin/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
++ .hermes/plugins/golden-plugin/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 + .hermes/plugins/golden-plugin/skills/reviewer/references/ dir 0755
-+ .hermes/plugins/golden-plugin/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
++ .hermes/plugins/golden-plugin/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 + .hermes/plugins/golden-plugin/skills/reviewer/scripts/ dir 0755
 + .hermes/plugins/golden-plugin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .mcp.json file 0644 117 1ac1127918b086b5ff075c8653d77f6fd682c2fb75815f9925182c8462af89ed
 + .opencode/ dir 0755
 + .opencode/agents/ dir 0755
-+ .opencode/agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-+ .opencode/agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
++ .opencode/agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
++ .opencode/agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 + .opencode/ai-rulez-bundle.json file 0644 773 ad1864ea97724719488345ae85452b5466b5b32cb068c0902f3e681563120920
-+ .opencode/ai-rulez-content.js file 0644 6127 eb7c3c9e516480428b0143bad0bbe304f7fcc80596210d59beebc7a0e4fd942a
++ .opencode/ai-rulez-content.js file 0644 6127 cdcf254b6cfa8a213bc9b0ec75ffa53e77c1b9839b6ee966b123f9a5869db10f
 + .opencode/commands/ dir 0755
-+ .opencode/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-+ .opencode/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
++ .opencode/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
++ .opencode/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
 + .opencode/plugins/ dir 0755
-+ .opencode/plugins/golden-plugin.js file 0644 1170 e1ccdb57543bd29ac203c33a859f6d25d1b882dd1e5504299c5c2fdf64f0b102
++ .opencode/plugins/golden-plugin.js file 0644 1170 2ddc25b01020b01a53560a5eff09d88b618d3c9689acecdd165e29efbb15d0a5
 + .opencode/skills/ dir 0755
 + .opencode/skills/deployer/ dir 0755
-+ .opencode/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
++ .opencode/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 + .opencode/skills/reviewer/ dir 0755
-+ .opencode/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
++ .opencode/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 + .opencode/skills/reviewer/references/ dir 0755
-+ .opencode/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
++ .opencode/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 + .opencode/skills/reviewer/scripts/ dir 0755
 + .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + agents/ dir 0755
-+ agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-+ agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
++ agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
++ agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 + commands/ dir 0755
-+ commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-+ commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
++ commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
++ commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
 + gemini-extension.json file 0644 249 802be7276969acc1d356cc15ed799a43226bb85e00667546f946e9fd609b2b12
 + kimi.plugin.json file 0644 657 63cc7dc1ef0b0cad243347108bfd4e37e78766259dc61621d04ed9e96dbb7045
 + package.json file 0644 895 c52a964d582039f44f8757d745b2ad86ecdf20fda162d5944a2ddca45d3f1cd8
 + skills/ dir 0755
 + skills/deployer/ dir 0755
-+ skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
++ skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 + skills/reviewer/ dir 0755
-+ skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
++ skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 + skills/reviewer/references/ dir 0755
-+ skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
++ skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 + skills/reviewer/scripts/ dir 0755
 + skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 --- home tree
@@ -239,7 +239,7 @@ WARN  MCP server references a path missing from the plugin source; it will not b
 INFO  Generated plugin artifacts are valid path=$ROOT
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez-generated.json file 0644 10131 417fdf4119e62cdc0cedb2b82e891ba3a8f00b023ca3f83ecdaab45da937f583
+.ai-rulez-generated.json file 0644 10131 4a3928b4fa70d9f4215c9930651c751051115fcfd5c2c862ff749c76ddc4bc08
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -275,90 +275,90 @@ INFO  Generated plugin artifacts are valid path=$ROOT
 .codex-plugin/plugin.json file 0644 574 489bff7458997e2badccbb65eac3bee1f30ba558d0b5940b6d936fdefcee1584
 .cursor-plugin/ dir 0755
 .cursor-plugin/commands/ dir 0755
-.cursor-plugin/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-.cursor-plugin/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
+.cursor-plugin/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
+.cursor-plugin/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
 .cursor-plugin/plugin.json file 0644 358 c46e224092e2aadcef0727ac49b18a10c75cc1d25b59ffdac2ec886eddae205a
 .cursor-plugin/skills/ dir 0755
 .cursor-plugin/skills/deployer/ dir 0755
-.cursor-plugin/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
+.cursor-plugin/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 .cursor-plugin/skills/reviewer/ dir 0755
-.cursor-plugin/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
+.cursor-plugin/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 .cursor-plugin/skills/reviewer/references/ dir 0755
-.cursor-plugin/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
+.cursor-plugin/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 .cursor-plugin/skills/reviewer/scripts/ dir 0755
 .cursor-plugin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .factory-plugin/ dir 0755
 .factory-plugin/plugin.json file 0644 219 1232f3edb9a8738e20a60077e0e39563c9dc98846edfbe3f503ae4df674bdb5c
 .hermes/ dir 0755
 .hermes/package/ dir 0755
-.hermes/package/pyproject.toml file 0644 534 1e5a9ecca210e1b9e456ace6a66b49859eef7043c84d7b09fc6acf9937f59964
+.hermes/package/pyproject.toml file 0644 886 bbd01a1553495516ba075934c6c87a2200d9f68bfaaeb5b15bab4439faddf07a
 .hermes/package/src/ dir 0755
 .hermes/package/src/golden_plugin_hermes_plugin/ dir 0755
-.hermes/package/src/golden_plugin_hermes_plugin/__init__.py file 0644 384 02c23cf26540f028de62aeab63b4f04ed671d8df04dbcb328acef91604ca7aeb
+.hermes/package/src/golden_plugin_hermes_plugin/__init__.py file 0644 384 c475addd7159bf450e976185342c892a5f4bcabd54912e9d1317a1f8b0ea1a6b
 .hermes/package/src/golden_plugin_hermes_plugin/agents/ dir 0755
-.hermes/package/src/golden_plugin_hermes_plugin/agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-.hermes/package/src/golden_plugin_hermes_plugin/agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
+.hermes/package/src/golden_plugin_hermes_plugin/agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
+.hermes/package/src/golden_plugin_hermes_plugin/agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 .hermes/package/src/golden_plugin_hermes_plugin/commands/ dir 0755
-.hermes/package/src/golden_plugin_hermes_plugin/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-.hermes/package/src/golden_plugin_hermes_plugin/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
-.hermes/package/src/golden_plugin_hermes_plugin/hermes.py file 0644 788 5345e747d18d2b6d83c8bc59b334abe79d183092354904a94d9f897374597867
+.hermes/package/src/golden_plugin_hermes_plugin/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
+.hermes/package/src/golden_plugin_hermes_plugin/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
+.hermes/package/src/golden_plugin_hermes_plugin/hermes.py file 0644 788 5c07f1459895eef025d00d31a64fbbd3746824de9b90f82521196e3dab2238c5
 .hermes/package/src/golden_plugin_hermes_plugin/plugin.yaml file 0644 104 1a806b55b2696c6ad4ff43532abdc732cad0dfc4621b9408531b5a4abdf383e9
 .hermes/package/src/golden_plugin_hermes_plugin/skills/ dir 0755
 .hermes/package/src/golden_plugin_hermes_plugin/skills/deployer/ dir 0755
-.hermes/package/src/golden_plugin_hermes_plugin/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
+.hermes/package/src/golden_plugin_hermes_plugin/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/ dir 0755
-.hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
+.hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/references/ dir 0755
-.hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
+.hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/scripts/ dir 0755
 .hermes/package/src/golden_plugin_hermes_plugin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .hermes/plugins/ dir 0755
 .hermes/plugins/golden-plugin/ dir 0755
-.hermes/plugins/golden-plugin/__init__.py file 0644 384 02c23cf26540f028de62aeab63b4f04ed671d8df04dbcb328acef91604ca7aeb
+.hermes/plugins/golden-plugin/__init__.py file 0644 384 c475addd7159bf450e976185342c892a5f4bcabd54912e9d1317a1f8b0ea1a6b
 .hermes/plugins/golden-plugin/agents/ dir 0755
-.hermes/plugins/golden-plugin/agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-.hermes/plugins/golden-plugin/agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
+.hermes/plugins/golden-plugin/agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
+.hermes/plugins/golden-plugin/agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 .hermes/plugins/golden-plugin/commands/ dir 0755
-.hermes/plugins/golden-plugin/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-.hermes/plugins/golden-plugin/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
-.hermes/plugins/golden-plugin/hermes.py file 0644 788 5345e747d18d2b6d83c8bc59b334abe79d183092354904a94d9f897374597867
+.hermes/plugins/golden-plugin/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
+.hermes/plugins/golden-plugin/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
+.hermes/plugins/golden-plugin/hermes.py file 0644 788 5c07f1459895eef025d00d31a64fbbd3746824de9b90f82521196e3dab2238c5
 .hermes/plugins/golden-plugin/plugin.yaml file 0644 104 1a806b55b2696c6ad4ff43532abdc732cad0dfc4621b9408531b5a4abdf383e9
 .hermes/plugins/golden-plugin/skills/ dir 0755
 .hermes/plugins/golden-plugin/skills/deployer/ dir 0755
-.hermes/plugins/golden-plugin/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
+.hermes/plugins/golden-plugin/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 .hermes/plugins/golden-plugin/skills/reviewer/ dir 0755
-.hermes/plugins/golden-plugin/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
+.hermes/plugins/golden-plugin/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 .hermes/plugins/golden-plugin/skills/reviewer/references/ dir 0755
-.hermes/plugins/golden-plugin/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
+.hermes/plugins/golden-plugin/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 .hermes/plugins/golden-plugin/skills/reviewer/scripts/ dir 0755
 .hermes/plugins/golden-plugin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .mcp.json file 0644 117 1ac1127918b086b5ff075c8653d77f6fd682c2fb75815f9925182c8462af89ed
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
-.opencode/agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-.opencode/agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
+.opencode/agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
+.opencode/agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 .opencode/ai-rulez-bundle.json file 0644 773 ad1864ea97724719488345ae85452b5466b5b32cb068c0902f3e681563120920
-.opencode/ai-rulez-content.js file 0644 6127 eb7c3c9e516480428b0143bad0bbe304f7fcc80596210d59beebc7a0e4fd942a
+.opencode/ai-rulez-content.js file 0644 6127 cdcf254b6cfa8a213bc9b0ec75ffa53e77c1b9839b6ee966b123f9a5869db10f
 .opencode/commands/ dir 0755
-.opencode/commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-.opencode/commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
+.opencode/commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
+.opencode/commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
 .opencode/plugins/ dir 0755
-.opencode/plugins/golden-plugin.js file 0644 1170 e1ccdb57543bd29ac203c33a859f6d25d1b882dd1e5504299c5c2fdf64f0b102
+.opencode/plugins/golden-plugin.js file 0644 1170 2ddc25b01020b01a53560a5eff09d88b618d3c9689acecdd165e29efbb15d0a5
 .opencode/skills/ dir 0755
 .opencode/skills/deployer/ dir 0755
-.opencode/skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
+.opencode/skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 .opencode/skills/reviewer/ dir 0755
-.opencode/skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
+.opencode/skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 .opencode/skills/reviewer/references/ dir 0755
-.opencode/skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
+.opencode/skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 agents/ dir 0755
-agents/architect.md file 0644 340 01c332b0ad1c91d12ed32997f4267e80888d5e6e489d3bc0cbbd313efde5363b
-agents/tester.md file 0644 325 9973182b2ec8b787f226689e0b73c451307f6fc87e7e54408c9b6ab520fcc0a3
+agents/architect.md file 0644 340 b6478674be5003cb20c0a29b98dfd147156fb06fdf1055ebf171fba90b063d63
+agents/tester.md file 0644 325 0f552d7fbf44a6d2561eb1559db87e5d67d94f447880fdf5379e0a79187bc348
 commands/ dir 0755
-commands/build.md file 0644 329 08da2d2440566491da76cc418ab74c3b188e594799a2284e467bc09bd7f092e3
-commands/ship.md file 0644 305 639dbb094e604f567ad26fdcb289f5419d0f4b52a735d59782c8d25b667d4e80
+commands/build.md file 0644 329 a87401f40612c6b446a8c13431e17a8d6e6fe50bff374259ebe538820a29371d
+commands/ship.md file 0644 305 67c6d31031576b6d5966a00e1de9e42bd0109771a520e730b239df9b79aeb935
 gemini-extension.json file 0644 249 802be7276969acc1d356cc15ed799a43226bb85e00667546f946e9fd609b2b12
 kimi.plugin.json file 0644 657 63cc7dc1ef0b0cad243347108bfd4e37e78766259dc61621d04ed9e96dbb7045
 package.json file 0644 895 c52a964d582039f44f8757d745b2ad86ecdf20fda162d5944a2ddca45d3f1cd8
@@ -366,11 +366,11 @@ scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 skills/ dir 0755
 skills/deployer/ dir 0755
-skills/deployer/SKILL.md file 0644 326 aba2dacfec229e372c53dd9aecb12521da1ce0542741732cfb8c3c4f47363e5a
+skills/deployer/SKILL.md file 0644 326 63212da76d068bee48fbc9bf2406ae7fdc441d3a8bbea82ce93766c9e1e00c8b
 skills/reviewer/ dir 0755
-skills/reviewer/SKILL.md file 0644 331 f86fca0c41b0445c7b1959f08c81f2fa54cf8cc3d13c3843d3bb601f26a61096
+skills/reviewer/SKILL.md file 0644 331 820b4bc6be3a1dec883cbdf51b97bc21b6efe86979eee12befc4acec25fc1776
 skills/reviewer/references/ dir 0755
-skills/reviewer/references/checklist.md file 0644 271 2b3d333dcc5e1719aa8a36fde392bc237c159f63a68d11b8c83f91812aacbd71
+skills/reviewer/references/checklist.md file 0644 271 0ce54ecc06e29b87aba255e3c52b6eeabc491f8665a1c44ffa893ebac7ff5c8d
 skills/reviewer/scripts/ dir 0755
 skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 --- home tree

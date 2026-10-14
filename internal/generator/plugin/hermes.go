@@ -111,6 +111,8 @@ func hermesPyproject(m *Manifest, moduleName string) ([]byte, error) {
 			Name           string                       `toml:"name"`
 			Version        string                       `toml:"version"`
 			Description    string                       `toml:"description"`
+			License        string                       `toml:"license,omitempty"`
+			Readme         map[string]string            `toml:"readme"`
 			RequiresPython string                       `toml:"requires-python"`
 			Dependencies   []string                     `toml:"dependencies,omitempty"`
 			Keywords       []string                     `toml:"keywords,omitempty"`
@@ -134,13 +136,28 @@ func hermesPyproject(m *Manifest, moduleName string) ([]byte, error) {
 	document.Project.Name = m.Name + "-hermes-plugin"
 	document.Project.Version = pythonPackageVersion(m.Version)
 	document.Project.Description = m.Description
+	document.Project.License = m.License
+	document.Project.Readme = map[string]string{
+		"text": fmt.Sprintf("# %s Hermes plugin\n\n%s\n\n"+
+			"Install this package in the same Python environment as Hermes Agent:\n\n"+
+			"```sh\npython -m pip install %s-hermes-plugin\n```\n\n"+
+			"Enable the plugin through Hermes Agent's plugin configuration. "+
+			"Available registrations depend on the plugin's authored Hermes adapter.\n", m.Name, m.Description, m.Name),
+		"content-type": "text/markdown",
+	}
 	document.Project.RequiresPython = requiresPython
 	if m.Hermes != nil {
 		document.Project.Dependencies = append([]string(nil), m.Hermes.Dependencies...)
 	}
 	document.Project.Keywords = append([]string(nil), m.Keywords...)
 	document.Project.EntryPoints = map[string]map[string]string{"hermes_agent.plugins": {m.Name: moduleName}}
-	document.Project.URLs = map[string]string{"Homepage": m.Homepage, "Repository": m.Repository}
+	document.Project.URLs = make(map[string]string)
+	if m.Homepage != "" {
+		document.Project.URLs["Homepage"] = m.Homepage
+	}
+	if m.Repository != "" {
+		document.Project.URLs["Repository"] = m.Repository
+	}
 	document.Tool.Hatch.Build.Targets.Wheel.Packages = []string{"src/" + moduleName}
 	content, err := toml.Marshal(document)
 	if err != nil {
