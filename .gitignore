@@ -175,3 +175,7 @@ benchmark-results.txt
 bench-subset.txt
 
 .codex/
+
+# ~keep Team governance CI is source; local hook channels are machine preferences.
+!.github/workflows/ai-rulez-validation.yml
+poly.local.toml

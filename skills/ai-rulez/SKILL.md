@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "5.0.0"
+  version: "5.3.0"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
@@ -39,9 +39,16 @@ pnpm dlx ai-rulez@latest
 # Python (no install)
 uvx ai-rulez
 
-# Go (the module path needs /v5; without it @latest resolves to an old 1.x build)
-go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
+# Source builds (Go + Task; setup fetches and verifies the pinned native library)
+# Checkout the source revision pinned in this repository's CI, then:
+task build
 ```
+
+Package commands use the published release. Source builds also need the pinned
+Liter-LLM native library: `task build` provisions it through
+`scripts/setup-liter-llm.sh`; a bare `go install` does not do that setup.
+See the source-build requirement in Verification and distribution for fixes
+not yet included in the published 5.3.0 package.
 
 ## Quick Start
 
@@ -92,7 +99,8 @@ Supported and planned standards, with pinned versions and test status, are in
 
 ```text
 .ai-rulez/
-  config.toml          # Main configuration
+  config.toml          # Governance configuration
+  config.plugins.toml  # Plugin and marketplace layer, selected by default_layers
   rules/               # Governance rules (.md files with frontmatter)
   context/             # Contextual information (.md files)
   skills/              # Specialized capabilities (name/SKILL.md plus resources)
@@ -108,12 +116,18 @@ Supported and planned standards, with pinned versions and test status, are in
 
 ## config.toml
 
+Keep governance in `config.toml`. Put consumer `[[plugins]]`/`[[marketplaces]]` and authoring
+`[plugin]`/`[marketplace]` blocks in `config.plugins.toml`, and select that layer with
+`default_layers = ["plugins"]` before the first table in `config.toml`. Plugin authoring
+can use a separate `plugin/.ai-rulez/` tree so public product skills exclude contributor rules.
+
 ```toml
 version = "5.0"
 name = "my-project"
 description = "Project description"
 
 presets = ["claude", "cursor", "gemini"]
+default_layers = ["plugins"]
 default = "backend"
 builtins = ["go", "security", "testing"]
 
@@ -237,30 +251,30 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 52 presets are available (`ai-rulez init` writes the list into a comment in the new `config.toml`): `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`, `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`, `dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`, plus the opt-in `okf` preset (an Open Knowledge Format bundle in `docs/okf/`, see `ai-rulez export okf`). The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
 
-`windsurf` is now `devin` and `continue-dev` was removed; `ai-rulez doctor` reports both. `docs/harnesses.md` has the per-preset feature matrix (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
+`windsurf` is now `devin` and `continue-dev` was removed; `ai-rulez doctor` reports both. [harnesses.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/harnesses.md) has the per-preset feature matrix (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
 
 ## Hooks, Permissions, Checks and User Scope
 
-- `[[hooks]]` in `config.toml` renders into the native hooks file of 36 harnesses (a generated plugin module for `opencode`, `kilo`, `mimocode`, `pi` and `amp`). Events, matchers and timeouts are translated per harness; a group a harness cannot express is skipped with a warning. See `docs/settings.md`.
-- `[permissions]` (`allow`, `ask`, `deny`, Claude Code rule syntax) is translated for 24 harnesses. A rule that cannot be expressed is skipped, never widened, and an unenforced deny is reported. See `docs/permissions.md`.
-- Checks are code-review guidelines in `.ai-rulez/checks/<name>.md` (frontmatter `description`, `severity`, `tools`, `targets`), rendered for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and `gitlab-duo`. Manage them with `ai-rulez add|remove|list check`. See `docs/checks.md`.
-- `ai-rulez generate --user` renders a user config (`~/.config/ai-rulez`) into the home directories of 47 harnesses; `clean --user` removes what it wrote. See `docs/user-scope.md`.
+- `[[hooks]]` in `config.toml` renders into the native hooks file of 36 harnesses (a generated plugin module for `opencode`, `kilo`, `mimocode`, `pi` and `amp`). Events, matchers and timeouts are translated per harness; a group a harness cannot express is skipped with a warning. See [settings.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/settings.md).
+- `[permissions]` (`allow`, `ask`, `deny`, Claude Code rule syntax) is translated for 24 harnesses. A rule that cannot be expressed is skipped, never widened, and an unenforced deny is reported. See [permissions.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/permissions.md).
+- Checks are code-review guidelines in `.ai-rulez/checks/<name>.md` (frontmatter `description`, `severity`, `tools`, `targets`), rendered for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and `gitlab-duo`. Manage them with `ai-rulez add|remove|list check`. See [checks.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/checks.md).
+- `ai-rulez generate --user` renders a user config (`~/.config/ai-rulez`) into the home directories of 47 harnesses; `clean --user` removes what it wrote. See [user-scope.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/user-scope.md).
 - Settings files you also edit (JSON, JSONC, TOML, YAML) are merged key by key, so your own keys and comments survive `generate` and `clean`.
 - `[guard] generated = true` adds a PreToolUse hook (`ai-rulez guard`) that blocks agent edits to generated files and points at the source under `.ai-rulez/`.
 
 ## Lock, Updates and Verification
 
-- `ai-rulez lock` writes `ai-rulez.lock`: commits and digests of remote includes, installed skills and skill sources, plus every authored item and generated output. It is enforced whenever the file exists (`[lock] enforce = false` opts out). `lock --check` verifies offline, `--diff` previews, `--subject` prints the digest to sign with cosign, `generate --locked`/`--frozen` are the CI modes. Exit codes: `0` ok, `1` could not run, `2` drift, `3` served skills left unpinned by the security scan. See `docs/lockfile.md`.
+- `ai-rulez lock` writes `ai-rulez.lock`: commits and digests of remote includes, installed skills and skill sources, plus every authored item and generated output. It is enforced whenever the file exists (`[lock] enforce = false` opts out). `lock --check` verifies offline, `--diff` previews, `--subject` prints the digest to sign with cosign, `generate --locked`/`--frozen` are the CI modes. Exit codes: `0` ok, `1` could not run, `2` drift, `3` served skills left unpinned by the security scan. See [lockfile.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/lockfile.md).
 - Sources accept `version = "^1.2"`; `ai-rulez lock --outdated` lists newer tags and `ai-rulez update` moves range pins (codes `AR730`, `AR731`, `AR732`, `AR735`).
-- `ai-rulez validate` runs deep content checks with stable `AR` codes (`--fix`, `--since`, `--baseline`, `--format json|sarif|github|junit|markdown`); `ai-rulez scan` runs only the security checks; `validate --explain AR001` explains a rule. See `docs/strict-validation.md`.
+- `ai-rulez validate` runs deep content checks with stable `AR` codes (`--fix`, `--since`, `--baseline`, `--format json|sarif|github|junit|markdown`); `ai-rulez scan` runs only the security checks; `validate --explain AR001` explains a rule. See [strict-validation.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/strict-validation.md).
 - `[[verifiers]]` and `.ai-rulez/verifiers/*.toml` declare deterministic repo checks run by `ai-rulez verifiers run` (`--since`, `--staged`, `--format sarif|junit`).
 - `ai-rulez sbom` prints a CycloneDX bill of materials, `ai-rulez catalog` lists every item with owner, version, tokens and lock status (`--html <dir>` writes a static site), `ai-rulez tokens` and `cost` report prompt-token cost, `ai-rulez search <query>` ranks skills.
 - `ai-rulez convert` imports existing tool files, a rulesync project or a `skills-lock.json` into `.ai-rulez/` with a lossiness report.
 
 ## Roles and Dynamic Skills
 
-- `[[roles]]` map a job to a slice of the content (`domains`, `include`/`exclude` selectors, `skill_mode`); `generate --role <name>` renders it and `ai-rulez roles list|show|resolve` inspects it. See `docs/roles.md`.
-- `delivery: static|served|both` on a skill (or `[skills] delivery`) serves a skill over MCP on demand instead of writing it to the harness trees: run `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`, `list_skill_resources`). `[[skill_sources]]` serve skills from a git repository or directory. See `docs/mcp-server.md`.
+- `[[roles]]` map a job to a slice of the content (`domains`, `include`/`exclude` selectors, `skill_mode`); `generate --role <name>` renders it and `ai-rulez roles list|show|resolve` inspects it. See [roles.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/roles.md).
+- `delivery: static|served|both` on a skill (or `[skills] delivery`) serves a skill over MCP on demand instead of writing it to the harness trees: run `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`, `list_skill_resources`). `[[skill_sources]]` serve skills from a git repository or directory. See [mcp-server.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/mcp-server.md).
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 
@@ -280,4 +294,20 @@ target paths are gitignored (`gitignore = true` or `generate --gitignore` adds t
 
 ## Plugins and Marketplaces
 
-ai-rulez can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (no output file is written for them: `generate` warns that `[[plugins]]` has no effect; enable plugins through `[claude.settings]` for Claude Code and `.codex/config.toml` for Codex).
+ai-rulez can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, Hermes, Pi, Agent Plugins and Copilot via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (no output file is written for them: `generate` warns that `[[plugins]]` has no effect; enable plugins through `[claude.settings]` for Claude Code and `.codex/config.toml` for Codex).
+
+## Verification and distribution
+
+Use `migrate okf --check`, `validate --strict --no-local`, `lock --check`, and
+`generate --check --no-local --strict-config` to check the authored configuration.
+For published plugins, use `verify --plugin` before regenerating to detect existing
+drift; after intentional regeneration, check it again and verify public skill exports.
+Package from a committed tree with `publish --tag <release-tag>`, then run
+`publish verify <dist-directory>` on the actual archive. A successful local package
+does not publish a release or registry package.
+
+This repository currently validates with a reviewed 5.3.0 source build pinned in CI.
+Stock 5.3.0 lacks fixes for registered marketplace members, both-layout MCP ownership,
+OpenCode skill IDs and shared include-cache locking. Use the CI-pinned source build
+for those features until a released version includes the fixes; keep that distinction
+when reporting installation or validation results.
