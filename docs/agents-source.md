@@ -101,7 +101,8 @@ agents_md_split = true
   line before the next heading (the text before the first heading for `agents`). `edit context <item>` and the MCP
   `update_context` replace that section with the content you send, which is the whole section as `show` prints it,
   heading line included; the rest of the file stays byte for byte, the write is atomic and the file's line endings,
-  mode and BOM are kept. Content that would add or drop a `##` heading, rename the section or be empty is refused and
+  mode and BOM are kept, and so is how the file ends: updating the last section of a file with or without a final
+  newline, LF or CRLF, leaves that ending as it was. Content that would add or drop a `##` heading, rename the section or be empty is refused and
   `AGENTS.md` is left alone, as is a symlinked `AGENTS.md`. Without the setting the item `agents` is the whole file:
   `show` and `read_context` return all of it, and `edit`, `update_context` and `remove` refuse (it is your file).
 - The setting needs `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`); `validate` rejects it
