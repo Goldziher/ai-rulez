@@ -190,12 +190,16 @@ func validatePreRun() error {
 }
 
 // runRecursiveValidate validates every discovered config, reports all failures,
-// and returns 1 if any config is invalid (0 otherwise, including when none exist).
+// and returns 1 if any config is invalid (0 otherwise). A tree with no config is
+// linted as an implicit root by the content checks (see runImplicitRecursive).
 func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting; splitting it hides the flow
 	// The same discovery `generate --recursive` counts, so the two summaries
 	// agree on how many roots the tree holds.
 	configFiles := recursiveConfigRoots()
 	if len(configFiles) == 0 {
+		if validateStrict {
+			return runImplicitRecursive()
+		}
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return 0
 	}
@@ -274,6 +278,23 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
 	return strictCode
+}
+
+// runImplicitRecursive is what a recursive run does when the tree holds no
+// configuration: it lints the implicit root exactly as a run without --recursive
+// would, so a CI that adds --recursive never passes a repository unchecked.
+func runImplicitRecursive() int {
+	cfg, err := loadLintConfig(cmdContext(), config.WithFrontmatterErrors())
+	if err != nil {
+		renderError(os.Stderr, err)
+		return 1
+	}
+	cfg.DeferMalformedFrontmatter = true
+	if err := cfg.Validate(); err != nil {
+		renderError(os.Stderr, err)
+		return 1
+	}
+	return runStrictSingle(cfg)
 }
 
 // recursiveValidateWorkers is how many roots a recursive validate checks at once.

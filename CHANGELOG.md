@@ -16,6 +16,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`validate --recursive` in a repository with no configuration no longer passes unchecked.** It printed `No configuration files found` and exited 0 even with a secret in `a/AGENTS.md`. It now lints the implicit root exactly as the run without `--recursive` does (`--path` and `--glob` honoured), so the findings and exit codes match; `--config-only` still reports that no configuration was found.
 - **`schema/validate-report.schema.json` declares the finding key `file`, not `path`.** `validate --format json` and `scan --format json` have always emitted `file`; the schema described a key that never appeared. A test now compares the keys findings emit with the schema, and checks that SARIF carries `source` in `results[].properties`.
 - **The refusal to lint a home or filesystem-root directory no longer suggests `--path` or `--glob`.** Those flags do not lift the refusal; the hint now says to run the command from inside a project directory.
 - **A nested `AGENTS.md` in a directory named with glob metacharacters is scoped to that directory only.** `app[1]/AGENTS.md` produced the scope `app[1]/**`, which matches `app1`; the directory name is now escaped (`app\[1\]/**`).
