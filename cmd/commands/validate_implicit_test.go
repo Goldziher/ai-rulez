@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -176,4 +177,20 @@ func TestExplicitPathReplacesDetectionInAnImplicitRun(t *testing.T) {
 	}
 	assert.True(t, codes[lint.CodePluginManifest], "the named directory is linted")
 	assert.False(t, codes[lint.CodeSecretDetected], "nothing is detected implicitly when files are named: %v", rep.Findings)
+}
+
+func TestImplicitRunRefusesTheHomeDirectoryWithoutSuggestingPathFlags(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Chdir(home)
+
+	_, err := loadLintConfig(t.Context())
+
+	require.Error(t, err)
+	oe, ok := oops.AsOops(err)
+	require.True(t, ok)
+	assert.Contains(t, oe.Hint(), "inside a project directory")
+	assert.NotContains(t, oe.Hint(), "--path")
+	assert.NotContains(t, oe.Hint(), "--glob")
 }
