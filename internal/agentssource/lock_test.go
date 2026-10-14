@@ -9,6 +9,22 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 )
 
+func TestLockPinsANestedAGENTSMD(t *testing.T) {
+	// Arrange
+	root := nestedProject(t, map[string]string{"svc/AGENTS.md": "# Service\n\nText.\n"})
+
+	// Act
+	snap, err := contentlock.Compute(load(t, root), contentlock.Options{})
+	require.NoError(t, err)
+
+	// Assert
+	paths := map[string]string{}
+	for _, item := range snap.Items {
+		paths[item.Kind+":"+item.ID] = item.Path
+	}
+	assert.Equal(t, "svc/AGENTS.md", paths["context:agents-svc"])
+}
+
 func TestLockPinsAGENTSMDAndTheAgentsTree(t *testing.T) {
 	for _, layout := range layouts {
 		t.Run(layout.name, func(t *testing.T) {

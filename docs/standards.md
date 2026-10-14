@@ -38,7 +38,8 @@ Antigravity and Amp conventions; `commands`, `context` and `domains` are ai-rule
 [.agents as a source](agents-source.md); `TestGenerateTranslatesTheSourceAndLeavesItAlone` and the `agents-source`
 goldens back the claim that the standards' files are read and never rewritten. AGENTS.md defines no internal
 structure, so reading it as one item per `##` heading (`agents_md_split = true`) is an ai-rulez convention, off by
-default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`.
+default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`. Nested `AGENTS.md` files are read as the standard
+describes them, a file per directory applying to that directory's subtree (`TestNestedAGENTSMDIsScopedContext`).
 
 ## Reading a status
 
