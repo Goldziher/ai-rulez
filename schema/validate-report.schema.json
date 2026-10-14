@@ -34,7 +34,7 @@
           "message": {
             "type": "string"
           },
-          "path": {
+          "file": {
             "type": "string"
           },
           "line": {
