@@ -52,7 +52,11 @@ becomes `docs.json`:
   each one it skips. A server with `transport = "http"` (or a `url` and no transport) is `streamable-http`; `sse` stays `sse`.
 - **No secrets.** Header values and environment values are never written. Each header becomes a required input named after
   the header, marked `isSecret` when its name is credential-like (such as `Authorization`), it is listed as secret, or its
-  value is a `${VAR}` reference. A URL with credentials is refused.
+  value is a `${VAR}` reference. A URL with credentials is refused. A server whose URL has a query, a fragment or an
+  unresolved `${...}` placeholder is skipped with a note. The URL path is otherwise published as written, so a key
+  carried in it is a leak: a path segment that looks like a credential (a prefix such as `sk-`, `ghp_` or `AKIA`, a
+  shape the security scan knows, or an opaque token of 32 or more letters and digits, which includes a UUID) also
+  skips the server, and the note never repeats the URL.
 - **Name.** `<namespace>/<server>`, where the server part has any character outside letters, digits, `.`, `_` and `-`
   replaced by `-`. The namespace is the emitter option `namespace`, else the reversed `[ard]` publisher (`acme.example`
   is `example.acme`), else derived from the repository (`owner/name` and `github.com/owner/name` are `io.github.owner`; `host/owner/name` on another host is the reversed host followed by the owner, such as `test.acme.git.acme`).

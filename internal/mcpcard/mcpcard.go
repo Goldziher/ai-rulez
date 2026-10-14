@@ -20,6 +20,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
 // Identifiers of the card.
@@ -199,7 +201,11 @@ func remoteType(s *Server) (typ string, remote bool, err error) {
 
 // unpublishableURL says why a url cannot be written into a public card as it
 // is: a query or fragment usually carries a key, and an unresolved ${...}
-// placeholder would be published verbatim. "" means it can.
+// placeholder would be published verbatim. A path segment that looks like a
+// credential (a known key prefix, a shape the security scan knows, or a long
+// opaque token) is refused too, since some hosted servers put the key in the
+// path. The path is otherwise published as written. "" means it can; the
+// reason never repeats the URL.
 func unpublishableURL(raw string) string {
 	switch {
 	case strings.Contains(raw, "${"):
@@ -207,7 +213,64 @@ func unpublishableURL(raw string) string {
 	case strings.ContainsAny(raw, "?#"):
 		return "has a query or fragment, which may carry a credential"
 	}
+	if u, err := url.Parse(raw); err == nil {
+		for _, seg := range strings.Split(u.Path, "/") {
+			if looksLikeCredential(seg) {
+				return "has a path segment that looks like a credential"
+			}
+		}
+	}
 	return ""
+}
+
+const (
+	// credentialPrefixMinRest is how many characters must follow a key prefix
+	// for a path segment to count as a key (sk-abc123 is one, sk-ml is not).
+	credentialPrefixMinRest = 6
+	// opaqueTokenMinLen is the length from which a path segment of only
+	// token characters, mixing letters and digits, counts as a key.
+	opaqueTokenMinLen = 32
+)
+
+// credentialPrefixes are the prefixes API keys start with.
+func credentialPrefixes() []string {
+	return []string{
+		"sk-", "ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "glpat-", "npm_",
+		"xoxa-", "xoxb-", "xoxp-", "xoxr-", "xoxs-", "AKIA", "ASIA", "AIza", "eyJ",
+	}
+}
+
+// looksLikeCredential reports whether one decoded URL path segment is probably
+// a secret: something the security scan recognizes, a known key prefix followed
+// by letters and digits, or a long opaque token. Plain words and short ids pass.
+func looksLikeCredential(seg string) bool {
+	if seg == "" {
+		return false
+	}
+	if secretpat.Redact(seg, "x") != seg {
+		return true
+	}
+	for _, prefix := range credentialPrefixes() {
+		if rest, ok := strings.CutPrefix(seg, prefix); ok && len(rest) >= credentialPrefixMinRest && secretpat.HasLetterAndDigit(rest) {
+			return true
+		}
+	}
+	return isOpaqueToken(seg)
+}
+
+// isOpaqueToken reports whether seg is a long run of token characters that mixes
+// letters and digits.
+func isOpaqueToken(seg string) bool {
+	if len(seg) < opaqueTokenMinLen || !secretpat.HasLetterAndDigit(seg) {
+		return false
+	}
+	for _, c := range seg {
+		isAlnum := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+		if !isAlnum && !strings.ContainsRune("-_.~", c) {
+			return false
+		}
+	}
+	return true
 }
 
 func checkURL(s *Server, httpsOnly bool) error {
