@@ -13,7 +13,7 @@ import (
 
 // composeNPMPackages merges runtime resource metadata before path de-duplication;
 // otherwise a combined Pi/OpenCode bundle silently loses one runtime's manifest.
-func composeNPMPackages(outputs []config.OutputFile, baseDir string) ([]config.OutputFile, error) {
+func composeNPMPackages(outputs []config.OutputFile, baseDir string, mergeAuthored bool) ([]config.OutputFile, error) {
 	manifestPath := filepath.Join(baseDir, "package.json")
 	count := 0
 	for _, out := range outputs {
@@ -38,6 +38,9 @@ func composeNPMPackages(outputs []config.OutputFile, baseDir string) ([]config.O
 		if merged == nil {
 			merged = pkg
 			continue
+		}
+		if mergeAuthored {
+			refreshOpenCodeFields(merged, pkg)
 		}
 		if err := mergeNPMPackage(merged, pkg); err != nil {
 			return nil, err
@@ -89,4 +92,27 @@ func mergeNPMPackage(merged, pkg map[string]any) error {
 		}
 	}
 	return nil
+}
+
+func refreshOpenCodeFields(first, second map[string]any) {
+	pi, openCode := first, second
+	if _, ok := pi["pi"]; !ok {
+		pi, openCode = second, first
+	}
+	for key, value := range openCode {
+		if key == "files" || key == "keywords" {
+			continue
+		}
+		if key == "dependencies" {
+			dependencies, ok := pi[key].(map[string]any)
+			if ok {
+				for name, version := range value.(map[string]any) {
+					dependencies[name] = version
+				}
+				openCode[key] = dependencies
+				continue
+			}
+		}
+		pi[key] = value
+	}
 }
