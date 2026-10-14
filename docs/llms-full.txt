@@ -12542,8 +12542,8 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
   symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
   matches at any depth). A glob that matches nothing is reported on stderr.
 - **Nothing you name is dropped silently.** A file picked with `--path`, `--glob` or `[lint] paths` that is not
-  linted is named on stderr as `<file>: not linted (<reason>)` and listed in the `notices` array of the JSON report
-  (`validate --format json`, `scan --format json`). The reasons are: larger than 2 MiB, a binary file, not a regular
+  linted is named on stderr as `<file>: not linted (<reason>)` and listed once in the `notices` array of the JSON report
+  (`validate --format json`, `scan --format json`; a file that two `--recursive` roots both skipped is reported once). The reasons are: larger than 2 MiB, a binary file, not a regular
   file, a symlink that resolves outside the project, a generated file (lint it with `--outputs`), or a skill that
   could not be loaded. Files found below a `--path` directory that are no content are only counted in one summary
   line. A file named with `--path` that cannot be read, is not a regular file or is over 2 MiB fails the run with
