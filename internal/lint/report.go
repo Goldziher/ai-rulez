@@ -48,6 +48,9 @@ type Combined struct {
 	// Analyzers lists the analyzers that ran when the run was narrowed to some
 	// of them (--analyzer or [lint] analyzers); the other analyzers did not run.
 	Analyzers []string `json:"analyzers,omitempty"`
+	// Notices lists the picked files that were not linted (--path, --glob,
+	// [lint] paths), each as "<file>: not linted (<reason>)".
+	Notices []string `json:"notices,omitempty"`
 }
 
 // Combine merges per-root reports into one document.
@@ -56,6 +59,7 @@ func Combine(reports []*Report) Combined {
 	for _, r := range reports {
 		c.Roots = append(c.Roots, r.Root)
 		c.Findings = append(c.Findings, r.Findings...)
+		c.Notices = append(c.Notices, r.Notices...)
 		c.addScope(r.Scope)
 		for _, a := range r.Analyzers {
 			if !slices.Contains(c.Analyzers, a) {

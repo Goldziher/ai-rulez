@@ -71,6 +71,13 @@
         }
       }
     },
+    "notices": {
+      "description": "Picked files that were not linted (--path, --glob, [lint] paths), each as \"<file>: not linted (<reason>)\". Absent when every picked file was linted.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "baseline": {
       "type": "object"
     },

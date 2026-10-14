@@ -73,6 +73,9 @@ type Report struct {
 	// [lint] analyzers); nil when every analyzer ran. Baseline entries of the
 	// analyzers that did not run are neither stale nor rewritten.
 	Analyzers []string `json:"-"`
+	// Notices are the lines about picked files that were not linted (--path,
+	// --glob, [lint] paths): "<file>: not linted (<reason>)".
+	Notices []string `json:"-"`
 	// External records that the run executed the [[lint.external]] scanners; a
 	// baseline entry for a scanner finding says nothing about a run without them.
 	External bool `json:"-"`
@@ -359,6 +362,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		}
 	}
 	r.checkOutputs()
+	r.unit(unitOf("plain-targets", AnalyzerSecurity), r.scanPlainTargets)
 	r.unit(depUnitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
 	r.unit(unitOf("mcp-command", AnalyzerMCP), r.checkMCP)
 	r.unit(depUnitOf("settings-hooks", AnalyzerHooks), func() { r.checkHooks(baseAbs) })
@@ -401,7 +405,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		return a.Code < b.Code
 	})
 	assignIdentity(r.findings, tree, r.cwd)
-	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
+	rep := &Report{Root: r.display(baseAbs), Notices: r.targets.Notices(), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
 		Units: map[string]int{}, unitRuns: r.units, External: so.External}
 	for name, u := range r.units {
 		rep.Units[name] = u.count

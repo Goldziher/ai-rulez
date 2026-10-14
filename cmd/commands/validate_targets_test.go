@@ -3,6 +3,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/pflag"
@@ -112,6 +113,41 @@ func TestStrictLintRefusesAPathOutsideTheProject(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "outside the project root")
+}
+
+func TestNamedEnvFileIsScannedForSecretsAndUnlintedPicksAreReported(t *testing.T) {
+	implicitProject(t, map[string]string{
+		".env":      "API_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789\n",
+		"blob.bin":  "ab\x00cd",
+		"clean.txt": "nothing here\n",
+	})
+	setTargetFlags(t, []string{".env"}, []string{"*.bin"})
+	cfg, err := loadLintConfig(t.Context())
+	require.NoError(t, err)
+
+	var rep *lint.Report
+	_, stderr := capture(t, func() {
+		rep, err = strictLint(t.Context(), cfg)
+	})
+
+	require.NoError(t, err)
+	got := findingsOf(rep, lint.CodeSecretDetected)
+	require.Len(t, got, 1, "%v", rep.Findings)
+	assert.Equal(t, ".env", got[0].File)
+	assert.Contains(t, stderr, "blob.bin: not linted (binary file)")
+	assert.Equal(t, []string{"blob.bin: not linted (binary file)"}, rep.Notices)
+}
+
+func TestNamedFileThatCannotBeReadFailsTheRun(t *testing.T) {
+	implicitProject(t, map[string]string{".env": strings.Repeat("A", 3<<20)})
+	setTargetFlags(t, []string{".env"}, nil)
+	cfg, err := loadLintConfig(t.Context())
+	require.NoError(t, err)
+
+	_, err = strictLint(t.Context(), cfg)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), ".env (larger than 2 MiB)")
 }
 
 func TestTargetFlagsAreStrictOnly(t *testing.T) {

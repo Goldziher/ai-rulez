@@ -1,6 +1,8 @@
 package lint
 
 import (
+	"strings"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
@@ -33,6 +35,24 @@ func (r *runner) addTargetItems() {
 		}
 		have[gitutil.Resolve(f.Abs)] = true
 		r.addItems(top, f.Kind, "", []config.ContentFile{*f.Content})
+	}
+}
+
+// scanPlainTargets runs the credential rule over the text files a user named
+// that are no content kind (.env, YAML, ...): nothing else about them is judged.
+func (r *runner) scanPlainTargets() {
+	if r.targets == nil {
+		return
+	}
+	for i := range r.targets.Plain {
+		p := &r.targets.Plain[i]
+		raw := string(p.Data)
+		if _, ok := r.docs[p.Abs]; !ok {
+			r.docs[p.Abs] = parseDoc(raw)
+		}
+		for n, line := range strings.Split(strings.ReplaceAll(raw, "\r\n", "\n"), "\n") {
+			r.scanSecrets(p.Abs, n+1, line)
+		}
 	}
 }
 
