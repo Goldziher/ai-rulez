@@ -98,6 +98,19 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
   repository root once symlinks are followed: a path that leaves it is an error, and a file reached through a
   symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
   matches at any depth). A glob that matches nothing is reported on stderr.
+- **Nothing you name is dropped silently.** A file picked with `--path`, `--glob` or `[lint] paths` that is not
+  linted is named on stderr as `<file>: not linted (<reason>)` and listed in the `notices` array of the JSON report
+  (`validate --format json`, `scan --format json`). The reasons are: larger than 2 MiB, a binary file, not a regular
+  file, a symlink that resolves outside the project, a generated file (lint it with `--outputs`), or a skill that
+  could not be loaded. Files found below a `--path` directory that are no content are only counted in one summary
+  line. A file named with `--path` that cannot be read, is not a regular file or is over 2 MiB fails the run with
+  exit 1 (it could not be checked, so no verdict is given), as does a path that does not exist or leaves the project;
+  the same file matched by a `--glob` is a notice only, so a broad glob cannot fail on one stray log.
+- **Text of any kind gets the secret scan.** A text file you name with `--path` or `--glob` that is no content kind
+  (`.env`, a YAML or TOML file, `notes.txt`, a JSON file that is not a plugin, marketplace, hook or MCP file) is read
+  as plain text (at most 2 MiB, never through a symlink) and checked for credentials (`AR001`, and your
+  `secret_patterns`); no other rule judges it. A directory given to `--path` lints only the kinds above, so name
+  `.env`-style files individually or by glob.
 - **One file, one spelling.** On a case-insensitive file system (the default on macOS and Windows) `--path agents.md`
   is the file `AGENTS.md`: it is classified by the spelling stored on disk and is linted once, however it is named.
 - **Untracked files count.** A directory or glob takes the tracked files and the untracked files that git does not

@@ -103,7 +103,7 @@ func ValidateAnalyzerNames(names []string) []string {
 // only code that reports AR001. A SecretsOnly run keeps just these.
 func isSecretUnit(name string) bool {
 	switch name {
-	case "security-scan", "resources", "imported":
+	case "security-scan", "resources", "imported", "plain-targets":
 		return true
 	}
 	return false

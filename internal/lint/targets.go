@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -79,6 +80,46 @@ type Targets struct {
 	Generated []OutputFile
 	// Unmatched lists the globs that matched no file, for a notice.
 	Unmatched []string
+	// Plain holds the files a user named that are text but no content kind
+	// (.env, a YAML file, ...): only the secret scan reads them.
+	Plain []PlainFile
+	// Skipped lists the files that were picked but not linted, with the reason,
+	// so nothing a user asked for is dropped without a word.
+	Skipped []SkippedTarget
+	// SkippedInDirs counts the files below a --path directory that are not
+	// content (a directory lints the kinds it recognizes and says how many it left).
+	SkippedInDirs int
+}
+
+// PlainFile is a text file that is scanned for secrets only.
+type PlainFile struct {
+	Abs, Rel string
+	Data     []byte
+}
+
+// SkippedTarget is a picked file that was not linted.
+type SkippedTarget struct {
+	Rel, Reason string
+}
+
+// Notices returns the lines to show about what was not linted: each skipped file
+// as "<rel>: not linted (<reason>)", a summary of the files left out of a
+// directory and each glob that matched nothing.
+func (t *Targets) Notices() []string {
+	if t == nil {
+		return nil
+	}
+	var out []string
+	for _, s := range t.Skipped {
+		out = append(out, fmt.Sprintf("%s: not linted (%s)", s.Rel, s.Reason))
+	}
+	if t.SkippedInDirs > 0 {
+		out = append(out, fmt.Sprintf("%d file(s) below a --path directory were not linted (not content, or generated): name a file with --path or --glob to scan it as text", t.SkippedInDirs))
+	}
+	for _, g := range t.Unmatched {
+		out = append(out, fmt.Sprintf("no file matches --glob %q (files git ignores are not matched)", g))
+	}
+	return out
 }
 
 // Rels returns the tree-relative paths of the files.
@@ -111,10 +152,25 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 	if len(rels) > maxTargetFiles {
 		return nil, fmt.Errorf("%d files match --path, --glob or [lint] paths; the limit is %d: narrow the selection", len(rels), maxTargetFiles)
 	}
+	var unreadable []string
 	for _, rel := range rels {
-		if f, ok := loadTarget(ctx, tree, rel, picked[rel]); ok {
-			res.Files = append(res.Files, f)
+		out := loadTarget(ctx, tree, rel, picked[rel])
+		switch {
+		case out.loaded:
+			res.Files = append(res.Files, out.file)
+		case out.plain != nil:
+			res.Plain = append(res.Plain, *out.plain)
+		default:
+			if out.fatal && picked[rel] == pickPath {
+				unreadable = append(unreadable, rel+" ("+out.reason+")")
+			}
+			if !spec.Generated || !out.generated { // --outputs lints a generated file as an output
+				res.noteSkipped(rel, picked[rel], out)
+			}
 		}
+	}
+	if len(unreadable) > 0 {
+		return nil, fmt.Errorf("cannot lint %s: a file named with --path must be a readable text file inside the limit", strings.Join(unreadable, "; "))
 	}
 	if spec.Generated {
 		res.Generated = generatedTargets(tree, rels)
@@ -151,12 +207,16 @@ type candidates struct {
 func (c *candidates) explicit(tree *Tree, spec TargetSpec, res *Targets) (picks, error) {
 	picked := picks{}
 	for _, p := range spec.Paths {
-		rels, err := c.expandPath(tree, spec.Cwd, p)
+		rels, isDir, err := c.expandPath(tree, spec.Cwd, p)
 		if err != nil {
 			return nil, err
 		}
+		how := pickPath
+		if isDir {
+			how = pickDir
+		}
 		for _, rel := range rels {
-			picked[rel] = true
+			picked.add(rel, how)
 		}
 	}
 	for _, g := range spec.Globs {
@@ -167,7 +227,7 @@ func (c *candidates) explicit(tree *Tree, spec TargetSpec, res *Targets) (picks,
 		hit := false
 		for _, rel := range c.list() {
 			if m.match(rel) {
-				picked[rel] = true
+				picked.add(rel, pickGlob)
 				hit = true
 			}
 		}
@@ -183,7 +243,7 @@ func (c *candidates) explicit(tree *Tree, spec TargetSpec, res *Targets) (picks,
 func (c *candidates) conventional(under string, picked picks) []string {
 	var out []string
 	for _, rel := range c.list() {
-		if picked[rel] || (under != "" && !strings.HasPrefix(rel, under+"/")) {
+		if picked[rel] != 0 || (under != "" && !strings.HasPrefix(rel, under+"/")) {
 			continue
 		}
 		if _, conventional := classifyPath(rel); conventional || isConventionalJSON(rel) {
@@ -193,10 +253,29 @@ func (c *candidates) conventional(under string, picked picks) []string {
 	return out
 }
 
+// pick says how a file was picked; the zero value is "not picked".
+type pick uint8
+
+const (
+	// pickDir: below a --path directory.
+	pickDir pick = iota + 1
+	// pickGlob: matched by a --glob.
+	pickGlob
+	// pickPath: a file named with --path (or [lint] paths).
+	pickPath
+)
+
 // picks is the set of files a path or glob named explicitly; a file picked by
 // convention alone is not in it, so an unconventional markdown file is only
-// taken when the user asked for it.
-type picks map[string]bool
+// taken when the user asked for it. A file picked several ways keeps the
+// most direct one.
+type picks map[string]pick
+
+func (p picks) add(rel string, how pick) {
+	if how > p[rel] {
+		p[rel] = how
+	}
+}
 
 // sorted returns the picked files below under (every file when it is empty), in order.
 func (p picks) sorted(under string) []string {
@@ -265,7 +344,7 @@ func (c *candidates) walk(top, dir string) {
 
 // expandPath returns the files --path p selects: the file itself, or the
 // candidates below a directory.
-func (c *candidates) expandPath(tree *Tree, cwd, p string) ([]string, error) {
+func (c *candidates) expandPath(tree *Tree, cwd, p string) (rels []string, isDir bool, err error) {
 	abs := p
 	if !filepath.IsAbs(abs) {
 		if cwd == "" {
@@ -277,15 +356,15 @@ func (c *candidates) expandPath(tree *Tree, cwd, p string) ([]string, error) {
 	resolved := gitutil.Resolve(abs)
 	rel, err := filepath.Rel(tree.Top, resolved)
 	if err != nil || safefs.RelEscapes(rel) {
-		return nil, fmt.Errorf("path %q is outside the project root %s: lint paths must stay inside it", p, tree.Top)
+		return nil, false, fmt.Errorf("path %q is outside the project root %s: lint paths must stay inside it", p, tree.Top)
 	}
 	info, err := os.Stat(resolved)
 	if err != nil {
-		return nil, fmt.Errorf("path %q does not exist", p)
+		return nil, false, fmt.Errorf("path %q does not exist", p)
 	}
 	rel = realCase(tree.Top, filepath.ToSlash(rel))
 	if !info.IsDir() {
-		return []string{rel}, nil
+		return []string{rel}, false, nil
 	}
 	if rel == "." {
 		rel = ""
@@ -301,7 +380,7 @@ func (c *candidates) expandPath(tree *Tree, cwd, p string) ([]string, error) {
 			out = append(out, f)
 		}
 	}
-	return out, nil
+	return out, true, nil
 }
 
 // contained reports whether the file at rel stays inside the tree top once its
@@ -313,61 +392,178 @@ func contained(tree *Tree, rel string) (abs string, ok bool) {
 	return abs, err == nil && !safefs.RelEscapes(r)
 }
 
-// loadTarget classifies and loads one file; ok is false for a file that is not
-// a lintable kind, is unreadable, leaves the project through a symlink, or is
-// itself generated (outputs are linted with --outputs, not as sources).
-func loadTarget(ctx context.Context, tree *Tree, rel string, explicit bool) (TargetFile, bool) {
-	abs, ok := contained(tree, rel)
-	if !ok {
-		return TargetFile{}, false
-	}
-	info, err := os.Stat(abs)
-	if err != nil || !info.Mode().IsRegular() {
-		return TargetFile{}, false
-	}
-	switch strings.ToLower(path.Ext(rel)) {
-	case extJSON:
-		return loadJSONTarget(abs, rel)
-	case extMD, extMDC:
-		return loadMarkdownTarget(ctx, tree, abs, rel, explicit)
-	}
-	return TargetFile{}, false
+// loadOutcome is what loading one picked file produced: a linted target, a text
+// file only the secret scan reads, or the reason it was left out.
+type loadOutcome struct {
+	file   TargetFile
+	loaded bool
+	plain  *PlainFile
+	// reason says why the file was not linted; kind how that is reported.
+	reason string
+	kind   skipKind
+	// fatal marks a file that could not be read at all: named with --path it fails the run.
+	fatal bool
+	// generated marks a file that carries the generated header.
+	generated bool
 }
 
-func loadMarkdownTarget(ctx context.Context, tree *Tree, abs, rel string, explicit bool) (TargetFile, bool) {
+// skipKind groups the reasons a file is not linted by how loudly they are reported.
+type skipKind uint8
+
+const (
+	// skipProblem: the file could not be read or lies outside the project;
+	// reported whatever way it was picked.
+	skipProblem skipKind = iota + 1
+	// skipUnsupported: not content a run lints, or generated; reported for a
+	// file that was named, counted for a file found below a directory.
+	skipUnsupported
+)
+
+// noteSkipped records a picked file that was not linted: a problem is always
+// reported, an unsupported file when it was named (--path file or --glob) and
+// counted when it came from a directory. A file found by convention alone is
+// not reported unless it could not be read.
+func (t *Targets) noteSkipped(rel string, how pick, out loadOutcome) {
+	switch {
+	case out.kind == skipProblem:
+		t.Skipped = append(t.Skipped, SkippedTarget{Rel: rel, Reason: out.reason})
+	case how == pickDir:
+		t.SkippedInDirs++
+	case how >= pickGlob:
+		t.Skipped = append(t.Skipped, SkippedTarget{Rel: rel, Reason: out.reason})
+	}
+}
+
+func problem(reason string, fatal bool) loadOutcome {
+	return loadOutcome{reason: reason, kind: skipProblem, fatal: fatal}
+}
+
+func unsupported(reason string) loadOutcome {
+	return loadOutcome{reason: reason, kind: skipUnsupported}
+}
+
+// reasonTooLarge is the notice for a file over the read limit.
+const reasonTooLarge = "larger than 2 MiB"
+
+// loadTarget classifies and loads one file. A file that is not a lintable kind,
+// is unreadable, leaves the project through a symlink, or is itself generated
+// (outputs are linted with --outputs, not as sources) comes back with its reason.
+// A text file the user named that is no content kind (.env, YAML, ...) comes back
+// as a plain file for the secret scan.
+func loadTarget(ctx context.Context, tree *Tree, rel string, how pick) loadOutcome {
+	abs, ok := contained(tree, rel)
+	if !ok {
+		return problem("resolves outside the project", false)
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return problem("cannot be read", true)
+	}
+	if !info.Mode().IsRegular() {
+		return problem("not a regular file", true)
+	}
+	named := how >= pickGlob
+	switch strings.ToLower(path.Ext(rel)) {
+	case extJSON:
+		return loadJSONTarget(tree, abs, rel, info.Size(), named)
+	case extMD, extMDC:
+		return loadMarkdownTarget(ctx, tree, abs, rel, info.Size(), how)
+	}
+	if !named {
+		return unsupported("not markdown or JSON")
+	}
+	return loadPlainTarget(tree, abs, rel)
+}
+
+// loadPlainTarget reads a named file that is no content kind, so the secret scan
+// can look at it. It reads the resolved path without following a link, and
+// leaves out a file over the limit, a binary file and anything unreadable.
+func loadPlainTarget(tree *Tree, abs, rel string) loadOutcome {
+	resolved := gitutil.Resolve(abs)
+	if r, err := filepath.Rel(tree.Top, resolved); err != nil || safefs.RelEscapes(r) {
+		return problem("resolves outside the project", false)
+	}
+	info, err := os.Lstat(resolved)
+	if err != nil || !info.Mode().IsRegular() {
+		return problem("not a regular file", true)
+	}
+	if info.Size() > maxReadBytes {
+		return problem(reasonTooLarge, true)
+	}
+	data, _, err := safefs.ReadRegularKeepMode(resolved)
+	if err != nil {
+		return problem("cannot be read", true)
+	}
+	if isBinary(data) {
+		return unsupported("binary file")
+	}
+	return loadOutcome{plain: &PlainFile{Abs: abs, Rel: rel, Data: data}}
+}
+
+// isBinary reports whether data looks like a binary file: a NUL byte in its first
+// 8 KiB, which text in every encoding the scan understands does not hold.
+func isBinary(data []byte) bool {
+	head := data
+	if len(head) > 8192 {
+		head = head[:8192]
+	}
+	return bytes.IndexByte(head, 0) >= 0
+}
+
+func loadMarkdownTarget(ctx context.Context, tree *Tree, abs, rel string, size int64, how pick) loadOutcome {
 	kind, conventional := classifyPath(rel)
-	if kind == "" || (!conventional && !explicit) {
-		return TargetFile{}, false
+	if kind == "" { // a resource of a skill: the skill item carries it
+		if how >= pickGlob {
+			return loadPlainTarget(tree, abs, rel)
+		}
+		return unsupported("a resource of a skill")
+	}
+	if !conventional && how == 0 {
+		return unsupported("not in a place an agent reads")
+	}
+	if size > maxReadBytes {
+		return problem(reasonTooLarge, true)
 	}
 	data, err := readSmallFile(abs)
-	if err != nil || carriesGeneratedHeader(data) {
-		return TargetFile{}, false
+	if err != nil {
+		return problem("cannot be read", true)
+	}
+	if carriesGeneratedHeader(data) {
+		out := unsupported("generated file: lint it with --outputs")
+		out.generated = true
+		return out
 	}
 	f := TargetFile{Abs: abs, Rel: rel, Kind: kind}
 	if kind == kindSkill && path.Base(rel) == fileSkill {
 		skill, ok := config.LoadSkillDir(ctx, tree.Top, filepath.Dir(abs))
 		if !ok {
-			return TargetFile{}, false
+			return problem("the skill could not be loaded", false)
 		}
 		f.Content = &skill
 		f.Content.Path = abs
-		return f, true
+		return loadOutcome{file: f, loaded: true}
 	}
 	cf := config.ContentFileFromText(abs, string(data))
 	f.Content = &cf
-	return f, true
+	return loadOutcome{file: f, loaded: true}
 }
 
-func loadJSONTarget(abs, rel string) (TargetFile, bool) {
+func loadJSONTarget(tree *Tree, abs, rel string, size int64, named bool) loadOutcome {
+	if size > maxReadBytes {
+		return problem(reasonTooLarge, true)
+	}
 	data, err := readSmallFile(abs)
 	if err != nil {
-		return TargetFile{}, false
+		return problem("cannot be read", true)
 	}
 	kind, key := sniffJSON(path.Base(rel), data)
 	if kind == "" {
-		return TargetFile{}, false
+		if named {
+			return loadPlainTarget(tree, abs, rel)
+		}
+		return unsupported("JSON that is no plugin, marketplace, hook or MCP file")
 	}
-	return TargetFile{Abs: abs, Rel: rel, Kind: kind, MCPKey: key}, true
+	return loadOutcome{file: TargetFile{Abs: abs, Rel: rel, Kind: kind, MCPKey: key}, loaded: true}
 }
 
 // generatedHeaderMarker is the line the header of every file `generate` writes
