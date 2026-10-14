@@ -31,6 +31,7 @@ type tomlPresetDoc struct {
 type tomlOutput struct {
 	Schema                string                  `toml:"schema,omitempty"`
 	Source                string                  `toml:"source,omitempty"`
+	AgentsMDSplit         bool                    `toml:"agents_md_split,omitempty"`
 	Version               string                  `toml:"version"`
 	Name                  string                  `toml:"name"`
 	Description           string                  `toml:"description,omitempty"`
@@ -140,6 +141,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 	return tomlOutput{
 		Schema:                cfg.Schema,
 		Source:                cfg.Source,
+		AgentsMDSplit:         cfg.AgentsMDSplit,
 		Version:               cfg.Version,
 		Name:                  cfg.Name,
 		Description:           cfg.Description,

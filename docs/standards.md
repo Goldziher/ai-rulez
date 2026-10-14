@@ -36,7 +36,9 @@ adds beside them (`.agents/rules`, `agents`, `checks`, `commands`, `context` and
 what they hold so that a later version of a standard supersedes them. Rules, agents and checks follow the
 Antigravity and Amp conventions; `commands`, `context` and `domains` are ai-rulez's own. See
 [.agents as a source](agents-source.md); `TestGenerateTranslatesTheSourceAndLeavesItAlone` and the `agents-source`
-goldens back the claim that the standards' files are read and never rewritten.
+goldens back the claim that the standards' files are read and never rewritten. AGENTS.md defines no internal
+structure, so reading it as one item per `##` heading (`agents_md_split = true`) is an ai-rulez convention, off by
+default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`.
 
 ## Reading a status
 
