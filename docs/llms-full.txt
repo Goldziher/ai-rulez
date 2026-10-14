@@ -6930,9 +6930,11 @@ never to `app1`. A tool that reads
 
 - skips symlinks (a linked file or directory is never followed), hidden directories, and dependency and build trees
   (`node_modules`, `vendor`, `target`, `dist`, `build`, ...);
-- honours `.gitignore`, `.git/info/exclude` and the global excludes file: an ignored `AGENTS.md` is not read;
+- honours `.gitignore`, `.git/info/exclude` and the global excludes file: an ignored `AGENTS.md` is not read. The rules are git's, so they
+  apply only inside a git repository: outside one every nested `AGENTS.md` is read, and a root `.gitignore` there
+  produces the warning ".gitignore is not applied to nested AGENTS.md files";
 - stops at a subdirectory that has its own `.agents/ai-rulez.toml`, `.ai-rulez/config.toml` or
-  `.config/ai-rulez/config.toml`: it is a project of its own and owns that file, which `generate --recursive` handles
+  `.config/ai-rulez/config.toml` (a symlinked configuration file does not count): it is a project of its own and owns that file, which `generate --recursive` handles
   with that project's configuration;
 - looks at most eight directories deep and at most 100000 entries, and warns when it stops early;
 - leaves out a file with the generated banner (a scope file an earlier `source = "ai-rulez"` run wrote is output, never

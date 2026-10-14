@@ -17,6 +17,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Nested `AGENTS.md` item names no longer depend on the walk or on `.gitignore`.** Directories whose slugs collide (`a/b`, `a-b`, `a b`; `app[1]`, `app1`) or sanitize to nothing got `-md` or numeric suffixes that changed when an unrelated directory was added or ignored, which churned the outputs and the lock. They now carry a short hash of their path, decided over all directories found before `.gitignore` is applied.
 - **Removing an `AGENTS.md` section is atomic and safer.** `remove context` on a split item now writes a temporary file and renames it over `AGENTS.md`, keeps the file mode, refuses a symlinked `AGENTS.md`, and aborts when the file changed in between instead of overwriting the edit. A leading BOM is kept, CRLF files work, and a file with lone CR line endings gets a clear error instead of "could not locate the sections".
 - **`remove context` on a split `AGENTS.md` item names `AGENTS.md`, not a file that never existed.** It printed `.agents/context/agents-<name>.md`; it now prints `AGENTS.md` and says which section was removed (`--format json` carries the same path).
+- **Nested `AGENTS.md` discovery says when `.gitignore` is not applied and ignores symlinked configuration.** Outside a git repository nothing is ignored; a root `.gitignore` there now produces a one-line warning, and the behaviour is documented. A symlinked `config.toml` or `ai-rulez.toml` no longer marks a subdirectory as a project of its own.
 
 ## [5.2.1] - 2026-10-14
 
