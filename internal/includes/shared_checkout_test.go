@@ -14,8 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-// Two loads of one remote at different commits share a cache directory: each
-// fetch must see the checkout of its own commit, not the other's half-replaced one.
+// Concurrent loads must retain their own commit and content across cache refreshes. ~keep
 func TestConcurrentFetchesOfOneRemoteAtDifferentCommits(t *testing.T) {
 	// Arrange
 	isolateHome(t)

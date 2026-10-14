@@ -389,8 +389,15 @@ naming it, so an include cannot point at an arbitrary local file. Replace the li
 An installed skill whose `SKILL.md` is a symlink fails to resolve, with an error naming the link, and a symlinked path inside its clone is skipped with a warning naming it. (Your own project's
 `.ai-rulez/` may use symlinks that stay inside the project; see [Configuration](configuration.md#symlinks-in-content).)
 Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path` (`http://` and `git://` are then rejected);
-anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash of the
-URL>` with mode `0700`.
+anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash>`
+with mode `0700`. The hash identifies the normalized URL, configured path, and requested ref or version
+constraint. Projects pinned to different commits and modules at different paths keep independent caches;
+resolving a tag or version request to its locked commit does not change that request's cache identity.
+Installed skills use the same identity scheme under `~/.cache/ai-rulez/skills/`.
+
+This replaces the earlier URL-only cache namespace. The first online load populates the new cache;
+existing cache files remain untouched. An offline or frozen run still requires a populated cache for
+its configured source and verifies it against the lock.
 
 ### Machine-local includes and offline runs
 
