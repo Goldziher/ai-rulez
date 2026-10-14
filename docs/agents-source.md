@@ -92,7 +92,9 @@ agents_md_split = true
   `.agents/context`. `remove context agents-code-style` (and the MCP delete tool) deletes that section from
   `AGENTS.md` and leaves every other byte of the file as it was. Without the setting `remove` refuses to touch the
   file. Items are rendered in name order, so a section's place in the generated files follows its name, not its place
-  in `AGENTS.md`.
+  in `AGENTS.md`. The file is replaced atomically with its mode and line endings (LF, CRLF) and a leading BOM kept;
+  `remove` refuses a symlinked `AGENTS.md` and a file with lone CR line endings, and writes nothing when the file
+  changed while the section was being cut out.
 - The setting needs `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`); `validate` rejects it
   otherwise. `AGENTS.md` itself is still never written by `generate`.
 
