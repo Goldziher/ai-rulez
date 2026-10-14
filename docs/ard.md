@@ -41,7 +41,7 @@ publish does.
 | Plugin | `application/vnd.ai-rulez.plugin+json` (override with `plugin_type`) | `url`: the release archive |
 
 Exactly one of `url` and `data` is set. Environment values and header values of an MCP server never reach the manifest (a card lists header names only), and a
-server URL with credentials or without https is refused. A server whose URL has a query, a fragment or an unresolved `${...}` placeholder is skipped with a warning, because such a URL is published verbatim and often carries a key. With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
+server URL with credentials or without https is refused. A server whose URL has a query, a fragment or an unresolved `${...}` placeholder is skipped with a warning, because such a URL is published verbatim and often carries a key; so is one whose path has a segment that looks like a credential (the path is otherwise published as written). With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
 `ard.json`, so hosting is a copy of the output directory. Only root skills are listed.
 
 The spec registers no plugin type, so the plugin type is ai-rulez's own vendor type until one exists; the conformance tool
