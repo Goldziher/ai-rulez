@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/judge"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
@@ -50,10 +52,17 @@ func judgeConventionRoots() []string {
 // are skipped: judge the sources.
 func resolveJudgeSources(ctx context.Context, cwd string, paths []string, lim lint.WalkLimits) (root string, files []judgeSource, err error) {
 	cwd = gitutil.Resolve(cwd) // the tree top is symlink-resolved, so the working directory must be too
-	if (gitutil.Git{}).TopLevelContext(ctx, cwd) == "" && broadRoot(cwd) {
-		return "", nil, oops.
-			Hint("Run it from inside a project directory").
-			Errorf("refusing to judge everything below %s: it is not a project (no git repository)", cwd)
+	if (gitutil.Git{}).TopLevelContext(ctx, cwd) == "" {
+		if broadRoot(cwd) {
+			return "", nil, oops.
+				Hint("Run it from inside a project directory").
+				Errorf("refusing to judge everything below %s: it is not a project (no git repository)", cwd)
+		}
+		if len(paths) == 0 && !hasJudgeProjectMarker(cwd) {
+			return "", nil, oops.
+				Hint("Name the files or directories to judge, for example: ai-rulez judge docs/guide.md").
+				Errorf("refusing default discovery below %s: it is not a git repository and has no AGENTS.md, .agents/ or ai-rulez config at its root, so name the files or directories to judge", cwd)
+		}
 	}
 	if len(paths) > 0 {
 		lim.MaxDepth = 0 // a named file is judged at any depth
@@ -74,10 +83,11 @@ func resolveJudgeSources(ctx context.Context, cwd string, paths []string, lim li
 		seen[f.Rel] = true
 		files = append(files, judgeSource{rel: f.Rel, abs: f.Abs})
 	}
-	if err := checkJudgeSourceCount(len(files), cwd, paths); err != nil {
+	skipped := skippedJudgeSources(targets, tree.Top, paths, seen)
+	if err := checkJudgeSourceCount(len(files), len(skipped), cwd, paths); err != nil {
 		return "", nil, err
 	}
-	files = append(files, skippedJudgeSources(targets, paths, seen)...)
+	files = append(files, skipped...)
 	sort.Slice(files, func(i, j int) bool { return files[i].rel < files[j].rel })
 	return tree.Top, files, nil
 }
@@ -86,12 +96,12 @@ func resolveJudgeSources(ctx context.Context, cwd string, paths []string, lim li
 // reason: a file that cannot be read or is too large, a binary file, and (for
 // named paths and directories) a generated file. A run with no paths leaves a
 // generated file out silently, since the project's own AGENTS.md may be one.
-func skippedJudgeSources(targets *lint.Targets, paths []string, seen map[string]bool) []judgeSource {
+func skippedJudgeSources(targets *lint.Targets, top string, paths []string, seen map[string]bool) []judgeSource {
 	var out []judgeSource
 	add := func(rel, kind, reason string) {
 		if !seen[rel] {
 			seen[rel] = true
-			out = append(out, judgeSource{rel: rel, skip: kind, reason: reason})
+			out = append(out, judgeSource{rel: rel, abs: filepath.Join(top, filepath.FromSlash(rel)), skip: kind, reason: reason})
 		}
 	}
 	for _, s := range targets.Skipped {
@@ -135,9 +145,24 @@ func judgeTargetSpec(tree *lint.Tree, cwd string, paths []string) lint.TargetSpe
 	return spec
 }
 
-// checkJudgeSourceCount refuses an empty selection or one over the per-run limit.
-func checkJudgeSourceCount(n int, cwd string, paths []string) error {
+// hasJudgeProjectMarker reports whether dir looks like a project root of its own:
+// an AGENTS.md, an .agents/ directory or an ai-rulez configuration directly in it.
+func hasJudgeProjectMarker(dir string) bool {
+	for _, name := range []string{config.AgentsMDFilename, ".agents", ".ai-rulez/config.toml", ".config/ai-rulez/config.toml"} {
+		if _, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(name))); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// checkJudgeSourceCount refuses an empty selection or one over the per-run
+// limit. n counts the files that can be judged and skipped the ones reported as
+// skipped: a selection of only skipped files is not empty, it is listed.
+func checkJudgeSourceCount(n, skipped int, cwd string, paths []string) error {
 	switch {
+	case n == 0 && skipped > 0:
+		return nil
 	case n == 0 && len(paths) == 0:
 		return oops.Hint("Name the files or directories to judge, for example: ai-rulez judge docs/guide.md").
 			Errorf("nothing to judge: found no AGENTS.md and no .agents/ or .ai-rulez/ content below %s", cwd)
@@ -171,17 +196,27 @@ func prepareJudgeFiles(sources []judgeSource, redact bool, secrets []string) []j
 	out := make([]judge.Prepared, 0, len(sources))
 	for _, s := range sources {
 		if s.skip != "" {
-			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Skip: s.skip, SkipReason: s.reason})
+			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Bytes: judgeFileSize(s.abs), Skip: s.skip, SkipReason: s.reason})
 			continue
 		}
 		data, reason := readJudgeSource(s.abs)
 		if reason != "" {
-			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Skip: judge.SkipUnreadable, SkipReason: reason})
+			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Bytes: judgeFileSize(s.abs), Skip: judge.SkipUnreadable, SkipReason: reason})
 			continue
 		}
 		out = append(out, judge.Prepare(s.rel, data, judge.PrepareOptions{MaxBytes: judge.DefaultMaxFileBytes, Redact: redact, Secrets: secrets}))
 	}
 	return out
+}
+
+// judgeFileSize is the size of a regular file, 0 for anything else or on error.
+// It is only reported for a skipped file, never used to read it.
+func judgeFileSize(abs string) int {
+	info, err := os.Lstat(abs)
+	if err != nil || !info.Mode().IsRegular() {
+		return 0
+	}
+	return int(min(info.Size(), math.MaxInt32))
 }
 
 // readJudgeSource reads one file, refusing a symlink and a file over the limit.

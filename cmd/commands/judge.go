@@ -83,7 +83,7 @@ text and sends it. Long files keep their head and tail. Symlinks are never follo
 sends nothing. Spend is capped by --max-cost (default $0.25); the run refuses to start when the worst case
 exceeds it.
 
-Exit codes: 0 every file passed, 1 the run could not complete, 2 a file scored below --min-score or was
+Exit codes: 0 every file passed, 1 the run could not complete or every selected file was skipped, 2 a file scored below --min-score or was
 skipped for secrets. Under an organization policy that forbids model use, only --estimate runs. See docs/judge.md.`,
 		Example: `  ai-rulez judge --estimate --model openai/gpt-4o-mini
   ai-rulez judge --allow-llm --model openai/gpt-4o-mini
@@ -198,6 +198,9 @@ func (d judgeDeps) run(cmd *cobra.Command, args []string, f *judgeFlags) error {
 		return &ExitError{Code: exitFailure, Silent: true}
 	case report.Summary.Failed > 0 || report.skippedForSecrets() > 0:
 		return exitStatus(exitFindings)
+	case report.Summary.Judged == 0 && report.Summary.Skipped > 0:
+		cmd.PrintErrln("nothing judged: every selected file was skipped (see the reasons above)")
+		return &ExitError{Code: exitFailure, Silent: true}
 	}
 	return nil
 }

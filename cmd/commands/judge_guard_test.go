@@ -41,7 +41,7 @@ func TestJudgeRefusesTheHomeDirectoryOutsideAProject(t *testing.T) {
 
 func TestJudgeBoundsTheWalkOfADirectoryWithoutARepository(t *testing.T) {
 	// Arrange
-	files := map[string]string{}
+	files := map[string]string{"AGENTS.md": "# root\n"}
 	for i := range 6 {
 		files[fmt.Sprintf("d%d/AGENTS.md", i)] = "# x\n"
 	}
