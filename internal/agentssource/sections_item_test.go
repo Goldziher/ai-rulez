@@ -83,6 +83,45 @@ func TestUpdateItemKeepsTheBytesAroundTheSection(t *testing.T) {
 	}
 }
 
+func TestUpdateItemOnTheLastSectionKeepsTheFinalLineEnding(t *testing.T) {
+	tests := []struct {
+		name    string
+		text    string
+		content string
+		want    string
+	}{
+		{"LF with trailing newline", "## Setup\n\nRun it.\n\n## Style\n\nTabs.\n", "## Style\n\nSpaces.\n",
+			"## Setup\n\nRun it.\n\n## Style\n\nSpaces.\n"},
+		{"LF with trailing newline and content without one", "## Setup\n\nRun it.\n\n## Style\n\nTabs.\n", "## Style\n\nSpaces.",
+			"## Setup\n\nRun it.\n\n## Style\n\nSpaces.\n"},
+		{"LF without trailing newline", "## Setup\n\nRun it.\n\n## Style\n\nTabs.", "## Style\n\nSpaces.",
+			"## Setup\n\nRun it.\n\n## Style\n\nSpaces."},
+		{"LF without trailing newline and content with one", "## Setup\n\nRun it.\n\n## Style\n\nTabs.", "## Style\n\nSpaces.\n",
+			"## Setup\n\nRun it.\n\n## Style\n\nSpaces."},
+		{"CRLF with trailing newline", "## Setup\r\n\r\nRun it.\r\n\r\n## Style\r\n\r\nTabs.\r\n", "## Style\n\nSpaces.\n",
+			"## Setup\r\n\r\nRun it.\r\n\r\n## Style\r\n\r\nSpaces.\r\n"},
+		{"CRLF without trailing newline", "## Setup\r\n\r\nRun it.\r\n\r\n## Style\r\n\r\nTabs.", "## Style\r\n\r\nSpaces.",
+			"## Setup\r\n\r\nRun it.\r\n\r\n## Style\r\n\r\nSpaces."},
+		{"CRLF without trailing newline and LF content", "## Setup\r\n\r\nRun it.\r\n\r\n## Style\r\n\r\nTabs.", "## Style\n\nSpaces.\n",
+			"## Setup\r\n\r\nRun it.\r\n\r\n## Style\r\n\r\nSpaces."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			base, path := writeAgentsMD(t, tt.text, 0o644)
+
+			// Act
+			err := UpdateItem(base, "agents-style", tt.content, true, nil)
+
+			// Assert
+			require.NoError(t, err)
+			got, readErr := os.ReadFile(path)
+			require.NoError(t, readErr)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
 func TestUpdateItemRefusesWhatWouldChangeTheSections(t *testing.T) {
 	tests := []struct {
 		name    string

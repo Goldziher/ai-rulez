@@ -95,14 +95,8 @@ func updateItem(base, name, content string, split bool, taken map[string]bool, b
 	if strings.Contains(sec.text, "\r\n") {
 		eol = "\r\n"
 	}
-	body := strings.Split(strings.TrimSuffix(strings.ReplaceAll(content, "\r\n", "\n"), "\n"), "\n")
-	for i := range body {
-		body[i] = strings.TrimSuffix(body[i], "\r")
-		if eol == "\r\n" {
-			body[i] += "\r"
-		}
-	}
 	lines := sec.lines
+	body := newSectionLines(content, eol, sec.span.End == len(lines), strings.HasSuffix(sec.text, "\n"))
 	merged := append(append(append([]string{}, lines[:sec.span.Start]...), body...), lines[sec.span.End:]...)
 	text := strings.Join(merged, "\n")
 	spans, err := importer.H2Spans(text)
@@ -112,6 +106,31 @@ func updateItem(base, name, content string, split bool, taken map[string]bool, b
 			Errorf("the new content would not stay one section of %s", config.AgentsMDFilename)
 	}
 	return replaceUnchanged(sec.path, sec.data, []byte(sec.bom+text), sec.mode, "updated", beforeReplace)
+}
+
+// newSectionLines splits the new content of a section into the file lines that
+// replace it. A line gets its "\r" (for a CRLF file) only when a "\n" follows it,
+// so the final line of a file without a trailing newline stays as the file had
+// it. last says the section runs to the end of the file; endsWithNewline says the
+// file ends with a newline, which the new last section keeps (or does not gain).
+func newSectionLines(content, eol string, last, endsWithNewline bool) []string {
+	text := strings.ReplaceAll(content, "\r\n", "\n")
+	if last && !endsWithNewline {
+		text = strings.TrimRight(text, "\n")
+	} else {
+		text = strings.TrimSuffix(text, "\n")
+	}
+	body := strings.Split(text, "\n")
+	if last && endsWithNewline {
+		body = append(body, "") // the empty element after the file's final newline
+	}
+	for i := range body {
+		body[i] = strings.TrimSuffix(body[i], "\r")
+		if eol == "\r\n" && (i < len(body)-1 || !last) {
+			body[i] += "\r"
+		}
+	}
+	return body
 }
 
 // section is one split AGENTS.md item located in the file as it is now.
