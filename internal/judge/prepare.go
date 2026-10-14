@@ -19,6 +19,9 @@ const (
 	SkipSecrets = "secrets"
 	SkipEmpty   = "empty"
 	SkipBinary  = "binary"
+	// SkipUnreadable is for a file the caller could not read safely: a symlink,
+	// a file that is not regular, or one over the size limit.
+	SkipUnreadable = "unreadable"
 )
 
 // PrepareOptions tunes Prepare.
@@ -86,11 +89,11 @@ func truncate(text string, maxBytes int) (string, bool) {
 	headLen := maxBytes * 2 / 3
 	tailLen := maxBytes - headLen
 	head := text[:headLen]
-	for len(head) > 0 && !utf8.ValidString(head) {
+	for head != "" && !utf8.ValidString(head) {
 		head = head[:len(head)-1]
 	}
 	tail := text[len(text)-tailLen:]
-	for len(tail) > 0 && !utf8.ValidString(tail) {
+	for tail != "" && !utf8.ValidString(tail) {
 		tail = tail[1:]
 	}
 	omitted := len(text) - len(head) - len(tail)

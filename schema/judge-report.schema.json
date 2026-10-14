@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/judge-report.schema.json",
+  "title": "ai-rulez judge report",
+  "description": "Output of `ai-rulez judge --format json`: a model's grade of each instruction file, or, with --estimate, what would be sent. It never carries file text or the prompt.",
+  "type": "object",
+  "required": ["schema_version", "mode", "rubric", "model", "egress_host", "min_score", "files", "estimate", "summary"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "mode": {
+      "description": "judge when the model was called, estimate when nothing was sent.",
+      "enum": ["judge", "estimate"]
+    },
+    "rubric": {
+      "description": "builtin:<name> or file:<path>.",
+      "type": "string"
+    },
+    "model": {
+      "description": "provider/model; empty when none was given (an estimate only).",
+      "type": "string"
+    },
+    "egress_host": {
+      "description": "The host file content goes to; empty when the provider's default endpoint is used and its host is not known.",
+      "type": "string"
+    },
+    "min_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "status", "bytes"],
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "enum": ["judged", "skipped", "error", "would_send"]
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why a file was skipped or failed.",
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "redacted": {
+            "type": "boolean"
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "status": { "const": "judged" } } },
+            "then": { "required": ["score", "passed"] }
+          },
+          {
+            "if": { "properties": { "status": { "enum": ["skipped", "error"] } } },
+            "then": { "required": ["reason"] }
+          }
+        ]
+      }
+    },
+    "estimate": {
+      "type": "object",
+      "required": ["files", "prompt_tokens", "max_completion_tokens", "cost_usd", "cost_known"],
+      "additionalProperties": true,
+      "properties": {
+        "files": { "type": "integer", "minimum": 0 },
+        "prompt_tokens": { "type": "integer", "minimum": 0 },
+        "max_completion_tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "cost_known": { "type": "boolean" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["judged", "passed", "failed", "skipped", "errors", "calls", "tokens", "cost_usd"],
+      "additionalProperties": true,
+      "properties": {
+        "judged": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "calls": { "type": "integer", "minimum": 0 },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

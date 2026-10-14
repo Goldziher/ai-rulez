@@ -165,6 +165,7 @@ func init() {
 	RootCmd.AddCommand(SearchCmd)
 	RootCmd.AddCommand(PublishCmd)
 	RootCmd.AddCommand(ReviewCmd, RubricCmd)
+	RootCmd.AddCommand(newJudgeCmd(defaultJudgeDeps()))
 	RootCmd.AddCommand(NewShowCmd(), NewEditCmd())
 }
 

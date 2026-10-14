@@ -37,6 +37,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval import`          | Import eval scenarios from another tool as eval cases ([details](evals.md#importing-scenarios)) |
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
+| `ai-rulez judge`                | Grade `AGENTS.md` and `.agents/*` with a model, from flags alone, with no config file ([details](#judge-command)) |
 | `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
 | `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#telemetry-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
@@ -115,6 +116,7 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez include list` | List all includes |
 | `ai-rulez include remove` | Remove an include source |
 | `ai-rulez init` | Initialize a new AI rules configuration |
+| `ai-rulez judge` | Grade instruction files with a model (AI as a judge), without any configuration |
 | `ai-rulez list` | List rules, context, and skills |
 | `ai-rulez list agents` | List all agents |
 | `ai-rulez list checks` | List all code-review checks |
@@ -2042,6 +2044,30 @@ Exit codes: 0 reviewed, 1 could not run or was refused, 2 `--gate` failed.
 
 List the built-in and project rubrics, print one rubric's dimensions and weights, or lint rubrics, golden files and calibration
 records (`AR9G8`; `--format text\|json\|sarif`; exit 2 with findings).
+
+## Judge Command
+
+Documented in [Judge](judge.md).
+
+### `ai-rulez judge [paths...]`
+
+Grade instruction files against a rubric with a model. It reads no configuration: the model comes from flags and `AI_RULEZ_LLM_*` variables, the key from the provider's own variable. With no paths it judges `AGENTS.md` at any depth and the `.agents/` and `.ai-rulez/` Markdown; generated files are skipped.
+
+| Flag | Meaning |
+| --- | --- |
+| `--allow-llm` | Agree to send file content to the provider; required to call a model |
+| `--model provider/model`, `--provider p` | The model (or `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_PROVIDER`) |
+| `--max-cost usd` | Spend cap (default 0.25; 0 removes it); refuses to start when the worst case exceeds it or the model has no known price |
+| `--max-tokens n` | Cap on prompt plus completion tokens of the run |
+| `--estimate`, `--dry-run`, `-n` | List the files, the egress host and model and the token and cost estimate; send nothing |
+| `--redact` | Mask secret-looking text and send the file; by default such a file is skipped and counts as a finding |
+| `--rubric builtin:instruction-quality\|file` | The rubric (default `builtin:instruction-quality`) |
+| `--min-score s` | Lowest passing score from 0 to 1 (default 0.7) |
+| `--no-cache` | Do not read or write the response cache |
+| `--format text\|json` | Output format (`schema/judge-report.schema.json`) |
+| `--policy`, `--policy-*` | Organization policy; one that forbids model use stops a real run |
+
+Exit codes: 0 every file passed (or `--estimate`), 1 could not run or a call failed, 2 a file scored below `--min-score` or was skipped for secrets.
 
 ## Search Command
 

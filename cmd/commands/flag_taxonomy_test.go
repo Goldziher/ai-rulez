@@ -37,7 +37,7 @@ var universalShorthands = map[string]string{
 var policyCommands = map[string]bool{
 	"generate": true, "validate": true, "scan": true, "lock": true, "doctor": true,
 	"verify": true, "catalog": true, "mcp": true, "sbom": true, "approve": true,
-	"tokens": true, "cost": true, "publish": true, "update": true,
+	"tokens": true, "cost": true, "publish": true, "update": true, "judge": true,
 }
 
 // strictCommands are the commands where --strict is the shortcut of --fail-on

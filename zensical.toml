@@ -72,6 +72,7 @@ nav = [
     { "Improve (experimental)" = "improve.md" },
     { "Skill Search" = "search.md" },
     { "Review" = "review.md" },
+    { "Judge" = "judge.md" },
     { "LLM Access" = "llm.md" },
     { "Performance" = "performance.md" },
   ] },
