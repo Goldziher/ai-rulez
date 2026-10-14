@@ -109,7 +109,9 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
 - **Text of any kind gets the secret scan.** A text file you name with `--path` or `--glob` that is no content kind
   (`.env`, a YAML or TOML file, `notes.txt`, a JSON file that is not a plugin, marketplace, hook or MCP file) is read
   as plain text (at most 2 MiB, never through a symlink) and checked for credentials (`AR001`, and your
-  `secret_patterns`); no other rule judges it. A directory given to `--path` lints only the kinds above, so name
+  `secret_patterns`); no other rule judges it. Injection phrases, hidden characters, links and the other
+  content rules are not applied to such a file, because it is not a known content kind; only a named markdown file
+  is classified (see below) and gets them. A directory given to `--path` lints only the kinds above, so name
   `.env`-style files individually or by glob.
 - **One file, one spelling.** On a case-insensitive file system (the default on macOS and Windows) `--path agents.md`
   is the file `AGENTS.md`: it is classified by the spelling stored on disk and is linted once, however it is named.
