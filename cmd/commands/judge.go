@@ -214,7 +214,12 @@ func (d judgeDeps) plan(ctx context.Context, cmd *cobra.Command, args []string, 
 	if err := f.validate(); err != nil {
 		return nil, err
 	}
-	rubric, err := loadJudgeRubric(f.rubric)
+	lc, err := d.config(cmd, f)
+	if err != nil {
+		return nil, err
+	}
+	secrets := d.secretValues(lc)
+	rubric, err := loadJudgeRubric(f.rubric, secrets)
 	if err != nil {
 		return nil, err
 	}
@@ -226,11 +231,7 @@ func (d judgeDeps) plan(ctx context.Context, cmd *cobra.Command, args []string, 
 	if err != nil {
 		return nil, err
 	}
-	files := prepareJudgeFiles(sources, f.redact)
-	lc, err := d.config(cmd, f)
-	if err != nil {
-		return nil, err
-	}
+	files := prepareJudgeFiles(sources, f.redact, secrets)
 	host, err := judgeEgressHost(lc)
 	if err != nil {
 		return nil, err
@@ -240,6 +241,22 @@ func (d judgeDeps) plan(ctx context.Context, cmd *cobra.Command, args []string, 
 		Rubric: rubric.ID, Model: lc.FullModel(), EgressHost: host, MinScore: f.minScore,
 		Estimate: judgeEstimate{Files: est.Files, PromptTokens: est.PromptTokens, MaxCompletionTokens: est.MaxCompletionTokens, CostUSD: est.CostUSD, CostKnown: est.CostKnown},
 	}}, nil
+}
+
+// secretValues are the values of the API key variables: the one AI_RULEZ_LLM_API_KEY_ENV
+// names and the provider's own. No file or rubric may carry one, and none is ever printed.
+func (d judgeDeps) secretValues(lc llm.Config) []string {
+	_, keyEnv := providerEndpoint(routedProvider(lc))
+	var out []string
+	for _, name := range []string{lc.APIKeyEnv, keyEnv} {
+		if name == "" {
+			continue
+		}
+		if v := strings.TrimSpace(d.getenv(name)); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // preflight refuses, before anything is sent, a run the user has not agreed to,
@@ -327,7 +344,8 @@ func stopsRun(err error) bool {
 // endpoint is safe for a key: https, or http to a loopback host.
 func judgeEgressHost(lc llm.Config) (string, error) {
 	if lc.BaseURL == "" {
-		return providerDefaultHost(lc), nil
+		host, _ := providerEndpoint(routedProvider(lc))
+		return host, nil
 	}
 	u, err := url.Parse(lc.BaseURL)
 	if err != nil || u.Host == "" {
@@ -341,34 +359,40 @@ func judgeEgressHost(lc llm.Config) (string, error) {
 	return u.Host, nil
 }
 
-// providerDefaultHost names the endpoint a known provider uses when no base URL
-// is set; "" when the provider is not one of the well-known ones.
-func providerDefaultHost(lc llm.Config) string {
-	provider := lc.Provider
-	if i := strings.Index(lc.Model, "/"); provider == "" && i > 0 {
-		provider = lc.Model[:i]
+// routedProvider is the provider the model routes to: --provider, else the prefix of --model.
+func routedProvider(lc llm.Config) string {
+	if i := strings.Index(lc.Model, "/"); lc.Provider == "" && i > 0 {
+		return lc.Model[:i]
 	}
+	return lc.Provider
+}
+
+// providerEndpoint names the host a well-known provider uses when no base URL is
+// set and the variable liter-llm reads its key from; both are "" for any other
+// provider. The values are those of liter-llm's provider registry
+// (schemas/providers.json): a provider is added here only when the registry lists it.
+func providerEndpoint(provider string) (host, keyEnv string) {
 	switch provider {
 	case "openai":
-		return "api.openai.com"
+		return "api.openai.com", "OPENAI_API_KEY"
 	case "anthropic":
-		return "api.anthropic.com"
+		return "api.anthropic.com", "ANTHROPIC_API_KEY"
 	case "gemini":
-		return "generativelanguage.googleapis.com"
+		return "generativelanguage.googleapis.com", "GEMINI_API_KEY"
 	case "mistral":
-		return "api.mistral.ai"
+		return "api.mistral.ai", "MISTRAL_API_KEY"
 	case "groq":
-		return "api.groq.com"
+		return "api.groq.com", "GROQ_API_KEY"
 	case "deepseek":
-		return "api.deepseek.com"
+		return "api.deepseek.com", "DEEPSEEK_API_KEY"
 	case "xai":
-		return "api.x.ai"
+		return "api.x.ai", "XAI_API_KEY"
 	case "openrouter":
-		return "openrouter.ai"
+		return "openrouter.ai", "OPENROUTER_API_KEY"
 	case "cohere":
-		return "api.cohere.com"
+		return "api.cohere.com", "COHERE_API_KEY"
 	}
-	return ""
+	return "", ""
 }
 
 func judgeHostLabel(host string) string {

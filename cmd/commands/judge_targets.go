@@ -131,15 +131,15 @@ func isDefaultJudgeTarget(rel string) bool {
 // prepareJudgeFiles reads each source without following a symlink and screens it
 // for sending. A file that cannot be read safely is skipped with the reason, never
 // sent.
-func prepareJudgeFiles(sources []judgeSource, redact bool) []judge.Prepared {
+func prepareJudgeFiles(sources []judgeSource, redact bool, secrets []string) []judge.Prepared {
 	out := make([]judge.Prepared, 0, len(sources))
 	for _, s := range sources {
 		data, reason := readJudgeSource(s.abs)
 		if reason != "" {
-			out = append(out, judge.Prepared{Path: s.rel, Skip: judge.SkipUnreadable, SkipReason: reason})
+			out = append(out, judge.Prepared{Path: judge.SafePath(s.rel, secrets), Skip: judge.SkipUnreadable, SkipReason: reason})
 			continue
 		}
-		out = append(out, judge.Prepare(s.rel, data, judge.PrepareOptions{MaxBytes: judge.DefaultMaxFileBytes, Redact: redact}))
+		out = append(out, judge.Prepare(s.rel, data, judge.PrepareOptions{MaxBytes: judge.DefaultMaxFileBytes, Redact: redact, Secrets: secrets}))
 	}
 	return out
 }
@@ -164,7 +164,7 @@ func readJudgeSource(abs string) (data []byte, reason string) {
 
 // loadJudgeRubric returns the rubric --rubric names: a built-in (builtin:<name>)
 // or a file, read without following a symlink. Empty is the default rubric.
-func loadJudgeRubric(spec string) (judge.Rubric, error) {
+func loadJudgeRubric(spec string, secrets []string) (judge.Rubric, error) {
 	switch {
 	case spec == "":
 		return judge.BuiltinRubric(judge.RubricInstructionQuality) //nolint:wrapcheck // typed config error
@@ -180,5 +180,5 @@ func loadJudgeRubric(spec string) (judge.Rubric, error) {
 	if err != nil {
 		return judge.Rubric{}, oops.Wrapf(err, "read --rubric %s", spec)
 	}
-	return judge.NewRubric("file:"+spec, string(data)) //nolint:wrapcheck // typed config error
+	return judge.NewRubric("file:"+spec, string(data), secrets...) //nolint:wrapcheck // typed config error
 }
