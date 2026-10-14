@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"errors"
 	"io/fs"
 	"strings"
 )
@@ -50,8 +51,14 @@ type H2Span struct {
 
 // H2Spans locates the sections ReadAgentsMD yields with SplitHeadings, in the
 // same order, as line ranges of the text as written. A heading inside a code
-// fence does not start a section.
-func H2Spans(text string) []H2Span {
+// fence does not start a section. A leading BOM is ignored (the read strips
+// it), CRLF lines are as good as LF ones, and a bare CR, which the read treats
+// as a line break but the line ranges cannot address, is an error.
+func H2Spans(text string) ([]H2Span, error) {
+	text = strings.TrimPrefix(text, "\ufeff")
+	if strings.Contains(strings.ReplaceAll(text, "\r\n", ""), "\r") {
+		return nil, bareCRError()
+	}
 	lines := strings.Split(text, "\n")
 	var spans []H2Span
 	cur := H2Span{}
@@ -84,7 +91,11 @@ func H2Spans(text string) []H2Span {
 		}
 	}
 	flush(len(lines))
-	return spans
+	return spans, nil
+}
+
+func bareCRError() error {
+	return errors.New("the file uses lone CR line endings; convert them to LF or CRLF first")
 }
 
 // IsGenerated reports whether data, read from file, is ai-rulez output: it
