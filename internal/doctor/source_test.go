@@ -66,6 +66,31 @@ func TestCheckSource(t *testing.T) {
 			},
 			want: []string{"1 generated file(s) in the source are ignored: AGENTS.md"},
 		},
+		{
+			name: "generated files under .agents are named, whatever the kind",
+			files: map[string]string{
+				".agents/ai-rulez.toml":                       baseConfig,
+				".agents/rules/old.md":                        generatedBanner,
+				".agents/agents/old.md":                       generatedBanner,
+				".agents/domains/backend/commands/old.md":     generatedBanner,
+				".agents/domains/backend/skills/a/SKILL.md":   "---\nname: a\ndescription: A\n---\nBody\n",
+				".agents/skills/a/references/hand-written.md": "# Mine\n",
+			},
+			want: []string{"3 generated file(s) in the source are ignored: .agents/agents/old.md, .agents/domains/backend/commands/old.md, .agents/rules/old.md"},
+		},
+		{
+			name: "a project with domains and every kind is clean",
+			files: map[string]string{
+				".agents/ai-rulez.toml":                     baseConfig,
+				".agents/agents/a.md":                       "# A\n",
+				".agents/commands/c.md":                     "# C\n",
+				".agents/checks/k.md":                       "# K\n",
+				".agents/domains/backend/rules/r.md":        "# R\n",
+				".agents/skills/a/scripts/run.sh":           "#!/bin/sh\n",
+				".agents/skills/a/SKILL.md":                 "---\nname: a\ndescription: A\n---\nBody\n",
+				".agents/domains/backend/context/layout.md": "# L\n",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
