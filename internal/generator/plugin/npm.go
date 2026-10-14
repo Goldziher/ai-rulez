@@ -105,8 +105,9 @@ func refreshOpenCodeFields(first, second map[string]any) {
 		}
 		if key == "dependencies" {
 			dependencies, ok := pi[key].(map[string]any)
-			if ok {
-				for name, version := range value.(map[string]any) {
+			extra, extraOK := value.(map[string]any)
+			if ok && extraOK {
+				for name, version := range extra {
 					dependencies[name] = version
 				}
 				openCode[key] = dependencies
