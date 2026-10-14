@@ -41,6 +41,16 @@ func ValidSkillName(name string) bool {
 	return true
 }
 
+// ValidateSkill rejects fields that make an Agent Skills client drop the skill. ~keep
+func ValidateSkill(name string, content []byte) error {
+	for _, issue := range checkSkill(name, content) {
+		if issue.fatal {
+			return fmt.Errorf("invalid Agent Skills skill %q: %s", name, issue.msg)
+		}
+	}
+	return nil
+}
+
 // skillIssue is one Agent Skills violation; fatal ones make clients skip the skill.
 type skillIssue struct {
 	fatal bool

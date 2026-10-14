@@ -106,7 +106,11 @@ func passthroughSkill(m *Manifest, content *config.ContentFile, destinationDir s
 	outputs, own := walk.outputs, walk.own
 	for i := range outputs {
 		if filepath.Base(outputs[i].Path) == skillManifestName {
-			outputs[i] = projectNativeContent(content, outputs[i])
+			var err error
+			outputs[i], err = projectNativeSkill(content, outputs[i])
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if err := appendSharedResources(m, content.Name, destinationDir, own, &outputs); err != nil {
