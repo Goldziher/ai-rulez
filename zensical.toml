@@ -77,6 +77,7 @@ nav = [
     { "Performance" = "performance.md" },
   ] },
   { "Reference" = [
+    { "Architecture" = "architecture.md" },
     { "Standards Conformance" = "standards.md" },
     { "CLI Commands" = "cli.md" },
     { "CLI Command Reference" = "cli-reference.md" },

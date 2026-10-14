@@ -81,6 +81,7 @@
 
 ## Reference
 
+- [Architecture](https://goldziher.github.io/ai-rulez/architecture/): How ai-rulez turns a source tree into the native files of 52 harnesses, and where each step lives in the code.
 - [Standards](https://goldziher.github.io/ai-rulez/standards/): ai-rulez claims conformance with a standard only when a passing test backs the claim.
 - [CLI Commands](https://goldziher.github.io/ai-rulez/cli/): All AI-Rulez CLI commands and flags.
 - [CLI Command Reference](https://goldziher.github.io/ai-rulez/cli-reference/): Every command, with its usage, aliases, examples and flags, generated from the binary's own command tree.
