@@ -24148,8 +24148,8 @@ here. Before anything is sent the command prints the model and the egress host t
 - Spend is capped by `--max-cost` (default `0.25` USD). The command estimates the worst case first and refuses to start
   when it exceeds the cap, or when the model has no known price (`--max-cost 0` removes the cap). `--max-tokens` caps
   prompt plus completion tokens of the whole run.
-- Prompt text and keys are never printed or logged. A model's rationale is masked for secrets and stripped of control
-  characters before it is shown.
+- Prompt text and keys are never printed or logged. Every string in the output (paths, reasons, rationales, the rubric
+  and model names) is masked for secrets and stripped of control characters, in text and in JSON.
 - An organization policy that forbids model use ([Organization policy](policy.md)) stops a real run even without a
   config file; `--estimate` still works. `--policy` and the other `--policy-*` flags are available.
 - Responses are cached in the user cache directory, keyed by project, model, rubric and file content; `--no-cache`
@@ -24167,7 +24167,7 @@ no stale commands, scored 0 to 1. `--rubric <file>` uses a Markdown file (at mos
 rubric; the model scores each file 0 to 1 against it and explains the score in a sentence or two.
 
 The file is untrusted data. It is fenced with a per-request token derived from its content, fence-looking text inside it
-is defused, and text in it that addresses the grader scores 0.
+is defused (a space breaks every run of three or more `<` or `>`), and text in it that addresses the grader scores 0.
 
 #### Model and configuration
 
