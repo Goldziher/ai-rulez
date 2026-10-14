@@ -91,9 +91,9 @@ func (g *Generator) hasLocalGitignoreTargets() bool {
 }
 
 // hasLocalInputTargets is hasLocalGitignoreTargets without a manifest that only
-// sits on disk: a manifest of digests alone implies no overlay or local/ tree.
+// sits on disk: output ownership claims and digests imply no overlay or local/ tree. ~keep
 func (g *Generator) hasLocalInputTargets() bool {
-	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || g.localManifestPending
+	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0
 }
 
 // localManifestIgnorable reports whether the machine-local manifest is written

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 func TestGenerate_LocalManifestIgnoredOnFirstRun(t *testing.T) {
@@ -148,4 +149,40 @@ func TestGenerate_LocalManifestCreatedByTheFirstRunIsIgnoredAfterTheEarlyPass(t 
 	assert.Contains(t, string(got), "node_modules/", "the user's lines stay")
 	assert.Contains(t, string(got), ".ai-rulez/.generated-manifest.local.json")
 	assert.FileExists(t, filepath.Join(root, ".ai-rulez", ".generated-manifest.local.json"))
+}
+
+func TestGenerate_NoLocalIgnoreBlockIgnoresOwnershipOnlyMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeDomainsFile(t, filepath.Join(root, ".ai-rulez/config.toml"), `version="5.0"
+name="ownership"
+presets=["codex"]
+gitignore=true
+[defaults.effort_by_preset]
+codex="xhigh"
+`)
+	writeDomainsFile(t, filepath.Join(root, ".codex/config.toml"), "model_reasoning_effort = \"xhigh\"\n")
+	gitCmd(t, root, "init", "-q")
+	generate := func() *Generator {
+		cfg, err := config.LoadConfig(t.Context(), root, config.WithoutLocal())
+		require.NoError(t, err)
+		g := NewGenerator(cfg)
+		require.NoError(t, g.Generate(""))
+		return g
+	}
+	generate()
+	baseline, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	require.NoError(t, err)
+	localPath := filepath.Join(root, ".ai-rulez", generatedLocalManifestName)
+	require.NoError(t, writeManifestFileDirs(localPath, nil, map[string][]jsonmerge.Claim{
+		".codex/config.toml": {{Path: []string{"model_reasoning_effort"}, Sum: jsonmerge.Digest("xhigh")}},
+	}, nil, nil, nil))
+	g := generate()
+	require.True(t, g.localManifestPending, "preserved claims really exercise the pending manifest path")
+	got, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	require.NoError(t, err)
+	require.Equal(t, string(baseline), string(got), "ownership metadata must not imply local source inputs")
+	require.Contains(t, string(got), ".ai-rulez/.generated-manifest.local.json")
+	require.FileExists(t, localPath)
+	require.Len(t, g.readManifest(localPath).Merged[".codex/config.toml"], 1, "machine ownership survives")
+	require.Equal(t, "model_reasoning_effort = \"xhigh\"\n", readFileString(t, filepath.Join(root, ".codex/config.toml")))
 }
