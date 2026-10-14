@@ -19,10 +19,6 @@ func extractContentHash(filePath string) string {
 	return contentHash
 }
 
-// maxHeaderLines bounds how far extractStoredHashes reads past a frontmatter
-// block (or into a file without one).
-const maxHeaderLines = 60
-
 // extractStoredHashes scans the header of an existing file and returns the
 // Content-Hash and Source-Hash values found there (empty strings if missing).
 // A file starting with a YAML frontmatter block is scanned through the closing
