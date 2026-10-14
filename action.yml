@@ -1,8 +1,5 @@
 name: Set up ai-rulez
-description: >-
-  Downloads a released ai-rulez binary (sha256-verified against the release's checksums.txt),
-  caches it and adds it to PATH, so later steps can call `ai-rulez` directly. No Go toolchain,
-  Node or Python needed. Needs bash and curl (present on every GitHub-hosted runner).
+description: Install a sha256-verified, cached ai-rulez binary and add it to PATH. No Go, Node or Python needed.
 branding:
   icon: check-square
   color: blue
