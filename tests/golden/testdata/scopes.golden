@@ -163,7 +163,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 1577 141603d4d8f8568cb3d8f32aa206bb5eff368eab26d89d2c4cb340598291eb07
+.gitignore file 0644 1552 5bbeca321b79a668f0c03f754e418ac0dc762abbcb64e6cbf6360b39382761c4
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .vscode/ dir 0755
 .vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
