@@ -166,3 +166,66 @@ func TestGeneratePlugin_ContentRootOverlappingTheOutputIsIdempotent(t *testing.T
 	assert.Equal(t, afterFirst, readFileString(t, skill), "the second run leaves the file unchanged")
 	require.NoError(t, load().VerifyPlugin(""), "verify --plugin converges right after generate --plugin")
 }
+
+func TestPluginVersionDriftUsesRegisteredMemberLayout(t *testing.T) {
+	for _, member := range []bool{false, true} {
+		t.Run(map[bool]string{false: "standalone", true: "registered member"}[member], func(t *testing.T) {
+			root := t.TempDir()
+			child := filepath.Join(root, "plugin")
+			writeDomainsFile(t, filepath.Join(root, ".ai-rulez/config.toml"), `version = "5.0"
+name = "producer"
+gitignore = false
+[marketplace]
+name = "catalog"
+members = ["plugin"]
+[marketplace.owner]
+name = "Owner"
+`)
+			childConfig := filepath.Join(child, ".ai-rulez/config.toml")
+			writeDomainsFile(t, childConfig, `version = "5.0"
+name = "child"
+gitignore = false
+[plugin]
+name = "child"
+version = "1.0.0"
+runtimes = ["claude", "copilot"]
+`)
+			skill := filepath.Join(child, ".ai-rulez/skills/shared/SKILL.md")
+			writeDomainsFile(t, skill, "---\nname: shared\ndescription: shared\n---\nBody.\n")
+			load := func(dir string) *Generator {
+				cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
+				require.NoError(t, err)
+				return NewGenerator(cfg)
+			}
+			producer := child
+			if member {
+				producer = root
+			}
+			require.NoError(t, load(producer).GeneratePlugin(""))
+			if !member {
+				writeDomainsFile(t, filepath.Join(root, ".ai-rulez/config.toml"), "version=\"5.0\"\nname=\"unrelated\"\ngitignore=false\n")
+			}
+			gitCmd(t, root, "init", "-q")
+			gitCmd(t, root, "add", "-A")
+			gitCmd(t, root, "commit", "-qm", "baseline")
+			drift, err := load(child).PluginVersionDrift("")
+			require.NoError(t, err)
+			require.Empty(t, drift, "fresh child matches its producer's committed layout")
+			writeDomainsFile(t, skill, "---\nname: shared\ndescription: shared\n---\nChanged.\n")
+			for _, dir := range []string{child, producer} {
+				drift, err = load(dir).PluginVersionDrift("")
+				require.NoError(t, err)
+				require.Len(t, drift, 1)
+				assert.Contains(t, drift[0].Changed, "skills/shared/SKILL.md")
+				assert.NotContains(t, drift[0].Changed, ".claude-plugin/marketplace.json")
+				assert.NotContains(t, drift[0].Changed, ".github/plugin/marketplace.json")
+			}
+			data, err := os.ReadFile(childConfig)
+			require.NoError(t, err)
+			writeDomainsFile(t, childConfig, strings.ReplaceAll(string(data), `version = "1.0.0"`, `version = "1.1.0"`))
+			drift, err = load(child).PluginVersionDrift("")
+			require.NoError(t, err)
+			require.Empty(t, drift, "bumping the changed plugin's version clears the warning")
+		})
+	}
+}

@@ -55,7 +55,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	if top == "" {
 		return nil, nil
 	}
-	outputs, err := g.collectPluginOutputs(profile)
+	outputs, err := g.pluginDriftOutputs(profile, top)
 	if err != nil {
 		return nil, err
 	}
@@ -220,4 +220,52 @@ func (g *Generator) sharedPluginView() (*Generator, error) {
 	shared := NewGenerator(cfg)
 	shared.ctx = g.ctx
 	return shared, nil
+}
+
+// ~keep Members omit local indexes because their registered producer owns the marketplace.
+func (g *Generator) pluginDriftOutputs(profile, top string) ([]config.OutputFile, error) {
+	if g.config.Plugin != nil && !g.config.HasPluginSet() {
+		top = resolveThroughLinks(top)
+		for dir := filepath.Dir(resolveThroughLinks(g.config.BaseDir)); isUnderBaseDir(top, dir); dir = filepath.Dir(dir) {
+			outputs, found, err := g.registeredMemberDriftOutputs(dir)
+			if err != nil || found {
+				return outputs, err
+			}
+			if samePath(dir, top) {
+				break
+			}
+		}
+	}
+	return g.collectPluginOutputs(profile)
+}
+
+func (g *Generator) registeredMemberDriftOutputs(dir string) ([]config.OutputFile, bool, error) {
+	view := g.config.ViewFor(dir)
+	found := false
+	for _, path := range []string{".agents/ai-rulez.toml", ".ai-rulez/config.toml", ".config/ai-rulez/config.toml"} {
+		if view.Exists(filepath.Join(dir, filepath.FromSlash(path))) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, false, nil
+	}
+	cfg, err := config.LoadConfig(g.ctx, dir, g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
+	if err != nil {
+		return nil, false, oops.With("producer", dir).Wrapf(err, "load ancestor plugin producer")
+	}
+	if cfg.Marketplace == nil {
+		return nil, false, nil
+	}
+	for _, member := range cfg.Marketplace.Members {
+		if !samePath(resolveThroughLinks(filepath.Join(cfg.BaseDir, member)), resolveThroughLinks(g.config.BaseDir)) {
+			continue
+		}
+		producer := NewGenerator(cfg)
+		producer.ctx = g.ctx
+		outputs, _, err := producer.collectMemberOutputs(member)
+		return g.withoutAgentsSourcePluginOutputs(outputs), true, err
+	}
+	return nil, false, nil
 }
