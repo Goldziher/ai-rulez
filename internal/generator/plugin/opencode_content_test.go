@@ -215,3 +215,49 @@ func TestResolveMCPCarriesDisabledServers(t *testing.T) {
 	assert.True(t, got[0].Disabled)
 	assert.False(t, got[1].Disabled)
 }
+
+func TestOpenCodeContentHelper_ShouldKeepSameNamedSkillsFromDifferentPlugins(t *testing.T) {
+	node, err := exec.LookPath("node")
+	require.NoError(t, err)
+	root := t.TempDir()
+	for _, name := range []string{"one", "two"} {
+		src := t.TempDir()
+		m := &Manifest{Name: name, Version: "1.0.0", SourceDir: src, Skills: []config.ContentFile{{
+			Name: "using-the-mcp-server",
+			Path: writeSource(t, src, "skills/using-the-mcp-server/SKILL.md",
+				"---\nname: using-the-mcp-server\ndescription: MCP guidance.\n---\n"+name+" MCP instructions\n"),
+		}}}
+		outputs, err := renderOpenCode(m, filepath.Join(root, name))
+		require.NoError(t, err)
+		for _, out := range outputs {
+			require.NoError(t, os.MkdirAll(filepath.Dir(out.Path), 0o755))
+			require.NoError(t, os.WriteFile(out.Path, outputBytes(out), 0o644))
+		}
+	}
+	for _, order := range []string{"one,two", "two,one"} {
+		script := `const skills = new Map();
+const ctx = { skill: { transform: async (fn) => fn({
+  get: (id) => skills.get(id), add: (skill) => skills.set(skill.id, skill),
+}) } };
+const modules = [];
+for (const name of process.argv[2].split(",")) {
+  const module = await import("./" + name + "/.opencode/ai-rulez-content.js");
+  modules.push(module); await module.registerBundledContent(ctx);
+}
+await modules[0].registerBundledContent(ctx);
+console.log(JSON.stringify([...skills.values()].sort((a,b) => a.id.localeCompare(b.id))));`
+		require.NoError(t, os.WriteFile(filepath.Join(root, "run.mjs"), []byte(script), 0o644))
+		cmd := exec.Command(node, "run.mjs", order)
+		cmd.Dir = root
+		data, err := cmd.Output()
+		require.NoError(t, err)
+		var skills []map[string]any
+		require.NoError(t, json.Unmarshal(data, &skills))
+		require.Len(t, skills, 2, "both plugins must register, regardless of load order")
+		for i, name := range []string{"one", "two"} {
+			assert.Equal(t, name+"/using-the-mcp-server", skills[i]["id"])
+			assert.Equal(t, "using-the-mcp-server", skills[i]["name"])
+			assert.Contains(t, skills[i]["content"], name+" MCP instructions")
+		}
+	}
+}
