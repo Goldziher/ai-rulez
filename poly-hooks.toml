@@ -17,22 +17,7 @@ run = "ai-rulez"
 id = "ai-rulez-check"
 stages = ["pre-commit"]
 args = ["generate", "--check", "--no-local"]
-files = [
-  ".ai-rulez/**",
-  "**/.ai-rulez/**",
-  "AGENTS.md",
-  "**/AGENTS.md",
-  "CLAUDE.md",
-  "**/CLAUDE.md",
-  ".mcp.json",
-  "**/.mcp.json",
-  ".claude/**",
-  "**/.claude/**",
-  ".codex/**",
-  "**/.codex/**",
-  ".agents/**",
-  "**/.agents/**",
-]
+files = ["**"]
 workspace = true
 pass_filenames = false
 
