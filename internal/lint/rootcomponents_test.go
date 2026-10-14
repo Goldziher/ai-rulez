@@ -109,6 +109,16 @@ func TestStrict_RootComponentShippedStaysQuiet(t *testing.T) {
 			files:  map[string]string{"plugin.json": "{}\n"},
 		},
 		{
+			name:   "portable runtime agent-plugins writes root components beside legacy codex",
+			config: rootComponentConfig("\nruntimes = [\"codex\", \"agent-plugins\"]\n\n[[plugin.mcp]]\nname = \"s\"\ncommand = \"npx\"\n"),
+			files:  map[string]string{"plugin.json": "{}\n", "mcp.json": "{}\n"},
+		},
+		{
+			name:   "portable runtime copilot writes root components beside legacy codex",
+			config: rootComponentConfig("\nruntimes = [\"codex\", \"copilot\"]\n\n[[plugin.mcp]]\nname = \"s\"\ncommand = \"npx\"\n"),
+			files:  map[string]string{"plugin.json": "{}\n", "mcp.json": "{}\n"},
+		},
+		{
 			name:   "root plugin.json without a codex runtime",
 			config: rootComponentConfig("\nruntimes = [\"claude\"]\n"),
 			files:  map[string]string{"plugin.json": "{}\n"},
