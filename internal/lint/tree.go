@@ -2,6 +2,8 @@ package lint
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
@@ -51,6 +53,26 @@ func LoadTreeWith(git gitutil.Git, base, root string) (*Tree, error) {
 
 // LoadTreeContext is LoadTreeWith with the git probes bounded by ctx.
 func LoadTreeContext(ctx context.Context, git gitutil.Git, base, root string) (*Tree, error) {
+	return indexTree(ctx, git, base, root, WalkLimits{})
+}
+
+// WalkLimits bounds the directory walk of a tree outside git; zero is unbounded.
+type WalkLimits struct {
+	// MaxEntries is how many directory entries the walk visits before it gives up with an error.
+	MaxEntries int
+	// MaxDepth is how many directory levels below the top are walked; deeper directories are left out.
+	MaxDepth int
+}
+
+// LoadTreeLimited indexes the tree below base like LoadTreeContext, but a walk
+// outside git stops with an error past lim.MaxEntries and skips directories below
+// lim.MaxDepth, so a huge directory (a home directory) cannot make the run
+// unbounded. A git repository is indexed from git and is not limited.
+func LoadTreeLimited(ctx context.Context, git gitutil.Git, base string, lim WalkLimits) (*Tree, error) {
+	return indexTree(ctx, git, base, "", lim)
+}
+
+func indexTree(ctx context.Context, git gitutil.Git, base, root string, lim WalkLimits) (*Tree, error) {
 	base = gitutil.Resolve(base)
 	t := &Tree{files: map[string]uint32{}, dirs: map[string]struct{}{}, topNames: map[string]struct{}{}}
 	if root != "" {
@@ -63,8 +85,8 @@ func LoadTreeContext(ctx context.Context, git gitutil.Git, base, root string) (*
 		t.Top, t.Git = root, ok
 		if ok {
 			t.files = files
-		} else {
-			t.walk()
+		} else if err := t.walk(lim); err != nil {
+			return nil, err
 		}
 		t.index()
 		return t, nil
@@ -80,7 +102,9 @@ func LoadTreeContext(ctx context.Context, git gitutil.Git, base, root string) (*
 	}
 	if !t.Git {
 		t.Top = base
-		t.walk()
+		if err := t.walk(lim); err != nil {
+			return nil, err
+		}
 	}
 	t.index()
 	return t, nil
@@ -126,13 +150,21 @@ func (t *Tree) index() {
 	}
 }
 
-func (t *Tree) walk() {
-	_ = filepath.WalkDir(t.Top, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
+func (t *Tree) walk(lim WalkLimits) error {
+	entries := 0
+	err := filepath.WalkDir(t.Top, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // best effort
 		}
+		entries++
+		if lim.MaxEntries > 0 && entries > lim.MaxEntries {
+			return errWalkTooLarge{limit: lim.MaxEntries, top: t.Top}
+		}
 		if d.IsDir() {
 			if p != t.Top && walkutil.ShouldSkipDir(d.Name()) {
+				return filepath.SkipDir
+			}
+			if lim.MaxDepth > 0 && p != t.Top && walkDepth(t.Top, p) > lim.MaxDepth {
 				return filepath.SkipDir
 			}
 			return nil
@@ -148,6 +180,30 @@ func (t *Tree) walk() {
 		t.files[filepath.ToSlash(rel)] = mode
 		return nil
 	})
+	var tooLarge errWalkTooLarge
+	if errors.As(err, &tooLarge) {
+		return tooLarge
+	}
+	return nil // unreadable entries are skipped
+}
+
+// errWalkTooLarge is a walk that passed its entry limit.
+type errWalkTooLarge struct {
+	limit int
+	top   string
+}
+
+func (e errWalkTooLarge) Error() string {
+	return fmt.Sprintf("%s holds more than %d entries; run from inside a project directory or name the files", e.top, e.limit)
+}
+
+// walkDepth is how many directory levels p lies below top.
+func walkDepth(top, p string) int {
+	rel, err := filepath.Rel(top, p)
+	if err != nil || rel == "." {
+		return 0
+	}
+	return strings.Count(rel, string(filepath.Separator)) + 1
 }
 
 // Rel returns abs as a slash path relative to the tree top, or "" when outside.
