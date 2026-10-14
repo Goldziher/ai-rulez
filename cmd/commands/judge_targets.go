@@ -22,6 +22,10 @@ const (
 	// judgeMaxReadBytes is the largest file read at all; a longer one is skipped,
 	// and a file under it is cut to its head and tail before it is sent.
 	judgeMaxReadBytes = 2 << 20
+	// judgeWalkMaxEntries and judgeWalkMaxDepth bound the directory walk of a
+	// directory that is not a git repository; the depth applies to default discovery only.
+	judgeWalkMaxEntries = 100_000
+	judgeWalkMaxDepth   = 8
 )
 
 // judgeSource is a file chosen for judging.
@@ -41,9 +45,17 @@ func judgeConventionRoots() []string {
 // a repository that has no ai-rulez config at all and in one that has. Named
 // paths take any Markdown file or directory inside the project. Generated files
 // are skipped: judge the sources.
-func resolveJudgeSources(ctx context.Context, cwd string, paths []string) (root string, files []judgeSource, err error) {
+func resolveJudgeSources(ctx context.Context, cwd string, paths []string, lim lint.WalkLimits) (root string, files []judgeSource, err error) {
 	cwd = gitutil.Resolve(cwd) // the tree top is symlink-resolved, so the working directory must be too
-	tree, err := lint.LoadTreeContext(ctx, gitutil.Git{}, cwd, "")
+	if (gitutil.Git{}).TopLevelContext(ctx, cwd) == "" && broadRoot(cwd) {
+		return "", nil, oops.
+			Hint("Run it from inside a project directory").
+			Errorf("refusing to judge everything below %s: it is not a project (no git repository)", cwd)
+	}
+	if len(paths) > 0 {
+		lim.MaxDepth = 0 // a named file is judged at any depth
+	}
+	tree, err := lint.LoadTreeLimited(ctx, gitutil.Git{}, cwd, lim)
 	if err != nil {
 		return "", nil, oops.Wrapf(err, "index the project below %s", cwd)
 	}

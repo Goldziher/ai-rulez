@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/judge"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
@@ -221,7 +222,7 @@ func (d judgeDeps) plan(ctx context.Context, cmd *cobra.Command, args []string, 
 	if err != nil {
 		return nil, oops.Wrapf(err, "read the working directory")
 	}
-	root, sources, err := resolveJudgeSources(ctx, cwd, args)
+	root, sources, err := resolveJudgeSources(ctx, cwd, args, lint.WalkLimits{MaxEntries: judgeWalkMaxEntries, MaxDepth: judgeWalkMaxDepth})
 	if err != nil {
 		return nil, err
 	}
