@@ -2,6 +2,7 @@ package agentssource
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,7 +79,9 @@ func TestUpdateItemKeepsTheBytesAroundTheSection(t *testing.T) {
 			assert.Equal(t, tt.want, string(got))
 			info, statErr := os.Stat(path)
 			require.NoError(t, statErr)
-			assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			if runtime.GOOS != "windows" { // Windows has no POSIX permission bits
+				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			}
 		})
 	}
 }

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 const judgeEscape = "\x1b[2J\x1b]0;owned\x07"
 
 func TestJudgeStripsTerminalEscapesFromPathsAndReasons(t *testing.T) {
+	skipIfNoControlCharsInNames(t)
 	tests := []struct {
 		name string
 		args []string
@@ -50,6 +52,7 @@ func TestJudgeStripsTerminalEscapesFromPathsAndReasons(t *testing.T) {
 }
 
 func TestJudgeStripsTerminalEscapesFromTheRubricName(t *testing.T) {
+	skipIfNoControlCharsInNames(t)
 	// Arrange
 	judgeProject(t, map[string]string{"AGENTS.md": "Run tests.\n", "r" + judgeEscape + ".md": "Score 1 when short.\n"})
 	rig := newJudgeRig(t)
@@ -61,4 +64,13 @@ func TestJudgeStripsTerminalEscapesFromTheRubricName(t *testing.T) {
 	require.Equal(t, 0, code, rig.stderr.String())
 	assert.NotContains(t, stdout, "\x1b")
 	assert.NotContains(t, stdout, "\x07")
+}
+
+// skipIfNoControlCharsInNames skips a test that needs a file name with control
+// characters, which Windows rejects.
+func skipIfNoControlCharsInNames(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows file names cannot hold control characters")
+	}
 }
