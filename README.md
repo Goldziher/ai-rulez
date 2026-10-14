@@ -347,6 +347,8 @@ An organization [policy](docs/policy.md) sets tighten-only floors a repository c
 - **Telemetry.** Item-load records with an optional OTLP export. See [telemetry](docs/telemetry.md).
 - **Evals and improve.** `ai-rulez eval` scores skills; `improve` (experimental) optimizes them behind a held-out eval
   gate. See [evals](docs/evals.md) and [improve](docs/improve.md).
+- **Judge.** `ai-rulez judge` grades `AGENTS.md` and `.agents/*` with a model from the command line alone, with no config
+  file: `ai-rulez judge --estimate --model openai/gpt-4o-mini`, then `--allow-llm` to send. See [judge](docs/judge.md).
 - **Cost and inventory.** `tokens`, `cost`, `catalog` and `search` report what the configuration contains and costs.
 
 Existing project on 4.x? Run `ai-rulez migrate v5 --dry-run`, then see [Migrating to v5](docs/migration-v5.md).

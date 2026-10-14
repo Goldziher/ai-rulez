@@ -260,6 +260,7 @@ rewrites them), and the test fails when they are stale.
 | `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
 | `guard` | a hook entry point the harness calls on tool use |
+| `judge` | sends file content to a model with the caller's provider key and spends money; a tool client has no consent prompt |
 | `list` | prints where skills and commands land per harness; generate_outputs dry_run returns the same plan |
 | `llm *` | model credentials and cost estimates for network calls |
 | `local *` | the machine-local overlay is per developer; tools reach it through the local argument of the item tools and update_config |

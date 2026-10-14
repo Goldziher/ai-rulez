@@ -385,6 +385,7 @@ func cliOnlyCapabilities() []Capability {
 		only("review", "spends model tokens in its default mode; the offline heuristics are not exposed yet", "review *", "rubric *"),
 		only("telemetry", "consent and network egress of usage data", "telemetry *"),
 		only("llm", "model credentials and cost estimates for network calls", "llm *"),
+		only("judge", "sends file content to a model with the caller's provider key and spends money; a tool client has no consent prompt", "judge"),
 		only("scanners", "run external scanner programs, possibly with egress", "scanners *"),
 		only("verifiers-other", "calibrate, suggest and test run models or programs; explain prints the help text of a verifier",
 			"verifiers calibrate", "verifiers explain", "verifiers suggest", "verifiers test"),

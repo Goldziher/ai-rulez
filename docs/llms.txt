@@ -75,6 +75,7 @@
 - [Improve (experimental)](https://goldziher.github.io/ai-rulez/improve/): ai-rulez improve run \<skill\> --with CMD runs an external optimizer (a tool that rewrites a skill against a benchmark) on a throwaway copy of the skill and accepts a candidate only if a held-out...
 - [Skill Search](https://goldziher.github.io/ai-rulez/search/): ai-rulez search ranks the skills your project serves against a query, with the same ranker as the findskill tool of mcp --serve-skills, and measures that ranking against labeled queries.
 - [Review](https://goldziher.github.io/ai-rulez/review/): ai-rulez review scores skills, agents and commands against a rubric you own.
+- [Judge](https://goldziher.github.io/ai-rulez/judge/): ai-rulez judge grades agent instruction files with a language model, from the command line alone.
 - [LLM Access](https://goldziher.github.io/ai-rulez/llm/): internal/llm.Client is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place.
 - [Performance](https://goldziher.github.io/ai-rulez/performance/): How ai-rulez is benchmarked, how a regression is caught, and what the optimization passes changed.
 
