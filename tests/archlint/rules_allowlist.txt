@@ -231,7 +231,6 @@ global internal/generator/settings/permrule.go 1
 global internal/generator/stale_verify.go 2
 global internal/generator/tokens.go 2
 global internal/generator/tokens_listing.go 1
-global internal/generator/write_outputs.go 2
 global internal/gitutil/env.go 1
 global internal/gitutil/gitutil.go 1
 global internal/govview/catalog_mcp.go 1

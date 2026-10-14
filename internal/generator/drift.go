@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
+	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
@@ -109,7 +110,7 @@ func (g *Generator) rawState(abs string, output config.OutputFile) DriftKind {
 // to one trailing newline, so bodyEdited cannot see how many the rendering had
 // and tries every run up to this bound; bodyHash caps the run at the same bound
 // so that every hash it writes is one of those shapes.
-const maxHashedTrailingNewlines = 3
+const maxHashedTrailingNewlines = genmark.MaxHashedTrailingNewlines
 
 // bodyEdited reports whether content, read from path, no longer matches the
 // Content-Hash stored in its header. A file without a stored hash cannot be
@@ -141,19 +142,7 @@ func bodyHash(output config.OutputFile) string {
 }
 
 func bodyEditedWith(stored, content, path string) bool {
-	if stored == "" {
-		return false
-	}
-	// The hash is taken before generate normalizes the file to one trailing
-	// newline, so any run of trailing newlines in the rendering may have been
-	// collapsed; accept every run bodyHash can produce.
-	trimmed := strings.TrimRight(stripHeader(content, path), "\n")
-	for newlines := 0; newlines <= maxHashedTrailingNewlines; newlines++ {
-		if templates.HashContent(trimmed+strings.Repeat("\n", newlines)) == stored {
-			return false
-		}
-	}
-	return true
+	return genmark.BodyEdited(stored, content, path)
 }
 
 // CheckDrift renders every output in memory and reports the files that differ

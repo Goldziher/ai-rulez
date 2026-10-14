@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"bufio"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
+	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -58,131 +58,26 @@ func scanHashesFrom(open opener, filePath string) (contentHash, sourceHash strin
 		return "", "", false
 	}
 	defer file.Close()
-
-	st := hashScan{budget: maxHeaderLines}
-	reader := bufio.NewReader(file)
-	for first := true; ; first = false {
-		raw, readErr := reader.ReadString('\n')
-		if raw == "" && readErr != nil {
-			break // EOF, or a read error: end with what was found
-		}
-		if st.line(strings.TrimRight(raw, "\r\n"), first) || readErr != nil {
-			break
-		}
-	}
-	return st.contentHash, st.sourceHash, st.inBlock
-}
-
-// hashScan is the state of scanStoredHashes.
-type hashScan struct {
-	contentHash, sourceHash string
-	inFrontmatter           bool // currently inside the frontmatter block
-	inBlock                 bool // a hash was found inside the frontmatter block
-	budget                  int  // lines left outside the frontmatter block
-}
-
-// line consumes one line and reports whether the scan is finished.
-func (h *hashScan) line(raw string, first bool) bool {
-	switch {
-	case first && raw == "---":
-		h.inFrontmatter = true
-		return false
-	case h.inFrontmatter && raw == "---":
-		h.inFrontmatter = false
-		return false
-	case !h.inFrontmatter:
-		h.budget--
-		if h.budget < 0 {
-			return true
-		}
-	}
-	c, s := hashFromLine(raw)
-	if c != "" {
-		h.contentHash = c
-	}
-	if s != "" {
-		h.sourceHash = s
-	}
-	if (c != "" || s != "") && h.inFrontmatter {
-		h.inBlock = true
-	}
-	return h.contentHash != "" && h.sourceHash != ""
+	return genmark.ScanHashes(file)
 }
 
 // hashFromLine extracts a Content-Hash or Source-Hash value from one header
 // line, regardless of comment style (HTML, hash, slash, semicolon).
-func hashFromLine(raw string) (contentHash, sourceHash string) {
-	stripped := strings.TrimSpace(raw)
-	for _, prefix := range []string{"<!--", "-->", "//", "#", ";", "/*", "*/"} {
-		stripped = strings.TrimPrefix(stripped, prefix)
-	}
-	stripped = strings.TrimSpace(stripped)
-	switch {
-	case strings.HasPrefix(stripped, "Content-Hash: "):
-		return strings.TrimPrefix(stripped, "Content-Hash: "), ""
-	case strings.HasPrefix(stripped, "Source-Hash: "):
-		return "", strings.TrimPrefix(stripped, "Source-Hash: ")
-	}
-	return "", ""
-}
+func hashFromLine(raw string) (contentHash, sourceHash string) { return genmark.HashFromLine(raw) }
 
-// stripHeader removes the header comment from generated content, returning
-// only the body. The header format depends on the output file extension.
-//
-// Detection runs in the same priority order as injectHashes so that the body
-// passed to the body hash is symmetric with the body the injection sees.
-// Files may have multiple header layers (e.g. devin rule files have
-// trigger frontmatter THEN a generated-file banner) — we strip them all,
-// otherwise the banner's per-run timestamp would leak into the body hash.
-func stripHeader(content, outputPath string) string {
-	ext := strings.ToLower(filepath.Ext(outputPath))
+// stripHeader removes the header comment from generated content, returning only
+// the body (see genmark.StripHeader).
+func stripHeader(content, outputPath string) string { return genmark.StripHeader(content, outputPath) }
 
-	// 1. YAML frontmatter (skill/agent files, plus rule files that prepend
-	// trigger frontmatter). Strip and continue — there may be a banner after.
-	if end, _ := frontmatterEnd(content); end > 0 {
-		// Drop a single leading blank line so banner detection works against
-		// either "---\n\n<!--" or "---\n<!--" forms.
-		content = strings.TrimPrefix(strings.TrimPrefix(content[end:], "\r"), "\n")
-	}
+// frontmatterEnd locates a leading YAML frontmatter block (see genmark.FrontmatterEnd).
+func frontmatterEnd(s string) (end int, open bool) { return genmark.FrontmatterEnd(s) }
 
-	switch ext {
-	case ".mdc", ".md", ".markdown", ".mdx", ".html":
-		// Only a banner at the very start (after the frontmatter) is a header: a
-		// "-->" further down belongs to the body (fenced HTML, comments) and
-		// stripping up to it would truncate the hashed body. "# Heading" is a
-		// heading in markdown, not a line comment, so no line-comment stripping.
-		if !strings.HasPrefix(content, "<!--") {
-			return content
-		}
-		if idx := strings.Index(content, "-->"); idx >= 0 {
-			return skipEOL(content[idx+len("-->"):])
-		}
-		return content
-	default:
-		// Line-prefix comments (#, //, ;) — also covers .mdc which uses
-		// "# title\n\nbody" with the title acting as a heading-shaped header.
-		lines := strings.Split(content, "\n")
-		i := 0
-		for i < len(lines) {
-			trimmed := strings.TrimSpace(lines[i])
-			if trimmed == "" {
-				i++
-				break
-			}
-			isComment := strings.HasPrefix(trimmed, "#") ||
-				strings.HasPrefix(trimmed, "//") ||
-				strings.HasPrefix(trimmed, ";")
-			if !isComment {
-				break
-			}
-			i++
-		}
-		if i >= len(lines) {
-			return ""
-		}
-		return strings.Join(lines[i:], "\n")
-	}
-}
+// hasGeneratedBanner reports whether data starts with a generated-file banner
+// (see genmark.HasBanner).
+func hasGeneratedBanner(path string, data []byte) bool { return genmark.HasBanner(path, data) }
+
+// isMarkdownRuleExt reports whether path has a markdown-family extension.
+func isMarkdownRuleExt(path string) bool { return genmark.IsMarkdownExt(path) }
 
 // injectContentHash inserts a Content-Hash line into the header of the
 // generated content. Backward-compatible thin wrapper around injectHashes.
