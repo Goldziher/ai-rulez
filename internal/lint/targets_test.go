@@ -2,6 +2,7 @@ package lint
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -165,6 +166,49 @@ func TestResolveTargetsSkipsSymlinkedFilesLeavingTheProject(t *testing.T) {
 	got := strings.Join(targets.Rels(), ",")
 	if got != "in/ok.md" {
 		t.Errorf("targets = %q, want only in/ok.md", got)
+	}
+}
+
+// onCaseInsensitiveFS skips the test unless the file system of dir treats two
+// spellings of a name as one file (the default on macOS and Windows).
+func onCaseInsensitiveFS(t *testing.T, dir, name string) {
+	t.Helper()
+	a, errA := os.Stat(filepath.Join(dir, name))
+	b, errB := os.Stat(filepath.Join(dir, strings.ToLower(name)))
+	if errA != nil || errB != nil || !os.SameFile(a, b) {
+		t.Skip("the file system is case-sensitive")
+	}
+}
+
+func TestResolveTargetsTakesTheRealCaseOfAPathOnACaseInsensitiveFS(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{".ai-rulez/config.toml": baseConfig, "AGENTS.md": "# a\n"})
+	gitAdd(t, root)
+	onCaseInsensitiveFS(t, root, "AGENTS.md")
+	tree, err := LoadTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name  string
+		paths []string
+	}{
+		{name: "lower case spelling", paths: []string{"agents.md"}},
+		{name: "both spellings", paths: []string{"agents.md", "AGENTS.md"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			targets, err := ResolveTargets(context.Background(), tree, TargetSpec{Paths: tc.paths, Cwd: root})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.Join(targets.Rels(), ","); got != "AGENTS.md" {
+				t.Fatalf("targets = %q, want AGENTS.md once", got)
+			}
+			if targets.Files[0].Kind != kindContext {
+				t.Errorf("kind = %q, want %q", targets.Files[0].Kind, kindContext)
+			}
+		})
 	}
 }
 

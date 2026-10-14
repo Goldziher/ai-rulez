@@ -283,7 +283,7 @@ func (c *candidates) expandPath(tree *Tree, cwd, p string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("path %q does not exist", p)
 	}
-	rel = filepath.ToSlash(rel)
+	rel = realCase(tree.Top, filepath.ToSlash(rel))
 	if !info.IsDir() {
 		return []string{rel}, nil
 	}
