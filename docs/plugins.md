@@ -142,6 +142,27 @@ optional `metadata`, `plugins[]` with `name` and a relative `source` directory).
 `[plugin.cursor] marketplace = true` for a single-plugin repository (`source` is `.`), and
 `[marketplace] cursor_index = true` next to the Claude index for members and domain plugins.
 
+### Gemini extension settings
+
+Gemini filters sensitive host environment variables before launching extensions. Declare the
+values your MCP server needs as settings; Gemini supplies the values at runtime and stores
+`sensitive = true` values in its keychain. Never put credential values or defaults in source.
+
+```toml
+[[plugin.gemini.settings]]
+name = "Provider key"
+description = "Credential for the provider used by this MCP server."
+env_var = "OPENAI_API_KEY"
+sensitive = true
+```
+
+The generated manifest uses native `settings[].envVar` keys. Names and environment variables
+must be unique; environment variable names use letters, digits and underscores. Gemini's
+`extensions install ./plugin --skip-settings` skips installation prompts. Configure the chosen
+provider later with `gemini extensions config <plugin-name>`, before making provider requests.
+There is no authored credential value, default, or required flag.
+See the [Gemini extension settings reference](https://geminicli.com/docs/extensions/reference/#extension-settings).
+
 ### Gemini commands
 
 `[plugin.gemini] commands = true` also bundles each command as `commands/<name>.toml` (a required

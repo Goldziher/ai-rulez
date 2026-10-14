@@ -106,6 +106,18 @@ tasks:
     cmds:
       - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
 
+  schema:local:generate:
+    desc: "Derive the local overlay schema from the main schema"
+    env:
+      UPDATE_LOCAL_SCHEMA: "1"
+    cmds:
+      - go test ./schema -run TestLocalSchemaInSync -count=1
+
+  test:gemini-settings:
+    desc: "Verify Gemini extension settings schema and native projection"
+    cmds:
+      - go test ./internal/config ./internal/generator/plugin ./schema -count=1
+
   test:golden:update:
     desc: "Rewrite golden files (UPDATE_GOLDEN=1) in every package that has them, then the tokens golden; review the diff"
     env:
