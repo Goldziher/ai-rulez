@@ -154,9 +154,16 @@ func (m *Manifest) managedOutputs() map[string][]string {
 	}
 	keys := piOwnedKeys()
 	if slices.Contains(m.Runtimes, config.PluginRuntimeOpenCode) {
-		keys = append(keys, "type", "main", "exports", "dependencies", "homepage", "license", "packageManager")
+		keys = append(keys, openCodeOwnedKeys()...)
 	}
 	return map[string][]string{"package.json": keys}
+}
+
+// openCodeOwnedKeys are the package.json keys a combined OpenCode package owns
+// beyond Pi's: the only ones the OpenCode manifest may overwrite in the merged
+// file. Every other key must agree between the runtimes.
+func openCodeOwnedKeys() []string {
+	return []string{"type", "main", "exports", "dependencies", "homepage", "license", "packageManager"}
 }
 
 // MarketInfo is the resolved marketplace metadata for the emitted index.
