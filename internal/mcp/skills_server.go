@@ -226,9 +226,9 @@ func (s *Server) registerSkillTools() {
 }
 
 func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
-	limit := int(req.GetNumber("limit", defaultSearchLimit))
-	if limit <= 0 {
-		limit = defaultSearchLimit
+	limit, err := limitArg(req, "limit", defaultSearchLimit)
+	if err != nil {
+		return handlers.ToolError(err)
 	}
 	limit = min(limit, maxSearchLimit)
 	domain := req.GetString("domain", "")

@@ -19644,7 +19644,9 @@ When the filters remove every skill, the start-up warning names each filter and 
   provenance and per-file digests; `read_skill_file(uri, encoding, offset, length)` returns a supporting file
   (see [Served files](#served-files-scripts-and-assets)). `offset` and `length` (and the `offset` of
   `list_skill_resources`) must be whole numbers from 0 to 2147483647; a fractional, negative, non-finite or larger
-  value is rejected with an error naming the argument.
+  value is rejected with an error naming the argument. The `limit` of `find_skill` and `search_skills` and the
+  `budget_bytes` of `load_skill` take zero or a negative number as "use the default"; a fractional, non-finite or
+  larger-than-2147483647 value is rejected the same way.
 - **The authoring surface**: the same tools, prompts and `ai-rulez://` resources as plain `ai-rulez mcp`
   (create, update, delete, validate, generate, reports), so the one server both serves skills and edits
   the project. With `--read-only` only the read-only tools are registered.
