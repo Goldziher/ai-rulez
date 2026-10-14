@@ -115,7 +115,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 766 0a6e490006ebdcefb34dd59bcc74da76a84e7cf73e58609d03f8262ce9dfbecd
+.gitignore file 0644 741 34f714a134fed8dd48965d6142fa4b2492845d37b6d62b68ed07d36bbf8b3742
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 1208 cb5ae6152306c7d479b8ee45b478875524baf306a83377a9d30c4637c1b937ce
 CLAUDE.md file 0644 909 a69385ee34fe5457e3b49b7c3737060e76fa67915829e0abdac9362800c92b9b
@@ -1325,13 +1325,12 @@ Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d95
 
 Use strict mode.
 <<<<
-.gitignore file 0644 766 0a6e490006ebdcefb34dd59bcc74da76a84e7cf73e58609d03f8262ce9dfbecd
+.gitignore file 0644 741 34f714a134fed8dd48965d6142fa4b2492845d37b6d62b68ed07d36bbf8b3742
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
-.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/always.md

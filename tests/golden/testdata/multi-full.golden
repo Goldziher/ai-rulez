@@ -1786,13 +1786,12 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-.gitignore file 0644 1206 84e44e460ce95cd918df0fd506075ba55cedfbc00884f7fae37823ba0eaf00a9
+.gitignore file 0644 1181 2d77b4f6f0d335b3530fa04d2069b4e6ae18f4d90fe8cb3dde3217dc7459cdb9
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
-.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/always.md
