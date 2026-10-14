@@ -25,7 +25,7 @@ $ ai-rulez validate
   package. A file `generate` would write is read from the plan, so a generated file is judged as the harness will see it
   whether or not `generate` has run; a hand-written file is read from disk.
   Traps that apply to generated files (`AR9C1`, `AR9C3` to `AR9C9`) also scan the gitignored output directories of
-  their scope (`.claude/skills`, `.claude/agents`, `.kiro/agents`, `.kiro/steering`, `.devin/rules`, ...) at the lint root and keep the files that carry the ai-rulez banner, because
+  their scope (`.claude/skills`, `.claude/agents`, `.kiro/agents`, `.kiro/steering`, `.devin/rules`, ...) at the lint root and keep the files that carry the ai-rulez header (the `AI-RULEZ :: GENERATED FILE` header or the older banner, as the first comment of the file, with a matching `Content-Hash` when one is stored), because
   Claude Code outputs are gitignored and git does not list them. A gitignored hand-written file is not checked.
 - Severity is `warning` for a hand-written file (it could be a README). A file that carries the ai-rulez banner
   and is certainly ignored by the harness is an `error`, because it means a preset is broken. An explicit

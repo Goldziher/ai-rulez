@@ -4,6 +4,8 @@ import (
 	"path"
 	"slices"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 )
 
 // PlannedFiles is what a generate run would write, as the traps see it. The
@@ -47,21 +49,23 @@ func (r *runner) plannedRels() []string {
 
 // plannedContent returns the planned bytes for the file at f (a path relative to
 // the tree top) when the traps should judge them instead of the disk's: the plan
-// writes the file and the disk has none, or has one ai-rulez generated.
-func (r *runner) plannedContent(f string, onDisk bool, onDiskGenerated bool) ([]byte, bool) {
+// writes the file and the disk has none, or has one ai-rulez generated. generated
+// says whether the planned bytes carry a generated header.
+func (r *runner) plannedContent(f string, onDisk bool, onDiskGenerated bool) (content []byte, generated, ok bool) {
 	if r.planned == nil {
-		return nil, false
+		return nil, false, false
 	}
-	rel, ok := r.underRoot(f)
-	if !ok {
-		return nil, false
+	rel, inside := r.underRoot(f)
+	if !inside {
+		return nil, false, false
 	}
 	content, planned := r.planned.Planned(rel)
 	if !planned || (onDisk && !onDiskGenerated) {
-		return nil, false
+		return nil, false, false
 	}
+	generated = genmark.IsGeneratedOutput(f, content)
 	if len(content) > maxTrapFileBytes {
 		content = content[:maxTrapFileBytes]
 	}
-	return content, true
+	return content, generated, true
 }
