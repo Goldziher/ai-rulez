@@ -40,7 +40,7 @@ func realGeneratedProject(t *testing.T) string {
 	return root
 }
 
-func TestEveryMarkdownFileGenerateWroteIsRecognisedAsGenerated(t *testing.T) {
+func TestEveryMarkdownFileGenerateWroteIsRecognizedAsGenerated(t *testing.T) {
 	root := realGeneratedProject(t)
 	var seen []string
 

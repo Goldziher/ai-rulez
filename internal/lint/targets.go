@@ -164,11 +164,7 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 		return nil, err
 	}
 	rels := picked.sorted(spec.Under)
-	if len(spec.Except) > 0 {
-		rels = slices.DeleteFunc(rels, func(rel string) bool {
-			return slices.ContainsFunc(spec.Except, func(dir string) bool { return strings.HasPrefix(rel, dir+"/") })
-		})
-	}
+	rels = dropUnder(rels, spec.Except)
 	if spec.Detect {
 		rels = append(rels, cands.conventional(spec.Under, picked)...)
 	}
@@ -789,3 +785,13 @@ const (
 	dirPluginMeta = ".claude-plugin"
 	jsonKeyMain   = "main"
 )
+
+// dropUnder removes the files below any of the directories dirs.
+func dropUnder(rels, dirs []string) []string {
+	if len(dirs) == 0 {
+		return rels
+	}
+	return slices.DeleteFunc(rels, func(rel string) bool {
+		return slices.ContainsFunc(dirs, func(dir string) bool { return strings.HasPrefix(rel, dir+"/") })
+	})
+}

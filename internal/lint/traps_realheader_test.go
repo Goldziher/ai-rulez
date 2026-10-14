@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTrapsRecogniseTheRealGeneratedHeader(t *testing.T) {
+func TestTrapsRecognizeTheRealGeneratedHeader(t *testing.T) {
 	const cfg = ".ai-rulez/config.toml"
 
 	t.Run("a generated file with the real header is an error, a preset bug, with no fix", func(t *testing.T) {

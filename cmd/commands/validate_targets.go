@@ -113,9 +113,7 @@ func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree
 		}
 		spec.Except, spec.Lenient = covered, true
 	} else if validateRecursive {
-		if under := tree.Rel(cfg.BaseDir); under != "." {
-			spec.Under = under // the repository root keeps every file
-		}
+		spec.Under = recursiveUnder(cfg, tree)
 	}
 	if spec.Empty() {
 		return nil, nil
@@ -124,13 +122,8 @@ func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree
 	if err != nil {
 		return nil, oops.Hint("--path and --glob must name readable files inside the project root; [lint] paths are relative to it").Wrap(err)
 	}
-	if orphans {
-		if len(targets.Files)+len(targets.Plain)+len(targets.Skipped) == 0 {
-			return nil, nil // every pick belongs to a root
-		}
-		for _, rel := range append(targets.Rels(), plainRels(targets)...) {
-			targets.AddNotice(rel + ": outside every --recursive root, linted at the repository root")
-		}
+	if orphans && !noteOrphans(targets) {
+		return nil, nil // every pick belongs to a root
 	}
 	for _, n := range targets.Notices() {
 		noteLine(ctx, os.Stderr, "WARN  "+n+"\n")
@@ -172,4 +165,25 @@ func plainRels(t *lint.Targets) []string {
 		out[i] = t.Plain[i].Rel
 	}
 	return out
+}
+
+// recursiveUnder is the directory a root of a recursive run keeps its picks
+// below; the repository root keeps every file ("").
+func recursiveUnder(cfg *config.Config, tree *lint.Tree) string {
+	if under := tree.Rel(cfg.BaseDir); under != "." {
+		return under
+	}
+	return ""
+}
+
+// noteOrphans names each file linted because no root covers it. It reports false
+// when there is none.
+func noteOrphans(targets *lint.Targets) bool {
+	if len(targets.Files)+len(targets.Plain)+len(targets.Skipped) == 0 {
+		return false
+	}
+	for _, rel := range append(targets.Rels(), plainRels(targets)...) {
+		targets.AddNotice(rel + ": outside every --recursive root, linted at the repository root")
+	}
+	return true
 }
