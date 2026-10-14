@@ -275,3 +275,37 @@ func TestRenderPiFilesListExistingTopLevelPaths(t *testing.T) {
 	assert.Contains(t, pkg["files"], "README.md")
 	assert.NotContains(t, pkg["files"], "assets/", "assets/ does not exist in the bundle")
 }
+
+func TestGeneratePiMergeShouldRefreshOpenCodeMetadata(t *testing.T) {
+	for _, runtimes := range [][]string{{"pi", "opencode"}, {"opencode", "pi"}} {
+		root := t.TempDir()
+		existing := `{"name":"authored","type":"commonjs","main":"old.js","exports":{".":"./old.js"},` +
+			`"dependencies":{"@opencode/plugin":"^2.0.20","authored":"1"},"scripts":{"test":"example"}}`
+		require.NoError(t, os.WriteFile(filepath.Join(root, "package.json"), []byte(existing), 0o644))
+		m := &Manifest{
+			Name: "probe", Version: "1.0.0", SourceDir: root,
+			Repository: "https://github.com/acme/probe", Runtimes: runtimes,
+			PiPackageJSON: config.PiPackageJSONMerge, PiPackageName: "@acme/probe",
+		}
+		outputs, err := Generate(m, root)
+		require.NoError(t, err)
+		var pkg map[string]any
+		require.NoError(t, json.Unmarshal(outputByPath(t, outputs, "package.json").RawContent, &pkg))
+		assert.Equal(t, "@acme/probe", pkg["name"])
+		assert.Equal(t, ".opencode/plugins/probe.js", pkg["main"])
+		assert.Equal(t, "module", pkg["type"])
+		assert.Equal(t, "^2.0.26", pkg["dependencies"].(map[string]any)["@opencode/plugin"])
+		assert.Equal(t, "1", pkg["dependencies"].(map[string]any)["authored"])
+		assert.Equal(t, map[string]any{"test": "example"}, pkg["scripts"])
+		for _, out := range outputs {
+			require.NoError(t, os.MkdirAll(filepath.Dir(out.Path), 0o755))
+			require.NoError(t, os.WriteFile(out.Path, out.RawContent, 0o644))
+		}
+		require.NoError(t, VerifyProvenance(root))
+		pkg["main"] = "broken.js"
+		data, err := json.Marshal(pkg)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(root, "package.json"), data, 0o644))
+		require.Error(t, VerifyProvenance(root))
+	}
+}

@@ -251,6 +251,9 @@ func openCodeDependency(m *Manifest) string {
 }
 
 func openCodePackageName(m *Manifest) string {
+	if slices.Contains(m.Runtimes, config.PluginRuntimePi) && m.PiPackageName != "" {
+		return m.PiPackageName
+	}
 	parsed, err := url.Parse(m.Repository)
 	if err == nil && strings.EqualFold(parsed.Host, "github.com") {
 		segments := strings.Split(strings.Trim(parsed.Path, "/"), "/")
