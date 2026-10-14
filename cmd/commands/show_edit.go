@@ -162,7 +162,12 @@ func runShow(cmd *cobra.Command, name string, k contentKind, opts *showOptions) 
 		return failMsg("Failed to show "+k.use, err)
 	}
 	path := contentFile(op, opts.domain, k.ftype, name)
-	content, err := op.ReadFileContent(path)
+	var content string
+	if op.IsAgentsMDItem(opts.domain, k.ftype, name) {
+		content, err = op.ReadAgentsMDItem(name) // its own section, not the whole AGENTS.md
+	} else {
+		content, err = op.ReadFileContent(path)
+	}
 	if err != nil {
 		return failMsg("Failed to read "+k.use, err)
 	}

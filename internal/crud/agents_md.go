@@ -51,6 +51,17 @@ func (op *OperatorImpl) withAgentsMDItems(domain, ftype string, listed []FileInf
 	return append(out, listed...)
 }
 
+// ReadAgentsMDItem returns the text of one AGENTS.md item: its section with
+// agents_md_split, the whole file without it (see agentssource.ReadItem).
+func (op *OperatorImpl) ReadAgentsMDItem(name string) (string, error) {
+	return agentssource.ReadItem(op.baseDir, name, op.layout.AgentsMDSplit, op.contextFileNames())
+}
+
+// updateAgentsMDItem rewrites one section of AGENTS.md (see agentssource.UpdateItem).
+func (op *OperatorImpl) updateAgentsMDItem(name, content string) error {
+	return agentssource.UpdateItem(op.baseDir, name, content, op.layout.AgentsMDSplit, op.contextFileNames())
+}
+
 // removeAgentsMDItem deletes one section of AGENTS.md (see agentssource.RemoveItem).
 func (op *OperatorImpl) removeAgentsMDItem(name string) error {
 	return agentssource.RemoveItem(op.baseDir, name, op.layout.AgentsMDSplit, op.contextFileNames())

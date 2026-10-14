@@ -515,6 +515,18 @@ func (op *OperatorImpl) ReadFileContent(path string) (string, error) {
 // Unlike the delete-then-create pattern, this uses WriteFile (temp+rename)
 // so the old content is never lost if the write fails.
 func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
+	if op.IsAgentsMDItem(domain, ftype, name) {
+		// A section of the author's AGENTS.md, not a file of its own.
+		if err := op.updateAgentsMDItem(name, content); err != nil {
+			return nil, err
+		}
+		return &FileResult{Name: name, FullPath: filepath.Join(op.baseDir, config.AgentsMDFilename), Type: ftype, Domain: domain}, nil
+	}
+	return op.updateContentFile(ctx, domain, ftype, name, content, priority, targets)
+}
+
+// updateContentFile is UpdateFile for an item that is a file of its own.
+func (op *OperatorImpl) updateContentFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
 	if err := ValidateFileName(name); err != nil {
 		return nil, err
 	}
