@@ -605,6 +605,9 @@ func (c *Config) validateMarketplaceAuthoring() error {
 // runtime list, the Codex layout and the Agent Plugins name grammar that every
 // runtime built on the standard shares.
 func validatePluginRuntimeRules(p *PluginAuthoring) error {
+	if err := validateGeminiSettings(p); err != nil {
+		return err
+	}
 	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
 		if err := validateCodexPluginMetadata(p); err != nil {
 			return err

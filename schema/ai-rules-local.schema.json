@@ -2452,6 +2452,31 @@
             },
             "context_file_name": {
               "type": "string"
+            },
+            "settings": {
+              "description": "Runtime-provided extension settings allowlisted into the MCP environment. Credential values are supplied by Gemini, never stored in this config.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "env_var": {
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
             }
           },
           "type": "object"
