@@ -2880,6 +2880,32 @@
             "commands": {
               "type": "boolean",
               "description": "Also bundle the plugin's commands as commands/<name>.toml Gemini custom commands (default off). $ARGUMENTS becomes {{args}}."
+            },
+            "settings": {
+              "type": "array",
+              "description": "Runtime-provided extension settings allowlisted into the MCP environment. Credential values are supplied by Gemini, never stored in this config.",
+              "items": {
+                "type": "object",
+                "required": ["name", "description", "env_var"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  },
+                  "env_var": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false
