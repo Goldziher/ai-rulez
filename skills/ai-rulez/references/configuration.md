@@ -15,6 +15,7 @@ presets = [                   # Built-in names and/or custom preset tables
 ]
 
 default = ""                  # Default profile name
+default_layers = ["plugins"]   # Select config.plugins.toml before any table
 
 gitignore = true              # Opt in to the managed .gitignore block (default: false)
 # agents_md = false           # Default true: one AGENTS.md, CLAUDE.md imports @AGENTS.md
@@ -64,8 +65,8 @@ style = "detailed"            # detailed | compact | minimal
 
 [[mcp_servers]]
 name = "ai-rulez"
-command = "pnpm"
-args = ["dlx", "ai-rulez@latest", "mcp"]
+command = "ai-rulez"
+args = ["mcp"]
 
 [[mcp_servers]]
 name = "grafana"
@@ -135,20 +136,33 @@ Practice domains: `ai-governance` (auto), `agent-delegation` (auto), `code-quali
 
 ```yaml
 ---
-priority: medium # critical | high | medium | low | minimal
-targets: # Limit to specific output targets
-  - CLAUDE.md
-  - .cursor/rules/*
-globs: # Path scope (rules); synonym: paths. Keeps the rule out of the root
-  - "**/*.tsx" # file and emits it as .claude/rules/ or a Cursor .mdc rule.
-aliases: # Alternative names (commands)
-  - alias1
-usage: "Usage text" # Command usage info
-shortcut: "Ctrl+K" # Keyboard shortcut (commands)
-category: "Category" # Content category
-description: "Desc" # Description (skills, agents)
+type: Principle
+title: TypeScript conventions
+x-ai-rulez:
+  kind: rule
+  id: typescript-conventions
+  metadata:
+    priority: medium
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+    globs:
+      - "**/*.tsx"
 ---
 ```
+
+For authored `.ai-rulez/` content, use OKF frontmatter and tool metadata under
+`x-ai-rulez.metadata`. Public `skills/<name>/SKILL.md` exports use native Agent
+Skills `name`/`description` frontmatter. `migrate okf --check` detects older
+authored formats; legacy fields remain readable for migration.
+
+## Plugin layer
+
+Keep consumer `[[marketplaces]]` and `[[plugins]]`, and producer `[plugin]` and
+`[marketplace]`, in `config.plugins.toml`. The root's `default_layers` selects
+that file. Plugin metadata does not belong to the root governance config.
+Use a separate author root for public product capabilities when contributor
+rules and maintainer agents should stay private to the repository.
 
 ## Merge Strategies
 
@@ -179,10 +193,10 @@ planned `--gitignore` patterns. Secret values are redacted before source-hash ca
 ## Config Directory and Generated Manifest
 
 - `.ai-rulez/` remains the default config root.
-- Config discovery also accepts the project-level `.config/` convention: `.config/ai-rulez/config.toml`. `.ai-rulez/` wins when both exist at the same level. Only `config.toml` is read; a V2/V3 `config.yaml`, `config.json` or flat `ai-rulez.yaml` fails with an error that points at ai-rulez 4.x (`npx ai-rulez@4 migrate v4`).
+- Config discovery also accepts the project-level `.config/` convention: `.config/ai-rulez/config.toml`. `.ai-rulez/` wins when both exist at the same level. The base `config.toml` and selected TOML layers are read; a V2/V3 `config.yaml`, `config.json` or flat `ai-rulez.yaml` fails with an error that points at ai-rulez 4.x (`npx ai-rulez@4 migrate v4`).
 - `ai-rulez init --config-dir .config/ai-rulez` scaffolds the `.config/` layout; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/`.
 - `ai-rulez generate --config-dir <name>` and `validate --config-dir <name>` use another config directory (nested values such as `.config/ai-rulez` are supported).
-- `ai-rulez generate <path/to/config.toml>` and `--config <path/to/config.toml>` load that exact file.
+- `ai-rulez --config <path/to/config.toml> generate` loads that exact file.
 - Generation writes `.generated-manifest.json` under the active config directory and removes only stale files listed in that manifest.
 - Assistant directories such as `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.devin/`, and `.agents/` are not considered fully owned; user settings, hooks, personal skills, and other local files are preserved.
 

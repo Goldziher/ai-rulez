@@ -7,26 +7,10 @@ presets = ["claude", "codex", "opencode", "zed"]
 
 builtins = ["go", "security", "git-workflow", "code-quality", "testing", "default-commands"]
 
-[[marketplaces]]
-name = "basemind"
-source = "Goldziher/basemind"
-type = "github"
-
-[[plugins]]
-marketplace = "basemind"
-name = "basemind"
-scope = "project"
-enabled = true
-
-# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
-[header]
-text = """
-AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Source: .ai-rulez/config.toml and .ai-rulez/
-Regenerate: pnpm dlx ai-rulez@latest generate
-Use MCP server: pnpm dlx ai-rulez@latest mcp
-"""
-hashes = "full"
+default_layers = ["plugins"]
 
 [mcp]
-self_server_command = ["pnpm", "dlx", "ai-rulez@latest", "mcp"]
+self_server_command = ["ai-rulez", "mcp"]
+
+[lock]
+include_outputs = false

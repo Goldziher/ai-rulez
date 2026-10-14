@@ -25,7 +25,7 @@ x-ai-rulez:
 
 Typical setup:
 
-- Use `pnpm dlx ai-rulez@5.3.0 mcp` (Node) or `uvx ai-rulez==5.3.0 mcp` (Python), pinning the version you have reviewed.
+- Use `ai-rulez mcp` from the reviewed native CLI. CI pins its 5.3.0-based source commit; package releases are a separate distribution channel.
 - This repo includes a default server entry in `.ai-rulez/config.toml`.
 
 When updating MCP functionality:

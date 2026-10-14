@@ -32,6 +32,20 @@ every commit, poly runs lint, format, and file-safety checks; the commit-msg
 hook validates the message. Run all hooks manually with
 `poly hooks run pre-commit --all-files`.
 
+## Repository governance and public skills
+
+Author contributor guidance in `.ai-rulez/`. The root `config.toml` selects
+`config.plugins.toml` through `default_layers = ["plugins"]`; the latter holds
+consumer marketplace declarations. The native CLI owns the generated headers and
+machine-local ownership sidecars. Use the reviewed 5.3.0 source build pinned in CI,
+then run `task governance:check` after editing sources. Install its system-channel
+Poly hooks with `task governance:hooks:install`; preserve existing machine preferences.
+
+The installable product skill is under `skills/ai-rulez/`, separate from internal
+maintainer skills under `.ai-rulez/skills/`. Audit its CLI examples and resource
+references when changing a public command. Stock 5.3.0 omits fixes currently restored
+on `main`, so the pinned source build is required for the full plugin validation path.
+
 ## Architectural Overview
 
 `ai-rulez` is designed with a clean, layered architecture that separates data, logic, and presentation. Understanding this structure is key to contributing effectively.
@@ -40,7 +54,7 @@ hook validates the message. Run all hooks manually with
 
 - **`internal/config`**: This is the single source of truth for the application's data structures. All YAML parsing and the definitions for `Rule`, `Agent`, `MCPServer`, etc., live here.
 
-- **`internal/crud`**: This package contains the **centralized, shared logic** for all Create, Read, Update, and Delete (CRUD) operations. It takes simple data structures, modifies the configuration in memory, and handles writing back to the `ai_rulez.yaml` file. **Nearly all business logic should be in this package.**
+- **`internal/crud`**: This package contains the **centralized, shared logic** for all Create, Read, Update, and Delete (CRUD) operations. It takes simple data structures, modifies the configuration in memory, and writes the project TOML configuration and OKF content under `.ai-rulez/`. **Nearly all business logic should be in this package.**
 
 ### The Presentation Layers: `cmd` and `mcp`
 
@@ -59,7 +73,7 @@ When adding a new feature or fixing a bug, the logic should almost always be imp
 
 Here is the step-by-step process for adding CRUD operations for a new entity (e.g., `new_entity`):
 
-1.  **Update the Schema:** Add the `new_entity` definition to `schema/ai-rules.schema.json`.
+1.  **Update the Schema:** Add the `new_entity` definition to `schema/ai-rules.schema.json` and relevant report schemas.
 2.  **Update the Config Struct:** Add the `NewEntity` struct to `internal/config/types.go` and the `[]NewEntity` slice to the main `Config` struct.
 3.  **Update the CRUD Logic:** Add a new case for `new_entity` in the main switch statement in `internal/crud/crud.go`.
 4.  **Create the CLI Command File:** Create a new file, `cmd/commands/crud/new_entity.go`, and define the `cobra` commands (`Add`, `Get`, `List`, `Update`, `Delete`). These commands should parse flags and call the `crud` helper functions.

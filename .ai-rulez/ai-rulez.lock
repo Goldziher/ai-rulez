@@ -1,0 +1,349 @@
+# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
+# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
+
+version = 1
+ai_rulez_version = '5.3.0'
+scope = 'all'
+tree = 'sha256:02b83ab143b48ff612bbd85754de3c0927d85e03ccec227a4463910fde89f190'
+
+[[served]]
+name = 'build'
+source = ''
+commit = ''
+digest = 'sha256:f8e2e1a09a08a9ccc8f81e595f7d532e361483acc0682c7b1b5ee809dbd4eb54'
+
+[[served]]
+name = 'capability-delivery-checklist'
+source = '.ai-rulez/skills/capability-delivery-checklist/SKILL.md'
+commit = ''
+digest = 'sha256:58d2ada76f516f24d9f85e3aaea76590d82179d803b5448d572c141ef26d6a3b'
+
+[[served]]
+name = 'code-quality-standards'
+source = 'builtin://universal/code-quality/skills/code-quality-standards/SKILL.md'
+commit = ''
+digest = 'sha256:0126cc7c038b3e343ee56866949865dd799bde0de4884ba0bdfeb28655fa8134'
+
+[[served]]
+name = 'config-schema-maintainer'
+source = '.ai-rulez/skills/config-schema-maintainer/SKILL.md'
+commit = ''
+digest = 'sha256:7a89670a7e6b2d39757430247cf5d93ad10cf8101d80b888633d14dc22f64095'
+
+[[served]]
+name = 'core-workflows'
+source = '.ai-rulez/skills/core-workflows/SKILL.md'
+commit = ''
+digest = 'sha256:076202cc1404d23c151f101bb15213c419fd1b7206d8ea8e0001cee088823ad2'
+
+[[served]]
+name = 'dependency-awareness'
+source = 'builtin://universal/security/skills/dependency-awareness/SKILL.md'
+commit = ''
+digest = 'sha256:e108ed344fe20948fcbda61b96266026bb9b2318df089964c088c0455294f8d3'
+
+[[served]]
+name = 'docs-and-site'
+source = '.ai-rulez/skills/docs-and-site/SKILL.md'
+commit = ''
+digest = 'sha256:b950231d0e629601ecd1b7ccd9f787508570ff88ab355396ad4cb4295c5c3356'
+
+[[served]]
+name = 'error-handling'
+source = 'builtin://universal/code-quality/skills/error-handling/SKILL.md'
+commit = ''
+digest = 'sha256:fddb5f980e8d98c91b459be578cdea7e0fc765d8219f66088892e936f0d1e349'
+
+[[served]]
+name = 'fix'
+source = ''
+commit = ''
+digest = 'sha256:55c099974503689811de0512e5c5f8c9662343cac8f2a193dda9ac4552fbc681'
+
+[[served]]
+name = 'go-conventions'
+source = 'builtin://languages/go/skills/go-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:d4476ba547378d20d11369f89ae4348b2de3ee9fbbc0a59c6a882fffeda351ce'
+
+[[served]]
+name = 'incremental-approach'
+source = 'builtin://universal/token-efficiency/skills/incremental-approach/SKILL.md'
+commit = ''
+digest = 'sha256:ff56cbdc4813ee427a3b6f7d23f6b41b82b7c3cc8dc2b64ccd256a90e75e02f8'
+
+[[served]]
+name = 'iterate'
+source = ''
+commit = ''
+digest = 'sha256:5cb87728d1449fadda6d8557501fcc0823509c60a37058ce4d2dda123296f67c'
+
+[[served]]
+name = 'lint'
+source = ''
+commit = ''
+digest = 'sha256:a974b5b04626f29512a0f7104b1f3dca490d61b96e1e91073f77cfe5f9921e8a'
+
+[[served]]
+name = 'mcp-integrations'
+source = '.ai-rulez/skills/mcp-integrations/SKILL.md'
+commit = ''
+digest = 'sha256:1f52f1f44932b43dbee403b5969b6564d8a363df19ad5b912560a94f87658588'
+
+[[served]]
+name = 'owasp-quick-reference'
+source = 'builtin://universal/security/skills/owasp-quick-reference/SKILL.md'
+commit = ''
+digest = 'sha256:de4f3b595b88e88d7bff0c342b5253637d08d79b3baebe888bd465f133ff512c'
+
+[[served]]
+name = 'parallelize'
+source = ''
+commit = ''
+digest = 'sha256:2700d984ba10baa2e16ed19b48cc8fd5f7351776f2ce03f6712394d3912f91cb'
+
+[[served]]
+name = 'release-and-distribution'
+source = '.ai-rulez/skills/release-and-distribution/SKILL.md'
+commit = ''
+digest = 'sha256:1d794508c342f8db68a2b9c404bacb675958fc5d4d2f717e04af586e056741c9'
+
+[[served]]
+name = 'repository-layout'
+source = '.ai-rulez/skills/repository-layout/SKILL.md'
+commit = ''
+digest = 'sha256:62d141b267c507d6a26a42addde26ccc14b28466de9930ec73ed28ca2fe38b55'
+
+[[served]]
+name = 'review'
+source = ''
+commit = ''
+digest = 'sha256:48b0d8cc16b893d636f1df194c36a5ddb687835793050801ed921e329628ac50'
+
+[[served]]
+name = 'task-runner'
+source = 'builtin://universal/token-efficiency/skills/task-runner/SKILL.md'
+commit = ''
+digest = 'sha256:9f3cadda648798b049869c463d7a69f6f7b5953bcad2a43ea02e645d1ec3e19b'
+
+[[served]]
+name = 'tdd-workflow'
+source = 'builtin://universal/testing/skills/tdd-workflow/SKILL.md'
+commit = ''
+digest = 'sha256:90ddeb170606792596979de6444904f88b5fbcdc52ea2462109401865d17f6ec'
+
+[[served]]
+name = 'test'
+source = ''
+commit = ''
+digest = 'sha256:9a9d32594ba92825816f00ca1c8d9a0ec158e0475ddafd23e788e1ee476cd74d'
+
+[[served]]
+name = 'test-command'
+source = ''
+commit = ''
+digest = 'sha256:7d20a749c5a55b635be27c63e245a90bb25b7a7cd8b8b8549a5bf74473f2caaf'
+
+[[served]]
+name = 'test-fixture-maintainer'
+source = '.ai-rulez/skills/test-fixture-maintainer/SKILL.md'
+commit = ''
+digest = 'sha256:4d4a299dfc2b052feccd484a06264db035830ef53d97519bf99dbe47d83f7766'
+
+[[served]]
+name = 'testing-conventions'
+source = 'builtin://universal/testing/skills/testing-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:562385aa3c563ffbf327d6776932b43175052b00ec4418695ed6c50c335f1686'
+
+[[item]]
+kind = 'agent'
+id = 'golang-maintainer'
+path = 'agents/golang-maintainer.md'
+digest = 'sha256:1d556d3a858942fa1685002d100043ba63d272ebb3385bcea26842618afb793c'
+
+[[item]]
+kind = 'agent'
+id = 'governance-architect'
+path = 'agents/governance-architect.md'
+digest = 'sha256:734f2cb8cd059b4e06eb05c942beba899ece3701cd023a0a8e94149e601e39be'
+
+[[item]]
+kind = 'command'
+id = 'build'
+path = 'commands/build.md'
+digest = 'sha256:0d4a9e84d5a8beecae980295511792f78b9c84ba410e50db7ff7c64a42c92dea'
+
+[[item]]
+kind = 'command'
+id = 'fix'
+path = 'commands/fix.md'
+digest = 'sha256:bb199ef5a59b87c5e7e238452d17563c2dc7c4ea0e7dd722f58b121e6fde525c'
+
+[[item]]
+kind = 'command'
+id = 'lint'
+path = 'commands/lint.md'
+digest = 'sha256:13c1197eccdb78489e83c6f1a60b85eeca9d06d02db4262278b2c4a9956e3741'
+
+[[item]]
+kind = 'command'
+id = 'review'
+path = 'commands/review.md'
+digest = 'sha256:648c210627ae92059c93955ab32a78f54bafa057a8461880617535398bddeb1d'
+
+[[item]]
+kind = 'command'
+id = 'test'
+path = 'commands/test.md'
+digest = 'sha256:543c6b40e649b1c5d773835c5b4182a283d61c06b01d6a6511b0eb08a95b22cf'
+
+[[item]]
+kind = 'command'
+id = 'test-command'
+path = 'commands/test-command.md'
+digest = 'sha256:2ea295eab8c29fe6b916437ab8f1a0801f37ea58b330f240e89411610b76e19b'
+
+[[item]]
+kind = 'context'
+id = 'cli-and-crud'
+path = 'context/cli-and-crud.md'
+digest = 'sha256:06a7d21a05a3f3aab5a5e881f7cbad7d2339d1732e27ff5f444eba9ebdbead06'
+
+[[item]]
+kind = 'context'
+id = 'generation-pipeline'
+path = 'context/generation-pipeline.md'
+digest = 'sha256:3da578031ebc0d600cd83f31e8c118b3998cc8aa4d6ec0819915b9dc8d1c5c6a'
+
+[[item]]
+kind = 'context'
+id = 'includes-and-merging'
+path = 'context/includes-and-merging.md'
+digest = 'sha256:1093dd57cdf711746da2b611cc0253e618937663ef23515a46b2eb5963760b4b'
+
+[[item]]
+kind = 'context'
+id = 'mcp-integrations'
+path = 'context/mcp-integrations.md'
+digest = 'sha256:d828cb17a4d16290bf5fdadefb6aaab82d483d82f9f25a63531d0c4afc74d08d'
+
+[[item]]
+kind = 'context'
+id = 'poly'
+path = 'context/poly.md'
+digest = 'sha256:20e62c5792273155a02d0db150432893769edfa3d87ec35305485b1a1507f21c'
+
+[[item]]
+kind = 'context'
+id = 'profiles-and-domains'
+path = 'context/profiles-and-domains.md'
+digest = 'sha256:e713dc88203189aa6a45a35ca561abcd51e94a5edddf20aaf2feff81beabea5d'
+
+[[item]]
+kind = 'context'
+id = 'release-and-distribution'
+path = 'context/release-and-distribution.md'
+digest = 'sha256:6b3aea93200a84f70546132079429d6148821916a1967ef6e264988b5bfd805a'
+
+[[item]]
+kind = 'context'
+id = 'skills-and-agents'
+path = 'context/skills-and-agents.md'
+digest = 'sha256:3b4bf64a720cde6cc071a82dff4d56fadae0f2c8201d909140440e1f3fe27a5b'
+
+[[item]]
+kind = 'context'
+id = 'testing-and-quality'
+path = 'context/testing-and-quality.md'
+digest = 'sha256:a16fe999be34b31769fa233a28df54c6c7fa0ff81debb846fb541a0e4e297963'
+
+[[item]]
+kind = 'context'
+id = 'tool-overview'
+path = 'context/tool-overview.md'
+digest = 'sha256:371ab94863686ec50617c8c85b205b25e55ac678182df1b45ccedac917b1cfa0'
+
+[[item]]
+kind = 'context'
+id = 'workspace-layout'
+path = 'context/workspace-layout.md'
+digest = 'sha256:c03d1c8771683195b30bf6493a637b27b83a009d88273e5b3c3ebc1360277f14'
+
+[[item]]
+kind = 'rule'
+id = 'cross-runtime-distribution'
+path = 'rules/cross-runtime-distribution.md'
+digest = 'sha256:fb84dc5e345895531a172ac9e3bf1fe68db3f8f6839b55ebdd9121041d1981bf'
+
+[[item]]
+kind = 'rule'
+id = 'documentation-and-samples'
+path = 'rules/documentation-and-samples.md'
+digest = 'sha256:134012c61ad2578e848c47dfd35772668a0d0d5d09b9eccf4acb3d01a0ffca08'
+
+[[item]]
+kind = 'rule'
+id = 'go-cli-architecture'
+path = 'rules/go-cli-architecture.md'
+digest = 'sha256:65816aa31b9da8546638b30fd557af56b6d7795de871530b8cd4974093c47a5b'
+
+[[item]]
+kind = 'rule'
+id = 'source-of-truth-governance'
+path = 'rules/source-of-truth-governance.md'
+digest = 'sha256:f14d5d26f0186cd81dee2ebc3c4df20f36b2d1f3401feabbc0fbf65942dafd55'
+
+[[item]]
+kind = 'rule'
+id = 'testing-and-qa'
+path = 'rules/testing-and-qa.md'
+digest = 'sha256:52b87b064a90d38f83f68044b847b1aa8cdb1f777dfbbca6f760b538233e053b'
+
+[[item]]
+kind = 'skill'
+id = 'capability-delivery-checklist'
+path = 'skills/capability-delivery-checklist'
+digest = 'sha256:9c1e4c3ac8b5ab6bb0402c859e38d3579ef67608738f52588325df805de2761c'
+
+[[item]]
+kind = 'skill'
+id = 'config-schema-maintainer'
+path = 'skills/config-schema-maintainer'
+digest = 'sha256:08bb1aad324c04f51b67688dcafd9362733bfe61f8d6edc39e8e4c10522ddc07'
+
+[[item]]
+kind = 'skill'
+id = 'core-workflows'
+path = 'skills/core-workflows'
+digest = 'sha256:d0030e80c8e2bef47b9b327dba587eeb66366c35994d7dfd9a3561f15c9387f6'
+
+[[item]]
+kind = 'skill'
+id = 'docs-and-site'
+path = 'skills/docs-and-site'
+digest = 'sha256:e4a99522b967f1673a839f30d4f6cdfa168bebc9fbd48e868b7d1494d661f75e'
+
+[[item]]
+kind = 'skill'
+id = 'mcp-integrations'
+path = 'skills/mcp-integrations'
+digest = 'sha256:982c138e8cd494b216507644c9d77c01d72a59fa0a712e1fa63c50e4ebbe9309'
+
+[[item]]
+kind = 'skill'
+id = 'release-and-distribution'
+path = 'skills/release-and-distribution'
+digest = 'sha256:43b86ff29fcb3b9704a2a54edc89d0f0b389d3424b6b1da2ca8c8719244b5f18'
+
+[[item]]
+kind = 'skill'
+id = 'repository-layout'
+path = 'skills/repository-layout'
+digest = 'sha256:7d6b6ca9958c165c0593248ca449b07814e8a45140e5c123d4294750996e1278'
+
+[[item]]
+kind = 'skill'
+id = 'test-fixture-maintainer'
+path = 'skills/test-fixture-maintainer'
+digest = 'sha256:2469c5464b743c7516921c1a71d2d6d75741917caf98e701ae34c2b1b5c153d8'
