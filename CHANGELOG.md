@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-10-14
+
 ### Added
 
 - **`ai-rulez judge [paths...]` grades instruction files with a model, with no configuration file.** With no paths it judges `AGENTS.md` at any depth and the `.agents/` and `.ai-rulez/` Markdown; named files and directories work anywhere in the project, symlinks are never followed and generated files are skipped. The model comes from `--model provider/model` and `AI_RULEZ_LLM_*` variables and the key from the provider's own variable; no repository or user config is read. A real run needs `--allow-llm`, prints the egress host and model first, refuses a non-https endpoint (loopback excepted), a model with no known price under `--max-cost` (default 0.25 USD) and a worst case above the cap, and honours an organization policy that forbids model use. A file with secret-looking text is not sent and counts as a finding unless `--redact` masks it; long files keep head and tail. `--estimate` (`--dry-run`) sends nothing. The built-in rubric `builtin:instruction-quality` (or `--rubric <file>`) scores clarity, actionability, non-contradiction, scope, secrets and stale commands. Exit 0 all pass, 1 could not run, 2 below `--min-score` or skipped for secrets. `--format json` follows `schema/judge-report.schema.json`; see [Judge](https://goldziher.github.io/ai-rulez/judge/).
