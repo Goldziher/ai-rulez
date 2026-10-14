@@ -41,6 +41,16 @@ type nestedFile struct {
 // project of its own (it owns its AGENTS.md), and is bounded in depth and size.
 // The second result is false when the size bound cut the walk short.
 func findNested(fsys fs.FS) (found []nestedFile, complete bool) {
+	return nestedWalker{maxEntries: nestedMaxEntries}.find(fsys)
+}
+
+// nestedWalker is the walk findNested runs, with the size bound as a field so a
+// test can lower it.
+type nestedWalker struct {
+	maxEntries int
+}
+
+func (w nestedWalker) find(fsys fs.FS) (found []nestedFile, complete bool) {
 	entries := 0
 	complete = true
 	_ = fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // best effort, read-only
@@ -51,7 +61,7 @@ func findNested(fsys fs.FS) (found []nestedFile, complete bool) {
 			return nil //nolint:nilerr // an unreadable entry is skipped
 		}
 		entries++
-		if entries > nestedMaxEntries {
+		if entries > w.maxEntries {
 			complete = false
 			return fs.SkipAll
 		}
@@ -92,7 +102,12 @@ func ownsConfig(fsys fs.FS, dir string) bool {
 // Files git ignores, generated files, empty files and files that only point
 // elsewhere are left out, as for the root. taken holds the names in use; it is updated.
 func readNested(ctx context.Context, cfg *config.Config, fsys fs.FS, taken map[string]bool) []config.ContentFile {
-	found, complete := findNested(fsys)
+	return readNestedWith(ctx, cfg, fsys, taken, nestedWalker{maxEntries: nestedMaxEntries})
+}
+
+// readNestedWith is readNested with the walk to use.
+func readNestedWith(ctx context.Context, cfg *config.Config, fsys fs.FS, taken map[string]bool, w nestedWalker) []config.ContentFile {
+	found, complete := w.find(fsys)
 	if !complete {
 		cfg.Warn("stopped looking for nested AGENTS.md files: the project has more than a bounded number of entries",
 			"source", config.SourceAgents)
