@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.2.1] - 2026-10-14
+
 ### Fixed
 
 - **A live reload no longer restores a served catalog that is missing a skill saved a moment earlier.** The catalog cache was keyed after the configuration load, so a save finishing in between cached the half-saved render under the finished file's key. The cache is now written only when the files did not change during the build.
