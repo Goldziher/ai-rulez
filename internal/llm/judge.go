@@ -52,6 +52,17 @@ var judgeSchema = map[string]any{
 	"required": []string{"score", "rationale"},
 }
 
+// VerdictFormat is the structured-output request for a Verdict reply, for the
+// callers that build their own judge prompt.
+func VerdictFormat() *JSONSchemaFormat {
+	return &JSONSchemaFormat{Name: "verdict", Schema: judgeSchema}
+}
+
+// ParseVerdict decodes a judge reply strictly: exactly one JSON object with both
+// fields present, a score in [0,1] and nothing after it. Callers that build their
+// own judge prompt use it as the ChatRequest.AcceptReply check and to read the reply.
+func ParseVerdict(text string) (Verdict, error) { return parseVerdict(text) }
+
 // JudgeOptions tunes JudgeWith.
 type JudgeOptions struct {
 	// RedactSecrets sends the rubric and transcript with secret-looking text
