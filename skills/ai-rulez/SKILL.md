@@ -344,13 +344,10 @@ OpenCode skill IDs and shared include-cache locking. Use the CI-pinned source bu
 for those features until a released version includes the fixes; keep that distinction
 when reporting installation or validation results.
 
-The CI pin is `1dd46d774f156f3d170ecd1b702598b12d1eaf5b`. Current source
-also includes the ID-only OKF skill projection fix from
-`9a15612428892be1b6efb6a4ee58c8bf4271b9e6`: it supplies a missing native
-Agent Skills name from the authored ID and rejects invalid projections. That
-fix is also unreleased. Explicit `x-ai-rulez.metadata.name` remains compatible
-with the CI pin; ID-only plugin skills need the later source fix. A future
-public patch release is required to replace these source-build requirements.
+The CI pin is `bdabc8a6e9211de60ca1e4ad76225ac92fcf218f`. This reviewed build includes
+the ID-only OKF skill projection fix, strict Hermes package metadata, and cache
+isolation by configured source path and revision. These fixes are unreleased;
+a future public patch release can replace the reviewed source build.
 
 ## Detailed references
 
