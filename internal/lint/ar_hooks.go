@@ -75,13 +75,20 @@ func checkHookSchema(r *runner) {
 // and every tracked plugin hooks/hooks.json.
 func (r *runner) hookJSONFiles() []string {
 	var files []string
+	seen := map[string]bool{}
 	if p := filepath.Join(r.rootAbs(), ".claude", "settings.json"); safefs.IsFile(p) {
 		files = append(files, p)
+		seen[p] = true
 	}
 	for _, rel := range r.tree.Paths() {
 		if path.Base(rel) == "hooks.json" && path.Base(path.Dir(rel)) == keyHooks {
-			files = append(files, filepath.Join(r.tree.Top, filepath.FromSlash(rel)))
+			abs := filepath.Join(r.tree.Top, filepath.FromSlash(rel))
+			seen[abs] = true
+			files = append(files, abs)
 		}
+	}
+	for _, f := range r.targetFiles(targetHooks, seen) { // recognized by content, wherever it lies
+		files = append(files, f.Abs)
 	}
 	sort.Strings(files)
 	return files

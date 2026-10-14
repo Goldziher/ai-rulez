@@ -71,13 +71,13 @@ func strictOnlyFlagSet() bool {
 	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
 		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
 		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != "" || validateVerifiers ||
-		validateMCPUserScope
+		validateMCPUserScope || targetFlagsSet()
 }
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
 	if !validateStrict && strictOnlyFlagSet() {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers, --mcp-user-scope and the baseline flags need the content checks: drop --config-only")
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers, --mcp-user-scope, --path, --glob and the baseline flags need the content checks: drop --config-only")
 	}
 	if len(validateAllowEgress) > 0 && !validateExtern {
 		return oops.Errorf("--allow-egress requires --external")
@@ -152,6 +152,9 @@ func checkBaselineFlags() error {
 	if validateUpdateBaseline && (validateLintProfile != "" || len(validateAnalyzers) > 0) {
 		return oops.Errorf("--update-baseline needs the full configured rule set; it cannot be combined with --lint-profile or --analyzer")
 	}
+	if validateUpdateBaseline && targetFlagsSet() {
+		return oops.Errorf("--update-baseline needs every finding of the configured content; it cannot be combined with --path or --glob (name them in [lint] paths to baseline them)")
+	}
 	if validateBaselineReason != "" && !validateUpdateBaseline {
 		return oops.Errorf("--baseline-reason only applies with --update-baseline")
 	}
@@ -212,6 +215,13 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	}
 	sel := analyzerSelection(cfg)
 	opts := append(governanceLintOptions(ctx, cfg, sel), contentLintOptions(ctx, cfg, sel)...)
+	targets, err := resolveLintTargets(ctx, cfg, tree)
+	if err != nil {
+		return nil, err
+	}
+	if targets != nil {
+		opts = append(opts, lint.WithTargets(targets))
+	}
 	scanner, err := scannerOptions()
 	if err != nil {
 		return nil, err

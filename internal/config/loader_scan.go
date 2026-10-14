@@ -208,43 +208,53 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 			continue
 		}
 
-		skillPath := filepath.Join(skillRoot, skillMarkerFile)
-		if _, err := s.v.Lstat(skillPath); os.IsNotExist(err) {
-			// No SKILL.md file, skip this directory
+		contentFile, ok := s.skillAt(skillRoot, entry.Name(), bundleExclude)
+		if !ok {
 			continue
 		}
-
-		contentFile, err := s.loadFile(skillPath)
-		if err != nil {
-			// Non-fatal: one unreadable file must not fail the whole load, but dropping
-			// it without a diagnostic makes it indistinguishable from a missing one.
-			s.logger().Warn("failed to load skill file", "path", skillPath, "error", err)
-			continue
-		}
-
-		// A frontmatter that never closes would be served as body text with no
-		// name or description; treat it as malformed like an unparseable one.
-		if contentFile.Metadata == nil && !contentFile.MalformedFrontmatter && hasUnclosedFrontmatter(contentFile.Content) {
-			s.logger().Warn("Ignoring skill frontmatter with no closing '---'", "skill", entry.Name(), "path", skillPath)
-			contentFile.MalformedFrontmatter = true
-		}
-
-		// Override the name with the directory name instead of filename
-		contentFile.Name = entry.Name()
-
-		// Load skill supporting files (references/, scripts/, assets/) so
-		// presets can preserve the canonical Agent Skills layout instead of
-		// concatenating everything into SKILL.md.
-		resources, resErr := s.loadResources(skillRoot, ItemKindSkill, bundleExclude)
-		if resErr != nil {
-			s.logger().Warn("Failed to load skill resources", "skill", entry.Name(), "error", resErr)
-		}
-		contentFile.Resources = resources
 
 		skills = append(skills, contentFile)
 	}
 
 	return skills, nil
+}
+
+// skillAt loads the skill in skillRoot (SKILL.md and its resources) under name.
+// ok is false when the directory holds no readable SKILL.md.
+func (s *contentScanner) skillAt(skillRoot, name string, bundleExclude []string) (contentFile ContentFile, ok bool) {
+	skillPath := filepath.Join(skillRoot, skillMarkerFile)
+	if _, err := s.v.Lstat(skillPath); os.IsNotExist(err) {
+		// No SKILL.md file, skip this directory
+		return ContentFile{}, false
+	}
+
+	contentFile, err := s.loadFile(skillPath)
+	if err != nil {
+		// Non-fatal: one unreadable file must not fail the whole load, but dropping
+		// it without a diagnostic makes it indistinguishable from a missing one.
+		s.logger().Warn("failed to load skill file", "path", skillPath, "error", err)
+		return ContentFile{}, false
+	}
+
+	// A frontmatter that never closes would be served as body text with no
+	// name or description; treat it as malformed like an unparseable one.
+	if contentFile.Metadata == nil && !contentFile.MalformedFrontmatter && hasUnclosedFrontmatter(contentFile.Content) {
+		s.logger().Warn("Ignoring skill frontmatter with no closing '---'", "skill", name, "path", skillPath)
+		contentFile.MalformedFrontmatter = true
+	}
+
+	// Override the name with the directory name instead of filename
+	contentFile.Name = name
+
+	// Load skill supporting files (references/, scripts/, assets/) so
+	// presets can preserve the canonical Agent Skills layout instead of
+	// concatenating everything into SKILL.md.
+	resources, resErr := s.loadResources(skillRoot, ItemKindSkill, bundleExclude)
+	if resErr != nil {
+		s.logger().Warn("Failed to load skill resources", "skill", name, "error", resErr)
+	}
+	contentFile.Resources = resources
+	return contentFile, true
 }
 
 // scanCommands scans the commands/ directory for .md files (flat form) and
@@ -488,7 +498,12 @@ func readContentFile(v workspace.View, log logger.Logger, path string) (ContentF
 			Wrapf(err, "read content file")
 	}
 
-	content := string(data)
+	return parseContentFile(log, path, string(data)), nil
+}
+
+// parseContentFile builds the ContentFile of the text of the file at path:
+// the name from the file name, the frontmatter split from the body.
+func parseContentFile(log logger.Logger, path, content string) ContentFile {
 	filename := filepath.Base(path)
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
 
@@ -507,5 +522,5 @@ func readContentFile(v workspace.View, log logger.Logger, path string) (ContentF
 		Content:              actualContent,
 		Metadata:             metadata,
 		MalformedFrontmatter: malformed,
-	}, nil
+	}
 }

@@ -2469,6 +2469,11 @@
           "items": { "type": "string" },
           "description": "Path globs (relative to the config directory or the repo root) of CLAUDE.md files AR9Q0 accepts as intentional islands."
         },
+        "paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files and directories, relative to the project root, that validate and scan lint in addition to the content tree (for example a marketplace or skill kept outside .ai-rulez/). Each must resolve inside the project root; the command line's --path and --glob add to them."
+        },
         "evals": {
           "type": "object",
           "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",

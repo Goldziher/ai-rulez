@@ -41,6 +41,7 @@ const helpExampleSpec = `
   ai-rulez validate --explain AR001
   ai-rulez validate --format sarif --output ai-rulez.sarif
   ai-rulez validate --fix --dry-run
+  ai-rulez validate --path catalog --glob "plugins/**/*.json"
 ## lock
   ai-rulez lock
   ai-rulez lock --check
@@ -461,6 +462,7 @@ const helpExampleSpec = `
   ai-rulez scan --recursive
   ai-rulez scan --format sarif --output scan.sarif
   ai-rulez scan --changed --fail-on warning
+  ai-rulez scan --path vendor/skills
 ## clean
   ai-rulez clean --dry-run
   ai-rulez clean --yes

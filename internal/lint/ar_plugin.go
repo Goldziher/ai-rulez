@@ -46,18 +46,33 @@ var (
 
 func checkPluginManifests(r *runner) {
 	var pluginDirs []string
+	seen := map[string]bool{}
 	for _, rel := range r.tree.Paths() {
 		dir, base := path.Dir(rel), path.Base(rel)
 		abs := filepath.Join(r.tree.Top, filepath.FromSlash(rel))
 		switch {
 		case path.Base(dir) == ".claude-plugin" && base == "plugin.json":
+			seen[abs] = true
 			r.checkPluginJSON(abs)
 			pluginDirs = append(pluginDirs, filepath.Dir(filepath.Dir(abs)))
 		case path.Base(dir) == ".claude-plugin" && base == "marketplace.json":
+			seen[abs] = true
 			r.checkMarketplaceJSON(abs)
 		case base == "hooks.json" && path.Base(dir) == keyHooks:
+			seen[abs] = true
 			r.checkPluginHookQuoting(abs)
 		}
+	}
+	// A file recognized by its content wherever it lies (a marketplace kept in a
+	// directory of its own, a plugin manifest outside .claude-plugin/).
+	for _, f := range r.targetFiles(targetPlugin, seen) {
+		r.checkPluginJSON(f.Abs)
+	}
+	for _, f := range r.targetFiles(targetMarketplace, seen) {
+		r.checkMarketplaceJSON(f.Abs)
+	}
+	for _, f := range r.targetFiles(targetHooks, seen) {
+		r.checkPluginHookQuoting(f.Abs)
 	}
 	if r.opts.External {
 		sort.Strings(pluginDirs)

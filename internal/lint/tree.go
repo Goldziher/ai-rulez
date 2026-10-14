@@ -3,6 +3,7 @@ package lint
 import (
 	"context"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -83,6 +84,29 @@ func LoadTreeContext(ctx context.Context, git gitutil.Git, base, root string) (*
 	}
 	t.index()
 	return t, nil
+}
+
+// WithFiles returns a copy of the tree that also lists the files rels (slash
+// paths relative to the top): files the index does not track yet, or a walk
+// skipped. The receiver is left alone, so a tree shared between roots stays what
+// it was.
+func (t *Tree) WithFiles(rels []string) *Tree {
+	n := &Tree{
+		Top: t.Top, Git: t.Git, Explicit: t.Explicit,
+		files: maps.Clone(t.files), dirs: maps.Clone(t.dirs), topNames: maps.Clone(t.topNames),
+	}
+	for _, rel := range rels {
+		if _, ok := n.files[rel]; ok {
+			continue
+		}
+		mode := uint32(0o100644)
+		if info, err := os.Stat(filepath.Join(t.Top, filepath.FromSlash(rel))); err == nil && info.Mode()&0o111 != 0 {
+			mode = 0o100755
+		}
+		n.files[rel] = mode
+	}
+	n.index()
+	return n
 }
 
 // index derives the top-level names and directory set from the file list.
