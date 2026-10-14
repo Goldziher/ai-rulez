@@ -105,7 +105,14 @@ func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree
 		}
 	}
 	spec := lint.TargetSpec{Paths: paths, Globs: globs, Cwd: workingDir(), Detect: cfg.Implicit && !explicit, Generated: cfg.Implicit && outputsRequested(cfg)}
-	if validateRecursive {
+	roots, orphans := orphanRootsFrom(ctx)
+	if orphans {
+		covered, ok := rootsRel(tree, roots)
+		if !ok {
+			return nil, nil // a root at the repository top lints every pick
+		}
+		spec.Except, spec.Lenient = covered, true
+	} else if validateRecursive {
 		if under := tree.Rel(cfg.BaseDir); under != "." {
 			spec.Under = under // the repository root keeps every file
 		}
@@ -117,8 +124,52 @@ func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree
 	if err != nil {
 		return nil, oops.Hint("--path and --glob must name readable files inside the project root; [lint] paths are relative to it").Wrap(err)
 	}
+	if orphans {
+		if len(targets.Files)+len(targets.Plain)+len(targets.Skipped) == 0 {
+			return nil, nil // every pick belongs to a root
+		}
+		for _, rel := range append(targets.Rels(), plainRels(targets)...) {
+			targets.AddNotice(rel + ": outside every --recursive root, linted at the repository root")
+		}
+	}
 	for _, n := range targets.Notices() {
 		noteLine(ctx, os.Stderr, "WARN  "+n+"\n")
 	}
 	return targets, nil
+}
+
+// orphanKey carries the root directories of a recursive run into the pass that
+// lints the picks no root covers.
+type orphanKey struct{}
+
+// withOrphanRoots marks ctx as the pass over the --path and --glob picks that lie
+// outside every root; roots are the absolute directories of the roots.
+func withOrphanRoots(ctx context.Context, roots []string) context.Context {
+	return context.WithValue(ctx, orphanKey{}, roots)
+}
+
+func orphanRootsFrom(ctx context.Context) (roots []string, ok bool) {
+	roots, ok = ctx.Value(orphanKey{}).([]string)
+	return roots, ok
+}
+
+// rootsRel returns the roots as slash paths relative to the tree top. ok is false
+// when one of them is the top itself, which covers every file.
+func rootsRel(tree *lint.Tree, roots []string) (rels []string, ok bool) {
+	for _, root := range roots {
+		rel := tree.Rel(root)
+		if rel == "." {
+			return nil, false
+		}
+		rels = append(rels, rel)
+	}
+	return rels, true
+}
+
+func plainRels(t *lint.Targets) []string {
+	out := make([]string, len(t.Plain))
+	for i := range t.Plain {
+		out[i] = t.Plain[i].Rel
+	}
+	return out
 }

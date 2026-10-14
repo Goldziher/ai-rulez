@@ -12579,7 +12579,12 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
 - **Nothing else changes.** Findings, baselines, `--fix` and the exit codes work as for the content tree; a fix
   never edits a generated file or a file outside the project root. `--path` and `--glob` need the content checks
   (not `--config-only`) and cannot be combined with `--update-baseline`: put the paths in `[lint] paths` to
-  baseline them. With `--recursive`, each root lints the matching files below its own directory.
+  baseline them. With `--recursive`, each root lints the matching files below its own directory. A file picked
+  with `--path` or `--glob` that lies outside every root (no root at the repository top covers it) is not dropped:
+  it is linted once at the repository root with the implicit configuration (no root's configuration applies to it),
+  named in the notices as `<file>: outside every --recursive root, linted at the repository root`, and its findings
+  count toward the exit code. This needs a git repository; outside git each root is its own project and a path
+  outside it is an error.
 
 #### Generated files: --outputs
 
