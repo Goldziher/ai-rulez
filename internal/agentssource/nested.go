@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io/fs"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -42,6 +44,19 @@ type nestedFile struct {
 // The second result is false when the size bound cut the walk short.
 func findNested(fsys fs.FS) (found []nestedFile, complete bool) {
 	return nestedWalker{maxEntries: nestedMaxEntries}.find(fsys)
+}
+
+// NestedPaths lists the nested AGENTS.md files of the project at base (the ones
+// the agents source reads as scoped context) as paths joined to base, in walk
+// order. It is the same walk as Read's, without
+// the git ignore filter: a watcher can watch a file git ignores at no cost.
+func NestedPaths(base string) []string {
+	found, _ := findNested(os.DirFS(base))
+	out := make([]string, 0, len(found))
+	for _, f := range found {
+		out = append(out, filepath.Join(base, filepath.FromSlash(f.dir), config.AgentsMDFilename))
+	}
+	return out
 }
 
 // nestedWalker is the walk findNested runs, with the size bound as a field so a

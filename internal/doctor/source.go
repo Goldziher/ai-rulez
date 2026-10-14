@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/agentssource"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 )
@@ -92,6 +93,9 @@ func generatedLeftovers(cfg *config.Config) []Finding {
 		}
 	}
 	check(filepath.Join(cfg.BaseDir, config.AgentsMDFilename))
+	for _, nested := range agentssource.NestedPaths(cfg.BaseDir) {
+		check(nested)
+	}
 	_ = filepath.WalkDir(filepath.Join(cfg.BaseDir, config.AgentsDirName), func(path string, d fs.DirEntry, err error) error { //nolint:errcheck // best effort, read-only
 		if err != nil || d.IsDir() || d.Type()&fs.ModeSymlink != 0 {
 			return nil //nolint:nilerr // an unreadable entry is skipped

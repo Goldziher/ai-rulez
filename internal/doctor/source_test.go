@@ -67,6 +67,17 @@ func TestCheckSource(t *testing.T) {
 			want: []string{"1 generated file(s) in the source are ignored: AGENTS.md"},
 		},
 		{
+			name: "a generated nested AGENTS.md is output, a hand-written one is not",
+			files: map[string]string{
+				".agents/ai-rulez.toml": baseConfig,
+				"AGENTS.md":             "# Mine\n",
+				"svc/AGENTS.md":         generatedBanner,
+				"svc/api/AGENTS.md":     "# Mine\n",
+				"web/ui/AGENTS.md":      generatedBanner,
+			},
+			want: []string{"2 generated file(s) in the source are ignored: svc/AGENTS.md, web/ui/AGENTS.md"},
+		},
+		{
 			name: "generated files under .agents are named, whatever the kind",
 			files: map[string]string{
 				".agents/ai-rulez.toml":                       baseConfig,

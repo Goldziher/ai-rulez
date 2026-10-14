@@ -86,7 +86,9 @@ agents_md_split = true
 ```
 
 - The text before the first `##` heading (the title and introduction) is the item `agents`, when it is not blank. Each
-  section is `agents-<heading slug>`: `## Code Style` is `agents-code-style`. A heading used twice gets `-2`, `-3`.
+  section is `agents-<heading slug>`: `## Code Style` is `agents-code-style`, and a heading named `## Agents`
+  becomes `agents-agents` (never `agents`, which is the text before the first heading). A heading used twice gets
+  `-2`, `-3`.
   A heading inside a code fence does not split. A section keeps its `##` heading line in the rendered text.
 - `list context` and the MCP list tool show every item with `AGENTS.md` as its path, before the files of
   `.agents/context`. `remove context agents-code-style` (and the MCP delete tool) deletes that section from
@@ -117,8 +119,9 @@ never to `app1`. A tool that reads
 - skips symlinks (a linked file or directory is never followed), hidden directories, and dependency and build trees
   (`node_modules`, `vendor`, `target`, `dist`, `build`, ...);
 - honours `.gitignore`, `.git/info/exclude` and the global excludes file: an ignored `AGENTS.md` is not read. The rules are git's, so they
-  apply only inside a git repository: outside one every nested `AGENTS.md` is read, and a root `.gitignore` there
-  produces the warning ".gitignore is not applied to nested AGENTS.md files";
+  apply only inside a git repository: outside one nothing is ignored and the whole tree is read (every nested
+  `AGENTS.md` below the skipped directories above), and a root `.gitignore` there produces the warning
+  ".gitignore is not applied to nested AGENTS.md files";
 - stops at a subdirectory that has its own `.agents/ai-rulez.toml`, `.ai-rulez/config.toml` or
   `.config/ai-rulez/config.toml` (a symlinked configuration file does not count): it is a project of its own and owns that file, which `generate --recursive` handles
   with that project's configuration;
@@ -136,7 +139,10 @@ never written by `generate`, and `lock` pins it with its path.
 
 ## Not covered
 
-- `generate --watch` watches the root `AGENTS.md` and `.agents`, not nested `AGENTS.md` files.
+- `generate --watch` watches the nested `AGENTS.md` files found when it starts and after each run (the same walk as
+  the loader's, `.gitignore` aside). A nested file created while it runs is picked up only after the next run, which
+  an edit to a watched file, `.agents` or the configuration triggers; restart `--watch` to see it at once.
+- `list`, `show`, `edit` and `remove` (and the MCP tools) do not see nested `AGENTS.md` files; edit them by hand.
 - Hooks, MCP servers, permissions, presets, profiles and roles stay in the TOML configuration: no standard defines
   them, and no ai-rulez extension folder exists for them.
 
@@ -198,13 +204,14 @@ yours: a second `generate` leaves every byte of them alone, and `generate --chec
   `.agents/.ai-rulez/` (or beside the `.ai-rulez/config.toml`).
 - `migrate okf` refuses a project with this source (it converts the `.ai-rulez` tree, which is not read), and the
   notice that a `.ai-rulez` tree uses the legacy layout is not shown for it.
-- `generate --watch` watches `AGENTS.md` and `.agents`.
+- `generate --watch` watches `AGENTS.md`, `.agents` and the nested `AGENTS.md` files (see [Not covered](#not-covered)).
 - `add`, `remove` and `list` (and the MCP create, update and delete tools) work on `.agents/rules`,
   `.agents/skills`, `.agents/domains/<name>` and the rest; the machine-local variants keep their files in the state
   directory (`.agents/.ai-rulez/local`), which is gitignored. Profile, include and installed-skill changes are
   saved to the configuration file in use.
 - `doctor` warns about a `.ai-rulez/config.toml` that `.agents/ai-rulez.toml` shadows, about `.ai-rulez` content
-  that `source = "agents"` does not read, and about generated files left in the source.
+  that `source = "agents"` does not read, and about generated files left in the source (the root and nested
+  `AGENTS.md` files and everything under `.agents`).
 - The `[guard]` hook keeps agents out of generated files only: `AGENTS.md` and `.agents` stay editable, and its
   message points at them.
 - `generate --recursive`, `validate --recursive` and the MCP recursive tools find a nested `.agents/ai-rulez.toml`.

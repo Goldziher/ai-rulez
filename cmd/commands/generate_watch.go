@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/agentssource"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -239,6 +240,11 @@ func watchTargets(cfg *config.Config) []watch.Target {
 			// (and its state directory) is inside the watched .agents already.
 			targets = append(targets, watch.Target{Path: filepath.Join(cfg.BaseDir, config.AgentsDirName)},
 				watch.Target{Path: filepath.Join(cfg.BaseDir, config.AgentsMDFilename), File: true})
+			// Nested AGENTS.md files are context too. The walk is the loader's, so a file added
+			// later is picked up when the targets are listed again after the next run.
+			for _, nested := range agentssource.NestedPaths(cfg.BaseDir) {
+				targets = append(targets, watch.Target{Path: nested, File: true})
+			}
 		}
 		if !cfg.AgentsLayout {
 			targets = append(targets, watch.Target{Path: cfg.ConfigDir})
