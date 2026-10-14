@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -12,21 +14,43 @@ import (
 
 type handlerFunc func(context.Context, *ToolRequest) (*sdkmcp.CallToolResult, error)
 
+func decodeResult(t *testing.T, res *sdkmcp.CallToolResult) map[string]any {
+	t.Helper()
+	require.False(t, res.IsError, textOf(t, res))
+	var out map[string]any
+	require.NoError(t, json.Unmarshal([]byte(textOf(t, res)), &out))
+	return out
+}
+
 func TestMCPHandlersMapEveryKindToTheAgentsTree(t *testing.T) {
 	kinds := []struct {
-		name   string
-		path   string // below .agents
-		create handlerFunc
-		list   handlerFunc
-		read   handlerFunc
-		remove handlerFunc
+		name    string
+		path    string // below .agents
+		listKey string // key of the list in the list result
+		want    string // exact content of the created file
+		create  handlerFunc
+		list    handlerFunc
+		read    handlerFunc
+		remove  handlerFunc
 	}{
-		{"rule", "rules/item.md", CreateRuleHandler, ListRulesHandler, ReadRuleHandler, DeleteRuleHandler},
-		{"context", "context/item.md", CreateContextHandler, ListContextsHandler, ReadContextHandler, DeleteContextHandler},
-		{"skill", "skills/item/SKILL.md", CreateSkillHandler, ListSkillsHandler, ReadSkillHandler, DeleteSkillHandler},
-		{"agent", "agents/item.md", CreateAgentHandler, ListAgentsHandler, ReadAgentHandler, DeleteAgentHandler},
-		{"command", "commands/item.md", CreateCommandHandler, ListCommandsHandler, ReadCommandHandler, DeleteCommandHandler},
-		{"check", "checks/item.md", CreateCheckHandler, ListChecksHandler, ReadCheckHandler, DeleteCheckHandler},
+		{"rule", "rules/item.md", "rules",
+			"---\ntype: Decision\ntitle: Item\nx-ai-rulez:\n  kind: rule\n  id: item\n  metadata:\n    priority: medium\n---\n\nBody\n",
+			CreateRuleHandler, ListRulesHandler, ReadRuleHandler, DeleteRuleHandler},
+		{"context", "context/item.md", "contexts",
+			"---\ntype: Concept\ntitle: Item\nx-ai-rulez:\n  kind: context\n  id: item\n  metadata:\n    priority: medium\n---\n\nBody\n",
+			CreateContextHandler, ListContextsHandler, ReadContextHandler, DeleteContextHandler},
+		{"skill", "skills/item/SKILL.md", "skills",
+			"---\ntype: Playbook\ntitle: Item\ndescription: An item\nx-ai-rulez:\n  kind: skill\n  id: item\n  metadata:\n    priority: medium\n    name: item\n---\n\nBody\n",
+			CreateSkillHandler, ListSkillsHandler, ReadSkillHandler, DeleteSkillHandler},
+		{"agent", "agents/item.md", "agents",
+			"---\ntype: Reference\ntitle: Item\nx-ai-rulez:\n  kind: agent\n  id: item\n---\n\nBody\n",
+			CreateAgentHandler, ListAgentsHandler, ReadAgentHandler, DeleteAgentHandler},
+		{"command", "commands/item.md", "commands",
+			"---\ntype: Reference\ntitle: Item\nx-ai-rulez:\n  kind: command\n  id: item\n---\n\nBody\n",
+			CreateCommandHandler, ListCommandsHandler, ReadCommandHandler, DeleteCommandHandler},
+		{"check", "checks/item.md", "checks",
+			"---\ntype: Reference\ntitle: Item\ndescription: An item\nx-ai-rulez:\n  kind: check\n  id: item\n---\n\nBody\n",
+			CreateCheckHandler, ListChecksHandler, ReadCheckHandler, DeleteCheckHandler},
 	}
 	for _, k := range kinds {
 		t.Run(k.name, func(t *testing.T) {
@@ -35,6 +59,7 @@ func TestMCPHandlersMapEveryKindToTheAgentsTree(t *testing.T) {
 			writeAgentsMCPFile(t, dir, ".agents/ai-rulez.toml", agentsMCPConfig)
 			args := map[string]any{"working_directory": dir, "name": "item", "description": "An item", "content": "Body\n"}
 			ctx := context.Background()
+			wantPath := filepath.Join(dir, ".agents", filepath.FromSlash(k.path))
 
 			// Act
 			created, createErr := k.create(ctx, newRequestWithArgs(args))
@@ -43,23 +68,36 @@ func TestMCPHandlersMapEveryKindToTheAgentsTree(t *testing.T) {
 
 			// Assert
 			require.NoError(t, createErr)
-			require.False(t, created.IsError, textOf(t, created))
-			assert.FileExists(t, filepath.Join(dir, ".agents", filepath.FromSlash(k.path)))
-			assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
 			require.NoError(t, listErr)
-			require.False(t, listed.IsError, textOf(t, listed))
-			assert.Contains(t, textOf(t, listed), "item")
 			require.NoError(t, readErr)
-			require.False(t, read.IsError, textOf(t, read))
-			assert.Contains(t, textOf(t, read), "Body")
+			createdOut := decodeResult(t, created)
+			assert.Equal(t, "item", createdOut["name"])
+			assert.Equal(t, filepath.ToSlash(wantPath), filepath.ToSlash(createdOut["path"].(string)))
+			onDisk, fileErr := os.ReadFile(wantPath)
+			require.NoError(t, fileErr)
+			assert.Equal(t, k.want, string(onDisk))
+			assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
+
+			listOut := decodeResult(t, listed)
+			assert.EqualValues(t, 1, listOut["count"])
+			items, ok := listOut[k.listKey].([]any)
+			require.True(t, ok, "list result has %q: %v", k.listKey, listOut)
+			require.Len(t, items, 1)
+			item := items[0].(map[string]any)
+			assert.Equal(t, "item", item["name"])
+			assert.Equal(t, filepath.ToSlash(wantPath), filepath.ToSlash(item["path"].(string)))
+
+			readOut := decodeResult(t, read)
+			assert.Equal(t, k.want, readOut["content"])
+			assert.Equal(t, filepath.ToSlash(wantPath), filepath.ToSlash(readOut["path"].(string)))
 
 			// Act: delete
 			removed, removeErr := k.remove(ctx, newRequestWithArgs(map[string]any{"working_directory": dir, "name": "item", "confirm": true}))
 
 			// Assert
 			require.NoError(t, removeErr)
-			require.False(t, removed.IsError, textOf(t, removed))
-			assert.NoFileExists(t, filepath.Join(dir, ".agents", filepath.FromSlash(k.path)))
+			decodeResult(t, removed)
+			assert.NoFileExists(t, wantPath)
 		})
 	}
 }
