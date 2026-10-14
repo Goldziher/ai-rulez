@@ -294,7 +294,15 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 	default:
 		return handlers.ToolError(fmt.Errorf("encoding %q is not supported; use text or base64", encoding))
 	}
-	win, err := readWindow(file.Content, int(req.GetNumber("offset", 0)), int(req.GetNumber("length", 0)), encoding == encodingText)
+	offset, err := intArg(req, "offset", 0)
+	if err != nil {
+		return handlers.ToolError(err)
+	}
+	length, err := intArg(req, "length", 0)
+	if err != nil {
+		return handlers.ToolError(err)
+	}
+	win, err := readWindow(file.Content, offset, length, encoding == encodingText)
 	if err != nil {
 		return handlers.ToolError(err)
 	}

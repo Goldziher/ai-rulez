@@ -19555,7 +19555,9 @@ When the filters remove every skill, the start-up warning names each filter and 
   ranks by name, keywords (frontmatter `keywords`), description and domain, lexically and
   deterministically (an empty query lists everything); `get_skill(name)` returns `SKILL.md` plus
   provenance and per-file digests; `read_skill_file(uri, encoding, offset, length)` returns a supporting file
-  (see [Served files](#served-files-scripts-and-assets)).
+  (see [Served files](#served-files-scripts-and-assets)). `offset` and `length` (and the `offset` of
+  `list_skill_resources`) must be whole numbers from 0 to 2147483647; a fractional, negative, non-finite or larger
+  value is rejected with an error naming the argument.
 - **The authoring surface**: the same tools, prompts and `ai-rulez://` resources as plain `ai-rulez mcp`
   (create, update, delete, validate, generate, reports), so the one server both serves skills and edits
   the project. With `--read-only` only the read-only tools are registered.

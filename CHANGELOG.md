@@ -18,6 +18,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Removing an `AGENTS.md` section is atomic and safer.** `remove context` on a split item now writes a temporary file and renames it over `AGENTS.md`, keeps the file mode, refuses a symlinked `AGENTS.md`, and aborts when the file changed in between instead of overwriting the edit. A leading BOM is kept, CRLF files work, and a file with lone CR line endings gets a clear error instead of "could not locate the sections".
 - **`remove context` on a split `AGENTS.md` item names `AGENTS.md`, not a file that never existed.** It printed `.agents/context/agents-<name>.md`; it now prints `AGENTS.md` and says which section was removed (`--format json` carries the same path).
 - **Nested `AGENTS.md` discovery says when `.gitignore` is not applied and ignores symlinked configuration.** Outside a git repository nothing is ignored; a root `.gitignore` there now produces a one-line warning, and the behaviour is documented. A symlinked `config.toml` or `ai-rulez.toml` no longer marks a subdirectory as a project of its own.
+- **`read_skill_file` and `list_skill_resources` reject out-of-range `offset` and `length` instead of converting them.** A JSON number such as `1e30` or `NaN` was cast to `int`, which Go leaves platform-dependent. One shared check now accepts whole numbers from 0 to 2147483647 and answers anything else with an error naming the argument; a negative `list_skill_resources` offset used to be clamped to 0 and is now an error too.
 
 ## [5.2.1] - 2026-10-14
 
