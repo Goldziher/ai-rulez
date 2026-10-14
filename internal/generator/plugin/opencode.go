@@ -116,6 +116,7 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 // servers in OpenCode's native shape and per-agent settings resolved here, so
 // model resolution matches the opencode preset.
 type openCodeBundle struct {
+	Plugin string                    `json:"plugin"`
 	MCP    map[string]openCodeMCP    `json:"mcp,omitempty"`
 	Agents map[string]map[string]any `json:"agents,omitempty"`
 	// Skills and Commands carry the frontmatter fields the helper registers, keyed
@@ -142,7 +143,7 @@ type openCodeMCP struct {
 }
 
 func openCodeBundleFor(m *Manifest) openCodeBundle {
-	var bundle openCodeBundle
+	bundle := openCodeBundle{Plugin: m.Name}
 	if len(m.MCP) > 0 {
 		bundle.MCP = make(map[string]openCodeMCP, len(m.MCP))
 		for _, s := range m.MCP {
