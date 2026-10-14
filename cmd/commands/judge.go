@@ -169,7 +169,7 @@ func (d judgeDeps) run(cmd *cobra.Command, args []string, f *judgeFlags) error {
 	report.Mode = judgeModeJudge
 	var client judgeClient
 	if p.est.Files > 0 {
-		if err := d.preflight(p.root, p.lc, f, p.est); err != nil {
+		if err := d.preflight(p.root, p.lc, f, p.est, report.EgressHost); err != nil {
 			return err
 		}
 		var cerr error
@@ -261,7 +261,7 @@ func (d judgeDeps) secretValues(lc llm.Config) []string {
 
 // preflight refuses, before anything is sent, a run the user has not agreed to,
 // the organization policy forbids, or the cap cannot cover.
-func (d judgeDeps) preflight(root string, lc llm.Config, f *judgeFlags, est judge.EstimateResult) error {
+func (d judgeDeps) preflight(root string, lc llm.Config, f *judgeFlags, est judge.EstimateResult, egressHost string) error {
 	switch {
 	case !f.allowLLM:
 		return oops.Hint("Pass --allow-llm to agree, or --estimate to see what would be sent").
@@ -271,6 +271,9 @@ func (d judgeDeps) preflight(root string, lc llm.Config, f *judgeFlags, est judg
 			Errorf("the organization policy forbids calling a model")
 	case lc.FullModel() == "":
 		return oops.Hint("Pass --model provider/model or set AI_RULEZ_LLM_MODEL").Errorf("no model: --model is required")
+	case egressHost == "":
+		return oops.Hint("Set AI_RULEZ_LLM_BASE_URL to the endpoint, or use a provider ai-rulez knows the host of (openai, anthropic, gemini, mistral, groq, deepseek, xai, openrouter, cohere); --estimate still works").
+			Errorf("cannot tell which host would receive the file content for model %q, and no base URL (AI_RULEZ_LLM_BASE_URL) is set", lc.FullModel())
 	}
 	if lc.MaxCostUSD > 0 {
 		if !est.CostKnown {

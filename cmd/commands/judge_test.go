@@ -770,6 +770,7 @@ func TestJudgeRefusesAnUnpricedModelUnderACap(t *testing.T) {
 	// Arrange
 	judgeProject(t, map[string]string{"AGENTS.md": "Run tests.\n"})
 	rig := newJudgeRig(t)
+	rig.env["AI_RULEZ_LLM_BASE_URL"] = "https://gateway.example.com/v1"
 
 	// Act
 	_, code := rig.run(t, "--allow-llm", "--model", "acme/never-heard-of-it", "--no-cache")

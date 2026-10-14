@@ -36,6 +36,9 @@ inside the project is accepted. A skill's supporting files are part of the skill
 File content leaves the machine, so every real run needs `--allow-llm`. `AI_RULEZ_LLM_ALLOW_NETWORK` is not consent
 here. Before anything is sent the command prints the model and the egress host to stderr.
 
+- The egress host must be known: it is `AI_RULEZ_LLM_BASE_URL`'s host, or the default host of `openai`, `anthropic`,
+  `gemini`, `mistral`, `groq`, `deepseek`, `xai`, `openrouter` or `cohere`. For any other provider, or a model with no
+  `provider/` prefix and no `--provider`, a real run refuses and names `AI_RULEZ_LLM_BASE_URL`; `--estimate` still works.
 - The endpoint (`AI_RULEZ_LLM_BASE_URL`) must be `https`, or `http` to a loopback host such as `localhost`. The
   plain-http opt-in of the `[llm]` table does not apply.
 - A file with secret-looking text (the `AR001` shapes: keys, tokens, private keys, `key=value` pairs) is **not sent**
