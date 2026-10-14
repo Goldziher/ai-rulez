@@ -107,6 +107,10 @@ agents_md_split = true
   `show` and `read_context` return all of it, and `edit`, `update_context` and `remove` refuse (it is your file).
 - The setting needs `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`); `validate` rejects it
   otherwise. `AGENTS.md` itself is still never written by `generate`.
+- Every split item pins the same file: in `ai-rulez.lock` the entries of all items point at `AGENTS.md` and carry the
+  hash of the whole file, not of the section. Editing one section therefore reports "source changed" for every item of
+  that file in `lock --check` and `generate --check` (and `--locked`), not only for the one edited. Re-run `lock` to
+  accept the edit.
 
 ## Nested AGENTS.md
 
@@ -134,6 +138,11 @@ When two directories sanitize to the same slug (`a/b`, `a-b` and `a b` are all `
 is empty, each of them gets a short hash of its path (`agents-a-b-1f2e3d4c`). Collisions are decided over every
 `AGENTS.md` found, before `.gitignore` is applied, so a name never changes because an unrelated directory was added or
 ignored, and `ai-rulez.lock` and the generated files do not churn.
+
+The limit: a hash is added to every directory that shares a slug, not only to the later ones. Adding `a b/AGENTS.md`
+next to an existing `a-b/AGENTS.md` renames the existing `agents-a-b` to `agents-a-b-<hash>` as well (and removing the
+colliding sibling renames it back), so the generated file name, the item name in `list` and the lock entry of the
+directory that did not change move with it. A scope `a-b/**` is unaffected; only the name changes.
 
 A nested file is one item even with `agents_md_split`, and `list` and `remove` do not see it: edit the file. It is
 never written by `generate`, and `lock` pins it with its path.
