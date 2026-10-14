@@ -100,7 +100,9 @@ agents_md_split = true
 
 An `AGENTS.md` in a subdirectory (`svc/api/AGENTS.md`) is read as context scoped to that directory. It becomes the
 context item `agents-<directory slug>` (`agents-svc-api`) with the path scope `svc/api/**`, the scope the generator
-gives any glob-scoped context, so each tool renders it the way it renders a path-scoped rule. A tool that reads
+gives any glob-scoped context, so each tool renders it the way it renders a path-scoped rule. Glob metacharacters in the
+directory name (`[ ] { } * ? ! ,` and `\`) are backslash-escaped, so `app[1]/AGENTS.md` is scoped to `app\[1\]/**` and
+never to `app1`. A tool that reads
 `AGENTS.md` itself, nested files included, gets no copy, as for the root file. The walk:
 
 - skips symlinks (a linked file or directory is never followed), hidden directories, and dependency and build trees

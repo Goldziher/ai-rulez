@@ -119,7 +119,7 @@ func contextFile(cfg *config.Config, name string, item *importer.Item, rel, scop
 		if meta == nil {
 			meta = &config.Metadata{}
 		}
-		meta.Globs = []string{scope + "/**"}
+		meta.Globs = []string{escapeGlob(scope) + "/**"}
 	}
 	return config.ContentFile{
 		Name:                 name,
@@ -128,6 +128,20 @@ func contextFile(cfg *config.Config, name string, item *importer.Item, rel, scop
 		Metadata:             meta,
 		MalformedFrontmatter: malformed,
 	}
+}
+
+// escapeGlob backslash-escapes the glob metacharacters (and the comma that
+// splits a glob list) in a literal directory path, so the scope `<dir>/**`
+// matches that directory and no other.
+func escapeGlob(literal string) string {
+	var b strings.Builder
+	for i := 0; i < len(literal); i++ {
+		if strings.IndexByte(`[]{}*?!\,`, literal[i]) >= 0 {
+			b.WriteByte('\\')
+		}
+		b.WriteByte(literal[i])
+	}
+	return b.String()
 }
 
 // agentsMDReaders lists, as negated targets, the configured presets that read

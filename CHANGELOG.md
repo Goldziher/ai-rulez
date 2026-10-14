@@ -11,6 +11,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **The agents source reads an `AGENTS.md` in a subdirectory as context scoped to that directory.** `svc/api/AGENTS.md` becomes the item `agents-svc-api` with the path scope `svc/api/**`, rendered like any path-scoped context, and tools that read `AGENTS.md` themselves get no copy. The walk skips symlinks, hidden, dependency and build directories and anything `.gitignore` ignores, stops at a subdirectory with its own ai-rulez configuration, is bounded in depth and size, and never reads a file with the generated banner.
 - **`agents_md_split = true` reads `AGENTS.md` as one context item per `##` heading.** With the agents source the items are named `agents-<heading slug>` (`agents` for the text before the first heading, `-2`, `-3` for a repeated heading) and `list context`, `remove context` and the MCP list and delete tools address them; removing one deletes that section from `AGENTS.md` and leaves the rest of the file byte for byte. Without the setting `AGENTS.md` stays one item named `agents`, now shown by `list context`, and `remove` refuses to touch it. `validate` rejects the setting without the agents source.
 
+### Fixed
+
+- **A nested `AGENTS.md` in a directory named with glob metacharacters is scoped to that directory only.** `app[1]/AGENTS.md` produced the scope `app[1]/**`, which matches `app1`; the directory name is now escaped (`app\[1\]/**`).
+
 ## [5.2.1] - 2026-10-14
 
 ### Fixed
