@@ -92,6 +92,10 @@ type LintConfig struct {
 	// marketplace or a skill kept outside .ai-rulez/. Each entry must resolve
 	// inside the project root; the command line's --path and --glob add to it.
 	Paths []string `yaml:"paths,omitempty" json:"paths,omitempty" toml:"paths,omitempty"`
+	// LintOutputs also lints the generated files (the bytes `generate` writes)
+	// with the analyzers that judge what a model reads: security, references and
+	// descriptions. The same as `validate --outputs`.
+	LintOutputs bool `yaml:"lint_outputs,omitempty" json:"lint_outputs,omitempty" toml:"lint_outputs,omitempty"` //nolint:tagliatelle
 }
 
 // LintTraps configures the checks for files a harness silently ignores.

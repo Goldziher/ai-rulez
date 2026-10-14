@@ -151,7 +151,7 @@ func writeText(w io.Writer, c Combined, quiet bool) error {
 		if f.IsAccepted() {
 			continue
 		}
-		fmt.Fprintf(&sb, "%s:%d: %s %s %s: %s\n", f.File, f.Line, f.Severity, f.Code, f.Name, f.Message)
+		fmt.Fprintf(&sb, "%s:%d: %s %s %s: %s%s\n", f.File, f.Line, f.Severity, f.Code, f.Name, f.Message, sourceSuffix(f))
 		if f.Trap != nil && f.Trap.Hint != "" {
 			fmt.Fprintf(&sb, "      fix: %s\n", f.Trap.Hint)
 		}
@@ -183,6 +183,14 @@ func writeText(w io.Writer, c Combined, quiet bool) error {
 	writeBaselineText(&sb, c)
 	_, err := io.WriteString(w, sb.String())
 	return err //nolint:wrapcheck // writer error
+}
+
+// sourceSuffix marks a finding of a generated file in the text report.
+func sourceSuffix(f *Finding) string {
+	if f.Source() == SourceOutput {
+		return " [generated output]"
+	}
+	return ""
 }
 
 // writeBaselineText adds the baseline and budget lines of the text report.

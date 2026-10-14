@@ -39,6 +39,10 @@
           },
           "line": {
             "type": "integer"
+          },
+          "source": {
+            "description": "Where the finding's file comes from when it is not authored content: \"output\" for a generated file linted with --outputs or [lint] lint_outputs. Absent for authored content.",
+            "enum": ["output"]
           }
         }
       }

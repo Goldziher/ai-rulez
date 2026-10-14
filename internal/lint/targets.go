@@ -50,6 +50,9 @@ type TargetSpec struct {
 	// tree top), so each root of a recursive run lints its own files once. Empty
 	// keeps every file.
 	Under string
+	// Generated also collects the targets that carry the generated header, as
+	// outputs to lint (Targets.Generated), instead of skipping them.
+	Generated bool
 }
 
 // Empty reports whether the spec names nothing.
@@ -71,6 +74,9 @@ type TargetFile struct {
 // Targets is the resolved, classified set.
 type Targets struct {
 	Files []TargetFile
+	// Generated holds the targets that carry the generated header, when the spec
+	// asked for them (TargetSpec.Generated).
+	Generated []OutputFile
 	// Unmatched lists the globs that matched no file, for a notice.
 	Unmatched []string
 }
@@ -110,7 +116,29 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 			res.Files = append(res.Files, f)
 		}
 	}
+	if spec.Generated {
+		res.Generated = generatedTargets(tree, rels)
+	}
 	return res, nil
+}
+
+// generatedTargets returns the markdown files among rels that carry the
+// generated header, which loadTarget leaves out as sources.
+func generatedTargets(tree *Tree, rels []string) []OutputFile {
+	var out []OutputFile
+	for _, rel := range rels {
+		if _, ok := classifyOutput(rel); !ok {
+			continue
+		}
+		abs, inside := contained(tree, rel)
+		if !inside {
+			continue
+		}
+		if data, err := readSmallFile(abs); err == nil && carriesGeneratedBanner(data) {
+			out = append(out, OutputFile{Abs: abs, Data: data})
+		}
+	}
+	return out
 }
 
 // candidates is the set of files a directory or glob selects from.

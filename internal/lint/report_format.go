@@ -83,6 +83,9 @@ func resultProperties(f *Finding) map[string]any {
 	if f.Meta != nil && f.Meta.Analyzer != "" {
 		props["analyzer"], props["scope"] = f.Meta.Analyzer, f.Meta.Scope
 	}
+	if src := f.Source(); src != "" {
+		props["source"] = src
+	}
 	return props
 }
 

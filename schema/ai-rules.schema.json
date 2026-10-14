@@ -2469,6 +2469,10 @@
           "items": { "type": "string" },
           "description": "Path globs (relative to the config directory or the repo root) of CLAUDE.md files AR9Q0 accepts as intentional islands."
         },
+        "lint_outputs": {
+          "type": "boolean",
+          "description": "Also lint the generated files (the bytes generate writes) with the security, references and descriptions analyzers; findings carry source \"output\". The same as validate --outputs."
+        },
         "paths": {
           "type": "array",
           "items": { "type": "string" },

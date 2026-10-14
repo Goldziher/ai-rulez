@@ -42,6 +42,7 @@ const helpExampleSpec = `
   ai-rulez validate --format sarif --output ai-rulez.sarif
   ai-rulez validate --fix --dry-run
   ai-rulez validate --path catalog --glob "plugins/**/*.json"
+  ai-rulez validate --outputs
 ## lock
   ai-rulez lock
   ai-rulez lock --check

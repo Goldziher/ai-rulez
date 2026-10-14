@@ -2705,6 +2705,7 @@ ai-rulez scan --path vendor/skills
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--outputs` | bool |  | Also lint the generated files (what generate writes, or would write) for secrets, broken references and descriptions; a finding in one is marked as output and a problem the authored source already has is reported once (the same as [lint] lint_outputs) |
 | `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; a marketplace, plugin, hook file or skill is recognized by its content wherever it is) |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
@@ -3551,6 +3552,7 @@ ai-rulez validate --explain AR001
 ai-rulez validate --format sarif --output ai-rulez.sarif
 ai-rulez validate --fix --dry-run
 ai-rulez validate --path catalog --glob "plugins/**/*.json"
+ai-rulez validate --outputs
 ```
 
 | Flag | Type | Default | Description |
@@ -3577,6 +3579,7 @@ ai-rulez validate --path catalog --glob "plugins/**/*.json"
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--outputs` | bool |  | Also lint the generated files (what generate writes, or would write) for secrets, broken references and descriptions; a finding in one is marked as output and a problem the authored source already has is reported once (the same as [lint] lint_outputs) |
 | `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; a marketplace, plugin, hook file or skill is recognized by its content wherever it is) |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |

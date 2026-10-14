@@ -69,7 +69,7 @@ The content set is found by convention, and everything found is treated as hand-
 - `.claude-plugin/plugin.json` and `marketplace.json`, `hooks/hooks.json`, `.claude/settings.json` hooks and `.mcp.json`.
 
 Untracked files that git does not ignore count; a file that carries the ai-rulez generated header is an output and is
-left out. With `--path` or `--glob` only the files you name are linted. Exit codes are the
+left out unless `--outputs` asks for it. With `--path` or `--glob` only the files you name are linted. Exit codes are the
 same as with a configuration. The baseline defaults to a file only when `.ai-rulez/` exists, so pass `--baseline <file>`
 to keep one; `--update-baseline` without a directory or a file is an error. Nothing is ever written, and a home or
 filesystem-root directory outside git is refused instead of walked. `generate`, `clean` and `lock` still need a
@@ -108,6 +108,29 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
   never edits a generated file or a file outside the project root. `--path` and `--glob` need the content checks
   (not `--config-only`) and cannot be combined with `--update-baseline`: put the paths in `[lint] paths` to
   baseline them. With `--recursive`, each root lints the matching files below its own directory.
+
+## Generated files: --outputs
+
+The content checks judge what you wrote. `--outputs` (or `[lint] lint_outputs = true`) also lints what `generate` writes
+into `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/` and the other harness files, using the bytes a run
+would write now (so it does not matter whether `generate` has run) and, for a file a past run recorded in the generated
+manifest that the plan no longer writes, the file on disk.
+
+```bash
+ai-rulez validate --strict --outputs
+```
+
+- **Which checks.** The security (`AR0xx`), references (`AR2xx`, `AR3xx`) and descriptions (`AR8xx`) analyzers run on
+  the generated markdown; budgets, metadata and the authoring-choice checks do not, since a generated file makes no
+  authoring choice.
+- **Reported once.** A finding on a generated file carries `"source": "output"` in JSON and `properties.source` in
+  SARIF (text marks it `[generated output]`). A generated file that repeats an authored item is not checked again, and
+  a finding on one that an authored file already has (same rule, same message, as in an `AGENTS.md` that carries the
+  text of every rule) is dropped, so a problem is reported at the authored path and counted once in the risk score and
+  the baseline.
+- **Never fixed.** `--fix` never edits a generated file, and a finding on one carries no fix: fix its source.
+- **Without a configuration.** With no configuration the generated files are the ones that carry the generated header;
+  they are linted as outputs and nothing is generated.
 
 ## Findings
 
@@ -383,6 +406,7 @@ allowed_keys = ["team"]                                 # extra frontmatter keys
 agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
 agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
 paths = ["catalog", "vendor/skills"]   # extra files and directories to lint, relative to the project root
+lint_outputs = true                # also lint the generated files (the same as --outputs)
 
 profile = "default"                # default | strict | permissive (see Profiles)
 
@@ -1028,7 +1052,8 @@ Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]
 ```
 
 `baseline`, `ratchet_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
-a baseline carries `"accepted": true`.
+a baseline carries `"accepted": true`, and a finding in a generated file linted with `--outputs` carries
+`"source": "output"` (see [Generated files](#generated-files-outputs)).
 
 `file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
 
