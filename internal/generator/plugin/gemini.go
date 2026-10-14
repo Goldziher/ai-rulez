@@ -23,6 +23,14 @@ type geminiManifest struct {
 	ContextFileName string                    `json:"contextFileName,omitempty"`
 	MCPServers      map[string]mcpEntry       `json:"mcpServers,omitempty"`
 	Hooks           map[string][]hookGroupDoc `json:"hooks,omitempty"`
+	Settings        []geminiSetting           `json:"settings,omitempty"`
+}
+
+type geminiSetting struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	EnvVar      string `json:"envVar"`
+	Sensitive   bool   `json:"sensitive,omitempty"`
 }
 
 func renderGemini(m *Manifest, baseDir string) ([]config.OutputFile, error) {
@@ -38,6 +46,12 @@ func renderGemini(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		ContextFileName: contextFile,
 		MCPServers:      mcpServersFor(m, config.PluginRuntimeGemini),
 		Hooks:           hooksBlock(m, config.PluginRuntimeGemini),
+	}
+
+	if m.Gemini != nil {
+		for _, setting := range m.Gemini.Settings {
+			doc.Settings = append(doc.Settings, geminiSetting{Name: setting.Name, Description: setting.Description, EnvVar: setting.EnvVar, Sensitive: setting.Sensitive})
+		}
 	}
 
 	// Gemini inlines the hooks block instead of writing hooks.json, but a

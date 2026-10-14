@@ -395,10 +395,20 @@ type CursorExtras struct {
 
 // GeminiExtras holds Gemini-extension-specific manifest fields.
 type GeminiExtras struct {
-	ContextFileName string `yaml:"context_file_name,omitempty" json:"context_file_name,omitempty" toml:"context_file_name,omitempty"` //nolint:tagliatelle
+	ContextFileName string          `yaml:"context_file_name,omitempty" json:"context_file_name,omitempty" toml:"context_file_name,omitempty"` //nolint:tagliatelle
+	Settings        []GeminiSetting `yaml:"settings,omitempty" json:"settings,omitempty" toml:"settings,omitempty"`
 	// Commands also bundles the plugin's commands as commands/<name>.toml
 	// custom commands (default off).
 	Commands bool `yaml:"commands,omitempty" json:"commands,omitempty" toml:"commands,omitempty"`
+}
+
+// GeminiSetting declares a runtime-provided value; credential values are never authored here.
+// https://geminicli.com/docs/extensions/reference/#extension-settings
+type GeminiSetting struct {
+	Name        string `yaml:"name" json:"name" toml:"name"`
+	Description string `yaml:"description" json:"description" toml:"description"`
+	EnvVar      string `yaml:"env_var" json:"env_var" toml:"env_var"` //nolint:tagliatelle
+	Sensitive   bool   `yaml:"sensitive,omitempty" json:"sensitive,omitempty" toml:"sensitive,omitempty"`
 }
 
 // KimiExtras holds Kimi-plugin-specific manifest fields.
