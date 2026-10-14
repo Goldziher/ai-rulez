@@ -60,8 +60,11 @@ found in that directory, and an error for a `default_layers` entry without a fil
 
 - The root `AGENTS.md` becomes one context file named `agents`. As for every content file, its first `# Title`
   heading is dropped when it is rendered: the item is titled `agents` in the generated files. Frontmatter keys no tool
-  reads are kept under `metadata`. That item has no file of its own to address: `list`, `remove` and the MCP tools do
-  not see or change the `agents` context, edit `AGENTS.md` by hand. A nested `<scope>/AGENTS.md` is not read as source.
+  reads are kept under `metadata`. `list context` and the MCP list tool show it with `AGENTS.md` as its path;
+  `remove context agents` refuses, because `AGENTS.md` is your file: edit or delete it by hand. A nested
+  `<scope>/AGENTS.md` is not read as source.
+- With `agents_md_split = true` the root `AGENTS.md` becomes one context item per H2 heading (see
+  [Splitting AGENTS.md](#splitting-agentsmd)). A nested `<scope>/AGENTS.md` is not read as source.
 - Everything under `.agents/` in the layout above is scanned like the `.ai-rulez` tree: same file formats, same
   `bundle_exclude`, and the same symlink policy (a symlink must resolve inside the project). The one exception is
   `AGENTS.md` itself: a symlinked `AGENTS.md` is never followed and is not read.
@@ -70,12 +73,31 @@ found in that directory, and an error for a `default_layers` entry without a fil
   `AGENTS.md` and `.agents/skills`) is not fed its own output. The ignored files are named in a warning; delete them or
   replace them with hand-written files.
 
+## Splitting AGENTS.md
+
+By default the root `AGENTS.md` is one context item named `agents`. Set `agents_md_split = true` to read it in place
+as one item per `##` heading, so a large file can be addressed, listed and removed section by section:
+
+```toml
+source = "agents"
+agents_md_split = true
+```
+
+- The text before the first `##` heading (the title and introduction) is the item `agents`, when it is not blank. Each
+  section is `agents-<heading slug>`: `## Code Style` is `agents-code-style`. A heading used twice gets `-2`, `-3`.
+  A heading inside a code fence does not split. A section keeps its `##` heading line in the rendered text.
+- `list context` and the MCP list tool show every item with `AGENTS.md` as its path, before the files of
+  `.agents/context`. `remove context agents-code-style` (and the MCP delete tool) deletes that section from
+  `AGENTS.md` and leaves every other byte of the file as it was. Without the setting `remove` refuses to touch the
+  file. Items are rendered in name order, so a section's place in the generated files follows its name, not its place
+  in `AGENTS.md`.
+- The setting needs `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`); `validate` rejects it
+  otherwise. `AGENTS.md` itself is still never written by `generate`.
+
 ## Not covered
 
 - A nested `<scope>/AGENTS.md` is generated for `[[scopes]]` in the `ai-rulez` source and is never written here; as a
   source only the root `AGENTS.md` is read.
-- `AGENTS.md` is one context file. Splitting it at its headings (`convert --split-headings` for a copied file) has no
-  equivalent for a file that is read in place.
 - Hooks, MCP servers, permissions, presets, profiles and roles stay in the TOML configuration: no standard defines
   them, and no ai-rulez extension folder exists for them.
 

@@ -637,6 +637,7 @@ func loadConfigTOML(v workspace.View, path string) (*Config, error) {
 type tomlConfig struct {
 	Schema                string                  `toml:"schema"`
 	Source                string                  `toml:"source"`
+	AgentsMDSplit         bool                    `toml:"agents_md_split"`
 	Version               string                  `toml:"version"`
 	Name                  string                  `toml:"name"`
 	Description           string                  `toml:"description"`
@@ -746,6 +747,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 	cfg := &Config{
 		Schema:                raw.Schema,
 		Source:                raw.Source,
+		AgentsMDSplit:         raw.AgentsMDSplit,
 		Version:               raw.Version,
 		Name:                  raw.Name,
 		Description:           raw.Description,

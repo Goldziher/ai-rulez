@@ -598,6 +598,19 @@ source = "ai-rulez"  # Default: the .ai-rulez content tree
 translates that content to every other tool and never writes `AGENTS.md` or anything under `.agents/`. A configuration
 kept in `.agents/ai-rulez.toml` implies `source = "agents"`. It forces per-tool files (`agents_md` off) and rejects an explicit `agents_md = true`. See [`.agents` as a source](agents-source.md).
 
+### `agents_md_split`
+
+With the agents source, reads the root `AGENTS.md` as one context item per `##` heading instead of one item.
+
+```toml
+source = "agents"
+agents_md_split = true  # Default false: AGENTS.md is one item named agents
+```
+
+Items are named `agents-<heading slug>`, and `list context` and `remove context` address them. It needs
+`source = "agents"` or a configuration in `.agents/ai-rulez.toml`. See
+[Splitting AGENTS.md](agents-source.md#splitting-agentsmd).
+
 ### `agents_md`
 
 Renders the files several tools share once instead of once per tool. On by default: `AGENTS.md` is the canonical
