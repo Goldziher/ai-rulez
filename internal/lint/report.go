@@ -59,7 +59,11 @@ func Combine(reports []*Report) Combined {
 	for _, r := range reports {
 		c.Roots = append(c.Roots, r.Root)
 		c.Findings = append(c.Findings, r.Findings...)
-		c.Notices = append(c.Notices, r.Notices...)
+		for _, n := range r.Notices {
+			if !slices.Contains(c.Notices, n) { // roots that share a picked file report it once
+				c.Notices = append(c.Notices, n)
+			}
+		}
 		c.addScope(r.Scope)
 		for _, a := range r.Analyzers {
 			if !slices.Contains(c.Analyzers, a) {
