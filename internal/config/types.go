@@ -44,6 +44,9 @@ type Config struct {
 	// Source selects where the content is read from: "ai-rulez" (default, the
 	// .ai-rulez content tree) or "agents" (AGENTS.md and .agents/, see agents_source.go).
 	Source string `yaml:"source,omitempty" json:"source,omitempty" toml:"source,omitempty"`
+	// AgentsMDSplit makes the "agents" source read AGENTS.md as one context item
+	// per H2 heading (named agents-<heading slug>) instead of one item.
+	AgentsMDSplit bool `yaml:"agents_md_split,omitempty" json:"agents_md_split,omitempty" toml:"agents_md_split,omitempty"`
 	// BundleExclude adds patterns to DefaultBundleExcludes: skill and command
 	// resources matching one are not listed in SKILL.md or copied.
 	BundleExclude []string `yaml:"bundle_exclude,omitempty" json:"bundle_exclude,omitempty" toml:"bundle_exclude,omitempty"` //nolint:tagliatelle

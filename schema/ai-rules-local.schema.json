@@ -246,6 +246,11 @@
       "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to true in v5: AGENTS.md is the canonical instruction file and tools that do not read it import it. Set false for per-tool outputs.",
       "type": "boolean"
     },
+    "agents_md_split": {
+      "default": false,
+      "description": "With the agents source, read the root AGENTS.md as one context item per H2 heading instead of one item. Items are named agents-<heading slug> (agents for the text before the first heading, -2, -3 for a repeated heading), so `list context` and `remove context` address them; removing one deletes that section from AGENTS.md. Headings inside code fences do not split. Needs source = \"agents\" or a configuration in .agents/ai-rulez.toml. Default false (AGENTS.md is one item named agents).",
+      "type": "boolean"
+    },
     "ard": {
       "additionalProperties": false,
       "description": "Agentic Resource Discovery manifest (ard.json, spec v0.91, a proposal). Identifiers are urn:air:<publisher>:<namespace>:<name>. Emitted by `ai-rulez publish --emit ard`; see docs/ard.md.",
@@ -664,17 +669,17 @@
       "description": "Per-domain settings, keyed by domain name.",
       "type": "object"
     },
+    "gitignore": {
+      "default": false,
+      "description": "Opt in to a managed block in .gitignore listing the generated output patterns. Off by default in v5 (committed outputs are not ignored); machine-local outputs are always ignored",
+      "type": "boolean"
+    },
     "gitignore_exclude": {
       "description": "Ignore patterns left out of the managed .gitignore block, for generated outputs the project commits on purpose (for example AGENTS.md, **/CLAUDE.md, .claude/skills/, .opencode/skills/). Gitignore notation: an entry without '/' matches at any depth, '**' crosses directories, a trailing '/' names a directory and covers what is below it. Machine-local and secret outputs are never excluded. Each root applies its own list to its own outputs. Has no effect unless the block is written",
       "items": {
         "type": "string"
       },
       "type": "array"
-    },
-    "gitignore": {
-      "default": false,
-      "description": "Opt in to a managed block in .gitignore listing the generated output patterns. Off by default in v5 (committed outputs are not ignored); machine-local outputs are always ignored",
-      "type": "boolean"
     },
     "governance": {
       "additionalProperties": false,

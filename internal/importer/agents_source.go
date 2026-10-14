@@ -2,6 +2,7 @@ package importer
 
 import (
 	"io/fs"
+	"strings"
 )
 
 // agentsMDFile is the root instruction file the "agents" source reads.
@@ -37,6 +38,53 @@ func ReadAgentsMD(fsys fs.FS, opt Options) AgentsMD {
 	}
 	out.Notes = p.Findings
 	return out
+}
+
+// H2Span is one section of a Markdown text: the lines [Start, End) of the text
+// split at "\n". A section starts at its "## " heading; the text before the
+// first heading is a section too (Header ""), unless it is blank.
+type H2Span struct {
+	Header     string
+	Start, End int
+}
+
+// H2Spans locates the sections ReadAgentsMD yields with SplitHeadings, in the
+// same order, as line ranges of the text as written. A heading inside a code
+// fence does not start a section.
+func H2Spans(text string) []H2Span {
+	lines := strings.Split(text, "\n")
+	var spans []H2Span
+	cur := H2Span{}
+	blank := true
+	var fenceChar byte
+	fenceLen := 0
+	flush := func(end int) {
+		cur.End = end
+		if cur.Header != "" || !blank {
+			spans = append(spans, cur)
+		}
+	}
+	for i, line := range lines {
+		if ch, n, rest, ok := fenceLine(line); ok {
+			switch {
+			case fenceLen == 0:
+				fenceChar, fenceLen = ch, n
+			case ch == fenceChar && n >= fenceLen && strings.TrimSpace(rest) == "":
+				fenceLen = 0
+			}
+		}
+		if fenceLen == 0 && strings.HasPrefix(line, "## ") {
+			flush(i)
+			cur = H2Span{Header: strings.TrimSpace(strings.TrimPrefix(line, "## ")), Start: i}
+			blank = true
+			continue
+		}
+		if strings.TrimSpace(line) != "" {
+			blank = false
+		}
+	}
+	flush(len(lines))
+	return spans
 }
 
 // IsGenerated reports whether data, read from file, is ai-rulez output: it

@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`agents_md_split = true` reads `AGENTS.md` as one context item per `##` heading.** With the agents source the items are named `agents-<heading slug>` (`agents` for the text before the first heading, `-2`, `-3` for a repeated heading) and `list context`, `remove context` and the MCP list and delete tools address them; removing one deletes that section from `AGENTS.md` and leaves the rest of the file byte for byte. Without the setting `AGENTS.md` stays one item named `agents`, now shown by `list context`, and `remove` refuses to touch it. `validate` rejects the setting without the agents source.
+
 ## [5.2.1] - 2026-10-14
 
 ### Fixed
