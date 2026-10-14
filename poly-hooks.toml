@@ -3,7 +3,7 @@ version = 1
 [[hooks]]
 id = "ai-rulez-validate"
 stages = ["pre-commit"]
-args = ["validate", "--recursive", "--no-local"]
+args = ["validate", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
@@ -16,7 +16,7 @@ run = "ai-rulez"
 [[hooks]]
 id = "ai-rulez-check"
 stages = ["pre-commit"]
-args = ["generate", "--recursive", "--check", "--no-local"]
+args = ["generate", "--check", "--no-local"]
 files = [
   ".ai-rulez/**",
   "**/.ai-rulez/**",

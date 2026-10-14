@@ -23,9 +23,12 @@ func TestPolyCatalogChecksSourceAndGeneratedDrift(t *testing.T) {
 	found := map[string]bool{}
 	for _, hook := range catalog.Hooks {
 		switch hook.ID {
+		case "ai-rulez-validate":
+			found[hook.ID] = true
+			require.Equal(t, []string{"validate", "--no-local"}, hook.Args)
 		case "ai-rulez-check":
 			found[hook.ID] = true
-			require.Equal(t, []string{"generate", "--recursive", "--check", "--no-local"}, hook.Args)
+			require.Equal(t, []string{"generate", "--check", "--no-local"}, hook.Args)
 			require.Contains(t, hook.Files, "**/AGENTS.md")
 		case "ai-rulez-plugin-verify":
 			found[hook.ID] = true
@@ -34,5 +37,5 @@ func TestPolyCatalogChecksSourceAndGeneratedDrift(t *testing.T) {
 			require.Contains(t, hook.Files, ".agents/plugins/**")
 		}
 	}
-	require.Len(t, found, 2)
+	require.Len(t, found, 3)
 }
