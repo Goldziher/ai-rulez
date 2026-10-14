@@ -1,0 +1,38 @@
+package hooks
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/pelletier/go-toml/v2"
+	"github.com/stretchr/testify/require"
+)
+
+func TestPolyCatalogChecksSourceAndGeneratedDrift(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "poly-hooks.toml"))
+	require.NoError(t, err)
+	var catalog struct {
+		Hooks []struct {
+			ID    string   `toml:"id"`
+			Args  []string `toml:"args"`
+			Files []string `toml:"files"`
+		} `toml:"hooks"`
+	}
+	require.NoError(t, toml.Unmarshal(data, &catalog))
+	found := map[string]bool{}
+	for _, hook := range catalog.Hooks {
+		switch hook.ID {
+		case "ai-rulez-check":
+			found[hook.ID] = true
+			require.Equal(t, []string{"generate", "--recursive", "--check", "--no-local"}, hook.Args)
+			require.Contains(t, hook.Files, "**/AGENTS.md")
+		case "ai-rulez-plugin-verify":
+			found[hook.ID] = true
+			require.Contains(t, hook.Files, "plugin/**")
+			require.Contains(t, hook.Files, ".claude-plugin/**")
+			require.Contains(t, hook.Files, ".agents/plugins/**")
+		}
+	}
+	require.Len(t, found, 2)
+}

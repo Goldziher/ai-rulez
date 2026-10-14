@@ -9,16 +9,32 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "pnpm"
-check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.2.1"
-install = "pnpm dlx ai-rulez@5.2.1 version"
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
 
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==5.2.1"
-install = "uvx ai-rulez==5.2.1 version"
+[[hooks]]
+id = "ai-rulez-check"
+stages = ["pre-commit"]
+args = ["generate", "--recursive", "--check", "--no-local"]
+files = [
+  ".ai-rulez/**",
+  "**/.ai-rulez/**",
+  "AGENTS.md",
+  "**/AGENTS.md",
+  "CLAUDE.md",
+  "**/CLAUDE.md",
+  ".mcp.json",
+  "**/.mcp.json",
+  ".claude/**",
+  "**/.claude/**",
+  ".codex/**",
+  "**/.codex/**",
+  ".agents/**",
+  "**/.agents/**",
+]
+workspace = true
+pass_filenames = false
 
 [[hooks.paths]]
 channel = "system"
@@ -34,18 +50,6 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "pnpm"
-check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.2.1"
-install = "pnpm dlx ai-rulez@5.2.1 version"
-
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==5.2.1"
-install = "uvx ai-rulez==5.2.1 version"
-
-[[hooks.paths]]
 channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
@@ -57,18 +61,6 @@ args = ["generate", "--recursive", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
-
-[[hooks.paths]]
-channel = "pnpm"
-check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.2.1"
-install = "pnpm dlx ai-rulez@5.2.1 version"
-
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==5.2.1"
-install = "uvx ai-rulez==5.2.1 version"
 
 [[hooks.paths]]
 channel = "system"
@@ -84,18 +76,6 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "pnpm"
-check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.2.1"
-install = "pnpm dlx ai-rulez@5.2.1 version"
-
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==5.2.1"
-install = "uvx ai-rulez==5.2.1 version"
-
-[[hooks.paths]]
 channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
@@ -104,21 +84,22 @@ run = "ai-rulez"
 id = "ai-rulez-plugin-verify"
 stages = ["pre-commit"]
 args = ["verify", "--recursive", "--plugin", "--if-configured"]
-files = [".ai-rulez/**", "**/.ai-rulez/**"]
+files = [
+  ".ai-rulez/**",
+  "**/.ai-rulez/**",
+  "plugin/**",
+  "plugins/**",
+  ".claude-plugin/**",
+  ".codex-plugin/**",
+  ".cursor-plugin/**",
+  ".agents/plugins/**",
+  ".opencode/plugins/**",
+  ".pi/**",
+  ".hermes/**",
+  ".github/plugin/**",
+]
 workspace = true
 pass_filenames = false
-
-[[hooks.paths]]
-channel = "pnpm"
-check = "command -v pnpm"
-run = "pnpm dlx ai-rulez@5.2.1"
-install = "pnpm dlx ai-rulez@5.2.1 version"
-
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==5.2.1"
-install = "uvx ai-rulez==5.2.1 version"
 
 [[hooks.paths]]
 channel = "system"
