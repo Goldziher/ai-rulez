@@ -24,3 +24,7 @@ const redactMask = "[REDACTED]"
 func SafePath(path string, secrets []string) string {
 	return cleanText(maskSecretValues(path, secrets))
 }
+
+// SafeText makes text fit to print: secret-looking text is masked and control
+// characters (terminal escapes, line breaks) become spaces.
+func SafeText(s string) string { return cleanText(s) }

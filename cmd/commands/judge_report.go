@@ -109,7 +109,21 @@ func (r *judgeReport) tally() {
 	}
 }
 
+// sanitized returns a copy whose strings carry no control character or secret-looking
+// text: a file name, a provider message or a rubric path can hold a terminal escape.
+func (r *judgeReport) sanitized() *judgeReport {
+	c := *r
+	c.Rubric, c.Model, c.EgressHost = judge.SafeText(r.Rubric), judge.SafeText(r.Model), judge.SafeText(r.EgressHost)
+	c.Files = make([]judgeFileReport, len(r.Files))
+	for i, f := range r.Files {
+		f.Path, f.Reason, f.Rationale = judge.SafeText(f.Path), judge.SafeText(f.Reason), judge.SafeText(f.Rationale)
+		c.Files[i] = f
+	}
+	return &c
+}
+
 func (r *judgeReport) write(out io.Writer, asJSON bool) error {
+	r = r.sanitized()
 	if asJSON {
 		return jsondoc.Write(out, r)
 	}
