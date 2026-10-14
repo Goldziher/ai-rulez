@@ -72,7 +72,7 @@ async function load() {
     try {
       const info = bundle.skills?.[entry.name] ?? {};
       skills.push({
-        id: entry.name,
+        id: bundle.plugin ? `${bundle.plugin}/${entry.name}` : entry.name,
         name: info.name || entry.name,
         description: info.description,
         path: file,
