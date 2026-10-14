@@ -147,13 +147,12 @@ func (r *runner) pluginBundlesKind(kind string) bool {
 	return false
 }
 
-// codexLegacyWritesMCP reports whether ai-rulez writes .mcp.json for the bundle:
-// the Codex runtime is targeted, uses its legacy layout, and the plugin declares
-// MCP servers.
+// codexLegacyWritesMCP includes the compatibility file emitted alongside a
+// portable manifest in the "both" layout. ~keep
 func codexLegacyWritesMCP(r *runner) bool {
 	p := r.cfg.Plugin
 	return p != nil && slices.Contains(p.ResolvedRuntimes(), config.PluginRuntimeCodex) &&
-		p.Codex.ManifestLayout() == config.CodexManifestLegacy && pluginHasMCP(r)
+		p.Codex.ManifestLayout() != config.CodexManifestRoot && pluginHasMCP(r)
 }
 
 // codexWritesRootManifest includes portable packages because Codex prefers their
