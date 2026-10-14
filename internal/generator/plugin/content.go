@@ -28,11 +28,9 @@ type contentLayout struct {
 	Agents   bool
 }
 
-// bundleContent emits verbatim copies of the plugin's skills/commands/agents
-// into the runtime's content directories. Content files are passed through byte
-// for byte from their source path (frontmatter + body), never re-rendered, so a
-// bundled SKILL.md is identical to the authored one. Builtin content (loaded
-// from embedded sources, path prefixed with "builtin://") is skipped.
+// bundleContent copies native sources verbatim and projects OKF metadata into
+// harness-readable frontmatter without changing the body. Builtin content has
+// no on-disk source and is skipped. ~keep
 func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 	root := filepath.Join(baseDir, layout.Root)
@@ -106,6 +104,11 @@ func passthroughSkill(m *Manifest, content *config.ContentFile, destinationDir s
 		return nil, err
 	}
 	outputs, own := walk.outputs, walk.own
+	for i := range outputs {
+		if filepath.Base(outputs[i].Path) == skillManifestName {
+			outputs[i] = projectNativeContent(content, outputs[i])
+		}
+	}
 	if err := appendSharedResources(m, content.Name, destinationDir, own, &outputs); err != nil {
 		return nil, err
 	}
@@ -283,7 +286,7 @@ func passthroughContent(cf *config.ContentFile, dstPath string) (config.OutputFi
 	if err != nil {
 		return config.OutputFile{}, oops.With("path", cf.Path).Wrapf(err, "read content source")
 	}
-	return config.OutputFile{Path: dstPath, RawContent: data}, nil
+	return projectNativeContent(cf, config.OutputFile{Path: dstPath, RawContent: data}), nil
 }
 
 // ensureWithinProject refuses a passthrough source that resolves outside the
@@ -416,4 +419,12 @@ func passthroughEvals(m *Manifest, destinationDir string) ([]config.OutputFile, 
 		return nil, err
 	}
 	return outputs, nil
+}
+
+func projectNativeContent(content *config.ContentFile, out config.OutputFile) config.OutputFile {
+	if content.Metadata != nil && content.Metadata.OKFType != "" {
+		out.RawContent = []byte(config.NativeContent(string(outputBytes(out))))
+		out.Content = ""
+	}
+	return out
 }
