@@ -95,6 +95,9 @@ type Layout struct {
 	StateDir string
 	// Agents is true when the content is read from AGENTS.md and .agents.
 	Agents bool
+	// AgentsMDSplit is true when AGENTS.md is read as one context item per H2
+	// heading (agents_md_split).
+	AgentsMDSplit bool
 }
 
 // LayoutOf resolves the layout of the config directory configDir. It reads the
@@ -102,36 +105,43 @@ type Layout struct {
 func LayoutOf(configDir string) Layout {
 	if base, ok := agentsLayoutBase(configDir); ok {
 		agents := filepath.Join(base, AgentsDirName)
+		file := filepath.Join(agents, AgentsConfigFilename)
 		return Layout{
-			ConfigDir: agents, ConfigFile: filepath.Join(agents, AgentsConfigFilename),
+			ConfigDir: agents, ConfigFile: file,
 			ContentDir: agents, StateDir: filepath.Join(agents, agentsStateDirName), Agents: true,
+			AgentsMDSplit: readSourceKeys(file).AgentsMDSplit,
 		}
 	}
 	l := Layout{
 		ConfigDir: configDir, ConfigFile: filepath.Join(configDir, configTOMLFilename),
 		ContentDir: configDir, StateDir: configDir,
 	}
-	if readSource(l.ConfigFile) == SourceAgents {
+	if keys := readSourceKeys(l.ConfigFile); keys.Source == SourceAgents {
 		l.ContentDir = filepath.Join(ProjectBaseDir(configDir), AgentsDirName)
 		l.Agents = true
+		l.AgentsMDSplit = keys.AgentsMDSplit
 	}
 	return l
 }
 
-// readSource returns the `source` key of the TOML file at path, "" when it is
-// missing or the file cannot be read.
-func readSource(path string) string {
+// sourceKeys are the config keys that say how the content is read.
+type sourceKeys struct {
+	Source        string `toml:"source"`
+	AgentsMDSplit bool   `toml:"agents_md_split"`
+}
+
+// readSourceKeys returns the source keys of the TOML file at path, zero when it
+// is missing or the file cannot be read.
+func readSourceKeys(path string) sourceKeys {
 	data, err := os.ReadFile(path) //nolint:gosec // the project's own config file
 	if err != nil {
-		return ""
+		return sourceKeys{}
 	}
-	var doc struct {
-		Source string `toml:"source"`
-	}
+	var doc sourceKeys
 	if toml.Unmarshal(data, &doc) != nil {
-		return ""
+		return sourceKeys{}
 	}
-	return doc.Source
+	return doc
 }
 
 // agentsLayoutBase returns the project directory when dir names the .agents
@@ -193,6 +203,12 @@ func (c *Config) validateSource() error {
 			With("field", "agents_md").
 			Hint("With the agents source every tool gets its own full file (AGENTS.md is yours and is never written); drop agents_md or set it to false.").
 			Errorf("agents_md = true cannot be combined with source = %q", SourceAgents)
+	}
+	if c.AgentsMDSplit && !c.UsesAgentsSource() {
+		return oops.
+			With("field", "agents_md_split").
+			Hint(`agents_md_split splits the AGENTS.md the agents source reads; set source = "agents" (or keep the configuration in .agents/ai-rulez.toml), or drop it.`).
+			Errorf("agents_md_split needs source = %q", SourceAgents)
 	}
 	if c.AgentsLayout && c.Source == SourceAIRulez {
 		return oops.

@@ -7,6 +7,7 @@ package agentssource
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -63,7 +64,7 @@ func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*con
 	if err != nil {
 		return nil, err
 	}
-	md := importer.ReadAgentsMD(fsys, importer.Options{})
+	md := importer.ReadAgentsMD(fsys, importer.Options{SplitHeadings: cfg.AgentsMDSplit})
 	for _, note := range md.Notes {
 		cfg.Warn(config.AgentsMDFilename+" "+note.Reason, "source", config.SourceAgents)
 	}
@@ -71,15 +72,32 @@ func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*con
 	for i := range tree.Context {
 		taken[tree.Context[i].Name] = true
 	}
-	for i := range md.Items {
-		name := md.Items[i].Name
+	files := make([]config.ContentFile, 0, len(md.Items))
+	for i, name := range itemNames(md.Items, taken) {
+		files = append(files, contextFile(cfg, name, &md.Items[i]))
+	}
+	tree.Context = append(files, tree.Context...)
+	return tree, nil
+}
+
+// itemNames names the AGENTS.md items: a heading used twice gets -2, -3, and a
+// name already taken by a file under .agents/context gets -md. taken is updated.
+func itemNames(items []importer.Item, taken map[string]bool) []string {
+	names := make([]string, 0, len(items))
+	own := map[string]int{}
+	for i := range items {
+		name := items[i].Name
+		own[name]++
+		if n := own[name]; n > 1 {
+			name = fmt.Sprintf("%s-%d", name, n)
+		}
 		for taken[name] {
 			name += "-md"
 		}
 		taken[name] = true
-		tree.Context = append([]config.ContentFile{contextFile(cfg, name, &md.Items[i])}, tree.Context...)
+		names = append(names, name)
 	}
-	return tree, nil
+	return names
 }
 
 // contextFile turns an AGENTS.md item into a context file, parsing the

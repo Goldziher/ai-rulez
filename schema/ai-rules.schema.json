@@ -536,6 +536,11 @@
       "default": "ai-rulez",
       "description": "Where the content is read from. 'ai-rulez' (default) reads the .ai-rulez content tree. 'agents' reads the open standards: the root AGENTS.md and the .agents directory (Agent Skills in .agents/skills/<name>/SKILL.md, plus the ai-rulez layout .agents/rules, agents, checks, commands, context and domains/<name>), and never writes to AGENTS.md or .agents. A configuration kept in .agents/ai-rulez.toml implies 'agents'; hooks, MCP servers, permissions and presets stay in the TOML."
     },
+    "agents_md_split": {
+      "type": "boolean",
+      "description": "With the agents source, read the root AGENTS.md as one context item per H2 heading instead of one item. Items are named agents-<heading slug> (agents for the text before the first heading, -2, -3 for a repeated heading), so `list context` and `remove context` address them; removing one deletes that section from AGENTS.md. Headings inside code fences do not split. Needs source = \"agents\" or a configuration in .agents/ai-rulez.toml. Default false (AGENTS.md is one item named agents).",
+      "default": false
+    },
     "agents_md": {
       "type": "boolean",
       "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to true in v5: AGENTS.md is the canonical instruction file and tools that do not read it import it. Set false for per-tool outputs.",

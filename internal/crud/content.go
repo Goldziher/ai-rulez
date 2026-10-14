@@ -257,6 +257,10 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 		return err
 	}
 
+	if op.isAgentsMDItem(domain, ftype, name) {
+		return op.removeAgentsMDItem(name) // a section of the author's AGENTS.md, not a file of its own
+	}
+
 	// Delete file or skill directory
 	if ftype == ContentTypeSkills {
 		// Delete skill directory
@@ -307,7 +311,7 @@ func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name 
 	}
 
 	// Check if file/skill exists
-	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) {
+	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) && !op.isAgentsMDItem(domain, ftype, name) {
 		filePath := filepath.ToSlash(op.filesMgr.GetFilePath(domain, ftype, name))
 		hint := "Check the name; nothing of that name exists."
 		if files, err := op.ListFiles(ctx, domain, ftype); err == nil {
@@ -353,7 +357,11 @@ func (op *OperatorImpl) ListFiles(ctx context.Context, domain, ftype string) ([]
 		}
 	}
 
-	return op.listFilesInDirectory(domain, ftype)
+	listed, err := op.listFilesInDirectory(domain, ftype)
+	if err != nil {
+		return nil, err
+	}
+	return op.withAgentsMDItems(domain, ftype, listed), nil
 }
 
 // extractMetadata reads a file and extracts priority and targets from YAML frontmatter.
