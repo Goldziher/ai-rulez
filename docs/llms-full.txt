@@ -12515,6 +12515,8 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
   repository root once symlinks are followed: a path that leaves it is an error, and a file reached through a
   symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
   matches at any depth). A glob that matches nothing is reported on stderr.
+- **One file, one spelling.** On a case-insensitive file system (the default on macOS and Windows) `--path agents.md`
+  is the file `AGENTS.md`: it is classified by the spelling stored on disk and is linted once, however it is named.
 - **Untracked files count.** A directory or glob takes the tracked files and the untracked files that git does not
   ignore. An explicit file path is linted even when git ignores it.
 - **Recognized by content, not by location.** A plugin manifest (a `name` and a `version`), a marketplace (a
