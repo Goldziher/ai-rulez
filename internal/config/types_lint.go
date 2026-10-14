@@ -87,6 +87,11 @@ type LintConfig struct {
 	// AgentsMDOnlyAllow lists path globs (relative to the config directory or
 	// the repo root) of CLAUDE.md files the check accepts as intentional islands.
 	AgentsMDOnlyAllow []string `yaml:"agents_md_only_allow,omitempty" json:"agents_md_only_allow,omitempty" toml:"agents_md_only_allow,omitempty"` //nolint:tagliatelle
+	// Paths lists files and directories, relative to the project root, that
+	// `validate` and `scan` lint in addition to the content tree, for example a
+	// marketplace or a skill kept outside .ai-rulez/. Each entry must resolve
+	// inside the project root; the command line's --path and --glob add to it.
+	Paths []string `yaml:"paths,omitempty" json:"paths,omitempty" toml:"paths,omitempty"`
 }
 
 // LintTraps configures the checks for files a harness silently ignores.

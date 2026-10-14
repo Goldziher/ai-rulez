@@ -1528,6 +1528,13 @@
           "description": "Typed checks for frontmatter keys (top-level or inside `metadata`), keyed by the frontmatter key.",
           "type": "object"
         },
+        "paths": {
+          "description": "Files and directories, relative to the project root, that validate and scan lint in addition to the content tree (for example a marketplace or skill kept outside .ai-rulez/). Each must resolve inside the project root; the command line's --path and --glob add to them.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "profile": {
           "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset.",
           "enum": ["default", "strict", "permissive"],

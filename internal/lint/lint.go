@@ -148,6 +148,9 @@ type runner struct {
 	cwd          string
 	host         ambient.Host
 	planned      PlannedFiles // what a run would write, for the traps (WithPlanned)
+	targets      *Targets     // files linted besides the content tree (WithTargets)
+	cwdResolved  string       // cwd with its symlinks resolved, see display
+	cwdOnce      sync.Once
 	sev          map[string]Severity
 	ignore       map[string]bool
 	ignorePaths  []globMatcher
@@ -264,6 +267,12 @@ type Option func(*runner)
 // (nil fields keep the real ones).
 func WithHost(h ambient.Host) Option { return func(r *runner) { r.host = h } }
 
+// WithTargets lints the files of t besides the content tree of the configuration:
+// each is classified by name, place and content (see ResolveTargets) and checked
+// like the files of the tree. The tree the run resolves references against gains
+// the files, so an untracked target is found as well.
+func WithTargets(t *Targets) Option { return func(r *runner) { r.targets = t } }
+
 // WithCwd sets the directory finding paths are shown relative to; without it
 // they are shown as given.
 func WithCwd(dir string) Option { return func(r *runner) { r.cwd = dir } }
@@ -334,6 +343,10 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.baseRel = tree.Rel(baseAbs)
 	if r.baseRel == "." {
 		r.baseRel = ""
+	}
+	if r.targets != nil && len(r.targets.Files) > 0 {
+		r.tree = tree.WithFiles(r.targets.Rels())
+		tree = r.tree
 	}
 	r.resolveSettings()
 	r.selectAnalyzers(so)
@@ -516,6 +529,14 @@ func (r *runner) display(abs string) string {
 	if rel, err := filepath.Rel(r.cwd, abs); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
+	// A path built from the tree top has its symlinks resolved; the working
+	// directory may be spelled through one (a temporary directory on macOS).
+	r.cwdOnce.Do(func() { r.cwdResolved = gitutil.Resolve(r.cwd) })
+	if r.cwdResolved != r.cwd {
+		if rel, err := filepath.Rel(r.cwdResolved, abs); err == nil && !safefs.RelEscapes(rel) {
+			return filepath.ToSlash(rel)
+		}
+	}
 	return filepath.ToSlash(abs)
 }
 
@@ -656,6 +677,7 @@ func (r *runner) collect() {
 		r.agents[n] = true
 	}
 	r.addInheritedNames()
+	defer r.addTargetItems()
 	c := r.cfg.Content
 	if c == nil {
 		return

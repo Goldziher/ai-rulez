@@ -2686,6 +2686,7 @@ ai-rulez scan
 ai-rulez scan --recursive
 ai-rulez scan --format sarif --output scan.sarif
 ai-rulez scan --changed --fail-on warning
+ai-rulez scan --path vendor/skills
 ```
 
 | Flag | Type | Default | Description |
@@ -2699,10 +2700,12 @@ ai-rulez scan --changed --fail-on warning
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
 | `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
+| `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json") |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; a marketplace, plugin, hook file or skill is recognized by its content wherever it is) |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
@@ -3547,6 +3550,7 @@ ai-rulez validate --changed
 ai-rulez validate --explain AR001
 ai-rulez validate --format sarif --output ai-rulez.sarif
 ai-rulez validate --fix --dry-run
+ai-rulez validate --path catalog --glob "plugins/**/*.json"
 ```
 
 | Flag | Type | Default | Description |
@@ -3566,12 +3570,14 @@ ai-rulez validate --fix --dry-run
 | `--fix` | bool |  | Apply the safe automatic fixes to authored sources: executable bits (AR502, AR503, AR505), frontmatter key renames (AR303), quoted booleans (AR304), unclosed code fences (AR806) and missing final newlines (AR807). Harness trap fixes (AR9C7 and project AR9CA key-misspelled rows) also rewrite a misspelled frontmatter key in hand-written harness files outside .ai-rulez/. Never touches generated outputs or security findings |
 | `--fix-unsafe` | bool |  | Also apply fixes that can change meaning: skill name normalization (AR804). Implies --fix |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
+| `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json") |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile) |
 | `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); needs --strict |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; a marketplace, plugin, hook file or skill is recognized by its content wherever it is) |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |

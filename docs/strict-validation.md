@@ -52,6 +52,39 @@ stdout.
 - **Prose, not code.** Fenced code blocks and inline code spans are ignored for links; backticked tokens are only
   read as paths or slash commands.
 
+## Files outside the content tree
+
+`validate` and `scan` lint the content tree of the configuration. Three inputs add files outside it, for example a
+marketplace, a plugin or a skill kept in a directory of its own:
+
+```bash
+ai-rulez validate --strict --path catalog                      # a file or a directory, repeatable
+ai-rulez validate --strict --glob "plugins/**/*.json"           # a glob, repeatable
+```
+
+```toml
+[lint]
+paths = ["catalog", "vendor/skills"]   # always linted, relative to the project root
+```
+
+- **Inside the project root only.** Every path, glob match and `[lint] paths` entry must resolve inside the
+  repository root once symlinks are followed: a path that leaves it is an error, and a file reached through a
+  symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
+  matches at any depth). A glob that matches nothing is reported on stderr.
+- **Untracked files count.** A directory or glob takes the tracked files and the untracked files that git does not
+  ignore. An explicit file path is linted even when git ignores it.
+- **Recognized by content, not by location.** A plugin manifest (a `name` and a `version`), a marketplace (a
+  `plugins` list with an `owner` or a `source` per plugin), a hook file (a `hooks` object of matcher groups) and an
+  MCP file (`mcpServers`) are recognized wherever they are, and get the same checks (`AR963`, `AR507`, the `AR6xx`
+  MCP rules) as the ones in `.claude-plugin/`, `hooks/` and `.mcp.json`. Markdown is classified by name and place:
+  `SKILL.md` is a skill, `AGENTS.md` and `CLAUDE.md` are context, files below `agents/`, `commands/`, `rules/` and
+  `checks/` are of that kind, and any other markdown named with `--path` or `--glob` is context. A file that
+  carries the ai-rulez generated header is an output, not a source, and is skipped.
+- **Nothing else changes.** Findings, baselines, `--fix` and the exit codes work as for the content tree; a fix
+  never edits a generated file or a file outside the project root. `--path` and `--glob` need the content checks
+  (not `--config-only`) and cannot be combined with `--update-baseline`: put the paths in `[lint] paths` to
+  baseline them. With `--recursive`, each root lints the matching files below its own directory.
+
 ## Findings
 
 | Code | Name | Default | Finds |
@@ -325,6 +358,7 @@ allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing 
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
 agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
 agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
+paths = ["catalog", "vendor/skills"]   # extra files and directories to lint, relative to the project root
 
 profile = "default"                # default | strict | permissive (see Profiles)
 

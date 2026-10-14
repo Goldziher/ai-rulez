@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // Codes for the MCP configuration checks.
@@ -77,8 +78,18 @@ func (r *runner) mcpServers() []*mcpServer {
 			})
 		}
 	}
+	files := make([]struct{ path, key string }, 0, len(mcpJSONFiles))
+	seen := map[string]bool{}
 	for _, f := range mcpJSONFiles {
 		p := filepath.Join(r.rootAbs(), filepath.FromSlash(f.rel))
+		seen[gitutil.Resolve(p)] = true
+		files = append(files, struct{ path, key string }{p, f.key})
+	}
+	for _, f := range r.targetFiles(targetMCP, seen) { // recognized by content, wherever it lies
+		files = append(files, struct{ path, key string }{f.Abs, f.MCPKey})
+	}
+	for _, f := range files {
+		p := f.path
 		data, err := readSmallFile(p)
 		if err != nil {
 			continue
