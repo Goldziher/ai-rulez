@@ -18,6 +18,7 @@ id = "ai-rulez-check"
 stages = ["pre-commit"]
 args = ["generate", "--check", "--no-local"]
 files = ["**"]
+always_run = true
 workspace = true
 pass_filenames = false
 
@@ -83,6 +84,7 @@ files = [
   ".hermes/**",
   ".github/plugin/**",
 ]
+always_run = true
 workspace = true
 pass_filenames = false
 
