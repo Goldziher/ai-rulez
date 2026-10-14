@@ -116,7 +116,7 @@ Supported and planned standards, with pinned versions and test status, are in
 
 ## config.toml
 
-Keep governance in `config.toml`. Put consumer `[[plugins]]`/`[[marketplaces]]` and authoring
+Keep governance in `config.toml`. Put marketplace registries (`[[marketplaces]]`) and authoring
 `[plugin]`/`[marketplace]` blocks in `config.plugins.toml`, and select that layer with
 `default_layers = ["plugins"]` before the first table in `config.toml`. Plugin authoring
 can use a separate `plugin/.ai-rulez/` tree so public product skills exclude contributor rules.
@@ -156,37 +156,69 @@ presets = ["codex", "claude"]
 
 ## Content Frontmatter
 
-Rules, context, skills, and agents support YAML frontmatter:
+Authored `.ai-rulez/` content uses OKF frontmatter: `type`, `title` and an
+`x-ai-rulez` identity. Tool-specific fields belong in `x-ai-rulez.metadata`.
+Use `Principle` for rules, `Concept` for context, `Playbook` for skills and
+`Reference` for agents. For example, `.ai-rulez/rules/project-conventions.md`:
 
 ```yaml
 ---
-priority: high # critical, high, medium, low, minimal
-targets: # Limit to specific presets
-  - CLAUDE.md
-  - .cursor/rules/*
-description: Brief description
+type: Principle
+title: Project conventions
+description: Shared project conventions
+x-ai-rulez:
+  kind: rule
+  id: project-conventions
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
 ---
 ```
+
+`priority` accepts `critical`, `high`, `medium`, `low` and `minimal`. Older flat
+frontmatter remains readable for migration; run `ai-rulez migrate okf` to convert
+it and `ai-rulez migrate okf --check` to verify the authored tree.
+
+For public plugin skills, set `x-ai-rulez.metadata.name` to a stable lowercase
+slug matching the skill directory and `x-ai-rulez.id`. This supplies the required
+native Agent Skills name across runtime projections.
+
+Public `skills/<name>/SKILL.md` exports use native Agent Skills frontmatter,
+including `name` and `description`, without the OKF wrapper. This public skill
+is such an export; its frontmatter is not the authoring format for `.ai-rulez/`.
 
 ### Agent-only fields
 
-Agent files under `.ai-rulez/agents/` accept additional frontmatter that maps to
-Claude Code's subagent spec. Each is optional and only emitted into
-`.claude/agents/*.md` (other presets skip fields they do not support):
+Agent files under `.ai-rulez/agents/` put native subagent fields inside
+`x-ai-rulez.metadata`. Supported fields render into the configured harness;
+fields a harness does not support are omitted. For example,
+`.ai-rulez/agents/security-reviewer.md`:
 
 ```yaml
 ---
-name: security-reviewer
+type: Reference
+title: Security reviewer
 description: Reviews code for security regressions
-model: opus # haiku | sonnet | opus | inherit
-effort: high # low | medium | high | xhigh | max | inherit
-permissionMode: default
-tools: # Restrict tool access
-  - Read
-  - Grep
-  - Glob
+x-ai-rulez:
+  kind: agent
+  id: security-reviewer
+  metadata:
+    name: security-reviewer
+    model: opus
+    effort: high
+    permissionMode: default
+    tools:
+      - Read
+      - Grep
+      - Glob
 ---
 ```
+
+Claude Code receives these fields in `.claude/agents/security-reviewer.md` using
+its native flat frontmatter. Keep the authored OKF file and generated native
+file distinct.
 
 `effort` controls reasoning depth. Set a project-wide default and per-preset
 overrides in `config.toml`:
@@ -257,7 +289,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 - `[[hooks]]` in `config.toml` renders into the native hooks file of 36 harnesses (a generated plugin module for `opencode`, `kilo`, `mimocode`, `pi` and `amp`). Events, matchers and timeouts are translated per harness; a group a harness cannot express is skipped with a warning. See [settings.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/settings.md).
 - `[permissions]` (`allow`, `ask`, `deny`, Claude Code rule syntax) is translated for 24 harnesses. A rule that cannot be expressed is skipped, never widened, and an unenforced deny is reported. See [permissions.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/permissions.md).
-- Checks are code-review guidelines in `.ai-rulez/checks/<name>.md` (frontmatter `description`, `severity`, `tools`, `targets`), rendered for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and `gitlab-duo`. Manage them with `ai-rulez add|remove|list check`. See [checks.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/checks.md).
+- Checks are code-review guidelines in `.ai-rulez/checks/<name>.md` (OKF `description` and `x-ai-rulez.metadata` fields `severity`, `tools`, `targets`), rendered for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and `gitlab-duo`. Manage them with `ai-rulez add|remove|list check`. See [checks.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/checks.md).
 - `ai-rulez generate --user` renders a user config (`~/.config/ai-rulez`) into the home directories of 47 harnesses; `clean --user` removes what it wrote. See [user-scope.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/user-scope.md).
 - Settings files you also edit (JSON, JSONC, TOML, YAML) are merged key by key, so your own keys and comments survive `generate` and `clean`.
 - `[guard] generated = true` adds a PreToolUse hook (`ai-rulez guard`) that blocks agent edits to generated files and points at the source under `.ai-rulez/`.
@@ -274,7 +306,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 ## Roles and Dynamic Skills
 
 - `[[roles]]` map a job to a slice of the content (`domains`, `include`/`exclude` selectors, `skill_mode`); `generate --role <name>` renders it and `ai-rulez roles list|show|resolve` inspects it. See [roles.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/roles.md).
-- `delivery: static|served|both` on a skill (or `[skills] delivery`) serves a skill over MCP on demand instead of writing it to the harness trees: run `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`, `list_skill_resources`). `[[skill_sources]]` serve skills from a git repository or directory. See [mcp-server.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/mcp-server.md).
+- `delivery: static|served|both` in an authored skill's `x-ai-rulez.metadata` (or `[skills] delivery`) serves a skill over MCP on demand instead of writing it to the harness trees: run `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`, `list_skill_resources`). `[[skill_sources]]` serve skills from a git repository or directory. See [mcp-server.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/mcp-server.md).
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 
@@ -311,3 +343,10 @@ Stock 5.3.0 lacks fixes for registered marketplace members, both-layout MCP owne
 OpenCode skill IDs and shared include-cache locking. Use the CI-pinned source build
 for those features until a released version includes the fixes; keep that distinction
 when reporting installation or validation results.
+
+## Detailed references
+
+- [Configuration and authored frontmatter](references/configuration.md)
+- [CLI commands](references/cli-reference.md)
+- [Presets and outputs](references/presets-and-outputs.md)
+- [Includes and installed skills](references/includes-and-skills.md)

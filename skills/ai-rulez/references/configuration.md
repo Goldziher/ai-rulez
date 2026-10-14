@@ -158,8 +158,9 @@ authored formats; legacy fields remain readable for migration.
 
 ## Plugin layer
 
-Keep consumer `[[marketplaces]]` and `[[plugins]]`, and producer `[plugin]` and
-`[marketplace]`, in `config.plugins.toml`. The root's `default_layers` selects
+Keep marketplace registries (`[[marketplaces]]`) and producer `[plugin]` and
+`[marketplace]` in `config.plugins.toml`. Deprecated `[[plugins]]` consumer
+entries have no effect; configure plugin enablement in the harness settings. The root's `default_layers` selects
 that file. Plugin metadata does not belong to the root governance config.
 Use a separate author root for public product capabilities when contributor
 rules and maintainer agents should stay private to the repository.
