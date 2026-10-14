@@ -52,7 +52,7 @@ func loadLintConfigOnce(ctx context.Context, once *sync.Once, opts ...config.Loa
 	}
 	if !(gitutil.Git{}).IsRepoContext(ctx, root) && broadRoot(root) {
 		return nil, oops.
-			Hint("Run it inside a project, or name files with --path / --glob from a project directory").
+			Hint("Run it from inside a project directory").
 			Errorf("refusing to lint everything below %s: it is not a project (no git repository, no ai-rulez config)", root)
 	}
 	implicit, ierr := loadProjectImplicit(ctx, root, opts...)
