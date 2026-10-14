@@ -10,6 +10,19 @@ import (
 const splitAgentsMD = "# Demo\n\nIntro text.\n\n## Setup Steps\n\nRun `task setup`.\n\n## Code Style\n\nUse tabs.\n\n" +
 	"## Fences\n\n```sh\n## not a heading\n```\n"
 
+func TestAgentsMDSplitNamesAnAgentsHeadingAgentsAgents(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	write(t, root, ".agents/ai-rulez.toml", agentsConfig+"agents_md_split = true\n")
+	write(t, root, "AGENTS.md", "# Demo\n\nIntro.\n\n## Agents\n\nAbout agents.\n")
+
+	// Act
+	cfg := load(t, root)
+
+	// Assert
+	assert.Equal(t, []string{"agents", "agents-agents"}, names(cfg.Content.Context))
+}
+
 func TestAgentsMDStaysOneItemByDefault(t *testing.T) {
 	// Arrange
 	root := t.TempDir()

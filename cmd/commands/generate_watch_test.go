@@ -117,6 +117,38 @@ func TestWatchTargets(t *testing.T) {
 	}
 }
 
+func TestWatchTargetsIncludeNestedAGENTSMD(t *testing.T) {
+	// Arrange
+	base := t.TempDir()
+	for _, rel := range []string{"svc/AGENTS.md", "svc/api/AGENTS.md", "node_modules/pkg/AGENTS.md", "docs/readme.md"} {
+		full := filepath.Join(base, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("# x\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfg := &config.Config{
+		BaseDir: base, ConfigDir: filepath.Join(base, ".agents", ".ai-rulez"), ConfigFile: "ai-rulez.toml",
+		AgentsLayout: true,
+	}
+
+	// Act
+	got := watchTargets(cfg)
+
+	// Assert
+	want := []watch.Target{
+		{Path: filepath.Join(base, ".agents")},
+		{Path: filepath.Join(base, "AGENTS.md"), File: true},
+		{Path: filepath.Join(base, "svc", "AGENTS.md"), File: true},
+		{Path: filepath.Join(base, "svc", "api", "AGENTS.md"), File: true},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("targets = %v, want %v", got, want)
+	}
+}
+
 func TestWatchTargets_FallbackWithoutConfig(t *testing.T) {
 	resetWatchFlags(t)
 	chdir(t, t.TempDir())
