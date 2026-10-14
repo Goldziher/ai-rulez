@@ -1,7 +1,9 @@
 package lint
 
 import (
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -56,12 +58,14 @@ func (r *runner) checkOutputs() {
 			bodies[bodyKey(it.cf.Content)] = true
 		}
 	}
+	texts := make(map[string]string, len(files))
 	for _, o := range files {
 		kind, ok := classifyOutput(r.rel(o.Abs))
 		if !ok || authored[gitutil.Resolve(o.Abs)] {
 			continue
 		}
 		text := string(o.Data)
+		texts[r.display(o.Abs)] = text
 		cf := config.ContentFileFromText(o.Abs, text)
 		if bodies[bodyKey(cf.Content)] {
 			continue // a copy of an authored item: its findings sit at the source
@@ -75,7 +79,7 @@ func (r *runner) checkOutputs() {
 		r.checkItem(&it)
 		r.tagOutputFindings(before)
 	}
-	r.dropRepeatedOutputFindings()
+	r.dropRepeatedOutputFindings(texts)
 }
 
 // classifyOutput names the content kind of a generated file from its path, or
@@ -110,20 +114,46 @@ func (r *runner) tagOutputFindings(before int) {
 }
 
 // dropRepeatedOutputFindings removes the findings of outputs that repeat a
-// finding of an authored file (same rule, same message): an aggregate such as
-// AGENTS.md carries the text of many sources, and each problem is reported at
-// the source that owns it.
-func (r *runner) dropRepeatedOutputFindings() {
+// finding of an authored file (same rule, same message, same flagged line): an
+// aggregate such as AGENTS.md carries the text of many sources, and each problem
+// is reported at the source that owns it. The line is part of the identity
+// because a message may mask what it found (AR001 hides the secret), so a stale
+// output that still holds an older, different secret of the same type must stay.
+// texts holds the bytes of the outputs by display path, which may not be on disk.
+func (r *runner) dropRepeatedOutputFindings(texts map[string]string) {
+	lines := map[string][]string{}
+	identity := func(f *Finding) string {
+		ls, ok := lines[f.File]
+		if !ok {
+			text, found := texts[f.File]
+			if !found {
+				abs := f.File
+				if !filepath.IsAbs(abs) {
+					abs = filepath.Join(r.cwd, filepath.FromSlash(abs))
+				}
+				if data, err := os.ReadFile(abs); err == nil {
+					text = string(data)
+				}
+			}
+			ls = strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+			lines[f.File] = ls
+		}
+		line := ""
+		if f.Line >= 1 && f.Line <= len(ls) {
+			line = normalizeText(ls[f.Line-1])
+		}
+		return f.Code + "\x00" + f.Message + "\x00" + line
+	}
 	authored := map[string]bool{}
 	for i := range r.findings {
 		if f := &r.findings[i]; f.Source() != SourceOutput {
-			authored[f.Code+"\x00"+f.Message] = true
+			authored[identity(f)] = true
 		}
 	}
 	kept := r.findings[:0]
 	for i := range r.findings {
 		f := r.findings[i]
-		if f.Source() == SourceOutput && authored[f.Code+"\x00"+f.Message] {
+		if f.Source() == SourceOutput && authored[identity(&f)] {
 			continue
 		}
 		kept = append(kept, f)
