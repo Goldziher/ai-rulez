@@ -285,7 +285,7 @@ func TestJudgeRefusesWhatCannotBeJudged(t *testing.T) {
 
 func TestJudgeEmptyProjectHasNothingToJudge(t *testing.T) {
 	// Arrange
-	judgeProject(t, map[string]string{"README.md": "# x\n"})
+	judgeProject(t, map[string]string{"README.md": "# x\n", ".agents/notes.txt": "not markdown\n"})
 	rig := newJudgeRig(t)
 
 	// Act
