@@ -80,7 +80,7 @@ func ownsConfig(fsys fs.FS, dir string) bool {
 		".ai-rulez/config.toml",
 		".config/ai-rulez/config.toml",
 	} {
-		if info, err := fs.Stat(fsys, path.Join(dir, rel)); err == nil && info.Mode().IsRegular() {
+		if info, err := fs.Lstat(fsys, path.Join(dir, rel)); err == nil && info.Mode().IsRegular() {
 			return true
 		}
 	}
@@ -101,7 +101,7 @@ func readNested(ctx context.Context, cfg *config.Config, fsys fs.FS, taken map[s
 		return nil
 	}
 	slugs := nestedSlugs(found)
-	ignored := ignoredNested(ctx, cfg, found)
+	ignored := ignoredNested(ctx, cfg, fsys, found)
 	var out []config.ContentFile
 	for _, f := range found {
 		file := f.dir + "/" + config.AgentsMDFilename
@@ -126,13 +126,22 @@ func readNested(ctx context.Context, cfg *config.Config, fsys fs.FS, taken map[s
 }
 
 // ignoredNested asks git which of the nested files .gitignore (and the other
-// ignore sources) excludes. Outside a repository nothing is ignored.
-func ignoredNested(ctx context.Context, cfg *config.Config, found []nestedFile) map[string]bool {
+// ignore sources) excludes. Ignore rules are git's: outside a repository nothing
+// is ignored, and a root .gitignore there is reported as not applied.
+func ignoredNested(ctx context.Context, cfg *config.Config, fsys fs.FS, found []nestedFile) map[string]bool {
 	paths := make([]string, 0, len(found))
 	for _, f := range found {
 		paths = append(paths, f.dir+"/"+config.AgentsMDFilename)
 	}
-	ignored, err := gitutil.New(runner.FromContext(ctx)).IgnoredAmongContext(ctx, cfg.BaseDir, paths)
+	git := gitutil.New(runner.FromContext(ctx))
+	if !git.IsRepoContext(ctx, cfg.BaseDir) {
+		if _, err := fs.Stat(fsys, ".gitignore"); err == nil {
+			cfg.Warn(".gitignore is not applied to nested AGENTS.md files: the project is not a git repository, so every one is read",
+				"source", config.SourceAgents)
+		}
+		return nil
+	}
+	ignored, err := git.IgnoredAmongContext(ctx, cfg.BaseDir, paths)
 	if err != nil {
 		cfg.Warn("could not ask git which nested AGENTS.md files are ignored; reading all of them",
 			"source", config.SourceAgents, "error", err.Error())
