@@ -24,7 +24,7 @@ import (
 // Read is a config.AgentsSourceReader: tree is the content scanned from .agents;
 // the result adds the root AGENTS.md (as a context file) and leaves out every
 // file an earlier generate run wrote, so output is never read back as source.
-func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*config.ContentTree, error) {
+func Read(ctx context.Context, cfg *config.Config, tree *config.ContentTree) (*config.ContentTree, error) {
 	if tree == nil {
 		tree = &config.ContentTree{Domains: map[string]*config.Domain{}}
 	}
@@ -74,9 +74,10 @@ func Read(_ context.Context, cfg *config.Config, tree *config.ContentTree) (*con
 	}
 	files := make([]config.ContentFile, 0, len(md.Items))
 	for i, name := range itemNames(md.Items, taken) {
-		files = append(files, contextFile(cfg, name, &md.Items[i]))
+		files = append(files, contextFile(cfg, name, &md.Items[i], config.AgentsMDFilename, ""))
 	}
-	tree.Context = append(files, tree.Context...)
+	nested := readNested(ctx, cfg, fsys, taken)
+	tree.Context = append(append(files, tree.Context...), nested...)
 	return tree, nil
 }
 
@@ -101,8 +102,11 @@ func itemNames(items []importer.Item, taken map[string]bool) []string {
 }
 
 // contextFile turns an AGENTS.md item into a context file, parsing the
-// frontmatter it may carry like any other content file.
-func contextFile(cfg *config.Config, name string, item *importer.Item) config.ContentFile {
+// frontmatter it may carry like any other content file. rel is the file the
+// item came from, relative to the project; scope is its directory for a nested
+// AGENTS.md ("" for the root), which scopes the item to `<scope>/**` unless its
+// frontmatter says otherwise.
+func contextFile(cfg *config.Config, name string, item *importer.Item, rel, scope string) config.ContentFile {
 	meta, body, malformed := config.ParseFrontmatterChecked(string(item.Main))
 	if readers := agentsMDReaders(cfg); len(readers) > 0 && (meta == nil || len(meta.Targets) == 0) {
 		// A tool that loads AGENTS.md itself needs no copy of it in its own files.
@@ -111,9 +115,15 @@ func contextFile(cfg *config.Config, name string, item *importer.Item) config.Co
 		}
 		meta.Targets = readers
 	}
+	if scope != "" && (meta == nil || len(meta.PathScope()) == 0) {
+		if meta == nil {
+			meta = &config.Metadata{}
+		}
+		meta.Globs = []string{scope + "/**"}
+	}
 	return config.ContentFile{
 		Name:                 name,
-		Path:                 filepath.Join(cfg.BaseDir, config.AgentsMDFilename),
+		Path:                 filepath.Join(cfg.BaseDir, filepath.FromSlash(rel)),
 		Content:              body,
 		Metadata:             meta,
 		MalformedFrontmatter: malformed,

@@ -549,7 +549,8 @@ Antigravity and Amp conventions; `commands`, `context` and `domains` are ai-rule
 [.agents as a source](agents-source.md); `TestGenerateTranslatesTheSourceAndLeavesItAlone` and the `agents-source`
 goldens back the claim that the standards' files are read and never rewritten. AGENTS.md defines no internal
 structure, so reading it as one item per `##` heading (`agents_md_split = true`) is an ai-rulez convention, off by
-default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`.
+default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`. Nested `AGENTS.md` files are read as the standard
+describes them, a file per directory applying to that directory's subtree (`TestNestedAGENTSMDIsScopedContext`).
 
 #### Reading a status
 
@@ -6838,6 +6839,7 @@ standard supersedes the extension of the same purpose.
 | Content                               | Location                                         | Defined by                                  |
 | ------------------------------------- | ------------------------------------------------ | ------------------------------------------- |
 | Project instructions                  | root `AGENTS.md`                                 | AGENTS.md standard                          |
+| Scoped instructions                   | `<dir>/AGENTS.md` in a subdirectory              | AGENTS.md standard (nested files)           |
 | Skills, with `references/`, `scripts/` and `assets/` | `.agents/skills/<name>/SKILL.md`  | Agent Skills standard                       |
 | Rules                                 | `.agents/rules/<name>.md`                        | Antigravity convention, read by ai-rulez    |
 | Agents (subagents)                    | `.agents/agents/<name>.md`                       | Antigravity and Amp convention              |
@@ -6881,10 +6883,11 @@ found in that directory, and an error for a `default_layers` entry without a fil
 - The root `AGENTS.md` becomes one context file named `agents`. As for every content file, its first `# Title`
   heading is dropped when it is rendered: the item is titled `agents` in the generated files. Frontmatter keys no tool
   reads are kept under `metadata`. `list context` and the MCP list tool show it with `AGENTS.md` as its path;
-  `remove context agents` refuses, because `AGENTS.md` is your file: edit or delete it by hand. A nested
-  `<scope>/AGENTS.md` is not read as source.
+  `remove context agents` refuses, because `AGENTS.md` is your file: edit or delete it by hand.
 - With `agents_md_split = true` the root `AGENTS.md` becomes one context item per H2 heading (see
-  [Splitting AGENTS.md](#splitting-agentsmd)). A nested `<scope>/AGENTS.md` is not read as source.
+  [Splitting AGENTS.md](#splitting-agentsmd)).
+- An `AGENTS.md` in a subdirectory is read as context scoped to that directory (see
+  [Nested AGENTS.md](#nested-agentsmd)).
 - Everything under `.agents/` in the layout above is scanned like the `.ai-rulez` tree: same file formats, same
   `bundle_exclude`, and the same symlink policy (a symlink must resolve inside the project). The one exception is
   `AGENTS.md` itself: a symlinked `AGENTS.md` is never followed and is not read.
@@ -6914,10 +6917,29 @@ agents_md_split = true
 - The setting needs `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`); `validate` rejects it
   otherwise. `AGENTS.md` itself is still never written by `generate`.
 
+#### Nested AGENTS.md
+
+An `AGENTS.md` in a subdirectory (`svc/api/AGENTS.md`) is read as context scoped to that directory. It becomes the
+context item `agents-<directory slug>` (`agents-svc-api`) with the path scope `svc/api/**`, the scope the generator
+gives any glob-scoped context, so each tool renders it the way it renders a path-scoped rule. A tool that reads
+`AGENTS.md` itself, nested files included, gets no copy, as for the root file. The walk:
+
+- skips symlinks (a linked file or directory is never followed), hidden directories, and dependency and build trees
+  (`node_modules`, `vendor`, `target`, `dist`, `build`, ...);
+- honours `.gitignore`, `.git/info/exclude` and the global excludes file: an ignored `AGENTS.md` is not read;
+- stops at a subdirectory that has its own `.agents/ai-rulez.toml`, `.ai-rulez/config.toml` or
+  `.config/ai-rulez/config.toml`: it is a project of its own and owns that file, which `generate --recursive` handles
+  with that project's configuration;
+- looks at most eight directories deep and at most 100000 entries, and warns when it stops early;
+- leaves out a file with the generated banner (a scope file an earlier `source = "ai-rulez"` run wrote is output, never
+  source), an empty file, and a file that only points at another (`@AGENTS.md`).
+
+A nested file is one item even with `agents_md_split`, and `list` and `remove` do not see it: edit the file. It is
+never written by `generate`, and `lock` pins it with its path.
+
 #### Not covered
 
-- A nested `<scope>/AGENTS.md` is generated for `[[scopes]]` in the `ai-rulez` source and is never written here; as a
-  source only the root `AGENTS.md` is read.
+- `generate --watch` watches the root `AGENTS.md` and `.agents`, not nested `AGENTS.md` files.
 - Hooks, MCP servers, permissions, presets, profiles and roles stay in the TOML configuration: no standard defines
   them, and no ai-rulez extension folder exists for them.
 
@@ -8540,7 +8562,8 @@ agents_md = true    # the default
 
 `AGENTS.md` and `.agents/skills` can also be the project's own source instead of ai-rulez's output: with
 `source = "agents"` ai-rulez reads them and never writes them. See [.agents as a source](agents-source.md); with
-`agents_md_split = true` it reads `AGENTS.md` as one context item per `##` heading.
+`agents_md_split = true` it reads `AGENTS.md` as one context item per `##` heading, and an `AGENTS.md` in a
+subdirectory is read as context scoped to that directory.
 
 What changes:
 
@@ -24381,7 +24404,8 @@ Antigravity and Amp conventions; `commands`, `context` and `domains` are ai-rule
 [.agents as a source](agents-source.md); `TestGenerateTranslatesTheSourceAndLeavesItAlone` and the `agents-source`
 goldens back the claim that the standards' files are read and never rewritten. AGENTS.md defines no internal
 structure, so reading it as one item per `##` heading (`agents_md_split = true`) is an ai-rulez convention, off by
-default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`.
+default and covered by `TestAgentsMDSplitMakesOneItemPerHeading`. Nested `AGENTS.md` files are read as the standard
+describes them, a file per directory applying to that directory's subtree (`TestNestedAGENTSMDIsScopedContext`).
 
 #### Reading a status
 
