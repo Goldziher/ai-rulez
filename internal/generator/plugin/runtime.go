@@ -106,7 +106,7 @@ func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if kept != nil {
 		outputs = dropUnpackagedSkills(outputs, kept, baseDir)
 	}
-	outputs, err := composeNPMPackages(outputs, baseDir)
+	outputs, err := composeNPMPackages(outputs, baseDir, m.mergesPiPackageJSON())
 	if err != nil {
 		return nil, err
 	}

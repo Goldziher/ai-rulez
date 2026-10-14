@@ -145,15 +145,18 @@ func (m *Manifest) mergesPiPackageJSON() bool {
 	return m != nil && m.PiPackageJSON == config.PiPackageJSONMerge
 }
 
-// managedOutputs maps a bundle-relative output path to the JSON keys ai-rulez
-// owns in it, for the provenance sidecar. Only the Pi root package.json in
-// package_json = "merge" mode is partially owned: its recorded hash covers the
-// owned keys alone, so an author's edits elsewhere do not read as drift.
+// managedOutputs hashes runtime-owned keys in a merged package.json while
+// allowing author-owned tooling to change. A combined OpenCode package also
+// owns its entrypoint and dependency metadata. ~keep
 func (m *Manifest) managedOutputs() map[string][]string {
 	if !m.mergesPiPackageJSON() {
 		return nil
 	}
-	return map[string][]string{"package.json": piOwnedKeys()}
+	keys := piOwnedKeys()
+	if slices.Contains(m.Runtimes, config.PluginRuntimeOpenCode) {
+		keys = append(keys, "type", "main", "exports", "dependencies", "homepage", "license", "packageManager")
+	}
+	return map[string][]string{"package.json": keys}
 }
 
 // MarketInfo is the resolved marketplace metadata for the emitted index.

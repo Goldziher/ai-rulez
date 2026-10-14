@@ -156,23 +156,23 @@ func codexLegacyWritesMCP(r *runner) bool {
 		p.Codex.ManifestLayout() == config.CodexManifestLegacy && pluginHasMCP(r)
 }
 
-// codexWritesRootManifest reports whether ai-rulez writes the root plugin.json
-// for the bundle: the Codex runtime is targeted and uses a layout other than
-// legacy. Under the legacy layout Codex still prefers a root plugin.json, so a
-// stray one is read as the manifest.
+// codexWritesRootManifest includes portable packages because Codex prefers their
+// root plugin.json even when its compatibility layout is also bundled. ~keep
 func codexWritesRootManifest(r *runner) bool {
 	p := r.cfg.Plugin
-	return p != nil && slices.Contains(p.ResolvedRuntimes(), config.PluginRuntimeCodex) &&
-		p.Codex.ManifestLayout() != config.CodexManifestLegacy
+	if p == nil {
+		return false
+	}
+	runtimes := p.ResolvedRuntimes()
+	return slices.Contains(runtimes, config.PluginRuntimeAgentPlugins) ||
+		slices.Contains(runtimes, config.PluginRuntimeCopilot) ||
+		(slices.Contains(runtimes, config.PluginRuntimeCodex) && p.Codex.ManifestLayout() != config.CodexManifestLegacy)
 }
 
-// codexRootWritesMCP reports whether ai-rulez writes mcp.json for the bundle:
-// the Codex runtime is targeted, uses the root layout, and the plugin declares
-// MCP servers.
+// codexRootWritesMCP includes Agent Plugins and Copilot's shared portable MCP
+// file, which Codex also reads. ~keep
 func codexRootWritesMCP(r *runner) bool {
-	p := r.cfg.Plugin
-	return p != nil && slices.Contains(p.ResolvedRuntimes(), config.PluginRuntimeCodex) &&
-		p.Codex.ManifestLayout() != config.CodexManifestLegacy && pluginHasMCP(r)
+	return codexWritesRootManifest(r) && pluginHasMCP(r)
 }
 
 // pluginHasMCP reports whether the plugin bundles any MCP server, from the
