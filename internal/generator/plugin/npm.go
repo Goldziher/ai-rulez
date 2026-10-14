@@ -99,8 +99,9 @@ func refreshOpenCodeFields(first, second map[string]any) {
 	if _, ok := pi["pi"]; !ok {
 		pi, openCode = second, first
 	}
+	owned := openCodeOwnedKeys()
 	for key, value := range openCode {
-		if key == "files" || key == "keywords" {
+		if !slices.Contains(owned, key) {
 			continue
 		}
 		if key == "dependencies" {

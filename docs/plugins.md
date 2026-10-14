@@ -199,6 +199,12 @@ repository whose `package.json` also holds `devDependencies`, `scripts` or `pack
 lose them. An authored `name` is kept unless `package_name` is set. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
 the whole file as before.
 
+In a combined Pi and OpenCode bundle the OpenCode runtime also owns `type`, `main`, `exports`, `dependencies`
+(its `@opencode/plugin` entry is added to the authored ones), `homepage`, `license` and `packageManager`, and
+refreshes them on every run; `ai-rulez verify --plugin` checks them too. It overwrites nothing else: if the two
+runtimes render a different `name`, `version`, `description` or any other shared key, generation fails with
+"runtime npm manifests disagree".
+
 `package_name` sets the npm `name` explicitly (a lowercase npm name, scoped or not) instead of
 `@<owner>/pi-<plugin-name>`; it also wins in a combined Pi and OpenCode package.
 
