@@ -96,6 +96,44 @@ func TestOutputsLintGeneratedFilesOfAnImplicitProject(t *testing.T) {
 	assert.Equal(t, lint.SourceOutput, got[0].Source())
 }
 
+// TestImplicitRunTreatsAFileWithTheRealGeneratedHeaderAsAnOutput generates a
+// project for real, drops its configuration, and checks that the AGENTS.md that
+// `generate` wrote (header and all) is no source: it is skipped by default and,
+// with --outputs, linted and tagged as an output.
+func TestImplicitRunTreatsAFileWithTheRealGeneratedHeaderAsAnOutput(t *testing.T) {
+	root := t.TempDir()
+	files := map[string]string{
+		".ai-rulez/config.toml":   "version = \"5.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n",
+		".ai-rulez/rules/leak.md": "---\npriority: high\n---\n# Leak\n\nkey = ghp_abcdefghijklmnopqrstuvwxyz0123456789\n",
+	}
+	for name, body := range files {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		require.NoError(t, os.WriteFile(p, []byte(body), 0o644))
+	}
+	t.Chdir(root)
+	cfg, err := config.LoadConfig(t.Context(), root, config.WithoutRemote())
+	require.NoError(t, err)
+	require.NoError(t, generator.NewGenerator(cfg).Generate(""))
+	agents, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	require.NoError(t, err)
+	require.Contains(t, string(agents), "GENERATED FILE", "a real header")
+	require.NoError(t, os.RemoveAll(filepath.Join(root, ".ai-rulez")))
+	require.NoError(t, os.RemoveAll(filepath.Join(root, ".claude")))
+	require.NoError(t, os.Remove(filepath.Join(root, "CLAUDE.md")))
+
+	rep := lintImplicit(t)
+	assert.Empty(t, rep.Findings, "a generated AGENTS.md is no source")
+
+	setOutputsFlag(t)
+	rep = lintImplicit(t)
+	got := findingsOf(rep, lint.CodeSecretDetected)
+	require.NotEmpty(t, got, "%v", rep.Findings)
+	for _, f := range got {
+		assert.Equal(t, lint.SourceOutput, f.Source())
+	}
+}
+
 func TestLintOutputsConfigTurnsOutputsOn(t *testing.T) {
 	assert.False(t, outputsRequested(&config.Config{}))
 	assert.False(t, outputsRequested(&config.Config{Lint: &config.LintConfig{}}))
