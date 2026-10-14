@@ -107,7 +107,9 @@ func resolveLintTargets(ctx context.Context, cfg *config.Config, tree *lint.Tree
 	}
 	spec := lint.TargetSpec{Paths: paths, Globs: globs, Cwd: workingDir(), Detect: cfg.Implicit && !explicit, Generated: cfg.Implicit && outputsRequested(cfg)}
 	if validateRecursive {
-		spec.Under = tree.Rel(cfg.BaseDir)
+		if under := tree.Rel(cfg.BaseDir); under != "." {
+			spec.Under = under // the repository root keeps every file
+		}
 	}
 	if spec.Empty() {
 		return nil, nil

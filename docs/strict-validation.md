@@ -74,7 +74,9 @@ same as with a configuration. The baseline defaults to a file only when `.ai-rul
 to keep one; `--update-baseline` without a directory or a file is an error. Nothing is ever written, and a home or
 filesystem-root directory outside git is refused instead of walked. `generate`, `clean` and `lock` still need a
 configuration and fail with `run ai-rulez init`, and so does `validate --config-only`, which checks a configuration
-file. `okf validate <dir>` never needed one.
+file. `okf validate <dir>` never needed one. `validate --recursive` in a tree that holds no configuration lints that
+implicit root the same way (with `--path` and `--glob` honoured) instead of reporting that nothing was found, so
+adding `--recursive` never turns a failing repository into a passing one.
 
 ## Files outside the content tree
 

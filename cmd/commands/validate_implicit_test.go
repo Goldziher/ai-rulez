@@ -179,6 +179,47 @@ func TestExplicitPathReplacesDetectionInAnImplicitRun(t *testing.T) {
 	assert.False(t, codes[lint.CodeSecretDetected], "nothing is detected implicitly when files are named: %v", rep.Findings)
 }
 
+const implicitSecretDoc = "# Rules\n\nkey = ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"
+
+func TestRecursiveValidateWithoutConfigurationLintsTheImplicitRoot(t *testing.T) {
+	tests := []struct {
+		name     string
+		files    map[string]string
+		paths    []string
+		wantCode int
+	}{
+		{name: "a secret in a nested AGENTS.md fails the run", files: map[string]string{"a/AGENTS.md": implicitSecretDoc}, wantCode: exitStrictFindings},
+		{name: "a clean tree passes", files: map[string]string{"a/AGENTS.md": "# Rules\n\nBe kind.\n"}, wantCode: 0},
+		{
+			name:     "--path replaces the detection",
+			files:    map[string]string{"AGENTS.md": implicitSecretDoc, "docs/ok.md": "# ok\n"},
+			paths:    []string{"docs/ok.md"},
+			wantCode: 0,
+		},
+		{
+			name:     "--path reaches a secret below the root",
+			files:    map[string]string{"docs/bad.md": implicitSecretDoc},
+			paths:    []string{"docs/bad.md"},
+			wantCode: exitStrictFindings,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			implicitProject(t, tt.files)
+			strictTreeCache = &lint.Loader{}
+			t.Cleanup(func() { strictTreeCache = &lint.Loader{}; validateStrict, validateRecursive = false, false })
+			validateStrict, validateRecursive = true, true
+			setTargetFlags(t, tt.paths, nil)
+
+			var code int
+			stdout, stderr := capture(t, func() { code = runRecursiveValidate() })
+
+			assert.Equal(t, tt.wantCode, code, "stdout: %s\nstderr: %s", stdout, stderr)
+			assert.NotContains(t, stdout+stderr, "No configuration files found")
+		})
+	}
+}
+
 func TestImplicitRunRefusesTheHomeDirectoryWithoutSuggestingPathFlags(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
