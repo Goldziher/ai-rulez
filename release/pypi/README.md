@@ -20,6 +20,7 @@ ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-r
 **Key features:**
 
 - **Directory-based** – One `.ai-rulez/` directory for all your AI tooling
+- **Standards as the source** – Or keep `AGENTS.md` and `.agents/` as the source (`source = "agents"`); ai-rulez translates them to every other tool and never writes into them
 - **Multi-tool generation** – Generate configs for all major AI assistants from one source
 - **Plugin publishing** – `generate --plugin` packages the same source into distributable plugin bundles and runtime-specific marketplace indexes (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, Hermes; opt-in Pi, Copilot, and Agent Plugins)
 - **Pi packages** – Opt in with `[plugin] runtimes = ["pi"]` to bundle skills and prompt templates for Git or npm installation; npm publishing preserves runtime metadata and uses `<configured-scope>/<plugin-name>`
@@ -27,6 +28,9 @@ ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-r
 - **Profiles** – Define profiles for different teams or use cases
 - **Includes** – Compose from local packages or Git repositories
 - **CRUD operations** – Manage configuration programmatically via CLI or MCP
+- **Lint without a config** – `ai-rulez validate --strict` checks `AGENTS.md`, `SKILL.md`, `.claude/`, `.agents/`, plugin manifests, hooks and MCP files in any repository; `--path`, `--glob` and `--outputs` widen the scope
+- **Judge** – `ai-rulez judge` grades instruction files against a rubric with a model, with no config file and nothing sent without `--allow-llm`
+- **GitHub Action** – `uses: Goldziher/ai-rulez@<ref>` installs a sha256-verified binary in CI
 
 ---
 

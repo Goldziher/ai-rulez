@@ -45,10 +45,10 @@ repository can loosen.
 
 | Stage | What happens | Commands | Docs |
 | ----- | ------------ | -------- | ---- |
-| **Author** | Rules, context, skills, agents, commands and checks as markdown in `.ai-rulez/`, with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](docs/okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice; `migrate okf` converts it. | `init`, `add`, `convert`, `import`, `migrate okf` | [Author](docs/configuration.md) |
+| **Author** | Rules, context, skills, agents, commands and checks as markdown in `.ai-rulez/`, with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](docs/okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice; `migrate okf` converts it. Or keep `AGENTS.md` and `.agents/` as the source with `source = "agents"`: ai-rulez translates them to every other tool and never writes into them ([guide](docs/agents-source.md)). | `init`, `add`, `convert`, `import`, `migrate okf` | [Author](docs/configuration.md) |
 | **Generate** | Native files for 52 harnesses (Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, Kilo and more), per project or per user. | `generate`, `doctor`, `clean` | [Harnesses](docs/harnesses.md) |
 | **Bundle** | Distributable plugin bundles, an Agent Plugins package, an OKF bundle, an ARD manifest, `AGENTS.md` and `llms.txt`. | `generate --plugin`, `export okf` | [Plugins](docs/plugins.md) |
-| **Lint and validate** | Content and security checks with stable `AR` codes, plus each standard's own schema or rules. | `validate`, `scan`, `okf validate`, `verify` | [Validate](docs/strict-validation.md) |
+| **Lint and validate** | Content and security checks with stable `AR` codes, plus each standard's own schema or rules. Works in a repository with no ai-rulez config (`--path`, `--glob` and `--outputs` pick what to lint); `judge` grades instruction files with a model, also without config. | `validate`, `scan`, `judge`, `okf validate`, `verify` | [Validate](docs/strict-validation.md) |
 | **Govern** | A content-pinning lock, reviewer approvals, Sigstore signing, an organization policy and an SBOM. | `lock`, `approve`, `sign`, `verify --attestation`, `sbom` | [Trust model](docs/trust-model.md) |
 | **Publish** | Reproducible, checksummed release artifacts to GitHub releases, npm, OCI and marketplaces. | `publish` | [Publish](docs/publish.md) |
 
@@ -144,7 +144,7 @@ each row, and is the source of truth for test status.
 | [CycloneDX / SPDX SBOM](docs/sbom.md) | supported | `sbom` | `sbom --check` |
 | [in-toto / DSSE / Sigstore](docs/signing.md) | supported | `sign` | `verify --attestation` |
 | [OpenTelemetry (OTLP)](docs/telemetry.md) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned, no spec yet | none | none |
+| "Agent bundle" | planned, no pinned spec | none | none |
 
 ## Usage
 
@@ -355,7 +355,8 @@ Existing project on 4.x? Run `ai-rulez migrate v5 --dry-run`, then see [Migratin
 
 ## Documentation
 
-Full documentation at [goldziher.github.io/ai-rulez](https://goldziher.github.io/ai-rulez/).
+Full documentation at [goldziher.github.io/ai-rulez](https://goldziher.github.io/ai-rulez/). For how a source becomes
+generated files, and the package map, see [Architecture](docs/architecture.md).
 
 ## Git Hooks
 
@@ -473,9 +474,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Goldziher/ai-rulez@main   # pin a release tag once one exists past v5.1.0 (the tag predates action.yml)
+      - uses: Goldziher/ai-rulez@v5.2.1   # a release tag from v5.2.0 on carries action.yml; pin the one you reviewed
         # with:
-        #   version: 5.1.0   # optional; omit (or "latest") to always use the newest release
+        #   version: 5.2.1   # optional; omit (or "latest") to always use the newest release
       - run: ai-rulez generate --check   # the committed output matches the sources
       - run: ai-rulez validate --strict  # content and security checks, warnings fail
       - run: ai-rulez lock --check        # pins were updated when the sources were
