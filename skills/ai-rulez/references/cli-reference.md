@@ -3,7 +3,7 @@
 ## Global Flags
 
 - `--config <path>` — Override config discovery
-- `--verbose, -V` — Enable verbose output
+- `--config-dir <name>` — Configuration directory name below the working directory
 - `--debug, -D` — Enable debug output
 - `--quiet, -q` — Suppress progress bars and non-essential output
 - `--token, -T <token>` — Git access token for private repos (or `AI_RULEZ_GIT_TOKEN` env var)
@@ -67,6 +67,12 @@ Flags:
 - `--strict` — Deep content validation with stable finding codes; exits 2 on findings at or above `--fail-on`
 - With `--strict` (or any `--format`): `--format text|json|sarif|github|junit|markdown`, `--output <file>`, `--fail-on error|warning|info|none`, `--analyzer <names>`, `--lint-profile default|strict|permissive`, `--external` and `--allow-egress <scanner>`, `--baseline <file>`, `--update-baseline --baseline-reason <text>`, `--strict-baseline`, `--since <rev>` / `--changed` with `--since-depth <n|all>` and `--since-max-files <n>`, `--fix` / `--fix-unsafe` with `--dry-run`
 - `--explain <code>` — Print what a rule checks, why, examples and how to suppress it
+- `--path <file|dir>` and `--glob <pattern>` (repeatable) — Also lint files outside the content tree, inside the project root; `--outputs` also lints the generated files
+- With no configuration file, `validate`, `scan` and `doctor` lint the files that follow a convention (`AGENTS.md`, `CLAUDE.md`, `SKILL.md`, `.claude/`, `.agents/`, `.cursor/rules`, plugin manifests, hooks, MCP files) and write nothing; `generate`, `clean` and `lock` still need a configuration
+
+### `ai-rulez judge`
+
+Grade instruction files (`AGENTS.md`, rules, skills, agents, commands) with a model against a rubric. Reads no configuration: the model comes from `--model provider/model` or `AI_RULEZ_LLM_MODEL`, the key from the provider's own variable. Nothing is sent without `--allow-llm`; `--estimate` (alias `--dry-run`) lists the files, egress host, model and cost and sends nothing. `--min-score` (default 0.7), `--max-cost` (default $0.25), `--rubric <file>`, `--format text|json`. Exit `0` all passed, `1` could not run, `2` a file scored below `--min-score` or was skipped for secrets.
 
 ### `ai-rulez scan`
 

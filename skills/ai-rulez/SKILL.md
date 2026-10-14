@@ -82,6 +82,12 @@ ai-rulez publish --dry-run              # publish: preview release artifacts
 Supported and planned standards, with pinned versions and test status, are in
 <https://goldziher.github.io/ai-rulez/standards/>.
 
+## Other sources and config-free checks
+
+- `source = "agents"` (or a configuration in `.agents/ai-rulez.toml`) reads the root and nested `AGENTS.md` and `.agents/` (skills, rules, agents, checks, commands, context, domains) instead of `.ai-rulez/`; `generate` translates them to every other tool and never writes `AGENTS.md` or `.agents/`. `agents_md_split = true` reads `AGENTS.md` as one item per `##` heading. Start with `ai-rulez init --source agents`.
+- `ai-rulez validate --strict` works in a repository with no ai-rulez config, linting the files that follow a convention; `--path`, `--glob` and `--outputs` choose what else to lint.
+- `ai-rulez judge --estimate --model openai/gpt-4o-mini` previews a model grading of instruction files, again with no config; add `--allow-llm` to send.
+
 ## Configuration Structure
 
 ```text
@@ -229,7 +235,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-52 presets are available (`ai-rulez init --help` prints them): `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`, `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`, `dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`, plus the opt-in `okf` preset (an Open Knowledge Format bundle in `docs/okf/`, see `ai-rulez export okf`). The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
+52 presets are available (`ai-rulez init` writes the list into a comment in the new `config.toml`): `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`, `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`, `dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`, plus the opt-in `okf` preset (an Open Knowledge Format bundle in `docs/okf/`, see `ai-rulez export okf`). The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
 
 `windsurf` is now `devin` and `continue-dev` was removed; `ai-rulez doctor` reports both. `docs/harnesses.md` has the per-preset feature matrix (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
 
