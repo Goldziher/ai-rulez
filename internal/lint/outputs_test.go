@@ -89,6 +89,29 @@ func TestOutputWhoseFindingRepeatsASourceFindingIsDropped(t *testing.T) {
 	}
 }
 
+func TestOutputHoldingADifferentSecretOfTheSameTypeIsKept(t *testing.T) {
+	root := t.TempDir()
+	const authored = "ghp_abcdefghijklmnopqrstuvwxyz0123456789"
+	const rotated = "ghp_ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210"
+	writeFiles(t, root, map[string]string{".ai-rulez/config.toml": baseConfig, ".ai-rulez/rules/r.md": "# R\n\nkey = " + authored + "\n"})
+	gitAdd(t, root)
+	// A stale generated copy that still holds an older, different key: AR001
+	// masks both, so the two findings read alike but are different secrets.
+	out := OutputFile{Abs: filepath.Join(root, "AGENTS.md"), Data: []byte("# Project\n\n# R\n\nkey = " + rotated + "\n")}
+
+	fs := lintWithOutputs(t, root, []OutputFile{out})
+
+	var onOutput int
+	for _, f := range fs {
+		if f.Code == CodeSecretDetected && sourceOf(f) == SourceOutput {
+			onOutput++
+		}
+	}
+	if onOutput != 1 || countCode(fs, CodeSecretDetected) != 2 {
+		t.Fatalf("want the authored key and the different key of the output, got\n%s", dump(fs))
+	}
+}
+
 func TestOutputAtAnAuthoredPathIsSkipped(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, map[string]string{".ai-rulez/config.toml": baseConfig, ".ai-rulez/skills/gen/SKILL.md": "---\nname: gen\n---\nbody\n"})

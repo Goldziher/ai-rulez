@@ -12545,9 +12545,10 @@ ai-rulez validate --strict --outputs
   authoring choice.
 - **Reported once.** A finding on a generated file carries `"source": "output"` in JSON and `properties.source` in
   SARIF (text marks it `[generated output]`). A generated file that repeats an authored item is not checked again, and
-  a finding on one that an authored file already has (same rule, same message, as in an `AGENTS.md` that carries the
-  text of every rule) is dropped, so a problem is reported at the authored path and counted once in the risk score and
-  the baseline.
+  a finding on one that an authored file already has (same rule, same message and the same flagged line, as in an `AGENTS.md`
+  that carries the text of every rule) is dropped, so a problem is reported at the authored path and counted once in
+  the risk score and the baseline. The line is compared because a message can mask what it found: a stale generated
+  file that still holds an older, different secret of the same type is kept and reported.
 - **Never fixed.** `--fix` never edits a generated file, and a finding on one carries no fix: fix its source.
 - **Without a configuration.** With no configuration the generated files are the ones that carry the generated header;
   they are linted as outputs and nothing is generated.
