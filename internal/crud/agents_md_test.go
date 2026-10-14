@@ -117,6 +117,20 @@ func TestRemoveRefusesTheWholeAGENTSMD(t *testing.T) {
 	assert.Equal(t, sectionedAgentsMD, string(data))
 }
 
+func TestContentPathNamesAGENTSMDForASplitItem(t *testing.T) {
+	// Arrange
+	root, op := agentsMDProject(t, agentsProjects[0], true)
+
+	// Act
+	path := op.ContentPath("", crud.ContentTypeContext, "agents-setup")
+
+	// Assert
+	assert.Equal(t, filepath.Join(root, "AGENTS.md"), path, "removing the item edits AGENTS.md, no file of its own exists")
+	assert.True(t, op.IsAgentsMDItem("", crud.ContentTypeContext, "agents-setup"))
+	assert.False(t, op.IsAgentsMDItem("", crud.ContentTypeContext, "arch"))
+	assert.False(t, op.IsAgentsMDItem("", crud.ContentTypeRules, "agents-setup"))
+}
+
 func TestAGENTSMDItemsAreNotListedForTheLocalTree(t *testing.T) {
 	// Arrange
 	_, op := agentsMDProject(t, agentsProjects[0], true)
