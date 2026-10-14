@@ -115,6 +115,11 @@ never to `app1`. A tool that reads
 - leaves out a file with the generated banner (a scope file an earlier `source = "ai-rulez"` run wrote is output, never
   source), an empty file, and a file that only points at another (`@AGENTS.md`).
 
+When two directories sanitize to the same slug (`a/b`, `a-b` and `a b` are all `a-b`; `app[1]` and `app1`), or a slug
+is empty, each of them gets a short hash of its path (`agents-a-b-1f2e3d4c`). Collisions are decided over every
+`AGENTS.md` found, before `.gitignore` is applied, so a name never changes because an unrelated directory was added or
+ignored, and `ai-rulez.lock` and the generated files do not churn.
+
 A nested file is one item even with `agents_md_split`, and `list` and `remove` do not see it: edit the file. It is
 never written by `generate`, and `lock` pins it with its path.
 
