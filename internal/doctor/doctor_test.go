@@ -744,3 +744,29 @@ TOKEN = "${DOCTOR_PROFILE_TOKEN}"
 		}
 	}
 }
+
+// A project with no configuration is diagnosed through an implicit one: the
+// checks that need presets, outputs or a lock have nothing to say, and nothing
+// is reported as missing or stale.
+func TestRun_WithoutAConfigurationReportsNoDriftOrMissingOutputs(t *testing.T) {
+	dir := project(t, map[string]string{"AGENTS.md": "# Rules\n\nRun the tests.\n"})
+	load := func(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
+		return config.LoadImplicit(ctx, dir, append(opts, config.WithoutRemote())...)
+	}
+
+	report := Run(context.Background(), Options{Load: load, LookPath: func(name string) (string, error) { return "/bin/" + name, nil }})
+
+	if report.Unloadable {
+		t.Fatal("an implicit configuration must load")
+	}
+	if len(report.Findings) != 0 {
+		t.Fatalf("findings = %+v, want none", report.Findings)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("doctor wrote files: %v", entries)
+	}
+}

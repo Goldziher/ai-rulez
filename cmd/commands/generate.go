@@ -361,6 +361,13 @@ func runPluginGenerate(out render.Out, gen *generator.Generator) error {
 // selects, else the one discovered in the working directory. A command takes no
 // config path argument.
 func loadConfigForCommand(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
+	cfg, err := loadConfigOrNoConfig(ctx, opts...)
+	return cfg, withInitHint(err)
+}
+
+// loadConfigOrNoConfig is loadConfigForCommand that returns config.ErrNoConfig
+// as it is, for the commands that lint a project without a configuration.
+func loadConfigOrNoConfig(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
 	if noLocal {
 		opts = append(opts, config.WithoutLocal())
 	}

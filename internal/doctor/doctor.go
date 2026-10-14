@@ -148,6 +148,13 @@ type state struct {
 
 type check func(ctx context.Context, s *state) []Finding
 
+// runsWithoutConfiguration reports whether the check says something about a
+// project that has no configuration. The others judge presets, generated
+// outputs, includes or a lock, which such a project does not have.
+func runsWithoutConfiguration(name string) bool {
+	return name == "config" || name == "policy"
+}
+
 // Run executes every check and returns the findings, most serious first and in
 // check order within a severity. Checks that need the configuration are skipped
 // when it does not load; that failure is itself reported by the config check.
@@ -185,6 +192,9 @@ func Run(ctx context.Context, o Options) *Report {
 		{"role-modes", checkRoleModes},
 	}
 	for _, c := range checks {
+		if s.cfg != nil && s.cfg.Implicit && !runsWithoutConfiguration(c.name) {
+			continue
+		}
 		start := ambient.Clock(nil).Now()
 		report.Findings = append(report.Findings, c.run(ctx, s)...)
 		if o.OnCheck != nil {

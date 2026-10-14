@@ -58,11 +58,11 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 		dir = parent
 	}
 
-	return "", oops.
+	return "", noConfig{oops.
 		With("search_dir", startDir).
 		With("supported_names", configNames).
 		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate %s/config.toml (or %s/config.toml)\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName)).
-		Errorf("no configuration file found")
+		Errorf("no configuration file found")}
 }
 
 // IsConfigDirAncestor reports whether path is a strict ancestor directory on

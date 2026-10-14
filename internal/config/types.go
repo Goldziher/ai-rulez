@@ -165,6 +165,11 @@ type Config struct {
 	// Run is the state of the generation in progress; nil outside one.
 	Run        *RunState `yaml:"-" json:"-" toml:"-"`
 	ConfigFile string    `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
+	// Implicit marks the synthetic configuration of a project that has none (see
+	// LoadImplicit): no presets, includes or config file, the content of the
+	// .ai-rulez/ tree when it exists, and the project root as the authored root.
+	// Only the read-only commands (validate, scan, doctor, okf validate) accept it.
+	Implicit bool `yaml:"-" json:"-" toml:"-"`
 	// agentsMDOptIn records an explicit agents_md = true in the main config file,
 	// which the agents source rejects (see validateSource).
 	agentsMDOptIn bool

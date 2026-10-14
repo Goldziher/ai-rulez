@@ -15,6 +15,10 @@ import (
 
 // Validate validates a configuration
 func (c *Config) Validate() error {
+	if c.Implicit {
+		// No config file to be wrong: only the content of the project is checked.
+		return firstCheckError(c.validateContentProblems, c.validateSkillDescriptions, c.validateFrontmatter)
+	}
 	checks := []func() error{
 		c.validateVersion,
 		c.validateName,
@@ -1524,4 +1528,14 @@ func (c *Config) warnLegacyActivation(path string, m *Metadata, mode ActivationM
 				"file", path, "alwaysApply", "false", "activation", m.Activation)
 		}
 	}
+}
+
+// firstCheckError runs the checks in order and returns the first failure.
+func firstCheckError(checks ...func() error) error {
+	for _, check := range checks {
+		if err := check(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

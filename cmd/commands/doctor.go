@@ -52,7 +52,10 @@ or the report could not be written).
 
 Doctor never uses the network or writes the include cache: includes and
 installed skills are not resolved, so the drift check is skipped when a project
-declares them (run generate --check for that).`,
+declares them (run generate --check for that).
+
+A project with no configuration file is diagnosed through an implicit one: only
+the checks that need no presets, outputs or lock run, and nothing is written.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return exitStatus(runDoctor(watchParentContext(cmd), cmd.OutOrStdout()))
@@ -76,7 +79,7 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 
 	report := doctor.Run(ctx, doctor.Options{
 		Profile:     doctorProfile,
-		Load:        loadConfigForCommand,
+		Load:        lintLoader(),
 		ReadUserMCP: doctorMCPUserScope,
 		OnCheck: func(name string, elapsed time.Duration) { // shown under --debug
 			logger.Debug("Doctor check finished", "check", name, "elapsed", elapsed.Round(time.Millisecond))
