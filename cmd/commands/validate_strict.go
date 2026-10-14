@@ -225,7 +225,11 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	if targets != nil {
+	if targets == nil {
+		if _, orphans := orphanRootsFrom(ctx); orphans {
+			return nil, nil // no pick lies outside the roots
+		}
+	} else {
 		opts = append(opts, lint.WithTargets(targets))
 	}
 	if outputsRequested(cfg) {

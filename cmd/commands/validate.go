@@ -254,6 +254,16 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 			}
 			reports, cfgs = append(reports, r.report), append(cfgs, r.cfg)
 		})
+	if validateStrict && targetFlagsSet() {
+		rep, cfg, err := lintOrphanPicks(ctx, rootBases(cfgs))
+		if err != nil {
+			renderError(os.Stderr, err)
+			return 1
+		}
+		if rep != nil {
+			reports, cfgs = append(reports, rep), append(cfgs, cfg)
+		}
+	}
 	if err := ctx.Err(); err != nil {
 		renderError(os.Stderr, oops.Wrapf(err, "validate interrupted before every root was checked"))
 		return 1
@@ -295,6 +305,40 @@ func runImplicitRecursive() int {
 		return 1
 	}
 	return runStrictSingle(cfg)
+}
+
+// rootBases returns the directory of each loaded root.
+func rootBases(cfgs []*config.Config) []string {
+	bases := make([]string, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		bases = append(bases, cfg.BaseDir)
+	}
+	return bases
+}
+
+// lintOrphanPicks lints the files named with --path or --glob that no root of a
+// recursive run covers, each root keeping only the picks below its own directory.
+// They are linted once at the repository root with the implicit configuration
+// (no root's configuration applies to them) and named in the notices. The report
+// is nil when every pick belongs to a root.
+func lintOrphanPicks(ctx context.Context, bases []string) (*lint.Report, *config.Config, error) {
+	cfg, err := loadLintConfig(ctx, config.WithFrontmatterErrors())
+	if err != nil {
+		return nil, nil, err
+	}
+	if !cfg.Implicit {
+		return nil, nil, nil // a configuration at the top is a root: it lints every pick
+	}
+	cfg.DeferMalformedFrontmatter = true
+	if err := cfg.Validate(); err != nil {
+		return nil, nil, err //nolint:wrapcheck // already contextual
+	}
+	cfg.Content = &config.ContentTree{} // the named files only
+	report, err := strictLint(withOrphanRoots(ctx, bases), cfg)
+	if err != nil || report == nil {
+		return nil, nil, err
+	}
+	return report, cfg, nil
 }
 
 // recursiveValidateWorkers is how many roots a recursive validate checks at once.

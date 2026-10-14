@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -53,6 +54,10 @@ type TargetSpec struct {
 	// tree top), so each root of a recursive run lints its own files once. Empty
 	// keeps every file.
 	Under string
+	// Except drops the picked files below any of these directories (slash paths
+	// relative to the tree top): the files the roots of a recursive run already
+	// lint, so the rest can be linted once at the repository root.
+	Except []string
 	// Generated also collects the targets that carry the generated header, as
 	// outputs to lint (Targets.Generated), instead of skipping them.
 	Generated bool
@@ -97,7 +102,12 @@ type Targets struct {
 	// SkippedInDirs counts the files below a --path directory that are not
 	// content (a directory lints the kinds it recognizes and says how many it left).
 	SkippedInDirs int
+	// extra holds notices the caller adds (AddNotice).
+	extra []string
 }
+
+// AddNotice appends a line to the notices, after the ones the resolution made.
+func (t *Targets) AddNotice(line string) { t.extra = append(t.extra, line) }
 
 // PlainFile is a text file that is scanned for secrets only.
 type PlainFile struct {
@@ -127,7 +137,7 @@ func (t *Targets) Notices() []string {
 	for _, g := range t.Unmatched {
 		out = append(out, fmt.Sprintf("no file matches --glob %q (files git ignores are not matched)", g))
 	}
-	return out
+	return append(out, t.extra...)
 }
 
 // Rels returns the tree-relative paths of the files.
@@ -154,6 +164,11 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 		return nil, err
 	}
 	rels := picked.sorted(spec.Under)
+	if len(spec.Except) > 0 {
+		rels = slices.DeleteFunc(rels, func(rel string) bool {
+			return slices.ContainsFunc(spec.Except, func(dir string) bool { return strings.HasPrefix(rel, dir+"/") })
+		})
+	}
 	if spec.Detect {
 		rels = append(rels, cands.conventional(spec.Under, picked)...)
 	}
