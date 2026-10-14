@@ -129,6 +129,11 @@ func TestStrict_RootComponentShippedStaysQuiet(t *testing.T) {
 			files:  map[string]string{"CLAUDE.md": "# dev notes\n"},
 		},
 		{
+			name:   "codex both layouts owns its compatibility mcp.json",
+			config: rootComponentConfig("\nruntimes = [\"claude\", \"codex\"]\n\n[plugin.codex]\nmanifest = \"both\"\n\n[[plugin.mcp]]\nname = \"s\"\ncommand = \"npx\"\n"),
+			files:  map[string]string{".mcp.json": "{}\n", "mcp.json": "{}\n", "plugin.json": "{}\n"},
+		},
+		{
 			name:   "codex root writes its own mcp.json",
 			config: rootComponentConfig("\nruntimes = [\"codex\"]\n\n[plugin.codex]\nmanifest = \"root\"\n\n[[plugin.mcp]]\nname = \"s\"\ncommand = \"npx\"\n"),
 			files:  map[string]string{"mcp.json": "{}\n"},
