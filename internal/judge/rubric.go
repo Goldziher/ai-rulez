@@ -55,14 +55,18 @@ func BuiltinRubric(name string) (Rubric, error) {
 	return Rubric{}, &llm.Error{Kind: llm.KindConfig, Message: "unknown built-in rubric " + quote(name) + " (use " + BuiltinPrefix + strings.Join(BuiltinNames(), ", "+BuiltinPrefix) + " or a file)"}
 }
 
-// NewRubric builds a rubric from caller-supplied text, such as a file.
-func NewRubric(id, text string) (Rubric, error) {
+// NewRubric builds a rubric from caller-supplied text, such as a file. A rubric
+// is sent to the model verbatim, so one that holds secret-looking text or the
+// value of one of secrets (the configured API key) is refused, never masked.
+func NewRubric(id, text string, secrets ...string) (Rubric, error) {
 	text = strings.TrimSpace(text)
 	switch {
 	case text == "":
 		return Rubric{}, &llm.Error{Kind: llm.KindConfig, Message: "the rubric " + id + " is empty"}
 	case len(text) > MaxRubricBytes:
 		return Rubric{}, &llm.Error{Kind: llm.KindConfig, Message: "the rubric " + id + " is larger than " + itoa(MaxRubricBytes) + " bytes"}
+	case llm.RedactSecrets(maskSecretValues(text, secrets)) != text:
+		return Rubric{}, &llm.Error{Kind: llm.KindConfig, Message: "the rubric " + cleanText(id) + " holds secret-looking text; remove it, because a rubric is sent to the model as it is"}
 	}
 	return Rubric{ID: id, Text: text}, nil
 }

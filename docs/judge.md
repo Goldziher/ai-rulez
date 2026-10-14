@@ -40,6 +40,12 @@ here. Before anything is sent the command prints the model and the egress host t
   plain-http opt-in of the `[llm]` table does not apply.
 - A file with secret-looking text (the `AR001` shapes: keys, tokens, private keys, `key=value` pairs) is **not sent**
   and counts as a finding. `--redact` masks the text and sends the file instead.
+- The value of the API key variable (`AI_RULEZ_LLM_API_KEY_ENV`'s, and the provider's own such as `OPENAI_API_KEY`) is
+  screened for like any secret: a file that contains it is not sent (or is masked with `--redact`), and the value is
+  never printed. Values shorter than 8 characters are not screened. A file path is masked the same way in the prompt and
+  the report.
+- A `--rubric` file is sent as it is, so one with secret-looking text or the key value is refused (exit 1); `--redact`
+  does not apply to it.
 - Spend is capped by `--max-cost` (default `0.25` USD). The command estimates the worst case first and refuses to start
   when it exceeds the cap, or when the model has no known price (`--max-cost 0` removes the cap). `--max-tokens` caps
   prompt plus completion tokens of the whole run.

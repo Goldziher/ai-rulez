@@ -31,6 +31,9 @@ type PrepareOptions struct {
 	// Redact masks secret-looking text and sends the file; without it a file
 	// that holds any is not sent.
 	Redact bool
+	// Secrets are values (the configured API key) that no file may carry; they are
+	// treated like secret-looking text and never reported.
+	Secrets []string
 }
 
 // Prepared is one file, ready to send or the reason it is not.
@@ -55,7 +58,7 @@ type Prepared struct {
 // text), and a long file keeps its head and tail. The check runs on the whole
 // file, so a secret in the part left out still stops it.
 func Prepare(path string, data []byte, opts PrepareOptions) Prepared {
-	p := Prepared{Path: path, Bytes: len(data)}
+	p := Prepared{Path: SafePath(path, opts.Secrets), Bytes: len(data)}
 	switch {
 	case bytes.IndexByte(data, 0) >= 0 || !utf8.Valid(data):
 		p.Skip, p.SkipReason = SkipBinary, "not UTF-8 text"
@@ -65,7 +68,7 @@ func Prepare(path string, data []byte, opts PrepareOptions) Prepared {
 		return p
 	}
 	text := string(data)
-	if redacted := llm.RedactSecrets(text); redacted != text {
+	if redacted := llm.RedactSecrets(maskSecretValues(text, opts.Secrets)); redacted != text {
 		if !opts.Redact {
 			p.Skip, p.SkipReason = SkipSecrets, "secret-looking text found; not sent (remove it, or pass --redact to send it masked)"
 			return p
