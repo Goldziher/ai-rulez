@@ -189,3 +189,32 @@ func TestGenerate_ClaudeDoesNotReAddSkillsAgentPluginsDropped(t *testing.T) {
 		assert.NotContains(t, p, "skills/bare", "the claude runtime must not re-add a dropped skill")
 	}
 }
+
+func TestGenerateShouldProjectOKFSkillMetadataForEveryRuntime(t *testing.T) {
+	root := t.TempDir()
+	body := "# Deploy\n\nDeploy the service.\n"
+	source := "---\ntype: Skill\ntitle: Deploy\nx-ai-rulez:\n  kind: skill\n  metadata:\n" +
+		"    name: deploy\n    description: Deploy the service.\n    license: MIT\n---\n" + body
+	skillDir := filepath.Join(root, "skills", "deploy")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	skillPath := filepath.Join(skillDir, "SKILL.md")
+	require.NoError(t, os.WriteFile(skillPath, []byte(source), 0o644))
+	m := &Manifest{
+		Name: "probe", Version: "1.0.0", SourceDir: root,
+		Runtimes: []string{"claude", "agent-plugins", "opencode", "pi"},
+		Skills:   []config.ContentFile{{Name: "deploy", Path: skillPath, Metadata: &config.Metadata{OKFType: "Skill"}}},
+	}
+	outputs, err := Generate(m, t.TempDir())
+	require.NoError(t, err)
+	for _, path := range []string{"skills/deploy/SKILL.md", ".opencode/skills/deploy/SKILL.md", ".pi/skills/deploy/SKILL.md"} {
+		data := string(outputByPath(t, outputs, path).RawContent)
+		assert.Contains(t, data, "name: deploy\n")
+		assert.Contains(t, data, "description: Deploy the service.\n")
+		assert.Contains(t, data, "license: MIT\n")
+		assert.Contains(t, data, body)
+		assert.NotContains(t, data, "x-ai-rulez:")
+	}
+	actual, err := os.ReadFile(skillPath)
+	require.NoError(t, err)
+	assert.Equal(t, source, string(actual))
+}
