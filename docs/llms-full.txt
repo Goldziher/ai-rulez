@@ -4635,7 +4635,7 @@ See [strict validation](strict-validation.md). AR9B0-AR9B9 are reserved for OKF.
 | AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2`, and info when the root index uses the frontmatter style (the scheme OKF 0.2 does not describe); error from `okf validate` alone when the directory has no root `index.md` naming `okf_version` (it is not a bundle, and `import okf` refuses it too) |
 | AR9B4 | `okf-orphan` | info | A concept reachable from no index entry and no link (only checked when the bundle has an index) |
 | AR9B5 | `okf-export-drift` | error | The configured bundle differs from what `export okf` would write now (project lint only) |
-| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one), or `log.md` headings that are not ISO dates |
+| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one); a `log.md` heading that is not an ISO date is a warning |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
 | AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, a markdown file over the size limit that was skipped, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
 | AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead, or a link in a concept points at a file that was not imported (left as written) |
@@ -13449,13 +13449,13 @@ linted by `validate --strict` and `doctor`. The same checks run on any third-par
 | AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list |
 | AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2) |
 | AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
-| AR9B3 | `okf-version-invalid` | warning | The root `okf_version` is not `MAJOR.MINOR` (info when well formed but not `0.2`) |
+| AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2`, and info when the root index uses the frontmatter style (the scheme OKF 0.2 does not describe); error from `okf validate` alone when the directory has no root `index.md` naming `okf_version` (it is not a bundle, and `import okf` refuses it too) |
 | AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
-| AR9B5 | `okf-export-drift` | error | The bundle differs from what the `okf` preset would write now (project lint only) |
-| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one; a `log.md` heading that is not an ISO date is a warning |
+| AR9B5 | `okf-export-drift` | error | The configured bundle differs from what `export okf` would write now (project lint only) |
+| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one); a `log.md` heading that is not an ISO date is a warning |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
-| AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
-| AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
+| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, a markdown file over the size limit that was skipped, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
+| AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead, or a link in a concept points at a file that was not imported (left as written) |
 
 A configuration directory with a root `index.md` (what `ai-rulez init` scaffolds) is a bundle too, and its
 `AR9B*` findings are reported as part of the same run. They sit next to the other analyzers, never instead of
