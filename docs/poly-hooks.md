@@ -46,8 +46,8 @@ refreshing a branch reference.
 
 | Hook                       | Command arguments                               | Purpose                                        |
 | -------------------------- | ----------------------------------------------- | ---------------------------------------------- |
-| `ai-rulez-validate`        | `validate --recursive --no-local`               | Validate the configuration and content recursively |
-| `ai-rulez-check`           | `generate --recursive --check --no-local`        | Check generated governance output drift         |
+| `ai-rulez-validate`        | `validate --no-local`               | Validate the root configuration and content |
+| `ai-rulez-check`           | `generate --check --no-local`        | Check generated governance output drift         |
 | `ai-rulez-generate`        | `generate --no-local`                           | Regenerate the root project                    |
 | `ai-rulez-recursive`       | `generate --recursive --no-local`               | Regenerate every project in a repository       |
 | `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` | Regenerate plugin producers and marketplaces   |
@@ -110,7 +110,7 @@ version = 1
 [[hooks]]
 id = "ai-rulez-validate"
 stages = ["pre-commit"]
-args = ["validate", "--recursive", "--no-local"]
+args = ["validate", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
@@ -140,3 +140,8 @@ generation and verification errors still fail the hook.
 !!! warning
 Hook catalogs execute commands with your user permissions. Review source and lock
 changes before running or installing hooks.
+
+Root validation and drift checks do not recursively treat plugin-authoring configs as governance
+projects. Plugin authors intentionally produce bundles rather than per-repository assistant files;
+plugin verification validates their generated bundles recursively. Run root governance hooks once
+per canonical repository so peer worktrees and unrelated nested repositories are not checked.
