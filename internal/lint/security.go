@@ -439,7 +439,7 @@ func (r *runner) scanComments(abs, raw string) {
 		if strings.Contains(body, "ai-rulez-lint-ignore") {
 			continue
 		}
-		suspicious := imperativeRe().MatchString(body)
+		suspicious := imperativeRe().MatchString(body) || commentAddressesAgent(body)
 		for _, re := range r.injectionRes() {
 			if re.MatchString(body) {
 				suspicious = true

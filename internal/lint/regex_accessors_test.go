@@ -12,6 +12,14 @@ import (
 func TestRegexAccessorsCompile(t *testing.T) {
 	accessors := map[string]func() *regexp.Regexp{
 		"addMarkerRe":         addMarkerRe,
+		"commentLabelRe":      commentLabelRe,
+		"commentConcealRe":    commentConcealRe,
+		"commentUserRe":       commentUserRe,
+		"credReadRe":          credReadRe,
+		"credSinkRe":          credSinkRe,
+		"credConcealRe":       credConcealRe,
+		"credPhraseRe":        credPhraseRe,
+		"keychainExportRe":    keychainExportRe,
 		"seeSkillRe":          seeSkillRe,
 		"alternativeRe":       alternativeRe,
 		"ambiguousLabelRe":    ambiguousLabelRe,
@@ -86,6 +94,8 @@ func TestRegexAccessorsCompile(t *testing.T) {
 		"imperativeRe":        imperativeRe,
 		"importRe":            importRe,
 		"indefiniteArticleRe": indefiniteArticleRe,
+		"possessiveRe":        possessiveRe,
+		"toolBeforeRe":        toolBeforeRe,
 		"includeCacheRE":      includeCacheRE,
 		"inlineLinkRe":        inlineLinkRe,
 		"ipURLRe":             ipURLRe,
