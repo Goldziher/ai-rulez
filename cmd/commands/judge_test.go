@@ -39,6 +39,7 @@ type judgeRig struct {
 	env        map[string]string
 	locked     bool
 	reply      func(req llm.ChatRequest) (string, error)
+	prepare    func(ctx context.Context, lc llm.Config, getenv func(string) string) error
 }
 
 func newJudgeRig(t *testing.T) *judgeRig {
@@ -63,8 +64,9 @@ func (r *judgeRig) deps() judgeDeps {
 			r.cfg, r.opts = lc, opts
 			return llm.Wrap(r.fake, lc, opts), nil
 		},
-		getenv:       func(name string) string { return r.env[name] },
-		policyLocked: func(string) bool { return r.locked },
+		getenv:             func(name string) string { return r.env[name] },
+		policyLocked:       func(string) bool { return r.locked },
+		prepareCredentials: r.prepare,
 	}
 }
 

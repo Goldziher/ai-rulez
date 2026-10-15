@@ -39,6 +39,9 @@ type judgeDeps struct {
 	newClient    func(llm.Config, llm.Options) (judgeClient, error)
 	getenv       func(string) string
 	policyLocked func(projectDir string) bool
+	// prepareCredentials runs before the client is built, for credentials the model
+	// client cannot find itself (the AWS credential chain for Bedrock). Nil does nothing.
+	prepareCredentials func(ctx context.Context, lc llm.Config, getenv func(string) string) error
 }
 
 func defaultJudgeDeps() judgeDeps {
@@ -52,12 +55,16 @@ func defaultJudgeDeps() judgeDeps {
 		},
 		getenv:       ambient.GetenvFunc(nil),
 		policyLocked: func(dir string) bool { return config.PolicyLocksIn(activePolicy, "llm", dir) },
+		prepareCredentials: func(ctx context.Context, lc llm.Config, getenv func(string) string) error {
+			return exportBedrockCredentials(ctx, lc, getenv, resolveAWSCredentialChain, setProcessEnv)
+		},
 	}
 }
 
 type judgeFlags struct {
 	model, provider, rubric                             string
 	maxCost, minScore                                   float64
+	priceInput, priceOutput                             float64
 	maxTokens                                           int
 	allowLLM, estimate, dryRun, redact, noCache, asJSON bool
 }
@@ -98,6 +105,8 @@ skipped for secrets. Under an organization policy that forbids model use, only -
 	fl.StringVar(&f.model, "model", "", "Model as provider/model (or AI_RULEZ_LLM_MODEL), for example openai/gpt-4o-mini")
 	fl.StringVar(&f.provider, "provider", "", "Provider prefix for a --model without one (or AI_RULEZ_LLM_PROVIDER)")
 	fl.Float64Var(&f.maxCost, "max-cost", judgeDefaultMaxCost, "Spend cap in USD (0 removes it; the model must be priced when a cap is set)")
+	fl.Float64Var(&f.priceInput, "price-input", 0, "Price of the model in USD per million input tokens, for a model the price table does not know (use with --price-output)")
+	fl.Float64Var(&f.priceOutput, "price-output", 0, "Price of the model in USD per million output tokens (use with --price-input)")
 	fl.IntVar(&f.maxTokens, "max-tokens", 0, "Cap on prompt plus completion tokens of the whole run (0 means no cap)")
 	fl.BoolVar(&f.allowLLM, "allow-llm", false, "Agree to send the files' content to the model's provider (required to call a model)")
 	fl.BoolVar(&f.estimate, "estimate", false, "Alias of --dry-run")
@@ -119,6 +128,10 @@ func (f *judgeFlags) validate() error {
 		return oops.Errorf("--max-cost must be a finite number >= 0, got %v", f.maxCost)
 	case f.maxTokens < 0:
 		return oops.Errorf("--max-tokens must be >= 0, got %d", f.maxTokens)
+	case !llm.Finite(f.priceInput) || !llm.Finite(f.priceOutput) || f.priceInput < 0 || f.priceOutput < 0:
+		return oops.Errorf("--price-input and --price-output must be finite numbers >= 0")
+	case (f.priceInput > 0) != (f.priceOutput > 0):
+		return oops.Errorf("--price-input and --price-output must be given together")
 	}
 	return nil
 }
@@ -144,6 +157,9 @@ func (d judgeDeps) config(cmd *cobra.Command, f *judgeFlags) (llm.Config, error)
 	}
 	if fl.Changed("max-tokens") {
 		lc.MaxTokens = f.maxTokens
+	}
+	if fl.Changed("price-input") || fl.Changed("price-output") {
+		lc = lc.WithPriceOverride(f.priceInput, f.priceOutput)
 	}
 	lc.AllowNetwork = f.allowLLM
 	lc.AllowPlainHTTP, lc.PlainHTTPHosts = false, nil
@@ -173,8 +189,8 @@ func (d judgeDeps) run(cmd *cobra.Command, args []string, f *judgeFlags) error {
 			return err
 		}
 		var cerr error
-		if client, cerr = d.newClient(p.lc, llm.Options{ConfigDir: p.root, NoCache: f.noCache, Getenv: d.getenv}); cerr != nil {
-			return oops.Wrapf(cerr, "start the model client")
+		if client, cerr = d.startClient(ctx, p, f); cerr != nil {
+			return cerr
 		}
 		defer client.Close() //nolint:errcheck // releasing a client
 		cmd.PrintErrf("judging %d files with %s via %s (file content is sent there; spend capped at %s)\n",
@@ -239,7 +255,7 @@ func (d judgeDeps) plan(ctx context.Context, cmd *cobra.Command, args []string, 
 		return nil, err
 	}
 	files := prepareJudgeFiles(sources, f.redact, secrets)
-	host, err := judgeEgressHost(lc)
+	host, err := judgeEgressHost(lc, d.getenv)
 	if err != nil {
 		return nil, err
 	}
@@ -250,12 +266,30 @@ func (d judgeDeps) plan(ctx context.Context, cmd *cobra.Command, args []string, 
 	}}, nil
 }
 
+// startClient prepares credentials the model client cannot find itself, then builds the client.
+func (d judgeDeps) startClient(ctx context.Context, p *judgePlan, f *judgeFlags) (judgeClient, error) {
+	if d.prepareCredentials != nil {
+		if err := d.prepareCredentials(ctx, p.lc, d.getenv); err != nil {
+			return nil, err
+		}
+	}
+	client, err := d.newClient(p.lc, llm.Options{ConfigDir: p.root, NoCache: f.noCache, Getenv: d.getenv})
+	if err != nil {
+		return nil, oops.Wrapf(err, "start the model client")
+	}
+	return client, nil
+}
+
 // secretValues are the values of the API key variables: the one AI_RULEZ_LLM_API_KEY_ENV
 // names and the provider's own. No file or rubric may carry one, and none is ever printed.
 func (d judgeDeps) secretValues(lc llm.Config) []string {
 	_, keyEnv := providerEndpoint(routedProvider(lc))
+	names := []string{lc.APIKeyEnv, keyEnv}
+	if routedProvider(lc) == providerBedrock {
+		names = append(names, "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN")
+	}
 	var out []string
-	for _, name := range []string{lc.APIKeyEnv, keyEnv} {
+	for _, name := range names {
 		if name == "" {
 			continue
 		}
@@ -279,7 +313,7 @@ func (d judgeDeps) preflight(root string, lc llm.Config, f *judgeFlags, est judg
 	case lc.FullModel() == "":
 		return oops.Hint("Pass --model provider/model or set AI_RULEZ_LLM_MODEL").Errorf("no model: --model is required")
 	case egressHost == "":
-		return oops.Hint("Set AI_RULEZ_LLM_BASE_URL to the endpoint, or use a provider ai-rulez knows the host of (openai, anthropic, gemini, mistral, groq, deepseek, xai, openrouter, cohere); --estimate still works").
+		return oops.Hint("Set AI_RULEZ_LLM_BASE_URL to the endpoint, or use a provider ai-rulez knows the host of (openai, anthropic, gemini, mistral, groq, deepseek, xai, openrouter, cohere, or bedrock with AWS_REGION set); --estimate still works").
 			Errorf("cannot tell which host would receive the file content for model %q, and no base URL (AI_RULEZ_LLM_BASE_URL) is set", lc.FullModel())
 	}
 	if lc.MaxCostUSD > 0 {
@@ -369,8 +403,11 @@ func stopsRun(err error) bool {
 
 // judgeEgressHost is where file content would go, after checking that the
 // endpoint is safe for a key: https, or http to a loopback host.
-func judgeEgressHost(lc llm.Config) (string, error) {
+func judgeEgressHost(lc llm.Config, getenv func(string) string) (string, error) {
 	if lc.BaseURL == "" {
+		if routedProvider(lc) == providerBedrock {
+			return bedrockEgressHost(getenv)
+		}
 		host, _ := providerEndpoint(routedProvider(lc))
 		return host, nil
 	}
@@ -418,6 +455,9 @@ func providerEndpoint(provider string) (host, keyEnv string) {
 		return "openrouter.ai", "OPENROUTER_API_KEY"
 	case "cohere":
 		return "api.cohere.com", "COHERE_API_KEY"
+	case providerBedrock:
+		// The host depends on the region (see bedrockEgressHost); the bearer-token key is optional.
+		return "", "AWS_BEARER_TOKEN_BEDROCK"
 	}
 	return "", ""
 }

@@ -7,6 +7,7 @@
 package pricing
 
 import (
+	"regexp"
 	"runtime/debug"
 	"strings"
 
@@ -16,7 +17,7 @@ import (
 // floorsRevision is bumped whenever floors change. Version folds it into the llm
 // cache identity, so a cost recorded under one set of prices is never replayed
 // under another.
-const floorsRevision = "2"
+const floorsRevision = "3"
 
 const literLLMModule = "github.com/xberg-io/liter-llm/packages/go/v2"
 
@@ -82,6 +83,34 @@ func bare(model string) string {
 	return name
 }
 
+var (
+	// bedrockProfileRe matches the cross-region inference-profile prefix of a Bedrock model id
+	// ("global.", "us.", "eu.", "apac.", "us-gov.", ...).
+	bedrockProfileRe = regexp.MustCompile(`^(global|us|eu|apac|au|ca|jp|us-gov)\.`)
+	// bedrockVendorRe matches the vendor prefix of a Bedrock model id ("anthropic.", "amazon.", ...).
+	bedrockVendorRe = regexp.MustCompile(`^(anthropic|amazon|meta|mistral|cohere|ai21|deepseek|qwen|writer|openai)\.`)
+	// bedrockVersionRe matches the "-v1:0" revision suffix of a Bedrock model id.
+	bedrockVersionRe = regexp.MustCompile(`-v\d+(:\d+)?$`)
+	datedRe          = regexp.MustCompile(`-\d{8}$`)
+)
+
+// spellings lists the names a model may be priced under, most specific first. A Bedrock id such
+// as "global.anthropic.claude-sonnet-5-5" or "eu.anthropic.claude-haiku-4-5-20251001-v1:0" is the
+// vendor's model under a regional prefix, a vendor prefix and a revision suffix; the catalog and
+// the floors know the plain name.
+func spellings(name string) []string {
+	out := []string{name}
+	plain := bedrockVendorRe.ReplaceAllString(bedrockProfileRe.ReplaceAllString(name, ""), "")
+	plain = bedrockVersionRe.ReplaceAllString(plain, "")
+	if plain != name {
+		out = append(out, plain)
+	}
+	if undated := datedRe.ReplaceAllString(plain, ""); undated != plain {
+		out = append(out, undated)
+	}
+	return out
+}
+
 func floorFor(name string) (Price, bool) {
 	best, found := "", false
 	for key := range floors {
@@ -116,27 +145,38 @@ func catalogPrice(name string) (Price, bool) {
 // Lookup returns the flat price of a model. known is false when neither the
 // catalog nor a floor has an entry.
 func Lookup(model string) (price Price, known bool) {
-	name := bare(model)
-	price, known = catalogPrice(name)
-	if !known {
-		price, known = floorFor(name)
+	for _, name := range spellings(bare(model)) {
+		if price, known = catalogPrice(name); known {
+			return price, true
+		}
 	}
-	return price, known
+	for _, name := range spellings(bare(model)) {
+		if price, known = floorFor(name); known {
+			return price, true
+		}
+	}
+	return Price{}, false
 }
 
 // Cost prices u on model in USD. Where the catalog lists the model it applies
 // the context tier and the cache-read rate for u.Cached; otherwise the floor
 // price is applied flat. known is false for a model nothing prices.
 func Cost(model string, u Tokens) (usd float64, known bool) {
-	name := bare(model)
 	prompt, completion := uint64(max(u.Prompt, 0)), uint64(max(u.Completion, 0))
 	cached := uint64(max(u.Cached, 0))
-	if _, listed := catalogPrice(name); listed {
-		if c := lit.CompletionCostWithCache(name, prompt, cached, completion); c != nil {
-			usd, known = *c, true
+	names := spellings(bare(model))
+	for _, name := range names {
+		if _, listed := catalogPrice(name); listed {
+			if c := lit.CompletionCostWithCache(name, prompt, cached, completion); c != nil {
+				return *c, true
+			}
+			return 0, false
 		}
-	} else if p, ok := floorFor(name); ok {
-		usd, known = (float64(prompt)*p.InPerMTok+float64(completion)*p.OutPerMTok)/1e6, true
 	}
-	return usd, known
+	for _, name := range names {
+		if p, ok := floorFor(name); ok {
+			return (float64(prompt)*p.InPerMTok + float64(completion)*p.OutPerMTok) / 1e6, true
+		}
+	}
+	return 0, false
 }

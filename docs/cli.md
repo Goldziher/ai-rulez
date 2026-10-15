@@ -2058,6 +2058,7 @@ Grade instruction files against a rubric with a model. It reads no configuration
 | `--allow-llm` | Agree to send file content to the provider; required to call a model |
 | `--model provider/model`, `--provider p` | The model (or `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_PROVIDER`) |
 | `--max-cost usd` | Spend cap (default 0.25; 0 removes it); refuses to start when the worst case exceeds it or the model has no known price |
+| `--price-input usd`, `--price-output usd` | Price per million tokens of a model the price table does not know, so `--max-cost` works (both required) |
 | `--max-tokens n` | Cap on prompt plus completion tokens of the run |
 | `--estimate`, `--dry-run`, `-n` | List the files, the egress host and model and the token and cost estimate; send nothing |
 | `--redact` | Mask secret-looking text and send the file; by default such a file is skipped and counts as a finding |
@@ -2898,7 +2899,7 @@ in these tables.
 `AI_RULEZ_LLM_PROVIDER`, `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_BASE_URL`,
 `AI_RULEZ_LLM_API_KEY_ENV`, `AI_RULEZ_LLM_EMBEDDING_MODEL`, `AI_RULEZ_LLM_MAX_COST_USD`, `AI_RULEZ_LLM_MAX_TOKENS`,
 `AI_RULEZ_LLM_MAX_CALLS`, `AI_RULEZ_LLM_TIMEOUT_SECONDS`, `AI_RULEZ_LLM_CACHE`, `AI_RULEZ_LLM_ALLOW_NETWORK`,
-`AI_RULEZ_LLM_ALLOW_PLAIN_HTTP`, `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS`. Review: `AI_RULEZ_REVIEW_ALLOWED_HOSTS`.
+`AI_RULEZ_LLM_ALLOW_PLAIN_HTTP`, `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS`, `AI_RULEZ_LLM_PRICE_INPUT_PER_MTOK`, `AI_RULEZ_LLM_PRICE_OUTPUT_PER_MTOK`, `AI_RULEZ_LLM_TEMPERATURE` (`omit`). Review: `AI_RULEZ_REVIEW_ALLOWED_HOSTS`.
 Search: `AI_RULEZ_SEARCH_MODE` (overrides `[search] mode`), `AI_RULEZ_SEARCH_LOG_QUERIES` (turns the query log on or off).
 
 **Telemetry** (see [Telemetry](telemetry.md); user scope only; `DO_NOT_TRACK=1` and `AI_RULEZ_TELEMETRY=off` always win)

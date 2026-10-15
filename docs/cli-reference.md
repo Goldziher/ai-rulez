@@ -1486,6 +1486,8 @@ ai-rulez judge --allow-llm --rubric rubrics/mine.md --format json
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--price-input` | number | `0` | Price of the model in USD per million input tokens, for a model the price table does not know (use with --price-output) |
+| `--price-output` | number | `0` | Price of the model in USD per million output tokens (use with --price-input) |
 | `--provider` | string |  | Provider prefix for a --model without one (or AI_RULEZ_LLM_PROVIDER) |
 | `--redact` | bool |  | Mask secret-looking text and send the file, instead of skipping it |
 | `--rubric` | string |  | Rubric: builtin:instruction-quality (default) or a Markdown file |
