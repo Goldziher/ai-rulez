@@ -64,3 +64,45 @@ func TestDetectNamesAConventionalFileItSkipsAsGenerated(t *testing.T) {
 		})
 	}
 }
+
+func TestDetectFindsNestedClaudeDirectories(t *testing.T) {
+	files := map[string]string{
+		"CLAUDE.md":                  "# root\n",
+		"sub/CLAUDE.md":              "Follow the `r` rule. Delegate to subagent_type: a.\n",
+		"sub/.claude/rules/r.md":     "---\npaths:\n  - \"**/*.py\"\n---\nRule r body.\n",
+		"sub/.claude/commands/c.md":  "---\ndescription: Do the c thing for this repo.\n---\nDo c.\n",
+		"sub/.claude/agents/a.md":    "---\nname: a\ndescription: Agent a. Use when asked to do a.\n---\nBody.\n",
+		"deep/er/.claude/rules/q.md": "Rule q body.\n",
+	}
+	want := []string{
+		"CLAUDE.md",
+		"deep/er/.claude/rules/q.md",
+		"sub/.claude/agents/a.md",
+		"sub/.claude/commands/c.md",
+		"sub/.claude/rules/r.md",
+		"sub/CLAUDE.md",
+	}
+	tests := []struct {
+		name string
+		git  bool
+	}{
+		{name: "git repository", git: true},
+		{name: "directory without git", git: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, files)
+			if tc.git {
+				gitAdd(t, root)
+			}
+			tree, err := LoadTree(root)
+			require.NoError(t, err)
+
+			targets, err := ResolveTargets(context.Background(), tree, TargetSpec{Detect: true, Cwd: root})
+
+			require.NoError(t, err)
+			assert.Equal(t, want, targets.Rels())
+		})
+	}
+}

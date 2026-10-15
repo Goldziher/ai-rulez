@@ -385,6 +385,11 @@ func TestClassifyPath(t *testing.T) {
 		{"docs/rules/style.md", kindRule, false},
 		{"docs/guide.md", kindContext, false},
 		{".claude/skills/x/references/a.md", "", false},
+		{"sub/.claude/rules/r.md", kindRule, true},
+		{"a/b/.claude/commands/c.md", kindCommand, true},
+		{"sub/.claude/agents/a.md", kindAgent, true},
+		{"sub/.claude/rules/deep/r.md", kindRule, true},
+		{"sub/.claude/docs/guide.md", kindContext, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.rel, func(t *testing.T) {
