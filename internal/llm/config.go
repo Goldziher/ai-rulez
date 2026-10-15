@@ -61,6 +61,12 @@ type Config struct {
 	PriceInputPerMTok  float64 `yaml:"price_input_per_mtok,omitempty" json:"price_input_per_mtok,omitempty" toml:"price_input_per_mtok,omitempty"`
 	PriceOutputPerMTok float64 `yaml:"price_output_per_mtok,omitempty" json:"price_output_per_mtok,omitempty" toml:"price_output_per_mtok,omitempty"`
 
+	// OmitTemperature leaves temperature out of every request (AI_RULEZ_LLM_TEMPERATURE=omit),
+	// for models that reject it, such as Claude 5.x on Amazon Bedrock. Environment only: it is
+	// not a config.toml key. Without it a request that a model rejects for its temperature is
+	// retried once without it.
+	OmitTemperature bool `yaml:"-" json:"-" toml:"-"`
+
 	// repoProvider and repoModelRoute record that provider routing (the provider
 	// field, or a provider/ prefix in model or embedding_model) came from a repository config rather
 	// than from user scope. Set only by Resolve; see RoutingFromRepo.
@@ -125,10 +131,28 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	c.applyStringOverrides(getenv)
 	errs := c.applyNumberOverrides(getenv)
 	c.applyBooleanOverrides(getenv, &errs)
+	switch v := strings.ToLower(envValue(getenv, "TEMPERATURE")); v {
+	case "":
+	case "omit":
+		c.OmitTemperature = true
+	default:
+		errs = append(errs, "AI_RULEZ_LLM_TEMPERATURE must be omit (or unset)")
+	}
 	if len(errs) > 0 {
 		return c, newError(KindConfig, "%s: %s", CodeConfigInvalid, strings.Join(errs, "; "))
 	}
 	return c, nil
+}
+
+// WithPriceOverride returns a copy that prices the current Model at the given USD per million
+// tokens. A zero value leaves that side unpriced; both zero changes nothing.
+func (c Config) WithPriceOverride(inPerMTok, outPerMTok float64) Config {
+	if inPerMTok <= 0 && outPerMTok <= 0 {
+		return c
+	}
+	c.PriceInputPerMTok, c.PriceOutputPerMTok = inPerMTok, outPerMTok
+	c.priceBound, c.priceModel = true, c.Model
+	return c
 }
 
 // envValue returns the trimmed value of AI_RULEZ_LLM_<name>, or "".
@@ -189,6 +213,8 @@ func (c *Config) applyNumberOverrides(getenv func(string) string) []string {
 		}
 	}
 	flt("MAX_COST_USD", &c.MaxCostUSD)
+	flt("PRICE_INPUT_PER_MTOK", &c.PriceInputPerMTok)
+	flt("PRICE_OUTPUT_PER_MTOK", &c.PriceOutputPerMTok)
 	num("MAX_TOKENS", &c.MaxTokens)
 	num("MAX_CALLS", &c.MaxCalls)
 	num("TIMEOUT_SECONDS", &c.TimeoutSeconds)

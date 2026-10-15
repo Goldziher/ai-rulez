@@ -42,8 +42,11 @@ File content leaves the machine, so every real run needs `--allow-llm`. `AI_RULE
 here. Before anything is sent the command prints the model and the egress host to stderr.
 
 - The egress host must be known: it is `AI_RULEZ_LLM_BASE_URL`'s host, or the default host of `openai`, `anthropic`,
-  `gemini`, `mistral`, `groq`, `deepseek`, `xai`, `openrouter` or `cohere`. For any other provider, or a model with no
-  `provider/` prefix and no `--provider`, a real run refuses and names `AI_RULEZ_LLM_BASE_URL`; `--estimate` still works.
+  `gemini`, `mistral`, `groq`, `deepseek`, `xai`, `openrouter` or `cohere`, or, for `bedrock`,
+  `bedrock-runtime.<region>.amazonaws.com` with the region from `AWS_REGION` (else `AWS_DEFAULT_REGION`). For any
+  other provider (`azure` and `vertex_ai` need a resource name or project that ai-rulez does not guess), a model with
+  no `provider/` prefix and no `--provider`, or `bedrock` without a region, a real run refuses and names
+  `AI_RULEZ_LLM_BASE_URL`; `--estimate` still works.
 - The endpoint (`AI_RULEZ_LLM_BASE_URL`) must be `https`, or `http` to a loopback host such as `localhost`. The
   plain-http opt-in of the `[llm]` table does not apply.
 - A file with secret-looking text (the `AR001` shapes: keys, tokens, private keys, `key=value` pairs) is **not sent**
@@ -90,11 +93,35 @@ is defused (a space breaks every run of three or more `<` or `>`), and text in i
 | Provider | `--provider p` (prefix for a bare model) | `AI_RULEZ_LLM_PROVIDER` |
 | Spend cap | `--max-cost usd` | `AI_RULEZ_LLM_MAX_COST_USD` |
 | Token cap | `--max-tokens n` | `AI_RULEZ_LLM_MAX_TOKENS` |
+| Price (USD per million tokens) | `--price-input n --price-output n` (both) | `AI_RULEZ_LLM_PRICE_INPUT_PER_MTOK`, `AI_RULEZ_LLM_PRICE_OUTPUT_PER_MTOK` |
 | Endpoint | | `AI_RULEZ_LLM_BASE_URL` |
+| Omit `temperature` | | `AI_RULEZ_LLM_TEMPERATURE=omit` |
 | Key variable | | `AI_RULEZ_LLM_API_KEY_ENV` (default: the provider's own) |
 | Timeout, retries | | `AI_RULEZ_LLM_TIMEOUT_SECONDS`, `AI_RULEZ_LLM_MAX_RETRIES` |
 
 A flag beats its variable.
+
+### Amazon Bedrock
+
+`--model bedrock/<model or inference-profile id>` (for example `bedrock/global.anthropic.claude-sonnet-5-5`) needs
+only `AWS_REGION`; the egress host is derived from it.
+
+- Credentials: `AWS_BEARER_TOKEN_BEDROCK` (a Bedrock API key) or an exported `AWS_ACCESS_KEY_ID` and
+  `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) are used as they are. Otherwise `judge` resolves the default AWS
+  credential chain (`AWS_PROFILE`, SSO, assume-role profiles, web identity such as `aws-actions/configure-aws-credentials`,
+  container and instance roles) once, before the first call, and hands the keys to the model client for the life of the
+  command. The keys are not refreshed during a run, so a run longer than the credential lifetime fails with an auth
+  error. The model client itself has no credential-provider hook; this export is why the keys pass through the process
+  environment. Only `judge` does this; the other model features (`eval --grader builtin`, verifiers, review) still need
+  one of the explicit forms above.
+- `temperature` is sent as 0 unless the model rejects it. Claude 5.x on Bedrock answers HTTP 400 ("`temperature` is
+  deprecated for this model"); the request is then retried once without it and the client leaves it out from then on.
+  `AI_RULEZ_LLM_TEMPERATURE=omit` leaves it out from the first request (no failed call). This applies to every
+  feature that calls a model (`judge`, `eval --grader builtin`, verifiers, review).
+- Price: inference-profile ids (`global.`, `us.`, `eu.`, `apac.`, ... prefix, `anthropic.` vendor prefix, `-v1:0`
+  suffix) are priced as the model they name, from the built-in table, so the default `--max-cost` works. For a model the
+  table does not know, give `--price-input` and `--price-output`; a price applies to the model you named. The price is
+  an estimate for the cap, not a bill.
 
 ## Output and exit codes
 

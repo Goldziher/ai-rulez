@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	lit "github.com/xberg-io/liter-llm/packages/go/v2"
@@ -26,6 +28,9 @@ type literLLM struct {
 	model      string
 	embedModel string
 	pricing    Pricing
+	// omitTemp leaves temperature out of every request: set by AI_RULEZ_LLM_TEMPERATURE=omit, or
+	// once a model has rejected it.
+	omitTemp atomic.Bool
 }
 
 var errClosed = permanentError("liter-llm client is closed")
@@ -71,7 +76,9 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 	if err != nil {
 		return nil, &Error{Kind: KindProvider, Message: "cannot create liter-llm client: " + RedactSecrets(err.Error())}
 	}
-	return &literLLM{client: c, key: key, provider: routeProvider(cfg), model: cfg.FullModel(), embedModel: embedFull(cfg), pricing: NewPricing(cfg)}, nil
+	l := &literLLM{client: c, key: key, provider: routeProvider(cfg), model: cfg.FullModel(), embedModel: embedFull(cfg), pricing: NewPricing(cfg)}
+	l.omitTemp.Store(cfg.OmitTemperature)
+	return l, nil
 }
 
 // routeProvider is the provider the configured models route to: the provider
@@ -270,9 +277,9 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	if l.client == nil {
 		return ChatResponse{}, errClosed
 	}
-	resp, err := l.client.ChatWithContext(ctx, chatRequest(model, req))
+	resp, err := l.chatOnce(ctx, model, req)
 	if err != nil {
-		return ChatResponse{}, l.classify(err)
+		return ChatResponse{}, err
 	}
 	if resp == nil {
 		return ChatResponse{}, permanentError("liter-llm returned an empty reply without an error")
@@ -293,6 +300,39 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 		out.FinishReason = string(*choice.FinishReason)
 	}
 	return out, nil
+}
+
+// chatOnce sends one chat request. A model that rejects temperature (Claude 5.x on Bedrock answers
+// HTTP 400 "`temperature` is deprecated for this model") gets one retry without it, and every later
+// request of this client leaves it out. The reply is already classified when err is not nil.
+func (l *literLLM) chatOnce(ctx context.Context, model string, req ChatRequest) (*lit.ChatCompletionResponse, error) {
+	build := func() lit.ChatCompletionRequest {
+		out := chatRequest(model, req)
+		if l.omitTemp.Load() {
+			out.Temperature = nil
+		}
+		return out
+	}
+	resp, err := l.client.ChatWithContext(ctx, build())
+	if err == nil {
+		return resp, nil
+	}
+	classified := l.classify(err)
+	if l.omitTemp.Load() || !rejectsTemperature(classified) {
+		return nil, classified
+	}
+	l.omitTemp.Store(true)
+	resp, err = l.client.ChatWithContext(ctx, build())
+	if err != nil {
+		return nil, l.classify(err)
+	}
+	return resp, nil
+}
+
+// rejectsTemperature reports whether err is the provider's HTTP 400 about the temperature parameter.
+func rejectsTemperature(err error) bool {
+	var e *Error
+	return errors.As(err, &e) && e.Status == http.StatusBadRequest && strings.Contains(strings.ToLower(e.Message), "temperature")
 }
 
 // maxResponseBytes bounds the HTTP body liter-llm reads for one reply. It is passed as the
