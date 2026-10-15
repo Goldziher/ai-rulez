@@ -14,6 +14,8 @@ type RuleDoc struct {
 	Why string
 	// Bad and Good are short examples (one or two lines each).
 	Bad, Good string
+	// Note is an optional extra reference bullet rendered after Why.
+	Note string
 }
 
 // Explanation is everything known about one rule.
@@ -96,6 +98,7 @@ var baseRuleDocs = map[string]RuleDoc{
 	},
 	CodeGlobNoMatch: {
 		Why:  "A rule scoped by paths/globs that match no tracked file never applies, so the guidance is silently dead.",
+		Note: "Glob base: for a rule under a nested `<dir>/.claude/rules/`, patterns are matched relative to `<dir>`, the directory holding `.claude`. Every other rule or context file (root `.claude/rules`, `.cursor/rules`, `.github/instructions`, `.ai-rulez/` content) is matched relative to the lint root, the directory of the configuration (the git toplevel or working directory when there is none).",
 		Bad:  "`paths: [\"src/legacy/**\"]` after the directory was renamed",
 		Good: "`paths: [\"src/core/**\"]` matching files that exist",
 	},
@@ -325,7 +328,11 @@ func RuleReferenceMarkdown() string {
 	for _, r := range Rules() {
 		e, _ := Explain(r.Code) //nolint:errcheck // registered
 		fmt.Fprintf(&sb, "\n### %s %s\n\n%s\n\n", r.Code, r.Name, e.Summary)
-		fmt.Fprintf(&sb, "- Default severity: `%s`\n- Analyzer: `%s` (scope `%s`)\n- Why: %s\n- Bad: %s\n- Good: %s\n", e.Default, e.Analyzer, e.Scope, e.Why, e.Bad, e.Good)
+		fmt.Fprintf(&sb, "- Default severity: `%s`\n- Analyzer: `%s` (scope `%s`)\n- Why: %s\n", e.Default, e.Analyzer, e.Scope, e.Why)
+		if note := ruleTables().docs[r.Code].Note; note != "" {
+			fmt.Fprintf(&sb, "- %s\n", note)
+		}
+		fmt.Fprintf(&sb, "- Bad: %s\n- Good: %s\n", e.Bad, e.Good)
 	}
 	sb.WriteString("\n" + ruleRefEnd + "\n")
 	return sb.String()

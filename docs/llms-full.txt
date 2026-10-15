@@ -521,7 +521,6 @@ Status values:
 - **conformant**: our output validates against the standard's official machine-readable schema in a test.
 - **partial**: tested, but the standard has no official schema (the test transcribes its written rules), or only part of
   what we emit is covered. The gaps column says what is missing.
-- **planned**: implemented or intended, with no conformance test yet.
 
 | Standard | Pinned version | Status | What we generate and validate | Test | Known gaps |
 | --- | --- | --- | --- | --- | --- |
@@ -532,7 +531,6 @@ Status values:
 | [AGENTS.md](https://agents.md) | No versioned release | partial | `AGENTS.md` at the project root ([page](agents-md.md)) | `TestGeneratedAgentsMDIsPlainMarkdownAtTheRoot` | The format has no schema and no required fields. The test checks that the file is plain Markdown at the root with the project's guidance. Nested `AGENTS.md` files in monorepos are not covered. |
 | MCP server configuration | The `mcp.json` schema of Agent Plugins 1.0.0 and 1.1.0 | partial | `mcp.json` (stdio, streamable-http and sse servers) | `TestMCPServerEntriesUseTheSchemaTransportTypes`, plus the `mcp.json` schema check in the Agent Plugins tests | The per-harness files (`.mcp.json`, `.codex/config.toml` and others) follow each tool's own format and are not validated against a schema here. |
 | [MCP server card](https://modelcontextprotocol.io/seps/2127-mcp-server-cards) | SEP-2127 (Final); the schema is `schema.json` of the experimental [server-card extension](https://github.com/modelcontextprotocol/experimental-ext-server-card) (Apache-2.0) at `526201b` | partial (experimental extension, pinned `526201b`) | One `<server>.json` per remote `[[mcp_servers]]` entry from `publish --emit mcp-server-card`, and the same card embedded as `application/mcp-server-card+json` entries in `ard.json` ([page](mcp-server-card.md)) | `TestMCPServerCardGoldensConformToTheExtensionSchema`, `TestMCPServerCardBuilderOutputConformsToTheExtensionSchema`, `TestMCPServerCardSchemaRejectsWhatACardMustNotBe` | The schema is generated from `schema.ts` by an experimental extension, not yet a published versioned schema; it can change. A card describes remote servers only, so stdio servers get none. Identity beyond name, version and description (title, icons, repository, website), URL variables and `_meta` are not generated. `validate` does not check cards; only the conformance tests do. |
-| "Agent bundle" | No upstream spec is defined or pinned | planned | Nothing | None | Tracked in [#393](https://github.com/Goldziher/ai-rulez/issues/393). No specification exists to target, so nothing is generated or claimed. |
 | [CycloneDX](https://cyclonedx.org/) | 1.6 | conformant | `ai-rulez sbom` ([page](sbom.md)) | `TestCycloneDXOutputConformsToTheOfficial16Schema` | The test validates structure. NTIA minimum-element and license-expression policy checks are not run. |
 | [SPDX](https://spdx.dev/) | 2.3 (JSON) | conformant | `ai-rulez sbom --type spdx-json` | `TestSPDXOutputConformsToTheOfficial23Schema` | Structure only. The in-package tests also check unique identifiers and resolving relationships. |
 | [in-toto Statement](https://github.com/in-toto/attestation) and [DSSE](https://github.com/secure-systems-lab/dsse) | Statement v1; DSSE v1 | partial | Signed statements inside Sigstore bundles from `ai-rulez sign`; `verify` checks them ([page](signing.md)) | `TestSignedStatementIsADSSEEnvelopeOverAnInTotoStatement` | Neither project publishes a JSON Schema, so the vendored schemas are hand-written from the specifications. Sigstore bundle structure and certificate chains are covered by `internal/signing` tests, not by a conformance schema. The `v0.1` statement type is accepted on verification only. |
@@ -583,7 +581,6 @@ status. In short:
 | CycloneDX / SPDX SBOM | supported | `sbom` | `sbom --check` |
 | in-toto / DSSE / Sigstore | supported | `sign` | `verify --attestation` |
 | OpenTelemetry (OTLP) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned, no spec yet | none | none |
 
 #### Upgrade in four steps
 
@@ -12535,7 +12532,7 @@ The content set is found by convention, and everything found is treated as hand-
 
 - `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`, at the root and in subdirectories (context);
 - every `SKILL.md`, wherever it is (a skill, with its `references/`, `scripts/` and `assets/`);
-- `.claude/{skills,agents,commands,rules}`, `.agents/**` and `.cursor/rules`;
+- `.claude/{skills,agents,commands,rules}` (a nested `.claude` directory is discovered at any depth, so its rules, commands and agents are linted and indexed for `AR301`), `.agents/**` and `.cursor/rules`;
 - an `.ai-rulez/` content tree even without a `config.toml`;
 - `.claude-plugin/plugin.json` and `marketplace.json`, `hooks/hooks.json`, `.claude/settings.json` hooks and `.mcp.json`.
 
@@ -14069,6 +14066,7 @@ a paths/globs pattern matches no tracked file
 - Default severity: `error`
 - Analyzer: `references` (scope `item`)
 - Why: A rule scoped by paths/globs that match no tracked file never applies, so the guidance is silently dead.
+- Glob base: for a rule under a nested `<dir>/.claude/rules/`, patterns are matched relative to `<dir>`, the directory holding `.claude`. Every other rule or context file (root `.claude/rules`, `.cursor/rules`, `.github/instructions`, `.ai-rulez/` content) is matched relative to the lint root, the directory of the configuration (the git toplevel or working directory when there is none).
 - Bad: `paths: ["src/legacy/**"]` after the directory was renamed
 - Good: `paths: ["src/core/**"]` matching files that exist
 
@@ -24979,7 +24977,6 @@ Status values:
 - **conformant**: our output validates against the standard's official machine-readable schema in a test.
 - **partial**: tested, but the standard has no official schema (the test transcribes its written rules), or only part of
   what we emit is covered. The gaps column says what is missing.
-- **planned**: implemented or intended, with no conformance test yet.
 
 | Standard | Pinned version | Status | What we generate and validate | Test | Known gaps |
 | --- | --- | --- | --- | --- | --- |
@@ -24990,7 +24987,6 @@ Status values:
 | [AGENTS.md](https://agents.md) | No versioned release | partial | `AGENTS.md` at the project root ([page](agents-md.md)) | `TestGeneratedAgentsMDIsPlainMarkdownAtTheRoot` | The format has no schema and no required fields. The test checks that the file is plain Markdown at the root with the project's guidance. Nested `AGENTS.md` files in monorepos are not covered. |
 | MCP server configuration | The `mcp.json` schema of Agent Plugins 1.0.0 and 1.1.0 | partial | `mcp.json` (stdio, streamable-http and sse servers) | `TestMCPServerEntriesUseTheSchemaTransportTypes`, plus the `mcp.json` schema check in the Agent Plugins tests | The per-harness files (`.mcp.json`, `.codex/config.toml` and others) follow each tool's own format and are not validated against a schema here. |
 | [MCP server card](https://modelcontextprotocol.io/seps/2127-mcp-server-cards) | SEP-2127 (Final); the schema is `schema.json` of the experimental [server-card extension](https://github.com/modelcontextprotocol/experimental-ext-server-card) (Apache-2.0) at `526201b` | partial (experimental extension, pinned `526201b`) | One `<server>.json` per remote `[[mcp_servers]]` entry from `publish --emit mcp-server-card`, and the same card embedded as `application/mcp-server-card+json` entries in `ard.json` ([page](mcp-server-card.md)) | `TestMCPServerCardGoldensConformToTheExtensionSchema`, `TestMCPServerCardBuilderOutputConformsToTheExtensionSchema`, `TestMCPServerCardSchemaRejectsWhatACardMustNotBe` | The schema is generated from `schema.ts` by an experimental extension, not yet a published versioned schema; it can change. A card describes remote servers only, so stdio servers get none. Identity beyond name, version and description (title, icons, repository, website), URL variables and `_meta` are not generated. `validate` does not check cards; only the conformance tests do. |
-| "Agent bundle" | No upstream spec is defined or pinned | planned | Nothing | None | Tracked in [#393](https://github.com/Goldziher/ai-rulez/issues/393). No specification exists to target, so nothing is generated or claimed. |
 | [CycloneDX](https://cyclonedx.org/) | 1.6 | conformant | `ai-rulez sbom` ([page](sbom.md)) | `TestCycloneDXOutputConformsToTheOfficial16Schema` | The test validates structure. NTIA minimum-element and license-expression policy checks are not run. |
 | [SPDX](https://spdx.dev/) | 2.3 (JSON) | conformant | `ai-rulez sbom --type spdx-json` | `TestSPDXOutputConformsToTheOfficial23Schema` | Structure only. The in-package tests also check unique identifiers and resolving relationships. |
 | [in-toto Statement](https://github.com/in-toto/attestation) and [DSSE](https://github.com/secure-systems-lab/dsse) | Statement v1; DSSE v1 | partial | Signed statements inside Sigstore bundles from `ai-rulez sign`; `verify` checks them ([page](signing.md)) | `TestSignedStatementIsADSSEEnvelopeOverAnInTotoStatement` | Neither project publishes a JSON Schema, so the vendored schemas are hand-written from the specifications. Sigstore bundle structure and certificate chains are covered by `internal/signing` tests, not by a conformance schema. The `v0.1` statement type is accepted on verification only. |

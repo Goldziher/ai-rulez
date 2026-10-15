@@ -64,7 +64,7 @@ The content set is found by convention, and everything found is treated as hand-
 
 - `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`, at the root and in subdirectories (context);
 - every `SKILL.md`, wherever it is (a skill, with its `references/`, `scripts/` and `assets/`);
-- `.claude/{skills,agents,commands,rules}`, `.agents/**` and `.cursor/rules`;
+- `.claude/{skills,agents,commands,rules}` (a nested `.claude` directory is discovered at any depth, so its rules, commands and agents are linted and indexed for `AR301`), `.agents/**` and `.cursor/rules`;
 - an `.ai-rulez/` content tree even without a `config.toml`;
 - `.claude-plugin/plugin.json` and `marketplace.json`, `hooks/hooks.json`, `.claude/settings.json` hooks and `.mcp.json`.
 
@@ -1598,6 +1598,7 @@ a paths/globs pattern matches no tracked file
 - Default severity: `error`
 - Analyzer: `references` (scope `item`)
 - Why: A rule scoped by paths/globs that match no tracked file never applies, so the guidance is silently dead.
+- Glob base: for a rule under a nested `<dir>/.claude/rules/`, patterns are matched relative to `<dir>`, the directory holding `.claude`. Every other rule or context file (root `.claude/rules`, `.cursor/rules`, `.github/instructions`, `.ai-rulez/` content) is matched relative to the lint root, the directory of the configuration (the git toplevel or working directory when there is none).
 - Bad: `paths: ["src/legacy/**"]` after the directory was renamed
 - Good: `paths: ["src/core/**"]` matching files that exist
 

@@ -126,8 +126,7 @@ full parity through a [custom provider-backed preset](docs/configuration.md#prov
 
 ## Standards
 
-Generation isn't limited to harness files — ai-rulez aims to be compliant with the major emerging standards in the agentic ecosystem. A standard is marked **supported** when the code generates it and
-validates it today, and **planned** when it does not yet.
+Generation isn't limited to harness files — ai-rulez aims to be compliant with the major emerging standards in the agentic ecosystem. A standard is listed when the code generates and validates it today.
 [docs/standards.md](docs/standards.md) carries the pinned spec version, the conformance test suite and the known gaps for
 each row, and is the source of truth for test status.
 
@@ -144,7 +143,6 @@ each row, and is the source of truth for test status.
 | [CycloneDX / SPDX SBOM](docs/sbom.md) | supported | `sbom` | `sbom --check` |
 | [in-toto / DSSE / Sigstore](docs/signing.md) | supported | `sign` | `verify --attestation` |
 | [OpenTelemetry (OTLP)](docs/telemetry.md) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned, no pinned spec | none | none |
 
 ## Usage
 

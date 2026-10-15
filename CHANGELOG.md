@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **Config-free `validate` lints `.claude/{rules,commands,agents}` at any depth.** Only the root `.claude` directory was discovered, so a nested `pkg/.claude/rules/x.md` was neither linted nor indexed for `AR301`, and a reference to it was reported as unknown (#411).
+- **AR101 resolves `paths:`/`globs` of a nested `.claude/rules/*.md` relative to the directory holding `.claude`.** Such globs were matched from the project root and reported as matching no file; root-level rules are unchanged (#412).
+
 ## [5.3.0] - 2026-10-14
 
 ### Added
