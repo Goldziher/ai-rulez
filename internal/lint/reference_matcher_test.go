@@ -127,3 +127,55 @@ func TestReferenceUnknown_SkillDirectoryPointerPrecision(t *testing.T) {
 		})
 	}
 }
+
+// A singular "`x` rule" after a possessive or a tool name names a linter or
+// business rule, not a rule item of the project (#416). A project with no rule
+// items has nothing to point at, so no "`x` rule" is a reference there.
+func TestReferenceUnknown_ToolRuleIsProse(t *testing.T) {
+	tests := []struct {
+		name  string
+		body  string
+		extra map[string]string
+		cfg   string
+		want  int
+	}{
+		{"possessive tool", "The frontend ran eslint's `camelcase` rule on locale identifiers.", nil, "", 0},
+		{"curly possessive", "We kept ruff\u2019s `E501` rule off, and clippy's `needless-return` rule on.", nil, "", 0},
+		{"tool name before", "Enable the eslint `no-console` rule for scripts.", nil, "", 0},
+		{"tool name with the", "Disable the stylelint `declaration-block-no-duplicate-properties` rule.", nil, "", 0},
+		{"plain rule, project with rules", "Follow the `ghost-thing` rule.", nil, "", 1},
+		{"true positive follows tool-less prose", "Please follow the `real-rule` rule.", nil, "", 1},
+		{"existing rule is fine", "Please follow the `real-rule` rule.",
+			map[string]string{".ai-rulez/rules/real-rule.md": "# Real\nbody\n"}, "", 0},
+		{"known_names silences a rule name", "Follow the `display` rule.", nil, "\n[lint]\nknown_names = [\"display\"]\n", 0},
+		{"skill after possessive still fires", "Run eslint's `ghost-skill` skill.", nil, "", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, precisionTree(tt.body, tt.cfg, tt.extra))
+			gitAdd(t, root)
+
+			fs := lintDir(t, root)
+
+			assert.Equal(t, tt.want, countCode(fs, CodeReferenceUnknown), "%q:\n%s", tt.body, dump(fs))
+		})
+	}
+}
+
+// With no rule item anywhere, a "`x` rule" cannot point at anything, so it is
+// prose; the issue's repro lives in a skill of a tree with no rules (#416).
+func TestReferenceUnknown_NoRuleItemsMeansRuleWordIsProse(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml": baseConfig,
+		"CLAUDE.md":             "# root\n",
+		".claude/skills/lint-notes/SKILL.md": "---\nname: lint-notes\ndescription: Explains why the frontend lint config changed.\n---\n# Lint notes\n\n" +
+			"We disabled the `no-console` rule for scripts and kept the `display` rule for tables.\n",
+	})
+	gitAdd(t, root)
+
+	fs := lintDir(t, root)
+
+	assert.Zero(t, countCode(fs, CodeReferenceUnknown), "%s", dump(fs))
+}

@@ -36,6 +36,17 @@ var (
 	// "a `both` skill" describes a kind of skill (the backticked word is an
 	// adjective), while "the `deploy` skill" names one (#352).
 	indefiniteArticleRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)\ban?\s+$`) })
+	// possessiveRe matches a possessive right before a token ("eslint's "), and
+	// toolBeforeRe a linter or tool name ("the eslint "): "eslint's `camelcase`
+	// rule" names a linter rule, not a rule item of the project (#416).
+	possessiveRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("(?i)[\\p{L}\\p{N}_-]['\u2019]s\\s+$") })
+	// toolBeforeRe lists the linters and tools whose own "rules" prose names:
+	// "the eslint `no-console` rule" is not a pointer to a rule item (#416).
+	toolBeforeRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:eslint|tslint|stylelint|biome|oxlint|prettier|ruff|pylint|flake8|mypy|pyright|` +
+			`clippy|rubocop|golangci-lint|staticcheck|shellcheck|markdownlint|rumdl|semgrep|checkstyle|sonarqube|sonar|` +
+			`lint|linter|linters|linting)\s+$`)
+	})
 	// skillDirRe matches the file-path pointer forms "skills/x" and
 	// ".claude/skills/x/SKILL.md", capturing the skill directory name. The
 	// "skills/" component must start the path or sit under a harness dot
@@ -348,6 +359,9 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 	if looksPlaceholder(key) || strings.Contains(key, ":") {
 		return
 	}
+	if kind == kindRule && !r.hasRuleItems() {
+		return // no rule item to point at: "the `no-console` rule" is prose (#416)
+	}
 	for _, s := range sets {
 		if s[key] {
 			return
@@ -367,6 +381,21 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 		return
 	}
 	r.add(CodeReferenceUnknown, it.abs, line, "references %s %q, which does not exist", kind, name)
+}
+
+// hasRuleItems reports whether the tree defines any rule, apart from the names
+// lint.known_names declares.
+func (r *runner) hasRuleItems() bool {
+	known := make(map[string]bool, len(r.lc.KnownNames))
+	for _, n := range r.lc.KnownNames {
+		known[strings.ToLower(n)] = true
+	}
+	for n := range r.rules {
+		if !known[n] {
+			return true
+		}
+	}
+	return false
 }
 
 var (
@@ -445,7 +474,11 @@ func backtickedNames(l bodyLine, add func(name, kind string)) {
 			if indefiniteArticleRe().MatchString(l.Text[:m[0]]) {
 				continue // "a `both` skill" is a kind of skill, not a name (#352)
 			}
-			add(l.Text[m[2]:m[3]], kindForWord(l.Text[m[4]:m[5]]))
+			kind := kindForWord(l.Text[m[4]:m[5]])
+			if kind == kindRule && toolRuleContext(l.Text[:m[0]]) {
+				continue // "eslint's `camelcase` rule" is a linter rule (#416)
+			}
+			add(l.Text[m[2]:m[3]], kind)
 		}
 	}
 	if agentWord {
@@ -453,6 +486,12 @@ func backtickedNames(l bodyLine, add func(name, kind string)) {
 			add(m[2], kindForWord(m[1]))
 		}
 	}
+}
+
+// toolRuleContext reports whether the text before a "`x` rule" token ends in a
+// possessive or a linter or tool name, so the rule belongs to a tool.
+func toolRuleContext(before string) bool {
+	return possessiveRe().MatchString(before) || toolBeforeRe().MatchString(before)
 }
 
 // plainNames adds the non-backticked references: Skill(...), subagent_type, a

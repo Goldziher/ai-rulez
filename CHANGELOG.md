@@ -6,8 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`validate` detects three more agent-targeted attacks.** `AR036` (credential-store instruction in prose) and `AR037` (a bundled script that reads the environment or a credential file and sends it over HTTP) are warnings, `AR038` (an instruction to run commands without asking) is a note; `AR003` and `AR004` also flag an HTML comment that addresses the agent or tells it to hide a step (#415).
+
 ### Fixed
 
+- **`judge` works through Amazon Bedrock.** The egress host is derived from `AWS_REGION` or `AWS_DEFAULT_REGION` (`bedrock-runtime.<region>.amazonaws.com`), so no `AI_RULEZ_LLM_BASE_URL` is needed; the default AWS credential chain (`AWS_PROFILE`, SSO, assume-role, web identity, instance roles) is resolved once and handed to the client; `AI_RULEZ_LLM_TEMPERATURE=omit` leaves `temperature` out and a single HTTP 400 about it is retried without it, for every `llm.Client` consumer; Bedrock inference-profile ids are priced from the catalog and `--price-input` / `--price-output` price any other model (#414). Only `judge` resolves the credential chain; `azure` and `vertex_ai` hosts are not derived.
+- **AR301 no longer reports prose about a linter rule.** A singular `` `x` rule `` after a possessive or a tool name (`eslint's`, `ruff`, `lint`) is prose, and rule references are not reported in a tree with no rule items; `lint.known_names` silences a name (#416).
 - **Config-free `validate` lints `.claude/{rules,commands,agents}` at any depth.** Only the root `.claude` directory was discovered, so a nested `pkg/.claude/rules/x.md` was neither linted nor indexed for `AR301`, and a reference to it was reported as unknown (#411).
 - **AR101 resolves `paths:`/`globs` of a nested `.claude/rules/*.md` relative to the directory holding `.claude`.** Such globs were matched from the project root and reported as matching no file; root-level rules are unchanged (#412).
 
