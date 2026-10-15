@@ -301,6 +301,18 @@ func (t *Tree) matchAny(g globMatcher, baseRel string) bool {
 	return false
 }
 
+// matchUnder reports whether g matches a tracked file under dir, with the
+// pattern taken relative to dir.
+func (t *Tree) matchUnder(g globMatcher, dir string) bool {
+	prefix := dir + "/"
+	for f := range t.files {
+		if strings.HasPrefix(f, prefix) && g.match(f[len(prefix):]) {
+			return true
+		}
+	}
+	return false
+}
+
 // Loader memoizes trees so linting many roots of one repository reads the git
 // index once. It is safe for concurrent use; hold it by pointer, since it
 // contains a mutex.

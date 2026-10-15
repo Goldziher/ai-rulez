@@ -21,7 +21,6 @@ status. In short:
 | CycloneDX / SPDX SBOM | supported | `sbom` | `sbom --check` |
 | in-toto / DSSE / Sigstore | supported | `sign` | `verify --attestation` |
 | OpenTelemetry (OTLP) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned, no spec yet | none | none |
 
 ## Upgrade in four steps
 

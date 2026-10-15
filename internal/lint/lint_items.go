@@ -66,7 +66,7 @@ func (r *runner) checkGlobs(it *item, d doc) {
 			r.add(CodeGlobNoMatch, it.abs, d.lineOf(pattern, 1), "glob %q is not a valid pattern", pattern)
 			continue
 		}
-		if !r.tree.matchAny(g, r.baseRel) {
+		if !r.globMatches(g, it) {
 			if always, set := it.cf.Metadata.ExtraBool(keyAlwaysApply); set && always {
 				r.add(CodeGlobNoMatch, it.abs, d.lineOf(pattern, 1), "glob %q matches no tracked file; this %s is alwaysApply so it still applies, but the glob is dead", pattern, it.kind)
 				continue
@@ -74,6 +74,27 @@ func (r *runner) checkGlobs(it *item, d doc) {
 			r.add(CodeGlobNoMatch, it.abs, d.lineOf(pattern, 1), "glob %q matches no tracked file, so this %s never applies", pattern, it.kind)
 		}
 	}
+}
+
+// globMatches reports whether g matches a tracked file as the harness reading
+// it would resolve it. Claude Code resolves the paths of a nested
+// <dir>/.claude/rules file against <dir>; every other file keeps the lint root.
+func (r *runner) globMatches(g globMatcher, it *item) bool {
+	if dir := nestedClaudeDir(r.tree.Rel(it.abs)); dir != "" && it.kind == kindRule {
+		return r.tree.matchUnder(g, dir)
+	}
+	return r.tree.matchAny(g, r.baseRel)
+}
+
+// nestedClaudeDir returns <dir> for a repository-relative <dir>/.claude/rules/...
+// path, or "" for a root-level .claude/rules file or any other location.
+func nestedClaudeDir(rel string) string {
+	rel = filepath.ToSlash(rel)
+	i := strings.Index(rel, "/.claude/rules/")
+	if i <= 0 {
+		return ""
+	}
+	return rel[:i]
 }
 
 func (r *runner) description(it *item) string { return config.SkillDescription(it.cf.Metadata) }
