@@ -340,6 +340,9 @@ func newCandidates(ctx context.Context, tree *Tree, detect bool) *candidates {
 		for _, dir := range conventionDirs() {
 			c.walk(tree.Top, dir)
 		}
+		if !tree.Git {
+			c.walkNestedClaude(tree.Top)
+		}
 	}
 	sort.Strings(c.rels)
 	return c
@@ -359,6 +362,30 @@ func (c *candidates) walk(top, dir string) {
 		}
 		if rel, rerr := filepath.Rel(top, p); rerr == nil {
 			c.add(filepath.ToSlash(rel))
+		}
+		return nil
+	})
+}
+
+// walkNestedClaude adds the files of every .claude directory below top, which a
+// non-git walk skips as hidden. It skips the directories a project walk skips
+// and stops once the candidates exceed maxTargetFiles.
+func (c *candidates) walkNestedClaude(top string) {
+	_ = filepath.WalkDir(top, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
+		if err != nil || !d.IsDir() || p == top {
+			return nil //nolint:nilerr // best effort
+		}
+		if len(c.rels) > maxTargetFiles {
+			return filepath.SkipAll
+		}
+		if d.Name() == ".claude" {
+			if rel, rerr := filepath.Rel(top, p); rerr == nil {
+				c.walk(top, rel)
+			}
+			return filepath.SkipDir
+		}
+		if walkutil.ShouldSkipDir(d.Name()) {
+			return filepath.SkipDir
 		}
 		return nil
 	})
@@ -670,7 +697,8 @@ func classifyPath(rel string) (kind string, conventional bool) {
 			return "", false // a resource of a skill: the skill item carries it
 		}
 		if k, ok := segmentKind(segs[i]); ok {
-			return k, under(".claude") || under(".agents") || under(".cursor") || under(".ai-rulez") || under(".github")
+			nested := i > 0 && segs[i-1] == ".claude" // a .claude directory at any depth
+			return k, nested || under(".claude") || under(".agents") || under(".cursor") || under(".ai-rulez") || under(".github")
 		}
 	}
 	return kindContext, false
