@@ -157,10 +157,10 @@ Verification history for liter-llm (the current pin is v2.2.4; earlier platform 
 | Platform | Result | Verified on |
 | --- | --- | --- |
 | macOS arm64 | static link; full Go tests, race checks and a live OpenAI smoke test pass | v2.2.4 |
-| Linux arm64 (glibc, Debian bookworm container) | static link, 43 MB, `ldd` lists libm, libgcc_s and libc only | v2.2.0 |
-| Linux x86_64, macOS x86_64 | same asset layout; built by the release workflow on native runners | v2.2.0 |
-| Windows x86_64 | not verifiable from a macOS host: the asset's static `.lib` is an MSVC archive while Go's cgo uses MinGW; the release workflow builds and smoke-tests it on a Windows runner and falls back to shipping `liter_llm_ffi.dll` beside `ai-rulez.exe` | v2.2.0 |
-| Windows arm64, Linux musl | liter-llm v2.2.3 now ships `windows-aarch64` and `linux-*-musl` assets (#267 closed), and its release workflow builds and tests each; ai-rulez has not linked or verified them, and its release matrix stays the five platforms above (Linux glibc only, so a musl-based image needs the glibc binary) | not verified |
+| Linux arm64 (glibc, Debian bookworm container) | release archive and smoke test pass; static liter-llm link, `ldd` lists libm, libgcc_s and libc only; highest required symbol is `GLIBC_2.34` | v2.2.4 |
+| Linux x86_64, macOS x86_64 | native release builds and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#platform-matrix) | v2.2.3 |
+| Windows x86_64 | archive packaging and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#windows); packaging can fall back to `liter_llm_ffi.dll` beside `ai-rulez.exe` when static linking fails | v2.2.3 |
+| Windows arm64, Linux musl | liter-llm v2.2.3 now ships `windows-aarch64` and `linux-*-musl` assets (#267 closed), and its release workflow builds and tests each; ai-rulez has not linked or verified them, and its release matrix stays the five platforms above (Linux glibc only; musl-based images are unsupported) | not verified |
 
 Binary size grows by about 35 MB per platform. The release workflow, glibc floor and the wrappers (npm, PyPI, Homebrew) are described in [maintainers/release.md](maintainers/release.md).
 

@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "5.3.0"
+  version: "5.4.0"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
@@ -34,10 +34,10 @@ Use this skill when:
 
 ```bash
 # npm (no install)
-pnpm dlx ai-rulez@5.3.0
+pnpm dlx ai-rulez@5.4.0
 
 # Python (no install)
-uvx ai-rulez==5.3.0
+uvx ai-rulez==5.4.0
 
 # Source builds (Go + Task; setup fetches and verifies the pinned native library)
 # Checkout the source revision pinned in this repository's CI, then:
@@ -47,8 +47,8 @@ task build
 Package commands use the published release. Source builds also need the pinned
 Liter-LLM native library: `task build` provisions it through
 `scripts/setup-liter-llm.sh`; a bare `go install` does not do that setup.
-See the source-build requirement in Verification and distribution for fixes
-not yet included in the published 5.3.0 package.
+Version 5.4.0 includes the governance and plugin validation fixes described below.
+For a reviewed source build, use the exact revision recorded in the CI workflow.
 
 ## Quick Start
 
@@ -146,7 +146,7 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 [[mcp_servers]]
 name = "ai-rulez"
 command = "pnpm"
-args = ["dlx", "ai-rulez@5.3.0", "mcp"]
+args = ["dlx", "ai-rulez@5.4.0", "mcp"]
 
 [[scopes]]
 path = "packages/web"
@@ -338,11 +338,9 @@ Package from a committed tree with `publish --tag <release-tag>`, then run
 `publish verify <dist-directory>` on the actual archive. A successful local package
 does not publish a release or registry package.
 
-This repository currently validates with a reviewed 5.3.0 source build pinned in CI.
-Stock 5.3.0 lacks fixes for registered marketplace members, both-layout MCP ownership,
-OpenCode skill IDs and shared include-cache locking. Use the CI-pinned source build
-for those features until a released version includes the fixes; keep that distinction
-when reporting installation or validation results.
+Version 5.4.0 includes fixes for registered marketplace members, both-layout MCP ownership,
+OpenCode skill IDs and shared include-cache locking. The repository validates with a reviewed
+source build pinned in CI; use that exact source revision when reproducing its checks.
 
 The exact reviewed source revision is recorded in
 `.github/workflows/ai-rulez-validation.yml`. It includes the ID-only OKF skill

@@ -190,7 +190,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7787 3dd47f8ff6629b0e6f71c892008668ca559662f54ee2a2d85da7bde95b5d5b71
+.ai-rulez/.generated-manifest.local.json file 0644 7787 663cd4f4a62ec52e564a9bb16741d75153cfd7e69640390b4614e48cda7be85e
 >>>>
 {
   "version": "1",
@@ -203,8 +203,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "13255f764811e1c2a3e5709debbf46b18e45fe5ae83f1791486b491af811d1e1",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "596f88857196ea13b16c7ddd20a0082028c91b3d57a5e06697b973fc2ab3b3c5"
         ]
       },
       {
@@ -291,7 +291,7 @@ echo review
           "preToolUse"
         ],
         "elementSums": [
-          "002554d0e7c093481797672ae3a063341ce190a28e1ef2b58bd36e1ed72c5d4a",
+          "0da64806e1ba05ac5b1e5c38229e8051b972885f2beaf6711608ef1d42bfb507",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -421,16 +421,16 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "bc26d1b22626c801f6384f92a5f29c3bf09990e9ee061e5a371a09de9bf88b36",
+    ".claude/settings.json": "4ea4aaaa3ba80bb59562ffc8c7fed38a2f37067f177e8fad7aa617f2a9b143bd",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "d7c655ee452f31c3aa217e3614bcf5463aa025b0a41638498375d0348460741f",
+    ".cursor/hooks.json": "ea8cfa1e1a231faa14890c69a7d5eb8948878dbec9cc8c4d275d2c6e89df75ec",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".github/hooks/ai-rulez.json": "d4edb370a7597e5fe8f5f5679ad704d39cf8dd15e578fcc9c060574773cca542",
+    ".github/hooks/ai-rulez.json": "64902387a6c1a31914651f6f64062d2c2ddb0942f6b3f9fb0e55b94bfabfa1d5",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",

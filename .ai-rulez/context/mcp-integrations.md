@@ -25,7 +25,7 @@ x-ai-rulez:
 
 Typical setup:
 
-- Use `ai-rulez mcp` from the reviewed native CLI. CI pins its 5.3.0-based source commit; package releases are a separate distribution channel.
+- Use `ai-rulez mcp` from the reviewed native CLI. CI pins the reviewed source revision; packages use the documented distribution channels.
 - This repo includes a default server entry in `.ai-rulez/config.toml`.
 
 When updating MCP functionality:

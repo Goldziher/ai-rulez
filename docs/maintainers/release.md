@@ -11,12 +11,19 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
 1. Bump every surface that carries the version, merge the result, and let CI go green:
 
    ```bash
-   scripts/release-bump.sh set 5.1.0        # or 5.1.0-rc.1
+   task set-version -- 5.4.0
+   scripts/release-bump.sh check 5.4.0
+   uv lock
    ```
 
-   The script rewrites `release/npm/package.json`, `release/pypi/__init__.py`, `release/pypi/ai_rulez/__init__.py`
-   (PEP 440 form, `5.1.0rc1`) and the default of `var version` in `cmd/ai-rulez/main.go`. `check <version>` verifies
-   them without writing. Also bump `Version` in `cmd/commands/root.go` by hand.
+   The task updates both Go version defaults, the npm wrapper, both Python `__init__.py` files, the docs
+   `pyproject.toml`, pre-commit defaults and the README and Poly hook version examples. `uv lock` synchronizes
+   the docs project's version in its lockfile. The publish workflow's `release-bump.sh check` verifies the
+   distribution versions and the liter-llm pin. For a prerelease such as `5.4.0-rc.1`, also run
+   `scripts/release-bump.sh set 5.4.0-rc.1` to convert the Python wrapper versions to PEP 440 (`5.4.0rc1`).
+
+   Date the release's changelog section, review the release notes, update any remaining version examples, and
+   regenerate the CLI and LLM documentation with `task docs:cli` and `task docs:llms`.
 
    Then regenerate the goldens: the generated manifest records the tool version, so every golden that lists
    `.ai-rulez/.generated-manifest.local.json` changes.
@@ -26,7 +33,7 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
    ```
 
 2. Optionally rehearse the packaging on your own machine (see [Dry run](#dry-run)).
-3. Tag and push: `git tag v5.1.0 && git push origin v5.1.0`.
+3. Sign the tag and push it: `git tag -s v5.4.0 -m 'Release v5.4.0' && git push origin v5.4.0`.
 
 The workflow does the rest:
 
@@ -53,11 +60,11 @@ push), and the same ref identity is carried.
 
 | Archive                                   | Runner             | Built in                | Status |
 | ----------------------------------------- | ------------------ | ----------------------- | ------ |
-| `ai-rulez_<v>_linux_amd64.tar.gz`         | `ubuntu-latest`    | `debian:bookworm`       | same path as arm64, first exercised by CI |
+| `ai-rulez_<v>_linux_amd64.tar.gz`         | `ubuntu-latest`    | `debian:bookworm`       | verified in the v5.3.0 publish run |
 | `ai-rulez_<v>_linux_arm64.tar.gz`         | `ubuntu-24.04-arm` | `debian:bookworm`       | verified (static build and run in a bookworm container) |
 | `ai-rulez_<v>_darwin_arm64.tar.gz`        | `macos-14`         | host                    | verified (built and run locally) |
-| `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host                    | same code path as arm64, first exercised by CI |
-| `ai-rulez_<v>_windows_amd64.zip`          | `windows-latest`   | host (MinGW gcc)        | **unverified**, see below |
+| `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host                    | verified in the v5.3.0 publish run |
+| `ai-rulez_<v>_windows_amd64.zip`          | `windows-latest`   | host (MinGW gcc)        | verified in the v5.3.0 publish run; see below |
 
 `windows/arm64` is not supported. Archive names, layout (`ai-rulez`/`ai-rulez.exe`, `README.md`, `LICENSE` at the
 archive root) and `checksums.txt` are unchanged from the GoReleaser era, so the npm and PyPI wrappers and the Homebrew
@@ -98,14 +105,22 @@ Linux archives are built in `debian:bookworm`, so they need glibc 2.36 or newer.
 `GLIBC_x.y` symbol the binary needs exceeds 2.36. The native library is glibc-only, so there is no musl or Alpine
 build, and the wrappers do not work on Alpine.
 
-### Windows (unverified)
+### Windows
 
 The Windows native asset ships `liter_llm_ffi.lib`, an MSVC static archive, while the Go toolchain's cgo uses MinGW
-gcc. Linking one with the other has not been tested. `scripts/package-release.sh` therefore runs with
+gcc. `scripts/package-release.sh` runs with
 `WINDOWS_LINK=auto`: it tries the static link and smoke-tests the result; if either fails it rebuilds against
 `liter_llm_ffi.dll` and ships the DLL next to `ai-rulez.exe` in the zip. The npm and PyPI wrappers copy a DLL from the
 archive beside the binary. The `build` job logs a warning when the fallback was used, and a failure of both paths fails
-the job, so the first release will tell.
+the job.
+
+The [v5.3.0 Windows build](https://github.com/Goldziher/ai-rulez/actions/runs/38556493072/job/115827153062),
+using liter-llm 2.2.3, passed its archive packaging (including version and `llm doctor` smoke tests), binary
+dependency check and upload. The publish run's provenance and release promotion jobs also succeeded, and the
+[public release](https://github.com/Goldziher/ai-rulez/releases/tag/v5.3.0) includes the Windows archive,
+its provenance bundle and `checksums.txt`. This verifies the release packaging path for that release; it does
+not establish that the MSVC static library links successfully with MinGW. Each new liter-llm version must pass
+the Windows build and smoke tests again before its release is considered verified.
 
 ## Dry run
 

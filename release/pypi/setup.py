@@ -1,22 +1,23 @@
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 VERSION = os.environ.get("RELEASE_VERSION", "0.0.0-placeholder")
 REPO_NAME = "Goldziher/ai-rulez"
 
 readme_path = os.path.join(os.path.dirname(__file__), "README.md")
 try:
-    with open(readme_path, "r", encoding="utf-8") as f:
+    with open(readme_path, encoding="utf-8") as f:
         long_description = f.read()
 except FileNotFoundError:
     readme_path = os.path.join(os.path.dirname(__file__), "..", "..", "README.md")
-    with open(readme_path, "r", encoding="utf-8") as f:
+    with open(readme_path, encoding="utf-8") as f:
         long_description = f.read()
 
 setup(
     name="ai-rulez",
     version=VERSION,
-    description="Standards-compliant lifecycle tool for agent knowledge and capabilities. Author rules, skills, agents and MCP servers once; generate for 52 harnesses; bundle as OKF, Agent Plugins and ARD; validate against each standard; govern with signing, approvals and policy; publish.",
+    description="Author, generate, validate and govern AI agent rules, skills, plugins and MCP configuration across 52 coding assistants. Review with verified model evidence, evaluate skills, lock and sign dependencies, and publish bundles. CLI, MCP server and Go API.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Na'aman Hirschfeld",
@@ -83,6 +84,8 @@ setup(
         "in-toto",
         "supply-chain",
         "governance",
+        "ai-governance",
+        "llm-evaluation",
         "standards",
     ],
     packages=find_packages(),

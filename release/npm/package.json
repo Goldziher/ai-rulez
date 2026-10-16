@@ -1,7 +1,7 @@
 {
   "name": "ai-rulez",
-  "version": "5.3.0",
-  "description": "Standards-compliant lifecycle tool for agent knowledge and capabilities. Author rules, skills, agents and MCP servers once; generate for 52 harnesses; bundle as OKF, Agent Plugins and ARD; validate against each standard; govern with signing, approvals and policy; publish.",
+  "version": "5.4.0",
+  "description": "Author, generate, validate and govern AI agent rules, skills, plugins and MCP configuration across 52 coding assistants. Review with verified model evidence, evaluate skills, lock and sign dependencies, and publish bundles. CLI, MCP server and Go API.",
   "keywords": [
     "agent-plugins",
     "agent-skills",
@@ -10,6 +10,7 @@
     "ai",
     "ai-assistant",
     "ai-development",
+    "ai-governance",
     "ai-rules",
     "ard",
     "assistant-configuration",
@@ -39,6 +40,7 @@
     "hooks",
     "in-toto",
     "lifecycle",
+    "llm-evaluation",
     "llms-txt",
     "mcp",
     "model-context-protocol",
@@ -88,22 +90,9 @@
   "bin": {
     "ai-rulez": "./ai-rulez.js"
   },
-  "files": [
-    "ai-rulez.js",
-    "install.js",
-    "README.md",
-    "bin/ai-rulez-*"
-  ],
-  "os": [
-    "darwin",
-    "linux",
-    "win32"
-  ],
-  "cpu": [
-    "x64",
-    "arm64",
-    "ia32"
-  ],
+  "files": ["ai-rulez.js", "install.js", "README.md", "bin/ai-rulez-*", "bin/liter_llm_ffi.dll"],
+  "os": ["darwin", "linux", "win32"],
+  "cpu": ["x64", "arm64"],
   "scripts": {},
   "engines": {
     "node": ">=22.0.0"

@@ -6,13 +6,18 @@ Thank you for your interest in contributing! This guide provides everything you 
 
 ### Prerequisites
 
-- **Go 1.27+**
-- **Node.js 22+** (for commit hooks)
-- **[Task](https://taskfile.dev)** (for running build scripts)
+- **Go 1.27.2+**, matching `go.mod`
+- **A C toolchain and cgo** for the liter-llm native library
+- **[Task](https://taskfile.dev)** for build scripts
+- **Poly** for linting, formatting and Git hooks
+- **Python 3.11+** for governance hook setup (`tomllib`)
+- **The reviewed ai-rulez CLI source build pinned in [CI](.github/workflows/ai-rulez-validation.yml)**, available on `PATH` before installing governance hooks
+
+Node.js 22+ and pnpm are needed when working on the npm wrapper. Documentation builds use Python and uv.
 
 ### Setup
 
-The fastest way to set up your development environment is to use the `setup` task. This command installs all necessary dependencies and configures Git hooks for you.
+Install the prerequisites first. The `setup` task installs golangci-lint, configures governance hooks and downloads Go modules; it does not install Poly, Python or the ai-rulez CLI.
 
 ```bash
 # 1. Clone the repository
@@ -37,49 +42,43 @@ hook validates the message. Run all hooks manually with
 Author contributor guidance in `.ai-rulez/`. The root `config.toml` selects
 `config.plugins.toml` through `default_layers = ["plugins"]`; the latter holds
 consumer marketplace declarations. The native CLI owns the generated headers and
-machine-local ownership sidecars. Use the reviewed 5.3.0 source build pinned in CI,
+machine-local ownership sidecars. Use the reviewed source revision pinned in CI,
 then run `task governance:check` after editing sources. Install its system-channel
 Poly hooks with `task governance:hooks:install`; preserve existing machine preferences.
 
 The installable product skill is under `skills/ai-rulez/`, separate from internal
 maintainer skills under `.ai-rulez/skills/`. Audit its CLI examples and resource
-references when changing a public command. Stock 5.3.0 omits fixes currently restored
-on `main`, so the pinned source build is required for the full plugin validation path.
+references when changing a public command. Version 5.4.0 includes the governance fixes developed on `main`;
+the CI source pin identifies the reviewed implementation used for plugin validation.
 
 ## Architectural Overview
 
 `ai-rulez` is designed with a clean, layered architecture that separates data, logic, and presentation. Understanding this structure is key to contributing effectively.
 
-### The Core: `internal/config` and `internal/crud`
+### Core packages
 
-- **`internal/config`**: This is the single source of truth for the application's data structures. All YAML parsing and the definitions for `Rule`, `Agent`, `MCPServer`, etc., live here.
+- **`internal/config`** defines configuration types, loads TOML configuration and reads the content tree. YAML remains in Markdown frontmatter, eval cases and legacy migration inputs.
+- **`internal/project`** assembles project loading, includes and installed skills.
+- **`internal/crud`** shares content and configuration mutations between the CLI and MCP server. Its `Operator` interface is in `internal/crud/crud.go`; content operations and file handling live in `content.go`, `files.go` and related files.
+- Domain packages own the other behavior: generation in `internal/generator`, validation in `internal/lint`, model review in `internal/judge`, and locking in `internal/lockfile` and `internal/lockrun`. See [Architecture](docs/architecture.md) for the full package map.
+- **`pkg/airulez`** exposes the public Go API over explicit workspaces. Preserve its documented API and isolation guarantees when changing shared internals.
 
-- **`internal/crud`**: This package contains the **centralized, shared logic** for all Create, Read, Update, and Delete (CRUD) operations. It takes simple data structures, modifies the configuration in memory, and writes the project TOML configuration and OKF content under `.ai-rulez/`. **Nearly all business logic should be in this package.**
+### CLI and MCP adapters
 
-### The Presentation Layers: `cmd` and `mcp`
+Cobra commands live directly under `cmd/commands`; `root.go` registers the top-level commands. CRUD commands use
+`add.go`, `remove.go`, `list.go` and `show_edit.go`. MCP tool definitions live in `internal/mcp/tools.go` and related
+tool files, with handlers under `internal/mcp/handlers`.
 
-The CLI and the MCP server are treated as thin "presentation layers." They are responsible for handling user/client input and calling the core `crud` logic. They should contain minimal business logic themselves.
+Keep input parsing and response formatting in these adapters. Put reusable behavior in the package that owns the
+operation, then call that shared implementation from both interfaces where the feature is exposed.
 
-- **`cmd/commands/crud`**: This is where the `cobra` CLI commands are defined. A typical command's only job is to parse flags and call the appropriate function from the `internal/crud` package.
+## How to Add a New CRUD Operation
 
-- **`internal/mcp/handlers`**: This is where the MCP server's tool handlers are defined. A handler's only job is to parse incoming MCP parameters and call the appropriate function from the `internal/crud` package.
-
-!!! success "The Golden Rule of Contributing"
-When adding a new feature or fixing a bug, the logic should almost always be implemented in the `internal/crud` package first. The CLI command and the MCP handler should then be simple wrappers around that core logic. This ensures consistent behavior across both interfaces.
-
----
-
-## How to Add a New CRUD Command
-
-Here is the step-by-step process for adding CRUD operations for a new entity (e.g., `new_entity`):
-
-1.  **Update the Schema:** Add the `new_entity` definition to `schema/ai-rules.schema.json` and relevant report schemas.
-2.  **Update the Config Struct:** Add the `NewEntity` struct to `internal/config/types.go` and the `[]NewEntity` slice to the main `Config` struct.
-3.  **Update the CRUD Logic:** Add a new case for `new_entity` in the main switch statement in `internal/crud/crud.go`.
-4.  **Create the CLI Command File:** Create a new file, `cmd/commands/crud/new_entity.go`, and define the `cobra` commands (`Add`, `Get`, `List`, `Update`, `Delete`). These commands should parse flags and call the `crud` helper functions.
-5.  **Register the CLI Commands:** Add the new commands to their parent commands (`AddCmd`, `GetCmd`, etc.) in `cmd/commands/root.go`.
-6.  **Add MCP Tools & Handlers:** Add the tool definitions to `internal/mcp/tools.go` and create the handlers in a new `internal/mcp/handlers/new_entity.go` file. The handlers should simply call the `crud` helper functions.
-7.  **Add Tests:** Add a new `TestNewEntityCRUD_FullCycle` test to `testing/e2e/cli/crud_test.go` and `testing/e2e/mcp_server_test.go`.
+1. Inspect the closest existing operation and its tests. Extend the relevant config or content types and schemas under `schema/` only when the data format changes; content items do not all require a new field on `Config`.
+2. Implement the mutation in `internal/crud`, extending `Operator` when appropriate. Preserve path confinement, the `.agents` source behavior, local overlay rules and atomic writes.
+3. Expose the operation through the appropriate `add`, `remove`, `list`, `show` or `edit` command in `cmd/commands`. Follow its existing subcommand registration pattern; register a new top-level command in `cmd/commands/root.go` only when needed.
+4. If MCP exposes the operation, update its tool definition and handler under `internal/mcp`. Preserve read-only mode restrictions and tool annotations.
+5. Add tests beside the implementation and cover the public interfaces in `tests/e2e/cli/crud_test.go` and `tests/e2e/mcp_server_test.go` as appropriate. Update report schemas, CLI documentation and the public skill when their contracts change.
 
 ## Development Workflow
 
@@ -124,7 +123,7 @@ Most packages read `UPDATE_GOLDEN=1`; the task sets it and reruns those packages
 
 ### Commit Messages
 
-We use [Conventional Commits](https://www.conventionalcommits.org/). This is required for our automated release process.
+We use [Conventional Commits](https://www.conventionalcommits.org/); the commit-msg hook validates the format.
 
 ```bash
 # Good commit messages
@@ -145,25 +144,23 @@ docs(contributing): clarify project architecture
 
 ## Releasing
 
-Releases are fully automated using GitHub Actions and are triggered when a new tag is pushed to the `main` branch.
+A version tag push triggers [the publish workflow](.github/workflows/publish.yaml). Follow the complete
+[maintainer release guide](docs/maintainers/release.md), including version synchronization, golden updates and verification.
 
-### How It Works
+1. Run `task set-version -- X.Y.Z`, `scripts/release-bump.sh check X.Y.Z` and `uv lock`. Update the changelog and generated documentation, commit the release changes, and wait for CI on `main` to pass.
+2. Create a signed tag at that verified commit and push it:
 
-1.  **Tag Push**: Bump every version surface with `scripts/release-bump.sh set X.Y.Z`, merge it, then push a tag with the format `vX.Y.Z` (e.g., `v2.0.1`).
+   ```bash
+   git tag -s vX.Y.Z -m 'Release vX.Y.Z'
+   git push origin vX.Y.Z
+   ```
 
-    ```bash
-    git tag v2.0.1
-    git push origin v2.0.1
-    ```
+3. The workflow creates or reuses a draft GitHub release, builds and smoke-tests each native platform archive, and uploads checksums and provenance. Linux and macOS use static linking; Windows can ship a DLL beside the executable. Only after the artifacts are complete does it publish the release, npm and PyPI packages, and Homebrew formula.
 
-2.  **CI/CD Pipeline**: The push event triggers the `.github/workflows/publish.yaml` workflow, which handles the entire release process:
-    - **Native builds**: Each platform archive is built on its own runner (cgo, with the liter-llm native library linked statically), checksummed, attested and attached to a GitHub Release. See [docs/maintainers/release.md](docs/maintainers/release.md).
-    - **Homebrew**: The formula in `Goldziher/homebrew-tap` is rendered from the release checksums.
-    - **PyPI Publishing**: The package is built and published to PyPI. Its version (`release/pypi/**/__init__.py`) must already equal the tag; run `scripts/release-bump.sh set <version>` before tagging.
-    - **npm Publishing**: The `release/npm/package.json` version must already equal the tag (same bump script); the package is published to npm.
-
-!!! danger "Do Not Release Manually"
-Manual releases are strongly discouraged. The CI pipeline is the single source of truth for versioning. Releasing locally will result in version mismatches (as the `__version__` string will not be updated) and should be avoided.
+A draft created through `gh release create --verify-tag --draft` after the signed tag is pushed is compatible with
+this workflow. Check for an existing draft first because the workflow may already have created it. Keep it a draft
+until the workflow completes its artifact checks. The release versions come from the committed manifests and tag;
+the workflow checks their consistency before publishing.
 
 ---
 
@@ -183,11 +180,11 @@ The npm package supports an **offline mode**: if platform-specific binaries are 
 ### Build and Publish
 
 ```bash
-# 1. Build binaries natively on each target platform (cgo + the liter-llm static library; no cross-compiling).
-#    Supported: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64.
+# 1. Build binaries natively on each Linux/macOS target (cgo + the liter-llm static library).
+#    Targets: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64; no cross-compiling.
 eval "$(bash scripts/setup-liter-llm.sh)"   # exports CGO_ENABLED=1 and CGO_LDFLAGS (verified, static)
 go build -o release/npm/bin/ai-rulez-darwin-arm64 ./cmd/ai-rulez   # on a darwin/arm64 host
-# ... repeat on a host of each other platform (the Windows binary is named ai-rulez-windows-amd64.exe)
+# ... repeat on a host of each other Linux/macOS target
 
 # 2. (Optional) Modify package.json for your scope/version
 cd release/npm
@@ -201,10 +198,14 @@ pnpm install @yourscope/ai-rulez --registry=https://your-private-registry/
 ai-rulez generate  # Uses local binary, no GitHub access needed
 ```
 
+For Windows, use `scripts/package-release.sh windows/amd64` with `VERSION` set, as described in the
+[release guide](docs/maintainers/release.md). Name the packaged executable `ai-rulez-windows-amd64.exe`;
+if packaging uses the DLL fallback, include `liter_llm_ffi.dll` beside it under `release/npm/bin/`.
+
 ### Binary Naming Convention
 
 Binaries must follow this naming pattern: `ai-rulez-{os}-{arch}[.exe]`
 
 - **os**: `linux`, `darwin`, `windows`
-- **arch**: `amd64`, `arm64`, `386`
+- **arch**: `amd64`, `arm64` (Windows supports `amd64` only)
 - **.exe**: Required for Windows only

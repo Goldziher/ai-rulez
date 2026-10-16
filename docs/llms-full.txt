@@ -1,6 +1,6 @@
 # AI-Rulez
 
-> The standards-compliant lifecycle tool for agent knowledge and capabilities: author, generate, bundle, validate, govern, publish
+> Author, generate, validate and govern AI agent rules, skills, plugins and MCP configuration across 52 coding assistants. Review with verified model evidence, evaluate skills, lock and sign dependencies, and publish bundles. CLI, MCP server and Go API.
 
 ## Home
 
@@ -28,9 +28,10 @@ The claim is "standards compliant": each format ai-rulez names is checked agains
 | **Author** | Write rules, context, skills, agents and checks as markdown; organize them with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice; `ai-rulez migrate okf` converts it. | [Configuration](configuration.md), [Rules](rules.md), [Skill frontmatter](skills.md) |
 | **Generate** | Render native files for 52 harnesses, per project or per user, with hooks and permissions translated for each. | [Supported harnesses](harnesses.md), [AGENTS.md](agents-md.md), [User-level configuration](user-scope.md) |
 | **Bundle and publish** | Package plugin bundles, Agent Plugins and ARD manifests, then release them to GitHub, npm, OCI and marketplaces. | [Authoring plugins](plugins.md), [Agent Plugins](agent-plugins.md), [ARD](ard.md), [Publish](publish.md) |
-| **Validate** | Content and security checks with stable `AR` codes, deterministic verifiers and the per-standard validators. | [Strict validation](strict-validation.md), [Verifiers](verifiers.md) |
+| **Validate** | Lint configured projects or existing harness files without a config; run content and security checks with stable `AR` codes, deterministic verifiers and per-standard validators. Review changed units with evidence-verified security, governance and quality findings. | [Strict validation](strict-validation.md), [Verifiers](verifiers.md), [Judge](judge.md) |
 | **Govern** | Pin content in a lock, record reviewer approvals, sign with Sigstore, set an organization policy and ship an SBOM. | [Trust model](trust-model.md), [Lock file](lockfile.md), [Signing](signing.md), [SBOM](sbom.md) |
-| **Operate** | Serve the configuration and skills over MCP, export telemetry, run evals and improve skills. | [MCP server](mcp-server.md), [Telemetry](telemetry.md), [Evals](evals.md) |
+| **Operate** | Serve configuration and skills over MCP, search the catalog, export telemetry, run evals and improve skills. | [MCP server](mcp-server.md), [Search](search.md), [Telemetry](telemetry.md), [Evals](evals.md), [Improve](improve.md) |
+| **Embed** | Load projects, validate, plan or apply generated files and manage locks through the Go API, with directory, memory and Git snapshot workspaces. | [Embedding (Go API)](embedding.md) |
 
 #### Get started
 
@@ -120,12 +121,16 @@ Install `ai-rulez` using your preferred package manager.
     go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
     ```
 
-    Or build from a clone:
+    This builds a local cgo executable using the native library shipped in the Go module.
+    It needs a C toolchain and the module cache at runtime; use a release package for distribution.
+
+    For a statically linked build from a clone, use Task to fetch and verify the pinned native library:
 
     ```bash
     git clone https://github.com/Goldziher/ai-rulez
     cd ai-rulez
-    go build -o ai-rulez ./cmd/ai-rulez
+    task build
+    ./bin/ai-rulez version
     ```
 
 #### Run Without Installing
@@ -16698,7 +16703,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.3.0"
+revision = "v5.4.0"
 hooks = ["ai-rulez-validate"]
 ```
 
@@ -24745,10 +24750,10 @@ Verification history for liter-llm (the current pin is v2.2.4; earlier platform 
 | Platform | Result | Verified on |
 | --- | --- | --- |
 | macOS arm64 | static link; full Go tests, race checks and a live OpenAI smoke test pass | v2.2.4 |
-| Linux arm64 (glibc, Debian bookworm container) | static link, 43 MB, `ldd` lists libm, libgcc_s and libc only | v2.2.0 |
-| Linux x86_64, macOS x86_64 | same asset layout; built by the release workflow on native runners | v2.2.0 |
-| Windows x86_64 | not verifiable from a macOS host: the asset's static `.lib` is an MSVC archive while Go's cgo uses MinGW; the release workflow builds and smoke-tests it on a Windows runner and falls back to shipping `liter_llm_ffi.dll` beside `ai-rulez.exe` | v2.2.0 |
-| Windows arm64, Linux musl | liter-llm v2.2.3 now ships `windows-aarch64` and `linux-*-musl` assets (#267 closed), and its release workflow builds and tests each; ai-rulez has not linked or verified them, and its release matrix stays the five platforms above (Linux glibc only, so a musl-based image needs the glibc binary) | not verified |
+| Linux arm64 (glibc, Debian bookworm container) | release archive and smoke test pass; static liter-llm link, `ldd` lists libm, libgcc_s and libc only; highest required symbol is `GLIBC_2.34` | v2.2.4 |
+| Linux x86_64, macOS x86_64 | native release builds and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#platform-matrix) | v2.2.3 |
+| Windows x86_64 | archive packaging and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#windows); packaging can fall back to `liter_llm_ffi.dll` beside `ai-rulez.exe` when static linking fails | v2.2.3 |
+| Windows arm64, Linux musl | liter-llm v2.2.3 now ships `windows-aarch64` and `linux-*-musl` assets (#267 closed), and its release workflow builds and tests each; ai-rulez has not linked or verified them, and its release matrix stays the five platforms above (Linux glibc only; musl-based images are unsupported) | not verified |
 
 Binary size grows by about 35 MB per platform. The release workflow, glibc floor and the wrappers (npm, PyPI, Homebrew) are described in [maintainers/release.md](maintainers/release.md).
 
@@ -25342,7 +25347,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez cost`                 | Report the biggest context-cost offenders           |
-| `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
+| `ai-rulez verify`               | Verify signatures, approvals and provenance (`--plugin` for plugin bundles; use `generate --check` for generated-file drift) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
 | `ai-rulez sign`                 | Sign the lock, a plugin bundle, a skill, an SBOM or a policy into a Sigstore bundle ([details](#sign-command)) |
 | `ai-rulez trust update`         | Cache the Sigstore trusted root used to verify keyless attestations ([details](#trust-command)) |
