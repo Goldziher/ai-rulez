@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +19,7 @@ import (
 type MCPClient struct {
 	session *sdkmcp.ClientSession
 	cancel  context.CancelFunc
-	stderr  *bytes.Buffer
+	stderr  *SyncBuffer
 }
 
 type MCPResponse struct {
@@ -58,7 +57,7 @@ func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 	//nolint:gosec // G204: Test utility needs to run MCP server with variable path.
 	cmd := exec.CommandContext(ctx, binaryPath, "mcp")
 	cmd.Dir = workingDir
-	stderr := &bytes.Buffer{}
+	stderr := &SyncBuffer{}
 	cmd.Stderr = stderr
 
 	client := sdkmcp.NewClient(&sdkmcp.Implementation{
@@ -81,7 +80,7 @@ func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 func (c *MCPClient) Close() {
 	if c.session != nil {
 		if err := c.session.Close(); err != nil && c.stderr != nil {
-			fmt.Fprintf(c.stderr, "\nclose: %v", err)
+			c.stderr.Notef("\nclose: %v", err)
 		}
 	}
 	if c.cancel != nil {

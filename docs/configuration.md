@@ -1246,17 +1246,17 @@ Run `ai-rulez builtins list` to see all available domains.
 (under the default split mode, written to `.claude/rules/*.md`; with `[rules] mode = "inline"`,
 inlined into `CLAUDE.md`) and on-demand skills (loaded only when relevant):
 
-- `ai-governance` — rules: read-before-write, minimal changes, verification before completion, systematic debugging, agent workflow, communication style, no AI signatures, explain reasoning
-- `security` — rules: input validation, secrets handling, least privilege. Skills: `owasp-quick-reference`, `dependency-awareness` (with per-language audit tool recommendations)
+- `ai-governance` — rules: read-before-write, minimal changes, verification before completion, systematic debugging, agent workflow, generated files, communication style, no AI signatures, explain reasoning. Skills: `config-placement`, `skill-authoring`
+- `security` — rules: input validation, secrets handling, least privilege, customer data boundary. Skills: `owasp-quick-reference`, `dependency-awareness` (with per-language audit tool recommendations)
 - `git-workflow` — rules: conventional commits, atomic commits, branch hygiene, safe operations
-- `code-quality` — skills only: `code-quality-standards` (readability, complexity limits, anti-patterns, duplication, dead code), `error-handling`
+- `code-quality` — skills only: `code-quality-standards` (readability, complexity limits, anti-patterns, duplication, dead code, suppressions, markers), `error-handling`
 - `testing` — rule: tests ship with the behaviour change. Skills: `tdd-workflow`, `testing-conventions` (naming, assertions, independence, anti-patterns)
 - `token-efficiency` — rules: context preservation, output awareness. Skills: `task-runner`, `incremental-approach`
 - `agent-delegation` — context: delegation instructions and the generated agent listing
 - `cicd` — rules: pipeline standards, GitHub workflow conventions
 - `docker` — skill only: `container-standards`
 - `observability` — skill only: `observability-standards`
-- `documentation` — rules: inline docs, README standards, docs-with-code updates
+- `documentation` — rules: inline docs, README standards, docs-with-code updates, ADR immutability. Skill: `adr-workflow`
 - `polyglot-bindings` — skills only: Rust-core/native ABI boundaries, FFI ownership, cross-language error conversion, binding parity
 - `default-commands` — commands: `/iterate` (implementation + review cycles) and `/parallelize` (subagent task splitting)
 
@@ -1292,6 +1292,8 @@ Builtins that emit as skills:
 - **Language** domains: `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`, `r`
 - **Binding** domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
 - **`polyglot-bindings`** conventions
+- **`ai-governance`**: the `config-placement` and `skill-authoring` entries
+- **`documentation`**: the `adr-workflow` entry
 - **`security`**: the `owasp-quick-reference` and `dependency-awareness` entries
 - **`code-quality`**, entirely: `code-quality-standards` and `error-handling`
 - **`testing`**, all but one rule: `tdd-workflow` and `testing-conventions`
@@ -1299,8 +1301,8 @@ Builtins that emit as skills:
 - **`docker`** and **`observability`**, entirely: `container-standards` and `observability-standards`
 
 What stays inline is behavioural governance that has to land before the first file is read, where a skill
-loaded after the fact is too late: all of `ai-governance` and `git-workflow`, `security`'s
-`secrets-handling`, `input-validation` and `least-privilege`, `token-efficiency`'s `context-preservation`
+loaded after the fact is too late: the rules of `ai-governance`, all of `git-workflow`, `security`'s
+`secrets-handling`, `input-validation`, `least-privilege` and `customer-data-boundary`, `token-efficiency`'s `context-preservation`
 and `output-awareness`, and `testing`'s `test-alongside-code`. Guidance that only matters once you are
 already inside a specific activity — writing a test, writing an error path, writing a Dockerfile — is a
 skill, because its description can name that trigger and its body then costs nothing until it fires.

@@ -121,7 +121,7 @@ exit: 2
 docs/llms.txt:23: warning AR9P4 llmstxt-optional-misplaced: the "Optional" section must come last so agents can drop it as a block
 docs/llms.txt:28: warning AR9P5 llmstxt-section-duplicate-or-empty: the section "Optional" repeats the one at line 23
 
-strict validation: 0 error(s), 11 warning(s), 0 info across 1 root(s)
+validation: 0 error(s), 11 warning(s), 0 info across 1 root(s)
   AR503 script-not-executable        1
   AR802 description-length           8
   AR9P4 llmstxt-optional-misplaced   1

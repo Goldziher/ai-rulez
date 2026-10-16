@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.3.0'
 scope = 'all'
-tree = 'sha256:02b83ab143b48ff612bbd85754de3c0927d85e03ccec227a4463910fde89f190'
+tree = 'sha256:3f2dbc1a4b29236a36bd92f100930787edc090f194fcb7d4c010a0736e361c5a'
 
 [[served]]
 name = 'build'
@@ -22,7 +22,13 @@ digest = 'sha256:58d2ada76f516f24d9f85e3aaea76590d82179d803b5448d572c141ef26d6a3
 name = 'code-quality-standards'
 source = 'builtin://universal/code-quality/skills/code-quality-standards/SKILL.md'
 commit = ''
-digest = 'sha256:0126cc7c038b3e343ee56866949865dd799bde0de4884ba0bdfeb28655fa8134'
+digest = 'sha256:8e01021ac23e15b01cac75b4ee9c1971a4c57a7d949d390fb4e0b6943f91afe2'
+
+[[served]]
+name = 'config-placement'
+source = 'builtin://universal/ai-governance/skills/config-placement/SKILL.md'
+commit = ''
+digest = 'sha256:dd198e7e6c233cc4509b95b165f10054849cf77c394d54d1f59045857d88191a'
 
 [[served]]
 name = 'config-schema-maintainer'
@@ -121,6 +127,12 @@ commit = ''
 digest = 'sha256:48b0d8cc16b893d636f1df194c36a5ddb687835793050801ed921e329628ac50'
 
 [[served]]
+name = 'skill-authoring'
+source = 'builtin://universal/ai-governance/skills/skill-authoring/SKILL.md'
+commit = ''
+digest = 'sha256:7ab2b543dc6608f204c957fedfc55ae902d22fda9dc8a52252330ff9b1406ff1'
+
+[[served]]
 name = 'task-runner'
 source = 'builtin://universal/token-efficiency/skills/task-runner/SKILL.md'
 commit = ''
@@ -130,7 +142,7 @@ digest = 'sha256:9f3cadda648798b049869c463d7a69f6f7b5953bcad2a43ea02e645d1ec3e19
 name = 'tdd-workflow'
 source = 'builtin://universal/testing/skills/tdd-workflow/SKILL.md'
 commit = ''
-digest = 'sha256:90ddeb170606792596979de6444904f88b5fbcdc52ea2462109401865d17f6ec'
+digest = 'sha256:a07f0dd7b07b37533acbd76b571f831a9854935b817d5e5de1e94865052176c9'
 
 [[served]]
 name = 'test'
@@ -154,7 +166,7 @@ digest = 'sha256:4d4a299dfc2b052feccd484a06264db035830ef53d97519bf99dbe47d83f776
 name = 'testing-conventions'
 source = 'builtin://universal/testing/skills/testing-conventions/SKILL.md'
 commit = ''
-digest = 'sha256:562385aa3c563ffbf327d6776932b43175052b00ec4418695ed6c50c335f1686'
+digest = 'sha256:c8ee10cb9a2e70b51ca43dd1abec57d4cc448f9b3dd19a3d446f992336406b40'
 
 [[item]]
 kind = 'agent'
@@ -208,7 +220,7 @@ digest = 'sha256:2ea295eab8c29fe6b916437ab8f1a0801f37ea58b330f240e89411610b76e19
 kind = 'context'
 id = 'cli-and-crud'
 path = 'context/cli-and-crud.md'
-digest = 'sha256:06a7d21a05a3f3aab5a5e881f7cbad7d2339d1732e27ff5f444eba9ebdbead06'
+digest = 'sha256:2444977f0c39c311ede777ee13e62e89528a21c518b7210a4e8aa68b6bbcd9d3'
 
 [[item]]
 kind = 'context'
@@ -262,7 +274,7 @@ digest = 'sha256:a16fe999be34b31769fa233a28df54c6c7fa0ff81debb846fb541a0e4e29796
 kind = 'context'
 id = 'tool-overview'
 path = 'context/tool-overview.md'
-digest = 'sha256:371ab94863686ec50617c8c85b205b25e55ac678182df1b45ccedac917b1cfa0'
+digest = 'sha256:44a644275350a39005ab308217f63cef5a20dfb06730bbcf694afba692a1519c'
 
 [[item]]
 kind = 'context'

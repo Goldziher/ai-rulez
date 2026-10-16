@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -26,6 +27,24 @@ func serve(t *testing.T, h http.HandlerFunc) *httptest.Server {
 	return srv
 }
 
+// guarded holds a value a handler goroutine records and the test goroutine reads back.
+type guarded[T any] struct {
+	mu sync.Mutex
+	v  T
+}
+
+func (g *guarded[T]) set(v T) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.v = v
+}
+
+func (g *guarded[T]) get() T {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.v
+}
+
 // localConfig points cfg at srv with the network allowed and no cache.
 func localConfig(srv *httptest.Server, cfg Config) Config {
 	cfg.BaseURL = srv.URL + "/v1"
@@ -36,7 +55,7 @@ func localConfig(srv *httptest.Server, cfg Config) Config {
 
 func newLocal(t *testing.T, cfg Config, getenv func(string) string) *literLLM {
 	t.Helper()
-	l, err := newLiterLLM(cfg, getenv)
+	l, err := newLiterLLM(cfg, getenv, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +73,12 @@ const chatReply = `{"id":"x","object":"chat.completion","created":1,"model":"gpt
 
 func TestLiterLLMChatAndEmbedAgainstALocalServer(t *testing.T) {
 	// Arrange
-	var gotAuth, gotPath string
-	var gotBody map[string]any
+	var gotAuthG, gotPathG guarded[string]
+	var gotBodyG guarded[map[string]any]
 	srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
-		gotAuth, gotPath, gotBody = r.Header.Get("Authorization"), r.URL.Path, readBody(r)
+		gotAuthG.set(r.Header.Get("Authorization"))
+		gotPathG.set(r.URL.Path)
+		gotBodyG.set(readBody(r))
 		if strings.HasSuffix(r.URL.Path, "/embeddings") {
 			fmt.Fprint(w, `{"object":"list","model":"text-embedding-3-small","data":[{"object":"embedding","index":1,"embedding":[3,4]},{"object":"embedding","index":0,"embedding":[1,2]}],"usage":{"prompt_tokens":4,"total_tokens":4}}`)
 			return
@@ -82,6 +103,7 @@ func TestLiterLLMChatAndEmbedAgainstALocalServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	gotAuth, gotPath, gotBody := gotAuthG.get(), gotPathG.get(), gotBodyG.get()
 	if gotPath != "/v1/chat/completions" || gotAuth != "Bearer "+env["MY_KEY"] || gotBody["model"] != "gpt-4o-mini" || gotBody["max_tokens"] != float64(50) {
 		t.Fatalf("request: path=%s auth=%s body=%v", gotPath, gotAuth, gotBody)
 	}
@@ -95,8 +117,8 @@ func TestLiterLLMChatAndEmbedAgainstALocalServer(t *testing.T) {
 	}
 
 	emb, err := m.Embed(context.Background(), EmbedRequest{Input: []string{"a", "b"}})
-	if err != nil || gotPath != "/v1/embeddings" || fmt.Sprint(emb.Vectors) != "[[1 2] [3 4]]" || emb.Usage.PromptTokens != 4 {
-		t.Fatalf("embed: %v %v %s", emb, err, gotPath)
+	if err != nil || gotPathG.get() != "/v1/embeddings" || fmt.Sprint(emb.Vectors) != "[[1 2] [3 4]]" || emb.Usage.PromptTokens != 4 {
+		t.Fatalf("embed: %v %v %s", emb, err, gotPathG.get())
 	}
 }
 
@@ -244,15 +266,17 @@ func TestLiterLLMConfigErrors(t *testing.T) {
 
 // A keyless local endpoint (Ollama style) has no api_key_env: no key is sent.
 func TestLiterLLMKeylessEndpointSendsNoCredential(t *testing.T) {
-	var auth string
+	var authG guarded[string]
 	srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
-		auth = r.Header.Get("Authorization")
+		authG.set(r.Header.Get("Authorization"))
 		fmt.Fprint(w, chatReply)
 	})
 	l := newLocal(t, localConfig(srv, Config{Model: "llama3"}), nil)
 
 	// liter-llm 2.2.2+ omits the Authorization header entirely when the key is empty.
-	if _, err := l.Chat(context.Background(), chatReq("x")); err != nil || strings.TrimSpace(strings.TrimPrefix(auth, "Bearer")) != "" {
+	_, err := l.Chat(context.Background(), chatReq("x"))
+	auth := authG.get()
+	if err != nil || strings.TrimSpace(strings.TrimPrefix(auth, "Bearer")) != "" {
 		t.Fatalf("keyless: err=%v auth=%q", err, auth)
 	}
 }

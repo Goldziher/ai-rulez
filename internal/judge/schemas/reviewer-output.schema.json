@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-rulez.dev/schema/judge-reviewer-output.v1.json",
+  "title": "judge reviewer output (security, quality, governance)",
+  "description": "Provider-safe subset: no minItems/maxItems/pattern/uniqueItems/format (Bedrock strict-schema and Gemini reject them). Limits are enforced by the Go validator after parsing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["findings", "coverage", "criteria_results"],
+  "properties": {
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/candidate" } },
+    "criteria_results": {
+      "type": "array",
+      "description": "Governance only; empty array elsewhere.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rubric_id", "result", "note"],
+        "properties": {
+          "rubric_id": { "type": "string" },
+          "result": { "enum": ["pass", "fail", "not_applicable"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not_reviewed"],
+      "properties": {
+        "not_reviewed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "start_line", "end_line", "reason"],
+            "properties": {
+              "path": { "type": "string" },
+              "start_line": { "type": "integer" },
+              "end_line": { "type": "integer" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "start_line", "end_line"],
+      "properties": {
+        "path": { "type": "string" },
+        "start_line": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "location", "quote"],
+      "properties": {
+        "role": { "enum": ["source", "transform", "trigger", "sink", "scope"] },
+        "location": { "$ref": "#/$defs/location" },
+        "quote": { "type": "string" }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "code",
+        "verdict",
+        "severity",
+        "confidence",
+        "title",
+        "location",
+        "quote",
+        "chain",
+        "why",
+        "benign_reading",
+        "why_not_benign",
+        "static_refs",
+        "also_at",
+        "convention",
+        "rubric_id",
+        "token_waste_estimate",
+        "suggested_fix"
+      ],
+      "properties": {
+        "id": { "type": "string", "description": "S1, S2... / Q1... / G1... unique within the call" },
+        "code": {
+          "type": "string",
+          "description": "JR-S01..JR-S15 | JR-Q01..JR-Q13 | JR-G01..JR-G07 (validated against the stage's enum in Go)"
+        },
+        "verdict": { "enum": ["confirmed", "contextual_risk"] },
+        "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "title": { "type": "string" },
+        "location": { "$ref": "#/$defs/location" },
+        "quote": { "type": "string" },
+        "chain": { "type": "array", "items": { "$ref": "#/$defs/step" } },
+        "why": { "type": "string" },
+        "benign_reading": { "type": "string" },
+        "why_not_benign": { "type": "string" },
+        "static_refs": { "type": "array", "items": { "type": "string" } },
+        "also_at": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["location", "quote"],
+            "properties": { "location": { "$ref": "#/$defs/location" }, "quote": { "type": "string" } }
+          }
+        },
+        "convention": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["id", "line", "quote"],
+          "properties": { "id": { "type": "string" }, "line": { "type": "integer" }, "quote": { "type": "string" } }
+        },
+        "rubric_id": { "type": ["string", "null"] },
+        "token_waste_estimate": { "type": ["integer", "null"] },
+        "suggested_fix": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

@@ -97,3 +97,37 @@ func TestAuthoringServer_ReadOnlyDropsWritingTools(t *testing.T) {
 	assert.Contains(t, names, "read_config")
 	assert.Contains(t, names, "validate_config")
 }
+
+// The judge tool sends file content to a model provider and spends money, so no read-only server
+// registers it, and a server that is not read-only does.
+func TestJudgeToolIsMissingFromReadOnlyServers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		srv       *Server
+		wantJudge bool
+	}{
+		{"authoring, read-only", NewServer("test", WithAnyDirectory(), WithReadOnly()), false},
+		{"merged, read-only", NewMergedServer("test", loadCatalog(t), ServeOptions{}, WithAnyDirectory(), WithReadOnly()), false},
+		{"authoring", NewServer("test", WithAnyDirectory()), true},
+		{"merged", NewMergedServer("test", loadCatalog(t), ServeOptions{}, WithAnyDirectory()), true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			// Arrange
+			session := connect(t, tc.srv)
+
+			// Act
+			names := toolNames(t, session)
+
+			// Assert
+			if tc.wantJudge {
+				assert.Contains(t, names, "judge")
+			} else {
+				assert.NotContains(t, names, "judge")
+				assert.Contains(t, names, "validate_config", "the read-only tools stay")
+			}
+		})
+	}
+}

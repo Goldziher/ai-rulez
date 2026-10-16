@@ -359,6 +359,15 @@ func TestRunConvert_NothingToConvertExitsZero(t *testing.T) {
 			if convertFormat == "text" {
 				assert.Contains(t, out.String(), "Nothing to convert")
 			}
+			if convertFormat == "json" {
+				var doc struct {
+					Written bool            `json:"written"`
+					Files   json.RawMessage `json:"files"`
+				}
+				require.NoError(t, json.Unmarshal(out.Bytes(), &doc), "stdout is a JSON report: %q", out.String())
+				assert.False(t, doc.Written)
+				assert.JSONEq(t, "[]", string(doc.Files))
+			}
 		})
 	}
 }

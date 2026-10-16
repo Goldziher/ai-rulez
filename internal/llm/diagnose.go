@@ -56,6 +56,9 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 	if u, err := url.Parse(cfg.BaseURL); err == nil {
 		d.BaseURLHost = u.Host
 	}
+	if d.BaseURLHost == "" && routeProvider(cfg) == ProviderBedrock {
+		d.addBedrockHost(getenv)
+	}
 	// Only a valid variable name is shown or looked up; anything else may be a pasted key.
 	if cfg.APIKeyEnv != "" && envNameRe.MatchString(cfg.APIKeyEnv) && !looksLikeSecret(cfg.APIKeyEnv) {
 		d.APIKeyEnv = cfg.APIKeyEnv
@@ -66,6 +69,21 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 	}
 	d.addBackendProblems(cfg)
 	return d
+}
+
+// addBedrockHost names the regional Bedrock endpoint the calls go to, from AWS_REGION or
+// AWS_DEFAULT_REGION, so egress allow-lists and manifests show a host instead of "provider default".
+// A region that only the AWS_PROFILE profile names is read when a call is made, not here.
+func (d *Diagnosis) addBedrockHost(getenv func(string) string) {
+	region, name := bedrockEnvRegion(getenv)
+	switch {
+	case region != "" && !awsRegionRe.MatchString(region):
+		d.Problems = append(d.Problems, name+" is not an AWS region name (set it to a region such as eu-north-1)")
+	case region != "":
+		d.BaseURLHost = bedrockHostOf(region)
+	case strings.TrimSpace(getenv("AWS_PROFILE")) == "":
+		d.Problems = append(d.Problems, "no AWS region for Bedrock: set AWS_REGION (or a region in the AWS_PROFILE profile), or a base_url")
+	}
 }
 
 // addBackendProblems reports what keeps the configured provider from making a call.

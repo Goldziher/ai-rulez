@@ -46,6 +46,9 @@ exclude = [
   # 404 until the conformance suite lands on main.
   "^https://github\\.com/Goldziher/ai-rulez/tree/main/tests/conformance$",
 
+  # 404 until the judge benchmark lands on main.
+  "^https://github\\.com/Goldziher/ai-rulez/tree/main/bench/judge$",
+
   # The Fulcio API root is a signing service, not a web page: GET returns 404.
   "^https://fulcio\\.sigstore\\.dev/?$",
 ]
@@ -57,7 +60,8 @@ exclude_path = ["site/llms-full.txt"]
 
 # Accept these HTTP status codes as valid. 429 and 503 are throttling responses
 # (github.com serves blob pages to the checker with intermittent 503s), not dead links.
-accept = [200, 204, 301, 302, 429, 503]
+# 304 is a conditional-request "not modified" (code.visualstudio.com answers it), not a failure.
+accept = [200, 204, 301, 302, 304, 429, 503]
 
 timeout = 30
 max_retries = 3

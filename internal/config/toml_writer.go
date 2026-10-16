@@ -72,6 +72,7 @@ type tomlOutput struct {
 	LLM                   *llm.Config             `toml:"llm,omitempty"`
 	Telemetry             *TelemetryConfig        `toml:"telemetry,omitempty"`
 	Review                *ReviewConfig           `toml:"review,omitempty"`
+	Judge                 *JudgeConfig            `toml:"judge,omitempty"`
 	Improve               *ImproveConfig          `toml:"improve,omitempty"`
 	Search                *skillsearch.Config     `toml:"search,omitempty"`
 	Scopes                []ScopeConfig           `toml:"scopes,omitempty"`
@@ -182,6 +183,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		LLM:                   cfg.LLM,
 		Telemetry:             cfg.Telemetry,
 		Review:                cfg.Review,
+		Judge:                 cfg.Judge,
 		Improve:               cfg.Improve,
 		Search:                cfg.Search,
 		Scopes:                cfg.Scopes,

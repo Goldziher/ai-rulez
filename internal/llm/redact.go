@@ -31,6 +31,10 @@ func mustJSON(v any) string {
 
 var secretRe = regexp.MustCompile(`(?i)(bearer\s+[A-Za-z0-9._~+/=-]{8,}|sk-[A-Za-z0-9_-]{8,}|AKIA[0-9A-Z]{12,}|ASIA[0-9A-Z]{12,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:basic|digest)\s+[A-Za-z0-9+/=]{12,}|(?:api[_-]?key|token|secret|authorization)["']?\s*[:=]\s*["']?[^\s"',}]{8,})`)
 
+// secretShapeRe is secretRe without its key=value branch: the token shapes that carry their own
+// evidence. RedactForReview masks these and leaves assignments to the shared AR001 detector.
+var secretShapeRe = regexp.MustCompile(`(?i)(bearer\s+[A-Za-z0-9._~+/=-]{8,}|sk-[A-Za-z0-9_-]{8,}|AKIA[0-9A-Z]{12,}|ASIA[0-9A-Z]{12,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:basic|digest)\s+[A-Za-z0-9+/=]{12,})`)
+
 // RedactSecrets masks key-looking substrings (bearer and basic credentials,
 // common vendor token shapes, JWTs, PEM private-key headers and key=value
 // pairs). Besides its own patterns it masks every credential shape the security
@@ -153,4 +157,12 @@ func errSummary(err error) string {
 		return ""
 	}
 	return strings.TrimSpace(RedactSecrets(err.Error()))
+}
+
+// RedactForReview masks what a model must never see in a unit under review: the vendor token
+// shapes RedactSecrets knows plus every credential the security scan (AR001) recognizes. Unlike
+// RedactSecrets it leaves an assignment such as `token = credentials["SessionToken"]` alone, so
+// code that names a secret without holding one is reviewed instead of masked.
+func RedactForReview(s string) string {
+	return secretpat.Redact(secretShapeRe.ReplaceAllString(s, "[REDACTED]"), "[REDACTED]")
 }

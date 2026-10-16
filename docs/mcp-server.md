@@ -220,6 +220,7 @@ rewrites them), and the test fails when they are stale.
 | `skill install` | `install_skill` | authoring |  |
 | `skill list` | `list_installed_skills` | authoring |  |
 | `skill remove` | `uninstall_skill` | authoring |  |
+| `judge` | `judge` | authoring |  |
 | `lock --check` | `lock_status` | authoring | yes |
 | `okf validate` | `okf_validate` | authoring | yes |
 | `validate --show-policy` | `policy_show` | authoring | yes |
@@ -260,7 +261,6 @@ rewrites them), and the test fails when they are stale.
 | `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
 | `guard` | a hook entry point the harness calls on tool use |
-| `judge` | sends file content to a model with the caller's provider key and spends money; a tool client has no consent prompt |
 | `list` | prints where skills and commands land per harness; generate_outputs dry_run returns the same plan |
 | `llm *` | model credentials and cost estimates for network calls |
 | `local *` | the machine-local overlay is per developer; tools reach it through the local argument of the item tools and update_config |
@@ -328,7 +328,7 @@ ai-rulez mcp --serve-skills --read-only          # serve skills and inspect, nev
 | `--targets` | Preset whose rendering is served (its frontmatter dialect and placement rules). Default: the first configured preset that produces skills. |
 | `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
-| `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. |
+| `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. The `judge` tool is not registered either: it sends file content to a model provider and spends money. |
 | `--root` / `--allow-any-dir` | Confine the authoring tools to a directory, as for plain `mcp`. |
 
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
@@ -105,7 +106,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	out := outFor(cmd)
-	displaySuccessMessage(out, projectName, configDir)
+	announceInit(out, projectName, configDir)
 	if abs, err := filepath.Abs(configDir); err == nil {
 		noteHandWrittenFiles(filepath.Dir(abs))
 	}
@@ -203,7 +204,37 @@ func backupConfigDir(configDir string, now time.Time) (string, error) {
 	if err := os.Rename(configDir, backup); err != nil {
 		return "", oops.Wrapf(err, "move the existing %s/ directory to %s", configDir, backup)
 	}
+	excludeBackupFromGit(backup)
 	return backup, nil
+}
+
+// excludeBackupFromGit lists the backup in the repository's info/exclude, so it never shows up as
+// an untracked directory to commit by accident. It is best effort: outside a repository, or when
+// the file cannot be written, the backup is simply left as it is.
+func excludeBackupFromGit(backup string) {
+	abs, err := filepath.Abs(backup)
+	if err != nil {
+		return
+	}
+	exclude := (gitutil.Git{}).InfoExcludePathContext(cmdContext(), filepath.Dir(abs))
+	if exclude == "" {
+		return
+	}
+	line := filepath.Base(abs) + "/"
+	if data, err := os.ReadFile(exclude); err == nil && strings.Contains("\n"+string(data), "\n"+line+"\n") {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
+		return
+	}
+	f, err := os.OpenFile(exclude, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // git's own exclude file
+	if err != nil {
+		return
+	}
+	defer f.Close() //nolint:errcheck // best effort
+	if _, err := f.WriteString(line + "\n"); err != nil {
+		return
+	}
 }
 
 // nativeRootFiles are the root files generate writes and refuses to overwrite
@@ -468,6 +499,15 @@ func parseDomains(domainsStr string) []string {
 
 // displaySuccessMessage tells what init created and what to do next. It is
 // progress, not a result: it goes to stderr and -q removes it.
+// announceInit prints the human summary of a created directory; under --format json the result
+// document is the only output.
+func announceInit(out render.Out, projectName, configDir string) {
+	if out.JSON() {
+		return
+	}
+	displaySuccessMessage(out, projectName, configDir)
+}
+
 func displaySuccessMessage(out render.Out, projectName, configDir string) {
 	out.Info("Created %s/ for %s\n\n", configDir, projectName)
 	out.Info("Directory structure:\n")
@@ -521,7 +561,16 @@ func shouldOverwriteConfig(filename string) bool {
 	// replacing an existing directory: neither --yes nor a CI or NO_INTERACTIVE
 	// environment may. The prompt is on stderr; a pipe or CI answers no, and the
 	// caller's error names --force.
-	return askYesNo(fmt.Sprintf("Replace existing directory '%s' (it is kept as a backup)? (y/N): ", filename))
+	return confirmReplace(filename, autoYes, askYesNo)
+}
+
+// confirmReplace asks, through ask, whether to replace an existing configuration directory; with
+// --yes it does not ask, because --yes skips prompts and never authorizes a replacement.
+func confirmReplace(filename string, yes bool, ask func(string) bool) bool {
+	if yes {
+		return false
+	}
+	return ask(fmt.Sprintf("Replace existing directory '%s' (it is kept as a backup)? (y/N): ", filename))
 }
 
 func handleHooksSetup() {

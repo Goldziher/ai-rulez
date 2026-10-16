@@ -168,16 +168,18 @@ configuration or implicit root  ->  targets  ->  analyzers  ->  filters  ->  rep
 
 ## Judge
 
-`ai-rulez judge` is the one lint-adjacent command that calls a model. It reads **no** configuration (not the repository's, not
-the user's), so it runs in any repository: the model comes from flags and `AI_RULEZ_LLM_*` variables and the key from the
-provider's own variable.
+`ai-rulez judge` is the one lint-adjacent command that calls a model. It runs in any repository: the models come from flags,
+`AI_RULEZ_LLM_*` variables and the user config, never from the repository, and the key from the provider's own variable.
 
-`cmd/commands/judge*.go` picks the files (`AGENTS.md` at any depth and the `.agents/` and `.ai-rulez/` content, or the paths you
-name; generated files are skipped), `internal/judge` builds the prompt against a rubric, bounds and screens what is sent (a
-file with secret-looking text is not sent) and parses the verdict, and `internal/llm` is the single abstraction that calls the
-model. Nothing is sent without `--allow-llm`, `--estimate` shows the files, the egress host, the model and the cost estimate
-and sends nothing, and `--max-cost` caps the spend. Exit `2` means a file scored below `--min-score` or was skipped for secrets.
-See [Judge](judge.md); for scored review with calibration, see [Review](review.md).
+`cmd/commands/judge*.go` discovers the units (a skill directory, or one file: agents, commands, rules, `CLAUDE.md`,
+`AGENTS.md`, MCP and settings files, `.claude/` at any depth), runs the `validate` analyzers over them for static facts, and
+reads the `[judge]` table. `internal/judge` is the engine and does no I/O of its own: it attaches the rules and `CLAUDE.md`
+files that apply to each unit, builds the nonce-fenced prompts, plans the calls under the caps, verifies every quote against
+the text that was sent, asks the adjudicator, and computes scores, statuses and the decision in code. `internal/llm` is the
+single abstraction that calls the model (and resolves and refreshes AWS credentials for Bedrock). Nothing is sent without
+`--allow-llm`, `--estimate` shows the units, the egress host, the models and the cost estimate and sends nothing, and
+`--max-cost` caps the spend. `bench/judge` is its evaluation. See [Judge](judge.md); for scored review with calibration, see
+[Review](review.md).
 
 ## Package map
 
@@ -214,7 +216,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `improve` | Runs an external skill optimizer behind a held-out eval gate (experimental) |
 | `includes` | Resolves local and git includes, installed skills and their pins |
 | `jsondoc` | Writes the JSON documents of `--format json` |
-| `judge` | Prompt, bounds, secret screening and verdict parsing for `judge` |
+| `judge` | The `judge` engine: units, attachment of rules, prompts, verifier, adjudicator, scoring, reports |
 | `lint` | The `validate` and `scan` engine: analyzers, `AR` codes, baseline, fixes, external scanners |
 | `llm` | The single abstraction for calling a language model, with consent, cache and egress gates |
 | `llmstxt` | Renders and validates `llms.txt` files |

@@ -48,7 +48,7 @@ repository can loosen.
 | **Author** | Rules, context, skills, agents, commands and checks as markdown in `.ai-rulez/`, with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](docs/okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice; `migrate okf` converts it. Or keep `AGENTS.md` and `.agents/` as the source with `source = "agents"`: ai-rulez translates them to every other tool and never writes into them ([guide](docs/agents-source.md)). | `init`, `add`, `convert`, `import`, `migrate okf` | [Author](docs/configuration.md) |
 | **Generate** | Native files for 52 harnesses (Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, Kilo and more), per project or per user. | `generate`, `doctor`, `clean` | [Harnesses](docs/harnesses.md) |
 | **Bundle** | Distributable plugin bundles, an Agent Plugins package, an OKF bundle, an ARD manifest, `AGENTS.md` and `llms.txt`. | `generate --plugin`, `export okf` | [Plugins](docs/plugins.md) |
-| **Lint and validate** | Content and security checks with stable `AR` codes, plus each standard's own schema or rules. Works in a repository with no ai-rulez config (`--path`, `--glob` and `--outputs` pick what to lint); `judge` grades instruction files with a model, also without config. | `validate`, `scan`, `judge`, `okf validate`, `verify` | [Validate](docs/strict-validation.md) |
+| **Lint and validate** | Content and security checks with stable `AR` codes, plus each standard's own schema or rules. Works in a repository with no ai-rulez config (`--path`, `--glob` and `--outputs` pick what to lint); `judge` reviews skills, agents, rules and `CLAUDE.md` files with models, also without config. | `validate`, `scan`, `judge`, `okf validate`, `verify` | [Validate](docs/strict-validation.md) |
 | **Govern** | A content-pinning lock, reviewer approvals, Sigstore signing, an organization policy and an SBOM. | `lock`, `approve`, `sign`, `verify --attestation`, `sbom` | [Trust model](docs/trust-model.md) |
 | **Publish** | Reproducible, checksummed release artifacts to GitHub releases, npm, OCI and marketplaces. | `publish` | [Publish](docs/publish.md) |
 
@@ -345,8 +345,11 @@ An organization [policy](docs/policy.md) sets tighten-only floors a repository c
 - **Telemetry.** Item-load records with an optional OTLP export. See [telemetry](docs/telemetry.md).
 - **Evals and improve.** `ai-rulez eval` scores skills; `improve` (experimental) optimizes them behind a held-out eval
   gate. See [evals](docs/evals.md) and [improve](docs/improve.md).
-- **Judge.** `ai-rulez judge` grades `AGENTS.md` and `.agents/*` with a model from the command line alone, with no config
-  file: `ai-rulez judge --estimate --model openai/gpt-4o-mini`, then `--allow-llm` to send. See [judge](docs/judge.md).
+- **Judge.** `ai-rulez judge` reviews skills, agents, commands, rules, `CLAUDE.md`, `AGENTS.md`, MCP and settings files
+  with models, from the command line alone: security, quality and governance reviewers whose every finding must quote the
+  file (a verifier checks it), an independent adjudicator, and scores computed in code. Governance reads the rules and
+  `CLAUDE.md` files that apply to each unit, nested `.claude/` directories at any depth. `ai-rulez judge --estimate`, then
+  `--allow-llm` to send; `--changed=origin/main` for a pull request, `--format sarif` for code scanning. See [judge](docs/judge.md).
 - **Cost and inventory.** `tokens`, `cost`, `catalog` and `search` report what the configuration contains and costs.
 
 Existing project on 4.x? Run `ai-rulez migrate v5 --dry-run`, then see [Migrating to v5](docs/migration-v5.md).

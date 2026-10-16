@@ -164,3 +164,25 @@ func TestWithPriceOverrideBindsTheCurrentModel(t *testing.T) {
 	assert.InDelta(t, 4.0, cost, 1e-9)
 	assert.False(t, otherKnown, "an override prices only the model it was written for")
 }
+
+func TestOmitsTemperatureForClaudeFiveAndLater(t *testing.T) {
+	tests := map[string]bool{
+		"bedrock/global.anthropic.claude-sonnet-5-5":        true,
+		"bedrock/global.anthropic.claude-opus-5-5":          true,
+		"bedrock/eu.anthropic.claude-opus-5-5-v1:0":         true,
+		"anthropic/claude-sonnet-5":                         true,
+		"anthropic/claude-haiku-6-0":                        true,
+		"bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0": false,
+		"anthropic/claude-3-5-sonnet-latest":                false,
+		"anthropic/claude-haiku-4-5":                        false,
+		"openai/gpt-4o-mini":                                false,
+		"bedrock/amazon.nova-pro-v1:0":                      false,
+	}
+	for model, want := range tests {
+		t.Run(model, func(t *testing.T) {
+			assert.Equal(t, want, omitsTemperature(model))
+			req := chatRequest(model, ChatRequest{Temperature: 0})
+			assert.Equal(t, want, req.Temperature == nil)
+		})
+	}
+}

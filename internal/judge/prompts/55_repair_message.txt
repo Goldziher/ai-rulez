@@ -1,0 +1,9 @@
+
+<<<VERIFIER_FEEDBACK {{NONCE}}   (T2; produced by the mechanical verifier of your previous answer)
+Your previous answer was checked mechanically. These findings failed the evidence contract and will be deleted unless you
+correct them now. For each, return the corrected finding with the SAME id, or leave it out if you cannot quote it exactly.
+Return ONLY the corrected findings (and the unchanged criteria_results and coverage) in the same schema. Quotes must be
+copied from the file text only, never with the `L<n>|` prefixes.
+
+{{problems}}
+VERIFIER_FEEDBACK {{NONCE}}>>>

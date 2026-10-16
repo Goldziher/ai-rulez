@@ -1,0 +1,24 @@
+T01 static_sql_union     Fixed SELECT ... UNION ALL SELECT ... in docs, fixtures or a reporting skill. Not injection;
+                         injection needs untrusted text reaching query construction.
+T02 argv_subprocess      subprocess.run([prog, arg, ...]) / exec.Command(prog, args...) with no shell and no untrusted
+                         piece. Not command injection.
+T03 status_probe         GET/HEAD to the declared service for status or health (`curl -s -o /dev/null -w '%{http_code}'`)
+                         with no local data in the request. Not exfiltration, not remote code execution.
+T04 pinned_runner        `uvx tool@x.y.z`, `npx pkg@x.y.z`, `pipx run`, `go run mod@version`, `pip install pkg==x.y.z`.
+                         Documented installer, not supply-chain abuse. Unpinned URL sources, curl|sh and unverified
+                         downloads remain findings.
+T05 lint_rule_wording    Prose about a linter or formatter option: "ignore properties", "disable the rule for generated
+                         files", "override the default", "camelcase", `eslint-disable`. Addresses the tool, not the agent.
+T06 prohibition          "never/do not/must not X". The prohibited thing is not an instruction to do X.
+T07 documented_example   Attack phrases or malicious commands shown as an example to detect, test or avoid, in a labelled
+                         block, a fixture, or a security skill whose purpose is to teach detection.
+T08 placeholder_secret   sk-...EXAMPLE, <TOKEN>, ${API_KEY}, changeme, AKIAIOSFODNN7EXAMPLE, .env.example values.
+T09 declared_credential  Authorization/API-key use against the service the skill declares.
+T10 bundled_reads        Reads of files shipped with the skill or named by the user.
+T11 purpose_capability   The capability is the purpose: browser JS in a browser skill, SQL in a DB skill, deploys in a
+                         deploy skill, spawning agents in an orchestration skill.
+T12 localhost_hook       Hooks or scripts that call localhost / loopback services, or write under the temp dir or the
+                         project's own build output.
+T13 ux_nondisclosure     "Do not tell the user the internal ticket id", "don't print the raw JSON" - UX copy that hides
+                         noise, not actions or data flows from the user.
+T14 declared_wildcard    allowed-tools such as Bash(npx:*) or Bash(git:*) matching the skill's single stated purpose.

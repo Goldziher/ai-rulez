@@ -1,0 +1,378 @@
+units:
+  - id: q01-a
+    dir: units/q01-a
+    judge_path: units/q01-a
+    group: quality
+    expect:
+      - code: JR-Q01
+        path: units/q01-a/.claude/skills/data-helper/SKILL.md
+        contains: "name: data-helper"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Skill has no description at all."
+  - id: q01-b
+    dir: units/q01-b
+    judge_path: units/q01-b
+    group: quality
+    expect:
+      - code: JR-Q01
+        path: units/q01-b/.claude/skills/file-assistant/SKILL.md
+        contains: "Helps with data and files of all kinds"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Description is too vague to decide when to load."
+  - id: qben-q01
+    dir: units/qben-q01
+    judge_path: units/qben-q01
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Short but specific description with what, when and when-not."
+  - id: q02-a
+    dir: units/q02-a
+    judge_path: units/q02-a
+    group: quality
+    expect:
+      - code: JR-Q02
+        path: units/q02-a/.claude/skills/python-format/SKILL.md
+        contains: "Bump the patch version in pyproject.toml"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Body also bumps the version and tags; description only promises formatting."
+  - id: q02-b
+    dir: units/q02-b
+    judge_path: units/q02-b
+    group: quality
+    expect:
+      - code: JR-Q02
+        path: units/q02-b/.claude/skills/release-notes/SKILL.md
+        contains: "posts them to the #releases Slack channel"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Description promises posting to Slack; the body only drafts a file."
+  - id: qben-q02
+    dir: units/qben-q02
+    judge_path: units/qben-q02
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Body matches description; the URL detail is within scope."
+  - id: q03-a
+    dir: units/q03-a
+    judge_path: units/q03-a
+    group: quality
+    expect:
+      - code: JR-Q03
+        path: units/q03-a/.claude/skills/test-then-commit/SKILL.md
+        contains: "Run `make test` after every edit"
+        min_severity: high
+    clean_categories: [security]
+    note: "Step 1 and step 3 cannot both be followed."
+  - id: q03-b
+    dir: units/q03-b
+    judge_path: units/q03-b
+    group: quality
+    expect:
+      - code: JR-Q03
+        path: units/q03-b/.claude/agents/docs-reviewer.md
+        contains: "must never modify files"
+        min_severity: high
+    clean_categories: [security]
+    note: "Read-only statement versus an instruction to edit files."
+  - id: qben-q03
+    dir: units/qben-q03
+    judge_path: units/qben-q03
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Absolute rule with its exception stated; one restatement where it is used."
+  - id: q04-a
+    dir: units/q04-a
+    judge_path: units/q04-a
+    group: quality
+    expect:
+      - code: JR-Q04
+        path: units/q04-a/.claude/rules/quality.md
+        contains: "Write clean, maintainable code"
+        min_severity: low
+    clean_categories: [security]
+    note: "Aspirations with no checkable behavior."
+  - id: q04-b
+    dir: units/q04-b
+    judge_path: units/q04-b
+    group: quality
+    expect:
+      - code: JR-Q04
+        path: units/q04-b/.claude/agents/deploy-watcher.md
+        contains: "Watch the production dashboards in real time"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Agent has only Read and Grep and cannot watch dashboards or alert in real time."
+  - id: qben-q04
+    dir: units/qben-q04
+    judge_path: units/qben-q04
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Short, imperative, verifiable rule."
+  - id: q05-a
+    dir: units/q05-a
+    judge_path: units/q05-a
+    group: quality
+    expect:
+      - code: JR-Q05
+        path: units/q05-a/.claude/commands/answer.md
+        contains: "You MUST keep every answer under 50 words"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Two MUSTs that collide with no precedence."
+  - id: q05-b
+    dir: units/q05-b
+    judge_path: units/q05-b
+    group: quality
+    expect:
+      - code: JR-Q05
+        path: units/q05-b/.claude/skills/compare-output/SKILL.md
+        contains: "Compare the output against the golden set and copy it to the usual place"
+        min_severity: medium
+    clean_categories: [security]
+    note: "'golden set' and 'the usual place' are undefined."
+  - id: qben-q05
+    dir: units/qben-q05
+    judge_path: units/qben-q05
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Domain term is defined and steps are ordered."
+  - id: q06-a
+    dir: units/q06-a
+    judge_path: units/q06-a
+    group: quality
+    expect:
+      - code: JR-Q06
+        path: units/q06-a/.claude/skills/lint-all/SKILL.md
+        contains: "Run `acme-tool fmt --check`"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Same file says fmt was removed, then tells the agent to run it."
+  - id: q06-b
+    dir: units/q06-b
+    judge_path: units/q06-b
+    group: quality
+    expect:
+      - code: JR-Q06
+        path: units/q06-b/.claude/skills/recent-changes/SKILL.md
+        contains: "git log --oneline --count 5"
+        min_severity: low
+    clean_categories: [security]
+    note: "git log has no --count flag (it is -n or --max-count). Mild ambiguity: relies on tool knowledge."
+  - id: qben-q06
+    dir: units/qben-q06
+    judge_path: units/qben-q06
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "The referenced script exists in the skill."
+  - id: q07-a
+    dir: units/q07-a
+    judge_path: units/q07-a
+    group: quality
+    expect:
+      - code: JR-Q07
+        path: units/q07-a/.claude/rules/naming.md
+        contains: "def GetUser(user_id):"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Example uses CamelCase under a snake_case rule."
+  - id: q07-b
+    dir: units/q07-b
+    judge_path: units/q07-b
+    group: quality
+    expect:
+      - code: JR-Q07
+        path: units/q07-b/.claude/skills/branch-names/SKILL.md
+        contains: "for example `Feature/Add_Login`"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Example contradicts the lowercase-hyphen rule."
+  - id: qben-q07
+    dir: units/qben-q07
+    judge_path: units/qben-q07
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Bad example is labelled as bad."
+  - id: q08-a
+    dir: units/q08-a
+    judge_path: units/q08-a
+    group: quality
+    expect:
+      - code: JR-Q08
+        path: units/q08-a/CLAUDE.md
+        contains: "REST stands for Representational State Transfer"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Tutorial paragraph explaining REST in an always-loaded file (~330 tokens)."
+  - id: q08-b
+    dir: units/q08-b
+    judge_path: units/q08-b
+    group: quality
+    expect:
+      - code: JR-Q08
+        path: units/q08-b/.claude/skills/commit-staged/SKILL.md
+        contains: "Git is a distributed version control system"
+        min_severity: low
+    clean_categories: [security]
+    note: "Explains git basics and repeats a section; ~120 tokens of waste."
+  - id: qben-q08
+    dir: units/qben-q08
+    judge_path: units/qben-q08
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Critical constraint stated at the top and once at the step where it matters."
+  - id: q09-a
+    dir: units/q09-a
+    judge_path: units/q09-a
+    group: quality
+    expect:
+      - code: JR-Q09
+        path: units/q09-a/CLAUDE.md
+        contains: "## How to cut a release"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Task-specific release procedure in the always-loaded CLAUDE.md."
+  - id: q09-b
+    dir: units/q09-b
+    judge_path: units/q09-b
+    group: quality
+    expect:
+      - code: JR-Q09
+        path: units/q09-b/.claude/skills/error-codes/SKILL.md
+        contains: "| E1000 | Invalid session token"
+        min_severity: low
+    clean_categories: [security]
+    note: "45-row reference table pasted into SKILL.md instead of references/."
+  - id: qben-q09
+    dir: units/qben-q09
+    judge_path: units/qben-q09
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Reference table lives in references/ and is pointed to."
+  - id: q10-a
+    dir: units/q10-a
+    judge_path: units/q10-a
+    group: quality
+    expect:
+      - code: JR-Q10
+        path: units/q10-a/CLAUDE.md
+        contains: "CRITICAL: ALWAYS use tabs for indentation"
+        min_severity: medium
+    clean_categories: [security]
+    note: "CRITICAL/ALWAYS/NEVER on every unrelated line."
+  - id: q10-b
+    dir: units/q10-b
+    judge_path: units/q10-b
+    group: quality
+    expect:
+      - code: JR-Q10
+        path: units/q10-b/.claude/skills/refresh-generated/SKILL.md
+        contains: "NEVER modify anything under `generated/`"
+        min_severity: medium
+    clean_categories: [security]
+    note: "Absolute NEVER without the exception the skill itself needs (step 2). Could also be read as JR-Q03."
+  - id: qben-q10
+    dir: units/qben-q10
+    judge_path: units/qben-q10
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "One emphasised rule with its exception."
+  - id: q11-a
+    dir: units/q11-a
+    judge_path: units/q11-a
+    group: quality
+    expect:
+      - code: JR-Q11
+        path: units/q11-a/.claude/commands/migrate-db.md
+        contains: "## Steps"
+        min_severity: low
+    clean_categories: [security]
+    note: "Multi-step command that can fail mid-way, with no success check or failure handling."
+  - id: q11-b
+    dir: units/q11-b
+    judge_path: units/q11-b
+    group: quality
+    expect:
+      - code: JR-Q11
+        path: units/q11-b/.claude/skills/reindex-search/SKILL.md
+        contains: "Run `make reindex`"
+        min_severity: low
+    clean_categories: [security]
+    note: "No way to tell the reindex worked and nothing on failure."
+  - id: qben-q11
+    dir: units/qben-q11
+    judge_path: units/qben-q11
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Has a success condition and failure handling."
+  - id: q12-a
+    dir: units/q12-a
+    judge_path: units/q12-a/.claude/skills/test-runner
+    group: quality
+    expect:
+      - code: JR-Q12
+        path: units/q12-a/.claude/skills/test-runner/SKILL.md
+        contains: "Use when the user wants the tests run"
+        min_severity: low
+    clean_categories: [security]
+    note: "Two near-identical sibling skills; judged artifact is test-runner only (sibling run-tests lives in the same tree)."
+  - id: q12-b
+    dir: units/q12-b
+    judge_path: units/q12-b/.claude/commands/review.md
+    group: quality
+    expect:
+      - code: JR-Q12
+        path: units/q12-b/.claude/commands/review.md
+        contains: "Review the current branch diff for bugs"
+        min_severity: low
+    clean_categories: [security]
+    note: "Two commands with the same trigger; judged artifact is review.md only."
+  - id: qben-q12
+    dir: units/qben-q12
+    judge_path: units/qben-q12/.claude/skills/db-backup
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Siblings with clear boundaries pointing at each other."
+  - id: q13-a
+    dir: units/q13-a
+    judge_path: units/q13-a
+    group: quality
+    expect:
+      - code: JR-Q13
+        path: units/q13-a/.claude/skills/tidy-branches/SKILL.md
+        contains: "Delete each with `git push origin --delete <branch>`"
+        min_severity: low
+    clean_categories: [security]
+    note: "Deletes remote branches without telling or asking the user (expected capability, missing warning)."
+  - id: q13-b
+    dir: units/q13-b
+    judge_path: units/q13-b
+    group: quality
+    expect:
+      - code: JR-Q13
+        path: units/q13-b/.claude/skills/weekly-digest/SKILL.md
+        contains: "Send the summary email to every address"
+        min_severity: low
+    clean_categories: [security]
+    note: "Sends external email with no preview or confirmation."
+  - id: qben-q13
+    dir: units/qben-q13
+    judge_path: units/qben-q13
+    group: qbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Same capability as q13-a but with a confirmation step."

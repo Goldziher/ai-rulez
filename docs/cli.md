@@ -37,7 +37,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval import`          | Import eval scenarios from another tool as eval cases ([details](evals.md#importing-scenarios)) |
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
-| `ai-rulez judge`                | Grade `AGENTS.md` and `.agents/*` with a model, from flags alone, with no config file ([details](#judge-command)) |
+| `ai-rulez judge`                | Review skills, agents, rules and `CLAUDE.md` files with models: verified quotes, an adjudicator, repo-aware governance; no config file needed ([details](#judge-command)) |
 | `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
 | `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#telemetry-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
@@ -116,7 +116,7 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez include list` | List all includes |
 | `ai-rulez include remove` | Remove an include source |
 | `ai-rulez init` | Initialize a new AI rules configuration |
-| `ai-rulez judge` | Grade instruction files with a model (AI as a judge), without any configuration |
+| `ai-rulez judge` | Review agent configuration with models: security, quality and governance, with verified evidence |
 | `ai-rulez list` | List rules, context, and skills |
 | `ai-rulez list agents` | List all agents |
 | `ai-rulez list checks` | List all code-review checks |
@@ -1234,7 +1234,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 **Exit codes:** 0 done (the report may contain losses) or nothing to convert, 1 could not run or would overwrite existing files, 2 blocked by the scan or validation, or `--fail-on` matched.
 
-**Nothing to convert.** When no importer finds anything to import (no tool files, or only files `ai-rulez generate` wrote), `convert` prints `Nothing to convert: ...` with a hint, writes nothing and exits 0, so a script converting many repositories keeps going. With `--format json` the message goes to stderr and stdout stays empty.
+**Nothing to convert.** When no importer finds anything to import (no tool files, or only files `ai-rulez generate` wrote), `convert` prints `Nothing to convert: ...` with a hint, writes nothing and exits 0, so a script converting many repositories keeps going. With `--format json` the message goes to stderr and stdout carries an empty report (`written: false`, no files) that validates against the report schema.
 
 #### `init --from`
 
@@ -2051,24 +2051,32 @@ Documented in [Judge](judge.md).
 
 ### `ai-rulez judge [paths...]`
 
-Grade instruction files against a rubric with a model. It reads no configuration: the model comes from flags and `AI_RULEZ_LLM_*` variables, the key from the provider's own variable. With no paths it judges `AGENTS.md` at any depth and the `.agents/` and `.ai-rulez/` Markdown; generated files are skipped.
+Review agent configuration (skills, agents, commands, rules, `CLAUDE.md`, `AGENTS.md`, MCP and settings files) with security, quality and governance reviewers, a verifier that checks every quote, and an adjudicator. It needs no configuration. With no paths it judges every unit below the working directory that a harness reads, nested `.claude/` directories included; generated files are skipped.
 
 | Flag | Meaning |
 | --- | --- |
-| `--allow-llm` | Agree to send file content to the provider; required to call a model |
-| `--model provider/model`, `--provider p` | The model (or `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_PROVIDER`) |
-| `--max-cost usd` | Spend cap (default 0.25; 0 removes it); refuses to start when the worst case exceeds it or the model has no known price |
-| `--price-input usd`, `--price-output usd` | Price per million tokens of a model the price table does not know, so `--max-cost` works (both required) |
-| `--max-tokens n` | Cap on prompt plus completion tokens of the run |
-| `--estimate`, `--dry-run`, `-n` | List the files, the egress host and model and the token and cost estimate; send nothing |
-| `--redact` | Mask secret-looking text and send the file; by default such a file is skipped and counts as a finding |
-| `--rubric builtin:instruction-quality\|file` | The rubric (default `builtin:instruction-quality`) |
-| `--min-score s` | Lowest passing score from 0 to 1 (default 0.7) |
-| `--no-cache` | Do not read or write the response cache |
-| `--format text\|json` | Output format (`schema/judge-report.schema.json`) |
+| `--allow-llm` | Agree to send the units' content to the provider; required to call a model |
+| `--estimate`, `--dry-run`, `-n` | List the units, what is attached to each, the egress host and models and the token and cost estimate; send nothing |
+| `--model provider/model`, `--adjudicator-model m`, `--model-for ROLE=M`, `--provider p` | The models (defaults: Bedrock Sonnet 5.5 for the reviewers, Opus 5.5 for the adjudicator); `AI_RULEZ_LLM_MODEL` and `AI_RULEZ_LLM_PROVIDER` also work |
+| `--categories security,quality,governance` | The reviewers to run (default all) |
+| `--fail-on list` | `category:severity`, `category:none`, `score:n` or `category:score:n` (default `security:high,governance:high,quality:none`) |
+| `--min-confidence low\|medium\|high` | Drop findings below a confidence |
+| `--changed[=rev]`, `--since rev`, `--impact` | Judge only the units changed since `rev` (`HEAD` for a bare `--changed`; `--since rev` is the same as `--changed=rev`), and the units a changed rule or `CLAUDE.md` applies to (`--impact` is on by default) |
+| `--attach-rules`, `--attach-claude-md` | Attach the path-scoped rules and the nested `CLAUDE.md` / `AGENTS.md` files to each unit (both default on) |
+| `--skill name\|path:dir`, `--skill-for category=name\|path:dir` | Rubric skills (repeatable) |
+| `--max-cost usd` | Spend cap (default 2.00; 0 removes it); every model must be priced under a cap |
+| `--max-tokens n`, `--max-calls n` | Caps on the tokens and calls of the run |
+| `--price-input usd`, `--price-output usd` | Price per million tokens of a model the price table does not know (both required) |
+| `--concurrency n`, `--rpm n` | Calls in flight (default 4) and started per minute |
+| `--redact` | Mask secret-looking text and send the unit; by default such a unit is withheld and counts as a finding |
+| `--allow-partial` | Accept a run in which a unit was only partly reviewed |
+| `--explain-drops` | List the dropped candidates and why |
+| `--allow-prompt-override` | Let a repository prompt file replace a reviewer's role prompt |
+| `--no-cache`, `--cache-readonly` | Skip the response cache, or serve hits without storing |
+| `--format text\|json\|sarif` | Output format (`schema/judge-report.schema.json` for json) |
 | `--policy`, `--policy-*` | Organization policy; one that forbids model use stops a real run |
 
-Exit codes: 0 every file passed (or `--estimate`), 1 could not run or a call failed, 2 a file scored below `--min-score` or was skipped for secrets.
+Exit codes: 0 every unit passed or warned (or `--estimate`), 1 the run could not complete (refused, capped, a call failed, nothing to judge, a unit only partly reviewed), 2 a unit met `--fail-on` or was withheld for secrets.
 
 ## Search Command
 
@@ -2187,7 +2195,7 @@ ai-rulez validate [flags]
 | `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
 | `--strict-baseline`   | boolean | Exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--since`             | string  | Report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
-| `--changed`           | boolean | Shorthand for `--since HEAD` (uncommitted and untracked changes) |
+| `--changed[=REV]`     | string  | Like `--since`, with an optional base: bare `--changed` is `--since HEAD` (uncommitted and untracked changes), `--changed=origin/main` is `--since origin/main`. Write the value with `=`; a separate word is not taken as the base |
 | `--verifiers`         | boolean | Also evaluate the verifiers (never a command or a model) and report them as `AR9H1`-`AR9H6` findings |
 | `--approvals-base`    | string  | Also report approvals added since this git revision for content that also changed since it (`AR716`, see [Approvals](approvals.md#approvals-are-assertions)) |
 | `--since-depth`       | string  | With `--since` or `--changed`: how many reference hops to follow from the changed files, a number or `all` (default `1`); each JSON finding carries a `hop` (`changed`, `dependent`, `transitive(n)`) |
@@ -2203,7 +2211,7 @@ ai-rulez validate [flags]
 
 Exit codes: `0` valid, `1` the configuration is invalid or could not be loaded, `2` findings at or above `--fail-on`.
 
-When the content tree is an OKF bundle (a root `index.md`, see `migrate okf`), `validate` also runs the OKF checks. "Configuration is valid" is printed only after they pass, so a run that exits `2` never says it; with `--format json` (or `--output`) that run writes the OKF document (`bundle`, `okf_spec`, `concepts`, `findings`) instead of the lint report, so a JSON consumer always gets a document. A rule or context file with no frontmatter block at all is plain native markdown: `generate` accepts it, so `validate` reports it as an `AR9B1` warning (run `migrate okf` to add the `type`) and `generate --check` stays clean; a frontmatter block without a `type`, or one that does not parse, is still an error. `-q` drops the summary lines (`N concepts, ...` and `strict validation: ...`); findings stay.
+When the content tree is an OKF bundle (a root `index.md`, see `migrate okf`), `validate` also runs the OKF checks. "Configuration is valid" is printed only after they pass, so a run that exits `2` never says it; with `--format json` (or `--output`) that run writes the OKF document (`bundle`, `okf_spec`, `concepts`, `findings`) instead of the lint report, so a JSON consumer always gets a document. A rule or context file with no frontmatter block at all is plain native markdown: `generate` accepts it, so `validate` reports it as an `AR9B1` warning (run `migrate okf` to add the `type`) and `generate --check` stays clean; a frontmatter block without a `type`, or one that does not parse, is still an error. `-q` drops the summary lines (`N concepts, ...` and `validation: ...`); findings stay.
 
 **Examples:**
 

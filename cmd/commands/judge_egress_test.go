@@ -15,7 +15,6 @@ func TestJudgeRefusesARealRunWhenTheEgressHostIsUnknown(t *testing.T) {
 		want  int
 	}{
 		{"an unlisted provider", "someprovider/some-model", nil, 1},
-		{"a bare model", "gpt-4o-mini", nil, 1},
 		{"an unlisted provider with a base url", "someprovider/some-model", map[string]string{"AI_RULEZ_LLM_BASE_URL": "https://gateway.example.com/v1"}, 0},
 		{"a listed provider", "mistral/mistral-small-latest", nil, 0},
 	}
@@ -42,6 +41,17 @@ func TestJudgeRefusesARealRunWhenTheEgressHostIsUnknown(t *testing.T) {
 	}
 }
 
+func TestJudgeRefusesABareModelWithoutAProvider(t *testing.T) {
+	judgeProject(t, map[string]string{"AGENTS.md": "Run tests.\n"})
+	rig := newJudgeRig(t)
+
+	_, code := rig.run(t, "--allow-llm", "--model", "gpt-4o-mini", "--no-cache", "--max-cost", "0")
+
+	require.Equal(t, 1, code)
+	assert.Contains(t, rig.stderr.String(), "no provider")
+	assert.Zero(t, rig.built)
+}
+
 func TestJudgeEstimateStillWorksWhenTheEgressHostIsUnknown(t *testing.T) {
 	// Arrange
 	judgeProject(t, map[string]string{"AGENTS.md": "Run tests.\n"})
@@ -52,7 +62,7 @@ func TestJudgeEstimateStillWorksWhenTheEgressHostIsUnknown(t *testing.T) {
 
 	// Assert
 	require.Equal(t, 0, code, rig.stderr.String())
-	assert.Contains(t, stdout, "egress: (the provider's default endpoint)")
+	assert.Contains(t, stdout, "(the provider's default endpoint)")
 }
 
 func TestProviderEndpoint(t *testing.T) {

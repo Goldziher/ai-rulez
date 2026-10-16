@@ -9,6 +9,15 @@ builtins = ["go", "security", "git-workflow", "code-quality", "testing", "defaul
 
 default_layers = ["plugins"]
 
+[lint]
+# These are deliberately invalid inputs exercised by the test and benchmark suites.
+ignore_paths = [
+  "bench/judge/corpus/**",
+  "internal/**/testdata/**",
+  "tests/review/golden/**/fixtures/**",
+  "tests/fixtures/**",
+]
+
 [mcp]
 self_server_command = ["ai-rulez", "mcp"]
 

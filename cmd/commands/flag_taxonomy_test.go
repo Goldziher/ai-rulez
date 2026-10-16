@@ -368,3 +368,31 @@ func TestStrayWordArgumentKeepsCobrasUnknownCommandText(t *testing.T) {
 		t.Fatalf("error = %v, want cobra's unknown command text for a word that is not a path", err)
 	}
 }
+
+// --changed means one thing wherever it exists: an optional base revision, HEAD when bare.
+func TestFlagTaxonomyChangedTakesAnOptionalBase(t *testing.T) {
+	// Arrange
+	var problems []string
+	found := map[string]bool{}
+	walkOwnFlags(t, func(cmd *cobra.Command, f *pflag.Flag) {
+		// Act
+		if f.Name != "changed" {
+			return
+		}
+		found[commandName(cmd)] = true
+		if f.Value.Type() != "string" || f.NoOptDefVal != "HEAD" {
+			problems = append(problems, commandName(cmd)+": --changed is "+f.Value.Type()+" with bare value \""+f.NoOptDefVal+"\", want string defaulting to HEAD")
+		}
+	})
+
+	// Assert
+	for _, name := range []string{"judge", "validate", "scan"} {
+		if !found[name] {
+			problems = append(problems, name+": no --changed flag")
+		}
+	}
+	if len(problems) > 0 {
+		sort.Strings(problems)
+		t.Fatalf("--changed[=BASE]:\n%s", strings.Join(problems, "\n"))
+	}
+}

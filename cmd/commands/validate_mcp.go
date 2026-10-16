@@ -46,7 +46,7 @@ func (v *mcpValidator) validate(ctx context.Context, cfg *config.Config, p handl
 	}
 
 	cfg.DeferMalformedFrontmatter = true // reported as the AR306 finding, as `validate` does
-	report, err := strictLint(ctx, cfg)
+	report, err := strictLint(withUnmanagedLint(ctx), cfg)
 	if err != nil {
 		return nil, err
 	}

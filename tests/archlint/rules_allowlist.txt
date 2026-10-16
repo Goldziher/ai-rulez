@@ -258,6 +258,7 @@ global internal/includes/gitauth.go 1
 global internal/includes/gitops.go 2
 global internal/includes/memo.go 1
 global internal/includes/state.go 1
+global internal/judge/assets.go 1
 global internal/lint/analyzer.go 2
 global internal/lint/ar_budget.go 1
 global internal/lint/ar_capability.go 3
@@ -301,6 +302,7 @@ global internal/lint/traps.go 4
 global internal/lint/traps_limits.go 1
 global internal/lint/traps_plan.go 2
 global internal/lint/units.go 1
+global internal/llm/bedrock.go 1
 global internal/llm/judge.go 1
 global internal/llmstxt/docsite.go 2
 global internal/llmstxt/render.go 2

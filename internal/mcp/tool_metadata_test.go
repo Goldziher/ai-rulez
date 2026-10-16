@@ -24,7 +24,7 @@ var readOnlyTools = map[string]bool{
 	"list_roles": true, "resolve_role": true, "lock_status": true, "catalog": true,
 	"find_skill": true, "load_skill": true, "list_skill_resources": true,
 	"search_skills": true, "get_skill": true, "read_skill_file": true,
-	"scan_content": true, "list_builtins": true, "token_report": true, "cost_report": true, "sbom": true,
+	"scan_content": true, "judge": true, "list_builtins": true, "token_report": true, "cost_report": true, "sbom": true,
 	"okf_validate": true, "approvals_status": true, "policy_show": true, "list_verifiers": true,
 	"read_agent": true, "list_agents": true, "read_command": true, "list_commands": true,
 }
@@ -45,7 +45,7 @@ func TestEveryToolCarriesMetadata(t *testing.T) {
 	authoring := listAllTools(t, NewServer("test"))
 	serving := listAllTools(t, NewSkillServerWith("test", loadCatalog(t), ServeOptions{}))
 	tools := append(append([]*sdkmcp.Tool{}, authoring...), serving...)
-	require.Len(t, tools, 72, "tool count changed: update the metadata expectations deliberately")
+	require.Len(t, tools, 73, "tool count changed: update the metadata expectations deliberately")
 
 	for _, tool := range tools {
 		t.Run(tool.Name, func(t *testing.T) {
@@ -57,7 +57,8 @@ func TestEveryToolCarriesMetadata(t *testing.T) {
 			a := tool.Annotations
 			require.NotNil(t, a.DestructiveHint, "destructiveHint is set explicitly")
 			require.NotNil(t, a.OpenWorldHint, "openWorldHint is set explicitly")
-			assert.False(t, *a.OpenWorldHint, "ai-rulez tools act on the local project tree only")
+			// judge is the one tool that reaches outside: it sends file content to the user's model provider.
+			assert.Equal(t, tool.Name == "judge", *a.OpenWorldHint, "ai-rulez tools act on the local project tree only, except judge, which reaches the user's model provider")
 
 			assert.NotNil(t, tool.InputSchema, "input schema")
 			schema, ok := tool.OutputSchema.(map[string]any)

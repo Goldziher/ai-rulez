@@ -65,6 +65,34 @@ type validateIn struct {
 	workDirArg
 }
 
+// judgeSkillIn names a rubric skill of a judge call.
+type judgeSkillIn struct {
+	Name           string `json:"name,omitempty" jsonschema:"A skill of the project by name, or the name of an inline skill"`
+	Path           string `json:"path,omitempty" jsonschema:"A directory of the project that holds the skill's SKILL.md"`
+	InlineMarkdown string `json:"inline_markdown,omitempty" jsonschema:"The skill as Markdown text with ## C1 - title criteria sections (needs name)"`
+}
+
+// judgeIn is the input of judge. It takes no model, price, spend cap or provider: those are the user's.
+type judgeIn struct {
+	Paths          []string                  `json:"paths,omitempty" jsonschema:"Files or directories of the project to judge (default: everything the agent harnesses read below the project directory)"`
+	Categories     []string                  `json:"categories,omitempty" jsonschema:"Categories to run: security, quality, governance (default all); the CLI's --categories"`
+	FailOn         []string                  `json:"fail_on,omitempty" jsonschema:"Gate entries such as security:high, governance:high, quality:none, score:70; the CLI's --fail-on"`
+	MinConfidence  string                    `json:"min_confidence,omitempty" jsonschema:"Drop findings below this confidence: low (default), medium, high; the CLI's --min-confidence"`
+	Changed        string                    `json:"changed,omitempty" jsonschema:"Judge only the units that changed since this git revision; HEAD means uncommitted and untracked work (the CLI's bare --changed), origin/main compares with that branch (--changed=origin/main)"`
+	Since          string                    `json:"since,omitempty" jsonschema:"Judge only the units that changed since this git revision, for example origin/main; the CLI's --since"`
+	Impact         *bool                     `json:"impact,omitempty" jsonschema:"With changed, also judge the units a changed rule or instruction file applies to (default true); the CLI's --impact"`
+	AttachRules    *bool                     `json:"attach_rules,omitempty" jsonschema:"Attach the path-scoped rules that govern each unit (default true); the CLI's --attach-rules"`
+	AttachClaudeMD *bool                     `json:"attach_claude_md,omitempty" jsonschema:"Attach the CLAUDE.md and AGENTS.md files that apply to each unit (default true); the CLI's --attach-claude-md"`
+	Skills         []judgeSkillIn            `json:"skills,omitempty" jsonschema:"Rubric skills applied to the governance review; the CLI's --skill"`
+	SkillFor       map[string][]judgeSkillIn `json:"skill_for,omitempty" jsonschema:"Rubric skills per category, for example {\"quality\": [{\"name\": \"style\"}]}; the CLI's --skill-for"`
+	ExplainDrops   bool                      `json:"explain_drops,omitempty" jsonschema:"List every dropped candidate with the reason; the CLI's --explain-drops"`
+	AllowPartial   bool                      `json:"allow_partial,omitempty" jsonschema:"Accept a run in which some unit was only partly reviewed; the CLI's --allow-partial"`
+	Estimate       bool                      `json:"estimate,omitempty" jsonschema:"Send nothing: list the units, what is attached, the models and the cost estimate; the CLI's --estimate"`
+	Redact         bool                      `json:"redact,omitempty" jsonschema:"Mask secret-looking text and send the unit instead of withholding it; the CLI's --redact"`
+	AllowLLM       bool                      `json:"allow_llm,omitempty" jsonschema:"Agree to send the units' content to the user's model provider. The user config must also allow it ([judge] allow_llm = true); the CLI's --allow-llm"`
+	workDirArg
+}
+
 type scanIn struct {
 	ConfigFile  string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file to scan (optional)"`
 	ConfigDir   string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`

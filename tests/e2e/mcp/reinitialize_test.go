@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -52,7 +51,7 @@ func TestServerToleratesRepeatedInitialize(t *testing.T) {
 	//nolint:gosec // G204: e2e test runs the built CLI from a computed path.
 	cmd := exec.CommandContext(ctx, binaryPath, "mcp")
 	cmd.Dir = workingDir
-	stderr := &bytes.Buffer{}
+	stderr := &testutil.SyncBuffer{}
 	cmd.Stderr = stderr
 
 	stdin, err := cmd.StdinPipe()

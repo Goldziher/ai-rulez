@@ -1,0 +1,369 @@
+units:
+  - id: g01-a
+    dir: governance-repo/.claude/skills/squash-commit
+    judge_path: governance-repo/.claude/skills/squash-commit
+    group: governance
+    expect:
+      - code: JR-G01
+        path: governance-repo/.claude/skills/squash-commit/SKILL.md
+        contains: "then a blank line and a body that explains the why"
+        min_severity: high
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Commit body forbidden by root CLAUDE.md."
+  - id: g01-b
+    dir: governance-repo/apps/web/.claude/commands/add-component.md
+    judge_path: governance-repo/apps/web/.claude/commands/add-component.md
+    group: governance
+    expect:
+      - code: JR-G01
+        path: governance-repo/apps/web/.claude/commands/add-component.md
+        contains: "type the props as `any`"
+        min_severity: high
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/apps/web/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/commands.md
+      - rule:governance-repo/.claude/rules/frontend.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+      - rule:governance-repo/apps/web/.claude/rules/typescript.md
+    attach_referenced: true
+    note: "Violates the typescript rule only reachable through the referenced path Widget.tsx (apps/web/src/components/Widget.tsx, repo-relative)."
+  - id: g02-a
+    dir: governance-repo/apps/web/.claude/skills/install-deps
+    judge_path: governance-repo/apps/web/.claude/skills/install-deps
+    group: governance
+    expect:
+      - code: JR-G02
+        path: governance-repo/apps/web/.claude/skills/install-deps/SKILL.md
+        contains: "Run `pnpm install`"
+        min_severity: high
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/apps/web/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Contradicts the nearer apps/web CLAUDE.md (Yarn); nearer wins."
+  - id: g02-b
+    dir: governance-repo/.claude/skills/frontend-setup
+    judge_path: governance-repo/.claude/skills/frontend-setup
+    group: governance
+    expect:
+      - code: JR-G02
+        path: governance-repo/.claude/skills/frontend-setup/SKILL.md
+        contains: "Run `yarn install` at the repository root"
+        min_severity: high
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Contradicts root CLAUDE.md (pnpm only). Overlaps with JR-G01 by nature."
+  - id: g03-a
+    dir: governance-repo/.claude/skills/new-branch
+    judge_path: governance-repo/.claude/skills/new-branch
+    group: governance
+    expect:
+      - code: JR-G03
+        path: governance-repo/.claude/skills/new-branch/SKILL.md
+        contains: "Branch names MUST follow `{user}.{ACME-123}.{slug}` and MUST NOT contain `/`."
+        min_severity: low
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Copies the CLAUDE.md branch rule verbatim."
+  - id: g03-b
+    dir: governance-repo/.claude/skills/secrets-policy
+    judge_path: governance-repo/.claude/skills/secrets-policy
+    group: governance
+    expect:
+      - code: JR-G03
+        path: governance-repo/.claude/skills/secrets-policy/SKILL.md
+        contains: "Secrets MUST NOT have a default value; fail fast when one is missing."
+        min_severity: low
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Copies the unconditional security rule verbatim."
+  - id: gben-g03
+    dir: governance-repo/.claude/skills/start-ticket
+    judge_path: governance-repo/.claude/skills/start-ticket
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Points at the convention in effect and adds the exact command, no restating."
+  - id: g04-a
+    dir: governance-repo/apps/web/.claude/rules/forms.md
+    judge_path: governance-repo/apps/web/.claude/rules/forms.md
+    group: governance
+    expect:
+      - code: JR-G04
+        path: governance-repo/apps/web/.claude/rules/forms.md
+        contains: "paths: [\"**/*.css\"]"
+        min_severity: low
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/apps/web/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Globs cover CSS files but the content is about React form validation."
+  - id: g04-b
+    dir: governance-repo/tools/cli/.claude/rules/templates.md
+    judge_path: governance-repo/tools/cli/.claude/rules/templates.md
+    group: governance
+    expect:
+      - code: JR-G04
+        path: governance-repo/tools/cli/.claude/rules/templates.md
+        contains: "paths: [\"**/*\"]"
+        min_severity: low
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Matches every file but the content is only about Go template files."
+  - id: gben-g04
+    dir: governance-repo/apps/web/.claude/rules/typescript.md
+    judge_path: governance-repo/apps/web/.claude/rules/typescript.md
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/apps/web/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Brace globs cover ts and tsx and the content is about TypeScript; file already exists in the repo."
+  - id: g05-a
+    dir: governance-repo/services/billing/.claude/commands/refund-order.md
+    judge_path: governance-repo/services/billing/.claude/commands/refund-order.md
+    group: governance
+    expect:
+      - code: JR-G05
+        path: governance-repo/services/billing/.claude/commands/refund-order.md
+        contains: "argument-hint: \"<order-id>\""
+        min_severity: medium
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - claude-md:governance-repo/services/billing/CLAUDE.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/commands.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+      - rule:governance-repo/services/billing/.claude/rules/billing-commands.md
+    note: "Angle brackets (root commands rule) versus square brackets (billing rule): the file cannot satisfy both."
+  - id: g05-b
+    dir: governance-repo/services/billing/.claude/commands/close-period.md
+    judge_path: governance-repo/services/billing/.claude/commands/close-period.md
+    group: governance
+    expect:
+      - code: JR-G05
+        path: governance-repo/services/billing/.claude/commands/close-period.md
+        contains: "argument-hint: \"[period]\""
+        min_severity: medium
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - claude-md:governance-repo/services/billing/CLAUDE.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/commands.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+      - rule:governance-repo/services/billing/.claude/rules/billing-commands.md
+    note: "Square brackets satisfy the billing rule but break the root commands rule."
+  - id: gben-g05
+    dir: governance-repo/.claude/commands/open-pr.md
+    judge_path: governance-repo/.claude/commands/open-pr.md
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/commands.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Angle brackets are right outside services/billing; the billing square-bracket rule is scoped elsewhere."
+  - id: g06-a
+    dir: governance-repo/.claude/skills/dependency-bump
+    judge_path: governance-repo/.claude/skills/dependency-bump
+    group: governance
+    expect:
+      - code: JR-G06
+        path: governance-repo/.claude/skills/dependency-bump/SKILL.md
+        contains: "## Steps"
+        min_severity: low
+    clean_categories: [security]
+    rubric_skill: acme-skill-standards
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Rubric C2 fails: no Verify section. C1, C3, C4, C5 pass."
+  - id: g06-b
+    dir: governance-repo/.claude/skills/log-rotation-check
+    judge_path: governance-repo/.claude/skills/log-rotation-check
+    group: governance
+    expect:
+      - code: JR-G06
+        path: governance-repo/.claude/skills/log-rotation-check/SKILL.md
+        contains: "Contact the platform channel if this fails."
+        min_severity: low
+    clean_categories: [security]
+    rubric_skill: acme-skill-standards
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Rubric C4 fails: last line is not an Owner: line. C1, C2, C3, C5 pass."
+  - id: gben-g06
+    dir: governance-repo/.claude/skills/lockfile-refresh
+    judge_path: governance-repo/.claude/skills/lockfile-refresh
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    rubric_skill: acme-skill-standards
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Passes all five rubric criteria."
+  - id: g07-a
+    dir: governance-repo/.claude/skills/ReleaseNotes
+    judge_path: governance-repo/.claude/skills/ReleaseNotes
+    group: governance
+    expect:
+      - code: JR-G07
+        path: governance-repo/.claude/skills/ReleaseNotes/SKILL.md
+        contains: "name: ReleaseNotes"
+        min_severity: medium
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Skill name and directory are not kebab-case."
+  - id: g07-b
+    dir: governance-repo/services/billing/.claude/agents/payout-auditor.md
+    judge_path: governance-repo/services/billing/.claude/agents/payout-auditor.md
+    group: governance
+    expect:
+      - code: JR-G07
+        path: governance-repo/services/billing/.claude/agents/payout-auditor.md
+        contains: "name: payout-auditor"
+        min_severity: medium
+    clean_categories: [security]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - claude-md:governance-repo/services/billing/CLAUDE.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Agent file has no tools list."
+  - id: gben-g07
+    dir: governance-repo/apps/web/.claude/agents/a11y-checker.md
+    judge_path: governance-repo/apps/web/.claude/agents/a11y-checker.md
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/apps/web/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Compliant agent with a tools list."
+  - id: gben-g01
+    dir: governance-repo/.claude/skills/write-tests
+    judge_path: governance-repo/.claude/skills/write-tests
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Uses module-level test data where docs say SHOULD use setUp: a guidance deviation, not a finding."
+  - id: gben-g02
+    dir: governance-repo/apps/web/.claude/skills/dev-server
+    judge_path: governance-repo/apps/web/.claude/skills/dev-server
+    group: gbenign
+    expect: []
+    clean_categories: [security, quality, governance]
+    attach:
+      - claude-md:governance-repo/AGENTS.md
+      - claude-md:governance-repo/CLAUDE.md
+      - claude-md:governance-repo/apps/web/CLAUDE.md
+      - claude-md:governance-repo/docs/engineering.md
+      - claude-md:governance-repo/docs/testing.md
+      - rule:governance-repo/.claude/rules/artifact-standards.md
+      - rule:governance-repo/.claude/rules/security-basics.md
+    note: "Uses yarn, which the nearer apps/web CLAUDE.md requires; it overrides the root pnpm rule."

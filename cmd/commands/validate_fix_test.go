@@ -179,7 +179,7 @@ func TestFixRespectsChangedScope(t *testing.T) {
 	changedSkill := filepath.Join(root, ".ai-rulez", "skills", "typo-skill", "SKILL.md")
 	writeFile(t, changedSkill, typoSkill+"edited\n")
 
-	validateFixUnsafe, validateChanged = true, true
+	validateFixUnsafe, validateChanged = true, "HEAD"
 	runStrict(t, root, loadStrictProject(t, root))
 
 	fixed, err := os.ReadFile(changedSkill)

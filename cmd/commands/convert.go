@@ -253,7 +253,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 
 // reportNothingToConvert says that the selected importers found nothing to
 // import. It is not an error: nothing is written and the exit code is 0. With
-// --format json the report stream stays empty and the message goes to stderr.
+// --format json stdout carries an empty report (nothing written, no files) and the message goes to stderr.
 func reportNothingToConvert(out io.Writer, err error) {
 	msg := "Nothing to convert: " + strings.TrimSuffix(err.Error(), ": "+importer.ErrNothingToConvert.Error())
 	if oe, ok := oops.AsOops(err); ok && oe.Hint() != "" {
@@ -261,6 +261,10 @@ func reportNothingToConvert(out io.Writer, err error) {
 	}
 	if convertFormat == formatJSON {
 		fprintf(os.Stderr, "%s\n", msg)
+		empty := importer.EmptyReport(strings.Join(convertFrom, ","), convertSource, filepath.ToSlash(convertInto))
+		if werr := printConvertReport(out, empty); werr != nil {
+			renderStderr(werr)
+		}
 		return
 	}
 	fprintf(out, "%s\n", msg)

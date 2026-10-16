@@ -1448,7 +1448,7 @@ ai-rulez init --domains backend,frontend --yes
 
 ## `ai-rulez judge`
 
-Grade instruction files with a model (AI as a judge), without any configuration
+Review agent configuration with models: security, quality and governance, with verified evidence
 
 ```text
 ai-rulez judge [paths...] [flags]
@@ -1457,23 +1457,38 @@ ai-rulez judge [paths...] [flags]
 Examples:
 
 ```bash
-ai-rulez judge --estimate --model openai/gpt-4o-mini
-ai-rulez judge --allow-llm --model openai/gpt-4o-mini
-ai-rulez judge docs/guide.md --allow-llm --model anthropic/claude-haiku-4-5 --min-score 0.8
-ai-rulez judge --allow-llm --rubric rubrics/mine.md --format json
+ai-rulez judge --estimate
+ai-rulez judge --allow-llm
+ai-rulez judge .claude/skills/deploy --allow-llm --fail-on security:medium,governance:high
+ai-rulez judge --changed=origin/main --allow-llm --format sarif > judge.sarif
+ai-rulez judge --allow-llm --skill path:rubrics/acme --skill-for quality=style-rubric
 ```
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `--allow-llm` | bool |  | Agree to send the files' content to the model's provider (required to call a model) |
+| `--adjudicator-model` | string |  | Model of the adjudicator, which should be the strongest you use |
+| `--allow-llm` | bool |  | Agree to send the units' content to the model's provider (required to call a model) |
+| `--allow-partial` | bool |  | Exit 0 or 2 by the findings even when some unit was only partly reviewed |
+| `--allow-prompt-override` | bool |  | Let a repository prompt file replace a reviewer's role prompt (an extension needs no flag) |
+| `--attach-claude-md` | bool | `true` | Attach the CLAUDE.md and AGENTS.md files (with their @imports) that apply to each unit |
+| `--attach-rules` | bool | `true` | Attach the path-scoped rules that govern each unit to its governance review |
+| `--cache-readonly` | bool |  | Serve cached answers but store none |
+| `--categories` | string list |  | Categories to run: security, quality, governance (default all) |
+| `--changed` | string |  | Judge only the units that changed since a base: bare --changed is --since HEAD (uncommitted and untracked work), --changed=REV is --since REV |
+| `--concurrency` | int | `0` | Model calls in flight at once (default 4) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
-| `--dry-run` / `-n` | bool |  | List the files, the egress host and model and the token and cost estimate; send nothing |
+| `--dry-run` / `-n` | bool |  | List the units, what is attached, the egress host and models and the token and cost estimate; send nothing |
 | `--estimate` | bool |  | Alias of --dry-run |
-| `--format` | string | `text` | Output format: text, json |
-| `--max-cost` | number | `0.25` | Spend cap in USD (0 removes it; the model must be priced when a cap is set) |
+| `--explain-drops` | bool |  | List in the report every candidate that was dropped, and why |
+| `--fail-on` | string list |  | When a unit fails: <category>:<severity>, <category>:none, score:<n> or <category>:score:<n>, comma separated. Default security:high,governance:high,quality:none (quality findings are advice) |
+| `--format` | string | `text` | Output format: text, json, sarif |
+| `--impact` | bool | `true` | With --changed, also judge the units a changed rule or instruction file applies to |
+| `--max-calls` | int | `0` | Cap on model calls of the whole run (0 means no cap) |
+| `--max-cost` | number | `2` | Spend cap in USD (0 removes it; every model must be priced when a cap is set) |
 | `--max-tokens` | int | `0` | Cap on prompt plus completion tokens of the whole run (0 means no cap) |
-| `--min-score` | number | `0.7` | Lowest passing score, from 0 to 1; a file below it is a finding (exit 2) |
-| `--model` | string |  | Model as provider/model (or AI_RULEZ_LLM_MODEL), for example openai/gpt-4o-mini |
+| `--min-confidence` | string |  | Drop findings below this confidence: low (default), medium, high |
+| `--model` | string |  | Model of the reviewers as provider/model (or AI_RULEZ_LLM_MODEL); the adjudicator uses it too unless --adjudicator-model names another. Default bedrock/global.anthropic.claude-sonnet-5-5 for the reviewers and bedrock/global.anthropic.claude-opus-5-5 for the adjudicator |
+| `--model-for` | string list |  | Model of one role as ROLE=MODEL, where ROLE is security, quality, governance or adjudicator (repeatable) |
 | `--no-cache` | bool |  | Do not read or write the model response cache |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
@@ -1489,8 +1504,11 @@ ai-rulez judge --allow-llm --rubric rubrics/mine.md --format json
 | `--price-input` | number | `0` | Price of the model in USD per million input tokens, for a model the price table does not know (use with --price-output) |
 | `--price-output` | number | `0` | Price of the model in USD per million output tokens (use with --price-input) |
 | `--provider` | string |  | Provider prefix for a --model without one (or AI_RULEZ_LLM_PROVIDER) |
-| `--redact` | bool |  | Mask secret-looking text and send the file, instead of skipping it |
-| `--rubric` | string |  | Rubric: builtin:instruction-quality (default) or a Markdown file |
+| `--redact` | bool |  | Mask secret-looking text and send the unit, instead of withholding it |
+| `--rpm` | int | `0` | Model calls started per minute (0 means no limit) |
+| `--since` | string |  | Judge only the units that changed since this git revision: committed, staged, unstaged and untracked work (and, with --impact, the units a changed rule applies to) |
+| `--skill` | string list |  | Rubric skill applied to the governance review: a skill name from the project, or path:DIR (repeatable) |
+| `--skill-for` | string list |  | Rubric skill for one category as CATEGORY=NAME or CATEGORY=path:DIR (repeatable) |
 
 ## `ai-rulez list`
 
@@ -2683,8 +2701,8 @@ Examples:
 
 ```bash
 ai-rulez sbom
-ai-rulez sbom --format spdx-json --output sbom.spdx.json
-ai-rulez sbom --check
+ai-rulez sbom --type spdx-json --output sbom.spdx.json
+ai-rulez sbom --output sbom.cdx.json --check
 ```
 
 | Flag | Type | Default | Description |
@@ -2732,6 +2750,7 @@ ai-rulez scan
 ai-rulez scan --recursive
 ai-rulez scan --format sarif --output scan.sarif
 ai-rulez scan --changed --fail-on warning
+ai-rulez scan --changed=origin/main
 ai-rulez scan --path vendor/skills
 ```
 
@@ -2740,7 +2759,7 @@ ai-rulez scan --path vendor/skills
 | `--allow-egress` | string list |  | With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable) |
 | `--baseline` | string |  | Accept the findings recorded in this baseline file (default: <config dir>/lint-baseline.json when it exists); only new findings count toward the exit code |
 | `--baseline-reason` | string |  | With --update-baseline, the reason stored on new entries (required for security findings) |
-| `--changed` | bool |  | Shorthand for --since HEAD: only files with uncommitted or untracked changes |
+| `--changed` | string |  | Like --since, with an optional base: bare --changed is --since HEAD (only files with uncommitted or untracked changes) and --changed=REV is --since REV |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
@@ -3594,6 +3613,7 @@ Examples:
 ai-rulez validate
 ai-rulez validate --strict
 ai-rulez validate --changed
+ai-rulez validate --changed=origin/main
 ai-rulez validate --explain AR001
 ai-rulez validate --format sarif --output ai-rulez.sarif
 ai-rulez validate --fix --dry-run
@@ -3608,7 +3628,7 @@ ai-rulez validate --outputs
 | `--approvals-base` | string |  | Report approvals added since this git revision for content that also changed since it (AR716) |
 | `--baseline` | string |  | Accept the findings recorded in this baseline file (default: <config dir>/lint-baseline.json when it exists); only new findings count toward the exit code |
 | `--baseline-reason` | string |  | With --update-baseline, the reason stored on new entries (required for security findings) |
-| `--changed` | bool |  | Shorthand for --since HEAD: only files with uncommitted or untracked changes |
+| `--changed` | string |  | Like --since, with an optional base: bare --changed is --since HEAD (only files with uncommitted or untracked changes) and --changed=REV is --since REV |
 | `--config-only` | bool |  | Check the configuration file only and skip the content checks |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | With --fix or --fix-unsafe, print the unified diff and change nothing |

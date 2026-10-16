@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-rulez.dev/schema/judge-adjudicator-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decisions", "chains", "escalations", "coverage_notes"],
+  "properties": {
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "decision",
+          "reason_code",
+          "final_severity",
+          "final_confidence",
+          "counter_quote",
+          "merge_into",
+          "note"
+        ],
+        "properties": {
+          "candidate_id": { "type": "string" },
+          "decision": { "enum": ["keep", "downgrade", "drop", "merge"] },
+          "reason_code": {
+            "enum": [
+              "grounded",
+              "prohibition_context",
+              "documentation_or_example",
+              "test_fixture_or_placeholder",
+              "expected_for_declared_purpose",
+              "static_literal_data",
+              "lint_option_wording",
+              "declared_service_credential",
+              "no_sink_or_no_untrusted_input",
+              "unverifiable_reference",
+              "guidance_not_binding",
+              "convention_not_in_scope",
+              "duplicate",
+              "severity_inflated",
+              "confidence_inflated",
+              "quote_context_mismatch"
+            ]
+          },
+          "final_severity": { "enum": ["critical", "high", "medium", "low", "info", "none"] },
+          "final_confidence": { "enum": ["high", "medium", "low", "none"] },
+          "counter_quote": {
+            "type": ["string", "null"],
+            "description": "verbatim from a WINDOW; required for drop/downgrade"
+          },
+          "merge_into": { "type": ["string", "null"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "chains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["members", "combined_severity", "story"],
+        "properties": {
+          "members": { "type": "array", "items": { "type": "string" } },
+          "combined_severity": { "enum": ["critical", "high", "medium", "low"] },
+          "story": { "type": "string" }
+        }
+      }
+    },
+    "escalations": {
+      "type": "array",
+      "items": { "$ref": "reviewer-output.schema.json#/$defs/candidate" }
+    },
+    "coverage_notes": { "type": "array", "items": { "type": "string" } }
+  }
+}

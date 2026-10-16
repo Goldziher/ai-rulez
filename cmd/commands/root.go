@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/llm/bedrockaws"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -55,6 +56,10 @@ func Execute() error {
 func execute() (*cobra.Command, error) {
 	// main sets Version from the build after init has run.
 	RootCmd.Version = Version
+	// The AWS SDK is linked by the command line only (library packages must not pull in its credential
+	// stack); registering it gives every model client of the process the same credential chain for a
+	// bedrock/ model: judge, eval, verifiers, review, improve and search.
+	bedrockaws.Register()
 	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
 	prepareCommandTree(RootCmd)

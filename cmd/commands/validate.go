@@ -270,7 +270,7 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 	}
 	strictCode := 0
 	if validateStrict {
-		strictCode = reportStrict(reports, cfgs)
+		strictCode = reportStrictCtx(ctx, reports, cfgs)
 	}
 
 	if len(failed) > 0 {
@@ -334,7 +334,7 @@ func lintOrphanPicks(ctx context.Context, bases []string) (*lint.Report, *config
 		return nil, nil, err //nolint:wrapcheck // already contextual
 	}
 	cfg.Content = &config.ContentTree{} // the named files only
-	report, err := strictLint(withOrphanRoots(ctx, bases), cfg)
+	report, err := strictLint(withUnmanagedLint(withOrphanRoots(ctx, bases)), cfg)
 	if err != nil || report == nil {
 		return nil, nil, err
 	}
@@ -407,7 +407,7 @@ func validateRoot(ctx context.Context, configPath string) validatedRoot {
 	ctx, r.notes = withRootNotes(ctx)
 	r.cfg, r.err = checkConfigFile(ctx, configPath)
 	if r.err == nil && validateStrict {
-		r.report, r.lintErr = strictLint(ctx, r.cfg)
+		r.report, r.lintErr = strictLint(withUnmanagedLint(ctx), r.cfg)
 	}
 	return r
 }

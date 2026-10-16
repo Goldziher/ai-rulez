@@ -159,9 +159,10 @@ func TestLiterLLMShouldRefuseRequestModelRoutedToAnotherProvider(t *testing.T) {
 		for _, kind := range []string{"chat", "embed"} {
 			t.Run(kind+" "+tt.name, func(t *testing.T) {
 				// Arrange
-				var sent string
+				var sentG guarded[string]
 				srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
-					sent, _ = readBody(r)["model"].(string)
+					model, _ := readBody(r)["model"].(string)
+					sentG.set(model)
 					if kind == "chat" {
 						fmt.Fprint(w, chatReply)
 						return
@@ -179,6 +180,7 @@ func TestLiterLLMShouldRefuseRequestModelRoutedToAnotherProvider(t *testing.T) {
 				}
 
 				// Assert
+				sent := sentG.get()
 				if tt.wantErr {
 					var e *Error
 					if !errors.As(err, &e) || e.Kind != KindConfig || sent != "" {

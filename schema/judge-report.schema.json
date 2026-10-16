@@ -2,111 +2,432 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/judge-report.schema.json",
   "title": "ai-rulez judge report",
-  "description": "Output of `ai-rulez judge --format json`: a model's grade of each instruction file, or, with --estimate, what would be sent. It never carries file text or the prompt.",
+  "description": "Output of `ai-rulez judge --format json`: per unit (a skill, agent, command, rule, CLAUDE.md, AGENTS.md, MCP or settings file) the verified findings, the category scores, the conventions attached and an honest account of what was and was not reviewed; or, with --estimate, what would be sent. It never carries file text beyond the quotes of findings, and never the prompt.",
   "type": "object",
-  "required": ["schema_version", "mode", "rubric", "model", "egress_host", "min_score", "files", "estimate", "summary"],
-  "additionalProperties": true,
+  "required": ["schema_version", "mode", "run", "units", "summary"],
+  "additionalProperties": false,
   "properties": {
-    "schema_version": {
-      "const": 1
-    },
+    "schema_version": { "const": 2 },
     "mode": {
-      "description": "judge when the model was called, estimate when nothing was sent.",
+      "description": "judge when the models were called, estimate when nothing was sent.",
       "enum": ["judge", "estimate"]
     },
-    "rubric": {
-      "description": "builtin:<name> or file:<path>.",
-      "type": "string"
+    "run": {
+      "type": "object",
+      "required": [
+        "prompt_version",
+        "categories",
+        "models",
+        "egress_hosts",
+        "fail_on",
+        "min_confidence",
+        "provenance",
+        "coverage",
+        "estimate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "prompt_version": { "type": "string", "examples": ["judge/v3"] },
+        "categories": { "type": "array", "items": { "enum": ["security", "quality", "governance"] } },
+        "models": {
+          "description": "role -> provider/model for security, quality, governance and adjudicator.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "egress_hosts": {
+          "description": "The hosts content goes to; empty when the provider's default endpoint is used and its host is not known.",
+          "type": ["array", "null"],
+          "items": { "type": "string" }
+        },
+        "fail_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "examples": [["security:high", "governance:high", "quality:none"]]
+        },
+        "min_confidence": { "enum": ["low", "medium", "high"] },
+        "loaded_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "sha256", "tier", "categories"],
+            "properties": {
+              "name": { "type": "string" },
+              "path": { "type": "string" },
+              "sha256": { "type": "string" },
+              "tier": { "enum": ["T1", "T2"] },
+              "categories": { "type": ["array", "null"], "items": { "type": "string" } }
+            }
+          }
+        },
+        "prompt_overrides": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Categories whose role prompt was replaced, not extended."
+        },
+        "provenance": {
+          "type": "object",
+          "required": [
+            "temperature",
+            "reasoning_effort",
+            "schema_sha256",
+            "prompt_sha256",
+            "cache_hits",
+            "calls",
+            "input_tokens",
+            "output_tokens",
+            "cost_usd"
+          ],
+          "properties": {
+            "temperature": {
+              "type": ["number", "null"],
+              "description": "null when omitted (Claude 5.x models take none)."
+            },
+            "reasoning_effort": { "type": ["string", "null"] },
+            "schema_sha256": { "type": "string" },
+            "prompt_sha256": { "type": "string" },
+            "cache_hits": { "type": "integer", "minimum": 0 },
+            "calls": { "type": "integer", "minimum": 0 },
+            "input_tokens": { "type": "integer", "minimum": 0 },
+            "output_tokens": { "type": "integer", "minimum": 0 },
+            "cost_usd": { "type": "number", "minimum": 0 }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "required": [
+            "units_total",
+            "units_fully_reviewed",
+            "units_partial",
+            "units_withheld",
+            "units_skipped",
+            "units_errored"
+          ],
+          "properties": {
+            "units_total": { "type": "integer", "minimum": 0 },
+            "units_fully_reviewed": { "type": "integer", "minimum": 0 },
+            "units_partial": { "type": "integer", "minimum": 0 },
+            "units_withheld": { "type": "integer", "minimum": 0 },
+            "units_skipped": { "type": "integer", "minimum": 0 },
+            "units_errored": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "estimate": {
+          "type": "object",
+          "required": [
+            "units",
+            "calls",
+            "prompt_tokens",
+            "max_completion_tokens",
+            "cost_usd",
+            "expected_cost_usd",
+            "cost_known"
+          ],
+          "properties": {
+            "units": { "type": "integer", "minimum": 0 },
+            "calls": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Planned calls: the reviewers' and one adjudicator call per unit with a review."
+            },
+            "calls_fit": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "How many of the planned calls fit under the caps."
+            },
+            "prompt_tokens": { "type": "integer", "minimum": 0 },
+            "max_completion_tokens": { "type": "integer", "minimum": 0 },
+            "cost_usd": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Worst case: every call uses its whole completion budget."
+            },
+            "expected_cost_usd": {
+              "type": "number",
+              "minimum": 0,
+              "description": "What the caps are planned against."
+            },
+            "cost_known": { "type": "boolean" }
+          }
+        },
+        "changed": {
+          "type": "object",
+          "required": ["base", "impact", "changed_units", "impacted_units"],
+          "properties": {
+            "base": { "type": "string" },
+            "impact": { "type": "boolean" },
+            "changed_units": { "type": "integer", "minimum": 0 },
+            "impacted_units": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "notices": { "type": ["array", "null"], "items": { "type": "string" } }
+      }
     },
-    "model": {
-      "description": "provider/model; empty when none was given (an estimate only).",
-      "type": "string"
-    },
-    "egress_host": {
-      "description": "The host file content goes to; empty when the provider's default endpoint is used and its host is not known.",
-      "type": "string"
-    },
-    "min_score": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "files": {
+    "units": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path", "status", "bytes"],
-        "additionalProperties": true,
+        "required": ["id", "kind", "path", "status", "complete", "scores", "coverage", "findings"],
         "properties": {
-          "path": {
-            "type": "string"
+          "id": { "type": "string" },
+          "kind": {
+            "enum": [
+              "skill",
+              "agent",
+              "command",
+              "rule",
+              "claude-md",
+              "agents-md",
+              "mcp-config",
+              "settings",
+              "plugin",
+              "other"
+            ]
           },
+          "path": { "type": "string" },
+          "content_sha256": { "type": "string" },
           "status": {
-            "enum": ["judged", "skipped", "error", "would_send"]
+            "description": "pass, warn (findings below the gate), fail (a --fail-on rule is met), partial (not fully reviewed), withheld_secret, skipped, error; would_send in an estimate.",
+            "enum": ["pass", "warn", "fail", "partial", "withheld_secret", "skipped", "error", "would_send"]
           },
-          "score": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
+          "reason": { "type": "string" },
+          "complete": {
+            "type": "boolean",
+            "description": "False when anything about the unit went unreviewed: see gaps and coverage."
           },
-          "passed": {
-            "type": "boolean"
+          "files": { "type": ["array", "null"], "items": { "type": "string" } },
+          "attached": {
+            "type": "object",
+            "properties": {
+              "rules": { "type": "array", "items": { "$ref": "#/definitions/convention" } },
+              "instruction_files": { "type": "array", "items": { "$ref": "#/definitions/convention" } }
+            }
           },
-          "rationale": {
-            "type": "string"
+          "scores": {
+            "type": "object",
+            "required": ["security", "quality", "governance"],
+            "properties": {
+              "security": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+              "quality": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+              "governance": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 }
+            }
           },
-          "reason": {
-            "description": "Why a file was skipped or failed.",
-            "type": "string"
+          "criteria_results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["rubric_id", "result"],
+              "properties": {
+                "rubric_id": { "type": "string" },
+                "result": { "enum": ["pass", "fail", "not_applicable", "not_evaluated"] },
+                "note": { "type": "string" }
+              }
+            }
           },
-          "bytes": {
-            "type": "integer",
-            "minimum": 0
+          "coverage": {
+            "type": "object",
+            "required": ["not_reviewed"],
+            "properties": {
+              "not_reviewed": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["path", "start_line", "end_line", "reason"],
+                  "properties": {
+                    "path": { "type": "string" },
+                    "start_line": { "type": "integer" },
+                    "end_line": { "type": "integer" },
+                    "reason": { "type": "string" }
+                  }
+                }
+              }
+            }
           },
-          "truncated": {
-            "type": "boolean"
+          "gaps": { "type": ["array", "null"], "items": { "type": "string" } },
+          "findings": { "type": "array", "items": { "$ref": "#/definitions/finding" } },
+          "suppressed": { "type": ["array", "null"], "items": { "$ref": "#/definitions/finding" } },
+          "dropped": {
+            "description": "Present with --explain-drops: candidates that did not become findings, with the stage, reason code and counter-quote.",
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "required": ["id", "code", "category", "location", "quote", "stage"],
+              "properties": {
+                "id": { "type": "string" },
+                "code": { "type": "string" },
+                "category": { "enum": ["security", "quality", "governance"] },
+                "severity": { "type": "string" },
+                "confidence": { "type": "string" },
+                "location": { "$ref": "#/definitions/location" },
+                "quote": { "type": "string" },
+                "rubric_id": { "type": "string" },
+                "stage": { "enum": ["verifier", "adjudicator", "merged", "min_confidence", "suppressed"] },
+                "reason_code": { "type": "string" },
+                "counter_quote": { "type": "string" },
+                "note": { "type": "string" },
+                "problems": { "type": ["array", "null"], "items": { "type": "string" } }
+              }
+            }
           },
-          "redacted": {
-            "type": "boolean"
-          }
-        },
-        "allOf": [
-          {
-            "if": { "properties": { "status": { "const": "judged" } } },
-            "then": { "required": ["score", "passed"] }
-          },
-          {
-            "if": { "properties": { "status": { "enum": ["skipped", "error"] } } },
-            "then": { "required": ["reason"] }
-          }
-        ]
-      }
-    },
-    "estimate": {
-      "type": "object",
-      "required": ["files", "prompt_tokens", "max_completion_tokens", "cost_usd", "cost_known"],
-      "additionalProperties": true,
-      "properties": {
-        "files": { "type": "integer", "minimum": 0 },
-        "prompt_tokens": { "type": "integer", "minimum": 0 },
-        "max_completion_tokens": { "type": "integer", "minimum": 0 },
-        "cost_usd": { "type": "number", "minimum": 0 },
-        "cost_known": { "type": "boolean" }
+          "notes": { "type": ["array", "null"], "items": { "type": "string" } },
+          "calls": { "type": "integer", "minimum": 0 },
+          "cost_usd": { "type": "number", "minimum": 0 }
+        }
       }
     },
     "summary": {
       "type": "object",
-      "required": ["judged", "passed", "failed", "skipped", "errors", "calls", "tokens", "cost_usd"],
-      "additionalProperties": true,
+      "required": ["decision", "by_severity", "by_category", "grounding"],
       "properties": {
-        "judged": { "type": "integer", "minimum": 0 },
-        "passed": { "type": "integer", "minimum": 0 },
-        "failed": { "type": "integer", "minimum": 0 },
-        "skipped": { "type": "integer", "minimum": 0 },
-        "errors": { "type": "integer", "minimum": 0 },
-        "calls": { "type": "integer", "minimum": 0 },
-        "tokens": { "type": "integer", "minimum": 0 },
-        "cost_usd": { "type": "number", "minimum": 0 }
+        "decision": { "enum": ["pass", "fail", "incomplete"] },
+        "by_severity": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "by_category": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "grounding": {
+          "type": "object",
+          "required": [
+            "candidates",
+            "quote_verified",
+            "dropped_ungrounded",
+            "dropped_by_adjudicator",
+            "repaired",
+            "below_min_confidence",
+            "suppressed"
+          ],
+          "properties": {
+            "candidates": { "type": "integer", "minimum": 0 },
+            "quote_verified": { "type": "integer", "minimum": 0 },
+            "dropped_ungrounded": { "type": "integer", "minimum": 0 },
+            "dropped_by_adjudicator": { "type": "integer", "minimum": 0 },
+            "repaired": { "type": "integer", "minimum": 0 },
+            "below_min_confidence": { "type": "integer", "minimum": 0 },
+            "suppressed": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "location": {
+      "type": "object",
+      "required": ["path", "start_line", "end_line"],
+      "properties": {
+        "path": { "type": "string" },
+        "start_line": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "convention": {
+      "type": "object",
+      "required": ["id", "why", "sha256"],
+      "properties": {
+        "id": { "type": "string", "description": "rule:<path> or claude-md:<path>." },
+        "paths": { "type": "array", "items": { "type": "string" } },
+        "why": {
+          "enum": [
+            "matches-file",
+            "matches-referenced-path",
+            "unconditional",
+            "ancestor-instructions",
+            "imported",
+            "overlapping-scope"
+          ]
+        },
+        "sha256": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "id",
+        "code",
+        "category",
+        "severity",
+        "confidence",
+        "verdict",
+        "title",
+        "location",
+        "quote",
+        "origin",
+        "adjudication",
+        "verification",
+        "fingerprint"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable: the first 12 hex digits of sha256(code|path|normalized quote)."
+        },
+        "code": { "type": "string", "examples": ["JR-S03"] },
+        "category": { "enum": ["security", "quality", "governance"] },
+        "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "verdict": { "enum": ["confirmed", "contextual_risk"] },
+        "title": { "type": "string" },
+        "location": { "$ref": "#/definitions/location" },
+        "quote": {
+          "type": "string",
+          "description": "Verbatim (whitespace-normalized) text of the cited lines; checked against the text that was sent."
+        },
+        "chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "location", "quote"],
+            "properties": {
+              "role": { "enum": ["source", "transform", "trigger", "sink", "scope"] },
+              "location": { "$ref": "#/definitions/location" },
+              "quote": { "type": "string" }
+            }
+          }
+        },
+        "why": { "type": "string" },
+        "benign_reading": { "type": "string" },
+        "why_not_benign": { "type": "string" },
+        "convention": {
+          "type": ["object", "null"],
+          "properties": { "id": { "type": "string" }, "line": { "type": "integer" }, "quote": { "type": "string" } }
+        },
+        "rubric_id": { "type": ["string", "null"] },
+        "static_refs": { "type": ["array", "null"], "items": { "type": "string" } },
+        "also_at": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "properties": { "location": { "$ref": "#/definitions/location" }, "quote": { "type": "string" } }
+          }
+        },
+        "suggested_fix": { "type": ["string", "null"] },
+        "token_waste_estimate": { "type": ["integer", "null"] },
+        "origin": { "enum": ["reviewer", "adjudicator", "static-only", "criteria"] },
+        "absence": {
+          "type": "boolean",
+          "description": "A JR-G06 finding raised from a failed criterion that has no verifiable quote: it concerns the unit as a whole (line 1 of its primary file)."
+        },
+        "adjudication": {
+          "type": "object",
+          "required": ["decision"],
+          "properties": {
+            "decision": { "enum": ["keep", "downgrade", "merge", "unreviewed"] },
+            "reason_code": { "type": "string" },
+            "original_severity": { "type": "string" },
+            "original_confidence": { "type": "string" },
+            "chain_id": { "type": ["string", "null"] },
+            "note": { "type": "string" }
+          }
+        },
+        "verification": {
+          "type": "object",
+          "required": ["quote_verified", "location_valid", "repair_attempts"],
+          "properties": {
+            "quote_verified": { "type": "boolean" },
+            "location_valid": { "type": "boolean" },
+            "repair_attempts": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "fingerprint": { "type": "string" },
+        "suppressed": {
+          "type": "object",
+          "properties": { "reason": { "type": "string" }, "expires": { "type": "string" } }
+        }
       }
     }
   }

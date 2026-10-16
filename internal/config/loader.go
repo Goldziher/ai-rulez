@@ -683,6 +683,7 @@ type tomlConfig struct {
 	LLM                   *llm.Config             `toml:"llm"`
 	Telemetry             *TelemetryConfig        `toml:"telemetry"`
 	Review                *ReviewConfig           `toml:"review"`
+	Judge                 *JudgeConfig            `toml:"judge"`
 	Improve               *ImproveConfig          `toml:"improve"`
 	Search                *skillsearch.Config     `toml:"search"`
 	Plugin                *PluginAuthoring        `toml:"plugin"`
@@ -792,6 +793,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		LLM:                   raw.LLM,
 		Telemetry:             raw.Telemetry,
 		Review:                raw.Review,
+		Judge:                 raw.Judge,
 		Improve:               raw.Improve,
 		Search:                raw.Search,
 		Plugin:                raw.Plugin,

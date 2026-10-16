@@ -42,6 +42,7 @@ import (
 const completionSpec = `
 enum  fail-on          = error warning info none
 enum  fail-on@convert  = approximated dropped needs-action unsupported
+enum  fail-on@judge    = security:high governance:high quality:none
 enum  severity         = low medium high critical
 enum  priority         = critical high medium low minimal
 enum  lint-profile     = default strict permissive
@@ -61,7 +62,7 @@ enum  index-style      = body frontmatter
 enum  protocol         = http/json http/protobuf grpc
 enum  outcome          = loaded used abandoned
 enum  emit             = cursor-team-marketplace agent-plugins ard mcp-server-card port aws-agent-registry kiro-steering
-enum  format@sbom      = cyclonedx spdx-json
+enum  type@sbom        = cyclonedx spdx-json
 enum  from@convert     = auto native rulesync apm tessl okf skills-lock agent-plugins
 enum  from@eval import = tessl
 enum  into@import okf  = rules context skills

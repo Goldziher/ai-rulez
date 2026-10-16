@@ -17,13 +17,16 @@ import (
 var (
 	// validateSince narrows the report to files changed since a git revision.
 	validateSince string
-	// validateChanged is --since HEAD: uncommitted and untracked changes.
-	validateChanged bool
+	// validateChanged is --changed[=BASE]: the base revision, HEAD when the flag is bare.
+	validateChanged string
 	// validateSinceDepth is --since-depth: reference hops to follow, or "all".
 	validateSinceDepth string
 	// validateSinceMax is --since-max-files: a cap on the files reported besides the changed ones.
 	validateSinceMax int
 )
+
+// changedDefaultBase is the revision a bare --changed compares with: uncommitted and untracked work.
+const changedDefaultBase = "HEAD"
 
 // sinceDepth resolves --since-depth: 1 by default, a positive number, or
 // lint.DepthAll for "all".
@@ -47,10 +50,7 @@ func changedRev() string {
 	if validateSince != "" {
 		return validateSince
 	}
-	if validateChanged {
-		return "HEAD"
-	}
-	return ""
+	return strings.TrimSpace(validateChanged)
 }
 
 // strictOnly words a flag description that only applies to the content checks:
@@ -64,7 +64,8 @@ func addChangedFlags(cmd *cobra.Command) {
 	f.StringVar(&validateSince, "since", "", strictOnly(cmd, "report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree"))
 	f.StringVar(&validateSinceDepth, "since-depth", "1", "With --since or --changed, how many reference hops to follow from the changed files: a number or \"all\" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json)")
 	f.IntVar(&validateSinceMax, "since-max-files", 0, "With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap)")
-	f.BoolVar(&validateChanged, "changed", false, strictOnly(cmd, "shorthand for --since HEAD: only files with uncommitted or untracked changes"))
+	f.StringVar(&validateChanged, "changed", "", strictOnly(cmd, "like --since, with an optional base: bare --changed is --since HEAD (only files with uncommitted or untracked changes) and --changed=REV is --since REV"))
+	f.Lookup("changed").NoOptDefVal = changedDefaultBase
 }
 
 // narrowToChanged narrows each report to the changed files of its repository.

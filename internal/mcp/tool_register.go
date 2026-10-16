@@ -34,6 +34,11 @@ type toolSpec struct {
 	readsConfig bool
 }
 
+// opensWorld reports whether a tool talks to parties outside the project.
+func opensWorld(a *sdkmcp.ToolAnnotations) bool {
+	return a.OpenWorldHint != nil && *a.OpenWorldHint
+}
+
 // addTool registers a tool through the SDK's typed AddTool: In is the argument
 // struct (the SDK infers and enforces its schema, rejecting unknown or mistyped
 // arguments), and the result carries structuredContent validated against the
@@ -41,9 +46,10 @@ type toolSpec struct {
 // IsError, so a failure is never reported as success.
 //
 // A read-only server (mcp --read-only) registers only the tools annotated
-// read-only; a tool that writes is skipped.
+// read-only and closed-world; a tool that writes, or that sends content to a
+// third party and spends money (judge), is skipped.
 func addTool[In any](s *Server, spec toolSpec, handler handlerFunc) {
-	if s.readOnly && !spec.annotations.ReadOnlyHint {
+	if s.readOnly && (!spec.annotations.ReadOnlyHint || opensWorld(spec.annotations)) {
 		return
 	}
 	in, err := inputSchemaFor[In](spec.enums)

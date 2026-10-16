@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -21,7 +20,7 @@ import (
 // isolated environment.
 type skillsServer struct {
 	session *sdkmcp.ClientSession
-	stderr  *bytes.Buffer
+	stderr  *testutil.SyncBuffer
 	cancel  context.CancelFunc
 }
 
@@ -31,7 +30,7 @@ func startSkillsServer(t *testing.T, env *isoEnv, root string, args ...string) (
 	cmd := exec.CommandContext(ctx, testutil.SetupTestBinary(t), append([]string{"mcp", "--serve-skills"}, args...)...) //nolint:gosec // the test binary
 	cmd.Dir = root
 	cmd.Env = env.environ()
-	stderr := &bytes.Buffer{}
+	stderr := &testutil.SyncBuffer{}
 	cmd.Stderr = stderr
 	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "e2e", Version: "1.0.0"}, nil)
 	session, err := client.Connect(ctx, &sdkmcp.CommandTransport{Command: cmd, TerminateDuration: 2 * time.Second}, nil)

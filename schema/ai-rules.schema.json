@@ -1845,6 +1845,168 @@
       },
       "additionalProperties": false
     },
+    "judge": {
+      "type": "object",
+      "description": "Settings of `ai-rulez judge`: which categories run, how a run gates, what is attached to a unit, rubric skills, prompt extensions and quote-pinned suppressions. The keys marked \"User scope only\" are honoured from the user config file, the environment and flags only; a repository value is ignored and reported. See docs/judge.md.",
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["security", "quality", "governance"]
+          },
+          "description": "Categories to review (default all three)."
+        },
+        "fail_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Gate entries: <category>:<severity>, <category>:none, score:<n> or <category>:score:<n>. Default security:high, governance:high, quality:none. A category the list does not name keeps its default."
+        },
+        "min_confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Findings below this confidence are dropped from the report (default low)."
+        },
+        "attach_rules": {
+          "type": "boolean",
+          "description": "Attach the path-scoped rules (every ancestor D/.claude/rules/**/*.md, globs relative to D) that govern a unit to its governance review. Default true."
+        },
+        "attach_claude_md": {
+          "type": "boolean",
+          "description": "Attach the CLAUDE.md, CLAUDE.local.md and AGENTS.md files (with their @imports) of every ancestor directory. Default true."
+        },
+        "skills": {
+          "type": "object",
+          "description": "Rubric skills: skills whose `## C1 - title` sections are criteria a unit is judged against.",
+          "properties": {
+            "load": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Skill names applied to the governance review. A name is looked up in the project's skill directories."
+            },
+            "for": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": "Skills per category, for example { quality = [\"my-rubric\"] }."
+            },
+            "pins": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Skill name to the start of its SHA-256. A matching pinned skill is configured text (T1); an unpinned or changed one is reference data (T2)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "prompts": {
+          "type": "object",
+          "description": "Extend or replace a category's role prompt: [judge.prompts.security] mode = \"extend\", file = \".ai-rulez/judge/security.md\". The evidence contract, the trust tiers and the output schema cannot be changed. An override outside the user config also needs --allow-prompt-override.",
+          "propertyNames": {
+            "enum": ["security", "quality", "governance"]
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["extend", "override"]
+              },
+              "file": {
+                "type": "string",
+                "description": "Prompt text, relative to the project root."
+              }
+            },
+            "required": ["mode", "file"],
+            "additionalProperties": false
+          }
+        },
+        "suppress": {
+          "type": "array",
+          "description": "Known findings to silence. Each is pinned to the quote it was made for (a changed text brings the finding back) and expires.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "A finding code such as JR-S05."
+              },
+              "path": {
+                "type": "string",
+                "description": "The file, or a glob relative to the project root."
+              },
+              "quote": {
+                "type": "string",
+                "description": "The finding's quote, or a part of it."
+              },
+              "reason": {
+                "type": "string"
+              },
+              "expires": {
+                "type": "string",
+                "description": "YYYY-MM-DD, at most 366 days ahead."
+              }
+            },
+            "required": ["code", "path", "quote", "reason", "expires"],
+            "additionalProperties": false
+          }
+        },
+        "traps_file": {
+          "type": "string",
+          "description": "YAML list of repository false-positive shapes the adjudicator is told about (default .ai-rulez/judge/traps.yaml)."
+        },
+        "models": {
+          "type": "object",
+          "description": "User scope only. Model of each role: security, quality, governance, adjudicator, or reviewers for the first three.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "max_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "User scope only. Spend cap of a run in USD."
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "User scope only. Token cap of a run."
+        },
+        "max_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "User scope only. Call cap of a run."
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "User scope only. Calls in flight at once (default 4)."
+        },
+        "rpm": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "User scope only. Calls started per minute (0 = no limit)."
+        },
+        "allow_llm": {
+          "type": "boolean",
+          "description": "User scope only. Agree to send content to the model's provider without --allow-llm."
+        },
+        "allow_prompt_override": {
+          "type": "boolean",
+          "description": "User scope only. Let an `override` prompt from a repository file take effect."
+        }
+      },
+      "additionalProperties": false
+    },
     "improve": {
       "type": "object",
       "description": "Defaults of `ai-rulez improve run`: the held-out split, the acceptance gate, limits and the optimizer. A flag always wins. `optimizer` and `env_pass` take effect from a repository config only with --trust-repo-optimizer. See docs/improve.md.",

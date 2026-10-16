@@ -38,6 +38,7 @@ const helpExampleSpec = `
   ai-rulez validate
   ai-rulez validate --strict
   ai-rulez validate --changed
+  ai-rulez validate --changed=origin/main
   ai-rulez validate --explain AR001
   ai-rulez validate --format sarif --output ai-rulez.sarif
   ai-rulez validate --fix --dry-run
@@ -463,6 +464,7 @@ const helpExampleSpec = `
   ai-rulez scan --recursive
   ai-rulez scan --format sarif --output scan.sarif
   ai-rulez scan --changed --fail-on warning
+  ai-rulez scan --changed=origin/main
   ai-rulez scan --path vendor/skills
 ## clean
   ai-rulez clean --dry-run
@@ -491,8 +493,8 @@ const helpExampleSpec = `
   ai-rulez mcp --allow list_rules --allow generate_outputs
 ## sbom
   ai-rulez sbom
-  ai-rulez sbom --format spdx-json --output sbom.spdx.json
-  ai-rulez sbom --check
+  ai-rulez sbom --type spdx-json --output sbom.spdx.json
+  ai-rulez sbom --output sbom.cdx.json --check
 ## sign
   ai-rulez sign --lock --keyless
   ai-rulez sign --lock --key cosign.key --output ai-rulez.lock.sigstore.json
