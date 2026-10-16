@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,6 +12,59 @@ import (
 	"testing"
 	"time"
 )
+
+func TestSchedulerOverlapsRestAndShardsAndJoinsFailures(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	started := make(chan struct{}, 2)
+	release := make(chan struct{})
+	restFailure, shardFailure := errors.New("rest failed"), errors.New("shards failed")
+	work := func(failure error) func(context.Context) error {
+		return func(ctx context.Context) error {
+			started <- struct{}{}
+			select {
+			case <-release:
+				return failure
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+	done := make(chan error, 1)
+	go func() { done <- runConcurrent(ctx, work(restFailure), work(shardFailure)) }()
+	for range 2 {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			cancel()
+			<-done
+			t.Fatal("remaining packages and CLI shards did not start concurrently")
+		}
+	}
+	close(release)
+	err := <-done
+	if !errors.Is(err, restFailure) || !errors.Is(err, shardFailure) {
+		t.Fatalf("scheduler must wait for and report both failures: %v", err)
+	}
+}
+
+func TestSchedulerCancellationReachesBothWorkers(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	started := make(chan struct{}, 2)
+	work := func(ctx context.Context) error {
+		started <- struct{}{}
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	done := make(chan error, 1)
+	go func() { done <- runConcurrent(ctx, work, work) }()
+	<-started
+	cancel()
+	err := <-done
+	if !errors.Is(err, context.Canceled) || len(started) != 1 {
+		t.Fatalf("cancellation did not reach both workers: %v", err)
+	}
+}
 
 func TestPartitionIsExhaustiveDisjointAndPreservesKinds(t *testing.T) {
 	names := []string{"TestZ", "Example", "FuzzSeed", "TestA", "ExampleThing"}
