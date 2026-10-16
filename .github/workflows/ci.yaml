@@ -148,11 +148,20 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Go
+        id: setup-go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
           cache: true
           cache-dependency-path: "**/go.sum"
+
+      - name: Record Windows Go cache paths
+        if: runner.os == 'Windows'
+        id: go-cache-paths
+        shell: bash
+        run: |
+          printf 'modules=%s\n' "$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+          printf 'build=%s\n' "$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -193,6 +202,17 @@ jobs:
       # The generator characterization goldens (they skip on Windows).
       - name: Run golden tests
         run: go test ./tests/golden/...
+
+      # setup-go only saves on success. Preserve valid compiled objects after
+      # a test failure too, using the key of the pinned setup-go v7 action.
+      - name: Preserve Windows Go cache after failure
+        if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.go-cache-paths.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ${{ steps.go-cache-paths.outputs.modules }}
+            ${{ steps.go-cache-paths.outputs.build }}
+          key: setup-go-Windows-x64-go-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('**/go.sum') }}
 
       - name: Upload test results
         if: always()
@@ -377,11 +397,20 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Go
+        id: setup-go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
           cache: true
           cache-dependency-path: "**/go.sum"
+
+      - name: Record Windows Go cache paths
+        if: runner.os == 'Windows'
+        id: go-cache-paths
+        shell: bash
+        run: |
+          printf 'modules=%s\n' "$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+          printf 'build=%s\n' "$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -402,6 +431,17 @@ jobs:
           TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: task test:all
+
+      # setup-go only saves on success. Preserve valid compiled objects after
+      # a test failure too, using the key of the pinned setup-go v7 action.
+      - name: Preserve Windows Go cache after failure
+        if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.go-cache-paths.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ${{ steps.go-cache-paths.outputs.modules }}
+            ${{ steps.go-cache-paths.outputs.build }}
+          key: setup-go-Windows-x64-go-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('**/go.sum') }}
 
       - name: Upload comprehensive test results
         if: always()
