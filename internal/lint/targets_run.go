@@ -34,7 +34,11 @@ func (r *runner) addTargetItems() {
 			continue
 		}
 		have[gitutil.Resolve(f.Abs)] = true
+		start := len(r.items)
 		r.addItems(top, f.Kind, "", []config.ContentFile{*f.Content})
+		for j := start; j < len(r.items); j++ {
+			r.items[j].targetOnly = true
+		}
 	}
 }
 

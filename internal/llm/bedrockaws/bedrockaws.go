@@ -84,7 +84,7 @@ type Credentials struct {
 
 // Environment coordinates credential exports and calls using them. Its zero value is ready to use.
 type Environment struct {
-	sync.RWMutex
+	mu    sync.RWMutex
 	owner *Credentials
 	last  aws.Credentials
 }
@@ -94,8 +94,8 @@ func sameCredentials(a, b aws.Credentials) bool {
 }
 
 func (c *Credentials) ownsEnvironment(getenv func(string) string) bool {
-	c.environment.RLock()
-	defer c.environment.RUnlock()
+	c.environment.mu.RLock()
+	defer c.environment.mu.RUnlock()
 	return c.environment.owner == c && sameCredentials(c.environment.last, aws.Credentials{
 		AccessKeyID: getenv("AWS_ACCESS_KEY_ID"), SecretAccessKey: getenv("AWS_SECRET_ACCESS_KEY"), SessionToken: getenv("AWS_SESSION_TOKEN"),
 	})
@@ -156,14 +156,14 @@ func (c *Credentials) Acquire(ctx context.Context) (release func(), err error) {
 		return nil, authError("resolve AWS credentials for Bedrock (sign in with `aws sso login`, set AWS_PROFILE, or export AWS_BEARER_TOKEN_BEDROCK): %v", err)
 	}
 	for {
-		c.environment.RLock()
+		c.environment.mu.RLock()
 		if c.environment.owner == c && sameCredentials(c.environment.last, creds) {
-			return c.environment.RUnlock, nil
+			return c.environment.mu.RUnlock, nil
 		}
-		c.environment.RUnlock()
-		c.environment.Lock()
+		c.environment.mu.RUnlock()
+		c.environment.mu.Lock()
 		if c.environment.owner == c && sameCredentials(c.environment.last, creds) {
-			c.environment.Unlock()
+			c.environment.mu.Unlock()
 			continue
 		}
 		// A failed export can leave a partially changed environment; never reuse its old cache.
@@ -172,7 +172,7 @@ func (c *Credentials) Acquire(ctx context.Context) (release func(), err error) {
 		if err == nil {
 			c.environment.owner, c.environment.last = c, creds
 		}
-		c.environment.Unlock()
+		c.environment.mu.Unlock()
 		if err != nil {
 			return nil, err
 		}

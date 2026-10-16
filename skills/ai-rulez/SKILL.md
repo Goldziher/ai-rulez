@@ -34,10 +34,10 @@ Use this skill when:
 
 ```bash
 # npm (no install)
-pnpm dlx ai-rulez@latest
+pnpm dlx ai-rulez@5.3.0
 
 # Python (no install)
-uvx ai-rulez
+uvx ai-rulez==5.3.0
 
 # Source builds (Go + Task; setup fetches and verifies the pinned native library)
 # Checkout the source revision pinned in this repository's CI, then:
@@ -79,7 +79,7 @@ ai-rulez doctor
 ai-rulez generate --plugin              # bundle: plugin bundles from the [plugin] block
 ai-rulez export okf                     # bundle: an OKF bundle of the knowledge
 ai-rulez validate --strict              # validate: warnings fail
-ai-rulez okf validate docs/okf          # validate: any OKF bundle
+ai-rulez okf validate <bundle-dir>      # validate: an existing OKF bundle directory
 ai-rulez lock                           # govern: pin includes, skills and content
 ai-rulez sign --lock                    # govern: Sigstore attestation of the lock
 ai-rulez sbom -o ai-bom.cdx.json        # govern: CycloneDX SBOM
@@ -146,7 +146,7 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 [[mcp_servers]]
 name = "ai-rulez"
 command = "pnpm"
-args = ["dlx", "ai-rulez@latest", "mcp"]
+args = ["dlx", "ai-rulez@5.3.0", "mcp"]
 
 [[scopes]]
 path = "packages/web"
@@ -193,8 +193,8 @@ is such an export; its frontmatter is not the authoring format for `.ai-rulez/`.
 
 Agent files under `.ai-rulez/agents/` put native subagent fields inside
 `x-ai-rulez.metadata`. Supported fields render into the configured harness;
-fields a harness does not support are omitted. For example,
-`.ai-rulez/agents/security-reviewer.md`:
+fields a harness does not support are omitted. For example, create
+`.ai-rulez/agents/<agent-id>.md` with `security-reviewer` as the ID:
 
 ```yaml
 ---
@@ -216,7 +216,7 @@ x-ai-rulez:
 ---
 ```
 
-Claude Code receives these fields in `.claude/agents/security-reviewer.md` using
+Claude Code receives these fields in `.claude/agents/<agent-id>.md` using
 its native flat frontmatter. Keep the authored OKF file and generated native
 file distinct.
 
@@ -281,7 +281,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-52 presets are available (`ai-rulez init` writes the list into a comment in the new `config.toml`): `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`, `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`, `dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`, plus the opt-in `okf` preset (an Open Knowledge Format bundle in `docs/okf/`, see `ai-rulez export okf`). The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
+52 presets are available (`ai-rulez init` writes the list into a comment in the new `config.toml`): `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`, `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`, `dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`, plus the opt-in `okf` preset (creates an Open Knowledge Format bundle at `<project-root>/docs/okf/` by default; see `ai-rulez export okf`). The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
 
 `windsurf` is now `devin` and `continue-dev` was removed; `ai-rulez doctor` reports both. [harnesses.md](https://github.com/Goldziher/ai-rulez/blob/main/docs/harnesses.md) has the per-preset feature matrix (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
 
@@ -344,14 +344,7 @@ OpenCode skill IDs and shared include-cache locking. Use the CI-pinned source bu
 for those features until a released version includes the fixes; keep that distinction
 when reporting installation or validation results.
 
-The CI pin is `bdabc8a6e9211de60ca1e4ad76225ac92fcf218f`. This reviewed build includes
-the ID-only OKF skill projection fix, strict Hermes package metadata, and cache
-isolation by configured source path and revision. These fixes are unreleased;
-a future public patch release can replace the reviewed source build.
-
-## Detailed references
-
-- [Configuration and authored frontmatter](references/configuration.md)
-- [CLI commands](references/cli-reference.md)
-- [Presets and outputs](references/presets-and-outputs.md)
-- [Includes and installed skills](references/includes-and-skills.md)
+The exact reviewed source revision is recorded in
+`.github/workflows/ai-rulez-validation.yml`. It includes the ID-only OKF skill
+projection fix, strict Hermes package metadata, and cache isolation by configured
+source path and revision. Use that workflow as the source of truth for the pin.

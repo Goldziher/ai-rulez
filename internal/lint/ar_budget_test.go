@@ -3,7 +3,45 @@ package lint
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestLoadBudgetIgnoresOnlyExcludedUnmanagedContent(t *testing.T) {
+	for _, kind := range []string{"rule", "skill"} {
+		for _, tc := range []struct {
+			name                string
+			configured, ignored bool
+			want                bool
+		}{
+			{"unmanaged included", false, false, true},
+			{"unmanaged ignored", false, true, false},
+			{"configured ignored", true, true, true},
+		} {
+			t.Run(kind+"/"+tc.name, func(t *testing.T) {
+				root := t.TempDir()
+				prefix := ".claude/"
+				if tc.configured {
+					prefix = ".ai-rulez/"
+				}
+				path := prefix + "rules/large.md"
+				body := "# Large\n" + strings.Repeat("content ", 30)
+				if kind == "skill" {
+					path = prefix + "skills/large/SKILL.md"
+					body = "---\nname: large\ndescription: Use when " + strings.Repeat("reviewing code ", 30) + "\n---\nBody.\n"
+				}
+				cfg := "version = \"5.0\"\nname = \"budget\"\npresets = [\"codex\"]\n[lint]\n"
+				if tc.ignored {
+					cfg += "ignore_paths = [\"" + path + "\"]\n"
+				}
+				cfg += "[lint.load_budgets]\ncodex-agents-chain = 100\ncodex-skill-listing = 100\n"
+				writeFiles(t, root, map[string]string{".ai-rulez/config.toml": cfg, path: body})
+				findings, _ := lintWithTargets(t, root, TargetSpec{Detect: true})
+				assert.Equal(t, tc.want, has(findings, CodeLoadBudget, "config.toml", 0), dump(findings))
+			})
+		}
+	}
+}
 
 func TestLoadBudgetsAR964(t *testing.T) {
 	long := strings.Repeat("word ", 400) // 2000 chars

@@ -209,8 +209,8 @@ use one provider and one credential. The egress host and the models are printed 
   Go whichever way the provider enforced the schema.
 - **Temperature** is omitted for Claude 5.x models, which reject it. The report records it (`provenance.temperature` is
   `null`). Thinking tokens spend the same completion budget, so each call gets 6,144 tokens.
-- A provider that stops a reply for its content policy is reported as a refusal, not retried; a reply that is whole and
-  valid is used whatever stop reason it carries.
+- A reviewer whose provider stops a reply for its content policy without a usable answer is retried once, then reported
+  as a refusal if it still cannot answer. A reply that is whole and valid is used whatever stop reason it carries.
 
 ## Cost, caps and the cache
 

@@ -262,7 +262,7 @@ func withSharedSkillGit(ctx context.Context, tree *Tree) context.Context {
 }
 
 // generatedTargets returns the markdown files among rels that carry the
-// generated header, which loadTarget leaves out as sources.
+// generated header or have the OKF listing shape, which loadTarget leaves out as sources.
 func generatedTargets(tree *Tree, rels []string) []OutputFile {
 	var out []OutputFile
 	for _, rel := range rels {
@@ -273,7 +273,7 @@ func generatedTargets(tree *Tree, rels []string) []OutputFile {
 		if !inside {
 			continue
 		}
-		if data, err := readSmallFile(abs); err == nil && genmark.IsGeneratedOutput(rel, data) {
+		if data, err := readSmallFile(abs); err == nil && (genmark.IsGeneratedOutput(rel, data) || isOKFListingTarget(rel, data)) {
 			out = append(out, OutputFile{Abs: abs, Data: data})
 		}
 	}
@@ -687,7 +687,7 @@ func loadMarkdownTarget(ctx context.Context, tree *Tree, abs, rel string, size i
 	if err != nil {
 		return problem("cannot be read", true)
 	}
-	if genmark.IsGeneratedOutput(rel, data) {
+	if genmark.IsGeneratedOutput(rel, data) || isOKFListingTarget(rel, data) {
 		out := unsupported("generated file: lint it with --outputs")
 		out.generated = true
 		return out
@@ -705,6 +705,14 @@ func loadMarkdownTarget(ctx context.Context, tree *Tree, abs, rel string, size i
 	cf := config.ContentFileFromText(abs, string(data))
 	f.Content = &cf
 	return loadOutcome{file: f, loaded: true}
+}
+
+func isOKFListingTarget(rel string, data []byte) bool {
+	switch strings.ToLower(path.Base(rel)) {
+	case "index.md", "log.md":
+		return config.IsOKFListing(data)
+	}
+	return false
 }
 
 func loadJSONTarget(tree *Tree, abs, rel string, size int64, named bool) loadOutcome {

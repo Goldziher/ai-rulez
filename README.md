@@ -346,8 +346,9 @@ An organization [policy](docs/policy.md) sets tighten-only floors a repository c
 - **Evals and improve.** `ai-rulez eval` scores skills; `improve` (experimental) optimizes them behind a held-out eval
   gate. See [evals](docs/evals.md) and [improve](docs/improve.md).
 - **Judge.** `ai-rulez judge` reviews skills, agents, commands, rules, `CLAUDE.md`, `AGENTS.md`, MCP and settings files
-  with models, from the command line alone: security, quality and governance reviewers whose every finding must quote the
-  file (a verifier checks it), an independent adjudicator, and scores computed in code. Governance reads the rules and
+  with models, from the command line alone: security, quality and governance reviewers, a verifier that checks quoted
+  evidence, an independent adjudicator, and scores computed in code. Failed rubric criteria without a verifiable quote
+  are reported separately as unit-level findings. Governance reads the rules and
   `CLAUDE.md` files that apply to each unit, nested `.claude/` directories at any depth. `ai-rulez judge --estimate`, then
   `--allow-llm` to send; `--changed=origin/main` for a pull request, `--format sarif` for code scanning. See [judge](docs/judge.md).
 - **Cost and inventory.** `tokens`, `cost`, `catalog` and `search` report what the configuration contains and costs.

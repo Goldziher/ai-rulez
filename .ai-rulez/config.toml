@@ -10,10 +10,11 @@ builtins = ["go", "security", "git-workflow", "code-quality", "testing", "defaul
 default_layers = ["plugins"]
 
 [lint]
-# These are deliberately invalid inputs exercised by the test and benchmark suites.
+# Fixtures are deliberately invalid; raw builtins are validated through their configured copies.
 ignore_paths = [
   "bench/judge/corpus/**",
   "internal/**/testdata/**",
+  "internal/builtins/**",
   "tests/review/golden/**/fixtures/**",
   "tests/fixtures/**",
 ]
