@@ -29,7 +29,7 @@ ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-r
 - **Includes** – Compose from local packages or Git repositories
 - **CRUD operations** – Manage configuration programmatically via CLI or MCP
 - **Lint without a config** – `ai-rulez validate --strict` checks `AGENTS.md`, `SKILL.md`, `.claude/`, `.agents/`, plugin manifests, hooks and MCP files in any repository; `--path`, `--glob` and `--outputs` widen the scope
-- **Judge** – `ai-rulez judge` grades instruction files against a rubric with a model, with no config file and nothing sent without `--allow-llm`
+- **Judge** – `ai-rulez judge` reviews agent configuration for security, quality and governance with verified evidence and optional rubric skills; no project config is required. `--estimate` sends nothing; a real run needs `--allow-llm` or standing consent in your user config.
 - **GitHub Action** – `uses: Goldziher/ai-rulez@<ref>` installs a sha256-verified binary in CI
 
 ---

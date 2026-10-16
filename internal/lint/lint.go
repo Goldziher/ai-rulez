@@ -141,6 +141,9 @@ type item struct {
 	owned   bool
 	isDoc   bool // a markdown resource of a skill or command: body checks only
 	itemDir string
+	// targetOnly distinguishes unmanaged files from configured content, which
+	// contributes to generated load budgets even when its lint findings are ignored.
+	targetOnly bool
 }
 
 type runner struct {

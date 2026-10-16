@@ -51,7 +51,7 @@ Removed and renamed: `windsurf` is `devin` (`.windsurf/` is `.devin/`, `windsurf
   user config only, so they need `generate --user`.
 - **Permissions**: top-level `[permissions]` render for 24 harnesses. `amp`, `pi`, `cline`, `kiro`, `factory`,
   `crush` and `rovodev` have no committable permission file and are named in a warning.
-- **Checks**: `.ai-rulez/checks/` render for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and
+- **Checks**: authored files at `.ai-rulez/checks/<name>.md` render for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and
   `gitlab-duo`.
 - **User scope**: `generate --user` supports 47 presets; `aiassistant`, `baz`, `codebuff`, `replit` and `xum` have no
   user-level location.

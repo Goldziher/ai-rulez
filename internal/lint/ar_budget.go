@@ -105,7 +105,7 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 		total, name := 0, 0
 		for i := range r.items {
 			it := &r.items[i]
-			if !it.owned || it.isDoc {
+			if !it.owned || it.isDoc || (it.targetOnly && r.pathIgnored(it.abs)) {
 				continue
 			}
 			switch b.Scope {

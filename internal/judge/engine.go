@@ -560,12 +560,7 @@ func (e *Engine) chat(ctx context.Context, req llm.ChatRequest) (llm.ChatRespons
 	if e.jsonMode.Load() {
 		req = jsonModeRequest(req)
 	}
-	// Rubrics, prompt overrides, traps and retry feedback bypass unit preparation.
-	// Screen every message at the final boundary before any content leaves the process.
-	req.Messages = append([]llm.Message(nil), req.Messages...)
-	for i := range req.Messages {
-		req.Messages[i].Content = llm.RedactForReview(maskSecretValues(req.Messages[i].Content, e.Opts.Attach.Secrets))
-	}
+	req = e.screenRequest(req)
 	resp, err := e.Client.Chat(ctx, req)
 	if err != nil && rejectsStructuredOutput(err) && req.ResponseFormat != nil {
 		// A gateway or model without json_schema support: ask for the schema in the prompt instead.
@@ -603,6 +598,16 @@ func (e *Engine) chat(ctx context.Context, req llm.ChatRequest) (llm.ChatRespons
 		return resp, callRefused, errors.New("the provider refused the request (content filter)")
 	}
 	return resp, callOK, nil
+}
+
+// screenRequest covers inputs that bypass unit preparation: rubrics, prompt overrides,
+// traps and retry feedback. It leaves the caller's message slice untouched.
+func (e *Engine) screenRequest(req llm.ChatRequest) llm.ChatRequest {
+	req.Messages = append([]llm.Message(nil), req.Messages...)
+	for i := range req.Messages {
+		req.Messages[i].Content = llm.RedactForReview(maskSecretValues(req.Messages[i].Content, e.Opts.Attach.Secrets))
+	}
+	return req
 }
 
 // stoppedByFilter reports whether the provider stopped the reply for its content policy. On Bedrock

@@ -94,7 +94,7 @@ Verify signatures and provenance: `--attestation`, `--approvals`, `--self`, `--p
 
 Open Knowledge Format (OKF v0.2) support, see `docs/okf.md`.
 
-- `ai-rulez export okf [--output-dir <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — write the content as a deterministic OKF bundle (default `okf.dir`, `docs/okf`); `--check` writes nothing and exits 2 on drift
+- `ai-rulez export okf [--output-dir <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — create a deterministic OKF bundle in `okf.dir` (default `<project-root>/docs/okf/`); `--check` writes nothing and exits 2 on drift
 - `ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain <d>] [--dry-run] [--force]` — convert a bundle into `.ai-rulez/` sources; never overwrites without `--force`, scans imported text (AR001-AR011) first
 - `ai-rulez okf validate <dir|git-url> [--format json] [--fail-on error|warning|info|none]` — lint any bundle (AR9B0-AR9B9)
 
@@ -131,7 +131,7 @@ Hidden PreToolUse hook added by `[guard] generated = true`: exits 2 when a tool 
 - `ai-rulez list skills [--domain <d>] [--format json]`
 - `ai-rulez list --placement [--profile <p>]` — where each skill and command ends up (core or plugin-only)
 
-`add`, `remove` and `list` also take `--local` for the machine-local tree `.ai-rulez/local/`, and `agent`, `command` and `check` work like `rule`.
+`add`, `remove` and `list` also take `--local` for the machine-local tree at `<config-dir>/local/`, which is created when local content is added. Agents and commands work like rules; checks use shared content only.
 
 ### Agents, Commands and Checks
 
