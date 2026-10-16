@@ -150,7 +150,8 @@ func command(ctx context.Context, dir, executable string, args ...string) *exec.
 	return cmd
 }
 
-func run(ctx context.Context, o options, out io.Writer) (runErr error) {
+func run(ctx context.Context, o options, out io.Writer) error {
+	out = &lockedWriter{w: out}
 	fmt.Fprintln(out, "testshard: resolving requested packages and target") //nolint:errcheck // progress
 	listCtx, stopList := context.WithTimeout(ctx, o.buildTimeout)
 	targets, err := resolvePackages(listCtx, []string{o.target})
@@ -167,28 +168,52 @@ func run(ctx context.Context, o options, out io.Writer) (runErr error) {
 	if err != nil {
 		return err
 	}
-	var restErr error
-	defer func() { runErr = errors.Join(restErr, runErr) }()
-	if len(rest) > 0 {
-		fmt.Fprintf(out, "testshard: ordinary go test on %d remaining packages (cache enabled)\n", len(rest)) //nolint:errcheck // progress
-		restCtx, stop := context.WithTimeout(ctx, o.buildTimeout+2*o.timeout+time.Minute)
-		cmd := command(restCtx, "", "go", append([]string{"test", "-timeout", o.timeout.String()}, rest...)...)
-		cmd.Stdout, cmd.Stderr = out, out
-		err := cmd.Run()
-		stop()
-		if err != nil {
-			restErr = fmt.Errorf("remaining packages: %w", err)
+	// Warm shared build objects before scheduling both suites, avoiding duplicate cold builds.
+	binary, groups, cleanup, prepErr := prepareTarget(ctx, o, pkg, out)
+	defer cleanup()
+	return runConcurrent(ctx, func(ctx context.Context) error {
+		if len(rest) == 0 {
+			return nil
 		}
+		return runRest(ctx, o, rest, out)
+	}, func(ctx context.Context) error {
+		if prepErr != nil {
+			return prepErr
+		}
+		shardOpts := o
+		if shardOpts.logDir == "" {
+			shardOpts.logDir = filepath.Join(filepath.Dir(binary), "logs")
+		}
+		if err := os.MkdirAll(shardOpts.logDir, 0o755); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "testshard: %d tests, %d processes; logs: %s\n", countNames(groups), len(groups), shardOpts.logDir) //nolint:errcheck // progress
+		return runGroups(ctx, shardOpts, pkg.Dir, binary, groups, out)
+	})
+}
+
+func runRest(ctx context.Context, o options, packages []string, out io.Writer) error {
+	fmt.Fprintf(out, "testshard: ordinary go test on %d remaining packages (cache enabled)\n", len(packages)) //nolint:errcheck // progress
+	ctx, stop := context.WithTimeout(ctx, o.buildTimeout+2*o.timeout+time.Minute)
+	defer stop()
+	cmd := command(ctx, "", "go", append([]string{"test", "-timeout", o.timeout.String()}, packages...)...)
+	cmd.Stdout, cmd.Stderr = out, out
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("remaining packages: %w", err)
 	}
+	return nil
+}
+
+func prepareTarget(ctx context.Context, o options, pkg goPackage, out io.Writer) (binary string, groups [][]string, cleanup func(), prepErr error) {
+	cleanup = func() {}
 	tmp, err := os.MkdirTemp("", "go-testshard-")
 	if err != nil {
-		return err
+		return "", nil, cleanup, err
 	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // own temporary compiled binary
-	if o.logDir == "" {
-		o.logDir = filepath.Join(tmp, "logs")
+	cleanup = func() {
+		_ = os.RemoveAll(tmp) //nolint:errcheck // own temporary compiled binary
 	}
-	binary := filepath.Join(tmp, "package.test")
+	binary = filepath.Join(tmp, "package.test")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
 	}
@@ -198,28 +223,32 @@ func run(ctx context.Context, o options, out io.Writer) (runErr error) {
 	build := command(buildCtx, pkg.Dir, "go", "test", "-c", "-o", binary, pkg.ImportPath)
 	build.Stdout, build.Stderr = out, out
 	if err := build.Run(); err != nil {
-		return fmt.Errorf("compile test binary: %w", err)
+		return "", nil, cleanup, fmt.Errorf("compile test binary: %w", err)
 	}
 	fmt.Fprintln(out, "testshard: enumerating compiled test names") //nolint:errcheck // progress
 	listCtx, stop := context.WithTimeout(ctx, time.Minute)
 	defer stop()
 	data, err := command(listCtx, pkg.Dir, binary, "-test.list=.").Output()
 	if err != nil {
-		return fmt.Errorf("enumerate tests: %w", err)
+		return "", nil, cleanup, fmt.Errorf("enumerate tests: %w", err)
 	}
 	names, err := listedNames(data)
 	if err != nil {
-		return err
+		return "", nil, cleanup, err
 	}
-	groups, err := partition(names, o.shards)
+	groups, err = partition(names, o.shards)
 	if err != nil {
-		return err
+		return "", nil, cleanup, err
 	}
-	if err := os.MkdirAll(o.logDir, 0o755); err != nil {
-		return err
+	return binary, groups, cleanup, nil
+}
+
+func countNames(groups [][]string) int {
+	n := 0
+	for _, group := range groups {
+		n += len(group)
 	}
-	fmt.Fprintf(out, "testshard: %d tests, %d processes; logs: %s\n", len(names), len(groups), o.logDir) //nolint:errcheck // progress
-	return runGroups(ctx, o, pkg.Dir, binary, groups, out)
+	return n
 }
 
 type goPackage struct{ Dir, ImportPath string }
@@ -274,6 +303,13 @@ func selectPackages(targets, packages []goPackage) (goPackage, []string, error) 
 type lockedWriter struct {
 	mu sync.Mutex
 	w  io.Writer
+}
+
+func runConcurrent(ctx context.Context, rest, shards func(context.Context) error) error {
+	restDone := make(chan error, 1)
+	go func() { restDone <- rest(ctx) }()
+	shardErr := shards(ctx)
+	return errors.Join(<-restDone, shardErr)
 }
 
 func (w *lockedWriter) Write(p []byte) (int, error) {
