@@ -339,6 +339,8 @@ cached_binary() {
 
   xberg_assert_status 0
   xberg_assert_output "$(cached_binary darwin-arm64)"
+  # Bats run --separate-stderr supplies this variable; older ShellCheck releases do not recognize it.
+  # shellcheck disable=SC2154
   [[ "$stderr" == *"Downloading ai-rulez v9.8.7 for darwin/arm64..."* ]]
   [ -x "$output" ]
 }
