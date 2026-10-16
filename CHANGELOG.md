@@ -6,6 +6,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.4.1] - 2026-10-16
+
+### Added
+
+- The official GitHub Action accepts 16 optional `llm-*` inputs matching the CLI's environment overrides. Settings persist to later job steps; omitted inputs preserve inherited configuration. Credentials remain in the caller's environment, and setup makes no model requests.
+- A GitHub Actions guide documents all inputs, environment precedence, provider credentials, Bedrock, outputs, and the distinction between the action ref and installed binary version. CI smoke-tests the composite action on Linux, macOS and Windows.
+
+### Fixed
+
+- Successful stable v5 publications create or advance the floating `v5` action tag after GitHub, npm, PyPI and Homebrew publication. Serialized updates reject prereleases, incomplete publications, divergent histories and rollback from older release reruns; full release tags remain unchanged.
+- Reject malformed action binary versions before writing runner outputs, and remove the unsupported `AI_RULEZ_LLM_BACKEND` variable from the LLM documentation.
+- The setup action honors the requested release even when another CLI is on `PATH`. Download progress stays off the returned binary path, and Windows installs retain the fallback native DLL beside the executable.
+
 ## [5.4.0] - 2026-10-16
 
 ### Added

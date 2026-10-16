@@ -51,6 +51,7 @@ nav = [
     { "Publish" = "publish.md" },
   ] },
   { "Validate" = [
+    { "GitHub Actions" = "github-actions.md" },
     { "Strict Validation" = "strict-validation.md" },
     { "Verifiers" = "verifiers.md" },
     { "Poly Hooks" = "poly-hooks.md" },

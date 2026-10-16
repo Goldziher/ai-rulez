@@ -46,8 +46,25 @@ The workflow does the rest:
 | `provenance`      | SLSA provenance over every binary and archive; uploads one `<archive>.sigstore.json` per archive.         |
 | `finalize_release`| Promotes the draft only when archives, `checksums.txt` and provenance are all attached.                   |
 | `publish_npm` / `publish_pypi` / `publish_homebrew` | Publish after the release is public. Homebrew is skipped for `-rc.N`.            |
+| `update_action_tag` | After all distribution jobs succeed or intentionally skip, move the floating `v5` action tag to the published stable v5 release commit. |
 
 A failed platform build therefore leaves a hidden draft, never a live release with missing binaries.
+
+### Floating action tag
+
+The root `action.yml` is published as `uses: Goldziher/ai-rulez@v5`. The `v5` tag selects the
+action implementation; its `version` input independently selects the CLI binary (default `latest`).
+See the [action guide](../github-actions.md) for input and environment examples.
+
+Only stable `v5.X.Y` releases advance `v5`. The final `update_action_tag` job has `contents: write`
+and serializes tag updates. It verifies the release is public, resolves an annotated release tag
+to its commit, and checks the workflow's source commit. A newer published stable v5 release or
+an existing `v5` commit ahead of the candidate prevents rollback. Release candidates, failed
+publication jobs and cancelled runs never move it. The full release tag is never rewritten.
+Moving `v5` does not trigger another publish: the tag trigger only matches full version tags.
+
+Rerunning a fully published release can repair a missing floating tag without rebuilding or
+republishing packages. Dispatch from that release's tag so the source and provenance checks hold.
 
 To run the workflow by hand, use **workflow_dispatch** with the tag, and choose the tag as the ref in "Use workflow
 from". The `meta` job enforces this: when the dispatch did not come from `refs/tags/<tag>` it fails with a clear error
@@ -60,11 +77,11 @@ push), and the same ref identity is carried.
 
 | Archive                                   | Runner             | Built in                | Status |
 | ----------------------------------------- | ------------------ | ----------------------- | ------ |
-| `ai-rulez_<v>_linux_amd64.tar.gz`         | `ubuntu-latest`    | `debian:bookworm`       | verified in the v5.3.0 publish run |
-| `ai-rulez_<v>_linux_arm64.tar.gz`         | `ubuntu-24.04-arm` | `debian:bookworm`       | verified (static build and run in a bookworm container) |
-| `ai-rulez_<v>_darwin_arm64.tar.gz`        | `macos-14`         | host                    | verified (built and run locally) |
-| `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host                    | verified in the v5.3.0 publish run |
-| `ai-rulez_<v>_windows_amd64.zip`          | `windows-latest`   | host (MinGW gcc)        | verified in the v5.3.0 publish run; see below |
+| `ai-rulez_<v>_linux_amd64.tar.gz`         | `ubuntu-latest`    | `debian:bookworm`       | verified in the v5.4.0 publish run |
+| `ai-rulez_<v>_linux_arm64.tar.gz`         | `ubuntu-24.04-arm` | `debian:bookworm`       | verified in the v5.4.0 publish run |
+| `ai-rulez_<v>_darwin_arm64.tar.gz`        | `macos-14`         | host                    | verified in the v5.4.0 publish run |
+| `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host                    | verified in the v5.4.0 publish run |
+| `ai-rulez_<v>_windows_amd64.zip`          | `windows-latest`   | host (MinGW gcc)        | verified in the v5.4.0 publish run; see below |
 
 `windows/arm64` is not supported. Archive names, layout (`ai-rulez`/`ai-rulez.exe`, `README.md`, `LICENSE` at the
 archive root) and `checksums.txt` are unchanged from the GoReleaser era, so the npm and PyPI wrappers and the Homebrew
@@ -114,10 +131,10 @@ gcc. `scripts/package-release.sh` runs with
 archive beside the binary. The `build` job logs a warning when the fallback was used, and a failure of both paths fails
 the job.
 
-The [v5.3.0 Windows build](https://github.com/Goldziher/ai-rulez/actions/runs/38556493072/job/115827153062),
-using liter-llm 2.2.3, passed its archive packaging (including version and `llm doctor` smoke tests), binary
+The [v5.4.0 publish run](https://github.com/Goldziher/ai-rulez/actions/runs/38901367255),
+using liter-llm 2.2.4, passed all five native builds, including Windows archive packaging (version and `llm doctor` smoke tests), binary
 dependency check and upload. The publish run's provenance and release promotion jobs also succeeded, and the
-[public release](https://github.com/Goldziher/ai-rulez/releases/tag/v5.3.0) includes the Windows archive,
+[public release](https://github.com/Goldziher/ai-rulez/releases/tag/v5.4.0) includes the Windows archive,
 its provenance bundle and `checksums.txt`. This verifies the release packaging path for that release; it does
 not establish that the MSVC static library links successfully with MinGW. Each new liter-llm version must pass
 the Windows build and smoke tests again before its release is considered verified.
@@ -142,6 +159,8 @@ Every stage can be rerun for the same tag, from the Actions UI ("Re-run failed j
 - An existing draft is reused; uploads use `--clobber`; `finalize_release` is skipped for an already-public release.
 - `publish_npm` and `publish_pypi` skip versions that already exist (PyPI also uses `skip-existing`).
 - `publish_homebrew` renders the formula again and does nothing when it is unchanged.
+- `update_action_tag` creates or advances `v5` only when its stable release is eligible; an existing
+  correct ref is a no-op, and a newer release prevents an older rerun from moving it backward.
 
 To rebuild a release from scratch, delete its assets (or the draft) and rerun.
 

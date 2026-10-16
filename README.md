@@ -408,7 +408,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v5.4.0
+    rev: v5.4.1
     hooks:
       - id: ai-rulez-recursive   # generate: write outputs for every nested .ai-rulez/ root
       - id: ai-rulez-validate    # validate --recursive: content, security and link checks
@@ -439,7 +439,7 @@ repository needs:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.4.0"
+revision = "v5.4.1"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 
@@ -492,9 +492,15 @@ the release's `checksums.txt`, caches it (keyed by OS, arch and the resolved ver
 toolchain, Node or Python needed in the job. It reuses the same `scripts/pre-commit/run-ai-rulez.sh`
 download-and-verify logic the pre-commit hooks above use, so the two stay in sync.
 
+Use `Goldziher/ai-rulez@v5` for compatible action updates: publishing a stable v5 release advances
+this floating tag after all distribution jobs succeed. Pin a full release tag or commit SHA to fix
+the action code. The action ref and installed CLI version are independent: set `version` as well
+to pin the binary; its default `latest` can eventually select a newer major release.
+
 | | |
 | --- | --- |
 | **Input** `version` | `X.Y.Z`, `vX.Y.Z`, or `latest` (default). Optional — omit it to always use the newest release. |
+| **Inputs** `llm-*` | Optional provider, model, gateway, credential variable name, network opt-in, budgets and other LLM settings exported to later steps. [Full reference](docs/github-actions.md#llm-configuration-inputs). |
 | **Output** `version` | The resolved version, without the leading `v`. |
 | **Output** `path` | Absolute path to the installed `ai-rulez` binary. |
 
@@ -512,15 +518,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: Goldziher/ai-rulez@v5.4.0   # pin a release you reviewed
-        # with:
-        #   version: 5.4.0   # optional; omit (or "latest") to always use the newest release
+      - uses: Goldziher/ai-rulez@v5
+        with:
+          version: 5.4.1   # pin the CLI independently of the floating action ref
       - run: ai-rulez generate --check   # the committed output matches the sources
       - run: ai-rulez validate --strict  # content and security checks, warnings fail
       - run: ai-rulez lock --check        # pins were updated when the sources were
 ```
 
 </details>
+
+For model-backed reviews, configure `llm-model`, `llm-allow-network: 'true'` and spend limits,
+pass provider credentials through `env:` on the command step or job, and run `ai-rulez judge
+--allow-llm`. Installation itself makes no model requests. See the [action guide](docs/github-actions.md)
+for all inputs, environment precedence, Bedrock, outputs and complete examples.
 
 See [CI usage](docs/lockfile.md#ci-usage) for the lock-check-vs-generate-check distinction and a scheduled
 "outdated sources" report job.

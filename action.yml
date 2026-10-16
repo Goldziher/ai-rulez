@@ -1,5 +1,5 @@
 name: Set up ai-rulez
-description: Install a sha256-verified, cached ai-rulez binary and add it to PATH. No Go, Node or Python needed.
+description: Install a sha256-verified, cached ai-rulez binary and optionally configure LLM access for later steps. No Go, Node or Python needed.
 branding:
   icon: check-square
   color: blue
@@ -9,6 +9,55 @@ inputs:
     description: "ai-rulez version to install: X.Y.Z, vX.Y.Z, or latest"
     required: false
     default: latest
+
+  llm-provider:
+    description: "Provider prefix used for model routing. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-model:
+    description: "Chat model, optionally prefixed with provider/. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-base-url:
+    description: "API base URL for a gateway or local model server. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-api-key-env:
+    description: "Name of the credential environment variable, never the key itself. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-embedding-model:
+    description: "Model used for embeddings. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-max-cost-usd:
+    description: "Maximum estimated spend in USD; 0 is unlimited. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-max-tokens:
+    description: "Maximum total prompt and completion tokens; 0 is unlimited. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-max-calls:
+    description: "Maximum provider calls; 0 is unlimited. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-timeout-seconds:
+    description: "Per-call timeout including retries, at most 3600 seconds. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-cache:
+    description: "Enable the response cache: true or false. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-allow-network:
+    description: "Allow provider calls: true or false; unset does not enable network access. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-allow-plain-http:
+    description: "Allow credentials over HTTP only to explicitly allowed hosts: true or false. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-plain-http-hosts:
+    description: "Comma-separated HTTP gateway host or host:port allowlist. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-price-input-per-mtok:
+    description: "Input price override in USD per million tokens. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-price-output-per-mtok:
+    description: "Output price override in USD per million tokens. Nonempty inputs override and persist for later steps."
+    required: false
+  llm-temperature:
+    description: "Set to omit to leave temperature out of requests. Nonempty inputs override and persist for later steps."
+    required: false
 
 outputs:
   version:
@@ -43,6 +92,10 @@ runs:
         else
           case "$tag" in v*) ;; *) tag="v$tag" ;; esac
         fi
+        if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+          echo "::error::version must be X.Y.Z, vX.Y.Z, a release candidate, or latest" >&2
+          exit 1
+        fi
         echo "tag=$tag" >>"$GITHUB_OUTPUT"
 
     - name: Cache the ai-rulez download
@@ -57,6 +110,8 @@ runs:
       env:
         AI_RULEZ_VERSION: ${{ steps.resolve.outputs.tag }}
         AI_RULEZ_RESOLVE_ONLY: "1"
+        AI_RULEZ_USE_PATH: "0"
+        AI_RULEZ_BINARY: ""
         AI_RULEZ_CACHE_DIR: ${{ runner.temp }}/ai-rulez-setup
         ACTION_PATH: ${{ github.action_path }}
       run: |
@@ -78,3 +133,29 @@ runs:
         echo "version=${AI_RULEZ_VERSION#v}" >>"$GITHUB_OUTPUT"
         echo "path=$binary_path" >>"$GITHUB_OUTPUT"
         echo "ai-rulez ${AI_RULEZ_VERSION} installed at $binary_path" >&2
+
+    - name: Configure LLM environment for subsequent steps
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_LLM_PROVIDER: ${{ inputs.llm-provider }}
+        INPUT_LLM_MODEL: ${{ inputs.llm-model }}
+        INPUT_LLM_BASE_URL: ${{ inputs.llm-base-url }}
+        INPUT_LLM_API_KEY_ENV: ${{ inputs.llm-api-key-env }}
+        INPUT_LLM_EMBEDDING_MODEL: ${{ inputs.llm-embedding-model }}
+        INPUT_LLM_MAX_COST_USD: ${{ inputs.llm-max-cost-usd }}
+        INPUT_LLM_MAX_TOKENS: ${{ inputs.llm-max-tokens }}
+        INPUT_LLM_MAX_CALLS: ${{ inputs.llm-max-calls }}
+        INPUT_LLM_TIMEOUT_SECONDS: ${{ inputs.llm-timeout-seconds }}
+        INPUT_LLM_CACHE: ${{ inputs.llm-cache }}
+        INPUT_LLM_ALLOW_NETWORK: ${{ inputs.llm-allow-network }}
+        INPUT_LLM_ALLOW_PLAIN_HTTP: ${{ inputs.llm-allow-plain-http }}
+        INPUT_LLM_PLAIN_HTTP_HOSTS: ${{ inputs.llm-plain-http-hosts }}
+        INPUT_LLM_PRICE_INPUT_PER_MTOK: ${{ inputs.llm-price-input-per-mtok }}
+        INPUT_LLM_PRICE_OUTPUT_PER_MTOK: ${{ inputs.llm-price-output-per-mtok }}
+        INPUT_LLM_TEMPERATURE: ${{ inputs.llm-temperature }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/scripts/action/configure-llm.sh"
