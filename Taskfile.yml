@@ -105,8 +105,9 @@ tasks:
     desc: "Run unit and integration tests"
     vars:
       TEST_TIMEOUT: '{{default "30m" .TEST_TIMEOUT}}'
+      COMMAND_TEST_LOG_DIR: '{{default "" .COMMAND_TEST_LOG_DIR}}'
     cmds:
-      - go test -timeout {{.TEST_TIMEOUT}} ./cmd/... ./internal/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
+      - '{{if eq OS "windows"}}go run ./scripts/testshard -shards 4 -log-dir "{{.COMMAND_TEST_LOG_DIR}}"{{else}}go test{{end}} -timeout {{.TEST_TIMEOUT}} ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
 
   schema:local:generate:
     desc: "Derive the local overlay schema from the main schema"
