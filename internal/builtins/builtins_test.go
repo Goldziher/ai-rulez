@@ -135,20 +135,24 @@ func TestLoadDomainContent(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("ai-governance")
 		require.NoError(t, err)
-		assert.Len(t, entries, 10) // 8 rules + 2 agents
+		assert.Len(t, entries, 13) // 9 rules + 2 skills + 2 agents
 
 		ruleCount := 0
 		agentCount := 0
+		skillCount := 0
 		for _, e := range entries {
 			assert.NotEmpty(t, e.Content)
 			switch e.Type {
 			case "rules":
 				ruleCount++
+			case "skills":
+				skillCount++
 			case "agents":
 				agentCount++
 			}
 		}
-		assert.Equal(t, 8, ruleCount) // verify-before-acting merged into verification-before-completion
+		assert.Equal(t, 9, ruleCount)  // verify-before-acting merged into verification-before-completion
+		assert.Equal(t, 2, skillCount) // config-placement + skill-authoring
 		assert.Equal(t, 2, agentCount)
 	})
 
@@ -156,7 +160,7 @@ func TestLoadDomainContent(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("security")
 		require.NoError(t, err)
-		assert.Len(t, entries, 6) // 3 rules + 2 skills + 1 agent
+		assert.Len(t, entries, 7) // 4 rules + 2 skills + 1 agent
 
 		ruleCount := 0
 		contextCount := 0
@@ -171,7 +175,7 @@ func TestLoadDomainContent(t *testing.T) {
 				skillCount++
 			}
 		}
-		assert.Equal(t, 3, ruleCount)    // dependency-awareness moved rules → skills
+		assert.Equal(t, 4, ruleCount)    // dependency-awareness moved rules → skills
 		assert.Equal(t, 0, contextCount) // owasp moved context → skills
 		assert.Equal(t, 2, skillCount)   // owasp-quick-reference + dependency-awareness
 	})
@@ -190,6 +194,7 @@ func TestLoadDomainContent(t *testing.T) {
 			{"code-quality", 0, []string{"code-quality-standards", "error-handling"}},
 			{"testing", 1, []string{"tdd-workflow", "testing-conventions"}},
 			{"token-efficiency", 2, []string{"incremental-approach", "task-runner"}},
+			{"documentation", 4, []string{"adr-workflow"}},
 			{"docker", 0, []string{"container-standards"}},
 			{"observability", 0, []string{"observability-standards"}},
 		}

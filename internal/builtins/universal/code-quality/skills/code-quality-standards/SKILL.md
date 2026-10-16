@@ -1,6 +1,6 @@
 ---
 name: code-quality-standards
-description: "Concrete code-quality thresholds and anti-patterns: 120-char lines, max 20 cyclomatic complexity, max 4 nesting levels, max 50 lines per function, no magic numbers, no global state, composition over inheritance, no bare except, rule-of-three before extracting an abstraction, delete dead code instead of commenting it out. Load when writing a new function or module, reviewing a diff for quality, refactoring a long or deeply nested function, or deciding whether to extract shared logic."
+description: "Concrete code-quality thresholds and anti-patterns: 120-char lines, max 20 cyclomatic complexity, max 4 nesting levels, max 50 lines per function, no magic numbers, no global state, composition over inheritance, no bare except, rule-of-three before extracting an abstraction, delete dead code instead of commenting it out, scope suppressions narrowly, and tag TODOs with a tracker key. Load when writing a new function or module, adding a lint suppression or TODO, reviewing a diff for quality, refactoring a long or deeply nested function, or deciding whether to extract shared logic."
 ---
 
 ## Readability
@@ -30,3 +30,11 @@ Extract shared logic after the third repetition, not before. Three similar lines
 ## Dead code
 
 Remove dead code instead of commenting it out. Version control preserves history; commented-out code creates confusion and maintenance burden.
+
+## Suppressions
+
+Fix the cause instead of suppressing a lint rule, type error or test. A necessary suppression (lint-disable, noqa, ts-ignore, `#[allow]`) is scoped to the narrowest line, names the rule, and gives a one-line reason. Never update a snapshot or baseline just to hide a failure.
+
+## Markers
+
+`TODO`, `FIXME`, `HACK` and `XXX` take the form `TODO(PROJ-123): description`. The key is an existing open tracker issue for future work, never the issue of the current change (it closes on merge). No bare markers, owners or dates.
