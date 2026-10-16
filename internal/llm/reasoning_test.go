@@ -23,9 +23,9 @@ func TestReasoningModelOmitsTemperatureAndUsesMaxCompletionTokens(t *testing.T) 
 	for _, tt := range tests {
 		t.Run(tt.model, func(t *testing.T) {
 			// Arrange
-			var body map[string]any
+			var bodyG guarded[map[string]any]
 			srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
-				body = readBody(r)
+				bodyG.set(readBody(r))
 				w.Header().Set("Content-Type", "application/json")
 				fmt.Fprint(w, chatReply)
 			})
@@ -38,6 +38,7 @@ func TestReasoningModelOmitsTemperatureAndUsesMaxCompletionTokens(t *testing.T) 
 			}
 
 			// Assert
+			body := bodyG.get()
 			if _, has := body["temperature"]; has != tt.wantTemp {
 				t.Errorf("temperature present = %v, want %v; body = %v", has, tt.wantTemp, body)
 			}

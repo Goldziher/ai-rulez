@@ -1,9 +1,11 @@
 package schema_test
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/schema"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 func TestGeminiSettingsSchemas(t *testing.T) {
@@ -28,7 +30,7 @@ default = "do-not-store-secrets"`, invalid: true},
 				} else {
 					err = schema.ValidateFile(writeTOML(t, "version = \"5.0\"\nname = \"example\"\n"+body))
 				}
-				if test.invalid && !(local && test.name == "missing variable") {
+				if test.invalid && (!local || test.name != "missing variable") {
 					require.Error(t, err)
 				} else {
 					require.NoError(t, err)

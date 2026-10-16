@@ -131,6 +131,20 @@ func (r *Report) Matches(statuses []string) bool {
 	return false
 }
 
+// EmptyReport is the report of a conversion that found nothing to import: nothing was written and
+// every list is present and empty, so it validates against the report schema.
+func EmptyReport(importerName, source, into string) *Report {
+	return &Report{
+		SchemaVersion: ReportSchemaVersion,
+		Importer:      importerName,
+		Source:        source,
+		Into:          into,
+		Findings:      []Finding{},
+		Files:         []FileAction{},
+		Security:      SecurityResult{Findings: []SecurityFinding{}},
+	}
+}
+
 // WriteJSON prints the report as JSON.
 func (r *Report) WriteJSON(w io.Writer) error {
 	enc := json.NewEncoder(w)

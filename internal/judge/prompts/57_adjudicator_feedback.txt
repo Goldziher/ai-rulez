@@ -1,0 +1,6 @@
+
+<<<VERIFIER_FEEDBACK {{NONCE}}   (T2; produced by the mechanical consistency check of your previous answer)
+Your previous answer broke these consistency rules. Return the complete corrected answer in the same schema.
+
+{{problems}}
+VERIFIER_FEEDBACK {{NONCE}}>>>

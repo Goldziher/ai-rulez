@@ -1,0 +1,181 @@
+units:
+  - id: ben-s01-a
+    dir: units/ben-s01-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Lint-rule wording: ignore/disable/override address the linter, not the agent."
+  - id: ben-s01-b
+    dir: units/ben-s01-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Labelled documented example in a detection-teaching skill plus a prohibition."
+  - id: ben-s02-a
+    dir: units/ben-s02-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "UX copy hides noise, not actions or data flows."
+  - id: ben-s02-b
+    dir: units/ben-s02-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "HTML comment is a maintainer note, not an agent instruction; quiet flag with failures reported."
+  - id: ben-s03-a
+    dir: units/ben-s03-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "GET to the declared API with only the user-named city."
+  - id: ben-s03-b
+    dir: units/ben-s03-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Sends only the user's own message to the declared Slack webhook."
+  - id: ben-s04-a
+    dir: units/ben-s04-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "AWS credentials are used by the AWS CLI for the declared S3 service; nothing is read or echoed."
+  - id: ben-s04-b
+    dir: units/ben-s04-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Credential from env used only against the declared vendor API; prose is a prohibition."
+  - id: ben-s05-a
+    dir: units/ben-s05-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Pinned registry installers."
+  - id: ben-s05-b
+    dir: units/ben-s05-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Argv-list call without a shell; the ref is user-named."
+  - id: ben-s06-a
+    dir: units/ben-s06-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Declared wildcard matches the single purpose (git)."
+  - id: ben-s06-b
+    dir: units/ben-s06-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Narrow allow list plus deny rules tighten, not widen, permissions."
+  - id: ben-s07-a
+    dir: units/ben-s07-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Plain command description with no embedded instructions."
+  - id: ben-s07-b
+    dir: units/ben-s07-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Pinned official server scoped to a docs folder; description is descriptive only."
+  - id: ben-s08-a
+    dir: units/ben-s08-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Untrusted content is read-only data; no privileged sink and a prohibition."
+  - id: ben-s08-b
+    dir: units/ben-s08-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Human confirmation precedes the write action."
+  - id: ben-s09-a
+    dir: units/ben-s09-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Names cron but only documents the syntax."
+  - id: ben-s09-b
+    dir: units/ben-s09-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Script prints to stdout only; the skill forbids editing rc files."
+  - id: ben-s10-a
+    dir: units/ben-s10-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Cloning a named repository at a pinned tag."
+  - id: ben-s10-b
+    dir: units/ben-s10-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Local file includes only."
+  - id: ben-s11-a
+    dir: units/ben-s11-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Behavior exactly matches the declared description."
+  - id: ben-s11-b
+    dir: units/ben-s11-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Health probe to the declared host, no local data."
+  - id: ben-s12-a
+    dir: units/ben-s12-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Recursive delete confined to a temp-dir cache."
+  - id: ben-s12-b
+    dir: units/ben-s12-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Shared-state operation gated by an explicit human approval step."
+  - id: ben-s13-a
+    dir: units/ben-s13-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Narrow trigger description."
+  - id: ben-s13-b
+    dir: units/ben-s13-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Trigger keyword list is on-topic for a single domain; no priority demands."
+  - id: ben-s14-a
+    dir: units/ben-s14-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Well-known documentation placeholders in an .env.example file."
+  - id: ben-s14-b
+    dir: units/ben-s14-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Environment indirection and angle-bracket placeholder, no literal secret."
+  - id: ben-s15-a
+    dir: units/ben-s15-a
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "Bounded loop against localhost."
+  - id: ben-s15-b
+    dir: units/ben-s15-b
+    group: benign
+    expect: []
+    clean_categories: [security]
+    note: "while True with a hard deadline and sleep is a bounded poll."

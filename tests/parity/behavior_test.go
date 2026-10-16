@@ -1,7 +1,6 @@
 package parity_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -113,7 +112,7 @@ func servingSession(t *testing.T, dir string) *sdkmcp.ClientSession {
 	//nolint:gosec // G204: the test runs the binary it built
 	cmd := exec.CommandContext(ctx, testutil.SetupTestBinary(t), "mcp", "--serve-skills")
 	cmd.Dir = dir
-	var stderr bytes.Buffer
+	var stderr testutil.SyncBuffer
 	cmd.Stderr = &stderr
 	session, err := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "parity", Version: "1"}, nil).Connect(ctx, &sdkmcp.CommandTransport{Command: cmd}, nil)
 	require.NoError(t, err, stderr.String())

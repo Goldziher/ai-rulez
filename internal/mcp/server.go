@@ -33,6 +33,8 @@ type Server struct {
 	// validator runs the lint behind validate_config; the CLI supplies the
 	// engine of `ai-rulez validate` so both report the same findings.
 	validator handlers.Validator
+	// judger runs the review behind the judge tool; the CLI supplies the engine of `ai-rulez judge`.
+	judger handlers.Judger
 	// policyViewer builds the report of policy_show; the CLI supplies the policy
 	// discovery of `validate --show-policy`.
 	policyViewer handlers.PolicyViewer
@@ -54,6 +56,11 @@ type Option func(*Server)
 // checks. Without it validate_config reports that it cannot lint.
 func WithValidator(v handlers.Validator) Option {
 	return func(s *Server) { s.validator = v }
+}
+
+// WithJudger sets the engine the judge tool runs. Without it the tool reports that it cannot judge.
+func WithJudger(j handlers.Judger) Option {
+	return func(s *Server) { s.judger = j }
 }
 
 // WithPolicyViewer sets the policy discovery policy_show reports from. Without it

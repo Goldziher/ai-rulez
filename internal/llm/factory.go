@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
@@ -33,6 +34,13 @@ type Options struct {
 	ShowContent bool
 	// NoCache disables the cache regardless of config (the --no-cache flag).
 	NoCache bool
+	// CacheReadOnly serves cache hits but stores nothing (the --cache-readonly flag).
+	CacheReadOnly bool
+	// BedrockCredentials replaces the registered AWS credential chain of a Bedrock model (tests,
+	// embedding programs); nil uses RegisterBedrockSupport, and without that the environment's keys.
+	BedrockCredentials BedrockCredentials
+	// CacheMaxAge, when positive, treats an entry older than it as a miss.
+	CacheMaxAge time.Duration
 }
 
 // Managed is the Client New returns: the middleware stack plus accounting.
@@ -75,7 +83,7 @@ func New(cfg Config, opts Options) (*Managed, error) {
 		// Refuse before building anything: no key lookup, no client, no connection.
 		return &Managed{Client: withGate(NewFake(), false, 0)}, nil
 	}
-	inner, err := newLiterLLM(cfg, getenv)
+	inner, err := newLiterLLM(cfg, getenv, opts.BedrockCredentials)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +103,10 @@ func Wrap(backend Client, cfg Config, opts Options) *Managed {
 				opts.Logger.Warn("llm response cache disabled: no usable cache secret", "error", err.Error())
 			}
 		} else {
-			cache = NewCache(dir, cacheIdentity(cfg), secret)
+			cache = NewCache(dir, cacheIdentity(cfg), secret).WithMaxAge(opts.CacheMaxAge)
+			if opts.CacheReadOnly {
+				cache = cache.AsReadOnly()
+			}
 			injected := 0
 			if budget.limits.Active() {
 				injected = DefaultCompletionCap

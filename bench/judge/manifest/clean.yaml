@@ -1,0 +1,141 @@
+units:
+  - id: clean-01
+    dir: units/clean-01
+    judge_path: units/clean-01
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Precise skill with trigger, boundary and done condition."
+  - id: clean-02
+    dir: units/clean-02
+    judge_path: units/clean-02
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Skill with references pointer."
+  - id: clean-03
+    dir: units/clean-03
+    judge_path: units/clean-03
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Read-only analysis skill."
+  - id: clean-04
+    dir: units/clean-04
+    judge_path: units/clean-04
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Skill with a bundled script referenced by command."
+  - id: clean-05
+    dir: units/clean-05
+    judge_path: units/clean-05
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Checklist skill."
+  - id: clean-06
+    dir: units/clean-06
+    judge_path: units/clean-06
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Skill with verification step."
+  - id: clean-07
+    dir: units/clean-07
+    judge_path: units/clean-07
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Agent: role, minimal tools, output contract, stopping condition."
+  - id: clean-08
+    dir: units/clean-08
+    judge_path: units/clean-08
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Agent with output contract."
+  - id: clean-09
+    dir: units/clean-09
+    judge_path: units/clean-09
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Agent."
+  - id: clean-10
+    dir: units/clean-10
+    judge_path: units/clean-10
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Agent."
+  - id: clean-11
+    dir: units/clean-11
+    judge_path: units/clean-11
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Command with named arg, ordered steps, done condition."
+  - id: clean-12
+    dir: units/clean-12
+    judge_path: units/clean-12
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Command."
+  - id: clean-13
+    dir: units/clean-13
+    judge_path: units/clean-13
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Command."
+  - id: clean-14
+    dir: units/clean-14
+    judge_path: units/clean-14
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Command."
+  - id: clean-15
+    dir: units/clean-15
+    judge_path: units/clean-15
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Rule."
+  - id: clean-16
+    dir: units/clean-16
+    judge_path: units/clean-16
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Rule."
+  - id: clean-17
+    dir: units/clean-17
+    judge_path: units/clean-17
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Rule."
+  - id: clean-18
+    dir: units/clean-18
+    judge_path: units/clean-18
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Concise CLAUDE.md."
+  - id: clean-19
+    dir: units/clean-19
+    judge_path: units/clean-19
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Tidy .mcp.json with a local stdio server and no secrets."
+  - id: clean-20
+    dir: units/clean-20
+    judge_path: units/clean-20
+    group: clean
+    expect: []
+    clean_categories: [security, quality, governance]
+    note: "Settings with narrow read/test permissions and a deny for .env."

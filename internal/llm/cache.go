@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
@@ -36,6 +38,24 @@ type Cache struct {
 	dir      string
 	identity string
 	secret   []byte
+	// maxAge, when positive, makes an entry older than it (by file modification time) a miss.
+	maxAge time.Duration
+	// readOnly serves hits and stores nothing.
+	readOnly bool
+}
+
+// WithMaxAge returns the cache with entries older than d treated as misses (0 keeps them forever).
+func (c *Cache) WithMaxAge(d time.Duration) *Cache {
+	cp := *c
+	cp.maxAge = d
+	return &cp
+}
+
+// AsReadOnly returns the cache serving hits but never storing an entry.
+func (c *Cache) AsReadOnly() *Cache {
+	cp := *c
+	cp.readOnly = true
+	return &cp
 }
 
 // NewCache returns a cache rooted at dir for the given endpoint identity (see
@@ -100,6 +120,12 @@ func (c *Cache) load(key string, dst any) bool {
 		os.Remove(p) //nolint:errcheck,gosec // a planted symlink or oversized file is dropped, never followed
 		return false
 	}
+	if c.maxAge > 0 && ambient.Clock(nil).Now().Sub(fi.ModTime()) > c.maxAge {
+		if !c.readOnly {
+			os.Remove(p) //nolint:errcheck,gosec // an expired entry is replaced by the next answer
+		}
+		return false
+	}
 	b, err := readCapped(p)
 	if err != nil {
 		return false
@@ -123,7 +149,7 @@ func readCapped(p string) ([]byte, error) {
 }
 
 func (c *Cache) store(key string, v any) {
-	if len(c.secret) == 0 {
+	if len(c.secret) == 0 || c.readOnly {
 		return
 	}
 	payload, err := json.Marshal(v)
@@ -203,12 +229,17 @@ type cacheClient struct {
 
 // cacheable reports whether a reply is complete enough to serve later: a reply cut off by
 // the token cap or a content filter, or an empty one, would be replayed as if it were whole.
-func cacheable(resp ChatResponse) bool {
-	switch resp.FinishReason {
-	case "length", "content_filter":
+// A caller that validates replies (AcceptReply) decides for itself what a whole reply is: some
+// providers (Bedrock) stamp a content-filter stop on a reply that is complete and valid.
+func cacheable(resp ChatResponse, validated bool) bool {
+	if strings.TrimSpace(resp.Text) == "" {
 		return false
 	}
-	return strings.TrimSpace(resp.Text) != ""
+	switch resp.FinishReason {
+	case "length", "content_filter":
+		return validated
+	}
+	return true
 }
 
 func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
@@ -236,7 +267,7 @@ func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	if err != nil {
 		return resp, err
 	}
-	if cacheable(resp) && (req.AcceptReply == nil || req.AcceptReply(resp.Text) == nil) {
+	if cacheable(resp, req.AcceptReply != nil) && (req.AcceptReply == nil || req.AcceptReply(resp.Text) == nil) {
 		cc.c.store(key, resp)
 	}
 	return resp, nil

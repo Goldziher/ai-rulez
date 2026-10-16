@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@example/github-mcp@2.1.0"],
+      "env": { "GITHUB_TOKEN": "ghp_0123456789abcdefghijklmnopqrstuvwxyz" }
+    }
+  }
+}

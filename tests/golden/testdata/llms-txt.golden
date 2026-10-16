@@ -110,7 +110,7 @@ exit: 2
 .ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
 .ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
 
-strict validation: 0 error(s), 6 warning(s), 0 info across 1 root(s)
+validation: 0 error(s), 6 warning(s), 0 info across 1 root(s)
   AR503 script-not-executable        1
   AR802 description-length           5
 risk (advisory, never fails the run): medium (score 48/100)

@@ -32,6 +32,17 @@ func readOnlyAnnotations() *sdkmcp.ToolAnnotations {
 	}
 }
 
+// openWorldAnnotations marks a read-only tool that sends data to an external service (a model
+// provider) and spends money: the project tree is not written, but the world is reached.
+func openWorldAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		ReadOnlyHint:    true,
+		DestructiveHint: boolPtr(false),
+		IdempotentHint:  false,
+		OpenWorldHint:   boolPtr(true),
+	}
+}
+
 // destructiveAnnotations returns tool annotations marking a tool as destructive.
 func destructiveAnnotations() *sdkmcp.ToolAnnotations {
 	return &sdkmcp.ToolAnnotations{
@@ -60,10 +71,16 @@ func idempotentAnnotations() *sdkmcp.ToolAnnotations {
 	}
 }
 
-var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
+const (
+	levelHigh = "high"
+	levelLow  = "low"
+	levelMid  = "medium"
+)
+
+var priorityValues = []string{"critical", levelHigh, levelMid, levelLow, "minimal"}
 
 // severityValues are the severity levels a check takes.
-var severityValues = []string{"low", "medium", "high", "critical"}
+var severityValues = []string{levelLow, levelMid, levelHigh, "critical"}
 
 // mergeStrategyError is the include merge strategy that fails on a conflict.
 const mergeStrategyError = "error"
@@ -110,6 +127,13 @@ func (s *Server) registerProjectTools() {
 		annotations: readOnlyAnnotations(), output: validateOut{},
 		enums: map[string][]string{"fail_on": failOnValues(), "lint_profile": lint.ProfileNames()},
 	}, handlers.ScanContentWith(s.validator))
+
+	addTool[judgeIn](s, toolSpec{
+		name: "judge", title: "Judge Agent Configuration",
+		description: "Review the project's agent configuration (skills, agents, commands, rules, CLAUDE.md and AGENTS.md files, MCP and settings files) with the user's language models, as `ai-rulez judge` does: security, quality and governance reviewers whose findings must quote the file, a verifier, an adjudicator and scores computed in code. SENDS FILE CONTENT TO THE USER'S MODEL PROVIDER AND SPENDS MONEY: it runs only with allow_llm true when the user config also allows it; with estimate true it sends nothing. Models, provider and spend caps come from the user's config, never from this call. Findings that meet fail_on, or a partly reviewed unit, make the result an error carrying the report.",
+		annotations: openWorldAnnotations(), output: judgeOut{},
+		enums: map[string][]string{"min_confidence": {levelLow, levelMid, levelHigh}},
+	}, handlers.JudgeWith(s.judger))
 
 	addTool[doctorIn](s, toolSpec{
 		name: "doctor", title: "Run Diagnostics",

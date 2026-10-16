@@ -28,7 +28,11 @@ func validateAgainstSchema(t *testing.T, schemaFile, stdout string) {
 	assert.True(t, res.IsValid(), "%s: %v\n%s", schemaFile, res.Errors, stdout)
 	doc, ok := v.(map[string]any)
 	require.True(t, ok, "a report is a JSON object: %s", stdout)
-	assert.EqualValues(t, 1, doc["schema_version"], "every report carries schema_version: %s", stdout)
+	want := 1
+	if schemaFile == "judge-report.schema.json" {
+		want = 2 // judge's report was redesigned (units, evidence, coverage); its schema_version is its own
+	}
+	assert.EqualValues(t, want, doc["schema_version"], "every report carries schema_version: %s", stdout)
 }
 
 const reportProjectConfig = `

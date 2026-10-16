@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": ["Bash(npm run test:*)", "Read(./src/**)"],
+    "deny": ["Bash(curl:*)", "Read(./.env)"]
+  }
+}

@@ -126,7 +126,7 @@ func checkFlagCombinations() error {
 
 // checkSinceFlags rejects --since, --changed and their limits used wrongly.
 func checkSinceFlags() error {
-	if validateSince != "" && validateChanged {
+	if validateSince != "" && validateChanged != "" {
 		return oops.Errorf("--since and --changed cannot be combined (--changed is --since HEAD)")
 	}
 	if changedRev() == "" && (validateSinceMax != 0 || (validateSinceDepth != "" && validateSinceDepth != "1")) {
@@ -439,7 +439,14 @@ type strictVerdict struct {
 // silences or tightens another's. done is true when the run ends before a
 // report exists (--update-baseline).
 func judgeStrict(reports []*lint.Report, cfgs []*config.Config) (verdict strictVerdict, done bool, err error) {
-	excess, done, err := prepareReportsErr(cmdContext(), reports, cfgs)
+	return judgeStrictCtx(cmdContext(), reports, cfgs)
+}
+
+// judgeStrictCtx is judgeStrict on ctx, which a run gives one shared view of the
+// git listings (see beginStrictRun) so the narrowing to the changed files reads
+// the work tree once, with the lint.
+func judgeStrictCtx(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) (verdict strictVerdict, done bool, err error) {
+	excess, done, err := prepareReportsErr(ctx, reports, cfgs)
 	if err != nil || done {
 		return strictVerdict{}, done, err
 	}
@@ -462,10 +469,15 @@ func judgeStrict(reports []*lint.Report, cfgs []*config.Config) (verdict strictV
 
 // reportStrict prints the combined report and returns the process exit code.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
+	return reportStrictCtx(cmdContext(), reports, cfgs)
+}
+
+// reportStrictCtx is reportStrict on ctx (see judgeStrictCtx).
+func reportStrictCtx(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) int {
 	if scannerDryRun() {
 		return 0 // the scanner plan was printed; nothing ran, so there is no report
 	}
-	verdict, done, err := judgeStrict(reports, cfgs)
+	verdict, done, err := judgeStrictCtx(ctx, reports, cfgs)
 	if err != nil {
 		renderStderr(err)
 		return 1
@@ -584,12 +596,14 @@ func runStrictSingle(cfg *config.Config) int {
 		renderStderr(err)
 		return 1
 	}
-	report, err := strictLint(cmdContext(), cfg)
+	// One read-only run: the git listings (tracked, untracked) are taken once.
+	ctx := withUnmanagedLint(gitutil.WithSharedIndex(cmdContext()))
+	report, err := strictLint(ctx, cfg)
 	if err != nil {
 		renderStderr(err)
 		return 1
 	}
-	return reportStrict([]*lint.Report{report}, []*config.Config{cfg})
+	return reportStrictCtx(ctx, []*lint.Report{report}, []*config.Config{cfg})
 }
 
 // warnUnpinned logs the remote includes and installed skills that follow a

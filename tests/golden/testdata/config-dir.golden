@@ -118,7 +118,7 @@ exit: 0
 .config/ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
 .cursor/mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 
-strict validation: 0 error(s), 8 warning(s), 1 info across 1 root(s)
+validation: 0 error(s), 8 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         2
   AR503 script-not-executable        1
   AR750 sbom-component-unpinned      1

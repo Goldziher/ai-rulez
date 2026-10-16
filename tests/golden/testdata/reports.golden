@@ -1024,7 +1024,7 @@ exit: 2
 .vscode/mcp.json:10: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
 .vscode/mcp.json:16: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
 
-strict validation: 2 error(s), 9 warning(s), 1 info across 1 root(s)
+validation: 2 error(s), 9 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         3
   AR015 secret-in-env-or-header      2
   AR503 script-not-executable        1

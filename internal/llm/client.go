@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,11 +32,19 @@ type literLLM struct {
 	// omitTemp leaves temperature out of every request: set by AI_RULEZ_LLM_TEMPERATURE=omit, or
 	// once a model has rejected it.
 	omitTemp atomic.Bool
+	// bedrock keeps the AWS credentials of a Bedrock model fresh; nil for any other provider.
+	bedrock BedrockCredentials
+	// create builds the liter-llm client on first use: liter-llm wants Bedrock credentials in the
+	// environment when it builds the client, and resolving them takes the context of a call.
+	create  func() (*lit.DefaultClient, error)
+	pending atomic.Bool // create has not run yet
+	buildMu sync.Mutex
+	closed  bool
 }
 
 var errClosed = permanentError("liter-llm client is closed")
 
-func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
+func newLiterLLM(cfg Config, getenv func(string) string, auth BedrockCredentials) (*literLLM, error) {
 	// liter-llm reads the routed provider's own key variable (OPENAI_API_KEY, ...) when no key is
 	// given, so a repository route picks which of the user's keys is sent and billed even without
 	// api_key_env: refuse it either way.
@@ -52,6 +61,12 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 			return nil, newError(KindAuth, "environment variable %s (api_key_env) is empty or unset", cfg.APIKeyEnv)
 		}
 	}
+	var bedrock BedrockCredentials
+	if needsBedrockAuth(cfg, getenv) {
+		if bedrock = auth; bedrock == nil {
+			bedrock = registeredBedrockCredentials(getenv)
+		}
+	}
 	var base, hint *string
 	if cfg.BaseURL != "" {
 		base = &cfg.BaseURL
@@ -65,20 +80,63 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 	}
 	retries := uint32(min(max(cfg.Retries(), 0), MaxRetriesLimit)) //nolint:gosec // bounded to [0, MaxRetriesLimit]
 	maxBytes := uint64(maxResponseBytes)
-	c, err := lit.CreateClientWithOptions(lit.ClientOptions{
-		APIKey:           key,
-		BaseURL:          base,
-		TimeoutSecs:      timeout,
-		MaxRetries:       &retries,
-		MaxResponseBytes: &maxBytes,
-		ModelHint:        hint,
-	})
-	if err != nil {
-		return nil, &Error{Kind: KindProvider, Message: "cannot create liter-llm client: " + RedactSecrets(err.Error())}
+	create := func() (*lit.DefaultClient, error) {
+		c, err := lit.CreateClientWithOptions(lit.ClientOptions{
+			APIKey:           key,
+			BaseURL:          base,
+			TimeoutSecs:      timeout,
+			MaxRetries:       &retries,
+			MaxResponseBytes: &maxBytes,
+			ModelHint:        hint,
+		})
+		if err != nil {
+			return nil, &Error{Kind: KindProvider, Message: "cannot create liter-llm client: " + RedactSecrets(err.Error())}
+		}
+		return c, nil
 	}
-	l := &literLLM{client: c, key: key, provider: routeProvider(cfg), model: cfg.FullModel(), embedModel: embedFull(cfg), pricing: NewPricing(cfg)}
+	l := &literLLM{key: key, provider: routeProvider(cfg), model: cfg.FullModel(), embedModel: embedFull(cfg), pricing: NewPricing(cfg), bedrock: bedrock, create: create}
 	l.omitTemp.Store(cfg.OmitTemperature)
+	if bedrock != nil {
+		l.pending.Store(true)
+		return l, nil
+	}
+	c, err := create()
+	if err != nil {
+		return nil, err
+	}
+	l.client = c
 	return l, nil
+}
+
+// ensureClient builds the client of a Bedrock model on first use, once the credential chain has
+// resolved and put its keys where liter-llm reads them.
+func (l *literLLM) ensureClient(ctx context.Context) error {
+	if !l.pending.Load() {
+		return nil
+	}
+	l.buildMu.Lock()
+	defer l.buildMu.Unlock()
+	if !l.pending.Load() {
+		return nil
+	}
+	release, err := l.bedrock.Acquire(ctx)
+	if err != nil {
+		return err //nolint:wrapcheck // already a typed llm error
+	}
+	release()
+	c, err := l.create()
+	if err != nil {
+		return err
+	}
+	l.mu.Lock()
+	if l.closed {
+		c.Free()
+	} else {
+		l.client = c
+	}
+	l.mu.Unlock()
+	l.pending.Store(false)
+	return nil
 }
 
 // routeProvider is the provider the configured models route to: the provider
@@ -182,8 +240,8 @@ func (l *literLLM) scrub(msg string) string {
 // chatRequest renders req for model as a liter-llm chat request.
 func chatRequest(model string, req ChatRequest) lit.ChatCompletionRequest {
 	out := lit.ChatCompletionRequest{Model: model}
-	// A reasoning model rejects any temperature but its default, so it is left unset.
-	if !isOpenAIReasoningModel(model) {
+	// A reasoning model and a Claude 5.x model reject any temperature but their default, so it is left unset.
+	if !isOpenAIReasoningModel(model) && !omitsTemperature(model) {
 		out.Temperature = &req.Temperature
 	}
 	switch {
@@ -209,6 +267,26 @@ func chatRequest(model string, req ChatRequest) lit.ChatCompletionRequest {
 		out.ResponseFormat = lit.ResponseFormatJSONSchema{JSONSchema: lit.JSONSchemaFormat{Name: rf.Name, Schema: json.RawMessage(mustJSON(rf.Schema)), Strict: lit.Ptr(true)}}
 	}
 	return out
+}
+
+// claudeMajorRe reads the major version out of a Claude model id in any naming: the Anthropic API
+// (claude-sonnet-5-5), a Bedrock inference profile (global.anthropic.claude-opus-5-5-v1:0) or the
+// older family-last form (claude-3-5-sonnet).
+var claudeMajorRe = regexp.MustCompile(`claude-(?:(?:opus|sonnet|haiku)-)?(\d+)`)
+
+// omitsTemperature reports whether model is a Claude 5.x model, which rejects temperature
+// ("`temperature` is deprecated for this model"): the parameter is left out up front instead of
+// being retried without after the provider's 400.
+func omitsTemperature(model string) bool { return OmitsTemperature(model) }
+
+// OmitsTemperature reports whether model is a Claude 5.x model, which takes no temperature.
+func OmitsTemperature(model string) bool {
+	m := claudeMajorRe.FindStringSubmatch(bareModel(model))
+	if m == nil {
+		return false
+	}
+	major, err := strconv.Atoi(m[1])
+	return err == nil && major >= 5
 }
 
 // isOpenAIReasoningModel reports whether model is an OpenAI reasoning model (the o*
@@ -272,12 +350,20 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	if model == "" {
 		return ChatResponse{}, newError(KindConfig, "%s llm-config-invalid: no model configured; set [llm] model", CodeConfigInvalid)
 	}
+	if err := l.ensureClient(ctx); err != nil {
+		return ChatResponse{}, err
+	}
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	if l.client == nil {
 		return ChatResponse{}, errClosed
 	}
-	resp, err := l.chatOnce(ctx, model, req)
+	var resp *lit.ChatCompletionResponse
+	err = l.authorized(ctx, func() error {
+		var cerr error
+		resp, cerr = l.chatOnce(ctx, model, req)
+		return cerr
+	})
 	if err != nil {
 		return ChatResponse{}, err
 	}
@@ -300,6 +386,29 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 		out.FinishReason = string(*choice.FinishReason)
 	}
 	return out, nil
+}
+
+// authorized runs one provider call with current AWS credentials in the environment when the model
+// is a Bedrock one signed through the credential chain. A call the provider refuses as
+// unauthenticated (credentials that expired between the check and the request) drops the cached
+// credentials and is tried once more with fresh ones.
+func (l *literLLM) authorized(ctx context.Context, call func() error) error {
+	if l.bedrock == nil {
+		return call()
+	}
+	for attempt := 0; ; attempt++ {
+		release, err := l.bedrock.Acquire(ctx)
+		if err != nil {
+			return err
+		}
+		err = call()
+		release()
+		var e *Error
+		if err == nil || attempt > 0 || !errors.As(err, &e) || e.Kind != KindAuth {
+			return err
+		}
+		l.bedrock.Invalidate()
+	}
 }
 
 // chatOnce sends one chat request. A model that rejects temperature (Claude 5.x on Bedrock answers
@@ -361,14 +470,25 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 // vector per input on the Gemini and Vertex routes, so a single request always serves the batch.
 func (l *literLLM) embedRaw(ctx context.Context, model string, input []string) (*lit.EmbeddingResponse, error) {
 	in := []byte(mustJSON(input))
+	if err := l.ensureClient(ctx); err != nil {
+		return nil, err
+	}
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	if l.client == nil {
 		return nil, errClosed
 	}
-	resp, err := l.client.EmbedWithContext(ctx, lit.EmbeddingRequest{Model: model, Input: lit.EmbeddingInput(in)})
+	var resp *lit.EmbeddingResponse
+	err := l.authorized(ctx, func() error {
+		var eerr error
+		resp, eerr = l.client.EmbedWithContext(ctx, lit.EmbeddingRequest{Model: model, Input: lit.EmbeddingInput(in)})
+		if eerr != nil {
+			return l.classify(eerr)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, l.classify(err)
+		return nil, err
 	}
 	if resp == nil {
 		return nil, permanentError("liter-llm returned an empty reply without an error")
@@ -400,6 +520,7 @@ func (l *literLLM) embedResult(resp *lit.EmbeddingResponse, model string, want i
 func (l *literLLM) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	l.closed = true
 	if l.client != nil {
 		l.client.Free()
 		l.client = nil

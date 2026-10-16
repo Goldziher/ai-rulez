@@ -25,10 +25,11 @@ func TestProviderTransformIsKeptWithABaseURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.provider, func(t *testing.T) {
 			// Arrange
-			var gotPath string
-			var gotBody map[string]any
+			var gotPathG guarded[string]
+			var gotBodyG guarded[map[string]any]
 			srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
-				gotPath, gotBody = r.URL.Path, readBody(r)
+				gotPathG.set(r.URL.Path)
+				gotBodyG.set(readBody(r))
 				w.Header().Set("Content-Type", "application/json")
 				fmt.Fprint(w, geminiReply)
 			})
@@ -42,6 +43,7 @@ func TestProviderTransformIsKeptWithABaseURL(t *testing.T) {
 			if err != nil {
 				t.Fatalf("chat: %v", err)
 			}
+			gotPath, gotBody := gotPathG.get(), gotBodyG.get()
 			if gotPath != tt.wantPath {
 				t.Errorf("path = %q, want %q", gotPath, tt.wantPath)
 			}

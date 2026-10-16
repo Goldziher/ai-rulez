@@ -1,62 +1,85 @@
 package commands
 
 import (
+	"bytes"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
-func TestReplaceConfigDir(t *testing.T) {
+func TestInitYesNeverPromptsToReplaceAnExistingDirectory(t *testing.T) {
 	tests := []struct {
-		name      string
-		write     func(configDir string) error
-		wantErr   bool
-		wantStale bool
-		wantNew   bool
+		name   string
+		yes    bool
+		answer bool
+		want   bool
+		asked  bool
 	}{
-		{"a successful import replaces the directory", func(d string) error {
-			return os.MkdirAll(filepath.Join(d, "rules"), 0o755)
-		}, false, false, true},
-		{"a failed import restores the previous directory", func(d string) error {
-			_ = os.MkdirAll(filepath.Join(d, "partial"), 0o755)
-			return assert.AnError
-		}, true, true, false},
+		{"--yes does not ask and does not replace", true, true, false, false},
+		{"without --yes the prompt decides: yes", false, true, true, true},
+		{"without --yes the prompt decides: no", false, false, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			dir := t.TempDir()
-			configDir := filepath.Join(dir, ".ai-rulez")
-			require.NoError(t, os.MkdirAll(configDir, 0o755))
-			require.NoError(t, os.WriteFile(filepath.Join(configDir, "stale.md"), []byte("old\n"), 0o644))
+			asked := false
+			ask := func(string) bool { asked = true; return tt.answer }
 
 			// Act
-			err := replaceConfigDir(configDir, func() error { return tt.write(configDir) })
+			got := confirmReplace(".ai-rulez/", tt.yes, ask)
 
 			// Assert
-			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, tt.wantStale, pathExists(filepath.Join(configDir, "stale.md")))
-			assert.Equal(t, tt.wantNew, pathExists(filepath.Join(configDir, "rules")))
-			assert.False(t, pathExists(filepath.Join(configDir, "partial")))
-			entries, readErr := os.ReadDir(dir)
-			require.NoError(t, readErr)
-			if tt.wantErr {
-				assert.Len(t, entries, 1, "a failed import leaves no backup behind")
-				return
-			}
-			require.Len(t, entries, 2, "a successful import keeps the previous directory as a backup")
-			backups, globErr := filepath.Glob(filepath.Join(dir, ".ai-rulez.bak-*"))
-			require.NoError(t, globErr)
-			require.Len(t, backups, 1)
-			assert.FileExists(t, filepath.Join(backups[0], "stale.md"))
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.asked, asked)
 		})
 	}
 }
 
-func pathExists(p string) bool {
-	_, err := os.Stat(p)
-	return err == nil
+func TestBackupOfAConfigDirIsIgnoredByGit(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	t.Chdir(root)
+	gitIn(t, root, "init", "-q")
+	require.NoError(t, os.MkdirAll(".ai-rulez", 0o755))
+	require.NoError(t, os.WriteFile(".ai-rulez/config.toml", []byte("x\n"), 0o644))
+
+	// Act
+	backup, err := backupConfigDir(".ai-rulez", time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+
+	// Assert
+	require.NoError(t, err)
+	out, err := gitutil.CommandNoContext(root, "status", "--porcelain", "--untracked-files=all").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.NotContains(t, string(out), backup, "the backup directory is untracked and not ignored")
+}
+
+func TestInitAnnouncementIsHumanOnly(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+		want   bool
+	}{
+		{"text prints the summary", "text", true},
+		{"json prints no summary", "json", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			var stdout, stderr bytes.Buffer
+			out := render.New(&stdout, &stderr, false).WithFormat(tt.format)
+
+			// Act
+			announceInit(out, "proj", ".ai-rulez")
+
+			// Assert
+			assert.Equal(t, tt.want, strings.Contains(stdout.String()+stderr.String(), "Created .ai-rulez/ for proj"))
+		})
+	}
 }

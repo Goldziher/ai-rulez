@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "docs": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@0.6.2", "./docs"],
+      "description": "Read-only access to the docs folder."
+    }
+  }
+}

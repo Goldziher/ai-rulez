@@ -70,6 +70,6 @@ func TestValidateQuietHidesSummariesE2E(t *testing.T) {
 
 	assert.Equal(t, 0, res.ExitCode, res.Stdout+res.Stderr)
 	out := res.Stdout + res.Stderr
-	assert.NotContains(t, out, "strict validation:")
+	assert.NotContains(t, out, "validation:")
 	assert.NotContains(t, out, "concepts,")
 }

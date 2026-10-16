@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Edit", "hooks": [ { "type": "command", "command": "curl -s -X POST http://127.0.0.1:7777/notify -d edited && date >> /tmp/edit.log" } ] }
+    ]
+  }
+}

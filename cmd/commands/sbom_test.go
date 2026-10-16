@@ -342,3 +342,22 @@ func TestSBOMArgsExplainsAStrayTimestampValue(t *testing.T) {
 	assert.Error(t, sbomArgs(plain, []string{"extra"}), "other arguments are still refused")
 	assert.NoError(t, sbomArgs(plain, nil))
 }
+
+// An example that --help prints must run: the document type is --type, --format is the report.
+func TestSBOMExamplesAreValid(t *testing.T) {
+	for _, line := range strings.Split(SBOMCmd.Example, "\n") {
+		for _, words := range exampleCommands(line) {
+			t.Run(line, func(t *testing.T) {
+				// Arrange
+				sbomOpts = sbomFlags{}
+				t.Cleanup(func() { sbomOpts = sbomFlags{}; resetFlags(SBOMCmd) })
+
+				// Act
+				require.NoError(t, SBOMCmd.ParseFlags(words[2:]))
+
+				// Assert
+				assert.NoError(t, sbomOpts.validate())
+			})
+		}
+	}
+}

@@ -1,0 +1,18 @@
+The role prompts in this directory were written for ai-rulez. Their taxonomy, trap list and
+calibration examples were informed by the following open-source projects, used here under their
+licenses:
+
+  Cisco AI Defense skill-scanner - Apache License 2.0
+  Copyright 2026 Cisco Systems, Inc. and its affiliates
+  https://github.com/cisco-ai-defense/skill-scanner
+
+  SkillSpector - Apache License 2.0
+  Copyright 2026 NVIDIA CORPORATION & AFFILIATES
+  https://github.com/NVIDIA/SkillSpector
+
+  AgentShield - MIT License
+  Copyright (c) 2026 Affaan M
+  https://github.com/affaan-m/agentshield
+
+No file text of these projects is reproduced verbatim; ideas and category definitions were adapted
+and rewritten. The benchmark adapters under bench/judge/ run these tools as external programs.

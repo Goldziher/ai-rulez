@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "vendor": {
+      "command": "npx",
+      "args": ["-y", "@example/vendor-mcp@1.2.0"],
+      "env": { "VENDOR_API_KEY": "${VENDOR_API_KEY}", "REGION": "<REGION>" }
+    }
+  }
+}

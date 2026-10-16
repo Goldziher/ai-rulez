@@ -103,8 +103,10 @@ tasks:
 
   test:
     desc: "Run unit and integration tests"
+    vars:
+      TEST_TIMEOUT: '{{default "30m" .TEST_TIMEOUT}}'
     cmds:
-      - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
+      - go test -timeout {{.TEST_TIMEOUT}} ./cmd/... ./internal/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
 
   schema:local:generate:
     desc: "Derive the local overlay schema from the main schema"
@@ -189,6 +191,16 @@ tasks:
     desc: "Format-check and lint the Bats suites (poly has no engine for .bats)"
     cmds:
       - scripts/bats/lint.sh
+
+  bench:judge:
+    desc: "Run the judge benchmark on Amazon Bedrock: the synthetic corpus of bench/judge through the model pipeline, then precision/recall per code, the trap false-positive rate, grounding and cost. Spends money (hard cap 5 USD by default); pass flags after --, for example: task bench:judge -- --max-cost 3 --only mal-s03-a,trap-t01. Uses AWS_PROFILE=default and AWS_REGION=eu-north-1 unless --aws-profile / --aws-region say otherwise"
+    cmds:
+      - go run ./bench/judge/cmd/judgebench {{.CLI_ARGS}}
+
+  bench:judge:offline:
+    desc: "Run the offline half of the judge benchmark: the verifier and the convention attachment on the corpus, no model"
+    cmds:
+      - go test ./bench/judge/... -count=1
 
   test:benchmark:
     desc: "Run Go benchmarks (small and medium synthetic projects)"

@@ -153,7 +153,7 @@ exit: 2
 .mcp.json:19: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
 .mcp.json:25: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
 
-strict validation: 4 error(s), 9 warning(s), 1 info across 1 root(s)
+validation: 4 error(s), 9 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         3
   AR015 secret-in-env-or-header      4
   AR503 script-not-executable        1

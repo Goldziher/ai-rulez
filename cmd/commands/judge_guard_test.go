@@ -49,7 +49,7 @@ func TestJudgeBoundsTheWalkOfADirectoryWithoutARepository(t *testing.T) {
 	dir := judgeProject(t, files)
 
 	// Act
-	_, _, err := resolveJudgeSources(context.Background(), dir, nil, lint.WalkLimits{MaxEntries: 5})
+	_, err := openJudgeWorkspace(context.Background(), dir, false, lint.WalkLimits{MaxEntries: 5})
 
 	// Assert
 	require.ErrorContains(t, err, "more than 5 entries")

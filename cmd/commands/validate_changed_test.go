@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +50,7 @@ func TestChangedOnlyNarrowsFindings(t *testing.T) {
 		return lint.Combine([]*lint.Report{report})
 	}
 
-	validateChanged = true
+	validateChanged = "HEAD"
 	none := run()
 	assert.Empty(t, none.Findings, "nothing changed since HEAD")
 	require.NotNil(t, none.ChangedOnly)
@@ -74,7 +75,7 @@ func TestChangedOnlyExitCodeIgnoresUntouchedFindings(t *testing.T) {
 	resetStrictFlags(t)
 	root := changedRepo(t)
 	cfg := loadStrictProject(t, root)
-	validateChanged = true
+	validateChanged = "HEAD"
 	assert.Equal(t, 0, runStrict(t, root, cfg), "every finding sits in an untouched file")
 
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "a.md"), brokenLinkRule+"\nedited\n")
@@ -90,7 +91,7 @@ func TestChangedOnlyIgnoresInheritedGitEnvironment(t *testing.T) {
 	t.Setenv("GIT_WORK_TREE", other)
 	t.Setenv("GIT_INDEX_FILE", filepath.Join(other, ".git", "index"))
 
-	validateChanged = true
+	validateChanged = "HEAD"
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "a.md"), brokenLinkRule+"\nedited\n")
 	assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)), "git must look at the project, not at GIT_DIR")
 }
@@ -101,11 +102,11 @@ func TestChangedFlagValidation(t *testing.T) {
 	validateSince = "main"
 	assert.Error(t, checkStrictFlags())
 	validateStrict = true
-	validateChanged = true
+	validateChanged = "HEAD"
 	assert.Error(t, checkStrictFlags(), "--since with --changed")
-	validateChanged, validateUpdateBaseline = false, true
+	validateChanged, validateUpdateBaseline = "", true
 	assert.Error(t, checkStrictFlags(), "--update-baseline with --since")
-	t.Cleanup(func() { validateSince, validateChanged = "", false })
+	t.Cleanup(func() { validateSince, validateChanged = "", "" })
 }
 
 func TestChangedOnlyUnknownRevisionFails(t *testing.T) {
@@ -171,7 +172,7 @@ func TestChangedOnlyFollowsTransitiveDependents(t *testing.T) {
 		require.NoError(t, narrowToChanged(context.Background(), []*lint.Report{report}, []*config.Config{cfg}))
 		return lint.Combine([]*lint.Report{report})
 	}
-	validateChanged = true
+	validateChanged = "HEAD"
 
 	one, two, all := run("1"), run("2"), run("all")
 
@@ -207,7 +208,7 @@ func TestChangedOnlyWithRepoRootNarrowerThanGitToplevel(t *testing.T) {
 	validateRepoRoot = sub
 	t.Cleanup(func() { validateRepoRoot = "" })
 	require.NoError(t, applyRepoRoot())
-	validateChanged = true
+	validateChanged = "HEAD"
 	cfg := loadStrictProject(t, sub)
 	report, err := strictLint(context.Background(), cfg)
 	require.NoError(t, err)
@@ -227,10 +228,67 @@ func TestChangedOnlyFailsClosedWhenRepoRootIsNotInGit(t *testing.T) {
 	writeFile(t, filepath.Join(outside, "x.txt"), "x")
 	validateRepoRoot = outside
 	t.Cleanup(func() { validateRepoRoot = "" })
-	validateChanged = true
+	validateChanged = "HEAD"
 
 	err := applyRepoRoot()
 
 	require.Error(t, err, "a change set that cannot be mapped must not pass vacuously")
 	assert.Contains(t, err.Error(), "not inside a git repository")
+}
+
+// --changed takes an optional base on validate, scan and judge: bare is HEAD, =REV names the base.
+func TestChangedFlagTakesAnOptionalBase(t *testing.T) {
+	newFlags := map[string]func(cmd *cobra.Command) func() string{
+		"validate": func(cmd *cobra.Command) func() string {
+			addChangedFlags(cmd)
+			return func() string { return changedRev() }
+		},
+		"scan": func(cmd *cobra.Command) func() string {
+			addChangedFlags(cmd)
+			return func() string { return changedRev() }
+		},
+		"judge": func(cmd *cobra.Command) func() string {
+			return registerJudgeFlags(cmd).sinceRev
+		},
+	}
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"absent", nil, ""},
+		{"bare", []string{"--changed"}, "HEAD"},
+		{"with a value", []string{"--changed=main"}, "main"},
+		{"with a remote ref", []string{"--changed=origin/master"}, "origin/master"},
+		{"the since alias", []string{"--since", "v1.0.0"}, "v1.0.0"},
+	}
+	for command, register := range newFlags {
+		for _, tt := range tests {
+			t.Run(command+" "+tt.name, func(t *testing.T) {
+				// Arrange
+				validateSince, validateChanged = "", ""
+				t.Cleanup(func() { validateSince, validateChanged = "", "" })
+				cmd := &cobra.Command{Use: command}
+				rev := register(cmd)
+
+				// Act
+				err := cmd.ParseFlags(tt.args)
+
+				// Assert
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, rev())
+			})
+		}
+	}
+}
+
+// A bare --changed must not swallow the next word: on judge that word is a path to judge.
+func TestBareChangedLeavesThePathAlone(t *testing.T) {
+	cmd := &cobra.Command{Use: "judge"}
+	f := registerJudgeFlags(cmd)
+
+	require.NoError(t, cmd.ParseFlags([]string{"--changed", "skills/a"}))
+
+	assert.Equal(t, "HEAD", f.sinceRev())
+	assert.Equal(t, []string{"skills/a"}, cmd.Flags().Args())
 }

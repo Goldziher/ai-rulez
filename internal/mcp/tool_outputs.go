@@ -116,6 +116,15 @@ type validateOut struct {
 	Risk     map[string]any `json:"risk,omitempty" jsonschema:"Advisory risk score"`
 }
 
+// judgeOut is the result of judge: the document of `ai-rulez judge --format json`.
+type judgeOut struct {
+	SchemaVersion int              `json:"schema_version" jsonschema:"2"`
+	Mode          string           `json:"mode" jsonschema:"judge, or estimate when nothing was sent"`
+	Run           map[string]any   `json:"run" jsonschema:"Provenance of the run: models, egress hosts, gate, coverage, cost"`
+	Units         []map[string]any `json:"units" jsonschema:"One entry per unit with its status, scores, attached conventions, coverage and verified findings"`
+	Summary       map[string]any   `json:"summary" jsonschema:"The decision (pass, fail, incomplete), counts and grounding totals"`
+}
+
 // doctorOut is the result of doctor.
 type doctorOut struct {
 	OK       bool           `json:"ok" jsonschema:"True when no finding fails the run"`

@@ -162,7 +162,7 @@ The schema files are available in the repository:
 | `schema/cost-report.schema.json`  | JSON Schema | v1      | `ai-rulez cost --format json` |
 | `schema/telemetry-doctor.schema.json` | JSON Schema | v1  | `ai-rulez telemetry doctor --format json` |
 | `schema/eval-report.schema.json`  | JSON Schema | v1      | `ai-rulez eval run --format json` |
-| `schema/judge-report.schema.json` | JSON Schema | v1      | `ai-rulez judge --format json`: the model's grade of each instruction file, or what `--estimate` would send; see [Judge](judge.md) |
+| `schema/judge-report.schema.json` | JSON Schema | v2      | `ai-rulez judge --format json`: per unit the verified findings, scores, attached conventions and coverage, or what `--estimate` would send; see [Judge](judge.md) |
 | `schema/okf-validate.schema.json` | JSON Schema | v1      | `ai-rulez okf validate --format json` |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json` |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
