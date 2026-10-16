@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
@@ -37,8 +37,10 @@ func resetUpdateFlags(t *testing.T) {
 	reset := func() {
 		lockOutdated, lockFailOnOutdated, lockOffline, lockFormat, lockKind = false, false, false, "", ""
 		updateDryRun, updateAllowDowngrade, updateAcceptMoved, updateKind, updateFormat, updateOffline = false, false, false, "", "", false
-		cliLockPolicy.Mode, cliLockPolicy.Offline, cliLockPolicy.Refresh = includes.LockAuto, false, nil
-		cliLockPolicy.Advance, cliLockPolicy.AllowDowngrade, cliLockPolicy.AcceptMovedTag = nil, false, false
+		updateMajor, updateWriteConfig, updateAcceptFindings = false, false, false
+		// A fixture represents a fresh CLI invocation. In particular, generate's
+		// RequireWhenEnforced writer policy must not leak into update's read phase.
+		cliLockPolicy = config.LockPolicy{}
 	}
 	reset()
 	t.Cleanup(reset)

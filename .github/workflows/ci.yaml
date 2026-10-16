@@ -29,17 +29,8 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Install dependencies
         run: go mod download
@@ -67,7 +58,8 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: go.mod and go.sum are tidy
         run: |
@@ -87,7 +79,8 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -158,20 +151,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: go mod download
@@ -200,6 +184,7 @@ jobs:
       - name: Run all tests (unit + platform)
         env:
           TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
+          COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: task test
 
       - name: Run cross-platform specific tests
@@ -215,6 +200,7 @@ jobs:
         with:
           name: test-results-${{ matrix.os }}
           path: |
+            ${{ runner.temp }}/command-test-shards/
             coverage.out
             *.log
           retention-days: 7
@@ -237,20 +223,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: go mod download
@@ -290,20 +267,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Pull the pinned images
         run: |
@@ -332,17 +300,8 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
@@ -360,20 +319,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: go mod download
@@ -430,20 +380,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: go mod download
@@ -459,6 +400,7 @@ jobs:
       - name: Run all test suites (unit + platform + e2e)
         env:
           TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
+          COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: task test:all
 
       - name: Upload comprehensive test results
@@ -467,6 +409,7 @@ jobs:
         with:
           name: comprehensive-test-results-${{ matrix.os }}
           path: |
+            ${{ runner.temp }}/command-test-shards/
             coverage.out
             tests/e2e/*.log
             *.log
@@ -484,20 +427,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.27"
-          cache: false
+          cache: true
+          cache-dependency-path: "**/go.sum"
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
-
-      - name: Cache Go modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: go mod download

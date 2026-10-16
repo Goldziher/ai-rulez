@@ -83,6 +83,21 @@ func TestUpdateMajor_WriteConfigPatchesOneLineAndMovesThePin(t *testing.T) {
 	assert.Empty(t, rep2.Major)
 }
 
+func TestUpdateMajor_FixtureIsolatesAPreviousGenerateLockPolicy(t *testing.T) {
+	// A generate test can leave its writer-only lock enforcement set. The update fixture
+	// must start with the policy of a fresh update process, regardless of test order.
+	applyLockFlags()
+	require.True(t, cliLockPolicy.RequireWhenEnforced)
+	f := newMajorFixture(t)
+	updateMajor, updateWriteConfig = true, true
+
+	rep, code := runUpdateJSON(t)
+
+	require.Equal(t, 0, code)
+	require.Len(t, rep.Updates, 1)
+	assert.Equal(t, "v2.0.0", f.lock().Find(lockfile.KindInclude, "shared").Tag)
+}
+
 func TestUpdateMajor_DryRunWithWriteConfigWritesNothing(t *testing.T) {
 	f := newMajorFixture(t)
 	before, lockBefore := f.config(), f.lock()

@@ -135,10 +135,11 @@ linters:
 
     rules:
       # forbidigo applies to the engine's library packages only: the command line, the benchmark
-      # harness (bench/ starts the binary it measures), the packages that are the process boundary
+      # harnesses (bench/ starts the measured binary; scripts/testshard/ starts isolated tests),
+      # the packages that are the process boundary
       # (ambient, runner) or CLI-only by design (agents, watch, logger, telemetry), tests and
       # fixtures are exempt.
-      - path: '^(cmd/|bench/|tests/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/|internal/signing/sigstore/fakesigstore/)|_test\.go$'
+      - path: '^(cmd/|bench/|tests/|scripts/testshard/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/|internal/signing/sigstore/fakesigstore/)|_test\.go$'
         linters:
           - forbidigo
 
