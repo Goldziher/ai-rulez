@@ -6,6 +6,7 @@
 # serves a fake release built in setup, so tar, unzip and the checksum tools run for real.
 
 setup_file() {
+  bats_require_minimum_version 1.5.0
   bats_load_library xberg-bats
   xberg_shadow_system_path_without ai-rulez
 }
@@ -25,7 +26,7 @@ setup() {
   export AI_RULEZ_VERSION="v9.8.7"
   export TMPDIR="$BATS_TEST_TMPDIR/tmp"
   mkdir -p "$RELEASE" "$TMPDIR"
-  unset AI_RULEZ_BINARY FAKE_EXIT
+  unset AI_RULEZ_BINARY AI_RULEZ_USE_PATH AI_RULEZ_RESOLVE_ONLY FAKE_EXIT
 
   export FAKE_UNAME_S="Darwin" FAKE_UNAME_M="arm64"
   xberg_stub uname \
@@ -327,4 +328,43 @@ cached_binary() {
   xberg_assert_status 1
   xberg_assert_output_contains "unzip is required to extract ai-rulez"
   xberg_assert_file_absent "$(cached_binary windows-amd64 .exe)"
+}
+
+@test "resolve-only downloads keep stdout limited to the usable binary path" {
+  make_release darwin arm64
+  write_checksums
+  export AI_RULEZ_RESOLVE_ONLY=1
+
+  run --separate-stderr "$SCRIPT"
+
+  xberg_assert_status 0
+  xberg_assert_output "$(cached_binary darwin-arm64)"
+  [[ "$stderr" == *"Downloading ai-rulez v9.8.7 for darwin/arm64..."* ]]
+  [ -x "$output" ]
+}
+
+@test "AI_RULEZ_USE_PATH=0 installs the requested release despite an existing PATH binary" {
+  xberg_stub ai-rulez 'echo "wrong version from PATH"'
+  make_release darwin arm64
+  write_checksums
+  export AI_RULEZ_USE_PATH=0 AI_RULEZ_RESOLVE_ONLY=1
+
+  run --separate-stderr "$SCRIPT"
+
+  xberg_assert_status 0
+  xberg_assert_output "$(cached_binary darwin-arm64)"
+  [ -x "$output" ]
+}
+
+@test "windows preserves the fallback native DLL beside the executable" {
+  export FAKE_UNAME_S="MINGW64_NT-10.0-19045" FAKE_UNAME_M="x86_64"
+  make_release windows amd64 zip
+  printf 'native library fixture\n' >"$BATS_TEST_TMPDIR/stage/liter_llm_ffi.dll"
+  (cd "$BATS_TEST_TMPDIR/stage" && zip -q "$RELEASE/$ARCHIVE" liter_llm_ffi.dll)
+  write_checksums
+
+  run "$SCRIPT" version
+
+  xberg_assert_status 0
+  cmp "$BATS_TEST_TMPDIR/stage/liter_llm_ffi.dll" "$(dirname "$(cached_binary windows-amd64 .exe)")/liter_llm_ffi.dll"
 }

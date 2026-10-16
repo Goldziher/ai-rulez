@@ -6,13 +6,15 @@
 # AI_RULEZ_RESOLVE_ONLY=1 skips execution: it prints the resolved binary's path on stdout and
 # exits 0 once the binary is available, so a caller (the setup-ai-rulez Action) can add its
 # directory to PATH instead of running a single command through this script.
+# AI_RULEZ_USE_PATH=0 bypasses PATH discovery so setup actions honor the requested release.
 
 set -euo pipefail
 
-AI_RULEZ_VERSION="${AI_RULEZ_VERSION:-v5.4.0}"
+AI_RULEZ_VERSION="${AI_RULEZ_VERSION:-v5.4.1}"
 AI_RULEZ_BINARY="${AI_RULEZ_BINARY:-}"
 AI_RULEZ_CACHE_DIR="${AI_RULEZ_CACHE_DIR:-$HOME/.cache/ai-rulez/pre-commit}"
 AI_RULEZ_RESOLVE_ONLY="${AI_RULEZ_RESOLVE_ONLY:-0}"
+AI_RULEZ_USE_PATH="${AI_RULEZ_USE_PATH:-1}"
 
 if [[ -n "$AI_RULEZ_BINARY" ]]; then
   # An explicit binary that cannot run is an error, not a reason to run a different one.
@@ -21,7 +23,7 @@ if [[ -n "$AI_RULEZ_BINARY" ]]; then
     exit 1
   fi
   BINARY_PATH="$AI_RULEZ_BINARY"
-elif command -v ai-rulez >/dev/null 2>&1; then
+elif [[ "$AI_RULEZ_USE_PATH" == "1" ]] && command -v ai-rulez >/dev/null 2>&1; then
   BINARY_PATH="$(command -v ai-rulez)"
 else
   TAG="${AI_RULEZ_VERSION}"
@@ -75,7 +77,7 @@ else
     trap cleanup EXIT
 
     archive_path="${tmp_dir}/${archive_name}"
-    echo "Downloading ai-rulez ${TAG} for ${PLATFORM}/${ARCH}..."
+    echo "Downloading ai-rulez ${TAG} for ${PLATFORM}/${ARCH}..." >&2
     curl -fsSL "$download_url" -o "$archive_path"
 
     # Fail closed, like the npm and PyPI wrappers: no checksum, no install.
@@ -111,6 +113,9 @@ else
       tar -xzf "$archive_path" -C "$tmp_dir"
     fi
 
+    if [[ "$PLATFORM" == "windows" && -f "${tmp_dir}/liter_llm_ffi.dll" ]]; then
+      mv "${tmp_dir}/liter_llm_ffi.dll" "$cache_dir/liter_llm_ffi.dll"
+    fi
     mv "${tmp_dir}/ai-rulez${exe_suffix}" "$BINARY_PATH"
     chmod +x "$BINARY_PATH"
     trap - EXIT

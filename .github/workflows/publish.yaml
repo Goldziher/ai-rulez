@@ -4,6 +4,7 @@ name: Publish Packages
 # on its own runner (no cross-compiling). Flow:
 #   meta -> create_release (DRAFT) -> build (one job per platform) -> checksums -> provenance
 #        -> finalize_release (promote the draft) -> publish_npm / publish_pypi / publish_homebrew
+#        -> update_action_tag (advance v5 only after successful stable distribution)
 # Every stage is idempotent: a rerun for the same tag redoes only what is missing. See
 # docs/maintainers/release.md.
 
@@ -672,3 +673,58 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           VERSION: ${{ needs.meta.outputs.version }}
         run: bash scripts/update-homebrew-formula.sh "$VERSION" dist/checksums.txt --push
+
+  update_action_tag:
+    name: Advance v5 GitHub Action tag
+    needs: [
+      meta,
+      create_release,
+      build,
+      checksums,
+      provenance,
+      finalize_release,
+      publish_npm,
+      publish_pypi,
+      publish_homebrew,
+    ]
+    # Existing distributions and an already-public release are intentionally skipped on reruns.
+    # Failed or cancelled dependencies must never promote the floating Action ref.
+    if: >-
+      ${{
+        !cancelled() &&
+        !contains(needs.*.result, 'failure') &&
+        !contains(needs.*.result, 'cancelled') &&
+        needs.meta.result == 'success' &&
+        needs.meta.outputs.prerelease == 'false' &&
+        startsWith(needs.meta.outputs.tag, 'v5.') &&
+        (needs.finalize_release.result == 'success' ||
+         (needs.finalize_release.result == 'skipped' && needs.meta.outputs.release_exists == 'true' &&
+          needs.meta.outputs.release_draft == 'false')) &&
+        (needs.publish_npm.result == 'success' ||
+         (needs.publish_npm.result == 'skipped' && needs.meta.outputs.npm_exists == 'true')) &&
+        (needs.publish_pypi.result == 'success' ||
+         (needs.publish_pypi.result == 'skipped' && needs.meta.outputs.pypi_exists == 'true')) &&
+        needs.publish_homebrew.result == 'success'
+      }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publish-floating-action-v5
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+          persist-credentials: false
+
+      - name: Test floating tag safety checks
+        run: python3 -m unittest discover -s scripts -p 'test_update_action_tag.py' -v
+
+      - name: Advance the stable major Action ref
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.meta.outputs.tag }}
+        run: python3 scripts/update-action-tag.py

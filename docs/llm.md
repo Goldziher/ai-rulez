@@ -50,7 +50,10 @@ or export `AI_RULEZ_LLM_ALLOW_NETWORK=1` (and `_BASE_URL`, `_API_KEY_ENV`). Prec
 
 ### Environment overrides
 
-`AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_BACKEND`, `_BASE_URL`, `_API_KEY_ENV`, `_EMBEDDING_MODEL`, `_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE`, `_ALLOW_NETWORK`, `_ALLOW_PLAIN_HTTP`, `_PLAIN_HTTP_HOSTS` (comma-separated), `_PRICE_INPUT_PER_MTOK`, `_PRICE_OUTPUT_PER_MTOK` (the price override for the model named by `_MODEL`) and `_TEMPERATURE` (`omit` leaves `temperature` out of every request; env only, no config key; a Claude 5.x model never gets one, whatever the setting). An environment value wins over the config file. An unparsable value is an `AR9L0` error, not a silent default.
+`AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_BASE_URL`, `_API_KEY_ENV`, `_EMBEDDING_MODEL`, `_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE`, `_ALLOW_NETWORK`, `_ALLOW_PLAIN_HTTP`, `_PLAIN_HTTP_HOSTS` (comma-separated), `_PRICE_INPUT_PER_MTOK`, `_PRICE_OUTPUT_PER_MTOK` (the price override for the model named by `_MODEL`) and `_TEMPERATURE` (`omit` leaves `temperature` out of every request; env only, no config key; a Claude 5.x model never gets one, whatever the setting). An environment value wins over the config file. An unparsable value is an `AR9L0` error, not a silent default.
+
+The [official GitHub Action](github-actions.md) accepts matching `llm-*` inputs and exports them
+for later command steps. Credentials belong in the command step's or job's environment.
 
 ### Validation: `AR9L0 llm-config-invalid`
 

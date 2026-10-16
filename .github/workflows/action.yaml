@@ -1,0 +1,72 @@
+name: Official Action
+
+on:
+  push:
+    branches: [main, develop]
+    paths: &action-paths
+      - "action.yml"
+      - "scripts/action/**"
+      - "scripts/pre-commit/run-ai-rulez.sh"
+      - "scripts/update-action-tag*"
+      - "scripts/test_update_action_tag.py"
+      - "tests/bats/scripts/action-llm.bats"
+      - ".github/workflows/action.yaml"
+      - ".github/workflows/publish.yaml"
+  pull_request:
+    branches: [main]
+    paths: *action-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: Setup on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      AI_RULEZ_LLM_PROVIDER: openai
+      AI_RULEZ_LLM_MODEL: inherited-model
+      AI_RULEZ_LLM_MAX_CALLS: "3"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test floating tag safety checks
+        if: runner.os == 'Linux'
+        run: python3 -m unittest discover -s scripts -p 'test_update_action_tag.py' -v
+      - name: Install the public CLI with this action implementation
+        id: setup
+        uses: ./
+        with:
+          version: 5.4.0
+          llm-model: gpt-4o-mini
+          llm-api-key-env: ACTION_TEST_KEY
+          llm-allow-network: "false"
+          llm-max-cost-usd: "0.10"
+          llm-cache: "false"
+      - name: Verify outputs, PATH and persisted configuration without model requests
+        env:
+          INSTALLED_VERSION: ${{ steps.setup.outputs.version }}
+          INSTALLED_PATH: ${{ steps.setup.outputs.path }}
+          ACTION_TEST_KEY: test-not-a-real-credential
+        run: |
+          set -euo pipefail
+          test "$INSTALLED_VERSION" = 5.4.0
+          test -f "$INSTALLED_PATH"
+          test "$AI_RULEZ_LLM_PROVIDER" = openai
+          test "$AI_RULEZ_LLM_MODEL" = gpt-4o-mini
+          test "$AI_RULEZ_LLM_API_KEY_ENV" = ACTION_TEST_KEY
+          test "$AI_RULEZ_LLM_ALLOW_NETWORK" = false
+          test "$AI_RULEZ_LLM_MAX_COST_USD" = 0.10
+          test "$AI_RULEZ_LLM_MAX_CALLS" = 3
+          test "$AI_RULEZ_LLM_CACHE" = false
+          test "$(ai-rulez version)" = 'ai-rulez version 5.4.0'
+          cd "$RUNNER_TEMP"
+          ai-rulez llm doctor
