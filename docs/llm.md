@@ -84,6 +84,9 @@ ai-rulez llm estimate <file>            approximate tokens and worst-case cost o
 
 `llm doctor` is also a section of `ai-rulez doctor` (check `llm`, silent when there is no `[llm]` table). `--ping` makes one 1-token call and refuses unless `allow_network` is true.
 
+`llm doctor` requires a project configuration; `llm estimate` can use only the user configuration
+and environment when no project exists.
+
 ## What it does for every call
 
 Outermost first: network gate and timeout, cache, budget, liter-llm (which retries inside the call).

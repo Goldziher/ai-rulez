@@ -68,5 +68,8 @@ jobs:
           test "$AI_RULEZ_LLM_MAX_CALLS" = 3
           test "$AI_RULEZ_LLM_CACHE" = false
           test "$(ai-rulez version)" = 'ai-rulez version 5.4.0'
-          cd "$RUNNER_TEMP"
+          project="$(mktemp -d)"
+          mkdir -p "$project/.ai-rulez"
+          printf 'version = "5.0"\nname = "Action smoke test"\nbuiltins = false\n' >"$project/.ai-rulez/config.toml"
+          cd "$project"
           ai-rulez llm doctor

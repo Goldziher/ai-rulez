@@ -118,6 +118,9 @@ to pull requests from forks.
 
 You can skip the LLM inputs and use the same variables directly:
 
+Run `llm doctor` from a repository with an ai-rulez project configuration. Unlike `judge`, this
+diagnostic requires a project; `llm estimate` can run without one.
+
 ```yaml
 - uses: Goldziher/ai-rulez@v5
   with:
