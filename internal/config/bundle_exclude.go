@@ -77,6 +77,12 @@ type bundleSnapshots struct {
 	// domains asked once per domain's skills and commands directory.
 	anchor string
 	wide   *wideListing
+	// indexIgnores answers "does git ignore this item's entry file" from the
+	// anchor's listing instead of one `git check-ignore` per parent directory.
+	// It is set for a scan that shares one snapshot across many single-item
+	// loads (see WithBundleSnapshots), where a process per parent costs seconds
+	// on a large repository.
+	indexIgnores bool
 }
 
 // wideListing is one `git ls-files` run at the anchor: the slash paths, relative
@@ -84,6 +90,11 @@ type bundleSnapshots struct {
 type wideListing struct {
 	paths []string
 	ok    bool
+	// set holds paths for membership tests; markers holds, per entry file name,
+	// the listed files of that name an ignore rule matches. Both are filled on
+	// demand, only when indexIgnores is set.
+	set     map[string]bool
+	markers map[string]map[string]bool
 }
 
 type snapshotKey struct{ parent, marker string }
@@ -132,7 +143,8 @@ func (b *bundleSnapshots) snapshot(ctx context.Context, git gitutil.Git, log log
 	if snap, ok := b.by[key]; ok {
 		return snap
 	}
-	snap := takeSnapshot(ctx, git, log, parent, marker, b.filesBelow(ctx, git, log, parent))
+	listed := b.filesBelow(ctx, git, log, parent)
+	snap := b.takeSnapshot(ctx, git, log, parent, marker, listed)
 	if b.by == nil {
 		b.by = make(map[snapshotKey]*parentSnapshot)
 	}
@@ -158,20 +170,7 @@ func (b *bundleSnapshots) filesBelow(ctx context.Context, git gitutil.Git, log l
 		}
 	}
 	if b.wide == nil {
-		b.wide = &wideListing{}
-		res := git.Exec(ctx, b.anchor, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
-		if err := gitutil.ResultErr(res); err != nil {
-			if res.Status != runner.StatusUnavailable {
-				log.Debug("git ls-files unavailable, bundling without .gitignore", "path", b.anchor, "error", err)
-			}
-		} else {
-			b.wide.ok = true
-			for _, p := range bytes.Split(res.Stdout, []byte{0}) {
-				if len(p) > 0 {
-					b.wide.paths = append(b.wide.paths, filepath.ToSlash(string(p)))
-				}
-			}
-		}
+		b.wide = b.loadWide(ctx, git, log)
 	}
 	if !b.wide.ok {
 		return nil
@@ -189,30 +188,131 @@ func (b *bundleSnapshots) filesBelow(ctx context.Context, git gitutil.Git, log l
 	return below
 }
 
-func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string, listed []string) *parentSnapshot { //nolint:gocyclo // one probe-then-list sequence; splitting it scatters the fallbacks
+// loadWide reads the anchor's listing once.
+func (b *bundleSnapshots) loadWide(ctx context.Context, git gitutil.Git, log logger.Logger) *wideListing {
+	w := &wideListing{}
+	files, ok, err := git.ListFilesContext(ctx, b.anchor)
+	if err != nil || !ok {
+		if err != nil {
+			log.Debug("git ls-files unavailable, bundling without .gitignore", "path", b.anchor, "error", err)
+		}
+		return w
+	}
+	w.ok = true
+	w.paths = make([]string, 0, len(files))
+	for _, p := range files {
+		w.paths = append(w.paths, filepath.ToSlash(p))
+	}
+	return w
+}
+
+// markerIgnored answers `git check-ignore --no-index` for the entry file of the
+// child name of parent from the anchor's listing. The tracked entry files of the
+// whole repository are asked in one batched call; a file the listing lacks is left
+// to git (it may be ignored, or only spelled in another case). ok is false when
+// the listing cannot answer.
+func (b *bundleSnapshots) markerIgnored(ctx context.Context, git gitutil.Git, parent, name, marker string) (ignored, ok bool) {
+	if !b.indexIgnores || b.wide == nil || !b.wide.ok {
+		return false, false
+	}
+	rel, err := filepath.Rel(b.anchor, filepath.Join(parent, name, marker))
+	if err != nil {
+		return false, false
+	}
+	rel = filepath.ToSlash(rel)
+	if b.wide.set == nil {
+		b.wide.set = make(map[string]bool, len(b.wide.paths))
+		for _, p := range b.wide.paths {
+			b.wide.set[p] = true
+		}
+	}
+	if b.wide.set[rel] {
+		tracked, ok := b.trackedIgnoredMarkers(ctx, git, marker)
+		if !ok {
+			return false, false
+		}
+		return tracked[rel], true
+	}
+	// Not listed: nothing to ignore when the file is absent. A file that is there
+	// may be unlisted only because the listing spells its name in another case
+	// (a case-insensitive filesystem), so git is asked about it.
+	if _, err = os.Lstat(filepath.Join(parent, name, marker)); err == nil {
+		return false, false
+	}
+	return false, true
+}
+
+// trackedIgnoredMarkers returns which listed files named marker an ignore rule
+// matches, asked of git once for all of them.
+func (b *bundleSnapshots) trackedIgnoredMarkers(ctx context.Context, git gitutil.Git, marker string) (map[string]bool, bool) {
+	if got, done := b.wide.markers[marker]; done {
+		return got, got != nil
+	}
+	if b.wide.markers == nil {
+		b.wide.markers = map[string]map[string]bool{}
+	}
+	var stdin bytes.Buffer
+	for _, p := range b.wide.paths {
+		if p == marker || strings.HasSuffix(p, "/"+marker) {
+			stdin.WriteString(p)
+			stdin.WriteByte(0)
+		}
+	}
+	got := map[string]bool{}
+	if stdin.Len() > 0 {
+		res := git.ExecStdin(ctx, b.anchor, stdin.Bytes(), 0, "check-ignore", "--no-index", "--stdin", "-z")
+		switch {
+		case res.Status == runner.StatusOK:
+			for _, p := range bytes.Split(res.Stdout, []byte{0}) {
+				if len(p) > 0 {
+					got[filepath.ToSlash(string(p))] = true
+				}
+			}
+		case res.Status == runner.StatusExit && res.ExitCode == 1: // none ignored
+		default:
+			got = nil
+		}
+	}
+	b.wide.markers[marker] = got
+	return got, got != nil
+}
+
+func (b *bundleSnapshots) takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string, listed []string) *parentSnapshot { //nolint:gocyclo // one probe-then-list sequence; splitting it scatters the fallbacks
 	snap := &parentSnapshot{ignored: map[string]bool{}, files: map[string]map[string]bool{}, probed: map[string]bool{}}
 	entries, err := os.ReadDir(parent)
 	if err != nil {
 		return snap
 	}
 	var stdin bytes.Buffer
+	probed := false
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
+		snap.probed[e.Name()] = true
+		probed = true
+		if listed != nil {
+			if ignored, ok := b.markerIgnored(ctx, git, parent, e.Name(), marker); ok {
+				if ignored {
+					snap.ignored[e.Name()] = true
+				}
+				continue
+			}
+		}
 		stdin.WriteString(e.Name() + "/" + marker)
 		stdin.WriteByte(0)
-		snap.probed[e.Name()] = true
 	}
-	if stdin.Len() == 0 {
+	if !probed {
 		return snap
 	}
 	// Exit 0/1: some/none of the entry files are ignored (the whole item is);
 	// 128: not a repo. Neither is an answer by itself, as in the per-item case.
-	if res := git.ExecStdin(ctx, parent, stdin.Bytes(), 0, "check-ignore", "--no-index", "--stdin", "-z"); res.Status == runner.StatusOK {
-		for _, p := range bytes.Split(res.Stdout, []byte{0}) {
-			if name, _, ok := strings.Cut(filepath.ToSlash(string(p)), "/"); ok {
-				snap.ignored[name] = true
+	if stdin.Len() > 0 {
+		if res := git.ExecStdin(ctx, parent, stdin.Bytes(), 0, "check-ignore", "--no-index", "--stdin", "-z"); res.Status == runner.StatusOK {
+			for _, p := range bytes.Split(res.Stdout, []byte{0}) {
+				if name, _, ok := strings.Cut(filepath.ToSlash(string(p)), "/"); ok {
+					snap.ignored[name] = true
+				}
 			}
 		}
 	}

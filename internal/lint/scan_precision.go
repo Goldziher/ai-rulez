@@ -17,7 +17,17 @@ var (
 	// other markers negate the whole sentence.
 	noBeforeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)\bno\s+(?:\w+\s+){0,2}$`) })
 	negationRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`(?i)\b(?:never|removed|deleted|decommissioned|retired|dropped|renamed|obsolete|older|formerly|gone|empty)\b|\bno longer\b|\bnot (?:exist|present|tracked|committed|checked in)|n't exist\b|\bused to\b|\bmoved to\b`)
+		return regexp.MustCompile(`(?i)\b(?:never|removed|deleted|decommissioned|retired|dropped|renamed|obsolete|older|formerly|gone|empty)\b|\bno longer\b|\bnot (?:exist|present|tracked|committed|checked in)|n't exist\b|\bused to\b|\bmoved to\b|` + historicalMarkers)
+	})
+	// prohibitionRe is a ban on creating the thing: "Don't add a `references/patterns/` tier".
+	// A ban on using it ("Do not edit `x`") still asserts that it exists.
+	prohibitionRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:don['’]t|do not|never|avoid|must not|should not)\s+(?:\w+\s+){0,2}?(?:add|create|introduce|make|write|invent)\b`)
+	})
+	// mentionHistoricalRe marks a sentence that talks about a name that used to exist, or
+	// that is declared not to: such a mention is no pointer.
+	mentionHistoricalRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:removed|deleted|decommissioned|retired|dropped|renamed|obsolete|formerly|no longer|used to)\b|n't exist\b|\bnot exist|` + historicalMarkers)
 	})
 	ignoredRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?i)\bgit-?ignored?\b|\bignored by git\b|\bnot (?:committed|checked in)\b|\.gitignore\b|\bbuild artifacts?\b|\bgenerated at (?:build|run) ?time\b`)
@@ -40,6 +50,55 @@ var (
 		return regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)+$`)
 	})
 )
+
+// historicalMarkers is the regexp alternation of the words that mark a mention as history or a
+// denial: the former thing, a deprecated one, one that is not (or no longer) registered.
+const historicalMarkers = `\bformer\b|\bdeprecated\b|\bsuperseded\b|\bde-?registered\b|\bnot (?:a )?(?:registered|real|valid|available)\b`
+
+// sentenceAround is the sentence of text that holds text[start:end].
+func sentenceAround(text string, start, end int) string {
+	before, after := text[:start], text[end:]
+	if m := sentenceEndRe().FindAllStringIndex(before, -1); len(m) > 0 {
+		before = before[m[len(m)-1][1]:]
+	}
+	if m := sentenceEndRe().FindStringIndex(after); m != nil {
+		after = after[:m[0]]
+	}
+	return before + " " + text[start:end] + " " + after
+}
+
+// mentionNotAClaim reports whether every mention of name in text sits in a sentence that
+// denies it or puts it in the past ("the former `x` skill", "`/x` is NOT a registered command",
+// "Don't add a `references/patterns/` tier"). A name that is not in text is not negated.
+func mentionNotAClaim(text, name string) bool {
+	found := false
+	for from := 0; from < len(text); {
+		i := strings.Index(text[from:], name)
+		if i < 0 {
+			break
+		}
+		i += from
+		from = i + len(name)
+		found = true
+		sentence := sentenceAround(text, i, from)
+		if !mentionHistoricalRe().MatchString(sentence) && !prohibitionRe().MatchString(sentence) {
+			return false
+		}
+	}
+	return found
+}
+
+// placeholderSegment reports whether a path has a segment that stands for a name: a single capital
+// letter ("references/services/X.md"), "..." or a glob.
+func placeholderSegment(tok string) bool {
+	for _, seg := range strings.Split(tok, "/") {
+		base := strings.TrimSuffix(seg, path.Ext(seg))
+		if len(base) == 1 && base[0] >= 'A' && base[0] <= 'Z' || strings.Contains(seg, "...") || strings.Contains(seg, "…") || strings.Contains(seg, "*") {
+			return true
+		}
+	}
+	return false
+}
 
 // imageRefToken reports whether tok is a container image reference rather than a
 // repository path. It has no file extension and the "namespace/name" shape of an
@@ -77,7 +136,7 @@ func (r *runner) pathNotAClaim(text, prev string, start, end int) bool {
 	switch {
 	case dateHolderRe().MatchString(tok):
 		return true
-	case noBeforeRe().MatchString(strings.TrimRight(before, "` ") + " "), negationRe().MatchString(sentence), ignoredRe().MatchString(sentence):
+	case noBeforeRe().MatchString(strings.TrimRight(before, "` ") + " "), negationRe().MatchString(sentence), ignoredRe().MatchString(sentence), prohibitionRe().MatchString(sentence):
 		return true
 	case exampleRe().MatchString(text[:start]):
 		return true

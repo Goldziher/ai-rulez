@@ -244,6 +244,8 @@ func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear c
 			if kind := anyString(obj["source"]); !inSet([]string{"github", "url", "git-subdir", cmdNPM, "git"}, kind) {
 				r.add(CodePluginManifest, abs, line, "plugin %q: source.source %q is not one of github, url, git-subdir, npm", name, kind)
 			}
+		case !r.marketplaceSourceExists(abs, m, s):
+			r.add(CodePluginManifest, abs, line, "plugin %q: source %q does not exist in the repository", name, s)
 		}
 		for _, k := range sortedRawKeys(p) {
 			if !inSet(entryKeys, k) {
@@ -256,6 +258,28 @@ func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear c
 			r.addSev(SeverityWarning, CodePluginManifest, abs, at(quoteNeedle(k)), "unknown field %q is ignored at load time", k)
 		}
 	}
+}
+
+// marketplaceSourceExists reports whether the local source of a marketplace entry is there: the
+// marketplace root is the directory above .claude-plugin, and metadata.pluginRoot may prefix a
+// relative source.
+func (r *runner) marketplaceSourceExists(abs string, m map[string]json.RawMessage, source string) bool {
+	root := filepath.Dir(filepath.Dir(abs))
+	prefixes := []string{""}
+	var meta struct {
+		PluginRoot string `json:"pluginRoot"`
+	}
+	if raw, ok := m["metadata"]; ok && json.Unmarshal(raw, &meta) == nil && meta.PluginRoot != "" {
+		prefixes = append(prefixes, filepath.FromSlash(meta.PluginRoot))
+	}
+	for _, prefix := range prefixes {
+		candidate := filepath.Join(root, prefix, filepath.FromSlash(source))
+		r.dep(abs, candidate)
+		if r.existsAbs(candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 var pluginRootRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\$\{?CLAUDE_PLUGIN_ROOT\}?`) })

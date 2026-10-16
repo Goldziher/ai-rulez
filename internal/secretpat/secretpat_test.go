@@ -14,7 +14,7 @@ func samples() []string {
 		"ghp_0123456789abcdefghijklmnopqrstuvwxyzAB", "gho_0123456789abcdefghijklmnopqrstuvwxyzAB", "ghx_0123456789abcdefghijklmnopqrstuvwxyzAB",
 		"github_pat_0123456789abcdefghijklmnop", "xoxb-1234567890-abcdef", "AIzaSyA-0123456789abcdefghijklmnopqrstuv",
 		"sk_" + "live_0123456789abcdefghijklmn", "rk_" + "live_0123456789abcdefghijklmn", "sk-ant-api03-abcdefghijklmnopqrstuv",
-		"sk-proj-0123456789abcdefghijklmnopqrstuvwxyzABCD", "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----",
+		"sk-proj-0123456789abcdefghijklmnopqrstuvwxyzABCD", "-----BEGIN " + "RSA PRIVATE KEY-----", "-----BEGIN " + "PRIVATE KEY-----",
 		"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmnop",
 		`password = "Sup3rS3cretValue99xyz"`, `API_KEY: 'abcdefghij1234567890'`, `ApiKey="abcdefghij1234567890"`, `TOKEN="abcdefghij1234567890"`,
 		`client-secret = "abcdefghij1234567890"`, `PaSsWd: "abcdefghij1234567890"`, `ſecret = "abcdefghij1234567890"`,
@@ -61,5 +61,28 @@ func TestRedactMasksEveryShape(t *testing.T) {
 		if !matched && got != text {
 			t.Errorf("Redact changed %q to %q without a match", text, got)
 		}
+	}
+}
+
+func TestIsCredentialValue(t *testing.T) {
+	tests := []struct {
+		value string
+		want  bool
+	}{
+		{"saq_tn3270_scan_password", false},
+		{"saq_ssh_scan_password", false},
+		{"saq_windows_scan_kdc_host", false},
+		{"Xk9fQ2pLm4Zr8TvB1nWc", true},
+		{"ab12_cd34_ef56_gh78_ij90", true},
+		{"two_words9x_only_1", true},
+		{"sk_live_a1b2c3d4e5f6g7h8i9j0", true},
+		{"nodigitsatall", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.value, func(t *testing.T) {
+			if got := IsCredentialValue(tt.value); got != tt.want {
+				t.Errorf("IsCredentialValue(%q) = %v, want %v", tt.value, got, tt.want)
+			}
+		})
 	}
 }

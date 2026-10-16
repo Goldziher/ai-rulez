@@ -32,6 +32,32 @@ func newGlob(pattern string) (globMatcher, bool) {
 	return globMatcher{re: re}, true
 }
 
+// malformedGlob reports whether pattern opens a character class or a brace group it never closes,
+// or closes a brace group it never opened: such a pattern would silently match nothing.
+func malformedGlob(pattern string) bool {
+	depth := 0
+	for i := 0; i < len(pattern); i++ {
+		switch pattern[i] {
+		case '\\':
+			i++
+		case '[':
+			end := strings.IndexByte(pattern[i+1:], ']')
+			if end < 0 {
+				return true
+			}
+			i += end + 1
+		case '{':
+			depth++
+		case '}':
+			if depth == 0 {
+				return true
+			}
+			depth--
+		}
+	}
+	return depth != 0
+}
+
 func (g globMatcher) match(path string) bool { return g.re != nil && g.re.MatchString(path) }
 
 func globBody(p string) string {

@@ -40,6 +40,7 @@ func TestGitFetchProcess(t *testing.T) {
 
 func TestGitFetchSerializesSeparateProcesses(t *testing.T) {
 	repo := initLocalRepo(t)
+	commitFile(t, repo, ".gitattributes", "* text eol=lf\n")
 	commitFile(t, repo, ".ai-rulez/rules/shared.md", "---\nname: shared\n---\nShared rule.\n")
 	root := t.TempDir()
 	start := filepath.Join(root, "start")

@@ -15,16 +15,18 @@ var (
 	// because "`term` skills" is a compound noun ("disable-model-invocation
 	// skills"), not a pointer to a skill named after the backticked term.
 	nameAfterRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`\\s+(skill|subagent|agent|rule)\\b")
+		return regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)*(?::[a-z][a-z0-9]*(?:-[a-z0-9]+)*)?)`\\s+(skill|subagent|agent|rule)\\b")
 	})
-	nameBeforeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("\\b(skill|subagent|agent)\\s+`([a-z][a-z0-9_-]*)`") })
-	slashRe      = sync.OnceValue(func() *regexp.Regexp {
+	nameBeforeRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile("\\b(skill|subagent|agent)\\s+`([a-z][a-z0-9_-]*(?::[a-z][a-z0-9_-]*)?)`")
+	})
+	slashRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?:^|[\s(])/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:[\s,;:)]|\.(?:\s|$)|$)`)
 	})
 	tickSlashRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:\s|$)`) })
 	skillCallRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bSkill\(\s*["']?([a-z][a-z0-9-]*)["']?\s*\)`) })
 	subagentRe  = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']?([a-z][a-z0-9-]*)`)
+		return regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']?([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?)`)
 	})
 	// labeledSkillRe matches a labeled, non-backticked pointer such as
 	// "Procedure/reference: skill x": a label separator, the word skill, then
@@ -62,7 +64,8 @@ var (
 	seeSkillRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?i:\b(?:see|load|read|use|follow|invoke|run))\s+(?:the\s+)?skill\s+([a-z0-9]+(?:-[a-z0-9]+)+)\b`)
 	})
-	skillRelRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
+	skillWordAfterRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("^`?\\s+skill\\b") })
+	skillRelRe       = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
 	// siblingSkillResourceRe matches a resource path that names a sibling skill
 	// explicitly: "skills/<other>/references/x.md" or
 	// ".claude/skills/<other>/references/x.md" (any "<prefix>/skills/").
@@ -115,7 +118,7 @@ func (r *runner) scanBody(it *item, d doc) {
 			if tickSlashRe().MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
 				continue // `/api-docs` in prose is a route, not a command
 			}
-			r.checkToken(it, l.No, tok, func() bool { return r.pathNotAClaim(l.Text, prev, m[2], m[3]) })
+			r.checkToken(it, l.No, tok, l.Text, m[3], func() bool { return r.pathNotAClaim(l.Text, prev, m[2], m[3]) })
 		}
 		r.checkNames(it, l)
 	}
@@ -204,10 +207,13 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 // checkToken checks one backtick token. notAClaim says whether the sentence around
 // it makes it prose rather than a claim about the repository; it costs a dozen
 // regular expressions, so it is only asked for a token that looks like a path.
-func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() bool) { //nolint:gocyclo // linear token checks
+func (r *runner) checkToken(it *item, line int, tok, text string, end int, notAClaim func() bool) { //nolint:gocyclo // linear token checks
 	tok = strings.TrimSpace(tok)
 	if m := tickSlashRe().FindStringSubmatch(tok); m != nil {
-		r.requireName(it, line, m[1], kindCommand, r.commands, r.skills)
+		if mentionNotAClaim(text, tok) {
+			return
+		}
+		r.requireNameAs(it, line, m[1], kindCommand, userSkillWording(text[end:]), r.commands, r.skills)
 		return
 	}
 	tok = lineSuffixRe().ReplaceAllString(strings.TrimRight(tok, ".,;:"), "")
@@ -219,7 +225,7 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() boo
 		return
 	}
 	if m := skillRelRe().FindString(tok); m != "" {
-		if r.checkSkillRelative(it, line, tok, m) {
+		if r.checkSkillRelative(it, line, tok, m, text) {
 			return
 		}
 	}
@@ -237,9 +243,28 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() boo
 	if r.baseRel != "" {
 		r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(r.baseRel), filepath.FromSlash(tok)))
 	}
-	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) {
+	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) && !r.existsNearFile(it, tok) {
 		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
 	}
+}
+
+// existsNearFile reports whether tok exists relative to the directory of the file that names it, or
+// to its project directory (the one that holds the nearest .claude directory): a path in a nested
+// project's content is written from that project, not from the repository root.
+func (r *runner) existsNearFile(it *item, tok string) bool {
+	dirs := []string{filepath.Dir(it.abs)}
+	if it.itemDir != "" {
+		dirs = append(dirs, it.itemDir)
+	}
+	dirs = append(dirs, r.projectDirs(it.abs)...)
+	for _, d := range dirs {
+		abs := filepath.Join(d, filepath.FromSlash(tok))
+		r.dep(it.abs, abs)
+		if r.existsAbs(abs) {
+			return true
+		}
+	}
+	return false
 }
 
 // pathLike filters out tokens that are prose, placeholders, URLs, bazel labels,
@@ -266,20 +291,99 @@ func (r *runner) allowed(tok string) bool {
 
 // checkSkillRelative handles references/, scripts/ and assets/ tokens. It
 // returns true when the token is fully handled (resolved, reported, or prose).
-func (r *runner) checkSkillRelative(it *item, line int, tok, prefix string) bool {
+func (r *runner) checkSkillRelative(it *item, line int, tok, prefix, text string) bool {
 	if tok == prefix || tok == strings.TrimSuffix(prefix, "/") {
 		return true // the bare directory name, used as prose
 	}
-	if it.itemDir == "" {
-		return false
+	if it.itemDir == "" || placeholderSegment(tok) {
+		return it.itemDir != ""
 	}
-	r.dep(it.abs, filepath.Join(it.itemDir, filepath.FromSlash(tok)))
-	if r.existsAbs(filepath.Join(it.itemDir, filepath.FromSlash(tok))) || r.existsRepo(tok) || r.allowed(tok) {
+	others, external := r.namedSkillDirs(text, it.itemDir)
+	dirs := append([]string{it.itemDir}, others...)
+	dirs = append(dirs, r.projectDirs(it.abs)...)
+	for _, d := range dirs {
+		abs := filepath.Join(d, filepath.FromSlash(tok))
+		r.dep(it.abs, abs)
+		if r.existsAbs(abs) {
+			return true
+		}
+	}
+	if r.existsRepo(tok) || r.allowed(tok) || external {
 		return true
 	}
 	r.add(CodeSkillResourceMissing, it.abs, line, "%q was not found relative to this %s's directory (%s) or relative to the repo root (%s)",
 		tok, it.kind, r.display(it.itemDir), r.display(r.tree.Top))
 	return true
+}
+
+// harnessDirNames are the dot directories that hold a project's agent content.
+const dirClaude = ".claude"
+
+func harnessDirNames() []string { return []string{dirClaude, ".agents", ".codex"} }
+
+// projectDirs lists the directories at or above the one holding abs that have a .claude directory
+// (or .agents or .codex), nearest first: a nested project's content is written from there, so
+// products/em/backend for products/em/backend/.claude/skills/x or products/em/backend/src/CLAUDE.md.
+func (r *runner) projectDirs(abs string) []string {
+	start := filepath.Dir(abs)
+	if v, ok := r.projDirs.Load(start); ok {
+		if dirs, isDirs := v.([]string); isDirs {
+			return dirs
+		}
+	}
+	var out []string
+	for d := start; ; d = filepath.Dir(d) {
+		rel := r.rel(d)
+		if rel == "" && d != filepath.Clean(r.tree.Top) {
+			break // left the repository
+		}
+		for _, h := range harnessDirNames() {
+			if r.existsAbs(filepath.Join(d, h)) {
+				out = append(out, d)
+				break
+			}
+		}
+		if d == filepath.Clean(r.tree.Top) || filepath.Dir(d) == d {
+			break
+		}
+	}
+	r.projDirs.Store(start, out)
+	return out
+}
+
+// namedSkillDirs lists the directories of the other skills the text names ("see skill `x`",
+// "the `x` skill"), apart from the skill in self. external is set when it names a skill no local
+// file defines (an installed plugin's): its files are not ours to check.
+func (r *runner) namedSkillDirs(text, self string) (dirs []string, external bool) {
+	if !strings.Contains(text, "skill") {
+		return nil, false
+	}
+	var names []string
+	for _, m := range nameAfterRe().FindAllStringSubmatch(text, -1) {
+		if kindForWord(m[2]) == kindSkill {
+			names = append(names, m[1])
+		}
+	}
+	for _, m := range nameBeforeRe().FindAllStringSubmatch(text, -1) {
+		if kindForWord(m[1]) == kindSkill {
+			names = append(names, m[2])
+		}
+	}
+	for _, n := range names {
+		var found []string
+		for _, abs := range r.names[strings.ToLower(n)] {
+			if d := filepath.Dir(abs); strings.EqualFold(filepath.Base(abs), "SKILL.md") && d != self {
+				found = append(found, d)
+			}
+		}
+		switch {
+		case len(found) > 0:
+			dirs = append(dirs, found...)
+		case !r.skills[strings.ToLower(n)] || strings.Contains(n, ":"):
+			external = true
+		}
+	}
+	return dirs, external
 }
 
 // checkSiblingSkillResource handles a resource path that names a sibling skill
@@ -354,6 +458,19 @@ func (r *runner) existsScope(rel string) bool {
 }
 
 func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[string]bool) {
+	r.requireNameAs(it, line, name, kind, false, sets...)
+}
+
+// userSkillWording reports whether the text after a backticked "/name" calls it a skill ("`/name`
+// skill"). Skills a user installs for themselves are not in the repository, so one that no local
+// file defines is a hint, not an error.
+func userSkillWording(after string) bool {
+	return skillWordAfterRe().MatchString(after)
+}
+
+// requireNameAs is requireName; userLevel marks a name the text calls a skill, which may live in
+// the user's own skill directory and is then reported as information.
+func (r *runner) requireNameAs(it *item, line int, name, kind string, userLevel bool, sets ...map[string]bool) {
 	key := strings.ToLower(name)
 	r.depName(it.abs, key)
 	if looksPlaceholder(key) || strings.Contains(key, ":") {
@@ -375,9 +492,19 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 			return
 		}
 	}
+	if kind != kindRule && r.cfg != nil && r.cfg.Implicit {
+		r.addWithSeverity(CodeReferenceUnknown, SeverityInfo, it.abs, line,
+			"references %s %q, which no file of the repository defines; it may be a user-level or plugin %s", kind, name, kind)
+		return
+	}
 	if kind != "rule" && r.pluginProvided(it) {
 		r.addWithSeverity(CodeReferenceUnknown, SeverityInfo, it.abs, line,
 			"references %s %q, which no local file defines; it may come from an installed plugin", kind, name)
+		return
+	}
+	if userLevel {
+		r.addWithSeverity(CodeReferenceUnknown, SeverityInfo, it.abs, line,
+			"references skill %q, which no local file defines; it may be a user-level or plugin skill", name)
 		return
 	}
 	r.add(CodeReferenceUnknown, it.abs, line, "references %s %q, which does not exist", kind, name)
@@ -478,6 +605,9 @@ func backtickedNames(l bodyLine, add func(name, kind string)) {
 			if kind == kindRule && toolRuleContext(l.Text[:m[0]]) {
 				continue // "eslint's `camelcase` rule" is a linter rule (#416)
 			}
+			if kind == kindRule && !ruleReferenceContext(l.Text[m[2]:m[3]], l.Text[m[5]:]) {
+				continue // "a `display` rule" is CSS or prose, not a pointer to a rule file
+			}
 			add(l.Text[m[2]:m[3]], kind)
 		}
 	}
@@ -486,6 +616,13 @@ func backtickedNames(l bodyLine, add func(name, kind string)) {
 			add(m[2], kindForWord(m[1]))
 		}
 	}
+}
+
+// ruleReferenceContext reports whether "`name` rule" points at a rule file: the name is
+// hyphenated or underscored the way rule file names are, or the phrase goes on to say "rule
+// file". A single plain word next to "rule" ("the `display` rule") is prose.
+func ruleReferenceContext(name, after string) bool {
+	return strings.ContainsAny(name, "-_") || strings.HasPrefix(after, " file")
 }
 
 // toolRuleContext reports whether the text before a "`x` rule" token ends in a
@@ -565,6 +702,9 @@ func kindForWord(w string) string {
 // reports each that no namespace defines.
 func (r *runner) checkNames(it *item, l bodyLine) {
 	for _, ref := range referenceNames(l) {
+		if mentionNotAClaim(l.Text, ref.name) {
+			continue
+		}
 		switch ref.kind {
 		case kindSkill:
 			r.requireName(it, l.No, ref.name, kindSkill, r.skills, r.commands)

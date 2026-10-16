@@ -5,6 +5,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -271,21 +272,43 @@ func (m *manifests) readPythonMarkers(top string, pyFiles []string) {
 		}
 		return rank(pyFiles[i]) < rank(pyFiles[j])
 	})
-	for i, p := range pyFiles {
-		if i >= maxPythonScan {
-			break
-		}
-		text := readTracked(top, p)
-		if !strings.Contains(text, "pytest") {
-			continue
-		}
-		for _, mm := range addMarkerRe().FindAllStringSubmatch(text, -1) {
-			m.markers[mm[1]] = true
-		}
-		for _, mm := range usedMarkerRe().FindAllStringSubmatch(text, -1) {
-			m.markers[mm[1]] = true
-		}
+	if len(pyFiles) > maxPythonScan {
+		pyFiles = pyFiles[:maxPythonScan]
 	}
+	// The files are read and scanned concurrently: a monorepo has thousands of them
+	// and the reads dominate. The markers are a set, so the order does not matter.
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	next := make(chan string)
+	for range min(runtime.GOMAXPROCS(0), len(pyFiles)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range next {
+				text := readTracked(top, p)
+				if !strings.Contains(text, "pytest") {
+					continue
+				}
+				var found []string
+				for _, mm := range addMarkerRe().FindAllStringSubmatch(text, -1) {
+					found = append(found, mm[1])
+				}
+				for _, mm := range usedMarkerRe().FindAllStringSubmatch(text, -1) {
+					found = append(found, mm[1])
+				}
+				mu.Lock()
+				for _, name := range found {
+					m.markers[name] = true
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+	for _, p := range pyFiles {
+		next <- p
+	}
+	close(next)
+	wg.Wait()
 }
 
 func checkDeadCommands(r *runner) {

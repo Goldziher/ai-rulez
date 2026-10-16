@@ -26,5 +26,44 @@ func LoadSkillDir(ctx context.Context, root, skillDir string) (skill ContentFile
 	s := newProjectScanner(ctx, osView(root))
 	s.git = gitutil.New(runner.FromContext(ctx))
 	s.log = logger.FromContext(ctx)
+	s.shared = sharedBundleSnapshots(ctx)
+	s.quietUnrecognized = true
 	return s.skillAt(skillDir, filepath.Base(skillDir), nil)
+}
+
+type bundleSnapshotsKey struct{}
+
+// WithBundleSnapshots returns ctx carrying one set of git answers about which
+// files below anchor (the repository top) are part of the project. Every
+// LoadSkillDir under that context reads them instead of asking git per skill,
+// which on a large repository is two processes per skill. Use it for a
+// read-only scan: the answers are not refreshed.
+func WithBundleSnapshots(ctx context.Context, anchor string) context.Context {
+	if sharedBundleSnapshots(ctx) != nil {
+		return ctx
+	}
+	return context.WithValue(ctx, bundleSnapshotsKey{}, &bundleSnapshots{anchor: filepath.Clean(anchor), indexIgnores: true})
+}
+
+func sharedBundleSnapshots(ctx context.Context) *bundleSnapshots {
+	if b, ok := ctx.Value(bundleSnapshotsKey{}).(*bundleSnapshots); ok {
+		return b
+	}
+	return nil
+}
+
+// SeedBundleListing gives the snapshots WithBundleSnapshots put in ctx the
+// listing the caller already holds: the slash paths, relative to the anchor, of
+// the tracked files and the untracked files git does not ignore. It saves the
+// second `git ls-files` over the whole repository.
+func SeedBundleListing(ctx context.Context, files []string) {
+	b := sharedBundleSnapshots(ctx)
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.wide == nil {
+		b.wide = &wideListing{ok: true, paths: files}
+	}
 }

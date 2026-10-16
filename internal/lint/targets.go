@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
@@ -58,6 +59,12 @@ type TargetSpec struct {
 	// relative to the tree top): the files the roots of a recursive run already
 	// lint, so the rest can be linted once at the repository root.
 	Except []string
+	// ExceptFiles drops these files (slash paths relative to the tree top) from the files found by
+	// convention: the outputs a generate run recorded, which are not hand-written content.
+	ExceptFiles []string
+	// QuietGenerated leaves out the notice for a file that carries the generated header: in a
+	// configured project nearly every harness file does.
+	QuietGenerated bool
 	// Generated also collects the targets that carry the generated header, as
 	// outputs to lint (Targets.Generated), instead of skipping them.
 	Generated bool
@@ -102,6 +109,8 @@ type Targets struct {
 	// SkippedInDirs counts the files below a --path directory that are not
 	// content (a directory lints the kinds it recognizes and says how many it left).
 	SkippedInDirs int
+	// skippedInDirNames names those files (slash paths), for the notice.
+	skippedInDirNames []string
 	// extra holds notices the caller adds (AddNotice).
 	extra []string
 }
@@ -132,12 +141,28 @@ func (t *Targets) Notices() []string {
 		out = append(out, fmt.Sprintf("%s: not linted (%s)", s.Rel, s.Reason))
 	}
 	if t.SkippedInDirs > 0 {
-		out = append(out, fmt.Sprintf("%d file(s) below a --path directory were not linted (not content, or generated): name a file with --path or --glob to scan it as text", t.SkippedInDirs))
+		out = append(out, fmt.Sprintf("%d file(s) below a --path directory were not linted (not content, or generated)%s: name a file with --path or --glob to scan it as text", t.SkippedInDirs, namedFiles(t.skippedInDirNames, maxNamedSkips)))
 	}
 	for _, g := range t.Unmatched {
 		out = append(out, fmt.Sprintf("no file matches --glob %q (files git ignores are not matched)", g))
 	}
 	return append(out, t.extra...)
+}
+
+// maxNamedSkips caps how many skipped files a notice lists by name.
+const maxNamedSkips = 10
+
+// namedFiles renders ": a, b, c and N more" for the first max names, or "" without any.
+func namedFiles(names []string, limit int) string {
+	if len(names) == 0 {
+		return ""
+	}
+	sorted := append([]string(nil), names...)
+	sort.Strings(sorted)
+	if len(sorted) <= limit {
+		return ": " + strings.Join(sorted, ", ")
+	}
+	return fmt.Sprintf(": %s and %d more", strings.Join(sorted[:limit], ", "), len(sorted)-limit)
 }
 
 // Rels returns the tree-relative paths of the files.
@@ -158,6 +183,7 @@ func (t *Targets) Rels() []string {
 // the untracked, not ignored files below it.
 func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets, error) {
 	res := &Targets{}
+	ctx = withSharedSkillGit(ctx, tree)
 	cands := newCandidates(ctx, tree, spec.Detect)
 	picked, err := cands.explicit(tree, spec, res)
 	if err != nil {
@@ -166,7 +192,7 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 	rels := picked.sorted(spec.Under)
 	rels = dropUnder(rels, spec.Except)
 	if spec.Detect {
-		rels = append(rels, cands.conventional(spec.Under, picked)...)
+		rels = append(rels, dropFiles(cands.conventional(spec.Under, picked), spec.ExceptFiles)...)
 	}
 	if len(rels) > maxTargetFiles {
 		return nil, fmt.Errorf("%d files match --path, --glob or [lint] paths; the limit is %d: narrow the selection", len(rels), maxTargetFiles)
@@ -183,12 +209,7 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 			if out.fatal && picked[rel] == pickPath && !spec.Lenient {
 				unreadable = append(unreadable, rel+" ("+out.reason+")")
 			}
-			if out.generated {
-				res.GeneratedRels = append(res.GeneratedRels, rel)
-			}
-			if !spec.Generated || !out.generated { // --outputs lints a generated file as an output
-				res.noteSkipped(rel, picked[rel], out)
-			}
+			res.recordSkip(spec, rel, picked[rel], out)
 		}
 	}
 	if len(unreadable) > 0 {
@@ -198,6 +219,46 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 		res.Generated = generatedTargets(tree, rels)
 	}
 	return res, nil
+}
+
+// recordSkip notes a picked file that was not linted, unless the spec lints or silences it: --outputs
+// lints a generated file as an output, and a conventional file with the generated header is silent
+// when QuietGenerated is set.
+func (t *Targets) recordSkip(spec TargetSpec, rel string, how pick, out loadOutcome) {
+	if out.generated {
+		t.GeneratedRels = append(t.GeneratedRels, rel)
+		if spec.Generated || (spec.QuietGenerated && how == 0) {
+			return
+		}
+	}
+	t.noteSkipped(rel, how, out)
+}
+
+// dropFiles returns rels without the files in except.
+func dropFiles(rels, except []string) []string {
+	if len(except) == 0 {
+		return rels
+	}
+	skip := make(map[string]bool, len(except))
+	for _, e := range except {
+		skip[e] = true
+	}
+	kept := rels[:0:0]
+	for _, rel := range rels {
+		if !skip[rel] {
+			kept = append(kept, rel)
+		}
+	}
+	return kept
+}
+
+// withSharedSkillGit makes the skills loaded under the returned context share
+// one set of git answers instead of asking git per skill.
+func withSharedSkillGit(ctx context.Context, tree *Tree) context.Context {
+	if !tree.Git {
+		return ctx
+	}
+	return config.WithBundleSnapshots(ctx, tree.Top)
 }
 
 // generatedTargets returns the markdown files among rels that carry the
@@ -330,10 +391,11 @@ func newCandidates(ctx context.Context, tree *Tree, detect bool) *candidates {
 		c.add(rel)
 	}
 	if tree.Git {
-		if files, ok, err := (gitutil.Git{}).ListFilesContext(ctx, tree.Top); ok && err == nil {
+		if files, ok, err := gitutil.New(procrunner.FromContext(ctx)).ListFilesContext(ctx, tree.Top); ok && err == nil {
 			for _, rel := range files {
 				c.add(rel)
 			}
+			config.SeedBundleListing(ctx, files)
 		}
 	}
 	if detect {
@@ -351,14 +413,27 @@ func newCandidates(ctx context.Context, tree *Tree, detect bool) *candidates {
 // conventionDirs are the hidden top-level directories that hold agent content;
 // the walk of a repository without git skips them as hidden.
 func conventionDirs() []string {
-	return []string{".claude", ".agents", ".cursor", dirPluginMeta, ".github", ".vscode"}
+	return []string{dirClaude, ".agents", ".cursor", dirPluginMeta, ".github", ".vscode"}
 }
 
 func (c *candidates) walk(top, dir string) {
 	root := filepath.Join(top, dir)
 	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
-		if err != nil || d.IsDir() {
+		if err != nil {
 			return nil //nolint:nilerr // best effort
+		}
+		if d.IsDir() {
+			if p != root {
+				// Tool state may contain independent repositories and linked worktrees.
+				// Their instructions belong to that repository, not this project.
+				if _, err := os.Lstat(filepath.Join(p, ".git")); err == nil {
+					return filepath.SkipDir
+				}
+				if d.Name() == ".git" {
+					return filepath.SkipDir
+				}
+			}
+			return nil
 		}
 		if rel, rerr := filepath.Rel(top, p); rerr == nil {
 			c.add(filepath.ToSlash(rel))
@@ -378,7 +453,7 @@ func (c *candidates) walkNestedClaude(top string) {
 		if len(c.rels) > maxTargetFiles {
 			return filepath.SkipAll
 		}
-		if d.Name() == ".claude" {
+		if d.Name() == dirClaude {
 			if rel, rerr := filepath.Rel(top, p); rerr == nil {
 				c.walk(top, rel)
 			}
@@ -510,6 +585,7 @@ func (t *Targets) noteSkipped(rel string, how pick, out loadOutcome) {
 		t.Skipped = append(t.Skipped, SkippedTarget{Rel: rel, Reason: out.reason})
 	case how == pickDir:
 		t.SkippedInDirs++
+		t.skippedInDirNames = append(t.skippedInDirNames, rel)
 	case how >= pickGlob, out.generated:
 		// A conventional file left out as generated is named too: the header is
 		// text anyone can write, so the skip must be visible.
@@ -697,8 +773,8 @@ func classifyPath(rel string) (kind string, conventional bool) {
 			return "", false // a resource of a skill: the skill item carries it
 		}
 		if k, ok := segmentKind(segs[i]); ok {
-			nested := i > 0 && segs[i-1] == ".claude" // a .claude directory at any depth
-			return k, nested || under(".claude") || under(".agents") || under(".cursor") || under(".ai-rulez") || under(".github")
+			nested := i > 0 && segs[i-1] == dirClaude // a .claude directory at any depth
+			return k, nested || under(dirClaude) || under(".agents") || under(".cursor") || under(".ai-rulez") || under(".github")
 		}
 	}
 	return kindContext, false
@@ -822,4 +898,11 @@ func dropUnder(rels, dirs []string) []string {
 	return slices.DeleteFunc(rels, func(rel string) bool {
 		return slices.ContainsFunc(dirs, func(dir string) bool { return strings.HasPrefix(rel, dir+"/") })
 	})
+}
+
+// Candidates lists the files of the project a run can pick from: the tracked files, the untracked
+// files git does not ignore and the files of the hidden agent directories (.claude, .agents, ...)
+// that a walk outside git skips, at any depth. The paths are slash paths relative to the tree top.
+func Candidates(ctx context.Context, tree *Tree) []string {
+	return newCandidates(ctx, tree, true).list()
 }

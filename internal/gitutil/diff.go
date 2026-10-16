@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,13 +40,60 @@ func (g Git) ListFilesContext(ctx context.Context, dir string) (files []string, 
 	if !g.IsRepoContext(ctx, dir) {
 		return nil, false, nil
 	}
-	out, _, err := g.run(ctx, dir, nil, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
-	if err != nil {
-		return nil, true, oops.Wrapf(err, "list repository files")
+	if memo := memoFrom(ctx); memo != nil && memo.shared {
+		if key, keyed := g.listFilesKey(dir); keyed {
+			return g.sharedFileList(ctx, memo, key, dir)
+		}
+	}
+	return g.listFiles(ctx, dir)
+}
+
+// listFilesKey is the memo key of the whole-repository file listing of dir.
+func (g Git) listFilesKey(dir string) (memoKey, bool) {
+	r, ok := g.memoRunner()
+	return memoKey{dir: dir, args: "list-files", runner: r}, ok
+}
+
+// sharedFileList reads the listing of dir once per shared-index context: the roots of a recursive
+// read-only run ask for the same listing.
+func (g Git) sharedFileList(ctx context.Context, memo *Memo, key memoKey, dir string) (files []string, ok bool, err error) {
+	l := memo.listing(key)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.done {
+		listed, _, lerr := g.listFiles(ctx, dir)
+		if lerr != nil {
+			return nil, true, lerr
+		}
+		l.names, l.done = listed, true
+	}
+	return slices.Clone(l.names), true, nil
+}
+
+func (g Git) listFiles(ctx context.Context, dir string) (files []string, ok bool, err error) {
+	var names []string
+	if g.bigRepository(dir) {
+		// The untracked part is found by a parallel walk (see othersWith).
+		cached, _, cerr := g.run(ctx, dir, nil, "ls-files", "--cached", "-z")
+		if cerr != nil {
+			return nil, true, oops.Wrapf(cerr, "list repository files")
+		}
+		tracked := splitNUL(cached)
+		others, oerr := g.othersWith(ctx, dir, tracked)
+		if oerr != nil {
+			return nil, true, oerr
+		}
+		names = slices.Concat(tracked, others)
+	} else {
+		out, _, err := g.run(ctx, dir, nil, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
+		if err != nil {
+			return nil, true, oops.Wrapf(err, "list repository files")
+		}
+		names = splitNUL(out)
 	}
 	seen := map[string]bool{}
-	for _, p := range strings.Split(string(out), "\x00") {
-		if p != "" && !seen[p] {
+	for _, p := range names {
+		if !seen[p] {
 			seen[p] = true
 			files = append(files, p)
 		}
@@ -90,16 +138,16 @@ func (g Git) ChangesSinceContext(ctx context.Context, dir, rev string) ([]Change
 	if err != nil {
 		return nil, err
 	}
-	others, _, err := g.run(ctx, dir, nil, "ls-files", "--others", "--exclude-standard", "-z")
+	others, err := g.othersContext(ctx, dir)
 	if err != nil {
-		return nil, oops.Wrapf(err, "list untracked files")
+		return nil, err
 	}
 	known := map[string]bool{}
 	for _, c := range changes {
 		known[c.Path] = true
 	}
-	for _, p := range strings.Split(string(others), "\x00") {
-		if p != "" && !known[p] {
+	for _, p := range others {
+		if !known[p] {
 			changes = append(changes, Change{Path: p, Status: 'A', AllAdded: true})
 		}
 	}

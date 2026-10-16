@@ -34,16 +34,30 @@ type contentScanner struct {
 	// root is non-empty for the project's own content: the root of v's workspace.
 	root     string
 	problems []ContentProblem
+	// quietUnrecognized leaves out the warning about skill subdirectories generate would not
+	// copy: a scan that generates nothing (lint of hand-written content) has no output to lose.
+	quietUnrecognized bool
 	// git answers which files a work tree ignores (bundle filtering); the zero
 	// value runs real git.
 	git gitutil.Git
 	// snapshots shares git's answers among the items of one directory.
 	snapshots bundleSnapshots
+	// shared, when set, replaces snapshots: one set of git answers for every
+	// scanner built from the same context (see WithBundleSnapshots).
+	shared *bundleSnapshots
 	// log receives what the scan reports. nil: refusals are only recorded, never
 	// printed (see refuse). A host that injected a logger gets everything there.
 	log logger.Logger
 	// ctx bounds the git questions the scan asks.
 	ctx context.Context
+}
+
+// bundleSnaps is the snapshots the scanner asks git through.
+func (s *contentScanner) bundleSnaps() *bundleSnapshots {
+	if s.shared != nil {
+		return s.shared
+	}
+	return &s.snapshots
 }
 
 // logger is the scanner's log, the CLI's when none was injected.
