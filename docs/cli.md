@@ -14,7 +14,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez cost`                 | Report the biggest context-cost offenders           |
-| `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
+| `ai-rulez verify`               | Verify signatures, approvals and provenance (`--plugin` for plugin bundles; use `generate --check` for generated-file drift) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
 | `ai-rulez sign`                 | Sign the lock, a plugin bundle, a skill, an SBOM or a policy into a Sigstore bundle ([details](#sign-command)) |
 | `ai-rulez trust update`         | Cache the Sigstore trusted root used to verify keyless attestations ([details](#trust-command)) |

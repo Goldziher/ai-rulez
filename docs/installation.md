@@ -33,12 +33,16 @@ Install `ai-rulez` using your preferred package manager.
     go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
     ```
 
-    Or build from a clone:
+    This builds a local cgo executable using the native library shipped in the Go module.
+    It needs a C toolchain and the module cache at runtime; use a release package for distribution.
+
+    For a statically linked build from a clone, use Task to fetch and verify the pinned native library:
 
     ```bash
     git clone https://github.com/Goldziher/ai-rulez
     cd ai-rulez
-    go build -o ai-rulez ./cmd/ai-rulez
+    task build
+    ./bin/ai-rulez version
     ```
 
 ## Run Without Installing

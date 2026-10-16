@@ -2,9 +2,9 @@
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
 
 version = 1
-ai_rulez_version = '5.3.0'
+ai_rulez_version = '5.4.0'
 scope = 'all'
-tree = 'sha256:3f2dbc1a4b29236a36bd92f100930787edc090f194fcb7d4c010a0736e361c5a'
+tree = 'sha256:6cd5a8b06946b0511b473d8c54f90713abd145fc4a99af0454d2aa4feee0e93a'
 
 [[served]]
 name = 'build'
@@ -238,7 +238,7 @@ digest = 'sha256:1093dd57cdf711746da2b611cc0253e618937663ef23515a46b2eb5963760b4
 kind = 'context'
 id = 'mcp-integrations'
 path = 'context/mcp-integrations.md'
-digest = 'sha256:d828cb17a4d16290bf5fdadefb6aaab82d483d82f9f25a63531d0c4afc74d08d'
+digest = 'sha256:8ccdce472f5d645c8d8e8a9dd5b3cfbc39ff43814dfbf368ca599fee77f18084'
 
 [[item]]
 kind = 'context'

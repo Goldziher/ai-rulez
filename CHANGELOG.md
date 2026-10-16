@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-10-16
+
 ### Added
 
 - **`ai-rulez judge` reviews agent configuration with verified evidence.** Three reviewers (security `JR-S01`-`JR-S15`, governance `JR-G01`-`JR-G07`, quality `JR-Q01`-`JR-Q13`) read every unit (a skill with its scripts and references, an agent, command, rule, `CLAUDE.md`, `AGENTS.md`, MCP or settings file; nested `.claude/` directories at any depth) together with the leads of `validate` and `scan`. Reviewer candidates carry a verbatim quote and a line range that Go checks against the text that was sent (a failed one is corrected once, then deleted and counted); failed rubric criteria without a verifiable quote are preserved as unit-level findings; an adjudicator keeps, downgrades, merges or drops what survives, asymmetrically (a security finding is dropped only with a concrete benign context and a verbatim counter-quote); scores, statuses and the decision are computed in code. Text in a reviewed file is inert data behind nonce-fenced trust tiers. Findings carry a stable id, a chain of quoted steps and the strongest benign reading; `--explain-drops` lists everything dropped. Exit codes: 0 pass, 1 could not complete, 2 findings at or above `fail_on`.
@@ -22,6 +24,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- **Dependencies and release tooling are current.** Upgrade Go modules, documentation dependencies, CI actions and pinned tools, including liter-llm 2.2.4, Registry 3.1.2, OpenTelemetry Collector 0.162.0 and Vault 2.2.0. Windows CLI tests run in isolated, exhaustive process shards alongside the remaining packages; native Go cache paths are used, and failed Windows runs preserve valid compiled objects.
+- **The README documents the full capability set.** A feature table links authoring, generation, validation, judge reviews, evaluation, governance, publishing, MCP and the Go API to the detailed guides. Installation, contributor and release instructions are corrected.
+
 - **`validate` also lints the hand-written harness files of a configured project.** A `.claude/skills/x/SKILL.md`, a nested `CLAUDE.md` or a `.claude/rules` file that the configuration does not list used to be skipped, so `validate` and `scan` reported a project clean that had findings. They are linted now; the files `generate` recorded and files with the generated header stay outputs. `catalog` and `publish` keep to the configured content.
 - **`--changed` takes an optional base revision on `validate`, `scan` and `judge`.** A bare `--changed` is unchanged (it compares with `HEAD`: uncommitted and untracked work); `--changed=REV` compares with `REV`, so `--changed=origin/main` replaces `--since origin/main`. Write the value with `=`: a separate word stays a path argument. `--since REV` keeps working as the same thing. `--changed` was a boolean flag before, so `--changed=false` is no longer accepted; leave the flag off instead.
 - **`validate` is an order of magnitude faster on a large repository.** On a monorepo of about 90,000 tracked files, 230 skills and deeply nested `.claude` directories (macOS, 18 cores, heavily loaded machine), config-free `validate --strict` went from 195 s to 14.6 s, `--path` with three files from 11.1 s to 2.1 s and `--changed` from 60 s to 5.9 s, with identical findings. The time was spent in git: each `SKILL.md` started two git processes that read the whole index, and `git ls-files --others` walked the work tree on one core. A run now lists the files once and shares the listing between target resolution, skills and the changed-files narrowing; the ignore state of all entry files is one batched `git check-ignore`; untracked files of a repository with a large index come from a parallel directory walk; and the Python files of the `pytest -m` marker scan are read concurrently. Small repositories keep the single `git ls-files` call.
@@ -30,6 +35,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **The response cache can expire entries and be read-only** (`llm.Options.CacheMaxAge`, `CacheReadOnly`). A reply that a caller validated is cached even when a provider stamped a content-filter stop on a whole, valid reply.
 
 ### Fixed
+
+- **Private npm packages include the Windows fallback DLL.** The package file list retains `bin/liter_llm_ffi.dll` beside a prebundled executable, so offline packages keep the native library needed by a DLL-linked build.
+- **Virtual Go API workspaces produce relative output plans on Windows.** Memory and snapshot workspaces use a fully qualified synthetic root, preventing duplicated output paths, incorrect stale-output removals and inconsistent plan digests. Disk-write and path-confinement restrictions are unchanged.
+- **Strict validation distinguishes generated OKF listings and ignored unmanaged files.** Bundle index and log files are recognized as generated listings; ignored discovery-only fixtures no longer consume authored load budgets, while configured sources remain budgeted.
 
 - **Judge prompt inputs stay within their intended boundaries.** Repository rubric and trap paths cannot escape the project or traverse symlinks; every outgoing model request redacts credential patterns and configured secret values. Scoped rules also attach other rules with overlapping globs.
 - **Large-repository discovery includes directories that replace tracked files.** The optimized untracked walk now agrees with Git when a tracked file becomes a directory containing new instruction files.

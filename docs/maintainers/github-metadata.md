@@ -6,10 +6,10 @@ This page is not in the site navigation.
 ## Repository description
 
 ```text
-Standards-compliant lifecycle tool for agent knowledge and capabilities: author, generate, bundle, validate, govern, publish.
+Author, generate, validate and govern AI agent rules, skills, plugins and MCP configuration across 52 coding assistants. Review with verified model evidence, evaluate skills, lock and sign dependencies, and publish bundles. CLI, MCP server and Go API.
 ```
 
-GitHub limits the description to 350 characters; this is under 130.
+GitHub limits the description to 350 characters; this description is within that limit.
 
 ## Homepage
 
@@ -21,22 +21,23 @@ https://goldziher.github.io/ai-rulez/
 
 ```text
 okf agent-plugins ard agent-skills agents-md llms-txt mcp model-context-protocol sbom cyclonedx spdx sigstore in-toto
-supply-chain ai-agents claude-code cli golang
+supply-chain ai-agents claude-code cli golang ai-governance llm-evaluation
 ```
 
 Apply with the GitHub CLI:
 
 ```bash
 gh repo edit Goldziher/ai-rulez \
-  --description "Standards-compliant lifecycle tool for agent knowledge and capabilities: author, generate, bundle, validate, govern, publish." \
+  --description "Author, generate, validate and govern AI agent rules, skills, plugins and MCP configuration across 52 coding assistants. Review with verified model evidence, evaluate skills, lock and sign dependencies, and publish bundles. CLI, MCP server and Go API." \
   --homepage "https://goldziher.github.io/ai-rulez/" \
   --add-topic okf --add-topic agent-plugins --add-topic ard --add-topic agent-skills --add-topic agents-md \
   --add-topic llms-txt --add-topic mcp --add-topic model-context-protocol --add-topic sbom --add-topic cyclonedx \
   --add-topic spdx --add-topic sigstore --add-topic in-toto --add-topic supply-chain --add-topic ai-agents \
-  --add-topic claude-code --add-topic cli --add-topic golang
+  --add-topic claude-code --add-topic cli --add-topic golang \
+  --add-topic ai-governance --add-topic llm-evaluation
 ```
 
-GitHub allows at most 20 topics; this is 18.
+GitHub allows at most 20 topics; this uses all 20.
 
 ## Release notes template
 

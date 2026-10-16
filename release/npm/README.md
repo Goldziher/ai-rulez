@@ -75,23 +75,23 @@ pnpm dlx ai-rulez@latest init "My Project"
 # Add a rule
 pnpm dlx ai-rulez@latest add rule coding-standards --priority high
 
-# Generate configs for all tools
+# Generate configs for the selected tools
 pnpm dlx ai-rulez@latest generate
 ```
 
-This creates `CLAUDE.md`, `.cursorrules`, and other native configs from your `.ai-rulez/` directory.
+This generates native configuration for the presets selected during `init`. Shared instructions use `AGENTS.md`; tool-specific content uses paths such as `.cursor/rules/`.
 
 ---
 
 ## Learn More
 
-**[Full Documentation →](https://goldziher.github.io/ai-rulez/)**
+**[Full Documentation →](https://goldziher.github.io/ai-rulez/)** · [Complete feature table](https://github.com/Goldziher/ai-rulez#features)
 
 ---
 
 ## Other Platforms
 
 - **Homebrew** (macOS/Linux) – `brew install goldziher/tap/ai-rulez`
-- **Go** – build from source: `git clone https://github.com/Goldziher/ai-rulez && cd ai-rulez && go build -o ai-rulez ./cmd/ai-rulez`
+- **Go** – clone the repository and run `task build` for a statically linked executable; see [source installation](https://goldziher.github.io/ai-rulez/installation/).
 - **uv** (Python) – `uv tool install ai-rulez`
 - **pip** (Python) – `pip install ai-rulez`
