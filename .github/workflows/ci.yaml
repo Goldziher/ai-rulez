@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@9ed0576675002330bb3d5446ac603b70a6f096ee # v1
+    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@cc89740654cef67b752113ddd87d4f0d23dda3f5 # v1
 
   lint:
     name: Lint
@@ -108,13 +108,14 @@ jobs:
             echo "::notice::no v5 release to compare pkg/airulez against yet"
             exit 0
           fi
-          go install golang.org/x/exp/cmd/gorelease@v0.0.0-20261005173118-76772065c9b0
+          go install golang.org/x/exp/cmd/gorelease@v0.0.0-20261014143641-f0251eb4aa3e
           # gorelease passes the deprecated `go get -d`, which Go 1.27 rejects with a
           # message it treats as failure, and its temporary load module omits the `go`
           # directive, so the module graph is not pruned and a broken transitive go.mod
           # (go-openapi/swag) breaks resolution. Shim `go` to drop -d and add the
           # directive before the resolution runs.
-          export GORELEASE_REAL_GO="$(command -v go)"
+          GORELEASE_REAL_GO="$(command -v go)"
+          export GORELEASE_REAL_GO
           shim="$(mktemp -d)"
           cat > "$shim/go" <<'SHIM'
           #!/usr/bin/env bash
@@ -197,6 +198,8 @@ jobs:
         run: echo "AI_RULEZ_REQUIRE_BROWSER=1" >> "$GITHUB_ENV"
 
       - name: Run all tests (unit + platform)
+        env:
+          TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
         run: task test
 
       - name: Run cross-platform specific tests
@@ -342,7 +345,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
   benchmarks:
     name: Benchmarks
@@ -454,6 +457,8 @@ jobs:
         run: task build
 
       - name: Run all test suites (unit + platform + e2e)
+        env:
+          TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
         run: task test:all
 
       - name: Upload comprehensive test results
