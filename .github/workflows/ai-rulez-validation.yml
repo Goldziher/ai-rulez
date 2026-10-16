@@ -41,5 +41,5 @@ jobs:
       - uses: xberg-io/actions/setup-ai-rulez@cc89740654cef67b752113ddd87d4f0d23dda3f5
         with:
           ai-rulez-version: "5.3.0"
-          source-revision: "b7468c251a9b0cf51b185387edba0ed9a9574131"
+          source-revision: "d845b569175c61f1cca5fb4c012effff7b5ac9f0"
       - uses: xberg-io/actions/validate-ai-rulez@cc89740654cef67b752113ddd87d4f0d23dda3f5
