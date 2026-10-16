@@ -14,16 +14,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// registryImage is registry:2 pinned to the digest CI pulls, so the test runs
+// registryImage is registry:3.1.2 pinned to the digest CI pulls, so the test runs
 // the same image everywhere.
-const registryImage = "registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373"
+const registryImage = "registry:3.1.2@sha256:ddf754342cfc8acc51a56d5d0ab6af06826461864460636d8bd5c546dab2a7b8"
 
-// TestLive_RegistryV2RoundTrip pushes to and pulls from a real `registry:2`
+// TestLive_RegistryV2RoundTrip pushes to and pulls from a real `registry:3.1.2`
 // container. It is opt-in (AI_RULEZ_LIVE_PUBLISH=1) because it needs Docker and
 // the registry image.
 func TestLive_RegistryV2RoundTrip(t *testing.T) {
 	if os.Getenv("AI_RULEZ_LIVE_PUBLISH") != "1" {
-		t.Skip("set AI_RULEZ_LIVE_PUBLISH=1 to run against a registry:2 container")
+		t.Skip("set AI_RULEZ_LIVE_PUBLISH=1 to run against a registry:3.1.2 container")
 	}
 	docker, err := exec.LookPath("docker")
 	if err != nil {

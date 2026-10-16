@@ -25,7 +25,7 @@ import (
 const (
 	envE2EOtelcol = "AI_RULEZ_E2E_OTELCOL"
 	// otelcolImage is pinned by tag and index digest; bump both together.
-	otelcolImage = "otel/opentelemetry-collector-contrib:0.130.0@sha256:867d1074c2f750936fb9358ec9eefa009308053cf156b2c7ca1761ba5ef78452"
+	otelcolImage = "otel/opentelemetry-collector-contrib:0.162.0@sha256:39923a8e431bd1f57be82411999d389fcfe40857492e4365456d97a4c1f74be6"
 )
 
 const otelcolConfig = `receivers:
