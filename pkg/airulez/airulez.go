@@ -33,6 +33,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"log/slog"
+	"runtime"
 	"sync"
 	"time"
 
@@ -214,9 +215,19 @@ func GitSnapshot(ctx context.Context, repoDir, rev string, r Runner) (Snapshot, 
 func virtualRoot() string {
 	var b [8]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		return "/.ai-rulez-virtual/0"
+		return virtualRootFor(runtime.GOOS, "0")
 	}
-	return "/.ai-rulez-virtual/" + hex.EncodeToString(b[:])
+	return virtualRootFor(runtime.GOOS, hex.EncodeToString(b[:]))
+}
+
+func virtualRootFor(host, id string) string {
+	root := "/.ai-rulez-virtual/" + id
+	if host == "windows" {
+		// A volume-less rooted path is not absolute on Windows. This synthetic
+		// volume is only a workspace identifier; it is never opened on disk.
+		return "C:" + root
+	}
+	return root
 }
 
 // Options is what a Project is loaded with. Every field but Workspace is optional.
