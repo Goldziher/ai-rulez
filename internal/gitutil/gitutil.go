@@ -486,15 +486,15 @@ func (g Git) ChangedSinceContext(ctx context.Context, dir, rev string) ([]string
 	if err != nil {
 		return nil, oops.Hint("Check that the revision exists (git rev-parse --verify "+rev+")").Wrapf(err, "list files changed since %s", rev)
 	}
-	others, _, err := g.run(ctx, top, nil, "ls-files", "--others", "--exclude-standard", "-z")
+	others, err := g.othersContext(ctx, top)
 	if err != nil {
-		return nil, oops.Wrapf(err, "list untracked files")
+		return nil, err
 	}
 	seen := map[string]bool{}
 	var out []string
-	for _, chunk := range [][]byte{diff, others} {
-		for _, p := range strings.Split(string(chunk), "\x00") {
-			if p != "" && !seen[p] {
+	for _, chunk := range [][]string{splitNUL(diff), others} {
+		for _, p := range chunk {
+			if !seen[p] {
 				seen[p] = true
 				out = append(out, p)
 			}

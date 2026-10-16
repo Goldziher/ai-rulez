@@ -12,6 +12,10 @@ import (
 func TestRegexAccessorsCompile(t *testing.T) {
 	accessors := map[string]func() *regexp.Regexp{
 		"addMarkerRe":         addMarkerRe,
+		"explicitAnchorRe":    explicitAnchorRe,
+		"skillWordAfterRe":    skillWordAfterRe,
+		"prohibitionRe":       prohibitionRe,
+		"mentionHistoricalRe": mentionHistoricalRe,
 		"commentLabelRe":      commentLabelRe,
 		"commentConcealRe":    commentConcealRe,
 		"commentUserRe":       commentUserRe,

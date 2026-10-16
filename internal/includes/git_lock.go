@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -24,16 +25,14 @@ func lockFetchCache(ctx context.Context, cacheDir string) (func(), error) {
 	defer ticker.Stop()
 	for {
 		if err := ctx.Err(); err != nil {
-			_ = file.Close()
-			return nil, oops.Wrapf(err, "wait for include cache lock")
+			return nil, oops.Wrapf(errors.Join(err, file.Close()), "wait for include cache lock")
 		}
 		acquired, err := tryFetchLock(file)
 		if err != nil {
-			_ = file.Close()
-			return nil, oops.Wrapf(err, "lock include cache")
+			return nil, oops.Wrapf(errors.Join(err, file.Close()), "lock include cache")
 		}
 		if acquired {
-			return func() { _ = releaseFetchLock(file); _ = file.Close() }, nil
+			return func() { _ = errors.Join(releaseFetchLock(file), file.Close()) }, nil //nolint:errcheck // a release has nowhere to report to
 		}
 		select {
 		case <-ctx.Done():

@@ -53,3 +53,27 @@ func TestExpandBraces(t *testing.T) {
 		}
 	}
 }
+
+func TestMalformedGlob(t *testing.T) {
+	tests := []struct {
+		pattern string
+		want    bool
+	}{
+		{"src/**/*.go", false},
+		{"src/{a,b}/*.go", false},
+		{"app/[id]/page.tsx", false},
+		{"file[0-9].txt", false},
+		{`weird\[name.txt`, false},
+		{"src/[abc", true},
+		{"src/{a,b", true},
+		{"src/a,b}", true},
+		{"{a,{b,c}", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			if got := malformedGlob(tt.pattern); got != tt.want {
+				t.Errorf("malformedGlob(%q) = %v, want %v", tt.pattern, got, tt.want)
+			}
+		})
+	}
+}

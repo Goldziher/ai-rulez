@@ -52,6 +52,15 @@ var builtinSlash = []string{
 	"output-style", "install-github-app", "permissions", "init", "review", "compact", "clear",
 }
 
+// builtinSkills are skills the Claude Code harness or Anthropic's bundled plugins provide, so a
+// reference to one is not a dangling pointer. Project-specific externals belong in lint.known_names.
+func builtinSkills() []string {
+	return []string{
+		"simplify", "loop", "security-review", "update-config", "keybindings-help", "fewer-permission-prompts",
+		"claude-api", "dataviz", "run", "init", "review", "batch", "debug",
+	}
+}
+
 var builtinAgents = []string{"general-purpose", "explore", "plan", "statusline-setup", "output-style-setup"}
 
 // Report is the result of linting one root.
@@ -135,6 +144,10 @@ type item struct {
 }
 
 type runner struct {
+	// indexless is set when the repository index listed no file: the picked targets then are the
+	// only files the tree knows, so a check of "matches a tracked file" has nothing to compare with.
+	indexless    bool
+	projDirs     sync.Map // directory -> []string of the project directories at or above it (see projectDirs)
 	cfg          *config.Config
 	mcpOnce      sync.Once
 	fakeTagOnce  sync.Once
@@ -348,6 +361,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if r.baseRel == "." {
 		r.baseRel = ""
 	}
+	r.indexless = len(tree.files) == 0
 	if r.targets != nil && len(r.targets.Files) > 0 {
 		r.tree = tree.WithFiles(r.targets.Rels())
 		tree = r.tree
@@ -681,6 +695,9 @@ func (r *runner) collect() {
 	}
 	for _, n := range builtinAgents {
 		r.agents[n] = true
+	}
+	for _, n := range builtinSkills() {
+		r.skills[n] = true
 	}
 	r.addInheritedNames()
 	defer r.addTargetItems()

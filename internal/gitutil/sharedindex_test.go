@@ -173,3 +173,37 @@ func TestSharedIndexDefersToThePathspecBelowAGitlink(t *testing.T) {
 	assert.Equal(t, 1, rec.pathspecCalls(), "the path below the gitlink went to the pathspec call")
 	assert.True(t, shared["b/other.txt"] || err != nil)
 }
+
+func TestSharedIndexListsTheRepositoryFilesOnce(t *testing.T) {
+	tests := []struct {
+		name      string
+		ctx       func(context.Context) context.Context
+		wantCalls int64
+	}{
+		{"with a shared index", WithSharedIndex, 1},
+		{"without one", func(ctx context.Context) context.Context { return ctx }, 3},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			repo := sharedIndexRepo(t)
+			c := &lsFilesRunner{}
+			g := New(c)
+			ctx := tt.ctx(t.Context())
+
+			// Act
+			var last []string
+			for range 3 {
+				files, ok, err := g.ListFilesContext(ctx, repo)
+				require.NoError(t, err)
+				require.True(t, ok)
+				last = files
+			}
+
+			// Assert
+			assert.Equal(t, tt.wantCalls, c.lsFiles.Load())
+			assert.Contains(t, last, "b/other.txt")
+			assert.Contains(t, last, "b/.ai-rulez/config.toml", "an untracked file that git does not ignore is listed")
+		})
+	}
+}

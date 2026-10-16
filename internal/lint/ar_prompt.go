@@ -104,7 +104,7 @@ func scanFakeTags(r *runner, t *scanText) {
 	}
 }
 
-var configTamperRe = newGatedRe(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`, true, "memory.md", "soul.md", "claude.md", "agents.md", ".cursorrules", ".windsurfrules", ".clinerules", "settings")
+var configTamperRe = newGatedRe(`(?i)\b(?:writ|wrot|modif|edit|updat|append|add|insert|inject)(?:e|es|ed|ing|y|ies|ied|ying|s|ten)?\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`, true, "memory.md", "soul.md", "claude.md", "agents.md", ".cursorrules", ".windsurfrules", ".clinerules", "settings")
 
 func scanConfigTamper(r *runner, t *scanText) {
 	for _, l := range t.lines {

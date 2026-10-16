@@ -82,6 +82,9 @@ func (d doc) body() []bodyLine {
 func headingSlugs(raw string) map[string]struct{} {
 	slugs := map[string]struct{}{}
 	seen := map[string]int{}
+	for _, m := range explicitAnchorRe().FindAllStringSubmatch(raw, -1) {
+		slugs[strings.ToLower(m[1])] = struct{}{}
+	}
 	d := parseDoc(raw)
 	for _, l := range d.body() {
 		m := headingRe().FindStringSubmatch(l.Text)
@@ -98,6 +101,12 @@ func headingSlugs(raw string) map[string]struct{} {
 	}
 	return slugs
 }
+
+// explicitAnchorRe matches an HTML anchor written in the markdown: <a name="x"></a>, <a id="x">, or
+// an id="x" attribute on any element; a link to #x lands there.
+var explicitAnchorRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)<[a-z][a-z0-9]*\b[^>]*?\b(?:name|id)\s*=\s*["']([^"']+)["']`)
+})
 
 var slugDropRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[^\p{L}\p{N}\s_-]`) })
 

@@ -54,7 +54,7 @@ func (r *runner) checkGlobs(it *item, d doc) {
 	if it.kind != kindRule && it.kind != kindContext {
 		return
 	}
-	if it.cf.Metadata == nil || len(r.tree.files) == 0 {
+	if it.cf.Metadata == nil || len(r.tree.files) == 0 || r.indexless {
 		return
 	}
 	for _, pattern := range it.cf.Metadata.PathScope() {
@@ -62,7 +62,7 @@ func (r *runner) checkGlobs(it *item, d doc) {
 			continue
 		}
 		g, ok := newGlob(pattern)
-		if !ok {
+		if !ok || malformedGlob(pattern) {
 			r.add(CodeGlobNoMatch, it.abs, d.lineOf(pattern, 1), "glob %q is not a valid pattern", pattern)
 			continue
 		}

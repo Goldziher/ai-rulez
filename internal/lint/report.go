@@ -146,7 +146,7 @@ func WriteText(w io.Writer, c Combined) error {
 	return writeText(w, c, false)
 }
 
-// writeText is WriteText; quiet drops the "strict validation:" total and the
+// writeText is WriteText; quiet drops the "validation:" total and the
 // per-code tally.
 func writeText(w io.Writer, c Combined, quiet bool) error {
 	var sb strings.Builder
@@ -169,7 +169,7 @@ func writeText(w io.Writer, c Combined, quiet bool) error {
 	}
 	if c.Summary.Total == 0 {
 		if !quiet {
-			fmt.Fprintf(&sb, "strict validation: no findings in %d root(s)\n", len(c.Roots))
+			fmt.Fprintf(&sb, "validation: no findings in %d root(s)\n", len(c.Roots))
 		}
 		writeBaselineText(&sb, c)
 		_, err := io.WriteString(w, sb.String())
@@ -181,7 +181,7 @@ func writeText(w io.Writer, c Combined, quiet bool) error {
 			codes = append(codes, code)
 		}
 		sort.Strings(codes)
-		fmt.Fprintf(&sb, "\nstrict validation: %d error(s), %d warning(s), %d info across %d root(s)\n", c.Summary.Errors, c.Summary.Warnings, c.Summary.Infos, len(c.Roots))
+		fmt.Fprintf(&sb, "\nvalidation: %d error(s), %d warning(s), %d info across %d root(s)\n", c.Summary.Errors, c.Summary.Warnings, c.Summary.Infos, len(c.Roots))
 		for _, code := range codes {
 			rule, _ := lookupRule(code) //nolint:errcheck // codes come from findings
 			fmt.Fprintf(&sb, "  %s %-28s %d\n", code, rule.Name, c.Summary.ByCode[code])

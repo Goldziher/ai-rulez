@@ -109,7 +109,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	if itemKind == ItemKindCommand {
 		marker = commandMarkerFile
 	}
-	filter := newBundleFilterWith(s.ctx, s.git, s.logger(), root, marker, extraExcludes, &s.snapshots)
+	filter := newBundleFilterWith(s.ctx, s.git, s.logger(), root, marker, extraExcludes, s.bundleSnaps())
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {
@@ -147,6 +147,9 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	warnings, err := s.unrecognizedSubdirectoryWarnings(root, itemKind)
 	if err != nil {
 		return nil, err
+	}
+	if s.quietUnrecognized {
+		warnings = nil
 	}
 	for _, warning := range warnings {
 		// The kind doubles as the attribute key, so the line reads

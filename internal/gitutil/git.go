@@ -17,6 +17,10 @@ type Git struct {
 	Runner runner.Runner
 	// Log receives the reports of the ignore-file helpers; nil is the CLI's logger.
 	Log logger.Logger
+
+	// bigIndexBytes, when non-zero, replaces the index size from which the
+	// untracked files are found by a parallel walk (a test lowers it).
+	bigIndexBytes int64
 }
 
 // WithLog returns g reporting to log.

@@ -156,6 +156,42 @@ func HasLetterAndDigit(s string) bool {
 	return letter && digit
 }
 
+// IdentifierLike reports whether s is a snake_case identifier: three or more lower-case
+// segments joined by underscores, at least two of them plain words ("saq_tn3270_scan_password").
+// A configuration key name carries letters and digits like a password does, but nobody
+// types a credential as a run of words.
+func IdentifierLike(s string) bool {
+	segments := strings.Split(s, "_")
+	if len(segments) < 3 {
+		return false
+	}
+	words := 0
+	for _, seg := range segments {
+		if seg == "" || seg[0] < 'a' || seg[0] > 'z' {
+			return false
+		}
+		allLetters := true
+		for i := 0; i < len(seg); i++ {
+			c := seg[i]
+			isLetter := c >= 'a' && c <= 'z'
+			if !isLetter && (c < '0' || c > '9') {
+				return false
+			}
+			allLetters = allLetters && isLetter
+		}
+		if allLetters && len(seg) >= 3 {
+			words++
+		}
+	}
+	return words >= 2
+}
+
+// IsCredentialValue reports whether the value of a GenericCredential assignment reads as a
+// secret: it mixes letters and digits and is no identifier.
+func IsCredentialValue(s string) bool {
+	return HasLetterAndDigit(s) && !IdentifierLike(s)
+}
+
 // Redact replaces every Builtin match, and the value of every GenericCredential assignment,
 // with mask.
 func Redact(s, mask string) string {
@@ -168,9 +204,50 @@ func Redact(s, mask string) string {
 		return s
 	}
 	return GenericCredential.ReplaceAllStringFunc(s, func(m string) string {
-		if sub := GenericCredential.FindStringSubmatch(m); len(sub) > 1 && HasLetterAndDigit(sub[1]) {
+		if sub := GenericCredential.FindStringSubmatch(m); len(sub) > 1 && IsCredentialValue(sub[1]) {
 			return strings.Replace(m, sub[1], mask, 1)
 		}
 		return m
 	})
+}
+
+// GenericName is the pattern name reported for a GenericCredential hit.
+const GenericName = "hard-coded credential"
+
+// Hit is one credential found by Scan. It names the pattern and the line, never the secret.
+type Hit struct {
+	Name string
+	// Line is the 1-based line of the hit.
+	Line int
+}
+
+// Scan reports every credential the security scan (AR001) recognizes in text, line by line:
+// the Builtin shapes and the GenericCredential assignments whose value reads as a secret.
+// It is the single detector behind the security scan and the model gate of the judge.
+func Scan(text string) []Hit {
+	var hits []Hit
+	for i, line := range strings.Split(text, "\n") {
+		for _, name := range ScanLine(line) {
+			hits = append(hits, Hit{Name: name, Line: i + 1})
+		}
+	}
+	return hits
+}
+
+// ScanLine returns the pattern name of every credential in one line.
+func ScanLine(line string) []string {
+	var names []string
+	for _, p := range Builtin {
+		if p.MayMatch(line) && FindValue(p.Re, line) != "" {
+			names = append(names, p.Name)
+		}
+	}
+	if MayHaveGenericCredential(line) {
+		for _, m := range GenericCredential.FindAllStringSubmatch(line, -1) {
+			if IsCredentialValue(m[1]) {
+				names = append(names, GenericName)
+			}
+		}
+	}
+	return names
 }

@@ -393,18 +393,7 @@ func maskSecret(s string) string {
 	return string([]rune(s)[:4]) + strings.Repeat("*", 4) + fmt.Sprintf(" (%d characters)", n)
 }
 
-func hasLetterAndDigit(s string) bool {
-	letter, digit := false, false
-	for _, c := range s {
-		switch {
-		case c >= '0' && c <= '9':
-			digit = true
-		case (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'):
-			letter = true
-		}
-	}
-	return letter && digit
-}
+func hasLetterAndDigit(s string) bool { return secretpat.IsCredentialValue(s) }
 
 // injectionRes is the built-in and configured injection phrases, compiled once per run.
 func (r *runner) injectionRes() []gatedRe {

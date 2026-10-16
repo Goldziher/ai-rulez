@@ -44,7 +44,8 @@ type indexListing struct {
 	// gitlinks holds the submodule entries of the index: a path below one is not
 	// the listing's to answer (see trackedFromSharedIndex).
 	gitlinks map[string]bool
-	raw      []byte // the output of a listing kept as it came (see ignoreFileListing)
+	names    []string // the untracked files (see othersContext)
+	raw      []byte   // the output of a listing kept as it came (see ignoreFileListing)
 	done     bool
 }
 
