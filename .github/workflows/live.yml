@@ -211,7 +211,7 @@ jobs:
           docker run -d --name vault \
             -e VAULT_DEV_ROOT_TOKEN_ID=root \
             -e VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200 \
-            -p 8200:8200 hashicorp/vault:1.18
+            -p 8200:8200 hashicorp/vault:2.2.0@sha256:e0acd3c681bdf57f002d7214e5d050b876e1704678005c6b0406dd96a65be919
           ready=0
           for _ in $(seq 1 30); do
             if docker exec -e VAULT_ADDR=http://127.0.0.1:8200 vault vault status >/dev/null 2>&1; then

@@ -17,14 +17,14 @@ import (
 )
 
 // The docker-gated end-to-end tests run the binary against real services in
-// containers: a registry:2 for `publish --to oci` and an OpenTelemetry
+// containers: a registry:3.1.2 for `publish --to oci` and an OpenTelemetry
 // Collector for `telemetry flush`. They are opt-in (AI_RULEZ_E2E_DOCKER=1)
 // because they pull images and open ports.
 const (
 	envE2EDocker = "AI_RULEZ_E2E_DOCKER"
 	// Pinned by index digest; bump tag and digest together.
-	registryImage = "registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373"
-	collectorImg  = "otel/opentelemetry-collector-contrib:0.130.0@sha256:867d1074c2f750936fb9358ec9eefa009308053cf156b2c7ca1761ba5ef78452"
+	registryImage = "registry:3.1.2@sha256:ddf754342cfc8acc51a56d5d0ab6af06826461864460636d8bd5c546dab2a7b8"
+	collectorImg  = "otel/opentelemetry-collector-contrib:0.162.0@sha256:39923a8e431bd1f57be82411999d389fcfe40857492e4365456d97a4c1f74be6"
 )
 
 func requireDocker(t *testing.T) string {
@@ -75,7 +75,7 @@ func waitHTTP(t *testing.T, url string) {
 	}, 60*time.Second, 250*time.Millisecond, "%s did not answer", url)
 }
 
-// TestDockerPublishOCIE2E pushes a release to a registry:2 container with
+// TestDockerPublishOCIE2E pushes a release to a registry:3.1.2 container with
 // `publish --to oci --execute --yes`, then pulls and verifies it by reference
 // with `publish verify`.
 func TestDockerPublishOCIE2E(t *testing.T) {
