@@ -67,6 +67,7 @@ func gitMonorepo(t *testing.T, n int) string {
 		pluginMode, dryRun, profile, validateStrict = false, false, "", false
 	})
 	pluginMode, dryRun, profile = false, false, ""
+	delete(RootCmd.Annotations, activeFormatKey) // a command that ran earlier may have left --format json behind
 	return root
 }
 

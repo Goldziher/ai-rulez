@@ -67,4 +67,7 @@ func runCLI(t *testing.T, args ...string) cliResult {
 // resetAllFlags puts the flags of every command back to their initial values.
 func resetAllFlags() {
 	walkCommands(RootCmd, resetFlags)
+	// The format of the last command that ran decides how helpers print; a later test must not inherit it.
+	delete(RootCmd.Annotations, activeFormatKey)
+	delete(RootCmd.Annotations, errorDocWritten)
 }
