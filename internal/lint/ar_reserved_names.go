@@ -33,7 +33,7 @@ func reservedPresetTable() map[string]reservedPreset {
 				release-notes reload-plugins reload-skills remote-control remote-env rename resume review rewind
 				run run-skill-generator sandbox schedule scroll-speed security-review setup-bedrock setup-vertex
 				simplify skill-doctor skills slides stats status statusline stickers stop subtask tasks
-				team-onboarding teleport terminal-setup theme todos tui ultraplan ultrareview update-config upgrade
+				team-onboarding teleport terminal-setup theme tui ultraplan ultrareview update-config upgrade
 				usage usage-credits verify vim voice web-setup workflow-authoring workflows
 			`),
 		},
