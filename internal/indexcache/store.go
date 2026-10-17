@@ -3,7 +3,6 @@ package indexcache
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,7 +42,6 @@ const (
 	// maxFileBytes bounds the index file that is read.
 	maxFileBytes = 256 << 20
 
-	keyBytes     = 32
 	lockAttempts = 1000
 	lockPause    = 5 * time.Millisecond
 	filePerm     = 0o600
@@ -114,7 +113,7 @@ func Open(ctx context.Context, o Options) (*Store, error) {
 	if loc.Kind == KindOff {
 		return s, nil
 	}
-	p, reason := readPayload(loc.Dir)
+	p, reason := readPayload(loc.Dir, o.Key)
 	s.stats.Discarded = reason
 	s.dirty = reason != "" // a cache that was discarded is written again
 	s.loaded = p
@@ -224,18 +223,41 @@ func (s *Store) MarkClean(key string) {
 	s.dirty = true
 }
 
+// FileSum names one scanned file and the SHA-256 of its content.
+type FileSum struct {
+	Name string
+	Sum  [sha256.Size]byte
+}
+
+// SumOfContent is the FileSum of a file the scan has in hand.
+func SumOfContent(name string, content []byte) FileSum {
+	return FileSum{Name: name, Sum: sha256.Sum256(content)}
+}
+
+// SumOfHash is the FileSum of a file known only by the "sha256:<hex>" hash an
+// index item carries. ok is false for any other form.
+func SumOfHash(name, hash string) (FileSum, bool) {
+	digest, found := strings.CutPrefix(hash, "sha256:")
+	raw, err := hex.DecodeString(digest)
+	if !found || err != nil || len(raw) != sha256.Size {
+		return FileSum{}, false
+	}
+	out := FileSum{Name: name}
+	copy(out.Sum[:], raw)
+	return out, true
+}
+
 // VerdictKey is the key of a scan verdict: a hash of the scan level and of the
-// names and contents of the scanned files, so a verdict stands for exactly
-// those bytes.
-func VerdictKey(level string, names []string, contents [][]byte) string {
+// names and content hashes of the scanned files, so a verdict stands for
+// exactly those bytes.
+func VerdictKey(level string, files []FileSum) string {
 	h := sha256.New()
 	h.Write([]byte(level))
 	h.Write([]byte{0})
-	for i, content := range contents {
-		sum := sha256.Sum256(content)
-		h.Write([]byte(names[i]))
+	for _, f := range files {
+		h.Write([]byte(f.Name))
 		h.Write([]byte{0})
-		h.Write(sum[:])
+		h.Write(f.Sum[:])
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -257,11 +279,8 @@ func (s *Store) Save(ctx context.Context) error {
 		return err
 	}
 	defer release()
-	key, err := ensureKey(s.loc.Dir)
-	if err != nil {
-		return err
-	}
-	disk, _ := readPayloadWith(s.loc.Dir, key)
+	key := s.o.Key
+	disk, _ := readPayload(s.loc.Dir, key)
 	out := payload{Gen: max(disk.Gen, s.loaded.Gen) + 1, Tree: s.o.Tree, Fingerprint: s.o.Fingerprint,
 		Entries: map[string]entryRec{}, Verdicts: map[string]int64{}}
 	if disk.Tree == s.o.Tree {
@@ -348,17 +367,9 @@ func mac(key, body []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// readPayload loads the cache file of dir with the key that is there; reason is
+// readPayload loads the cache file of dir, authenticated with key; reason is
 // why it was not used ("" for a missing file or a good one).
-func readPayload(dir string) (p payload, reason string) {
-	key, err := readKey(dir)
-	if err != nil {
-		key = nil // without a key nothing in the file can be trusted
-	}
-	return readPayloadWith(dir, key)
-}
-
-func readPayloadWith(dir string, key []byte) (p payload, reason string) {
+func readPayload(dir string, key []byte) (p payload, reason string) {
 	path := filepath.Join(dir, indexFile)
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -393,34 +404,6 @@ func readPayloadWith(dir string, key []byte) (p payload, reason string) {
 		return payload{}, ReasonCorrupt
 	}
 	return p, ""
-}
-
-// readKey reads the MAC key of a cache directory.
-func readKey(dir string) ([]byte, error) {
-	data, err := os.ReadFile(filepath.Join(dir, keyFile)) //nolint:gosec // inside the cache directory
-	if err != nil {
-		return nil, err //nolint:wrapcheck // a missing key means a cache that cannot be trusted
-	}
-	key, err := hex.DecodeString(string(data))
-	if err != nil || len(key) != keyBytes {
-		return nil, errors.New("the cache key is malformed")
-	}
-	return key, nil
-}
-
-// ensureKey reads the MAC key, creating it when missing. The caller holds the lock.
-func ensureKey(dir string) ([]byte, error) {
-	if key, err := readKey(dir); err == nil {
-		return key, nil
-	}
-	key := make([]byte, keyBytes)
-	if _, err := rand.Read(key); err != nil {
-		return nil, oops.Wrapf(err, "create the index cache key")
-	}
-	if err := gitutil.WriteFileAtomic(filepath.Join(dir, keyFile), []byte(hex.EncodeToString(key)), filePerm); err != nil {
-		return nil, oops.Wrapf(err, "write the index cache key")
-	}
-	return key, nil
 }
 
 // lockDir takes the lock file of a cache directory, waiting a few seconds for

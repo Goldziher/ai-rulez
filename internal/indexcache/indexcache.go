@@ -42,7 +42,6 @@ const (
 
 	dirName    = "monorepo-index"
 	indexFile  = "index.json"
-	keyFile    = "key"
 	lockFile   = "lock"
 	repoCache  = ".cache"
 	rootCache  = ".ai-rulez-cache"
@@ -62,6 +61,10 @@ type Options struct {
 	ConfigDir string
 	// Mode is [mcp] index_cache: user (the default), repo or off.
 	Mode string
+	// Key authenticates the index file (HMAC-SHA256). It is a per-user secret
+	// kept outside the cache directory, so what is planted or edited there fails
+	// the check. Without one there is no cache.
+	Key []byte
 	// Fingerprint identifies the scanner and its settings; verdicts of another
 	// fingerprint are dropped.
 	Fingerprint string
@@ -131,6 +134,11 @@ func Locate(ctx context.Context, o Options) (Location, error) {
 	switch o.mode() {
 	case config.IndexCacheOff:
 		return Location{Kind: KindOff}, nil
+	}
+	if len(o.Key) == 0 {
+		return Location{Kind: KindOff, Warning: "there is no secret to authenticate the index cache; the index cache is off"}, nil
+	}
+	switch o.mode() {
 	case config.IndexCacheRepo:
 		return o.locateRepo(ctx, false, "")
 	}
