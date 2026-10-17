@@ -42,6 +42,8 @@ func TestValidateInstalledSkillFieldsRefusesUnsafeForms(t *testing.T) {
 		{"empty resource", InstalledSkillConfig{Name: "a", Source: "https://h/r", Resources: []string{"!"}}, "is empty"},
 		{"resource that is only slashes", InstalledSkillConfig{Name: "a", Source: "https://h/r", Resources: []string{"//"}}, "is empty"},
 		{"unterminated resource class", InstalledSkillConfig{Name: "a", Source: "https://h/r", Resources: []string{"[bad"}}, "is not a valid glob"},
+		{"backslash in a resource glob matches nothing", InstalledSkillConfig{Name: "a", Source: "https://h/r", Resources: []string{`docs\*.md`}}, "backslash"},
+		{"backslash in an exclusion matches nothing", InstalledSkillConfig{Name: "a", Source: "https://h/r", Resources: []string{`!secrets\*`}}, "backslash"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
