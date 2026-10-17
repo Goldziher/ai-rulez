@@ -65,6 +65,7 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "gitignore", false, "Update .gitignore files to include generated output patterns")
 	GenerateCmd.Flags().BoolVar(&noSelfMCP, "no-self-mcp", false, "Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it)")
 	GenerateCmd.Flags().Bool(flagRefreshRemote, false, refreshRemoteUsage)
+	GenerateCmd.Flags().Bool(flagAcceptFindings, false, acceptFindingsUsage)
 	specRecursive.Bool(GenerateCmd.Flags(), &recursive, "Find and process configuration files recursively")
 	specProfile.String(GenerateCmd.Flags(), &profile, "Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE)")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
@@ -111,7 +112,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	ctx := gitutil.WithMemo(cmdContext())
 	refreshed := refreshRemoteFlag(cmd)
 	if refreshed {
-		if err := refreshRemoteLock(ctx); err != nil {
+		if err := refreshRemoteLockWith(ctx, acceptFindingsFlag(cmd)); err != nil {
 			return err
 		}
 	}
@@ -120,7 +121,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	if !refreshed && refreshOnGenerate(cfg) {
-		if err := refreshRemoteLock(ctx); err != nil {
+		if err := refreshRemoteLockWith(ctx, acceptFindingsFlag(cmd)); err != nil {
 			return err
 		}
 		if cfg, err = loadGenerateConfig(ctx); err != nil {
