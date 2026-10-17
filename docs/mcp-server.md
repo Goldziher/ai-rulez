@@ -265,8 +265,10 @@ rewrites them), and the test fails when they are stale.
 | `llm *` | model credentials and cost estimates for network calls |
 | `local *` | the machine-local overlay is per developer; tools reach it through the local argument of the item tools and update_config |
 | `lock` | writes the lock, the trust anchor of the project, after network pinning and scan acceptance; an agent must not mint trust |
+| `marketplace *` | adds, removes and updates installed marketplaces: network fetches that rewrite the configuration and the lock |
 | `mcp` | starts the MCP server itself |
 | `export okf`, `import okf` | write a whole bundle or import a foreign one into the tree |
+| `plugin *` | installs, removes and updates plugins imported from marketplaces: network fetches, hook and MCP imports that run code |
 | `publish *` | builds and signs distribution artifacts and may push them |
 | `review *`, `rubric *` | spends model tokens in its default mode; the offline heuristics are not exposed yet |
 | `roles show` | a presentation of one role; resolve_role returns what the role keeps |
