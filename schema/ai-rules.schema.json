@@ -437,6 +437,33 @@
           "enum": ["user", "repo", "off"],
           "default": "user",
           "description": "Where the repository index of `mcp --serve-skills --discover-skills` keeps its cache of item summaries and scan verdicts (never file bodies): \"user\" is the user cache directory, with a gitignored directory in the project (.ai-rulez/.cache/) as the fallback when it is not writable; \"repo\" always uses that project directory; \"off\" keeps no cache. The scan, allow and deny rules run again whenever an item is loaded."
+        },
+        "read_only": {
+          "type": "boolean",
+          "description": "Register only the read-only tools, as `mcp --read-only` does: the server can inspect the project but not change it, and its instructions and prompts follow the tools it has. The --read-only flag overrides it. An organization policy with mcp.read_only = true cannot be loosened by it."
+        },
+        "daemon": {
+          "type": "boolean",
+          "description": "Share one long-lived skills server per repository, as `mcp --serve-skills --daemon` does. The --daemon flag overrides it."
+        },
+        "no_watch": {
+          "type": "boolean",
+          "description": "Do not reload the served skills when their files change, as `mcp --serve-skills --no-watch` does. The --no-watch flag overrides it."
+        },
+        "allow": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Serve only the skills whose name matches one of these path.Match globs, as `mcp --serve-skills --allow` does. The --allow flag overrides it."
+        },
+        "deny": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Never serve the skills whose name matches one of these path.Match globs; wins over allow. The --deny flag overrides it."
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The only tools the server registers, for example [\"find_skill\", \"load_skill\", \"find_context\", \"load_context\"] for a server that can only read. An unknown name fails the server start and names the valid ones. The --tools flag overrides it."
         }
       },
       "additionalProperties": false

@@ -377,6 +377,31 @@ type MCPConfig struct {
 	// (that project directory) or "off". The cache holds summaries and scan
 	// verdicts, never file bodies.
 	IndexCache string `yaml:"index_cache,omitempty" json:"index_cache,omitempty" toml:"index_cache,omitempty"`
+
+	// The keys below are the settings of `ai-rulez mcp` that a project can pin
+	// instead of every launcher repeating a flag. A flag given on the command
+	// line wins over the key. They are read when the server starts.
+
+	// ReadOnly registers only the read-only tools, as `mcp --read-only` does. An
+	// organization policy's mcp.read_only = true cannot be loosened by it.
+	ReadOnly *bool `yaml:"read_only,omitempty" json:"read_only,omitempty" toml:"read_only,omitempty"`
+
+	// Daemon shares one long-lived skills server per repository, as
+	// `mcp --serve-skills --daemon` does.
+	Daemon *bool `yaml:"daemon,omitempty" json:"daemon,omitempty" toml:"daemon,omitempty"`
+
+	// NoWatch stops `mcp --serve-skills` reloading when skill files change, as
+	// --no-watch does.
+	NoWatch *bool `yaml:"no_watch,omitempty" json:"no_watch,omitempty" toml:"no_watch,omitempty"`
+
+	// Allow and Deny are the --allow and --deny name globs of the served skills.
+	Allow []string `yaml:"allow,omitempty" json:"allow,omitempty" toml:"allow,omitempty"`
+	Deny  []string `yaml:"deny,omitempty" json:"deny,omitempty" toml:"deny,omitempty"`
+
+	// Tools, when set, is the only list of tools the server registers (the
+	// --tools flag), for example ["find_skill", "load_skill", "find_context",
+	// "load_context"] for a server that can only read.
+	Tools []string `yaml:"tools,omitempty" json:"tools,omitempty" toml:"tools,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.
