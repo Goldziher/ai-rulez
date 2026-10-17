@@ -542,32 +542,8 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 
 // updateContentFile is UpdateFile for an item that is a file of its own.
 func (op *OperatorImpl) updateContentFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
-	if err := op.requireContentTree(); err != nil {
+	if err := op.validateUpdateRequest(domain, name, priority, targets); err != nil {
 		return nil, err
-	}
-	if err := ValidateFileName(name); err != nil {
-		return nil, err
-	}
-
-	if priority != "" {
-		if err := ValidatePriority(priority); err != nil {
-			return nil, err
-		}
-	}
-	if err := ValidateTargets(targets); err != nil {
-		return nil, err
-	}
-
-	if domain != "" {
-		if err := ValidateDomainName(domain); err != nil {
-			return nil, err
-		}
-		if !op.filesMgr.DomainExists(domain) {
-			return nil, &DomainNotFoundError{
-				Name: domain,
-				Path: op.filesMgr.GetDomainPath(domain),
-			}
-		}
 	}
 
 	// Verify file exists
@@ -607,6 +583,38 @@ func (op *OperatorImpl) updateContentFile(ctx context.Context, domain, ftype, na
 		Type:     ftype,
 		Domain:   domain,
 	}, nil
+}
+
+// validateUpdateRequest checks the tree, the name, the flags and the domain of an update.
+func (op *OperatorImpl) validateUpdateRequest(domain, name, priority string, targets []string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
+	if err := ValidateFileName(name); err != nil {
+		return err
+	}
+
+	if priority != "" {
+		if err := ValidatePriority(priority); err != nil {
+			return err
+		}
+	}
+	if err := ValidateTargets(targets); err != nil {
+		return err
+	}
+
+	if domain != "" {
+		if err := ValidateDomainName(domain); err != nil {
+			return err
+		}
+		if !op.filesMgr.DomainExists(domain) {
+			return &DomainNotFoundError{
+				Name: domain,
+				Path: op.filesMgr.GetDomainPath(domain),
+			}
+		}
+	}
+	return nil
 }
 
 // requireDomain checks that a domain exists. A local operator creates it on

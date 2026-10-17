@@ -78,7 +78,7 @@ func ReadPayload(in io.Reader) Payload {
 		return p
 	}
 	data, err := io.ReadAll(io.LimitReader(in, maxPayloadBytes))
-	if err != nil || len(strings.TrimSpace(string(data))) == 0 {
+	if err != nil || strings.TrimSpace(string(data)) == "" {
 		return p
 	}
 	if err := json.Unmarshal(data, &p); err != nil {

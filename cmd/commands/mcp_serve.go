@@ -50,7 +50,7 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 	f.Bool(flagServeNoWatch, false, "Do not reload skills when their files change (requires --serve-skills)")
 	f.Duration(flagServePoll, 0, "How often to check skill files for changes; default 2s (requires --serve-skills)")
 	f.Bool(flagServeDaemon, false, "Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills)")
-	f.String(flagServeDiscover, "", "Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honouring .gitignore) or all (repo plus installed and included skills); a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills)")
+	f.String(flagServeDiscover, "", "Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honoring .gitignore) or all (repo plus installed and included skills); a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills)")
 	f.Lookup(flagServeDiscover).NoOptDefVal = "repo"
 	f.Bool(flagServeDaemonServer, false, "Run as the shared daemon itself instead of proxying to it; set by the spawned child, not from the command line")
 	_ = f.MarkHidden(flagServeDaemonServer) //nolint:errcheck // the flag was just registered

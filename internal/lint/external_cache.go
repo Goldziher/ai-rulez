@@ -144,7 +144,7 @@ func cacheExpired(sc resolvedScanner, hit cachedScan, at time.Time) bool {
 		return false
 	}
 	name := strings.ToLower(filepath.Base(strings.ReplaceAll(sc.Command[0], "\\", "/")))
-	for _, ext := range []string{".exe", ".cmd", ".bat"} {
+	for _, ext := range []string{extExe, ".cmd", ".bat"} {
 		name = strings.TrimSuffix(name, ext)
 	}
 	if !launchers[name] {

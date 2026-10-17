@@ -46,9 +46,9 @@ func (s *resolutionState) extraWants(baseDir string) []lockfile.Want {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []lockfile.Want
-	for key, e := range s.extra {
+	for key := range s.extra {
 		if len(key) > len(baseDir) && key[:len(baseDir)] == baseDir && key[len(baseDir)] == 0 {
-			out = append(out, e.want)
+			out = append(out, s.extra[key].want)
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {

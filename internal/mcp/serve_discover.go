@@ -89,6 +89,17 @@ func (st *ServeSetup) discoverMode(cfg *config.Config) (string, error) {
 	return mode, err //nolint:wrapcheck // names the field and the values
 }
 
+// discovery is one run of skill discovery.
+type discovery struct {
+	st     *ServeSetup
+	cfg    *config.Config
+	report *DiscoveryReport
+	// roots are the absolute skill roots whose contents the build depends on.
+	roots []string
+	// generated holds the absolute paths the manifests record.
+	generated map[string]bool
+}
+
 // reportOf is the report of a discovery run; nil for no run.
 func (d *discovery) reportOf() *DiscoveryReport {
 	if d == nil {
@@ -118,17 +129,6 @@ type skillDir struct {
 }
 
 func (d skillDir) depth() int { return strings.Count(d.rel, "/") }
-
-// discovery is one run of skill discovery.
-type discovery struct {
-	st     *ServeSetup
-	cfg    *config.Config
-	report *DiscoveryReport
-	// roots are the absolute skill roots whose contents the build depends on.
-	roots []string
-	// generated holds the absolute paths the manifests record.
-	generated map[string]bool
-}
 
 // appendDiscovered serves the skills found in the working tree after the
 // project's own skills and the skill sources: those keep every name they take.

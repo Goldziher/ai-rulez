@@ -201,12 +201,12 @@ const (
 
 var opaqueExt = map[string]bool{
 	".wasm": true, ".zip": true, ".tar": true, ".gz": true, ".tgz": true, ".bz2": true, ".xz": true, ".7z": true, ".rar": true, ".jar": true,
-	".exe": true, ".dll": true, ".so": true, ".dylib": true, ".bin": true, ".o": true, ".a": true, ".class": true, ".pyc": true, ".whl": true,
+	extExe: true, ".dll": true, ".so": true, ".dylib": true, ".bin": true, ".o": true, ".a": true, ".class": true, ".pyc": true, ".whl": true,
 	".pdf": true, ".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true, ".ico": true, ".mp4": true, ".mov": true, ".mp3": true,
 	".wav": true, ".ttf": true, ".otf": true, ".woff": true, ".woff2": true, ".sqlite": true, ".db": true, ".onnx": true, ".pt": true,
 }
 
-var skipDirs = map[string]bool{".git": true, "node_modules": true, "__pycache__": true, ".venv": true}
+var skipDirs = map[string]bool{dirGit: true, "node_modules": true, "__pycache__": true, ".venv": true}
 
 func checkAnalyzability(r *runner) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	for i := range r.items {

@@ -29,32 +29,42 @@ type layout struct {
 	tomlCommands bool
 }
 
+// Directory and file names shared across the layouts.
+const (
+	dirSkills     = "skills"
+	dirAgents     = "agents"
+	dirCommands   = "commands"
+	fileHooksJSON = "hooks/hooks.json"
+	fileMCPJSON   = ".mcp.json"
+)
+
 // layouts lists the supported plugin layouts in detection order. An agent
 // plugin has no entry: it is read by the Agent Plugins importer.
 func layouts() []layout {
 	return []layout{
 		{format: config.PluginFormatClaude, harness: config.HarnessClaude, manifest: ".claude-plugin/plugin.json",
-			skills: []string{"skills"}, agents: []string{"agents"}, commands: []string{"commands"},
-			hooks: []string{"hooks/hooks.json"}, mcp: []string{".mcp.json"}},
+			skills: []string{dirSkills}, agents: []string{dirAgents}, commands: []string{dirCommands},
+			hooks: []string{fileHooksJSON}, mcp: []string{fileMCPJSON}},
 		{format: config.PluginFormatCodex, harness: config.HarnessCodex, manifest: ".codex-plugin/plugin.json",
-			skills: []string{"skills"}, hooks: []string{"hooks.json", "hooks/hooks.json"}, mcp: []string{".mcp.json"}},
+			skills: []string{dirSkills}, hooks: []string{"hooks.json", fileHooksJSON}, mcp: []string{fileMCPJSON}},
 		{format: config.PluginFormatCursor, harness: config.HarnessCursor, manifest: ".cursor-plugin/plugin.json",
-			skills: []string{"skills"}, agents: []string{"agents"}, commands: []string{"commands"}, rules: []string{"rules"},
-			hooks: []string{"hooks/hooks.json"}, mcp: []string{".mcp.json", "mcp.json"}},
+			skills: []string{dirSkills}, agents: []string{dirAgents}, commands: []string{dirCommands}, rules: []string{"rules"},
+			hooks: []string{fileHooksJSON}, mcp: []string{fileMCPJSON, "mcp.json"}},
 		{format: config.PluginFormatAgentPlugins, harness: config.HarnessClaude, manifest: "plugin.json",
-			skills: []string{"skills"}, agents: []string{"com.anthropic.claude-code/agents"},
+			skills: []string{dirSkills}, agents: []string{"com.anthropic.claude-code/agents"},
 			commands: []string{"com.anthropic.claude-code/commands"}, rules: []string{"io.github.goldziher.ai-rulez/rules"},
 			hooks: []string{"com.anthropic.claude-code/hooks/hooks.json"}, mcp: []string{"mcp.json"}},
 		{format: config.PluginFormatGemini, harness: config.HarnessGemini, manifest: "gemini-extension.json",
-			skills: []string{"skills"}, agents: []string{"agents"}, commands: []string{"commands"}, tomlCommands: true,
-			hooks: []string{"hooks/hooks.json"}, context: "contextFileName"},
+			skills: []string{dirSkills}, agents: []string{dirAgents}, commands: []string{dirCommands}, tomlCommands: true,
+			hooks: []string{fileHooksJSON}, context: "contextFileName"},
 	}
 }
 
 func layoutFor(format string) (layout, bool) {
-	for _, l := range layouts() {
-		if l.format == format {
-			return l, true
+	all := layouts()
+	for i := range all {
+		if all[i].format == format {
+			return all[i], true
 		}
 	}
 	return layout{}, false
@@ -64,23 +74,24 @@ func layoutFor(format string) (layout, bool) {
 // a directory with Claude's default component directories and no manifest is a
 // Claude plugin, as Claude Code itself treats it.
 func detect(dir string) (format string, found bool) {
-	for _, l := range layouts() {
-		if l.format == config.PluginFormatAgentPlugins {
+	all := layouts()
+	for i := range all {
+		if all[i].format == config.PluginFormatAgentPlugins {
 			continue // its plugin.json is told apart by its $schema below
 		}
-		if info, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(l.manifest))); err == nil && info.Mode().IsRegular() {
-			return l.format, true
+		if info, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(all[i].manifest))); err == nil && info.Mode().IsRegular() {
+			return all[i].format, true
 		}
 	}
 	if isAgentPlugin(dir) {
 		return config.PluginFormatAgentPlugins, true
 	}
-	for _, d := range []string{"skills", "agents", "commands", "hooks"} {
+	for _, d := range []string{dirSkills, dirAgents, dirCommands, "hooks"} {
 		if info, err := os.Lstat(filepath.Join(dir, d)); err == nil && info.IsDir() {
 			return config.PluginFormatClaude, true
 		}
 	}
-	if info, err := os.Lstat(filepath.Join(dir, ".mcp.json")); err == nil && info.Mode().IsRegular() {
+	if info, err := os.Lstat(filepath.Join(dir, fileMCPJSON)); err == nil && info.Mode().IsRegular() {
 		return config.PluginFormatClaude, true
 	}
 	return "", false

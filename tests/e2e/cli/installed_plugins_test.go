@@ -18,11 +18,10 @@ import (
 
 // pluginProject is a project and a marketplace repository served from disk.
 type pluginProject struct {
-	t       *testing.T
-	dir     string
-	home    string
-	market  *plugintest.Repo
-	release int
+	t      *testing.T
+	dir    string
+	home   string
+	market *plugintest.Repo
 }
 
 func newPluginProject(t *testing.T) *pluginProject {
