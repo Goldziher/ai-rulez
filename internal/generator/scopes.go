@@ -50,6 +50,7 @@ func (g *Generator) generateScopedOutputs(activeProfile string, rootContent *con
 		}
 		applySharedOutputs(outputsByPreset, scopeCfg, scopeCfg.Content)
 		g.dropAgentsSourceOutputs(outputsByPreset, scopeCfg)
+		g.dropSkippedKinds(outputsByPreset, scopeCfg)
 		flat, err := flattenPresetOutputs(g.config.Diag, g.log(), g.config.ReadExisting, outputsByPreset)
 		if err != nil {
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "merge scoped presets")

@@ -1865,6 +1865,30 @@ Quick reference:
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
 
+##### `skip_outputs`
+
+Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them and still let ai-rulez emit
+the rest (installed skills, plugins, MCP servers, hooks, permissions). The default is empty: nothing is skipped.
+
+```toml
+skip_outputs = ["instructions"]
+```
+
+| Value          | Skips |
+| -------------- | ----- |
+| `instructions` | Every root instruction file: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` and the other presets' root files, the `*.local.md` and `AGENTS.override.md` variants, and scope roots. Overrides `agents_md` and `claude_md`. |
+| `agents_md`    | Only the shared `AGENTS.md` (and `AGENTS.override.md`) and the shared `.agents/skills` tree. |
+| `claude_md`    | Only `CLAUDE.md` (root and scopes). |
+| `rules`        | Rule files in every preset (`.claude/rules`, `.cursor/rules`, ...). |
+| `skills`       | Skill directories in every preset, installed skills included. |
+| `agents`       | Agent definition files. |
+| `commands`     | Command and prompt files. |
+
+An unknown value fails validation and names the valid ones. `config.local.toml` accepts the key too. Skipped files leave
+the manifest, the managed `.gitignore` block, `generate --check`, the lock output digests and `clean`, so none of them
+reads or removes a hand-written file. A file an earlier run generated and that is now skipped is left in place and
+reported once as no longer managed. See [Managing only remote skills and plugins](managing-remote-skills.md).
+
 ##### `claude_md`
 
 Controls whether the `claude` preset writes its `CLAUDE.md` when `agents_md` is on. The default, `"shim"`, keeps the
@@ -8612,6 +8636,10 @@ agents_md = true    # the default
 `update_context` and `delete_context` then act on that one section, never the whole file), and an `AGENTS.md` in a
 subdirectory is read as context scoped to that directory.
 
+To write `AGENTS.md`, `CLAUDE.md` or the shared skills by hand and keep ai-rulez away from them, list them in
+[`skip_outputs`](configuration.md#skip_outputs): `"agents_md"` skips the shared `AGENTS.md` and `.agents/skills`,
+`"claude_md"` skips `CLAUDE.md`, and `"instructions"` skips every root instruction file and overrides both.
+
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).
@@ -8873,6 +8901,60 @@ The flag is on unless you set `agents_md = false`; the two lists below describe 
 
 See also: [Configuration: `agents_md`](configuration.md#agents_md), [Rules and native rules folders](rules.md),
 [Local Overrides](local-overrides.md), [Monorepo](monorepo.md).
+
+## Managing Only Remote Skills
+
+Source: https://goldziher.github.io/ai-rulez/managing-remote-skills/
+
+Use this when you write `CLAUDE.md`, `AGENTS.md` and your own skills by hand and want ai-rulez to manage only the
+configured components: skills installed from a remote repository, plugins, MCP servers, hooks and permissions, all
+pinned in `ai-rulez.lock`. ai-rulez never writes, overwrites or deletes the hand-written files.
+
+#### Configure
+
+```toml
+version = "5.0"
+presets = ["claude", "codex"]
+
+# Hand-written: CLAUDE.md, AGENTS.md and every other root instruction file.
+skip_outputs = ["instructions"]
+
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+version = "^1.2"
+
+[[mcp_servers]]
+name = "docs"
+command = "uvx"
+args = ["docs-mcp"]
+```
+
+`instructions` skips every root instruction file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, the files of the other
+presets, their `*.local.md` and `AGENTS.override.md` variants, and each scope's root). Installed skills, MCP servers,
+hooks and permissions are still emitted. Skills you write by hand under `.claude/skills/` or `.agents/skills/` are
+left alone as long as their names differ from the skills ai-rulez writes: ai-rulez only deletes files that carry its
+own `Content-Hash` header or that its manifest lists. Do not add `skills` to `skip_outputs` unless you want to drop
+installed skills too; it skips every skill directory.
+
+For a narrower choice, `agents_md` skips only the shared `AGENTS.md` and `.agents/skills`, and `claude_md` skips only
+`CLAUDE.md`. See [`skip_outputs`](configuration.md#skip_outputs) for all values.
+
+#### Lock and generate
+
+```bash
+ai-rulez lock                 # pin the remote skills and the generated outputs
+ai-rulez generate --locked    # fail if ai-rulez.lock does not match
+ai-rulez generate --check     # report drift; hand-written files are never reported
+```
+
+#### What happens to existing files
+
+- A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
+  `generate` or `clean`.
+- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns once that it is no
+  longer managed and drops it from the manifest, so you can edit or delete it yourself.
+- `generate` stays quiet about a missing `AGENTS.md` when the skip is intentional.
 
 ## llms.txt
 

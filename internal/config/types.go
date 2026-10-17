@@ -39,8 +39,12 @@ type Config struct {
 	Header           *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
 	Defaults         *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
 	Builtins         *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
-	Compact          *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
-	AgentsMD         bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
+	// SkipOutputs lists output kinds ai-rulez never writes, overwrites or deletes
+	// ("instructions", "agents_md", "claude_md", "rules", "skills", "agents",
+	// "commands"); see skip_outputs.go.
+	SkipOutputs []string `yaml:"skip_outputs,omitempty" json:"skip_outputs,omitempty" toml:"skip_outputs,omitempty"` //nolint:tagliatelle
+	Compact     *bool    `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
+	AgentsMD    bool     `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
 	// Source selects where the content is read from: "ai-rulez" (default, the
 	// .ai-rulez content tree) or "agents" (AGENTS.md and .agents/, see agents_source.go).
 	Source string `yaml:"source,omitempty" json:"source,omitempty" toml:"source,omitempty"`

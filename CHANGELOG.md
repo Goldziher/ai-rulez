@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- `skip_outputs` (also accepted in `config.local.toml`) lists output kinds ai-rulez never writes, overwrites or deletes: `instructions`, `agents_md`, `claude_md`, `rules`, `skills`, `agents` and `commands`. A project can hand-write `CLAUDE.md`, `AGENTS.md` or skills and let ai-rulez emit only installed skills, plugins, MCP servers and hooks. A file an earlier run generated and that is now skipped stays in place with a one-time warning. See [Managing only remote skills and plugins](docs/managing-remote-skills.md).
+
 ## [5.4.1] - 2026-10-16
 
 ### Added

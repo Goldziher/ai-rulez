@@ -107,7 +107,7 @@ func (g *Generator) adoptable(rel string, data []byte) bool {
 func (g *Generator) retiredFiles(outputs []config.OutputFile) []string {
 	files := g.staleManifestFiles(outputs)
 	orphans := g.orphanGeneratedFiles(outputs)
-	for _, abs := range g.supersededCommands(outputs) {
+	for _, abs := range g.keepSkipped(g.supersededCommands(outputs)) {
 		if !slices.Contains(files, abs) {
 			files = append(files, abs)
 		}

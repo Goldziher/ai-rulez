@@ -647,6 +647,7 @@ type tomlConfig struct {
 	Profiles              map[string][]string     `toml:"profiles"`
 	Gitignore             *bool                   `toml:"gitignore"`
 	GitignoreExclude      []string                `toml:"gitignore_exclude"`
+	SkipOutputs           []string                `toml:"skip_outputs"`
 	Compact               *bool                   `toml:"compact"`
 	AgentsMD              *bool                   `toml:"agents_md"`
 	BundleExclude         []string                `toml:"bundle_exclude"`
@@ -758,6 +759,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Profiles:              raw.Profiles,
 		Gitignore:             raw.Gitignore,
 		GitignoreExclude:      raw.GitignoreExclude,
+		SkipOutputs:           raw.SkipOutputs,
 		Compact:               raw.Compact,
 		AgentsMD:              raw.AgentsMD == nil || *raw.AgentsMD,
 		BundleExclude:         raw.BundleExclude,
