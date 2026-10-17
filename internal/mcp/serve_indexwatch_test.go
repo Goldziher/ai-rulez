@@ -40,6 +40,34 @@ func TestRelevantIndexChange(t *testing.T) {
 	}
 }
 
+// Windows reports a write on a directory whenever a file in it changes, so a
+// directory event counts only when the directory can hold indexed content.
+func TestDirMayChangeIndex(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "src/main.go", "package main\n")
+	writeFile(t, root, "pkg/new/deep/AGENTS.md", "# new\n")
+	writeFile(t, root, "pkg/tool/.claude/rules/r.md", "rule\n")
+	writeFile(t, root, "pkg/dep/vendor/x/AGENTS.md", "# vendored\n")
+	writeFile(t, root, ".claude/skills/x/notes.txt", "notes\n")
+	ignore := indexWatchIgnore(root, nil, nil)
+
+	tests := []struct {
+		rel  string
+		want bool
+	}{
+		{rel: "src", want: false},
+		{rel: "pkg/new", want: true},
+		{rel: "pkg/tool", want: true},
+		{rel: "pkg/dep", want: false},
+		{rel: ".claude/skills/x", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.rel, func(t *testing.T) {
+			assert.Equal(t, tt.want, dirMayChangeIndex(filepath.Join(root, filepath.FromSlash(tt.rel)), tt.rel, ignore))
+		})
+	}
+}
+
 // watchedServer starts a discovering server whose only reload trigger is the
 // file watcher: the poll interval is an hour.
 func watchedServer(t *testing.T, root string, mutate ...func(*ServeSetup)) (*Server, *sdkmcp.ClientSession, *atomic.Int32) {

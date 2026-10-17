@@ -24,6 +24,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`find_context` with `path` honours rule globs.** A Claude Code rule's `paths:` and a Cursor rule's `globs:` (relative to the directory holding the harness folder) now narrow the rules returned for a file; rules without them apply to their whole scope, and `scope` queries are unchanged. The index cache format moved to version 2 and is rebuilt once ([#441](https://github.com/Goldziher/ai-rulez/issues/441)).
 - **A repository skill wins over a builtin of the same name.** `mcp --discover-skills` served the builtin and dropped `.claude/skills/<name>`; the repository skill is now served and a start-up line names the builtin it replaces. `validate` reports a hand-written skill that collides with a configured skill as `AR703`, as it already did for `.ai-rulez/skills`, silenced by `lint.allow_overrides` ([#443](https://github.com/Goldziher/ai-rulez/issues/443)).
 - The catalog reports no served or shadowed repository skills as `[]`, not `null`.
+- On Windows, editing a file in an ordinary directory no longer rebuilds the repository index: a directory event now counts only when the directory can hold an instruction file, skill, rule or agent.
 
 ## [5.5.0] - 2026-10-17
 
