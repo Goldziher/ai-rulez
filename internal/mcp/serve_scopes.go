@@ -259,6 +259,9 @@ type IndexReport struct {
 	Truncated bool `json:"truncated"`
 	// Found is how many items the repository holds before the cap.
 	Found int `json:"found"`
+	// Cache says how the build used the index cache; nil when the build made no
+	// use of one.
+	Cache *IndexCacheReport `json:"cache,omitempty"`
 }
 
 // withScopes adds the scopes section to the JSON document of the catalog

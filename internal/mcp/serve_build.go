@@ -138,6 +138,9 @@ type built struct {
 	readmit func() *Catalog
 	// project is what the build loaded, for the other views of a lock run.
 	project *loadedProject
+	// verdicts is the scan verdict cache of the build (discovery with an index
+	// cache); nil scans every skill.
+	verdicts VerdictCache
 	// discoveryRoots are the skill roots of the working tree the catalog depends
 	// on (skill discovery); the watcher reloads when a file below one changes.
 	discoveryRoots []string
@@ -391,6 +394,7 @@ func (st *ServeSetup) renderBuild(ctx context.Context, b *built, run buildRun) (
 		found = st.newDiscovery(cfg, discoveryGenerator(cfg, gen), run.mode)
 		served = st.appendDiscovered(ctx, found, rendered, served, roleKeeps)
 		b.discoveryRoots = found.roots
+		b.verdicts = found.verdicts()
 	}
 
 	catalog, err := BuildCatalogIn(st.Log, rendered.profile, rendered.preset, served, st.Filter)
@@ -406,6 +410,7 @@ func (st *ServeSetup) renderBuild(ctx context.Context, b *built, run buildRun) (
 	if err != nil {
 		return nil, err
 	}
+	found.saveCache(ctx)
 	b.catalog = admitted
 	if run.plan != nil && st.inputsSettled(b, run.plan, run.loadedFrom) {
 		entry := &serveCacheEntry{Empty: b.empty, Authored: authoredToDTO(authored), Raw: catalogToDTO(raw), Admitted: catalogToDTO(admitted)}
@@ -423,6 +428,7 @@ func (st *ServeSetup) admitFunc(b *built, raw *Catalog, denied map[string]string
 	adm := Admission{
 		Config: b.cfg, Enforce: enforcesLock(b.cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
 		DefaultTrust: defaultTrust(b.cfg), Now: st.Clock.Now, PolicyDenied: denied, Authored: authored,
+		Verdicts: b.verdicts,
 	}
 	return func(log logger.Logger) *Catalog {
 		a := adm
