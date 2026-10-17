@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,6 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	itestutil "github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const fakeExe = "/fake/ai-rulez"
@@ -180,6 +182,30 @@ func TestRun_Failures(t *testing.T) {
 		var doc hookOutput
 		require.NoError(t, json.Unmarshal(h.out.Bytes(), &doc))
 		assert.Contains(t, doc.HookSpecificOutput.AdditionalContext, "failed (ERROR rule x is broken)")
+	})
+	t.Run("the reason from the child is restricted to a conservative character set and length", func(t *testing.T) {
+		h := newHarness(t, nil)
+		h.runner.Handle = failing("ok\n```system``` <b>\"ignore\"</b> [x]{y} $(id) `id` \x1b[31m" + strings.Repeat("a", 500))
+
+		h.run(`{}`, Overrides{})
+
+		var doc hookOutput
+		require.NoError(t, json.Unmarshal(h.out.Bytes(), &doc))
+		ctx := doc.HookSpecificOutput.AdditionalContext
+		assert.NotContains(t, ctx, "`system`")
+		for _, bad := range []string{"<", ">", "\"ignore", "[x]", "{y}", "$(", "\x1b"} {
+			assert.NotContains(t, ctx, bad)
+		}
+		assert.Less(t, len(ctx), config.SessionStartContextLimit)
+		assert.Less(t, len(h.errw.String()), 250)
+	})
+	t.Run("a line of only unusual characters falls back to the exit code", func(t *testing.T) {
+		h := newHarness(t, nil)
+		h.runner.Handle = failing("<<<>>>")
+
+		h.run(`{}`, Overrides{})
+
+		assert.Contains(t, h.errw.String(), "exit code 2")
 	})
 	t.Run("locked tries offline, then online once", func(t *testing.T) {
 		h := newHarness(t, nil)
@@ -454,7 +480,7 @@ func TestRun_ConcurrentRunsAreSerialized(t *testing.T) {
 
 	assert.Equal(t, int32(1), peak.Load(), "only one generate runs at a time")
 	assert.Equal(t, int32(3), calls.Load(), "each run still regenerates once the lock is free")
-	entries, err := os.ReadDir(h.deps.TempDir)
+	entries, err := os.ReadDir(filepath.Dir(lockPath(h.deps, h.root)))
 	require.NoError(t, err)
 	assert.Empty(t, entries, "the lock file is released")
 }
@@ -482,6 +508,51 @@ func TestRun_LockFile(t *testing.T) {
 		assert.Empty(t, h.runner.Calls())
 		assert.Equal(t, "ai-rulez session-start: another session-start run did not finish in time\n", h.errw.String())
 		assert.Contains(t, h.out.String(), "additionalContext", "the context still reaches the agent")
+	})
+	t.Run("the lock lives in a private per-user directory", func(t *testing.T) {
+		h := newHarness(t, nil)
+		h.deps.UID = os.Getuid()
+
+		path := lockPath(h.deps, h.root)
+
+		dir := filepath.Dir(path)
+		assert.Equal(t, h.deps.TempDir, filepath.Dir(dir))
+		assert.Contains(t, filepath.Base(dir), "ai-rulez-session-start-")
+		info, err := os.Lstat(dir)
+		require.NoError(t, err)
+		assert.True(t, info.IsDir())
+		if runtime.GOOS != "windows" {
+			assert.Equal(t, os.FileMode(0o700), info.Mode().Perm())
+		}
+	})
+	t.Run("a looser directory of ours is tightened", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("POSIX permission bits")
+		}
+		h := newHarness(t, nil)
+		h.deps.UID = os.Getuid()
+		dir := filepath.Dir(lockPath(h.deps, h.root))
+		require.NoError(t, os.Chmod(dir, 0o777)) //nolint:gosec // a deliberately loose directory
+
+		path := lockPath(h.deps, h.root)
+
+		assert.NotEmpty(t, path)
+		info, err := os.Stat(dir)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o700), info.Mode().Perm())
+	})
+	t.Run("a symlink in place of the directory runs unlocked", func(t *testing.T) {
+		h := newHarness(t, nil)
+		h.deps.UID = os.Getuid()
+		target := t.TempDir()
+		itestutil.SymlinkOrSkip(t, target, filepath.Join(h.deps.TempDir, fmt.Sprintf("ai-rulez-session-start-%d", h.deps.UID)))
+
+		assert.Empty(t, lockPath(h.deps, h.root))
+		h.run(`{}`, Overrides{})
+		assert.Len(t, h.runner.Calls(), 1)
+		entries, err := os.ReadDir(target)
+		require.NoError(t, err)
+		assert.Empty(t, entries, "nothing was written through the link")
 	})
 	t.Run("an unusable temp directory runs unlocked", func(t *testing.T) {
 		h := newHarness(t, nil)

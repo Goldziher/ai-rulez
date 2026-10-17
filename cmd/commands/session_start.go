@@ -29,6 +29,7 @@ func defaultSessionStartDeps() sessionstart.Deps {
 		Runner:  runner.Exec{},
 		Exe:     exe,
 		TempDir: os.TempDir(),
+		UID:     os.Getuid(),
 		Now:     time.Now,
 		LoadConfig: func(ctx context.Context, dir string) (*config.Config, error) {
 			return loadProject(ctx, dir, config.WithoutRemote(), config.WithoutLocal())
