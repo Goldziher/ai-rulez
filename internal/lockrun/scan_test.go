@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -97,7 +98,9 @@ func TestWalkFilesRecordsSizeModeAndContent(t *testing.T) {
 		byPath[f.Path] = f
 	}
 	require.Len(t, byPath, 3, "the symlink is not listed")
-	assert.True(t, byPath["run.sh"].Executable)
+	if runtime.GOOS != "windows" { // Windows has no executable bit
+		assert.True(t, byPath["run.sh"].Executable)
+	}
 	assert.Equal(t, []byte("#!/bin/sh\n"), byPath["run.sh"].Data)
 	assert.False(t, byPath["plain.md"].Executable)
 	assert.EqualValues(t, 5, byPath["plain.md"].Size)
