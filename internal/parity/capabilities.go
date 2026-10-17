@@ -21,7 +21,7 @@ func authoringCapabilities() []Capability {
 			ID: "init", Kind: Paired, CLI: []string{"init"}, Tool: "init_project",
 			Flags: []FlagPair{{Flag: "source"}},
 			CLIFlags: []Exclusion{
-				{Names: []string{"config-dir", "domains", "setup-hooks", "skip-content", "from", "force"},
+				{Names: []string{"config-dir", "domains", "setup-hooks", "skip-content", "from", "force", "minimal"},
 					Reason: "init seeds a project interactively or from a source; init_project writes the minimal config.toml and refuses to overwrite"},
 			},
 			ToolArgs: []Exclusion{
@@ -53,7 +53,10 @@ func authoringCapabilities() []Capability {
 		},
 		{
 			ID: "installed-skill-install", Kind: Paired, CLI: []string{"skill install"}, Tool: "install_skill",
-			Flags: []FlagPair{{Flag: "local"}, {Flag: "path"}, {Flag: "ref"}, {Flag: "source"}},
+			Flags: []FlagPair{{Flag: "local"}, {Flag: "path"}, {Flag: "ref"}, {Flag: "source"},
+				{Flag: "include"}, {Flag: "exclude"}, {Flag: "name-prefix"}, {Flag: "trust"}, {Flag: "resources"}, {Flag: "version"},
+				{Flag: "tag-prefix"}, {Flag: "include-prerelease"}, {Flag: "min-release-age"}, {Flag: "domain"},
+				{Flag: "profile", Arg: "profiles"}, {Flag: "local-override"}},
 		},
 		{
 			ID: "installed-skill-remove", Kind: Paired, CLI: []string{"skill remove"}, Tool: "uninstall_skill",
@@ -175,6 +178,7 @@ func buildCapabilities() []Capability {
 				{Flag: "recursive"}, {Flag: "no-local"}, {Flag: "no-self-mcp"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"watch", "if-configured"}, Reason: "process-bound or hook-bound: a tool call returns once"},
+				{Names: []string{"refresh-remote", "accept-findings"}, Reason: "move pins to newer remote versions and accept security findings: network pinning and trust decisions an agent must not make"},
 				{Names: []string{"emit-plan"}, Reason: "writes the plan to a file or stdout; generate_outputs dry_run returns the plan in the result"},
 				{Names: []string{"locked", "frozen", "verify-tags", "allow-local-drift", "force", "strict-config"},
 					Reason: "gates that turn drift into an exit code or overwrite files; an agent runs generate_outputs check for drift and never forces"},
@@ -396,6 +400,8 @@ func cliOnlyCapabilities() []Capability {
 		only("sign", "signs with a key, an OIDC identity or a transparency log: credentials and egress", "sign", "trust update"),
 		only("verify", "verifies signatures, attestations and downloaded artifacts with the signing backend; the drift half is generate_outputs check and doctor",
 			"verify"),
+		only("marketplace", "adds, removes and updates installed marketplaces: network fetches that rewrite the configuration and the lock", "marketplace *"),
+		only("plugin", "installs, removes and updates plugins imported from marketplaces: network fetches, hook and MCP imports that run code", "plugin *"),
 		only("update", "moves pinned remote sources to newer tags over the network and rewrites the lock", "update", "skill update"),
 		only("convert-migrate", "one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview",
 			"convert", "migrate *"),
