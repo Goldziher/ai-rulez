@@ -115,7 +115,7 @@ func (r *resolver) merge(out *config.PluginResolution, p *config.InstalledPlugin
 	for _, f := range res.Findings {
 		r.log.Debug("Installed plugin import", "plugin", p.Name, "status", string(f.Status), "source", f.Source, "field", f.Field, "reason", f.Reason)
 	}
-	if res.HooksDisabled > 0 {
+	if res.HooksDisabled > 0 && r.cfg.OncePerRun("plugin-hooks-disabled\x00"+p.Name) {
 		r.log.Info("Installed plugin hooks are not imported; set enable_hooks = true to import them", "plugin", p.Name, "hooks", res.HooksDisabled)
 	}
 }

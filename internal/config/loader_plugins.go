@@ -118,7 +118,9 @@ func (m *pluginMerger) files(kind string, files []ContentFile) {
 		f := files[i]
 		key := kind + "\x00" + f.Name
 		if m.taken[key] {
-			m.log.Warn("Installed plugin "+kind+" name conflicts with an existing one, skipping", "name", f.Name)
+			if m.cfg.OncePerRun("plugin-conflict\x00" + key) {
+				m.log.Warn("Installed plugin "+kind+" name conflicts with an existing one, skipping", "name", f.Name)
+			}
 			continue
 		}
 		m.taken[key] = true
@@ -153,7 +155,9 @@ func (m *pluginMerger) mcp(servers []MCPServer) {
 	for i := range servers {
 		s := servers[i]
 		if _, dup := m.cfg.MCPServers[s.Name]; dup {
-			m.log.Warn("Installed plugin MCP server name conflicts with an existing one, skipping", "name", s.Name)
+			if m.cfg.OncePerRun("plugin-mcp-conflict\x00" + s.Name) {
+				m.log.Warn("Installed plugin MCP server name conflicts with an existing one, skipping", "name", s.Name)
+			}
 			continue
 		}
 		m.cfg.MCPServers[s.Name] = &s
