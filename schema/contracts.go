@@ -47,6 +47,8 @@ var JSONContracts = []JSONContract{
 	{"publish verify", "publish-verify.schema.json"},
 	{"eval run", "eval-report.schema.json"},
 	{"judge", "judge-report.schema.json"},
+	{"cache status", "cache-status.schema.json"},
+	{"cache clear", "cache-clear.schema.json"},
 }
 
 // ErrorDocumentSchema describes what a command with a --format flag prints on
