@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"sort"
@@ -84,7 +83,7 @@ func (r *runner) stageSkillFiles(it *item) []config.SkillResource {
 	for _, res := range all {
 		have[path.Clean(strings.ReplaceAll(res.RelPath, `\`, "/"))] = true
 	}
-	ctx := logger.WithContext(context.Background(), r.log())
+	ctx := logger.WithContext(scanContext(), r.log())
 	extra, err := config.LoadAllSkillFiles(ctx, it.itemDir, r.cfg.BundleExclude)
 	if err != nil {
 		r.log().Warn("Staging only the canonical resources of a skill", "skill", it.itemDir, "error", err)

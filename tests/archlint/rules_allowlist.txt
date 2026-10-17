@@ -19,7 +19,7 @@ background internal/govview/approvals.go 2
 background internal/govview/lock.go 2
 background internal/govview/lock_roles.go 1
 background internal/lint/ar_plugin.go 1
-background internal/lint/external_run.go 4
+background internal/lint/external_run.go 1
 background internal/lint/tree.go 2
 background internal/policy/discover.go 1
 background internal/publish/ocipack.go 1

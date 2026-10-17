@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,9 +62,7 @@ func TestSymlinksAndOversizedFilesAreNotStaged(t *testing.T) {
 	p := skillTreeProject(t, "")
 	outside := filepath.Join(t.TempDir(), "outside.md")
 	require.NoError(t, os.WriteFile(outside, []byte("secret\n"), 0o644)) //nolint:gosec // a test file
-	if err := os.Symlink(outside, filepath.Join(p.root, ".ai-rulez", "skills", "deploy", "link.md")); err != nil {
-		t.Skipf("symlinks are not available: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(p.root, ".ai-rulez", "skills", "deploy", "link.md"))
 	require.NoError(t, os.WriteFile(filepath.Join(p.root, ".ai-rulez", "skills", "deploy", "huge.bin"), make([]byte, 9<<20), 0o644)) //nolint:gosec // a test file
 
 	// Act

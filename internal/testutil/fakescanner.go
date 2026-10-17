@@ -132,7 +132,7 @@ func (s fakeScan) results() []map[string]any {
 func RunFakeScanner(args []string) int {
 	s := parseFakeScan(args)
 	if v, ok := s.opts["--print-version"]; ok {
-		fmt.Println("fake-scanner " + v)
+		fmt.Fprintln(os.Stdout, "fake-scanner "+v)
 		return 0
 	}
 	s.log("start")
