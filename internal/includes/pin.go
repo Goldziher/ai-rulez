@@ -71,7 +71,7 @@ func Lockable(cfg *config.Config) []lockfile.Want {
 	}
 	for i := range cfg.InstalledSkills {
 		sk := &cfg.InstalledSkills[i]
-		if DetectSourceType(sk.Source) == SourceTypeGit {
+		if kind, _, err := SkillSourceRoot(cfg, sk.Source); err == nil && kind == SourceTypeGit {
 			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindSkill, Name: sk.Name, Source: lockSource(cfg.BaseDir, sk.Source), Path: sk.GetPath(), Ref: sk.Ref}, sk.VersionSpec()))
 		}
 	}

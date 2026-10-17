@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/samber/oops"
 )
 
@@ -37,8 +38,6 @@ type skillsLockDoc struct {
 	Version int                        `json:"version"`
 	Skills  map[string]json.RawMessage `json:"skills"`
 }
-
-var githubShorthand = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9._-]+$`)
 
 type skillsLockImporter struct{}
 
@@ -159,8 +158,8 @@ func lockSourceURL(e skillsLockEntry) (gitURL, reason string) {
 		switch {
 		case strings.Contains(cand, "://") || strings.HasPrefix(cand, "git@"):
 			return cand, ""
-		case e.SourceType == "github" && githubShorthand.MatchString(cand):
-			return "https://github.com/" + cand, ""
+		case e.SourceType == "github" && lockfile.IsGitHubShorthand(cand):
+			return lockfile.GitHubURL(cand), ""
 		}
 	}
 	if e.SourceType == "github" || e.SourceType == "" {

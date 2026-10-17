@@ -337,6 +337,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.Workspace = v.W
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
+	NormalizeInstalledSkillSources(baseDir, config.InstalledSkills)
 	config.Host = lo.host
 	config.Resolve = lo.resolvers
 	config.Registry = lo.registry
