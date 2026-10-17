@@ -36,6 +36,10 @@ const (
 	agentsStateDir    = ".agents/.ai-rulez"
 	manifestName      = ".generated-manifest.json"
 	localManifestName = ".generated-manifest.local.json"
+	// rootManifestName and rootLocalManifestName are the manifests of a project
+	// configured in ai-rulez.toml alone: they sit in the project root.
+	rootManifestName      = ".ai-rulez-manifest.json"
+	rootLocalManifestName = ".ai-rulez-manifest.local.json"
 	// maxPayload bounds stdin; an apply_patch payload carries the whole patch.
 	maxPayload = 8 << 20
 	// maxTargets bounds the distinct files one call may name; more is blocked.
@@ -330,6 +334,26 @@ func stringsIn(v any) []string {
 // generated manifests.
 func stateDirs() []string { return []string{configDirName, agentsStateDir} }
 
+// manifestRef is one place a manifest may be: its path and whether it is the
+// machine-local one.
+type manifestRef struct {
+	path  string
+	local bool
+}
+
+// manifestRefs lists, for the project at root, every manifest the guard reads:
+// those in the state directories and those a single-file project keeps in its root.
+func manifestRefs(root string) []manifestRef {
+	var refs []manifestRef
+	for _, state := range stateDirs() {
+		dir := filepath.Join(root, filepath.FromSlash(state))
+		refs = append(refs, manifestRef{path: filepath.Join(dir, manifestName)},
+			manifestRef{path: filepath.Join(dir, localManifestName), local: true})
+	}
+	return append(refs, manifestRef{path: filepath.Join(root, rootManifestName)},
+		manifestRef{path: filepath.Join(root, rootLocalManifestName), local: true})
+}
+
 // selectsAgentsSource reports whether a config.toml holds the top-level setting
 // source = "agents". It scans lines rather than parsing: the guard stays light
 // and fails open.
@@ -362,11 +386,9 @@ func findProject(dir string) (string, bool) {
 		return "", false
 	}
 	for {
-		for _, state := range stateDirs() {
-			for _, name := range []string{manifestName, localManifestName} {
-				if info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(state), name)); err == nil && info.Mode().IsRegular() {
-					return dir, true
-				}
+		for _, ref := range manifestRefs(dir) {
+			if info, err := os.Stat(ref.path); err == nil && info.Mode().IsRegular() {
+				return dir, true
 			}
 		}
 		parent := filepath.Dir(dir)
@@ -392,28 +414,25 @@ type owned map[string]string
 func loadManifest(root string) owned {
 	set := owned{}
 	merged := map[string]bool{}
-	for _, state := range stateDirs() {
-		for _, name := range []string{manifestName, localManifestName} {
-			path := filepath.Join(root, filepath.FromSlash(state), name)
-			if name == localManifestName && gitutil.UntrustedLocalFile(path) != "" {
-				continue // forged or tracked: it must not decide what the guard protects
+	for _, ref := range manifestRefs(root) {
+		if ref.local && gitutil.UntrustedLocalFile(ref.path) != "" {
+			continue // forged or tracked: it must not decide what the guard protects
+		}
+		data, err := os.ReadFile(ref.path)
+		if err != nil {
+			continue
+		}
+		var m manifestFile
+		if json.Unmarshal(data, &m) != nil {
+			continue
+		}
+		for _, f := range m.Files {
+			if f = cleanRel(f); f != "" {
+				set[fold(f)] = f
 			}
-			data, err := os.ReadFile(path)
-			if err != nil {
-				continue
-			}
-			var m manifestFile
-			if json.Unmarshal(data, &m) != nil {
-				continue
-			}
-			for _, f := range m.Files {
-				if f = cleanRel(f); f != "" {
-					set[fold(f)] = f
-				}
-			}
-			for f := range m.Merged {
-				merged[fold(cleanRel(f))] = true
-			}
+		}
+		for f := range m.Merged {
+			merged[fold(cleanRel(f))] = true
 		}
 	}
 	for f := range merged {

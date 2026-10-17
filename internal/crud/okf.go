@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
@@ -49,6 +50,9 @@ func (op *OperatorImpl) ConfigDir() string { return op.aiRulezDir }
 // operator.
 func (op *OperatorImpl) ConfigFile() string {
 	if op.local {
+		if op.layout.Contentless {
+			return filepath.Join(op.layout.StateDir, config.RootLocalConfigFilename)
+		}
 		return filepath.Join(op.layout.StateDir, "config.local.toml")
 	}
 	return op.layout.ConfigFile

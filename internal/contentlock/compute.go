@@ -215,7 +215,8 @@ func (c *collector) collectFiles(domain string, rules, contexts, skills, agents,
 // local reports whether the file is an authored file inside the configuration
 // directory (not built in, not from a remote include, not outside the project).
 func (c *collector) local(cf *config.ContentFile) bool {
-	if cf.Path == "" || strings.Contains(cf.Path, "://") {
+	// A contentless project has no authored content: every file comes from an include or an installed skill.
+	if c.cfg.Contentless() || cf.Path == "" || strings.Contains(cf.Path, "://") {
 		return false
 	}
 	_, ok := c.relToConfig(cf.Path)

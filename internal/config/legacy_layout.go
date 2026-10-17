@@ -18,6 +18,9 @@ const LegacyLayoutMessage = "This configuration directory uses the pre-OKF layou
 // holds markdown content and has no root index.md. A directory without content
 // has nothing to migrate.
 func IsLegacyLayout(configDir string) bool {
+	if IsRootConfigDir(configDir) {
+		return false // the project root has no content tree
+	}
 	if info, err := os.Stat(filepath.Join(configDir, okfRootIndex)); err == nil && !info.IsDir() {
 		return false
 	}

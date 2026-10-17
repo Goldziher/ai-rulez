@@ -27,6 +27,7 @@ nav = [
     { "Includes" = "includes.md" },
     { "Installed Skills" = "installed-skills.md" },
     { ".agents as a Source" = "agents-source.md" },
+    { "Config without a .ai-rulez folder" = "config-without-folder.md" },
     { "Local Configuration" = "local-overrides.md" },
     { "Catalog" = "catalog.md" },
     { "Monorepo" = "monorepo.md" },

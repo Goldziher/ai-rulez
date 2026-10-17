@@ -16,6 +16,9 @@ import (
 // AddDomain creates a new domain with subdirectories (rules, context, skills)
 // Returns DomainResult with the created domain information
 func (op *OperatorImpl) AddDomain(ctx context.Context, req *AddDomainRequest) (*DomainResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddDomainRequest cannot be nil").

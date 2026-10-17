@@ -24,11 +24,11 @@ func (g *Generator) manifestDir() string {
 }
 
 func (g *Generator) manifestPath() string {
-	return filepath.Join(g.manifestDir(), generatedManifestName)
+	return filepath.Join(g.manifestDir(), g.config.ManifestName())
 }
 
 func (g *Generator) localManifestPath() string {
-	return filepath.Join(g.manifestDir(), generatedLocalManifestName)
+	return filepath.Join(g.manifestDir(), g.config.LocalManifestName())
 }
 
 // beginRun forgets the manifests the previous run of this Generator read. The
@@ -112,7 +112,7 @@ func (g *Generator) localManifestRel() string {
 	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
 		return rel
 	}
-	return generatedLocalManifestName
+	return g.config.LocalManifestName()
 }
 
 func (g *Generator) localManifestFix(reason string) string {

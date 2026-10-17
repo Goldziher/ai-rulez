@@ -497,6 +497,14 @@ func LoadRepo(root, configDirName string) (*config.TelemetryConfig, error) {
 			break
 		}
 	}
+	if len(paths) == 0 {
+		// A project configured in ai-rulez.toml alone has no config directory.
+		for _, name := range []string{config.RootConfigFilename, config.RootLocalConfigFilename} {
+			if _, err := os.Stat(filepath.Join(root, name)); err == nil {
+				paths = append(paths, filepath.Join(root, name))
+			}
+		}
+	}
 	return loadTable(paths)
 }
 

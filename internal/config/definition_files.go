@@ -202,6 +202,9 @@ func readMainDoc(v workspace.View, mainPath, configDir string) (map[string]any, 
 	if err != nil {
 		return nil, err
 	}
+	if isRootLayoutMain(mainPath, configDir) {
+		return doc, nil // no directory holds definition files
+	}
 	plugins, marketplaces, err := readDefinitionFiles(v, configDir)
 	if err != nil {
 		return nil, err

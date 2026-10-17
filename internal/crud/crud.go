@@ -151,6 +151,18 @@ func NewOperatorAt(configDir string) (*OperatorImpl, error) {
 	}, nil
 }
 
+// requireContentTree refuses a content write in a project that keeps its whole
+// configuration in ai-rulez.toml: it has no .ai-rulez/ tree to hold rules,
+// context, skills, agents, commands, checks or domains.
+func (op *OperatorImpl) requireContentTree() error {
+	if !op.layout.Contentless {
+		return nil
+	}
+	return oops.
+		Hint("This project keeps its configuration in " + config.RootConfigFilename + " and has no content tree. Run 'ai-rulez init' for the directory layout, or declare skills with 'ai-rulez skill install'.").
+		Errorf("cannot write content: no .ai-rulez/ directory (single-file configuration)")
+}
+
 // load reads the project's configuration from the operator's config directory:
 // the explicit one when the operator was opened with NewOperatorAt, else the
 // discovered one under baseDir.

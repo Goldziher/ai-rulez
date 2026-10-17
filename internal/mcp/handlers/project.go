@@ -460,6 +460,11 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 			return nil
 		}
 		if !d.IsDir() {
+			// An ai-rulez.toml with no config directory beside it is a project of its own.
+			if useConventionFallback && d.Name() == config.RootConfigFilename &&
+				config.ResolveConfigDirName(filepath.Dir(path)) == config.RootConfigDirName {
+				dirs = append(dirs, filepath.Dir(path))
+			}
 			return nil
 		}
 		name := d.Name()

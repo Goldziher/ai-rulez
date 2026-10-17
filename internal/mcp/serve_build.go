@@ -220,7 +220,11 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 func (st *ServeSetup) projectFingerprint() (string, error) {
 	wd := st.workDir()
 	var roots []string
-	if name := config.ResolveConfigDirName(wd); name != "" {
+	if name := config.ResolveConfigDirName(wd); name == config.RootConfigDirName {
+		// The project root is the config directory: only its config files matter.
+		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
+		roots = append(roots, filepath.Join(abs, config.RootConfigFilename), filepath.Join(abs, config.RootLocalConfigFilename))
+	} else if name != "" {
 		abs, _ := filepath.Abs(filepath.Join(wd, filepath.FromSlash(name))) //nolint:errcheck // falls back to the given dir
 		roots = append(roots, abs)
 	}
@@ -707,7 +711,7 @@ func defaultTrust(cfg *config.Config) func(*CatalogSkill) string {
 func (st *ServeSetup) usageLogPath(cfg *config.Config) string {
 	logPath := st.UsageLog
 	if logPath == "" && st.UsageSink == "" && cfg.Usage != nil && cfg.Usage.SkillsIndex && cfg.ConfigDir != "" {
-		logPath = filepath.Join(cfg.ConfigDir, "local", "usage.jsonl")
+		logPath = filepath.Join(cfg.LocalDir(), "usage.jsonl")
 	}
 	return logPath
 }
@@ -741,7 +745,7 @@ func (st *ServeSetup) telemetry(cfg *config.Config) (record func(SessionTelemetr
 			// A sink without a log has no salt file beside it; use the project's
 			// so a sink record carries the same salted session as a log line.
 			// With neither, nothing records and nothing may be written.
-			options.SaltPath = filepath.Join(cfg.ConfigDir, "local", "usage.salt")
+			options.SaltPath = filepath.Join(cfg.LocalDir(), "usage.salt")
 		}
 	}
 	closeSink = func(time.Duration) {}
@@ -778,7 +782,9 @@ const usageSinkFlushWait = 3 * time.Second
 // another root is left out so no file is fingerprinted twice.
 func (st *ServeSetup) watchRoots(b *built) []string {
 	var candidates []string
-	if b.cfg.ConfigDir != "" {
+	if b.cfg.Contentless() {
+		candidates = append(candidates, b.cfg.ConfigPath(), filepath.Join(b.cfg.ConfigDir, config.RootLocalConfigFilename))
+	} else if b.cfg.ConfigDir != "" {
 		candidates = append(candidates, b.cfg.ConfigDir)
 	}
 	candidates = append(candidates, localIncludeDirs(b.cfg)...)

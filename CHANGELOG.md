@@ -22,6 +22,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - `skip_outputs` (also accepted in `config.local.toml`) lists output kinds ai-rulez never writes, overwrites or deletes: `instructions`, `agents_md`, `claude_md`, `rules`, `skills`, `agents` and `commands`. A project can hand-write `CLAUDE.md`, `AGENTS.md` or skills and let ai-rulez emit only installed skills, plugins, MCP servers and hooks. A file an earlier run generated and that is now skipped stays in place with a one-time warning. See [Managing only remote skills and plugins](https://goldziher.github.io/ai-rulez/managing-remote-skills/).
 
+- A configuration without a `.ai-rulez/` folder: `ai-rulez.toml` at the project root (overlay `ai-rulez.local.toml`) declares installed skills, skill sources, includes, MCP servers, hooks, permissions and lint settings, with `ai-rulez.lock` beside it. `generate` writes no instruction files and leaves hand-written `CLAUDE.md` and `AGENTS.md` alone; the manifests are `.ai-rulez-manifest.json` and `.ai-rulez-manifest.local.json` in the root. A config directory still wins over the file. `ai-rulez init --minimal` creates it. See [Config without a .ai-rulez folder](https://goldziher.github.io/ai-rulez/config-without-folder/).
+
 ## [5.4.1] - 2026-10-16
 
 ### Added

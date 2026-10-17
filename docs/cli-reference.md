@@ -1442,6 +1442,7 @@ ai-rulez init --domains backend,frontend --yes
 | `--force` | bool |  | Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp> |
 | `--format` | string | `text` | Output format: text, json |
 | `--from` | string |  | Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor') |
+| `--minimal` | bool |  | Create only ai-rulez.toml at the project root, with no .ai-rulez/ folder (for skills, MCP servers, lint and the lock; your CLAUDE.md and AGENTS.md stay yours) |
 | `--setup-hooks` | bool |  | Automatically configure git hooks for ai-rulez validation |
 | `--skip-content` | bool |  | Skip creating example content files |
 | `--source` | string |  | Where the content lives: ai-rulez (the .ai-rulez tree, default) or agents (AGENTS.md and .agents/, configured in .agents/ai-rulez.toml) |

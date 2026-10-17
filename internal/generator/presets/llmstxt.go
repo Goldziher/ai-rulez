@@ -43,6 +43,10 @@ func (g *LLMsTxtPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	if rulefiles.InScope(cfg) || cfg.RoleActive() {
 		return nil, nil
 	}
+	// A project that keeps its own files by hand has no authored content to index.
+	if cfg.SkipsRootFiles() {
+		return nil, nil
+	}
 	settings := cfg.LLMsTxtSettings()
 	items := llmsTxtItems(content, settings.Include, baseDir, cfg.LLMsTxtDir())
 

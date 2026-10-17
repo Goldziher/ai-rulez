@@ -67,6 +67,10 @@ func resolveConfigDirName(v workspace.View, absDir string) string {
 			return dirName
 		}
 	}
+	// The root layout comes last: a config directory wins over an ai-rulez.toml.
+	if v.IsRegularFile(filepath.Join(absDir, RootConfigFilename)) {
+		return RootConfigDirName
+	}
 	return ""
 }
 
@@ -75,6 +79,9 @@ func resolveConfigDirName(v workspace.View, absDir string) string {
 // layout it skips past the generic .config/ wrapper so generated outputs are
 // rooted in the project, not in .config/.
 func ProjectBaseDir(configDir string) string {
+	if IsRootConfigDir(configDir) {
+		return filepath.Clean(configDir)
+	}
 	if base, ok := agentsLayoutBase(configDir); ok {
 		return base
 	}
@@ -129,7 +136,11 @@ func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Confi
 	if dirName == "" {
 		dirName = aiRulezDirName
 	}
-	return LoadConfigFromDir(ctx, baseDir, dirName, opts...)
+	cfg, err := LoadConfigFromDir(ctx, baseDir, dirName, opts...)
+	if err == nil && dirName != RootConfigDirName {
+		warnShadowedRootConfig(cfg, v, absDir)
+	}
+	return cfg, err
 }
 
 // LoadConfigFromDir loads configuration from configDirName below baseDir.
@@ -146,6 +157,9 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 	configDir := filepath.Join(absDir, filepath.FromSlash(configDirName))
 	if IsAgentsConfigDir(configDir) {
 		return loadAgentsLayout(ctx, v, absDir, lo)
+	}
+	if configDirName == RootConfigDirName {
+		return loadRootLayout(ctx, v, absDir, lo)
 	}
 
 	if info, err := v.Stat(configDir); err != nil {
@@ -207,6 +221,9 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 	}
 	if filepath.Base(absPath) == AgentsConfigFilename && filepath.Base(filepath.Dir(absPath)) == AgentsDirName {
 		return loadAgentsLayout(ctx, v, ProjectBaseDir(filepath.Dir(absPath)), lo)
+	}
+	if filepath.Base(absPath) == RootConfigFilename {
+		return loadRootLayout(ctx, v, filepath.Dir(absPath), lo)
 	}
 	if isLocalConfigFilename(filepath.Base(absPath)) {
 		return nil, oops.
@@ -349,6 +366,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 		config.ConfigFilePath = filepath.Join(configDir, config.ConfigFile)
 	}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
+	if config.contentless {
+		config.ConfigDirName = RootConfigDirName
+	}
 	config.RootRel = rootRelInRepo(baseDir)
 	config.NestedRoot = nestedInRepo(baseDir)
 	if err := config.loadStubBodyFile(v); err != nil {
@@ -383,12 +403,16 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	scanner.snapshots.anchor = filepath.Clean(configDir)
 	var contentTree *ContentTree
 	var err error
-	if config.UsesAgentsSource() {
+	switch {
+	case config.contentless:
+		// The project keeps no content tree: nothing under the project root is authored content.
+		contentTree = &ContentTree{Domains: make(map[string]*Domain)}
+	case config.UsesAgentsSource():
 		// AGENTS.md is the project's own file and is never written, so it cannot carry
 		// the always-on rules and context for the other tools: each one gets its full file.
 		config.AgentsMD = false
 		contentTree, err = loadAgentsSource(ctx, scanner, config, lo)
-	} else {
+	default:
 		contentTree, err = scanContentTree(scanner, configDir, config.BundleExclude)
 	}
 	if err != nil {
@@ -399,7 +423,10 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	// Scan machine-local override content into a SEPARATE tree. This never
 	// enters config.Content, so it cannot leak into committed output; it is
 	// emitted only to the per-preset ".local" root variants.
-	if !lo.withoutLocal {
+	switch {
+	case config.contentless:
+		config.LocalContent = &ContentTree{Domains: make(map[string]*Domain)}
+	case !lo.withoutLocal:
 		localTree, err := scanLocalContentTree(scanner, configDir, config.BundleExclude)
 		if err != nil {
 			return nil, err
@@ -880,6 +907,8 @@ func SaveConfig(cfg *Config, configDir string) error {
 	targetPath := filepath.Join(configDir, configTOMLFilename)
 	if IsAgentsConfigDir(configDir) {
 		targetPath = filepath.Join(agentsDirOf(configDir), AgentsConfigFilename)
+	} else if cfg.Contentless() || IsRootConfigDir(configDir) {
+		targetPath = filepath.Join(configDir, RootConfigFilename)
 	}
 	data, err := MarshalTOML(cfg)
 	if err != nil {
