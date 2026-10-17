@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
@@ -41,6 +43,9 @@ type DiscoveryReport struct {
 	// Shadowed lists the repository skills that are not served because a skill
 	// with the same name has precedence.
 	Shadowed []ShadowedSkill `json:"shadowed"`
+	// Renamed lists the repository skills served under their path because
+	// another repository skill kept their name.
+	Renamed []RenamedSkill `json:"renamed,omitempty"`
 	// Generated counts the skill directories left out because ai-rulez wrote them.
 	Generated int `json:"generated_skipped"`
 	// Index sizes the repository index the discovery built.
@@ -67,6 +72,18 @@ type ShadowedSkill struct {
 	ShadowedBy string `json:"shadowed_by"`
 }
 
+// RenamedSkill is a repository skill served under another name than its own.
+type RenamedSkill struct {
+	// Name is the name the skill declares.
+	Name string `json:"name"`
+	// ServedAs is the name it is served under.
+	ServedAs string `json:"served_as"`
+	// Path is the skill directory, relative to the project root.
+	Path string `json:"path"`
+	// KeptBy is the directory of the repository skill that kept Name.
+	KeptBy string `json:"kept_by"`
+}
+
 // Discovery reports what skill discovery found; nil when it did not run.
 func (c *Catalog) Discovery() *DiscoveryReport {
 	if c == nil {
@@ -84,6 +101,39 @@ func (st *ServeSetup) discoverMode(cfg *config.Config) (string, error) {
 	}
 	mode, err := config.ParseDiscoverSkills(value)
 	return mode, err //nolint:wrapcheck // names the field and the values
+}
+
+// checkExclude validates the --exclude globs and refuses them without discovery,
+// where they would silently do nothing.
+func (st *ServeSetup) checkExclude(mode string) error {
+	if len(st.Exclude) == 0 {
+		return nil
+	}
+	if mode == config.DiscoverOff {
+		return oops.
+			Hint("Add --discover-skills (or set [mcp] discover_skills), or drop --exclude").
+			Errorf("--exclude applies to repository discovery, which is off")
+	}
+	return config.ValidateExcludeGlobs(st.Exclude) //nolint:wrapcheck // names the field and the glob
+}
+
+// excludeGlobs are the globs discovery leaves out: [mcp] exclude, then the
+// --exclude flag's, without repeats.
+func (st *ServeSetup) excludeGlobs(cfg *config.Config) []string {
+	var globs []string
+	if cfg != nil && cfg.MCP != nil {
+		globs = append(globs, cfg.MCP.Exclude...)
+	}
+	globs = append(globs, st.Exclude...)
+	seen := make(map[string]bool, len(globs))
+	out := globs[:0:0]
+	for _, g := range globs {
+		if !seen[g] {
+			seen[g] = true
+			out = append(out, g)
+		}
+	}
+	return out
 }
 
 // discovery is one run of skill discovery.
@@ -133,6 +183,18 @@ func (st *ServeSetup) warnShadowed(report *DiscoveryReport) {
 	}
 }
 
+// warnRenamed reports at startup each repository skill served under its path
+// because another repository skill kept its name.
+func (st *ServeSetup) warnRenamed(report *DiscoveryReport) {
+	if report == nil {
+		return
+	}
+	for _, r := range report.Renamed {
+		st.logger().Warn("A repository skill shares its name with another and is served under its path",
+			"skill", r.Name, "served_as", r.ServedAs, "path", r.Path, "kept_by", r.KeptBy)
+	}
+}
+
 // appendDiscovered serves the skills found in the working tree after the
 // project's own skills and the skill sources: those keep every name they take.
 func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *renderedSkills, served []generator.ServedSkill, roleKeeps func(string) bool) []generator.ServedSkill {
@@ -161,6 +223,7 @@ func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *ren
 				continue
 			}
 			skill.ID, skill.Files[0].Content = renamed, skillsource.RewriteName(skill.Files[0].Content, renamed)
+			d.report.Renamed = append(d.report.Renamed, RenamedSkill{Name: name, ServedAs: renamed, Path: item.Path, KeptBy: holder})
 			name = renamed
 		}
 		if roleKeeps != nil && !roleKeeps(name) {
@@ -226,7 +289,7 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 		d.st.logger().Warn("The index cache is not where it was asked to be", "reason", d.cacheWarning)
 	}
 	opts := repoindex.Options{
-		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Generated: d.isGenerated, Screen: d.screen,
+		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Exclude: d.st.excludeGlobs(d.cfg), Generated: d.isGenerated, Screen: d.screen,
 		MaxItems: d.st.indexLimit,
 	}
 	if d.store.Enabled() {
@@ -247,7 +310,7 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 	}
 	refusals := ix.Refusals()
 	for i := range refusals {
-		d.st.logger().Warn("Refusing to serve repository context", "kind", string(refusals[i].Item.Kind), "path", refusals[i].Item.Path, "reason", refusals[i].Reason)
+		d.st.logger().Warn("Withholding repository context: the security scan found an error", "kind", string(refusals[i].Item.Kind), "path", refusals[i].Item.Path, "reason", refusals[i].Reason)
 	}
 	d.report.Generated += ix.GeneratedSkipped(repoindex.KindSkill)
 	skills := ix.Skills()

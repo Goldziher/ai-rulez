@@ -263,7 +263,7 @@ func TestStore_DiscardsACacheItCannotTrust(t *testing.T) {
 	}{
 		{name: "not JSON", damage: func(t *testing.T, file string) { writeFile(t, file, "not json at all") }, wantReason: ReasonCorrupt},
 		{name: "empty", damage: func(t *testing.T, file string) { writeFile(t, file, "") }, wantReason: ReasonCorrupt},
-		{name: "other version", damage: func(t *testing.T, file string) { rewrite(t, file, `"version":1`, `"version":99`) }, wantReason: ReasonVersion},
+		{name: "other version", damage: func(t *testing.T, file string) { rewrite(t, file, `"version":2`, `"version":99`) }, wantReason: ReasonVersion},
 		{name: "edited verdict", damage: func(t *testing.T, file string) { rewrite(t, file, `"v"`, `"w"`) }, wantReason: ReasonIntegrity},
 		{name: "edited hash", damage: func(t *testing.T, file string) { rewrite(t, file, `sha256:aa`, `sha256:bb`) }, wantReason: ReasonIntegrity},
 	}

@@ -402,6 +402,11 @@ type MCPConfig struct {
 	// --tools flag), for example ["find_skill", "load_skill", "find_context",
 	// "load_context"] for a server that can only read.
 	Tools []string `yaml:"tools,omitempty" json:"tools,omitempty" toml:"tools,omitempty"`
+
+	// Exclude lists globs, relative to the project root, of the paths repository
+	// discovery (`mcp --serve-skills --discover-skills`) never reads: skill
+	// directories and the context index alike. The --exclude flag adds to it.
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.

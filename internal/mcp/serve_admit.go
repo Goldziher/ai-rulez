@@ -237,7 +237,46 @@ func (a Admission) knownClean(s *CatalogSkill, level string) (key string, known 
 	return key, true
 }
 
-func (a Admission) scan(s *CatalogSkill) *Refusal {
+func (a Admission) scan(s *CatalogSkill) *Refusal { return a.scanAs(s, skillSubject()) }
+
+// The log attribute that names what a scan finding is about.
+const (
+	labelSkill   = "skill"
+	labelContext = "context"
+)
+
+// scanSubject says how the scan names what it scanned: a served skill, or an
+// item of repository context.
+type scanSubject struct {
+	// where renders the location of a finding.
+	where func(file string, line int) string
+	// noun and label name the thing in a log line ("a served skill").
+	noun, label string
+	// reasonPrefix starts the reason of a refusal.
+	reasonPrefix func(level string) string
+}
+
+// skillSubject names a served skill, as the scan does.
+func skillSubject() scanSubject {
+	return scanSubject{
+		where: func(file string, line int) string { return fmt.Sprintf("%s:%d", file, line) },
+		noun:  "a served skill", label: labelSkill,
+		reasonPrefix: func(level string) string { return "security scan (trust=" + level + "): " },
+	}
+}
+
+// contextSubject names an item of repository context by its context:// URI. The
+// trust level plays no part in a refusal: an error finding withholds the file
+// whatever the level.
+func contextSubject(uri string) scanSubject {
+	return scanSubject{
+		where: func(_ string, line int) string { return fmt.Sprintf("%s:%d", uri, line) },
+		noun:  "repository context", label: labelContext,
+		reasonPrefix: func(string) string { return "security scan: " },
+	}
+}
+
+func (a Admission) scanAs(s *CatalogSkill, subject scanSubject) *Refusal {
 	level := a.scanLevelOf(s)
 	key, known := a.knownClean(s, level)
 	if known {
@@ -269,7 +308,7 @@ func (a Admission) scan(s *CatalogSkill) *Refusal {
 	}
 	if len(blocking) == 0 {
 		for _, f := range findings {
-			logger.Or(a.Log).Warn("Security scan finding in a served skill", "skill", s.Name, "code", f.Code, "where", fmt.Sprintf("%s:%d", f.File, f.Line), "message", f.Message)
+			logger.Or(a.Log).Warn("Security scan finding in "+subject.noun, subject.label, s.Name, "code", f.Code, "where", subject.where(f.File, f.Line), "message", f.Message)
 		}
 		return nil
 	}
@@ -279,7 +318,7 @@ func (a Admission) scan(s *CatalogSkill) *Refusal {
 			parts = append(parts, fmt.Sprintf("and %d more", len(blocking)-3))
 			break
 		}
-		parts = append(parts, fmt.Sprintf("%s %s at %s:%d", f.Code, f.Name, f.File, f.Line))
+		parts = append(parts, fmt.Sprintf("%s %s at %s", f.Code, f.Name, subject.where(f.File, f.Line)))
 	}
-	return &Refusal{Name: s.Name, Code: blocking[0].Code, Reason: "security scan (trust=" + level + "): " + strings.Join(parts, "; ")}
+	return &Refusal{Name: s.Name, Code: blocking[0].Code, Reason: subject.reasonPrefix(level) + strings.Join(parts, "; ")}
 }

@@ -464,6 +464,14 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "description": "The only tools the server registers, for example [\"find_skill\", \"load_skill\", \"find_context\", \"load_context\"] for a server that can only read. An unknown name fails the server start and names the valid ones. The --tools flag overrides it."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Globs, relative to the project root, of the paths repository discovery (`mcp --serve-skills --discover-skills`) never reads: skill directories and the context index (CLAUDE.md, AGENTS.md, rules, agents) alike. `**` crosses directories, `*` and `?` do not, `{a,b}` alternates, a pattern without a slash matches at any depth and a trailing slash matches a directory and everything below it. The --exclude flag adds to this list."
         }
       },
       "additionalProperties": false
