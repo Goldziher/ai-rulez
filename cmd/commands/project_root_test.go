@@ -137,3 +137,47 @@ func TestLoadConfigOrNoConfig_NoConfigNamesWhereItLooked(t *testing.T) {
 	assert.True(t, errors.Is(err, config.ErrNoConfig))
 	assert.Contains(t, err.Error(), "searched "+dir)
 }
+
+func TestOpenOperator_WalksUpFromASubdirectory(t *testing.T) {
+	layouts := []struct {
+		name string
+		path string
+	}{
+		{"ai-rulez dir", filepath.Join(".ai-rulez", "config.toml")},
+		{"config convention", filepath.Join(".config", "ai-rulez", "config.toml")},
+		{"root file", "ai-rulez.toml"},
+	}
+	for _, tt := range layouts {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			resetDiscoveryFlags(t)
+			root := t.TempDir()
+			writeFile(t, filepath.Join(root, tt.path), rootTestConfig)
+			sub := filepath.Join(root, "a", "b")
+			require.NoError(t, os.MkdirAll(sub, 0o755))
+			t.Chdir(sub)
+
+			// Act
+			op, err := openOperator()
+
+			// Assert
+			require.NoError(t, err)
+			want, _ := filepath.EvalSymlinks(root)
+			got, _ := filepath.EvalSymlinks(op.BaseDir())
+			assert.Equal(t, want, got)
+		})
+	}
+}
+
+func TestOpenOperator_NoConfigKeepsTheNotFoundError(t *testing.T) {
+	// Arrange
+	resetDiscoveryFlags(t)
+	t.Chdir(t.TempDir())
+
+	// Act
+	_, err := openOperator()
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "directory not found")
+}

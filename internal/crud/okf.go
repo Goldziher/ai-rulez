@@ -45,6 +45,9 @@ func (op *OperatorImpl) isBundle() bool {
 // ConfigDir is the configuration directory the operator writes to.
 func (op *OperatorImpl) ConfigDir() string { return op.aiRulezDir }
 
+// BaseDir is the project directory the operator works in.
+func (op *OperatorImpl) BaseDir() string { return op.baseDir }
+
 // ConfigFile is the file the profile, include and installed-skill operations
 // write: the shared config.toml, or the machine-local overlay for a Local
 // operator.
