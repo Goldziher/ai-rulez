@@ -128,6 +128,13 @@ func nativeSources() []nativeSource {
 // directories where the named presets keep skills (".claude/skills" for claude,
 // ".agents/skills" for codex and several others). A name no preset has is ignored.
 func SkillDirectories(presetNames []string) []string {
+	return KindDirectories(presetNames, KindSkill)
+}
+
+// KindDirectories lists, sorted and slash separated, the project-relative
+// directories where the named presets keep items of one kind (rules, skills,
+// agents or commands). A name no preset has is ignored.
+func KindDirectories(presetNames []string, kind Kind) []string {
 	wanted := make(map[string]bool, len(presetNames))
 	for _, name := range presetNames {
 		wanted[name] = true
@@ -135,7 +142,7 @@ func SkillDirectories(presetNames []string) []string {
 	seen := map[string]bool{}
 	var dirs []string
 	for _, src := range nativeSources() {
-		if src.Kind != KindSkill || seen[src.Path] {
+		if src.Kind != kind || seen[src.Path] {
 			continue
 		}
 		for _, preset := range src.Presets {

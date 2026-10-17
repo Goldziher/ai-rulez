@@ -62,3 +62,36 @@ func TestConventionalSkillDirsCoverPresetLayouts(t *testing.T) {
 		})
 	}
 }
+
+func TestKindDirectories(t *testing.T) {
+	tests := []struct {
+		name    string
+		presets []string
+		kind    Kind
+		want    []string
+		absent  []string
+	}{
+		{name: "claude rules", presets: []string{"claude"}, kind: KindRule, want: []string{".claude/rules"}, absent: []string{".cursor/rules"}},
+		{name: "claude agents", presets: []string{"claude"}, kind: KindAgent, want: []string{".claude/agents"}},
+		{name: "claude commands", presets: []string{"claude"}, kind: KindCommand, want: []string{".claude/commands"}},
+		{name: "cursor rules", presets: []string{"cursor"}, kind: KindRule, want: []string{".cursor/rules"}, absent: []string{".claude/rules"}},
+		{name: "skills match SkillDirectories", presets: []string{"claude", "codex"}, kind: KindSkill, want: SkillDirectories([]string{"claude", "codex"})},
+		{name: "unknown preset", presets: []string{"nope"}, kind: KindRule},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := KindDirectories(tt.presets, tt.kind)
+
+			for _, dir := range tt.want {
+				assert.Contains(t, got, dir)
+			}
+			for _, dir := range tt.absent {
+				assert.NotContains(t, got, dir)
+			}
+			if tt.want == nil {
+				assert.Empty(t, got)
+			}
+			assert.True(t, slices.IsSorted(got), "the list is sorted")
+		})
+	}
+}
