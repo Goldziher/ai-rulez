@@ -128,6 +128,23 @@ skills, the index `Screen` for instruction files, rules and agents):
 | 100 | 300 | 291 ms | 58.8 MB | 363k |
 | 500 | 1500 | 1220 ms | 220.8 MB | 1.30M |
 
+The index cache (`[mcp] index_cache`, `docs/mcp-server.md#the-index-cache`) removes most of that on a later start.
+`BenchmarkDiscoveryCatalogCache` starts the same server three ways on the 20000-file monorepo: `off` keeps no cache,
+`cold` starts with an empty cache and writes it, `warm` starts with the cache of an earlier start, over files whose
+modification time is an hour old (a file modified in the two seconds before a save is read again). Mean of 5 starts,
+same machine as above:
+
+| Scopes | Items | off | cold (fills the cache) | warm | warm B/op | warm vs off |
+| ------ | ----- | --- | ---------------------- | ---- | --------- | ----------- |
+| 10 | 30 | 48.9 ms | 58.1 ms | 22.7 ms | 5.5 MB | -54% |
+| 100 | 300 | 316.8 ms | 292.4 ms | 53.5 ms | 11.3 MB | -83% |
+| 500 | 1500 | 1251 ms | 1450 ms | 106 ms | 37.3 MB | -92% |
+
+A cold start with the cache on costs what a start without it does, plus the write of the index file (the 10 and 500 scope
+rows differ from `off` by run-to-run noise as much as by that write). A warm start no longer reads, hashes or scans an
+unchanged item: what remains is the file listing, one `stat` per candidate, the configuration load and reading the
+served skill directories. The live refresh of the index pays the warm cost per change, not the cold one.
+
 Most of that is the security scan, not the index (before the fifth pass about 90% of a build; `Build` alone is 129 ms at 500 scopes). Queries over the
 in-memory transport (`BenchmarkRepositoryQueries`, one sample each; every call also pays about 0.5 MB and 0.3 ms of
 protocol overhead, the same as `search_skills`):

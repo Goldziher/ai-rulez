@@ -1,6 +1,6 @@
 # Monorepo indexing over MCP
 
-Status: accepted, in implementation (phases 1 and 2 done). Branch `claude/monorepo-index`.
+Status: implemented (phases 1 to 4 done). Branch `claude/monorepo-index`.
 
 ## Problem
 
@@ -81,8 +81,8 @@ Instruction files and rules are read-only over MCP in this iteration.
 
 1. Scope model and index (kinds, scopes, resolution, collisions), `find_skill` `path`/`scope`, catalog `scopes`. **Done** (`internal/repoindex`).
 2. Nested instruction files, rules and agents: `find_context`, `load_context`, `context://` resources, server-instruction summary. **Done.**
-3. Cache (user, repo fallback, off), `ai-rulez cache clear`, doctor reporting, and the watcher with `list_changed`.
-4. Scoped write path.
+3. Cache (user, repo fallback, off), `ai-rulez cache clear`, doctor reporting, and the watcher with `list_changed`. **Done** (`internal/indexcache`).
+4. Scoped write path. **Done.**
 
 Each phase is test-first, ships with its documentation, and leaves the previous behavior unchanged when the feature is off.
 
@@ -94,6 +94,26 @@ Each phase is test-first, ships with its documentation, and leaves the previous 
 - `find_context` and `load_context` are registered only when discovery is on, so the tool list is unchanged otherwise.
 - The catalog narrows through query parameters on the `ai-rulez://catalog` resource; the `catalog` tool is unchanged.
 - `context://` is a resource template and is not enumerated by `resources/list`.
+
+## Implementation notes (phases 3 and 4)
+
+- The cache stores two things: the summary of each indexed file (keyed by path, size, modification time and the HEAD
+  tree; a file modified within two seconds before a save is not trusted, as git's racy-timestamp rule) and the scan
+  verdict of content with no finding at all, keyed by the scan level and the content hashes. A verdict is dropped when
+  the ai-rulez build or the `[lint]` settings change.
+- The proposal says the scan runs again at load time. `load_context` scans the body it reads on every call. For a
+  skill, the catalog build is its load, and it trusts a cached clean verdict instead of scanning again. The verdict is
+  only trusted if the index file's HMAC verifies. The secret is per user, kept outside the cache
+  (`~/.config/ai-rulez/index-cache.key`), so a planted or edited file is discarded; a skill with any finding is
+  scanned every time.
+- Live refresh rebuilds the whole catalog on a debounced fsnotify event; it is incremental in cost (the cache),
+  not in structure. `resources/list_changed` is sent by re-registering the `ai-rulez://index` resource, because
+  `context://` is a template that `resources/list` does not enumerate. The server instructions are not rewritten.
+- The write path accepts any existing directory of the project as a scope (every scope the index knows is one), so
+  it does not need the index. It adds an optional `harness` argument to pick the preset's skills directory. The CLI
+  has no equivalent: a person edits the file. `update_skill` is annotated destructive and not idempotent.
+- `watch` skips `.git`, `node_modules`, `vendor`, `target`, `dist`, `build` and other output directories by name
+  rather than reading `.gitignore`, so a gitignored directory with another name is watched.
 
 ## Open points
 
