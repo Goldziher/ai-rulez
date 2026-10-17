@@ -44,6 +44,7 @@ func TestEnforcerCheckSourceHostRules(t *testing.T) {
 		{"deny sees through a git+ prefix", denyGitHub, "git+https://github.com/evil/repo", "denied by sources.deny_hosts"},
 		{"deny sees the scp-like form", denyGitHub, "git@github.com:evil/repo.git", "denied by sources.deny_hosts"},
 		{"deny sees ssh urls with a port", denyGitHub, "ssh://git@github.com:22/evil/repo.git", "denied by sources.deny_hosts"},
+		{"deny sees a trailing-dot host", denyGitHub, "https://github.com./evil/repo", "denied by sources.deny_hosts"},
 		{"deny ignores a trailing slash and .git", denyGitHub, "https://github.com/evil/repo.git/", "denied by sources.deny_hosts"},
 		{"a local path names no host", denyGitHub, "./vendor/skills", ""},
 		{"a file url names no host", denyGitHub, "file:///srv/evil/repo", ""},
