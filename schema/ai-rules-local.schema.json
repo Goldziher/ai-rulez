@@ -2009,6 +2009,10 @@
           "description": "Where a tag's release time comes from: auto (default) tries the forge publish time, then the first time this machine saw the tag, then the commit date; the others use one source only. The commit date can be forged by anyone who can push.",
           "enum": ["auto", "forge", "first-seen", "commit"]
         },
+        "refresh_on_generate": {
+          "description": "Make generate re-resolve remote includes, installed skills and skill sources to their latest allowed version and rewrite ai-rulez.lock before writing outputs, as generate --refresh-remote does. The security scan of the new trees runs first and a refusal aborts before any output is written. Needs the network; skipped with --check, --dry-run, --emit-plan, --locked, --frozen and --offline. Default false.",
+          "type": "boolean"
+        },
         "scope": {
           "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only.",
           "enum": ["all", "skills"]
