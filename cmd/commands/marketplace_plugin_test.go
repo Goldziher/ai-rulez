@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -534,4 +535,40 @@ func TestMarketplaceAndPluginUpdateRepinToTheNewUpstreamCommit(t *testing.T) {
 	assert.Equal(t, exitDrift, checkLockAt(""), "content pins still describe the old plugin")
 	require.Equal(t, 0, writeLockAt("", "", nil), "full lock")
 	assert.Equal(t, 0, checkLockAt(""), "a full lock settles it")
+}
+
+func TestMarketplaceAddAndPluginInstall_ConfirmWhatWasWritten(t *testing.T) {
+	tests := []struct {
+		name   string
+		build  func() *cobra.Command
+		args   []string
+		quiet  bool
+		want   string
+		silent bool
+	}{
+		{name: "marketplace add", build: newMarketplaceCmd, args: []string{"add", "acme", "--source", "owner/market"}, want: "Added marketplace acme (owner/market) to "},
+		{name: "plugin install", build: newPluginCmd, args: []string{"install", "fmt", "--source", "owner/plug"}, want: "Installed plugin fmt (from owner/plug) in "},
+		{name: "quiet", build: newPluginCmd, args: []string{"install", "fmt", "--source", "owner/plug"}, quiet: true, silent: true},
+		{name: "json", build: newPluginCmd, args: []string{"install", "fmt", "--source", "owner/plug", "--format", "json"}, silent: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			lockProject(t, "")
+			viper.Set("quiet", tt.quiet)
+			t.Cleanup(func() { viper.Set("quiet", false) })
+
+			// Act
+			_, stderr, err := runSubBoth(t, tt.build, tt.args...)
+
+			// Assert
+			require.NoError(t, err)
+			if tt.silent {
+				assert.Empty(t, stderr)
+				return
+			}
+			assert.Contains(t, stderr, tt.want)
+			assert.Contains(t, stderr, "config.toml")
+		})
+	}
 }
