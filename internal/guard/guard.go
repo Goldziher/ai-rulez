@@ -192,6 +192,9 @@ type project struct {
 	files          owned
 	// agents is set when the project's source is AGENTS.md and .agents.
 	agents bool
+	// dirs memoizes the symlink resolution of directories: a patch naming a
+	// thousand files in one directory resolves it once.
+	dirs map[string]string
 }
 
 // cache keeps what one Check run looked up: the project of each base directory and
@@ -221,7 +224,7 @@ func (c *cache) project(base string) (*project, bool) {
 		if err != nil {
 			realRoot = root
 		}
-		p = &project{root: root, realRoot: realRoot, files: loadManifest(root), agents: usesAgentsSource(root)}
+		p = &project{root: root, realRoot: realRoot, files: loadManifest(root), agents: usesAgentsSource(root), dirs: map[string]string{}}
 		c.byRoot[root] = p
 	}
 	c.byBase[base] = p
@@ -250,7 +253,7 @@ func (c *cache) check(cwd, target string) (Decision, bool) {
 		if !ok {
 			continue
 		}
-		if rel, hit := proj.files.lookup(proj.root, proj.realRoot, base, target); hit {
+		if rel, hit := proj.files.lookup(proj.root, proj.realRoot, base, target, proj.dirs); hit {
 			return Decision{Block: true, Path: rel, Agents: proj.agents, Source: sourceOf(filepath.Join(proj.root, filepath.FromSlash(rel)))}, true
 		}
 	}
@@ -460,13 +463,13 @@ func fold(p string) string {
 // lookup reports whether target, as the tool names it, is an owned output. Both the
 // lexical path and the path with symlinks resolved are checked: an agent could name
 // the generated file directly, through "..", or through a link to it.
-func (o owned) lookup(root, realRoot, cwd, target string) (string, bool) {
+func (o owned) lookup(root, realRoot, cwd, target string, dirs map[string]string) (string, bool) {
 	abs := target
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(cwd, abs)
 	}
 	abs = filepath.Clean(abs)
-	for _, c := range []struct{ base, path string }{{root, abs}, {realRoot, resolve(abs)}} {
+	for _, c := range []struct{ base, path string }{{root, abs}, {realRoot, resolveCached(abs, dirs)}} {
 		// Both sides are folded on a case-insensitive file system: a path that
 		// differs from the root only in case is the same path there.
 		rel, err := filepath.Rel(fold(c.base), fold(c.path))
@@ -482,6 +485,27 @@ func (o owned) lookup(root, realRoot, cwd, target string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// resolveCached is resolve with the parent directory memoized in dirs. Only the
+// final element is examined per call: when it is itself a link, the full
+// resolution runs. EvalSymlinks is a syscall per component, which is slow on
+// Windows, so a patch naming many files must not repeat it for each.
+func resolveCached(p string, dirs map[string]string) string {
+	dir, base := filepath.Dir(p), filepath.Base(p)
+	if dir == p || dirs == nil {
+		return resolve(p)
+	}
+	rdir, ok := dirs[dir]
+	if !ok {
+		rdir = resolve(dir)
+		dirs[dir] = rdir
+	}
+	full := filepath.Join(rdir, base)
+	if info, err := os.Lstat(full); err == nil && info.Mode()&(os.ModeSymlink|os.ModeIrregular) != 0 {
+		return resolve(p) // a link or a Windows junction: resolve it in full
+	}
+	return full
 }
 
 // resolve evaluates symlinks of the longest existing prefix of p, so a file that
