@@ -48,20 +48,6 @@ const (
 	domainRoot = "root"
 )
 
-const skillServerInstructions = "ai-rulez serves the skills of one profile read-only. " +
-	"Skills are MCP resources under skill://<name>/SKILL.md (supporting files sit beside it); " +
-	"skills/list and skills/get return each skill's frontmatter plus the SHA-256 digest and size of every file. " +
-	"Call find_skill with a task to get ranked matches and load_skill to read one (list_skill_resources shows its files); " +
-	"search_skills, get_skill and read_skill_file are the lexical equivalents. This server cannot modify any content."
-
-// mergedServerInstructions is surfaced when one server serves both surfaces
-// (`mcp --serve-skills`): the authoring tools, prompts and ai-rulez:// resources
-// of `mcp`, plus the skills extension and the skill:// resources.
-const mergedServerInstructions = serverInstructions + " " +
-	"This server also serves the project's skills read-only: skills are MCP resources under " +
-	"skill://<name>/SKILL.md; call find_skill with a task and load_skill to read one. " +
-	"Start it with --read-only to register the read-only tools only."
-
 // NewSkillServer builds the read-only serving surface: the Skills extension
 // (skills/list, skills/get, skill:// resources) plus search_skills, get_skill
 // and read_skill_file tools for clients that only speak tools. None of the
@@ -94,19 +80,19 @@ func NewMergedServer(version string, catalog *Catalog, opts ServeOptions, author
 func newServingServer(version string, catalog *Catalog, opts ServeOptions, authoring []Option) *Server {
 	merged := authoring != nil
 	name, title := "ai-rulez-skills", "AI-Rulez Skills"
-	instructions := skillServerInstructions
 	caps := &sdkmcp.ServerCapabilities{
 		Tools:     &sdkmcp.ToolCapabilities{},
 		Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
 	}
 	if merged {
 		name, title = "ai-rulez", "AI-Rulez"
-		instructions = mergedServerInstructions
 		caps.Prompts = &sdkmcp.PromptCapabilities{}
 	}
-	instructions += scopeSummary(catalog.repository())
 	caps.AddExtension(SkillsExtensionID, map[string]any{"directoryRead": true})
-	srv := &Server{version: version, catalog: catalog, serve: newServeState(opts), authoring: merged}
+	srv := &Server{
+		version: version, catalog: catalog, serve: newServeState(opts), authoring: merged,
+		scopeNote: scopeSummary(catalog.repository()),
+	}
 	for _, opt := range authoring {
 		opt(srv)
 	}
@@ -117,14 +103,14 @@ func newServingServer(version string, catalog *Catalog, opts ServeOptions, autho
 	mcpServer := sdkmcp.NewServer(
 		&sdkmcp.Implementation{Name: name, Title: title, Version: version},
 		&sdkmcp.ServerOptions{
-			Capabilities: caps, Instructions: instructions, Logger: sdkLogger(), PageSize: pageSize,
+			Capabilities: caps, Logger: sdkLogger(), PageSize: pageSize,
 			SetCacheable: cacheable,
 		},
 	)
 	srv.mcpServer = mcpServer
 	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware(mcpServer))
 
-	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
+	mcpServer.AddReceivingMiddleware(srv.instructionsMiddleware(), srv.unknownResourceMiddleware())
 	srv.registerSkillsExtension()
 	srv.registerSkillResources()
 	srv.registerIndexResource()

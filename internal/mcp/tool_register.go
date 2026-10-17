@@ -50,9 +50,10 @@ func opensWorld(a *sdkmcp.ToolAnnotations) bool {
 //
 // A read-only server (mcp --read-only) registers only the tools annotated
 // read-only and closed-world; a tool that writes, or that sends content to a
-// third party and spends money (judge), is skipped.
+// third party and spends money (judge), is skipped. So is a tool outside the
+// allow-list of WithTools (surface.go).
 func addTool[In any](s *Server, spec toolSpec, handler handlerFunc) {
-	if s.readOnly && (!spec.annotations.ReadOnlyHint || opensWorld(spec.annotations)) {
+	if !s.admitTool(&spec) {
 		return
 	}
 	in, err := inputSchemaFor[In](spec.enums)

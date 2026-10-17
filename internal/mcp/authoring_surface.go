@@ -218,7 +218,10 @@ func firstText(res *sdkmcp.CallToolResult) string {
 type promptSpec struct {
 	name, title, description string
 	args                     []*sdkmcp.PromptArgument
-	text                     func(args map[string]string) string
+	// needs are the tools the text tells the model to call; the prompt is
+	// registered only on a server that registered all of them.
+	needs []string
+	text  func(args map[string]string) string
 }
 
 func requiredArg(name, description string) *sdkmcp.PromptArgument {
@@ -237,6 +240,7 @@ func authoringPrompts() []promptSpec {
 			name: "author-skill", title: "Author a Skill",
 			description: "Write a new skill for the project: draft it, create it, then check it",
 			args:        []*sdkmcp.PromptArgument{requiredArg("name", "Skill name: lowercase letters, digits and hyphens"), requiredArg("purpose", "What the skill helps an agent do, and when it should be used")},
+			needs:       []string{"list_skills", "list_rules", "create_skill", "scan_content", "validate_config", "update_skill", "cost_report"},
 			text: func(a map[string]string) string {
 				return fmt.Sprintf(`Author the skill %q for this project. Its purpose: %s
 
@@ -245,13 +249,14 @@ func authoringPrompts() []promptSpec {
 3. Call create_skill with name %q, the description and the content.
 4. Call scan_content to confirm the skill trips no security check, and validate_config to confirm it lints clean. Fix what they report with update_skill.
 5. Call cost_report and tell me how many tokens the skill adds to the always-loaded and on-demand surface.
-Do not call generate_outputs until I say so.`, a["name"], a["purpose"], a["name"])
+Do not generate output files until I say so.`, a["name"], a["purpose"], a["name"])
 			},
 		},
 		{
 			name: "add-rule", title: "Add a Rule",
 			description: "Turn a guideline into a rule file with the right priority",
 			args:        []*sdkmcp.PromptArgument{requiredArg("name", "Rule name, the filename without .md"), requiredArg("guideline", "The guideline the rule states"), optionalArg("priority", "critical, high, medium, low or minimal (default medium)")},
+			needs:       []string{"list_rules", "read_rule", "update_rule", "create_rule", "validate_config"},
 			text: func(a map[string]string) string {
 				priority := a["priority"]
 				if priority == "" {
@@ -268,6 +273,7 @@ Do not call generate_outputs until I say so.`, a["name"], a["purpose"], a["name"
 			name: "review-config", title: "Review the Configuration",
 			description: "Check the project's AI configuration end to end and summarize what to fix",
 			args:        []*sdkmcp.PromptArgument{optionalArg("focus", "Where to look hardest: security, size, drift or governance (default: all)")},
+			needs:       []string{"validate_config", "scan_content", "doctor", "token_report", "cost_report", "lock_status", "approvals_status", "policy_show"},
 			text: func(a map[string]string) string {
 				focus := a["focus"]
 				if focus == "" {
@@ -287,6 +293,7 @@ Do not change anything. End with a short list of the changes you would make, eac
 			name: "trim-context", title: "Trim Always-Loaded Context",
 			description: "Find what to cut or move to on-demand to reduce the tokens paid on every request",
 			args:        []*sdkmcp.PromptArgument{optionalArg("budget", "Target ceiling for always-loaded tokens")},
+			needs:       []string{"token_report", "cost_report", "read_rule", "read_context", "read_skill", "update_rule", "update_context", "update_skill"},
 			text: func(a map[string]string) string {
 				target := "as low as is reasonable"
 				if a["budget"] != "" {
@@ -304,6 +311,9 @@ Do not change anything. End with a short list of the changes you would make, eac
 
 func (s *Server) registerPrompts() {
 	for _, spec := range authoringPrompts() {
+		if !s.hasAll(spec.needs...) {
+			continue
+		}
 		s.mcpServer.AddPrompt(&sdkmcp.Prompt{
 			Name: spec.name, Title: spec.title, Description: spec.description, Arguments: spec.args,
 		}, func(_ context.Context, req *sdkmcp.GetPromptRequest) (*sdkmcp.GetPromptResult, error) {
