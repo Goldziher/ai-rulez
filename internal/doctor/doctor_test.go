@@ -18,7 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 )
 
-const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
+const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\nsession_start = { generate = false }\n"
 
 // project writes files under a fresh temp dir and returns it.
 func project(t *testing.T, files map[string]string) string {
@@ -122,7 +122,7 @@ func TestRun_ReportsEachCheckWithItsDuration(t *testing.T) {
 		t.Fatalf("findings = %+v, want none", report.Findings)
 	}
 	want := []string{"config", "policy", "presets", "source", "mcp-env", "mcp-scope", "drift", "gitignore", "documents", "okf",
-		"hooks", "includes", "lock", "llm", "tools", "role-modes"}
+		"hooks", "includes", "lock", "llm", "tools", "session-start", "role-modes"}
 	if !slices.Equal(names, want) {
 		t.Errorf("checks = %v, want %v", names, want)
 	}

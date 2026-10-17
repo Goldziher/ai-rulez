@@ -17,6 +17,7 @@ import (
 const driftShared = `version = "5.0"
 name = "shared-project"
 presets = ["claude"]
+session_start = { generate = false }
 gitignore = false
 agents_md = false
 

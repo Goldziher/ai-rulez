@@ -1101,6 +1101,15 @@ hand-authored content survives, comments in JSONC, TOML and YAML included. See
 `ai-rulez generate --user` renders a user config into the per-user directories each harness reads; see
 [User-level configuration](user-scope.md).
 
+### `session_start`
+
+`[session_start]` is on by default for a project that generates for Claude Code: `generate` adds a `SessionStart` hook
+to `.claude/settings.json` that runs `ai-rulez session-start`. In a remote (cloud) session, where `CLAUDE_CODE_REMOTE`
+is `true`, it regenerates the outputs of the fresh clone and injects a short briefing; in a local session it does
+nothing. Keys: `generate` (false removes it), `when` (`remote` or `always`), `mode` (`auto`, `locked`, `frozen`,
+`plain`), `timeout`, `version`, `command`, `prompt` and `prompt_text`. See
+[Run generate when a remote session starts](session-start.md).
+
 ### `builtins`
 
 Enables built-in domains that ship embedded in the `ai-rulez` binary. These provide opinionated rules,

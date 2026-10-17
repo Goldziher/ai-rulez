@@ -72,8 +72,12 @@ var skillOverrideValues = []string{"on", "name-only", SkillModeUserInvocableOnly
 // SkillOverrideValues returns the documented skillOverrides states.
 func SkillOverrideValues() []string { return slices.Clone(skillOverrideValues) }
 
-// HasSettingsHooks reports whether top-level [[hooks]] are declared.
-func (c *Config) HasSettingsHooks() bool { return c != nil && len(c.Hooks) > 0 }
+// HasSettingsHooks reports whether top-level [[hooks]] are declared for the run. A
+// [[scopes]] subdirectory renders none (project-wide hooks do not belong in it), so the
+// built-in hooks that every Claude Code project gets do not create an empty settings file there.
+func (c *Config) HasSettingsHooks() bool {
+	return c != nil && len(c.Hooks) > 0 && (c.Run == nil || c.Run.Scope == nil)
+}
 
 // ManagedClaudeSettings returns the [claude.settings.managed] block, or nil.
 func (c *Config) ManagedClaudeSettings() *ManagedSettings {

@@ -19,6 +19,7 @@ import (
 const localContentConfig = `version = "5.0"
 name = "t"
 presets = ["%s"]
+session_start = { generate = false }
 gitignore = true
 agents_md = false
 

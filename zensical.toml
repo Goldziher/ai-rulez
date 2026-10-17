@@ -37,6 +37,7 @@ nav = [
     { "AGENTS.md and .agents/skills" = "agents-md.md" },
     { "llms.txt" = "llms-txt.md" },
     { "Hooks and Permissions" = "settings.md" },
+    { "Run Generate in Remote Sessions" = "session-start.md" },
     { "Permissions" = "permissions.md" },
     { "User-level Configuration" = "user-scope.md" },
     { "Custom Presets" = "profiles.md" },

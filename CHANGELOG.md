@@ -6,6 +6,18 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[session_start]` and `ai-rulez session-start` set a remote session up with no hand-written hook.** `generate` adds a `SessionStart` hook to `.claude/settings.json` that runs `ai-rulez session-start`. In a remote (cloud) session (`CLAUDE_CODE_REMOTE=true`) it regenerates the outputs of the fresh clone (`--locked` when `ai-rulez.lock` exists, offline first) and returns `additionalContext` that says the generated files are managed by ai-rulez and, when enabled, how to use its MCP server and served skills (`find_skill`, then `load_skill`). Locally it does nothing unless `when = "always"`. The hook tries an installed `ai-rulez`, then `npx -y ai-rulez@<version>`, then `uvx --from ai-rulez==<version> ai-rulez`, and never fails a session: the command always exits 0, is bounded by `timeout` (default 120 s, process tree killed), runs generate with a scrubbed environment under a lock file, and reports a problem as one stderr line. `ai-rulez doctor` lists the launcher order and warns when the committed settings lack the hook, git ignores them, or the npm registry is denied or unreachable in a remote session. Keys: `generate`, `when`, `mode`, `timeout`, `version`, `command`, `prompt`, `prompt_text`; see [Run generate when a remote session starts](https://goldziher.github.io/ai-rulez/session-start/).
+
+### Changed
+
+- **A project that generates for Claude Code now gets a `SessionStart` hook in `.claude/settings.json` by default.** The generated file changes on the next `generate` (a new file, or a new entry merged beside your own hooks), the hook appears in the "new hook commands" notice. The hook returns at once outside a remote session. Set `[session_start] generate = false` to opt out and remove it. Other harnesses are not affected.
+
+### Fixed
+
+- **`generate` in a fresh clone no longer strips hooks from a committed `.claude/settings.json`.** A clone has no machine-local record of the earlier run, so the hooks (and the self server of `.mcp.json`) already in the committed file looked like the user's; the upgrade fallback then took them back as "no longer rendered" and left `{}`. A run takes back nothing it still renders. The Claude Code settings document, when it carries ai-rulez-owned hook groups, is no longer pinned as an output of `ai-rulez.lock` (a clone cannot tell it is wholly ai-rulez's, so `lock --check` and `validate` reported `AR982` there).
+
 ## [5.4.1] - 2026-10-16
 
 ### Added

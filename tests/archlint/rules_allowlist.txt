@@ -91,6 +91,7 @@ global cmd/commands/scan_external.go 5
 global cmd/commands/scanners.go 6
 global cmd/commands/search.go 3
 global cmd/commands/search_index.go 2
+global cmd/commands/session_start.go 1
 global cmd/commands/sign.go 20
 global cmd/commands/sign_trust.go 2
 global cmd/commands/skill.go 11

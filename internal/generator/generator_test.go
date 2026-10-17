@@ -2600,7 +2600,7 @@ func TestGenerator_SelfMCPServer(t *testing.T) {
 	const (
 		handMCP      = "{\n  \"mcpServers\": {\n    \"hand\": {\"type\":\"stdio\",\"command\":\"foo\"}\n  }\n}\n"
 		handSettings = "{\n  \"permissions\": {\"allow\": [\"Read\"]},\n  \"skillOverrides\": {\"init\": \"off\"}\n}\n"
-		baseConfig   = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+		baseConfig   = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\nsession_start = { generate = false }\n"
 	)
 
 	tests := []struct {
