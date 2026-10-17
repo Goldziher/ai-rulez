@@ -89,6 +89,23 @@ func awaitIndexWatch(t *testing.T, root string, session *sdkmcp.ClientSession) {
 	eventually(t, "the watcher sees the probe go", func() bool { return contextCount(t, session, probe) == 0 })
 }
 
+// settled returns the counter once it has stopped moving: the watcher's own
+// set-up (the probe file appearing and going, which on some platforms arrives as
+// several events) can still rebuild after the server is up, and a test that
+// asserts no rebuild has to count from after the last of those.
+func settled(t *testing.T, counter *atomic.Int32) int32 {
+	t.Helper()
+	const quiet = 300 * time.Millisecond
+	last, since := counter.Load(), time.Now()
+	require.Eventually(t, func() bool {
+		if now := counter.Load(); now != last {
+			last, since = now, time.Now()
+		}
+		return time.Since(since) >= quiet
+	}, 10*time.Second, 25*time.Millisecond, "the watcher settles")
+	return last
+}
+
 func eventually(t *testing.T, what string, cond func() bool) {
 	t.Helper()
 	require.Eventually(t, cond, 10*time.Second, 25*time.Millisecond, what)
@@ -149,7 +166,7 @@ func TestIndexWatch_AnUnrelatedFileChangeDoesNotRebuild(t *testing.T) {
 	writeFile(t, root, "src/other.go", "package main\n") // the directory exists before the watch starts
 	var rebuilds atomic.Int32
 	watchedServer(t, root, func(s *ServeSetup) { s.afterLoad = func() { rebuilds.Add(1) } })
-	base := rebuilds.Load()
+	base := settled(t, &rebuilds)
 
 	writeFile(t, root, "src/main.go", "package main\n")
 	time.Sleep(500 * time.Millisecond)

@@ -136,7 +136,7 @@ func TestIndexWatch_ExcludedPathsDoNotRefreshTheIndex(t *testing.T) {
 		s.Exclude = []string{"gen/**"}
 		s.afterLoad = func() { rebuilds.Add(1) }
 	})
-	base := rebuilds.Load()
+	base := settled(t, &rebuilds)
 
 	// Act
 	writeFile(t, root, "gen/AGENTS.md", "# Generated tree\n")
