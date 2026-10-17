@@ -65,7 +65,7 @@ func Inspect(_ context.Context, o Options) (Report, error) {
 	}
 	rep.Exists = true
 	rep.Bytes = dirSize(rep.Dir)
-	p, reason := readPayload(rep.Dir)
+	p, reason := readPayload(rep.Dir, o.Key)
 	if reason != "" {
 		rep.Warnings = append(rep.Warnings, "the cache index is "+reasonText(reason)+" and is rebuilt on the next start")
 	}
