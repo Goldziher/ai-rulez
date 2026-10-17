@@ -22,7 +22,7 @@ type skipMatcher struct {
 	cfg *config.Config
 	// roots are the root instruction files presets write, relative to the base
 	// dir (".rules", ".github/copilot-instructions.md", GEMINI.md, ...). A scope
-	// root is matched by its tail.
+	// root is one of these directly inside a configured scope path.
 	roots map[string]bool
 }
 
@@ -67,11 +67,25 @@ func (m *skipMatcher) addPresetRoots(gen config.PresetGenerator) {
 // variant of one), at the base dir or in a scope below it.
 func (m *skipMatcher) isRoot(rel string) bool {
 	for root := range m.roots {
-		if rel == root || strings.HasSuffix(rel, "/"+root) {
+		if rel == root {
+			return true
+		}
+		// A scope root sits directly in a configured scope path. A file with a
+		// root's name anywhere else (a skill resource, a rule, a docs page) is not
+		// a root file.
+		if dir, ok := strings.CutSuffix(rel, "/"+root); ok && m.isScopePath(dir) {
 			return true
 		}
 	}
 	return !strings.Contains(rel, "/") && config.InferOutputKind(rel, "") == config.OutputKindRoot
+}
+
+// isScopePath reports whether dir (slash separated, relative to the base dir) is
+// the path of a configured scope.
+func (m *skipMatcher) isScopePath(dir string) bool {
+	return slices.ContainsFunc(m.cfg.Scopes, func(scope config.ScopeConfig) bool {
+		return path.Clean(filepath.ToSlash(scope.Path)) == dir
+	})
 }
 
 // skips reports whether skip_outputs excludes the output at rel (a path relative
