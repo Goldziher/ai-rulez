@@ -26,7 +26,7 @@ type SessionStartConfig struct {
 	// Timeout bounds the whole run, in seconds. Zero means 120.
 	Timeout int `yaml:"timeout,omitempty" json:"timeout,omitempty" toml:"timeout,omitempty"`
 	// Version pins the ai-rulez version the hook runs through npx and uvx. Empty
-	// means the version of the running binary, or "latest" for a dev build.
+	// means the latest published release.
 	Version string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
 	// Command replaces the whole launcher (executable followed by its arguments,
 	// without the trailing "session-start"), for example ["ai-rulez"]. It runs
@@ -119,8 +119,8 @@ func (s *SessionStartConfig) TimeoutSecondsOrDefault() int {
 }
 
 // resolveLauncherVersion is the version an npx or uvx launch pins: the configured
-// one, else the running binary's, and "latest" for a dev build. It is the one
-// normalization the self MCP entry, the guard and the session-start hook share.
+// one, else the running binary's, and "latest" for a dev build. The self MCP entry
+// and the guard share it; the session-start hook does not (see SessionStartLaunchers).
 func resolveLauncherVersion(configured, binary string) string {
 	for _, v := range []string{configured, binary} {
 		if v != "" && v != "dev" {
@@ -137,36 +137,45 @@ type SessionStartLauncher struct {
 }
 
 // SessionStartLaunchers lists the launchers the hook tries, in order: an installed
-// ai-rulez, then npx pinned to the version, then uvx pinned to it. A configured
-// command is the only launcher.
-func (c *Config) SessionStartLaunchers(binaryVersion string) []SessionStartLauncher {
+// ai-rulez, then npx, then uvx, the last two on the latest published release unless
+// [session_start] version pins one. A configured command is the only launcher.
+func (c *Config) SessionStartLaunchers() []SessionStartLauncher {
 	s := c.SessionStart
 	if s != nil && len(s.Command) > 0 {
 		return []SessionStartLauncher{{Name: ItemKindCommand, Command: shellJoinArgs(append(slices.Clone(s.Command), sessionStartSubcommand))}}
 	}
-	configured := ""
-	if s != nil {
-		configured = s.Version
+	npxSpec, uvxSpec := "ai-rulez@latest", "ai-rulez@latest"
+	if s != nil && s.Version != "" {
+		npxSpec, uvxSpec = "ai-rulez@"+s.Version, "ai-rulez=="+s.Version
 	}
-	v := resolveLauncherVersion(configured, binaryVersion)
 	return []SessionStartLauncher{
 		{Name: "path", Command: "ai-rulez " + sessionStartSubcommand},
-		{Name: SelfLauncherNPX, Command: "npx -y ai-rulez@" + v + " " + sessionStartSubcommand},
-		{Name: "uvx", Command: "uvx --from ai-rulez==" + v + " ai-rulez " + sessionStartSubcommand},
+		{Name: SelfLauncherNPX, Command: "npx -y " + npxSpec + " " + sessionStartSubcommand},
+		{Name: "uvx", Command: "uvx --from " + uvxSpec + " ai-rulez " + sessionStartSubcommand},
 	}
 }
 
 // remoteGate exits the hook unless the harness says the session is remote.
 const remoteGate = `case "${CLAUDE_CODE_REMOTE:-}" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; `
 
+// neutralRun is the shell function that runs the npx and uvx launchers from an empty,
+// freshly created private directory (mktemp -d honors TMPDIR), so a project's .npmrc,
+// node_modules/.bin or uv configuration cannot substitute the package that runs. The
+// installed-binary attempt stays in the project directory. CLAUDE_PROJECT_DIR is
+// exported first, so `ai-rulez session-start` still finds the project after the cd.
+const neutralRun = `export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"; ` +
+	`n() { d=$(mktemp -d 2>/dev/null) || d=/; (cd "$d" 2>/dev/null || exit 1; "$@"); r=$?; ` +
+	`if [ "$d" != / ]; then rmdir "$d" 2>/dev/null; fi; return $r; }; `
+
 // SessionStartCommand is the shell command of the session-start hook. The script
-// (no single quotes in it) tries an installed ai-rulez, then npx, then uvx, each
-// pinned to the same version; an attempt that fails to run falls through to the
-// next, and when none runs it prints one line and exits 0, so it never fails a
-// session. With when = "remote" it returns at once unless CLAUDE_CODE_REMOTE is
-// set, before npx has a chance to download anything on a developer's machine.
-func (c *Config) SessionStartCommand(binaryVersion string) string {
-	launchers := c.SessionStartLaunchers(binaryVersion)
+// (no single quotes in it) tries an installed ai-rulez, then npx, then uvx (the
+// latter two on the latest release unless pinned, and from a neutral directory);
+// an attempt that fails to run falls through to the next, and when none runs it
+// prints one line and exits 0, so it never fails a session. With when = "remote"
+// it returns at once unless CLAUDE_CODE_REMOTE is set, before npx has a chance to
+// download anything on a developer's machine.
+func (c *Config) SessionStartCommand() string {
+	launchers := c.SessionStartLaunchers()
 	if len(launchers) == 1 {
 		return launchers[0].Command
 	}
@@ -174,9 +183,14 @@ func (c *Config) SessionStartCommand(binaryVersion string) string {
 	if c.SessionStart.WhenOrDefault() == SessionStartWhenRemote {
 		b.WriteString(remoteGate)
 	}
+	b.WriteString(neutralRun)
 	for _, l := range launchers {
 		bin, _, _ := strings.Cut(l.Command, " ")
-		fmt.Fprintf(&b, "if command -v %s >/dev/null 2>&1 && %s; then exit 0; fi; ", bin, l.Command)
+		run := l.Command
+		if l.Name != "path" {
+			run = "n " + l.Command
+		}
+		fmt.Fprintf(&b, "if command -v %s >/dev/null 2>&1 && %s; then exit 0; fi; ", bin, run)
 	}
 	b.WriteString(`echo "ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped" >&2; exit 0`)
 	return "sh -c '" + b.String() + "'"
@@ -224,7 +238,7 @@ func (c *Config) userRunsSessionStart() bool {
 // EnableSessionStartHooks adds the synthesized session-start group to Hooks. It is
 // idempotent, so every generator built from the same Config shares one group, and the
 // group is never written back to config.toml.
-func (c *Config) EnableSessionStartHooks(binaryVersion string) {
+func (c *Config) EnableSessionStartHooks() {
 	if !c.HasSessionStart() {
 		return
 	}
@@ -241,7 +255,7 @@ func (c *Config) EnableSessionStartHooks(binaryVersion string) {
 		Builtin: HookBuiltinSessionStart,
 		Hooks: []HookAction{{
 			Type:    HookTypeCommand,
-			Command: c.SessionStartCommand(binaryVersion),
+			Command: c.SessionStartCommand(),
 			Timeout: c.SessionStart.TimeoutSecondsOrDefault() + sessionStartHookSlackSeconds,
 		}},
 	})
