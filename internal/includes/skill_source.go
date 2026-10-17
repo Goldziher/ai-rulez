@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -452,6 +453,10 @@ func ScanInstalledSkillDir(ctx context.Context, skillDir, skillName string) (con
 	}
 
 	resources, err := config.LoadSkillResourcesContext(ctx, skillDir)
+	var limit *config.SkillBundleLimitError
+	if errors.As(err, &limit) {
+		return config.ContentFile{}, err //nolint:wrapcheck // names the limit and how to narrow it
+	}
 	if err != nil {
 		// Resources are optional — log but don't fail the skill load.
 		log.Warn("Failed to read skill resources", "skill", skillName, "error", err)

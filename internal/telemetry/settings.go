@@ -483,6 +483,15 @@ func LoadUser(getenv func(string) string) (*config.TelemetryConfig, string, erro
 // local overlay. Both count as repository scope. Only that table is decoded, so
 // the call is cheap enough for a hook.
 func LoadRepo(root, configDirName string) (*config.TelemetryConfig, error) {
+	if configDirName == config.RootConfigDirName {
+		// The root layout is configured by ai-rulez.toml and its overlay alone: any
+		// other config.* file at the project root belongs to something else.
+		var paths []string
+		for _, name := range []string{config.RootConfigFilename, config.RootLocalConfigFilename} {
+			paths = append(paths, filepath.Join(root, name))
+		}
+		return loadTable(paths)
+	}
 	dir := filepath.Join(root, configDirName)
 	var paths []string
 	for _, ext := range []string{"toml", "yaml", "yml", "json"} {

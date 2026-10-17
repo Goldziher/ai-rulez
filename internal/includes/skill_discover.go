@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -220,6 +221,10 @@ func scanEntrySkills(ctx context.Context, base string, probed bool, namePrefix, 
 	var out []config.ContentFile
 	for _, dir := range dirs {
 		cf, err := ScanInstalledSkillDir(ctx, dir, namePrefix+filepath.Base(dir))
+		var limit *config.SkillBundleLimitError
+		if errors.As(err, &limit) {
+			return nil, err //nolint:wrapcheck // names the limit and how to narrow it
+		}
 		if err != nil {
 			log.Warn("Skipping a skill in an installed skill entry", "path", dir, "error", err)
 			continue
