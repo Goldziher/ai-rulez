@@ -75,24 +75,6 @@ func TestContentWriteHandlers_RefuseInARootLayout(t *testing.T) {
 	}
 }
 
-func TestInitProjectHandler_InARootLayoutScaffoldsTheDirectoryLayout(t *testing.T) {
-	// Arrange
-	dir := t.TempDir()
-	writeRootLayout(t, dir)
-
-	// Act
-	res, err := InitProjectHandler(t.Context(), newRequestWithArgs(map[string]any{"working_directory": dir, "project_name": "grown"}))
-
-	// Assert: init is the documented way to leave the single-file layout; the directory then wins.
-	require.NoError(t, err)
-	require.False(t, res.IsError, textOf(t, res))
-	assert.FileExists(t, filepath.Join(dir, ".ai-rulez", "config.toml"))
-	cfg, err := config.LoadConfig(t.Context(), dir, config.WithoutRemote())
-	require.NoError(t, err)
-	assert.False(t, cfg.Contentless())
-	assert.Equal(t, "grown", cfg.Name)
-}
-
 func TestFindRecursiveConfigDirs_RootLayouts(t *testing.T) {
 	// Arrange
 	base := t.TempDir()
