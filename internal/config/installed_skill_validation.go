@@ -95,6 +95,13 @@ func ValidateInstalledSkillFields(skill *InstalledSkillConfig) error {
 	return nil
 }
 
+// ValidateInstalledSkillVersion checks the version-constraint keys of an entry
+// (ref as a constraint, version, tag_prefix, include_prerelease,
+// min_release_age), the check config load applies.
+func ValidateInstalledSkillVersion(skill *InstalledSkillConfig) error {
+	return validateVersionKeys("installed_skills", skill.Name, skill.Ref, skill.Version, skill.TagPrefix, skill.IncludePrerelease, skill.MinReleaseAge)
+}
+
 // skillResourcePatternProblem says why a resources pattern cannot select files
 // inside a skill directory ("" when it can).
 func skillResourcePatternProblem(pattern string) string {

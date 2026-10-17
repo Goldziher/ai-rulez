@@ -269,6 +269,14 @@ type InstallSkillRequest struct {
 	Source string // Git URL or local path (required)
 	Path   string // Path within repo to skill directory (optional, defaults to skills/<name>)
 	Ref    string // Git ref (optional)
+
+	// Optional installed_skills fields; see config.InstalledSkillConfig.
+	Include    []string
+	Exclude    []string
+	NamePrefix string
+	Trust      string
+	Resources  []string
+	Version    string
 }
 
 // InstalledSkillInfo represents information about an installed skill
