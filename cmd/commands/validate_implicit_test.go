@@ -286,9 +286,16 @@ func TestOtherCommandsLintOnlyTheConfiguredContent(t *testing.T) {
 
 	// Act
 	rep, err := strictLint(t.Context(), cfg)
+	control, controlErr := strictLint(withUnmanagedLint(t.Context()), cfg)
 
 	// Assert
 	require.NoError(t, err)
+	require.NoError(t, controlErr)
+	var controlCodes []string
+	for _, f := range control.Findings {
+		controlCodes = append(controlCodes, f.Code)
+	}
+	require.Contains(t, controlCodes, lint.CodeReferenceUnknown, "control: a validate run lints the hand-written file")
 	for _, f := range rep.Findings {
 		assert.NotEqual(t, lint.CodeReferenceUnknown, f.Code, "an unlisted file was linted: %v", f)
 	}

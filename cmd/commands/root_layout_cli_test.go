@@ -76,9 +76,10 @@ func TestRootLayoutValidate_RejectsABrokenFile(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
+		want string
 	}{
-		{"invalid toml", "version = \"5.0\"\nname = \n"},
-		{"default layers", rootLayoutConfig + "default_layers = [\"ci\"]\n"},
+		{"invalid toml", "version = \"5.0\"\nname = \n", "parse TOML config"},
+		{"default layers", rootLayoutConfig + "default_layers = [\"ci\"]\n", "default_layers is not supported in ai-rulez.toml"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -89,7 +90,8 @@ func TestRootLayoutValidate_RejectsABrokenFile(t *testing.T) {
 			res := runCLI(t, "validate")
 
 			// Assert
-			assert.NotEqual(t, 0, res.code, res.stdout+res.stderr)
+			assert.Equal(t, 1, res.code, res.stdout+res.stderr)
+			assert.Contains(t, res.stdout+res.stderr, tt.want)
 		})
 	}
 }

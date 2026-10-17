@@ -78,6 +78,7 @@ func TestRun_RootLayoutReportsNoErrors(t *testing.T) {
 	})
 
 	// Assert
+	require.NotEmpty(t, report.Findings, "control: the run reports its checks, so the loop below has something to check")
 	for _, f := range report.Findings {
 		assert.NotEqual(t, SeverityError, f.Severity, "%+v", f)
 	}

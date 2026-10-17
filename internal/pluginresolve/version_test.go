@@ -106,5 +106,5 @@ func TestVersionRanges_NoMatchingTagIsReported(t *testing.T) {
 	_, err := writeLock(t, project, lockrun.Request{}, config.LockPolicy{})
 
 	// Assert
-	require.Error(t, err)
+	require.ErrorContains(t, err, `AR730 no tag satisfies "^1.0"`)
 }
