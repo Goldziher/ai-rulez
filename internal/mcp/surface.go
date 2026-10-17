@@ -45,6 +45,27 @@ func WithTools(names ...string) Option {
 	}
 }
 
+// WithoutProject marks a server that serves a directory with no ai-rulez
+// configuration (`mcp --serve-skills --discover-skills` in a plain repository).
+// It registers only the tools that work without one, offers no config or item
+// resources, and builds the catalog resource from the discovered content.
+func WithoutProject() Option {
+	return func(s *Server) { s.noProject = true }
+}
+
+// projectlessTool reports whether a tool works without a configuration: the
+// serving tools, the builtin catalog, the version, the policy view, the OKF
+// validator and init_project, which creates the configuration.
+func projectlessTool(name string) bool {
+	switch name {
+	case toolFindSkill, toolLoadSkill, toolListSkillResources, toolFindContext, toolLoadContext,
+		"search_skills", "get_skill", "read_skill_file",
+		"get_version", "list_builtins", "show_builtin", "policy_show", "okf_validate", "init_project":
+		return true
+	}
+	return false
+}
+
 // noteKnown records tool names that exist even when this server cannot
 // register them (the context tools of a server without a repository index).
 func (s *Server) noteKnown(names ...string) {
@@ -62,6 +83,9 @@ func (s *Server) admitTool(spec *toolSpec) bool {
 	if s.readOnly && (!spec.annotations.ReadOnlyHint || opensWorld(spec.annotations)) {
 		return false
 	}
+	if s.noProject && !projectlessTool(spec.name) {
+		return false
+	}
 	if s.surface.allow != nil && !s.surface.allow[spec.name] {
 		return false
 	}
@@ -69,7 +93,7 @@ func (s *Server) admitTool(spec *toolSpec) bool {
 		s.surface.registered = map[string]bool{}
 	}
 	s.surface.registered[spec.name] = true
-	if !spec.annotations.ReadOnlyHint {
+	if !spec.annotations.ReadOnlyHint && !spec.initializes {
 		s.surface.writes = true
 	}
 	return true
@@ -167,6 +191,9 @@ func (s *Server) composeInstructions() string {
 
 // authoringInstructions describes the authoring tools that are registered.
 func (s *Server) authoringInstructions() string {
+	if s.noProject {
+		return s.projectlessInstructions()
+	}
 	parts := []string{"ai-rulez manages AI assistant governance from a single source of truth in the " +
 		".ai-rulez/ directory and generates tool-specific outputs (CLAUDE.md, .cursor/rules, etc.)."}
 	switch {
@@ -202,7 +229,7 @@ func (s *Server) hasAnyReader() bool {
 func (s *Server) serveInstructions() string {
 	var parts []string
 	if s.authoring {
-		parts = append(parts, "This server also serves the project's skills read-only: skills are MCP resources under skill://<name>/SKILL.md;")
+		parts = append(parts, "This server also serves the project's skills read-only: skills are MCP resources under skill://<name>/SKILL.md.")
 	} else {
 		parts = append(parts, "ai-rulez serves the skills of one profile read-only. "+
 			"Skills are MCP resources under skill://<name>/SKILL.md (supporting files sit beside it); "+
@@ -255,4 +282,14 @@ func (s *Server) lexicalToolSentence() string {
 		return names[0] + " is the lexical equivalent."
 	}
 	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1] + " are the lexical equivalents."
+}
+
+// projectlessInstructions is the authoring part of the instructions of a server
+// that has no configuration to manage.
+func (s *Server) projectlessInstructions() string {
+	text := "This directory has no ai-rulez configuration, so the server serves the skills and instruction files found in the repository and none of the configuration tools."
+	if s.has("init_project") {
+		text += " init_project creates a configuration."
+	}
+	return text
 }

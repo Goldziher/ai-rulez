@@ -39,6 +39,9 @@ type Server struct {
 	// readOnly restricts the authoring tools to the read-only ones (mcp
 	// --read-only); it is ignored when authoring is false.
 	readOnly bool
+	// noProject is true for a server of a directory with no ai-rulez
+	// configuration (WithoutProject).
+	noProject bool
 	// surface records the tools registered; the instructions and the prompts
 	// follow it (surface.go).
 	surface toolSurface
