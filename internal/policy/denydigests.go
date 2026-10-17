@@ -30,13 +30,19 @@ func (a *applier) denyDigests() {
 		a.out.Violations[len(a.out.Violations)-1].Subject = &subject
 	}
 	dropped := map[string]map[string]bool{lockfile.KindInclude: {}, lockfile.KindSkill: {}, lockfile.KindSource: {}, lockfile.KindMarketplace: {}, lockfile.KindPlugin: {}}
-	for kind, entries := range map[string][]lockfile.Entry{lockfile.KindInclude: lock.Include, lockfile.KindSkill: lock.Skill, lockfile.KindSource: lock.Source,
-		lockfile.KindMarketplace: lock.Marketplace, lockfile.KindPlugin: lock.Plugin} {
-		for i := range entries {
-			e := &entries[i]
+	// A slice, not a map: violations are reported in a fixed order.
+	for _, group := range []struct {
+		kind    string
+		entries []lockfile.Entry
+	}{
+		{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill}, {lockfile.KindSource, lock.Source},
+		{lockfile.KindMarketplace, lock.Marketplace}, {lockfile.KindPlugin, lock.Plugin},
+	} {
+		for i := range group.entries {
+			e := &group.entries[i]
 			if denied(e.Digest) {
-				report(kind, config.PolicySubject{Kind: kind, Name: e.Name, Digest: e.Digest})
-				dropped[kind][e.Name] = true
+				report(group.kind, config.PolicySubject{Kind: group.kind, Name: e.Name, Digest: e.Digest})
+				dropped[group.kind][e.Name] = true
 			}
 		}
 	}
