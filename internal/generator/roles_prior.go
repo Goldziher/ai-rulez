@@ -38,6 +38,9 @@ type roleLedger struct {
 }
 
 func (g *Generator) roleLedgerPath() string {
+	if g.config.Contentless() {
+		return filepath.Join(g.config.LocalDir(), roleLedgerName)
+	}
 	return filepath.Join(g.manifestDir(), localSourceDirName, roleLedgerName)
 }
 

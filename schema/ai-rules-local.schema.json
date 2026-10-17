@@ -231,7 +231,7 @@
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-local.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
-  "description": "Schema for config.local.toml machine-local overlay files merged onto the shared ai-rulez config",
+  "description": "Schema for config.local.toml (ai-rulez.local.toml beside a root ai-rulez.toml) machine-local overlay files merged onto the shared ai-rulez config",
   "properties": {
     "$comment": {
       "description": "Free-form note, ignored by ai-rulez (accepted so a config can carry a comment)",
@@ -465,7 +465,7 @@
       "type": "string"
     },
     "default_layers": {
-      "description": "Layer names (config.<name>.toml beside config.toml, or in .agents/.ai-rulez/ for an .agents project) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
+      "description": "Layer names (config.<name>.toml beside config.toml, or in .agents/.ai-rulez/ for an .agents project; not supported in a root ai-rulez.toml) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
       "items": {
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
         "type": "string"
