@@ -150,7 +150,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		_, viaFileURL := lockfile.FileURLPath(skillConf.Source)
 		if !viaFileURL || !lockfile.AllowFileURLsOutside(cfg.Host.Env) {
 			if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, localPath); err != nil {
-				if _, home := homeRelative(skillConf.Source); home {
+				if config.IsHomeSource(skillConf.Source) {
 					err = oops.Hint("A '~' path is honored only from config.local.toml (machine-local) or the user config; a committed config must stay inside the project").Wrap(err)
 				}
 				return nil, err
