@@ -12,9 +12,14 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
+// Hash is the content hash an item carries: "sha256:" and the hex digest.
+func Hash(content []byte) string {
+	sum := sha256.Sum256(content)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
 // newItem builds the item a candidate and its content describe.
 func newItem(c *candidate, content []byte) Item {
-	sum := sha256.Sum256(content)
 	block := frontmatter.Split(content)
 	var front map[string]any
 	if block.Closed {
@@ -22,7 +27,7 @@ func newItem(c *candidate, content []byte) Item {
 	}
 	it := Item{
 		Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit,
-		Hash: "sha256:" + hex.EncodeToString(sum[:]),
+		Hash: Hash(content),
 	}
 	switch c.kind {
 	case KindSkill:
