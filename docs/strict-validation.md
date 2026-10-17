@@ -1097,10 +1097,22 @@ egress = false
 cache_files = ["tools/**/*.py", "tools/rules/*.yaml"]
 ```
 
+A scanner whose command passes `{skill_dirs}` and none of `{stage}`, `{root}` and `{files}` judges each skill
+directory on its own, so its result is cached **per skill**: the key is the tree hash of that skill (every staged
+file of its directory), the command line with the directories left out, the scanner's identity and the values above.
+A run hands the scanner only the skills without a cached result, so editing one skill of fifty costs one skill's
+scan; adding a skill scans that skill. Under `--changed` or `--since`, only the skills that hold a changed file are
+handed to the scanner (or read from the cache), and the others are neither run nor reported. `--no-scan-cache` still
+bypasses the cache, and `--write-baseline` ignores `--changed` so the baseline stays complete. A scanner that
+reports a result naming no file of any skill (or a path outside the stage) cannot have that result replayed from one
+skill's entry, so a run of several skills with such a result is not cached; a run of one skill caches all of it.
+`ai-rulez lock` sums the per-skill entries into one `[[scan]]` record, which exists only when every skill has one.
+
 `scan --external --dry-run` (also `validate --strict --external --dry-run`) prints, for each scanner that would run,
 its binary, command (stage paths shown as `<stage>` and `<scratch>`), isolation, the names of the environment
 variables it would receive (never values), the staged files and the cache state (`hit`, `miss`, `off`), and starts
-nothing. It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
+nothing. For a per-skill scanner the cache line counts hits and misses and each skill is listed with its state
+(`hit`, `miss`, `not cached` or `skipped (no changed file)` under `--changed`). It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
 to stderr so stdout stays the report format.
 
 ### Adapters

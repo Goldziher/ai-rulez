@@ -157,8 +157,9 @@ type runner struct {
 	injOnce      sync.Once
 	secOnce      sync.Once
 	secRes       []secretPattern
-	relMemo      sync.Map // absolute path -> tree-relative path, see rel
-	skillFiles   sync.Map // skill directory -> every file below it, see stageSkillFiles
+	relMemo      sync.Map   // absolute path -> tree-relative path, see rel
+	skillFiles   sync.Map   // skill directory -> every file below it, see stageSkillFiles
+	runMu        sync.Mutex // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer

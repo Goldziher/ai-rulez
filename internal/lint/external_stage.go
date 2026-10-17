@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -457,20 +458,46 @@ func restoreWrite(scratch string) {
 	})
 }
 
+// outName is the name of the {out} file of run idx below the scratch directory.
+// Runs of one stage that may overlap (batches) each get their own file and
+// temp directory; the first keeps the plain names.
+func outName(idx int) string {
+	if idx == 0 {
+		return "out.sarif"
+	}
+	return "out-" + strconv.Itoa(idx) + ".sarif"
+}
+
+func (st *scannerStage) outFileN(idx int) string { return filepath.Join(st.scratch, outName(idx)) }
+
+// tmpDirN is the scratch temp directory of run idx.
+func (st *scannerStage) tmpDirN(idx int) string {
+	if idx == 0 {
+		return filepath.Join(st.scratch, "tmp")
+	}
+	return filepath.Join(st.scratch, "tmp-"+strconv.Itoa(idx))
+}
+
 // outFile is the path of the {out} file.
-func (st *scannerStage) outFile() string { return filepath.Join(st.scratch, "out.sarif") }
+func (st *scannerStage) outFile() string { return st.outFileN(0) }
 
 // expand turns a command template into argv. list placeholders become one
 // argument per path; the others are replaced inside the argument. No shell is involved.
 func (st *scannerStage) expand(cmd []string) []string {
-	repl := strings.NewReplacer(phStage, st.root, phRoot, st.root, phOut, st.outFile(), phTmp, filepath.Join(st.scratch, "tmp"))
+	return st.expandFor(cmd, st.skillDirs, 0)
+}
+
+// expandFor is expand for run idx, handing the scanner the skill directories
+// dirs (absolute stage paths) instead of all of them.
+func (st *scannerStage) expandFor(cmd, dirs []string, idx int) []string {
+	repl := strings.NewReplacer(phStage, st.root, phRoot, st.root, phOut, st.outFileN(idx), phTmp, st.tmpDirN(idx))
 	argv := make([]string, 0, len(cmd)+len(st.files))
 	for _, arg := range cmd {
 		switch arg {
 		case phFiles:
 			argv = append(argv, st.files...)
 		case phSkillDirs:
-			argv = append(argv, st.skillDirs...)
+			argv = append(argv, dirs...)
 		default:
 			argv = append(argv, repl.Replace(arg))
 		}
@@ -480,8 +507,11 @@ func (st *scannerStage) expand(cmd []string) []string {
 
 // env is the scrubbed environment of a staged run: the scratch home and temp
 // directories replace the real ones, so a scanner finds no config or cache of the user.
-func (st *scannerStage) env(pass, parent []string) []string {
-	home, tmp := filepath.Join(st.scratch, "home"), filepath.Join(st.scratch, "tmp")
+func (st *scannerStage) env(pass, parent []string) []string { return st.envFor(pass, parent, 0) }
+
+// envFor is env for run idx.
+func (st *scannerStage) envFor(pass, parent []string, idx int) []string {
+	home, tmp := filepath.Join(st.scratch, "home"), st.tmpDirN(idx)
 	extra := []string{"HOME=" + home, "TMPDIR=" + tmp}
 	if runtime.GOOS == osWindows {
 		extra = append(extra, "USERPROFILE="+home, "TMP="+tmp, "TEMP="+tmp)

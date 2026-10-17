@@ -154,6 +154,9 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 		r.log().Debug("Scanner has nothing staged to scan", "scanner", sc.Name, "inputs", sc.Inputs)
 		return nil, true
 	}
+	if perSkillCommand(sc.Command) {
+		return r.runSkillUnits(sc, root, files)
+	}
 	binary := lookExecutable(sc.Command[0], root)
 	digest := digestStage(files)
 	key, cache := r.cacheFor(sc, binary, digest, keyFiles(sc, root))
@@ -198,22 +201,45 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 // execStaged starts a staged scanner (confined when isolation allows) and
 // returns its findings with stage-relative paths.
 func (r *runner) execStaged(sc resolvedScanner, st *scannerStage, spec cmdrun.Spec, argv []string, binary string) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
-	usesOut := slices.ContainsFunc(sc.Command, func(a string) bool { return strings.Contains(a, phOut) })
+	spec, usesOut, ok := r.prepareBatch(sc, st, spec, argv, binary, 0)
+	if !ok {
+		return nil, 0, "", false
+	}
+	r.banner(sc)
+	return r.finishBatch(sc, st, usesOut, 0, cmdrun.Run(context.Background(), spec))
+}
+
+// prepareBatch readies run idx of a stage: it creates the {out} file the
+// command may use and wraps argv in the process sandbox when the policy asks
+// for it. It returns the spec to run.
+func (r *runner) prepareBatch(sc resolvedScanner, st *scannerStage, spec cmdrun.Spec, argv []string, binary string, idx int) (out cmdrun.Spec, usesOut, ok bool) {
+	usesOut = slices.ContainsFunc(sc.Command, func(a string) bool { return strings.Contains(a, phOut) })
 	if usesOut {
-		if err := os.WriteFile(st.outFile(), nil, 0o600); err != nil {
+		if err := os.WriteFile(st.outFileN(idx), nil, 0o600); err != nil {
 			r.addRun(CodeScannerRunFailed, sc.Name, "could not create its output file: "+sanitizeScannerText(err.Error()))
-			return nil, 0, "", false
+			return spec, usesOut, false
+		}
+	}
+	if idx > 0 {
+		if err := os.MkdirAll(st.tmpDirN(idx), 0o700); err != nil {
+			r.addRun(CodeScannerRunFailed, sc.Name, "could not create its temp directory: "+sanitizeScannerText(err.Error()))
+			return spec, usesOut, false
 		}
 	}
 	argv, ok = r.isolate(sc, st, argv, binary)
 	if !ok {
-		return nil, 0, "", false
+		return spec, usesOut, false
 	}
 	spec.Argv = argv
-	r.banner(sc)
-	res := cmdrun.Run(context.Background(), spec)
+	return spec, usesOut, true
+}
+
+// finishBatch turns the outcome of run idx into findings with stage-relative
+// paths: the {out} file replaces stdout, the report is parsed and paths that are
+// not staged files are dropped and counted.
+func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, usesOut bool, idx int, res cmdrun.Result) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
 	if usesOut && (res.Status == cmdrun.StatusOK || res.Status == cmdrun.StatusExit) {
-		data, rerr := st.readOut()
+		data, rerr := st.readOut(idx)
 		if rerr != nil {
 			r.addRun(CodeScannerRunFailed, sc.Name, "its output file is not readable: "+sanitizeScannerText(rerr.Error()))
 			return nil, 0, "", false
@@ -463,10 +489,13 @@ func (r *runner) isolate(sc resolvedScanner, st *scannerStage, argv []string, bi
 // noteIsolationDegraded reports once per run that isolation = "auto" found no
 // backend, so staged scanners ran with a scrubbed environment only.
 func (r *runner) noteIsolationDegraded() {
-	if r.opts.Scanner.degraded {
+	r.runMu.Lock()
+	already := r.opts.Scanner.degraded
+	r.opts.Scanner.degraded = true
+	r.runMu.Unlock()
+	if already {
 		return
 	}
-	r.opts.Scanner.degraded = true
 	r.addRun(CodeScannerNoIsolation, "isolation", "no process isolation is available on this system, so staged scanners ran with a scrubbed environment but without network or write confinement; set isolation = \"none\" to accept this, or \"require\" to refuse")
 }
 
@@ -534,7 +563,10 @@ type planInfo struct {
 	files   []string
 	note    string
 	cache   string
-	stage   *scannerStage
+	// units are the per-skill lines of a scanner handed {skill_dirs}: the skill
+	// directory and whether its result is cached.
+	units []string
+	stage *scannerStage
 }
 
 func (r *runner) planStaged(sc resolvedScanner, st *scannerStage, argv []string, spec cmdrun.Spec, files []stagedFile, _ bool, cache string) {
@@ -583,6 +615,12 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 	}
 	if p.cache != "" {
 		fmt.Fprintf(&w, "  cache:     %s\n", p.cache)
+	}
+	if len(p.units) > 0 {
+		fmt.Fprintf(&w, "  skills:    %d\n", len(p.units))
+		for _, u := range p.units {
+			fmt.Fprintf(&w, "    %s\n", u)
+		}
 	}
 	fmt.Fprintf(&w, "  files:     %d\n", len(p.files))
 	for _, f := range p.files {
