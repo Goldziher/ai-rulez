@@ -25,6 +25,8 @@ var (
 	// cannot be fetched, found or scanned fails the load, because generating
 	// without it removes its outputs as stale and lets `generate --check` pass.
 	ErrSkillUnresolved = errors.New("installed skill could not be resolved")
+	// ErrPluginUnresolved is ErrSkillUnresolved for an installed marketplace or plugin.
+	ErrPluginUnresolved = errors.New("installed plugin could not be resolved")
 	// ErrIncludeOutsideProject marks a local include declared in the committed
 	// project config that resolves outside the project. It is fatal like a lock
 	// violation: dropping the include with a warning would hide a path a

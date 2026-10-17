@@ -36,14 +36,16 @@ const (
 // namedListKeys are the top-level list keys merged entry-by-entry. The value
 // reports whether an entry without a name is identified by its path (scopes).
 var namedListKeys = map[string]bool{
-	"mcp_servers":      false,
-	"plugins":          false,
-	"includes":         false,
-	"installed_skills": false,
-	"marketplaces":     false,
-	"scopes":           true,
-	"roles":            false,
-	"verifiers":        false,
+	"mcp_servers":            false,
+	"plugins":                false,
+	"includes":               false,
+	"installed_skills":       false,
+	"installed_marketplaces": false,
+	"installed_plugins":      false,
+	"marketplaces":           false,
+	"scopes":                 true,
+	"roles":                  false,
+	"verifiers":              false,
 	// Producer-side definitions: several plugins and marketplaces from one root.
 	"plugins_authoring":      false,
 	"marketplaces_authoring": false,

@@ -36,6 +36,7 @@ func (c *Config) Validate() error {
 		c.validateOKF,
 		c.validateLLMsTxt,
 		c.validateInstalledSkills,
+		c.validateInstalledPlugins,
 		c.validateDefaults,
 		c.validateMCP,
 		c.validateGuard,
@@ -908,6 +909,11 @@ func (c *Config) warnMissingResourceDomains() {
 	for i := range c.InstalledSkills {
 		if d := c.InstalledSkills[i].Domain; d != "" && !known(d) {
 			c.Warn("installed skill references non-existent domain", "skill", c.InstalledSkills[i].Name, "domain", d)
+		}
+	}
+	for i := range c.InstalledPlugins {
+		if d := c.InstalledPlugins[i].Domain; d != "" && !known(d) {
+			c.Warn("installed plugin references non-existent domain", "plugin", c.InstalledPlugins[i].Name, "domain", d)
 		}
 	}
 	for i := range c.SkillSources {
