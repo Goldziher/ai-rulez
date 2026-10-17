@@ -7,8 +7,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
+	"github.com/Goldziher/ai-rulez/v5/internal/indexcache"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +85,11 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 		Profile:     doctorProfile,
 		Load:        lintLoader(),
 		ReadUserMCP: doctorMCPUserScope,
-		Probe:       probeURL,
+		IndexCache: func(cfg *config.Config) indexcache.Options {
+			opts, _ := (&mcp.ServeSetup{Version: Version}).IndexCacheOptions(ctx, cfg, false)
+			return opts
+		},
+		Probe: probeURL,
 		OnCheck: func(name string, elapsed time.Duration) { // shown under --debug
 			logger.Debug("Doctor check finished", "check", name, "elapsed", elapsed.Round(time.Millisecond))
 		},
