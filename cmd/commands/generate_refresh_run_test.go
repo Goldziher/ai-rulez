@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -142,6 +143,9 @@ func TestRunGenerate_RefreshRemoteRefusedScanWritesNothing(t *testing.T) {
 			// Assert
 			require.Error(t, err)
 			assert.Equal(t, exitFindings, exitCodeOf(t, err))
+			oe, ok := oops.AsOops(err)
+			require.True(t, ok)
+			assert.Contains(t, oe.Hint(), "generate --refresh-remote --accept-findings", "the hint names the flag generate has")
 			assert.Equal(t, lockBefore, p.lockBytes(t), "the lock is byte-identical")
 			assert.Equal(t, outBefore, p.output(t), "no output was rewritten")
 		})
