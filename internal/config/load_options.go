@@ -17,6 +17,7 @@ import (
 // loadOptions are the resolved LoadOption settings.
 type loadOptions struct {
 	withoutLocal  bool
+	userScope     bool
 	layers        []string
 	layersSet     bool
 	noLayers      bool
@@ -74,6 +75,13 @@ type LoadOption func(*loadOptions)
 // teammate without local overrides sees.
 func WithoutLocal() LoadOption {
 	return func(o *loadOptions) { o.withoutLocal = true }
+}
+
+// WithUserScope loads the user config: the paths it names (local includes and
+// installed skills) may leave the project, as the user's own choice. It is set
+// before includes and installed skills resolve, so they see the scope.
+func WithUserScope() LoadOption {
+	return func(o *loadOptions) { o.userScope = true }
 }
 
 // WithLayers activates the config.<name>.toml layers, in order, instead of the
@@ -226,6 +234,9 @@ func bootstrapBase(absPath string) string {
 		return filepath.Dir(absPath)
 	}
 	if !info.IsDir() {
+		if filepath.Base(absPath) == RootConfigFilename && IsRootConfigDir(filepath.Dir(absPath)) {
+			return filepath.Dir(absPath)
+		}
 		return ProjectBaseDir(filepath.Dir(absPath))
 	}
 	if st, err := os.Stat(filepath.Join(absPath, configTOMLFilename)); err == nil && !st.IsDir() {

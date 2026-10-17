@@ -7,10 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestLockCheckFormatJSON(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetLockViewFlags(t)
 	root := lockProject(t, "")
 	require.Equal(t, 0, writeLockAt("", "", nil))

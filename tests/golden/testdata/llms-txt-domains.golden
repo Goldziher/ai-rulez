@@ -13,7 +13,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c
-.ai-rulez/.generated-manifest.local.json file 0644 2130 f38d5860998dc36ba6d789cbc7fdf588dc3479859e67bac93e01ce68db3defcb
+.ai-rulez/.generated-manifest.local.json file 0644 2208 cf4df79b0e408916c768eaa5160d1172ff776a55d49bd7a0cc7af082b342e8aa
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -70,7 +70,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
@@ -179,7 +179,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2130 f38d5860998dc36ba6d789cbc7fdf588dc3479859e67bac93e01ce68db3defcb
+.ai-rulez/.generated-manifest.local.json file 0644 2208 cf4df79b0e408916c768eaa5160d1172ff776a55d49bd7a0cc7af082b342e8aa
 >>>>
 {
   "version": "1",
@@ -192,8 +192,8 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
           "PreToolUse"
         ],
         "elementSums": [
-          "431a33920aa4b87d9be9fc179299e94f5d7dd0ae8619c717601f2f32bd3f04d1",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "8e7bcfedbd92aefa55c778e2648f97e53ac43255aef2635d961ed2eec4324896"
         ]
       },
       {
@@ -202,7 +202,8 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
           "SessionStart"
         ],
         "elementSums": [
-          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86",
+          "7d27dd6f414248f8eb315dbf0293f3ca0ce793752c360e49ba8605d987e15a10"
         ]
       },
       {
@@ -247,7 +248,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
     ]
   },
   "digests": {
-    ".claude/settings.json": "a779bea6d9f7f754635e3b2f65a321f97d89e62002bcadb2b3acf88b4552e4f7",
+    ".claude/settings.json": "2bc9a14910cf29125eb9e4aa8a40037867ec5c9c3e06edb2f451a3ac1b870a71",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",
@@ -626,7 +627,7 @@ Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d95
 
 Use strict mode.
 <<<<
-.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 >>>>
 {
   "hooks": {
@@ -659,6 +660,15 @@ Use strict mode.
             "type": "command",
             "command": "echo started",
             "statusMessage": "Starting"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; export CLAUDE_PROJECT_DIR=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; n() { d=$(mktemp -d \"${TMPDIR:-/tmp}/ai-rulez.XXXXXX\" 2\u003e/dev/null) || d=/; (cd \"$d\" 2\u003e/dev/null || exit 1; \"$@\"); r=$?; if [ \"$d\" != / ]; then rmdir \"$d\" 2\u003e/dev/null; fi; return $r; }; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n npx -y ai-rulez@latest session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n uvx --from ai-rulez@latest ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
           }
         ]
       }

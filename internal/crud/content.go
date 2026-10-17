@@ -17,6 +17,9 @@ import (
 // AddRule creates a new rule file in the root or domain rules directory
 // Returns FileResult with the created file information
 func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddFileRequest cannot be nil").
@@ -88,6 +91,9 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 // AddContext creates a new context file in the root or domain context directory
 // Returns FileResult with the created file information
 func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddFileRequest cannot be nil").
@@ -159,6 +165,9 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 // AddSkill creates a new skill directory with a SKILL.md file
 // Returns FileResult with the created skill information
 func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddFileRequest cannot be nil").
@@ -257,6 +266,9 @@ func (op *OperatorImpl) ContentPath(domain, ftype, name string) string {
 
 // RemoveFile deletes a file or skill directory
 func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
 	if err := op.RequireContent(ctx, domain, ftype, name); err != nil {
 		return err
 	}
@@ -287,6 +299,9 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 // domain, nothing of that name) without touching anything. A caller asks it
 // before it asks the user to confirm a removal or reads the item.
 func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
 	// Validate inputs
 	if err := ValidateFileName(name); err != nil {
 		return err
@@ -527,29 +542,8 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 
 // updateContentFile is UpdateFile for an item that is a file of its own.
 func (op *OperatorImpl) updateContentFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
-	if err := ValidateFileName(name); err != nil {
+	if err := op.validateUpdateRequest(domain, name, priority, targets); err != nil {
 		return nil, err
-	}
-
-	if priority != "" {
-		if err := ValidatePriority(priority); err != nil {
-			return nil, err
-		}
-	}
-	if err := ValidateTargets(targets); err != nil {
-		return nil, err
-	}
-
-	if domain != "" {
-		if err := ValidateDomainName(domain); err != nil {
-			return nil, err
-		}
-		if !op.filesMgr.DomainExists(domain) {
-			return nil, &DomainNotFoundError{
-				Name: domain,
-				Path: op.filesMgr.GetDomainPath(domain),
-			}
-		}
 	}
 
 	// Verify file exists
@@ -589,6 +583,38 @@ func (op *OperatorImpl) updateContentFile(ctx context.Context, domain, ftype, na
 		Type:     ftype,
 		Domain:   domain,
 	}, nil
+}
+
+// validateUpdateRequest checks the tree, the name, the flags and the domain of an update.
+func (op *OperatorImpl) validateUpdateRequest(domain, name, priority string, targets []string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
+	if err := ValidateFileName(name); err != nil {
+		return err
+	}
+
+	if priority != "" {
+		if err := ValidatePriority(priority); err != nil {
+			return err
+		}
+	}
+	if err := ValidateTargets(targets); err != nil {
+		return err
+	}
+
+	if domain != "" {
+		if err := ValidateDomainName(domain); err != nil {
+			return err
+		}
+		if !op.filesMgr.DomainExists(domain) {
+			return &DomainNotFoundError{
+				Name: domain,
+				Path: op.filesMgr.GetDomainPath(domain),
+			}
+		}
+	}
+	return nil
 }
 
 // requireDomain checks that a domain exists. A local operator creates it on
@@ -637,6 +663,9 @@ func (op *OperatorImpl) AddCheck(ctx context.Context, req *AddFileRequest) (*Fil
 // supplied without frontmatter is written as given, since agent and command
 // frontmatter carries no priority or targets of its own to generate.
 func (op *OperatorImpl) addFlatItem(ctx context.Context, req *AddFileRequest, ftype string, template func(*AddFileRequest) string) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.Hint("AddFileRequest cannot be nil").Errorf("invalid request")
 	}

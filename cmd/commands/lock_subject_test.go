@@ -9,12 +9,13 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLockSubject(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetLockViewFlags(t)
 	root := lockProject(t, "")
 	require.Equal(t, 0, writeLockAt("", "", nil))

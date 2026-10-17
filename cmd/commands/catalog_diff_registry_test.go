@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // A revision's configuration is validated like the working tree's, provider
@@ -15,7 +17,7 @@ import (
 func TestCatalogDiffRevisionValidatesProviderSpecs(t *testing.T) {
 	// Arrange
 	root := t.TempDir()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
 		"version = \"5.0\"\nname = \"p\"\npresets = [\"claude\", { name = \"demo\", provider = \".ai-rulez/providers/demo.toml\" }]\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "providers", "demo.toml"), "name = \"other\"\n\n[root]\nfile = \"DEMO.md\"\nsections = [\"title\"]\n")

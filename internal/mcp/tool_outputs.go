@@ -23,6 +23,9 @@ type mutationOut struct {
 	Domains []string `json:"domains,omitempty" jsonschema:"Domains of a profile"`
 	Updated []string `json:"updated,omitempty" jsonschema:"Settings that update_config changed"`
 	Message string   `json:"message,omitempty" jsonschema:"Human-readable summary"`
+	Scope   string   `json:"scope,omitempty" jsonschema:"Scope a scoped skill write went to"`
+	Harness string   `json:"harness,omitempty" jsonschema:"Preset whose skills directory a scoped skill write used"`
+	Lock    string   `json:"lock,omitempty" jsonschema:"Present when ai-rulez.lock exists: a scoped write is reported as drift until the lock is refreshed"`
 }
 
 // readOut is the result of a read tool.

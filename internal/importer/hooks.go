@@ -275,6 +275,10 @@ func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool
 		b.p.add(newFinding(StatusDropped, src.file, field, "", "this is ai-rulez's own guard hook, which generate adds itself when [guard] is on"))
 		return config.HookAction{}, false
 	}
+	if isOwnSessionStart(command) {
+		b.p.add(newFinding(StatusDropped, src.file, field, "", "this is ai-rulez's own session-start hook, which generate adds itself unless [session_start] generate = false"))
+		return config.HookAction{}, false
+	}
 	if on, present := d.boolean("enabled"); present && !on {
 		b.p.add(newFinding(StatusDropped, src.file, field, "", "the hook is marked disabled in the source"))
 		return config.HookAction{}, false
@@ -308,6 +312,12 @@ func (b *hookBuilder) seconds(src hookSource, field string, n float64, ms bool) 
 		return 0
 	}
 	return int(n)
+}
+
+// isOwnSessionStart matches the launcher generate writes for [session_start]: a shell
+// script that mentions ai-rulez and its session-start subcommand.
+func isOwnSessionStart(command string) bool {
+	return strings.Contains(command, "ai-rulez") && strings.Contains(command, "session-start")
 }
 
 func isOwnGuard(command string) bool {

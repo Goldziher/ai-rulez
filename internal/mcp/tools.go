@@ -153,7 +153,7 @@ func (s *Server) registerProjectTools() {
 	addTool[initIn](s, toolSpec{
 		name: "init_project", title: "Initialize Project",
 		description: "Initialize a new ai-rulez project in the current directory. Refuses to overwrite an existing configuration.",
-		annotations: additiveAnnotations(), output: initOut{},
+		annotations: additiveAnnotations(), output: initOut{}, initializes: true,
 	}, handlers.InitProjectHandler)
 }
 
@@ -303,19 +303,20 @@ func (s *Server) registerCRUDContextTools() {
 func (s *Server) registerCRUDSkillTools() {
 	addTool[skillCreateIn](s, toolSpec{
 		name: "create_skill", title: "Create Skill",
-		description: "Create a new skill file with optional YAML frontmatter",
+		description: "Create a new skill file with optional YAML frontmatter. With scope (and allow_write) it writes the skill into the repository for a harness working in that directory, <scope>/<harness skills dir>/<name>/SKILL.md, after a security scan; that file is the harness's own, not ai-rulez content.",
 		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
-	}, handlers.CreateSkillHandler)
+	}, s.scopedSkillHandler(true, handlers.CreateSkillHandler))
 
 	addTool[contentRefIn](s, toolSpec{
 		name: "read_skill", title: "Read Skill", description: "Read the content of a skill file",
 		annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
 	}, handlers.ReadSkillHandler)
 
-	addTool[contentUpdateIn](s, toolSpec{
-		name: "update_skill", title: "Update Skill", description: "Update an existing skill file atomically",
-		annotations: idempotentAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
-	}, handlers.UpdateSkillHandler)
+	addTool[skillUpdateIn](s, toolSpec{
+		name: "update_skill", title: "Update Skill",
+		description: "Update an existing skill file atomically. With scope (and allow_write) it replaces the harness's skill file <scope>/<harness skills dir>/<name>/SKILL.md after a security scan; generated copies are refused.",
+		annotations: destructiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, s.scopedSkillHandler(false, handlers.UpdateSkillHandler))
 
 	addTool[contentRefIn](s, toolSpec{
 		name: "delete_skill", title: "Delete Skill", description: "Delete a skill file",
@@ -477,7 +478,7 @@ func (s *Server) registerGovernanceTools() {
 		name: "lock_status", title: "Lock Status",
 		description: "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only. A project with no lock file is an error, as in the CLI.",
 		annotations: readOnlyAnnotations(), output: lockStatusOut{},
-		enums: map[string][]string{"kind": govview.LockKinds},
+		enums: map[string][]string{keyKind: govview.LockKinds},
 	}, handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
 		extras := make([]ServeSetup, 0, len(views))
 		for _, v := range views {

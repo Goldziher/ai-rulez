@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // writeSkill writes a minimal SKILL.md for name below dir.
@@ -90,6 +91,7 @@ func TestResolveInstalledSkills_MultiSkillEntry(t *testing.T) {
 			names := make([]string, len(skills))
 			for i := range skills {
 				names[i] = skills[i].Name
+				assert.Equal(t, tt.wantNames[i], config.SkillID(skills[i]), "the output id carries the prefix too")
 				assert.Contains(t, skills[i].Content, "# "+tt.wantNames[i][len(tt.entry.NamePrefix):],
 					"the body of %s is scanned from its own directory", tt.wantNames[i])
 			}
@@ -201,7 +203,7 @@ func TestResolveInstalledSkills_GitIncludeWithoutPath(t *testing.T) {
 	commitFile(t, repoDir, "skills/basemind-cli/SKILL.md", "---\nname: basemind-cli\n---\n# Basemind CLI\n")
 	commitFile(t, repoDir, "skills/multi-agent-room/SKILL.md", "---\nname: multi-agent-room\n---\n# Multi Agent Room\n")
 	commitFile(t, repoDir, "skills/unrelated/SKILL.md", "---\nname: unrelated\n---\n# Unrelated\n")
-	t.Setenv("HOME", t.TempDir()) // keep the fetch cache out of the real home
+	testutil.IsolateHome(t) // keep the fetch cache out of the real home
 	cfg := &config.Config{BaseDir: t.TempDir(), InstalledSkills: []config.InstalledSkillConfig{{
 		Name:    "basemind-test",
 		Source:  "file://" + repoDir,

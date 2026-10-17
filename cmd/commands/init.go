@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
@@ -33,6 +34,11 @@ var InitCmd = &cobra.Command{
 This creates a .ai-rulez/ directory structure with configuration files,
 rules, context, and skills for your selected AI assistants.
 
+With --minimal, init creates only ai-rulez.toml at the project root and no
+.ai-rulez/ directory: a configuration for skills, MCP servers, hooks, lint
+settings and the lock, while the project's own CLAUDE.md and AGENTS.md stay as
+they are.
+
 The global --config-dir names the directory to create (default .ai-rulez; use
 .config/ai-rulez for the .config/ convention). An existing directory is never
 deleted: --force moves it aside to <dir>.bak-<timestamp> first, and --yes only
@@ -47,6 +53,7 @@ func init() {
 	InitCmd.Flags().BoolVar(&skipContentFlag, "skip-content", false, "Skip creating example content files")
 	InitCmd.Flags().StringVar(&fromFlag, "from", "", "Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor')")
 	InitCmd.Flags().String("source", "", "Where the content lives: ai-rulez (the .ai-rulez tree, default) or agents (AGENTS.md and .agents/, configured in .agents/ai-rulez.toml)")
+	InitCmd.Flags().Bool("minimal", false, "Create only ai-rulez.toml at the project root, with no .ai-rulez/ folder (for skills, MCP servers, lint and the lock; your CLAUDE.md and AGENTS.md stay yours)")
 	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation")
 	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts (never replaces an existing configuration directory; see --force)")
 	InitCmd.Flags().Bool("force", false, "Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp>")
@@ -63,6 +70,9 @@ func initConfigDir() string {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
+	if minimal, _ := cmd.Flags().GetBool("minimal"); minimal { //nolint:errcheck // the flag is defined above
+		return runInitMinimal(cmd, args)
+	}
 	source, err := initSource(cmd)
 	if err != nil {
 		return failMsg("Invalid --source", err)
@@ -72,6 +82,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 	projectName := getProjectName(args)
 	configDir := initConfigDir()
+	if err := prepareRootConfigFile(cmd, "."); err != nil {
+		return failMsg("Refusing to shadow the existing ai-rulez.toml", err)
+	}
 
 	// --from is convert: check the sources first, so a failure leaves an existing
 	// configuration directory alone
@@ -182,6 +195,17 @@ func prepareExistingConfigDir(cmd *cobra.Command, configDir string) (string, err
 	}
 	logger.Info("Existing " + configDir + "/ directory moved to " + backup)
 	return backup, nil
+}
+
+// prepareRootConfigFile guards a project configured by ai-rulez.toml in dir: the
+// directory layout init scaffolds would win over that file and silently shadow
+// it. Like an existing configuration directory, the file is replaced only after
+// --force, which keeps it as ai-rulez.toml.bak-<timestamp>.
+func prepareRootConfigFile(cmd *cobra.Command, dir string) error {
+	if !config.IsRootConfigDir(dir) {
+		return nil
+	}
+	return prepareAgentsConfig(cmd, filepath.Join(dir, config.RootConfigFilename))
 }
 
 // initForceFlag reports whether init was given --force.

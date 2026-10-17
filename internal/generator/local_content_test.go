@@ -14,11 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 const localContentConfig = `version = "5.0"
 name = "t"
 presets = ["%s"]
+session_start = { generate = false }
 gitignore = true
 agents_md = false
 
@@ -284,7 +286,7 @@ func TestLocalContent_IgnoredPerClone(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	require.NoError(t, exec.Command("git", "-C", dir, "init", "-q").Run()) //nolint:gosec // test
+	require.NoError(t, gitutil.CommandNoContext(dir, "init", "-q").Run())
 
 	// Act
 	generateLocalIn(t, dir, "")

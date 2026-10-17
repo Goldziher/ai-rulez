@@ -303,7 +303,7 @@ func TestScanRecordsReadTheCacheWithoutStartingAnything(t *testing.T) {
 }
 
 func TestUserScanCacheIsOnePerProjectWhateverTheSpelling(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config"))
 	real := filepath.Join(t.TempDir(), "project", ".ai-rulez")
 	require.NoError(t, os.MkdirAll(real, 0o755)) //nolint:gosec // test directory

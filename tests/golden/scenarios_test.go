@@ -189,6 +189,7 @@ reviewer = "on"
 		},
 	)
 
+	out = append(out, installedPluginScenarios()...)
 	out = append(out, localScenarios(multi)...)
 	out = append(out, lifecycleScenarios(multi)...)
 	out = append(out, userScenarios(all)...)

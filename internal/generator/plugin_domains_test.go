@@ -16,6 +16,7 @@ import (
 const domainsProjectHeader = `version = "5.0"
 name = "demo"
 presets = ["claude"]
+session_start = { generate = false }
 gitignore = false
 
 [plugin]

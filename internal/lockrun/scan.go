@@ -83,13 +83,19 @@ func WalkFiles(dir string, only ...string) (files []File, note string) {
 // errors first. A file with no Data (over the size limit) is not scanned; the
 // caller lists it. A binary file is reported by the scan itself.
 func ScanFiles(cfg *config.Config, name string, files []File) []lint.Finding {
+	return ScanFilesAt(cfg, name, files, "")
+}
+
+// ScanFilesAt is ScanFiles at a trust level: config.TrustError turns every
+// finding into an error.
+func ScanFilesAt(cfg *config.Config, name string, files []File, level string) []lint.Finding {
 	var served []lint.ServedFile
 	for _, f := range files {
 		if f.Data != nil {
 			served = append(served, lint.ServedFile{Path: f.Path, Content: f.Data})
 		}
 	}
-	found := lint.ScanServed(cfg, name, served, "")
+	found := lint.ScanServed(cfg, name, served, level)
 	sort.SliceStable(found, func(i, j int) bool {
 		if (found[i].Severity == lint.SeverityError) != (found[j].Severity == lint.SeverityError) {
 			return found[i].Severity == lint.SeverityError
@@ -124,6 +130,11 @@ type ScanFinding struct {
 // ScanTree scans the cached tree in dir ("" = not cached, not scanned). Error
 // findings refuse the pin unless accept is set.
 func ScanTree(cfg *config.Config, name, dir string, accept bool) *ScanSummary {
+	return ScanTreeAt(cfg, name, dir, accept, "")
+}
+
+// ScanTreeAt is ScanTree at a trust level (see ScanFilesAt).
+func ScanTreeAt(cfg *config.Config, name, dir string, accept bool, level string) *ScanSummary {
 	sum := &ScanSummary{}
 	if dir == "" {
 		sum.Note = "the new tree is not in the local cache: it was not scanned"
@@ -131,7 +142,7 @@ func ScanTree(cfg *config.Config, name, dir string, accept bool) *ScanSummary {
 	}
 	files, note := WalkFiles(dir)
 	sum.Note = note
-	for _, f := range ScanFiles(cfg, name, files) {
+	for _, f := range ScanFilesAt(cfg, name, files, level) {
 		switch f.Severity {
 		case lint.SeverityError:
 			sum.Errors++
@@ -157,6 +168,8 @@ func SafeText(s string) string { return govview.SafeText(s) }
 type PinScan struct {
 	Kind, Name string
 	Summary    *ScanSummary
+	// Dir is the cached tree that was scanned.
+	Dir string
 }
 
 // scanNewPins runs the security scan (AR001-AR009, as `update` does) over the
@@ -179,7 +192,8 @@ func scanNewPins(cfg *config.Config, current, next *lockfile.File, accept bool, 
 	groups := []struct {
 		kind    string
 		entries []lockfile.Entry
-	}{{lockfile.KindInclude, next.Include}, {lockfile.KindSkill, next.Skill}, {lockfile.KindSource, next.Source}}
+	}{{lockfile.KindInclude, next.Include}, {lockfile.KindSkill, next.Skill}, {lockfile.KindSource, next.Source},
+		{lockfile.KindMarketplace, next.Marketplace}, {lockfile.KindPlugin, next.Plugin}}
 	for _, g := range groups {
 		for i := range g.entries {
 			e := &g.entries[i]
@@ -197,12 +211,12 @@ func scanNewPins(cfg *config.Config, current, next *lockfile.File, accept bool, 
 			if dir == "" {
 				continue // not in the local cache (a local source, or nothing fetched): nothing to scan
 			}
-			sum := ScanTree(cfg, e.Name, dir, accept)
+			sum := ScanTreeAt(cfg, e.Name, dir, accept, trustOf(cfg, g.kind, e.Name))
 			if sum.Errors == 0 {
 				continue
 			}
 			printPinScan(report, g.kind, e.Name, sum)
-			scans = append(scans, PinScan{Kind: g.kind, Name: e.Name, Summary: sum})
+			scans = append(scans, PinScan{Kind: g.kind, Name: e.Name, Summary: sum, Dir: dir})
 			if sum.Refused {
 				refused++
 			}
@@ -229,4 +243,23 @@ func printPinScan(w io.Writer, kind, name string, sum *ScanSummary) {
 	for _, f := range sum.Findings {
 		fmt.Fprintf(w, "  %s %s %s:%d %s\n", f.Code, f.Severity, SafeText(f.File), f.Line, SafeText(f.Message)) //nolint:errcheck // a report to the terminal
 	}
+}
+
+// trustOf is the scan level of a marketplace or plugin entry; other kinds scan at the default level.
+func trustOf(cfg *config.Config, kind, name string) string {
+	switch kind {
+	case lockfile.KindMarketplace:
+		for i := range cfg.InstalledMarketplaces {
+			if cfg.InstalledMarketplaces[i].Name == name {
+				return cfg.InstalledMarketplaces[i].Trust
+			}
+		}
+	case lockfile.KindPlugin:
+		for i := range cfg.InstalledPlugins {
+			if cfg.InstalledPlugins[i].Name == name {
+				return cfg.PluginTrust(&cfg.InstalledPlugins[i])
+			}
+		}
+	}
+	return ""
 }

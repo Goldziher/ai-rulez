@@ -24,11 +24,11 @@ func (g *Generator) manifestDir() string {
 }
 
 func (g *Generator) manifestPath() string {
-	return filepath.Join(g.manifestDir(), generatedManifestName)
+	return filepath.Join(g.manifestDir(), g.config.ManifestName())
 }
 
 func (g *Generator) localManifestPath() string {
-	return filepath.Join(g.manifestDir(), generatedLocalManifestName)
+	return filepath.Join(g.manifestDir(), g.config.LocalManifestName())
 }
 
 // beginRun forgets the manifests the previous run of this Generator read. The
@@ -112,7 +112,7 @@ func (g *Generator) localManifestRel() string {
 	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
 		return rel
 	}
-	return generatedLocalManifestName
+	return g.config.LocalManifestName()
 }
 
 func (g *Generator) localManifestFix(reason string) string {
@@ -195,7 +195,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		// drop. This run only adds what it rendered; the rest of the record stays.
 		return g.updateLocalManifest(localMerged, digests, localAssets)
 	}
-	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 && len(localAssets) == 0 {
+	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 && len(localAssets) == 0 && len(g.unmanagedRecord()) == 0 {
 		return g.removeLocalManifest()
 	}
 	return g.writeManifest(g.localManifestPath(), local, localMerged, digests, localAssets)
@@ -295,7 +295,7 @@ func (g *Generator) removeLocalManifest() error {
 // earlier claims on paths this run does not render, so a server only the local
 // overlay defines is still taken back by the next full run.
 func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, digests, assets map[string]string) error {
-	if len(merged) == 0 && len(digests) == 0 && len(assets) == 0 {
+	if len(merged) == 0 && len(digests) == 0 && len(assets) == 0 && len(g.noticed) == 0 {
 		return nil
 	}
 	prev := g.readManifest(g.localManifestPath())
@@ -344,7 +344,11 @@ func (g *Generator) writeManifest(path string, files []string, merged map[string
 	if path == g.manifestPath() {
 		servers = g.renderedServers
 	}
-	return writeManifestFileHints(resolved, files, merged, digests, g.manifestDirs(path), assets, servers)
+	var unmanaged []string
+	if path == g.localManifestPath() {
+		unmanaged = g.unmanagedRecord()
+	}
+	return writeManifestFileHints(resolved, files, merged, digests, g.manifestDirs(path), assets, servers, unmanaged)
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
@@ -353,17 +357,17 @@ func writeManifestFile(path string, files []string, merged map[string][]jsonmerg
 
 func writeManifestFileDirs(path string, files []string, merged map[string][]jsonmerge.Claim,
 	digests map[string]string, dirs *[]string, assets map[string]string) error {
-	return writeManifestFileHints(path, files, merged, digests, dirs, assets, nil)
+	return writeManifestFileHints(path, files, merged, digests, dirs, assets, nil, nil)
 }
 
 func writeManifestFileHints(path string, files []string, merged map[string][]jsonmerge.Claim,
-	digests map[string]string, dirs *[]string, assets map[string]string, servers map[string][][]string) error {
+	digests map[string]string, dirs *[]string, assets map[string]string, servers map[string][][]string, unmanaged []string) error {
 	sort.Strings(files)
 	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}
-	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Servers: servers, Digests: digests, Dirs: dirs, Assets: assets}, "", "  ")
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Servers: servers, Digests: digests, Dirs: dirs, Assets: assets, Unmanaged: unmanaged}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}

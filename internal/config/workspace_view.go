@@ -58,6 +58,18 @@ func (c *Config) OnceKey(key string) bool {
 	return c.Diag.Sticky(key)
 }
 
+// OncePerRun reports whether this is the first call for key in this process for
+// the project at BaseDir. A command loads the project several times (lock,
+// generate, validate), each load with its own collector, so what the project
+// says about itself on every load is said once through this instead. Safe on a
+// nil Config.
+func (c *Config) OncePerRun(key string) bool {
+	if c == nil {
+		return true
+	}
+	return (*diag.Collector)(nil).Sticky(c.BaseDir + "\x00" + key)
+}
+
 // WarnOnce logs msg once through the host logger, whatever sink the run's
 // advice is sent to. Safe on a nil Config.
 func (c *Config) WarnOnce(key, msg string, args ...any) {

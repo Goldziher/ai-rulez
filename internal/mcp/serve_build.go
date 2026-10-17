@@ -99,6 +99,11 @@ type ServeSetup struct {
 	// directory confinement and, with WithReadOnly, the read-only tool set. Nil
 	// keeps the read-only skills-only server.
 	Authoring []Option
+	// DiscoverSkills also serves the skills already in the repository: "repo" the
+	// skill directories of the working tree, "all" those plus the installed and
+	// included skills whatever their delivery, "off" neither. Empty takes [mcp]
+	// discover_skills from the configuration (off when unset). See serve_discover.go.
+	DiscoverSkills string
 	// Daemon opts `mcp --serve-skills` into the shared per-repo daemon: the
 	// process either runs the daemon or proxies its stdin/stdout to one, and it
 	// falls back to serving in-process when no daemon can be reached. Off is
@@ -110,9 +115,15 @@ type ServeSetup struct {
 	// fields, for library callers and tests.
 	DaemonIdentity string
 
+	// IndexWatchDebounce is the quiet period of the repository file watcher
+	// before it refreshes the index (0 selects 300 ms).
+	IndexWatchDebounce time.Duration
+
 	// afterLoad, when set, runs after a build loaded the configuration (tests
 	// edit files at that point).
 	afterLoad func()
+	// indexLimit, when set, replaces the repository index size cap (tests).
+	indexLimit int
 }
 
 // built is one build of the catalog with what produced it.
@@ -131,6 +142,12 @@ type built struct {
 	readmit func() *Catalog
 	// project is what the build loaded, for the other views of a lock run.
 	project *loadedProject
+	// verdicts is the scan verdict cache of the build (discovery with an index
+	// cache); nil scans every skill.
+	verdicts VerdictCache
+	// discoveryRoots are the skill roots of the working tree the catalog depends
+	// on (skill discovery); the watcher reloads when a file below one changes.
+	discoveryRoots []string
 }
 
 // NewServer builds the catalog and the skills server around it. The caller runs
@@ -185,6 +202,9 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			current.Store(b)
 			return b.catalog, nil
 		}
+		if first.catalog.repository() != nil {
+			opts.IndexWatch = &IndexWatch{Root: first.cfg.BaseDir, Skip: configDirSkip(first.cfg), Debounce: st.IndexWatchDebounce}
+		}
 		logs := st.usageFiles(first.cfg)
 		opts.Fingerprint = func() (string, error) { return fingerprint(roots, logs...) }
 		if baselineErr == nil {
@@ -194,6 +214,8 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	if first.empty != "" {
 		st.logger().Warn(first.empty)
 	}
+	st.warnShadowed(first.catalog.Discovery())
+	st.warnIndexLimit(first.catalog.Discovery())
 	if st.Authoring != nil {
 		srv = NewMergedServer(st.Version, first.catalog, opts, st.Authoring...)
 	} else {
@@ -220,7 +242,11 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 func (st *ServeSetup) projectFingerprint() (string, error) {
 	wd := st.workDir()
 	var roots []string
-	if name := config.ResolveConfigDirName(wd); name != "" {
+	if name := config.ResolveConfigDirName(wd); name == config.RootConfigDirName {
+		// The project root is the config directory: only its config files matter.
+		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
+		roots = append(roots, filepath.Join(abs, config.RootConfigFilename), filepath.Join(abs, config.RootLocalConfigFilename))
+	} else if name != "" {
 		abs, _ := filepath.Abs(filepath.Join(wd, filepath.FromSlash(name))) //nolint:errcheck // falls back to the given dir
 		roots = append(roots, abs)
 	}
@@ -283,12 +309,42 @@ func (st *ServeSetup) loadProject(ctx context.Context, bo buildOptions) (*loaded
 }
 
 func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error) {
-	// Fingerprint before loading: the load reads the skill files, and a catalog
-	// rendered from files that changed since must not be cached.
-	loadedFrom, _ := st.projectFingerprint() //nolint:errcheck // an unreadable fingerprint only disables caching below
-	project, err := st.loadProject(ctx, bo)
+	b, denied, loadedFrom, err := st.loadBuild(ctx, bo)
 	if err != nil {
 		return nil, err
+	}
+	mode, err := st.discoverMode(b.cfg)
+	if err != nil {
+		return nil, err
+	}
+	// The rendered catalog is a function of the files this build fingerprints and
+	// of the view's selection options, so a restart restores it instead of
+	// rendering and scanning every skill again. Discovered skills live outside
+	// the files the cache key covers, so a discovering build is not cached.
+	var plan *cachePlan
+	if mode == config.DiscoverOff {
+		plan = st.cachePlan(b, bo)
+	}
+	if plan != nil {
+		if entry, ok := plan.cache.load(plan.key); ok {
+			st.restoreFromCache(b, entry, denied, bo)
+			st.logger().Debug("Restored the served catalog from the cache", "skills", len(b.catalog.Skills()))
+			return b, nil
+		}
+	}
+	return st.renderBuild(ctx, b, buildRun{opts: bo, mode: mode, plan: plan, denied: denied, loadedFrom: loadedFrom})
+}
+
+// loadBuild loads the project and resolves the skill sources of a build. denied
+// holds the digests the organization policy denies; loadedFrom is the fingerprint
+// taken before the load.
+func (st *ServeSetup) loadBuild(ctx context.Context, bo buildOptions) (b *built, denied map[string]string, loadedFrom string, err error) {
+	// Fingerprint before loading: the load reads the skill files, and a catalog
+	// rendered from files that changed since must not be cached.
+	loadedFrom, _ = st.projectFingerprint() //nolint:errcheck // an unreadable fingerprint only disables caching below
+	project, err := st.loadProject(ctx, bo)
+	if err != nil {
+		return nil, nil, "", err
 	}
 	if st.afterLoad != nil {
 		st.afterLoad()
@@ -297,65 +353,75 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	// A serving build refuses only the served skills the policy denies; the
 	// lock commands (ignoreLock) keep failing on them, so a denied pin is never
 	// silently dropped from the lock.
-	var denied map[string]string
 	if bo.admit && !bo.ignoreLock {
 		denied = takeServedDenials(cfg, lock)
 	}
 	if err := config.CheckPolicy(cfg); err != nil {
-		return nil, err //nolint:wrapcheck // already contextual
+		return nil, nil, "", err //nolint:wrapcheck // already contextual
 	}
 	specs, err := st.sourceSpecs(cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
-	b := &built{cfg: cfg, lock: lock, view: st.ViewKey(), project: project}
-	resolved, err := st.resolveSources(ctx, cfg, lock, specs, bo)
-	if err != nil {
-		return nil, err
+	b = &built{cfg: cfg, lock: lock, view: st.ViewKey(), project: project}
+	if b.sources, err = st.resolveSources(ctx, cfg, lock, specs, bo); err != nil {
+		return nil, nil, "", err
 	}
-	b.sources = resolved
 	if err := st.checkDomains(cfg); err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
+	return b, denied, loadedFrom, nil
+}
 
-	// The rendered catalog is a function of the files this build fingerprints and
-	// of the view's selection options, so a restart restores it instead of
-	// rendering and scanning every skill again.
-	plan := st.cachePlan(b, bo)
-	if plan != nil {
-		if entry, ok := plan.cache.load(plan.key); ok {
-			st.restoreFromCache(b, entry, denied, bo)
-			st.logger().Debug("Restored the served catalog from the cache", "skills", len(b.catalog.Skills()))
-			return b, nil
-		}
-	}
+// buildRun is what renderBuild needs beyond the loaded build.
+type buildRun struct {
+	opts       buildOptions
+	mode       string
+	plan       *cachePlan
+	denied     map[string]string
+	loadedFrom string
+}
 
+// renderBuild renders the project's skills, adds the sources' and the discovered
+// ones, builds the catalog and admits it.
+func (st *ServeSetup) renderBuild(ctx context.Context, b *built, run buildRun) (*built, error) {
+	cfg := b.cfg
 	gen := generator.NewGenerator(cfg)
 	roleKeeps, err := st.selectRole(cfg, gen)
 	if err != nil {
 		return nil, err
 	}
-	rendered, err := st.renderProjectSkills(cfg, gen)
+	rendered, err := st.renderProjectSkills(cfg, gen, run.mode)
 	if err != nil {
 		return nil, err
 	}
-	served := st.appendSourceSkills(resolved, rendered, roleKeeps)
+	served := st.appendSourceSkills(b.sources, rendered, roleKeeps)
+	var found *discovery
+	if run.mode != config.DiscoverOff {
+		found = st.newDiscovery(cfg, discoveryGenerator(cfg, gen), run.mode)
+		served = st.appendDiscovered(ctx, found, rendered, served, roleKeeps)
+		b.discoveryRoots = found.roots
+		b.verdicts = found.verdicts()
+	}
 
 	catalog, err := BuildCatalogIn(st.Log, rendered.profile, rendered.preset, served, st.Filter)
 	if err != nil {
 		return nil, oops.Wrapf(err, "build skill catalog")
 	}
+	catalog.discovery = found.reportOf()
+	catalog.repo = found.view()
 	if len(catalog.Skills()) == 0 {
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
-	admitted, raw, authored, err := st.admitCatalog(b, catalog, denied, bo)
+	admitted, raw, authored, err := st.admitCatalog(b, catalog, run.denied, run.opts)
 	if err != nil {
 		return nil, err
 	}
+	found.saveCache(ctx)
 	b.catalog = admitted
-	if plan != nil && st.inputsSettled(b, plan, loadedFrom) {
+	if run.plan != nil && st.inputsSettled(b, run.plan, run.loadedFrom) {
 		entry := &serveCacheEntry{Empty: b.empty, Authored: authoredToDTO(authored), Raw: catalogToDTO(raw), Admitted: catalogToDTO(admitted)}
-		if err := plan.cache.store(plan.key, entry); err != nil {
+		if err := run.plan.cache.store(run.plan.key, entry); err != nil {
 			st.logger().Debug("Could not write the serve catalog cache", "error", err.Error())
 		}
 	}
@@ -369,6 +435,7 @@ func (st *ServeSetup) admitFunc(b *built, raw *Catalog, denied map[string]string
 	adm := Admission{
 		Config: b.cfg, Enforce: enforcesLock(b.cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
 		DefaultTrust: defaultTrust(b.cfg), Now: st.Clock.Now, PolicyDenied: denied, Authored: authored,
+		Verdicts: b.verdicts,
 	}
 	return func(log logger.Logger) *Catalog {
 		a := adm
@@ -407,10 +474,18 @@ type renderedSkills struct {
 
 // renderProjectSkills renders the project's skills for the view; empty when the
 // project has no content tree (a server of --source skills only).
-func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Generator) (*renderedSkills, error) {
+func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Generator, mode string) (*renderedSkills, error) {
 	out := &renderedSkills{profile: st.Profile, preset: st.Preset, taken: map[string]bool{}}
 	if cfg.Content == nil {
 		return out, nil
+	}
+	if out.preset == "" && len(cfg.Presets) == 0 {
+		// A lint-only configuration declares no preset to render the skills with:
+		// it serves none, unless discovery needs the default rendering.
+		if mode == config.DiscoverOff {
+			return out, nil
+		}
+		out.preset = defaultServePreset
 	}
 	preset, served, err := gen.ServedSkills(out.profile, out.preset)
 	if err != nil {
@@ -430,7 +505,38 @@ func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Gen
 		out.taken[catalogName(&served[i])] = true
 	}
 	out.served = selectByDelivery(served, st.IncludeStatic)
+	if mode == config.DiscoverAll {
+		out.served = withImportedSkills(out.served, served)
+	}
 	return out, nil
+}
+
+// defaultServePreset renders the skills of a configuration that names no preset.
+const defaultServePreset = "claude"
+
+// withImportedSkills adds to the selected skills the installed and included ones
+// that the delivery selection left out, in the order of all.
+func withImportedSkills(selected, all []generator.ServedSkill) []generator.ServedSkill {
+	have := make(map[string]bool, len(selected))
+	for i := range selected {
+		have[selected[i].ID] = true
+	}
+	out := append([]generator.ServedSkill(nil), selected...)
+	for i := range all {
+		if (all[i].Imported || all[i].Installed || all[i].Include != "") && !have[all[i].ID] {
+			out = append(out, all[i])
+		}
+	}
+	return out
+}
+
+// discoveryGenerator is the generator whose manifests tell the generated skills
+// from the repository's own; nil for a build without a project.
+func discoveryGenerator(cfg *config.Config, gen *generator.Generator) *generator.Generator {
+	if cfg.ConfigDir == "" {
+		return nil
+	}
+	return gen
 }
 
 // appendSourceSkills adds the resolved sources' skills to the rendered project
@@ -524,10 +630,10 @@ func (st *ServeSetup) lockPolicy() config.LockPolicy {
 
 func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 	wd := st.workDir()
-	if config.ResolveConfigDirName(wd) == "" && len(st.Sources) > 0 {
-		// Serving only --source skills needs no project.
-		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
-		return &config.Config{BaseDir: abs}, nil
+	if config.ResolveConfigDirName(wd) == "" {
+		if cfg := st.projectlessConfig(wd); cfg != nil {
+			return cfg, nil
+		}
 	}
 	// --frozen and --offline are the lock policy of the load, exactly as
 	// `generate --frozen` and `generate --no-fetch` make them.
@@ -541,6 +647,27 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 		return nil, oops.Wrapf(err, "load configuration")
 	}
 	return cfg, nil
+}
+
+// projectlessConfig is the in-memory configuration for a directory with none,
+// or nil when serving needs one. Serving only --source skills needs no project;
+// skill discovery works from a minimal one whose presets (claude and codex, which read .claude/skills and .agents/skills)
+// name the skill directories to search.
+func (st *ServeSetup) projectlessConfig(wd string) *config.Config {
+	discovering := false
+	if mode, err := config.ParseDiscoverSkills(st.DiscoverSkills); err != nil || mode != config.DiscoverOff {
+		// An invalid mode is reported by the build, as it is with a project.
+		discovering = true
+	}
+	if len(st.Sources) == 0 && !discovering {
+		return nil
+	}
+	abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
+	cfg := &config.Config{BaseDir: abs}
+	if discovering {
+		cfg.Presets = []config.Preset{{BuiltIn: "claude"}, {BuiltIn: "codex"}}
+	}
+	return cfg
 }
 
 func (st *ServeSetup) sourceSpecs(cfg *config.Config) ([]skillsource.Spec, error) {
@@ -707,7 +834,7 @@ func defaultTrust(cfg *config.Config) func(*CatalogSkill) string {
 func (st *ServeSetup) usageLogPath(cfg *config.Config) string {
 	logPath := st.UsageLog
 	if logPath == "" && st.UsageSink == "" && cfg.Usage != nil && cfg.Usage.SkillsIndex && cfg.ConfigDir != "" {
-		logPath = filepath.Join(cfg.ConfigDir, "local", "usage.jsonl")
+		logPath = filepath.Join(cfg.LocalDir(), "usage.jsonl")
 	}
 	return logPath
 }
@@ -741,7 +868,7 @@ func (st *ServeSetup) telemetry(cfg *config.Config) (record func(SessionTelemetr
 			// A sink without a log has no salt file beside it; use the project's
 			// so a sink record carries the same salted session as a log line.
 			// With neither, nothing records and nothing may be written.
-			options.SaltPath = filepath.Join(cfg.ConfigDir, "local", "usage.salt")
+			options.SaltPath = filepath.Join(cfg.LocalDir(), "usage.salt")
 		}
 	}
 	closeSink = func(time.Duration) {}
@@ -778,9 +905,12 @@ const usageSinkFlushWait = 3 * time.Second
 // another root is left out so no file is fingerprinted twice.
 func (st *ServeSetup) watchRoots(b *built) []string {
 	var candidates []string
-	if b.cfg.ConfigDir != "" {
+	if b.cfg.Contentless() {
+		candidates = append(candidates, b.cfg.ConfigPath(), filepath.Join(b.cfg.ConfigDir, config.RootLocalConfigFilename))
+	} else if b.cfg.ConfigDir != "" {
 		candidates = append(candidates, b.cfg.ConfigDir)
 	}
+	candidates = append(candidates, b.discoveryRoots...)
 	candidates = append(candidates, localIncludeDirs(b.cfg)...)
 	candidates = append(candidates, policyFiles(b.cfg)...)
 	for _, res := range b.sources {

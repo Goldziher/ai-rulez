@@ -201,8 +201,17 @@ func TestSkillOwners_AttributesInstalledOriginByPathNotName(t *testing.T) {
 		path         string
 		wantSource   string
 		wantRef      string
+		wantTrust    string
 		wantImported bool
 	}{
+		{
+			name:       "the git install carries the entry's trust",
+			installed:  config.InstalledSkillConfig{Name: "helper", Source: gitURL, Ref: "v1", Trust: config.TrustWarn},
+			path:       filepath.Join(cache, "skills", "helper", "SKILL.md"),
+			wantSource: gitURL,
+			wantRef:    "v1",
+			wantTrust:  config.TrustWarn,
+		},
 		{
 			name:       "the local install itself",
 			installed:  config.InstalledSkillConfig{Name: "helper", Source: "./vendor"},
@@ -249,6 +258,7 @@ func TestSkillOwners_AttributesInstalledOriginByPathNotName(t *testing.T) {
 				assert.Equal(t, tt.wantSource, o.source)
 				assert.Equal(t, tt.wantRef, o.ref)
 				assert.Equal(t, tt.wantImported, o.imported)
+				assert.Equal(t, tt.wantTrust, o.trust)
 			}
 		})
 	}

@@ -1,0 +1,861 @@
+# scenario installed-plugins
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  Generating with configuration profile=default
+INFO  Generation complete files=19
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/cx-explain/ dir 0755
+.agents/skills/cx-explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
+.agents/skills/review/ dir 0755
+.agents/skills/review/SKILL.md file 0644 381 9fdeea076c06901b561acf90cb3b0f9bce39c0045ca3b8d4dd0a58c0d0e027da
+.agents/skills/review/references/ dir 0755
+.agents/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 179 7d31171c1ef470e59905537c613e719d72989d6fbac927a4ec650f687000b22b
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
+.ai-rulez/.generated-manifest.local.json file 0644 2743 c98a9cd612eb1935a9787ef55eb3d74502e60b260c6e0f398ca5787d3c1d40ac
+.ai-rulez/config.toml file 0644 342 aef42a2395bbff68aa6289ccb5736750ba0c26ccaf5086797aa5fef46eb29f88
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/planner.md file 0644 181 39c7f79b9e3af5da5eb4d6d18c2d8531e7f07442d5f19d68b659833bf108e945
+.claude/settings.json file 0644 1274 508dba13556787f47c8864ccfeb355277fabfe6461994b653077f342436f8eed
+.claude/skills/ dir 0755
+.claude/skills/cx-explain/ dir 0755
+.claude/skills/cx-explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
+.claude/skills/review/ dir 0755
+.claude/skills/review/SKILL.md file 0644 379 bd570ce5f1b359b603739e272b8aa8090aff2216ab803069a6808ca6dfdc355c
+.claude/skills/review/references/ dir 0755
+.claude/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 167 643a8fc31397ad88199fa1cc01105ec6945873d812c2e4d539d7f387f80bdd4b
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/planner.toml file 0644 100 bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d
+.codex/config.toml file 0644 133 8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011
+.cursor/ dir 0755
+.cursor/agents/ dir 0755
+.cursor/agents/planner.md file 0644 157 e1b72400dfadbe9604e240b05e59be1ab4753db9dfa702a9f78764209d65411e
+.cursor/commands/ dir 0755
+.cursor/commands/ship.md file 0644 52 932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab
+.cursor/mcp.json file 0644 207 b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09
+.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
+.mcp.json file 0644 403 449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a
+AGENTS.md file 0644 448 005e0df39648f70646b036b45784dd02573aa4bc3f29b6be2f259e817ec38f93
+CLAUDE.md file 0644 385 a5339d809644df61225e26f170d180f3c38c12076884484abd15cfc9198aba1b
+vendor/ dir 0755
+vendor/codex-tools/ dir 0755
+vendor/codex-tools/.codex-plugin/ dir 0755
+vendor/codex-tools/.codex-plugin/plugin.json file 0644 96 eae140969d665adf3af9da4c2f781c95465b84d33cbbabf29a831e74b2c9797d
+vendor/codex-tools/.mcp.json file 0644 75 0ea1542cbcaa5a706939f68aa755fe1d5556319375176cd9dd58c444a1f3e52a
+vendor/codex-tools/skills/ dir 0755
+vendor/codex-tools/skills/explain/ dir 0755
+vendor/codex-tools/skills/explain/SKILL.md file 0644 76 46b91df0723a3a9795274b195427fb6db4c4131827f6a97f4e86181d61770d00
+vendor/market/ dir 0755
+vendor/market/.claude-plugin/ dir 0755
+vendor/market/.claude-plugin/marketplace.json file 0644 77 533ef831d6b79214ae85960daa0a5fe9894855e9767589005282cbf0892fa8aa
+vendor/market/plugins/ dir 0755
+vendor/market/plugins/tools/ dir 0755
+vendor/market/plugins/tools/.claude-plugin/ dir 0755
+vendor/market/plugins/tools/.claude-plugin/plugin.json file 0644 61 c5d2dbf863e0f0412df6a6141e0ea501b1c3c27561f5b739ce8b589334d080f8
+vendor/market/plugins/tools/.mcp.json file 0644 90 348d24242ecfb1d4ec7fe68e419909f9b5465d7160fa0cabdbcdf62b3ad3220a
+vendor/market/plugins/tools/agents/ dir 0755
+vendor/market/plugins/tools/agents/planner.md file 0644 87 a97d231e87537b6665bae711bb2b61ca3fb059fcc8a6b694be585d2eb12bd248
+vendor/market/plugins/tools/commands/ dir 0755
+vendor/market/plugins/tools/commands/ship.md file 0644 47 551a41ecbd2eae69e3f10cff1abad14fe592dcbad23be6b9bef6ff973add4ae5
+vendor/market/plugins/tools/hooks/ dir 0755
+vendor/market/plugins/tools/hooks/hooks.json file 0644 160 a385a77035039f7094f220a4036b69ebfcc9f0462e5cf9db3ea3f6581363e05b
+vendor/market/plugins/tools/scripts/ dir 0755
+vendor/market/plugins/tools/scripts/format.sh file 0644 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+vendor/market/plugins/tools/skills/ dir 0755
+vendor/market/plugins/tools/skills/review/ dir 0755
+vendor/market/plugins/tools/skills/review/SKILL.md file 0644 82 abac7c7772b73cc784ef58e84016eea1fb7dfba8b909b0d00ddb182de60068e1
+vendor/market/plugins/tools/skills/review/references/ dir 0755
+vendor/market/plugins/tools/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez lock
+exit: 0
+--- stdout
+locked cx-explain  sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359
+locked review  sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d
+locked ship  sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b
+pinned 4 item(s) and 18 output(s), tree sha256:a4c53571a003dac988babb6d449c2a157e617be8edebc96713a376808be6cee4
+--- stderr
+INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
+--- project tree
++ .ai-rulez/ai-rulez.lock file 0600 3799 ce0727dfa889ff35fe6b5ab4632b9ea152a8cc30b1d4ea9a54bf66f38f9f9634
+--- home tree
+(no change)
+
+## step 4: ai-rulez generate --locked
+exit: 0
+--- stdout
+--- stderr
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  Generating with configuration profile=default
+INFO  Generation complete files=19
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez plugin list
+exit: 0
+--- stdout
+Installed plugins:
+  • tools
+    From: marketplace acme
+    Hooks: enabled
+  • codex-tools
+    From: ./vendor/codex-tools
+--- stderr
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 6: ai-rulez marketplace list
+exit: 0
+--- stdout
+Installed marketplaces:
+  • acme [local]
+    Source: ./vendor/market
+--- stderr
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/cx-explain/ dir 0755
+.agents/skills/cx-explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
+>>>>
+---
+name: cx-explain
+description: "Explain code"
+# Content-Hash: blake3:490a481c8271070952d5c5acb72f517b7d277285b19232e598e601f3cb2b3fe2
+---
+
+# Explain
+
+Explain simply.
+<<<<
+.agents/skills/review/ dir 0755
+.agents/skills/review/SKILL.md file 0644 381 9fdeea076c06901b561acf90cb3b0f9bce39c0045ca3b8d4dd0a58c0d0e027da
+>>>>
+---
+name: review
+description: "Review a change"
+# Content-Hash: blake3:4d3262d9f2f66c7959228599c238614536ab26d6d803736e9c462231b940bc0a
+---
+
+# Review
+
+Read the diff first.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+<<<<
+.agents/skills/review/references/ dir 0755
+.agents/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+>>>>
+# Checklist
+
+- tests
+<<<<
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 179 7d31171c1ef470e59905537c613e719d72989d6fbac927a4ec650f687000b22b
+>>>>
+---
+name: ship
+description: "Ship it"
+disable-model-invocation: true
+# Content-Hash: blake3:a96524c0d2dc06cc018a7cde5d1c67b0cd904dc10f916312b35449be283b077b
+---
+
+Ship $ARGUMENTS.
+<<<<
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+>>>>
+policy:
+  allow_implicit_invocation: false
+<<<<
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
+>>>>
+{
+  "version": "1",
+  "files": [
+    ".agents/skills/cx-explain/SKILL.md",
+    ".agents/skills/review/SKILL.md",
+    ".agents/skills/review/references/checklist.md",
+    ".agents/skills/ship/SKILL.md",
+    ".agents/skills/ship/agents/openai.yaml",
+    ".claude/agents/planner.md",
+    ".claude/settings.json",
+    ".claude/skills/cx-explain/SKILL.md",
+    ".claude/skills/review/SKILL.md",
+    ".claude/skills/review/references/checklist.md",
+    ".claude/skills/ship/SKILL.md",
+    ".codex/agents/planner.toml",
+    ".codex/config.toml",
+    ".cursor/agents/planner.md",
+    ".cursor/commands/ship.md",
+    ".cursor/mcp.json",
+    ".mcp.json",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "merged": {
+    ".claude/settings.json": [],
+    ".codex/config.toml": [],
+    ".cursor/mcp.json": [],
+    ".mcp.json": []
+  },
+  "servers": {
+    ".codex/config.toml": [
+      [
+        "mcp_servers",
+        "cx-api"
+      ],
+      [
+        "mcp_servers",
+        "tools-docs"
+      ]
+    ],
+    ".cursor/mcp.json": [
+      [
+        "mcpServers",
+        "cx-api"
+      ],
+      [
+        "mcpServers",
+        "tools-docs"
+      ]
+    ],
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
+        "cx-api"
+      ],
+      [
+        "mcpServers",
+        "tools-docs"
+      ]
+    ]
+  },
+  "assets": {
+    ".agents/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
+    ".claude/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e"
+  }
+}
+<<<<
+.ai-rulez/.generated-manifest.local.json file 0644 2743 c98a9cd612eb1935a9787ef55eb3d74502e60b260c6e0f398ca5787d3c1d40ac
+>>>>
+{
+  "version": "1",
+  "files": [],
+  "merged": {
+    ".claude/settings.json": [
+      {
+        "path": [
+          "hooks",
+          "PostToolUse"
+        ],
+        "elementSums": [
+          "5313dfb4fd93cd2a709a2d21e777883c544c5faf6b51eff3717a748bd02e8c2d"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "7d27dd6f414248f8eb315dbf0293f3ca0ce793752c360e49ba8605d987e15a10"
+        ]
+      }
+    ],
+    ".codex/config.toml": [
+      {
+        "path": [
+          "mcp_servers",
+          "cx-api"
+        ],
+        "sum": "b6ab9af4649e26f4b90a7786ee4b70f287a0b0189551386e1accb431f4e97986"
+      },
+      {
+        "path": [
+          "mcp_servers",
+          "tools-docs"
+        ],
+        "sum": "279e465a8aeb04839b0d45a7cc3b8ffd6f3675e9077fc6d7e19928f7e96db0ce"
+      }
+    ],
+    ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "cx-api"
+        ],
+        "sum": "b6ab9af4649e26f4b90a7786ee4b70f287a0b0189551386e1accb431f4e97986"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "tools-docs"
+        ],
+        "sum": "279e465a8aeb04839b0d45a7cc3b8ffd6f3675e9077fc6d7e19928f7e96db0ce"
+      }
+    ],
+    ".mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "cx-api"
+        ],
+        "sum": "a51a767c891b31cc3372e314f46523e6c5654a8a5572556bfda664221aef3100"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "tools-docs"
+        ],
+        "sum": "81b8f0c2194cb8de8a7efa065a86cc9dbc8f86c12063acc11785553b805b215e"
+      }
+    ]
+  },
+  "digests": {
+    ".agents/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
+    ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+    ".claude/settings.json": "508dba13556787f47c8864ccfeb355277fabfe6461994b653077f342436f8eed",
+    ".claude/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
+    ".codex/agents/planner.toml": "bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d",
+    ".codex/config.toml": "8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011",
+    ".cursor/commands/ship.md": "932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab",
+    ".cursor/mcp.json": "b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09",
+    ".mcp.json": "449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a"
+  }
+}
+<<<<
+.ai-rulez/ai-rulez.lock file 0600 3799 ce0727dfa889ff35fe6b5ab4632b9ea152a8cc30b1d4ea9a54bf66f38f9f9634
+>>>>
+# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
+# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
+
+version = 1
+ai_rulez_version = '$VERSION'
+scope = 'all'
+outputs_pinned = true
+tree = 'sha256:a4c53571a003dac988babb6d449c2a157e617be8edebc96713a376808be6cee4'
+
+[[served]]
+name = 'cx-explain'
+source = 'vendor/codex-tools/skills/explain/SKILL.md'
+commit = ''
+digest = 'sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359'
+
+[[served]]
+name = 'review'
+source = 'vendor/market/plugins/tools/skills/review/SKILL.md'
+commit = ''
+digest = 'sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d'
+
+[[served]]
+name = 'ship'
+source = ''
+commit = ''
+digest = 'sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b'
+
+[[item]]
+kind = 'local-marketplace'
+id = 'acme'
+path = './vendor/market'
+digest = 'sha256:0cabe73b3673151138263beefe2b533de7c51ec156d87d93104c9734781b4dfb'
+
+[[item]]
+kind = 'local-plugin'
+id = 'codex-tools'
+path = './vendor/codex-tools'
+digest = 'sha256:f5cc51b0d25b0b861be873bce58e77d39d95ffe09dfcf2301e27bd15b8e2838c'
+
+[[item]]
+kind = 'rule'
+id = 'base'
+path = 'rules/base.md'
+digest = 'sha256:6b0320d45eca36a045acd26e1774375a59050038ce300d8681ab9a380b340acd'
+
+[[item]]
+kind = 'settings'
+id = 'mcp-servers'
+digest = 'sha256:00b6432df1f00369dc6e4ab4e59bfe1bfefae81125a6a35986f92bd21f243bb3'
+
+[[output]]
+path = '.agents/skills/cx-explain/SKILL.md'
+digest = 'sha256:61501b58c363e06d421546b4692a517c4a9f0c17baedcf0bc941e7a88639cd6a'
+
+[[output]]
+path = '.agents/skills/review/SKILL.md'
+digest = 'sha256:75cad0fd5aeeeb14fae82f09e9818c51683de8b83baefb971f01e0ff5d757b6e'
+
+[[output]]
+path = '.agents/skills/review/references/checklist.md'
+digest = 'sha256:3b2d74cad6829c220af4387ea3b37a019415932d16233c2108760dcade5547fa'
+
+[[output]]
+path = '.agents/skills/ship/SKILL.md'
+digest = 'sha256:be303685c9b26d9f180227179a644882a3ae89e4b43e4dcf0bdd0ecb12c53840'
+
+[[output]]
+path = '.agents/skills/ship/agents/openai.yaml'
+digest = 'sha256:90d53ab67ff438ea94cdeeaa181c9f86995a168de3c32d296ed3a4f2eadeaf17'
+
+[[output]]
+path = '.claude/agents/planner.md'
+digest = 'sha256:b83a1e2d57c633092c207b4a190887c859d40e46498560a97a4851e33f1694b2'
+
+[[output]]
+path = '.claude/skills/cx-explain/SKILL.md'
+digest = 'sha256:d175cbb369fd99a56671dc7fa6eaf8ef3c01fad6b2f2be9ecc2710b49f4ba391'
+
+[[output]]
+path = '.claude/skills/review/SKILL.md'
+digest = 'sha256:d18182f2fd737534dc9a2e8328163f61e4e8a3f6198f1e252bd9c3a71ade406d'
+
+[[output]]
+path = '.claude/skills/review/references/checklist.md'
+digest = 'sha256:5f52dfa28b8f36f3dd7a348c9585e0bd874c554a2458637a483f55df5cc9c5be'
+
+[[output]]
+path = '.claude/skills/ship/SKILL.md'
+digest = 'sha256:65b5c67efb08881d72cecf78b6378218c21623c9d66632fe161dcbf252710c66'
+
+[[output]]
+path = '.codex/agents/planner.toml'
+digest = 'sha256:6cf62add8dcc02d95ceb3998b2f893942030d32630202b5df4e7b603a314c190'
+
+[[output]]
+path = '.codex/config.toml'
+digest = 'sha256:a008a6ce713b2460f6d112af78ae2b8e2988d99378f17a5e02909d41f703564c'
+
+[[output]]
+path = '.cursor/agents/planner.md'
+digest = 'sha256:30951f62ddc1f3cf6432fc35f948ca53498c3bd6593dc4474c3a6f1a836a061e'
+
+[[output]]
+path = '.cursor/commands/ship.md'
+digest = 'sha256:b5e93ecdef99ef5f2857e1fe77a02af8747c3a8f8289e2b7db258e9da68e393f'
+
+[[output]]
+path = '.cursor/mcp.json'
+digest = 'sha256:17d0d20bdee3d14f15cd91a13ff960eb6ffcdd882b3d8fc9b91f65f7ac721304'
+
+[[output]]
+path = '.mcp.json'
+digest = 'sha256:63a589e20f8464622e704b15ffe0adef0f538b185eff5aadc13b619c14c3be56'
+
+[[output]]
+path = 'AGENTS.md'
+digest = 'sha256:8a7a1968f9b43cfa281a086d863f6e15ed44cfd05dff03cf6a858af58fb5cbd6'
+
+[[output]]
+path = 'CLAUDE.md'
+digest = 'sha256:133b3ae34ab62b4eb07931d315869ff10c20f04c9d8477e33485adc90679b5b7'
+<<<<
+.ai-rulez/config.toml file 0644 342 aef42a2395bbff68aa6289ccb5736750ba0c26ccaf5086797aa5fef46eb29f88
+>>>>
+version = "5.0"
+name = "golden-plugins"
+presets = ["claude", "codex", "cursor"]
+gitignore = false
+
+[[installed_marketplaces]]
+name = "acme"
+source = "./vendor/market"
+
+[[installed_plugins]]
+name = "tools"
+marketplace = "acme"
+enable_hooks = true
+
+[[installed_plugins]]
+name = "codex-tools"
+source = "./vendor/codex-tools"
+name_prefix = "cx-"
+<<<<
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
+>>>>
+---
+priority: high
+---
+# Base
+
+Keep it simple.
+<<<<
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/planner.md file 0644 181 39c7f79b9e3af5da5eb4d6d18c2d8531e7f07442d5f19d68b659833bf108e945
+>>>>
+---
+description: Plans work
+name: planner
+tools:
+    - Read, Grep
+# Content-Hash: blake3:49b0736eea377162fd14d2c42706f778d7cb2748e38cb4990396d053607bcb55
+---
+
+Plan before you code.
+<<<<
+.claude/settings.json file 0644 1274 508dba13556787f47c8864ccfeb355277fabfe6461994b653077f342436f8eed
+>>>>
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./vendor/market/plugins/tools/scripts/format.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; export CLAUDE_PROJECT_DIR=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; n() { d=$(mktemp -d \"${TMPDIR:-/tmp}/ai-rulez.XXXXXX\" 2\u003e/dev/null) || d=/; (cd \"$d\" 2\u003e/dev/null || exit 1; \"$@\"); r=$?; if [ \"$d\" != / ]; then rmdir \"$d\" 2\u003e/dev/null; fi; return $r; }; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n npx -y ai-rulez@latest session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n uvx --from ai-rulez@latest ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
+          }
+        ]
+      }
+    ]
+  }
+}
+<<<<
+.claude/skills/ dir 0755
+.claude/skills/cx-explain/ dir 0755
+.claude/skills/cx-explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
+>>>>
+---
+description: Explain code
+name: cx-explain
+# Content-Hash: blake3:490a481c8271070952d5c5acb72f517b7d277285b19232e598e601f3cb2b3fe2
+---
+
+# Explain
+
+Explain simply.
+<<<<
+.claude/skills/review/ dir 0755
+.claude/skills/review/SKILL.md file 0644 379 bd570ce5f1b359b603739e272b8aa8090aff2216ab803069a6808ca6dfdc355c
+>>>>
+---
+description: Review a change
+name: review
+# Content-Hash: blake3:4d3262d9f2f66c7959228599c238614536ab26d6d803736e9c462231b940bc0a
+---
+
+# Review
+
+Read the diff first.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+<<<<
+.claude/skills/review/references/ dir 0755
+.claude/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+>>>>
+# Checklist
+
+- tests
+<<<<
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 167 643a8fc31397ad88199fa1cc01105ec6945873d812c2e4d539d7f387f80bdd4b
+>>>>
+---
+description: Ship it
+name: ship
+user-invocable: true
+# Content-Hash: blake3:a3716252b96ca181a09c4024dbc873140702a038502ab2fb08750f44b1b3c1d1
+---
+
+Ship $ARGUMENTS.
+<<<<
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/planner.toml file 0644 100 bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d
+>>>>
+name = "planner"
+description = "Plans work"
+developer_instructions = """
+Plan before you code.
+
+"""
+<<<<
+.codex/config.toml file 0644 133 8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011
+>>>>
+[mcp_servers.cx-api]
+url = "https://example.com/mcp"
+
+[mcp_servers.tools-docs]
+args = ["-y", "@example/docs-server"]
+command = "npx"
+<<<<
+.cursor/ dir 0755
+.cursor/agents/ dir 0755
+.cursor/agents/planner.md file 0644 157 e1b72400dfadbe9604e240b05e59be1ab4753db9dfa702a9f78764209d65411e
+>>>>
+---
+description: Plans work
+name: planner
+# Content-Hash: blake3:49b0736eea377162fd14d2c42706f778d7cb2748e38cb4990396d053607bcb55
+---
+
+Plan before you code.
+<<<<
+.cursor/commands/ dir 0755
+.cursor/commands/ship.md file 0644 52 932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab
+>>>>
+# /ship
+
+**Description:** Ship it
+
+Ship $ARGUMENTS.
+<<<<
+.cursor/mcp.json file 0644 207 b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09
+>>>>
+{
+  "mcpServers": {
+    "cx-api": {
+      "url": "https://example.com/mcp"
+    },
+    "tools-docs": {
+      "args": [
+        "-y",
+        "@example/docs-server"
+      ],
+      "command": "npx"
+    }
+  }
+}
+<<<<
+.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
+>>>>
+# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.ai-rulez/.generated-manifest.local.json
+# END ai-rulez
+<<<<
+.mcp.json file 0644 403 449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a
+>>>>
+{
+  "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
+    "cx-api": {
+      "type": "http",
+      "url": "https://example.com/mcp"
+    },
+    "tools-docs": {
+      "args": [
+        "-y",
+        "@example/docs-server"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    }
+  }
+}
+<<<<
+AGENTS.md file 0644 448 005e0df39648f70646b036b45784dd02573aa4bc3f29b6be2f259e817ec38f93
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden-plugins
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:31fd2858defa4e7296c304346fc42f988e9d70ce8fc58ea2632cbddfb8a41ec1
+-->
+
+# golden-plugins
+
+## Rules
+
+### base
+
+**Priority:** high
+
+Keep it simple.
+<<<<
+CLAUDE.md file 0644 385 a5339d809644df61225e26f170d180f3c38c12076884484abd15cfc9198aba1b
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden-plugins
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:eb5f48bc10e0c22ebc0d90b72401142f812ff998d8107c18dc572adc562fde08
+-->
+
+@AGENTS.md
+<<<<
+vendor/ dir 0755
+vendor/codex-tools/ dir 0755
+vendor/codex-tools/.codex-plugin/ dir 0755
+vendor/codex-tools/.codex-plugin/plugin.json file 0644 96 eae140969d665adf3af9da4c2f781c95465b84d33cbbabf29a831e74b2c9797d
+>>>>
+{"name": "codex-tools", "version": "0.2.0", "description": "Codex tools", "skills": "./skills/"}
+<<<< (no trailing newline)
+vendor/codex-tools/.mcp.json file 0644 75 0ea1542cbcaa5a706939f68aa755fe1d5556319375176cd9dd58c444a1f3e52a
+>>>>
+{"mcpServers": {"api": {"url": "https://example.com/mcp", "type": "http"}}}
+<<<< (no trailing newline)
+vendor/codex-tools/skills/ dir 0755
+vendor/codex-tools/skills/explain/ dir 0755
+vendor/codex-tools/skills/explain/SKILL.md file 0644 76 46b91df0723a3a9795274b195427fb6db4c4131827f6a97f4e86181d61770d00
+>>>>
+---
+name: explain
+description: Explain code
+---
+
+# Explain
+
+Explain simply.
+<<<<
+vendor/market/ dir 0755
+vendor/market/.claude-plugin/ dir 0755
+vendor/market/.claude-plugin/marketplace.json file 0644 77 533ef831d6b79214ae85960daa0a5fe9894855e9767589005282cbf0892fa8aa
+>>>>
+{"name": "acme", "plugins": [{"name": "tools", "source": "./plugins/tools"}]}
+<<<< (no trailing newline)
+vendor/market/plugins/ dir 0755
+vendor/market/plugins/tools/ dir 0755
+vendor/market/plugins/tools/.claude-plugin/ dir 0755
+vendor/market/plugins/tools/.claude-plugin/plugin.json file 0644 61 c5d2dbf863e0f0412df6a6141e0ea501b1c3c27561f5b739ce8b589334d080f8
+>>>>
+{"name": "tools", "version": "1.0.0", "description": "Tools"}
+<<<< (no trailing newline)
+vendor/market/plugins/tools/.mcp.json file 0644 90 348d24242ecfb1d4ec7fe68e419909f9b5465d7160fa0cabdbcdf62b3ad3220a
+>>>>
+{"mcpServers": {"tools-docs": {"command": "npx", "args": ["-y", "@example/docs-server"]}}}
+<<<< (no trailing newline)
+vendor/market/plugins/tools/agents/ dir 0755
+vendor/market/plugins/tools/agents/planner.md file 0644 87 a97d231e87537b6665bae711bb2b61ca3fb059fcc8a6b694be585d2eb12bd248
+>>>>
+---
+name: planner
+description: Plans work
+tools: Read, Grep
+---
+
+Plan before you code.
+<<<<
+vendor/market/plugins/tools/commands/ dir 0755
+vendor/market/plugins/tools/commands/ship.md file 0644 47 551a41ecbd2eae69e3f10cff1abad14fe592dcbad23be6b9bef6ff973add4ae5
+>>>>
+---
+description: Ship it
+---
+
+Ship $ARGUMENTS.
+<<<<
+vendor/market/plugins/tools/hooks/ dir 0755
+vendor/market/plugins/tools/hooks/hooks.json file 0644 160 a385a77035039f7094f220a4036b69ebfcc9f0462e5cf9db3ea3f6581363e05b
+>>>>
+{"hooks": {"PostToolUse": [{"matcher": "Write|Edit", "hooks": [
+			{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/format.sh", "timeout": 10}]}]}}
+<<<< (no trailing newline)
+vendor/market/plugins/tools/scripts/ dir 0755
+vendor/market/plugins/tools/scripts/format.sh file 0644 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+>>>>
+#!/bin/sh
+exit 0
+<<<<
+vendor/market/plugins/tools/skills/ dir 0755
+vendor/market/plugins/tools/skills/review/ dir 0755
+vendor/market/plugins/tools/skills/review/SKILL.md file 0644 82 abac7c7772b73cc784ef58e84016eea1fb7dfba8b909b0d00ddb182de60068e1
+>>>>
+---
+name: review
+description: Review a change
+---
+
+# Review
+
+Read the diff first.
+<<<<
+vendor/market/plugins/tools/skills/review/references/ dir 0755
+vendor/market/plugins/tools/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+>>>>
+# Checklist
+
+- tests
+<<<<
+--- home tree
+(no change)

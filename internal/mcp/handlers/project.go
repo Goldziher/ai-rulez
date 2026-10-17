@@ -454,12 +454,12 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 	var dirs []string
 	err := filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			if d != nil && d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
+			return skipUnreadable(d)
 		}
 		if !d.IsDir() {
+			if useConventionFallback && isStandaloneRootConfig(path, d.Name()) {
+				dirs = append(dirs, filepath.Dir(path))
+			}
 			return nil
 		}
 		name := d.Name()
@@ -485,6 +485,22 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 		return recursiveWalkDecision(path, name, configDirName)
 	})
 	return dirs, err
+}
+
+// skipUnreadable is the walk's answer to an entry it could not read: skip an
+// unreadable directory, ignore anything else.
+func skipUnreadable(d os.DirEntry) error {
+	if d != nil && d.IsDir() {
+		return filepath.SkipDir
+	}
+	return nil
+}
+
+// isStandaloneRootConfig reports whether the file at path is an ai-rulez.toml
+// with no config directory beside it, which is a project of its own.
+func isStandaloneRootConfig(path, name string) bool {
+	return name == config.RootConfigFilename &&
+		config.ResolveConfigDirName(filepath.Dir(path)) == config.RootConfigDirName
 }
 
 // ownsRecursiveConfig reports whether the config directory at path holds the
@@ -919,6 +935,11 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		return ToolError(err)
 	}
 
+	// A configuration in ai-rulez.toml would be shadowed by the directory this scaffolds.
+	if err := configConflict(ctx, baseDir); err != nil {
+		return ToolError(err)
+	}
+
 	switch source := request.GetString("source", ""); source {
 	case "", config.SourceAIRulez:
 	case config.SourceAgents:
@@ -955,6 +976,37 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		keyMessage: "Project initialized successfully",
 		keyPath:    configPath,
 	})
+}
+
+// configConflict is why init_project must not scaffold in baseDir: an
+// ai-rulez.toml there would be shadowed by the directory it creates, and a
+// configuration above it in the same repository already configures the project.
+func configConflict(ctx context.Context, baseDir string) error {
+	if config.IsRootConfigDir(baseDir) {
+		return fmt.Errorf("%s already exists; init_project does not overwrite a configuration", filepath.Join(baseDir, config.RootConfigFilename))
+	}
+	if ancestor := ancestorConfig(ctx, baseDir); ancestor != "" {
+		return fmt.Errorf("%s already configures this repository; init_project does not create a nested configuration under it (use a directory outside the project, or edit that configuration)", ancestor)
+	}
+	return nil
+}
+
+// ancestorConfig returns the configuration file of a directory above dir
+// within the same repository (in any layout), or "" when there is none.
+func ancestorConfig(ctx context.Context, dir string) string {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	stop := config.SearchStopDir(ctx, abs)
+	if stop == "" || config.SameDir(stop, abs) {
+		return ""
+	}
+	path, err := config.FindConfigFileUntil(filepath.Dir(abs), "", stop)
+	if err != nil {
+		return ""
+	}
+	return path
 }
 
 // initAgentsProject initializes a project whose content is AGENTS.md and .agents:

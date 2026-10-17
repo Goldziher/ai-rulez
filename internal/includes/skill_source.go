@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,8 @@ type SkillGitSource struct {
 	ref         string // Fetch ref; the configured request determines cacheDir separately. ~keep
 	cacheDir    string
 	accessToken string
+	probe       bool             // no path was configured: search the conventional skill directories when the default location is empty
+	full        bool             // fetch the whole repository instead of the sparse path
 	pin         *pin             // ai-rulez.lock entry this skill must match (nil: unpinned)
 	baseDir     string           // project the skill belongs to, for recording what it resolved to
 	state       *resolutionState // per-load records of what this fetch resolved to
@@ -89,6 +92,9 @@ func (s *SkillGitSource) resolvedRef() string {
 
 // sparsePathSpec returns the path spec to pass to sparseClone.
 func (s *SkillGitSource) sparsePathSpec() string {
+	if s.full {
+		return ""
+	}
 	return strings.TrimPrefix(s.path, "/") + "/"
 }
 
@@ -124,7 +130,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 
 // checkPin records what the cache holds and verifies it against the lock.
 func (s *SkillGitSource) checkPin() error {
-	dir := s.cachedRoot()
+	dir, _ := s.cachedRoot()
 	if dir == "" {
 		return nil
 	}
@@ -150,7 +156,7 @@ func (s *SkillGitSource) DiscoverSkills(ctx context.Context, include, exclude []
 	mu.Lock()
 	defer mu.Unlock()
 
-	root, err := s.locate(ctx)
+	root, probed, err := s.locate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +164,7 @@ func (s *SkillGitSource) DiscoverSkills(ctx context.Context, include, exclude []
 	if retryable(ctx, err) {
 		// The cache may be damaged: fetch the pinned commit again before failing.
 		_ = os.Remove(filepath.Join(s.cacheDir, cacheMetaFile)) //nolint:errcheck // best-effort; a stale meta only skips the retry
-		if root, err = s.locate(ctx); err != nil {
+		if root, probed, err = s.locate(ctx); err != nil {
 			return nil, err
 		}
 		err = s.checkPin()
@@ -166,11 +172,11 @@ func (s *SkillGitSource) DiscoverSkills(ctx context.Context, include, exclude []
 	if err != nil {
 		return nil, err
 	}
-	return scanSelectedSkills(ctx, root, namePrefix, s.name, include, exclude)
+	return scanEntrySkills(ctx, root, probed, namePrefix, s.name, include, exclude)
 }
 
 func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) {
-	if _, err := s.locate(ctx); err != nil {
+	if _, _, err := s.locate(ctx); err != nil {
 		return config.ContentFile{}, err
 	}
 	skillDir := s.findSkillDir()
@@ -194,14 +200,14 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 // path names, else the .ai-rulez path, else the cache root when it is itself a
 // skill. It handles the network and cache work; discovering and scanning the
 // skills below the root is the caller's job.
-func (s *SkillGitSource) locate(ctx context.Context) (string, error) {
+func (s *SkillGitSource) locate(ctx context.Context) (root string, probed bool, err error) {
 	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
 	if config.OfflineIncludes(ctx) {
-		if root := s.cachedRoot(); root != "" {
-			return root, nil
+		if root, probed := s.cachedRoot(); root != "" {
+			return root, probed, nil
 		}
-		return "", oops.
+		return "", false, oops.
 			With("repo", RedactURL(s.repoURL)).
 			With("cache_dir", s.cacheDir).
 			Wrapf(ErrNotCached, "%s: no cached skill found for '%s'", offlineReason(ctx), s.name)
@@ -217,35 +223,46 @@ func (s *SkillGitSource) locate(ctx context.Context) (string, error) {
 		var err error
 		currentSHA, err = remoteHEADSHA(ctx, s.originalURL, ref, s.accessToken)
 		if err != nil {
-			if root := s.cachedRoot(); root != "" {
+			if root, probed := s.cachedRoot(); root != "" {
 				s.logger().Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
-				return root, nil
+				return root, probed, nil
 			}
-			return "", oops.With("repo", RedactURL(s.repoURL)).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
+			return "", false, oops.With("repo", RedactURL(s.repoURL)).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
 		}
 	}
 
 	if isCacheHit(s.cacheDir, currentSHA) {
-		if root := s.cachedRoot(); root != "" {
-			return root, nil
+		if root, probed := s.cachedRoot(); root != "" {
+			return root, probed, nil
 		}
 		// Meta is valid but files are gone — fall through to re-fetch.
 	}
 
 	if err := s.refresh(ctx, ref, isSHA, currentSHA); err != nil {
-		return "", err
+		return "", false, err
 	}
 
-	if root := s.cachedRoot(); root != "" {
-		return root, nil
+	if root, probed := s.cachedRoot(); root != "" {
+		return root, probed, nil
+	}
+	if s.probe && !s.full {
+		// The sparse checkout of the default location held nothing: take the whole
+		// repository, where the skills may sit under a conventional directory.
+		s.full = true
+		if err := s.refresh(ctx, ref, isSHA, currentSHA); err != nil {
+			return "", false, err
+		}
+		if root, probed := s.cachedRoot(); root != "" {
+			return root, probed, nil
+		}
 	}
 	if link := symlinkedMarker(filepath.Join(s.cacheDir, s.path)); link != "" {
-		return "", oops.
+		return "", false, oops.
 			With("repo", RedactURL(s.repoURL)).
 			With("path", link).
 			Errorf("skill %q: %s is a symlink, and symlinks are not followed", s.name, link)
 	}
-	return "", oops.
+	return "", false, oops.
 		With("repo", RedactURL(s.repoURL)).
 		With("path", s.path).
 		Errorf("skill directory not found (expected SKILL.md at %s)", s.path)
@@ -299,20 +316,25 @@ func (s *SkillGitSource) entryDir() string {
 }
 
 // cachedRoot returns the entry root when the cache holds a skill for it: a
-// SKILL.md at the root (single skill) or at least one immediate subdirectory
-// that has one (a multi-skill entry). It falls back to the cache root when that
-// is itself a skill, matching findSkillDir. "" when the cache holds nothing
-// usable for the entry.
-func (s *SkillGitSource) cachedRoot() string {
-	root := s.entryDir()
-	if root != "" && !pathHasSymlink(s.logger(), s.cacheDir, root) &&
-		(hasSkillMarker(root) || len(skillSubdirs(root)) > 0) {
-		return root
+// SKILL.md at the root (single skill) or a skill directory below it (a
+// multi-skill entry). It falls back to the cache root when that is itself a
+// skill, matching findSkillDir, and, for an entry with no configured path, to
+// the cache root with probed set so the conventional harness directories are
+// searched. "" when the cache holds nothing usable for the entry.
+func (s *SkillGitSource) cachedRoot() (root string, probed bool) {
+	root = s.entryDir()
+	if root != "" && !pathHasSymlink(s.logger(), s.cacheDir, root) && holdsSkills(root) {
+		return root, false
 	}
 	if hasSkillMarker(s.cacheDir) {
-		return s.cacheDir
+		return s.cacheDir, false
 	}
-	return ""
+	// No path was configured and the default location is empty: the skills may sit
+	// where harnesses keep them, anywhere in the checkout.
+	if s.probe && len(probeRoots(s.cacheDir)) > 0 {
+		return s.cacheDir, true
+	}
+	return "", false
 }
 
 // swapDir replaces final with tmp. The old directory is renamed aside first so
@@ -431,6 +453,10 @@ func ScanInstalledSkillDir(ctx context.Context, skillDir, skillName string) (con
 	}
 
 	resources, err := config.LoadSkillResourcesContext(ctx, skillDir)
+	var limit *config.SkillBundleLimitError
+	if errors.As(err, &limit) {
+		return config.ContentFile{}, err //nolint:wrapcheck // names the limit and how to narrow it
+	}
 	if err != nil {
 		// Resources are optional — log but don't fail the skill load.
 		log.Warn("Failed to read skill resources", "skill", skillName, "error", err)

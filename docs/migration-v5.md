@@ -360,8 +360,12 @@ Things to know:
   to be called `index` with prose in it is still a rule.
 - `validate` runs `okf validate` on a tree that has a root `index.md` and reports the `AR9B*` findings, failing at
   `--fail-on` (default `error`).
-- Not yet: `add`, `init` and the MCP CRUD tools still write the native layout, and a custom `title` is not restored by
-  `export okf` from a migrated tree.
+- `add`, `init` and the MCP CRUD tools on OKF trees: see [Not yet implemented](#not-yet-implemented).
+
+## Not yet implemented
+
+- `add`, `init` and the MCP CRUD tools still write the native layout on an OKF tree.
+- A custom `title` is not restored by `export okf` from a migrated tree.
 
 ## `init --from`
 

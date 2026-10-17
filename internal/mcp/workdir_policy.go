@@ -1,11 +1,13 @@
 package mcp
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
@@ -78,6 +80,29 @@ func (p dirPolicy) check(arg, dir, base string) (string, error) {
 		return "", fmt.Errorf("%s %q is outside the directory this server is allowed to use (%s); start the server in the project, or pass --root or --allow-any-dir", arg, dir, p.root)
 	}
 	return resolved, nil
+}
+
+// useProjectRoot moves working_directory up to the nearest project root, the
+// walk-up the CLI does from a subdirectory (it stops at the git root and never
+// goes above the home directory). A call that names a config file or directory
+// is left alone, as is a directory with no project above it.
+func useProjectRoot(ctx context.Context, args map[string]any) {
+	if stringArg(args, argConfigFile) != "" || stringArg(args, argConfigDir) != "" {
+		return
+	}
+	base := stringArg(args, argWorkingDirectory)
+	if base == "" {
+		base = "."
+	}
+	abs, err := filepath.Abs(base)
+	if err != nil {
+		return
+	}
+	root, err := config.DiscoverProjectRoot(ctx, abs)
+	if err != nil || config.SameDir(root, abs) {
+		return
+	}
+	args[argWorkingDirectory] = root
 }
 
 func stringArg(args map[string]any, name string) string {

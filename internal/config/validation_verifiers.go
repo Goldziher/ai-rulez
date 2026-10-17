@@ -57,7 +57,7 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 			Errorf("verifier %s sets %s, which does not apply to type %s", field, strings.Join(extra, ", "), v.Type)
 	}
 	if !slices.Contains(VerifierTypes, v.Type) {
-		if v.Type == "command" {
+		if v.Type == ItemKindCommand {
 			return oops.Hint("The command predicate is spec-form only: declare [verifiers.require.command] under a rule-linked verifier (see docs/verifiers.md).").
 				Errorf("unknown verifier type %q at %s.type", v.Type, field)
 		}
@@ -244,7 +244,7 @@ func verifierSpecFieldsSet(v *VerifierConfig) []string {
 		name string
 		on   bool
 	}{
-		{"rule", v.Rule != ""}, {ItemKindSkill, v.Skill != ""}, {"agent", v.Agent != ""}, {ItemKindCommand, v.Command != ""},
+		{"rule", v.Rule != ""}, {ItemKindSkill, v.Skill != ""}, {string(OutputKindAgent), v.Agent != ""}, {ItemKindCommand, v.Command != ""},
 		{"anchor", v.Anchor != ""}, {"message", v.Message != ""}, {"fix", v.Fix != ""},
 		{"when_changed", len(v.WhenChanged) > 0}, {"require", v.Require != nil}, {"examples", len(v.Examples) > 0},
 	} {

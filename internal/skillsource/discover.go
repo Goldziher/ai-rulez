@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -24,7 +25,7 @@ const (
 	maxSkillFiles = 2000
 	// DefaultMaxSkills and DefaultMaxBytes bound what one skill source loads into
 	// memory ([[skill_sources]] max_skills and max_bytes override them).
-	DefaultMaxSkills = 200
+	DefaultMaxSkills = includes.DefaultMaxSkills
 	DefaultMaxBytes  = 64 << 20
 )
 
@@ -149,6 +150,17 @@ func fileExists(log logger.Logger, p string) bool {
 // DigestDir) leaves out at the root of the digested directory. A file the digest
 // does not cover must not be served, or it could change unnoticed by the lock.
 var cacheMetaNames = map[string]bool{".cache_meta.json": true, ".cache_meta.json.tmp": true}
+
+// ReadSkillDir reads the files of the skill in dir with the limits of a skill
+// source: SKILL.md first, then the rest by path; symlinks are not followed and
+// an oversized file is skipped with a warning.
+func ReadSkillDir(log logger.Logger, dir string) ([]File, error) {
+	return readSkill(logger.Or(log), dir, "")
+}
+
+// RewriteName sets the frontmatter `name:` of a SKILL.md content, so the served
+// name and the frontmatter agree. Content without frontmatter is returned as is.
+func RewriteName(content []byte, name string) []byte { return rewriteName(content, name) }
 
 // readSkill reads the files of the skill in dir; sourceRoot is the directory the
 // source digest is taken over.

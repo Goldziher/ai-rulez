@@ -3,6 +3,7 @@ package generator
 import (
 	pathpkg "path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -28,7 +29,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	}
 	var wantAgentsMD, wantSkills bool
 	var skillReaders []string
-	targeted := skillTargets(presets.SkillTargets(content))
+	targeted := sharedSkillTargets(content)
 	for _, preset := range cfg.Presets {
 		if !preset.IsBuiltIn() {
 			continue
@@ -56,13 +57,13 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	// with no content would write a header-only AGENTS.md. It is skipped rather
 	// than written empty; the preset's own root file reports the skip (see
 	// providers.renderRootFile).
-	if wantAgentsMD && (!content.IsEmpty() || !cfg.HasPluginAuthoring()) {
+	if wantAgentsMD && !cfg.SkipsRootFiles() && (!content.IsEmpty() || !cfg.HasPluginAuthoring()) {
 		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, owners, inlining))
 	}
 	if wantSkills {
 		// The tree is rendered once for all readers, so delivery is resolved for
 		// them together (served skills out and the stub in, as for claude).
-		shared = append(shared, presets.SharedAgentSkills(sharedSkillsContent(cfg, content, skillReaders), cfg.BaseDir)...)
+		shared = append(shared, sharedSkillOutputs(cfg, content, skillReaders)...)
 	}
 	for i := range shared {
 		if !shared[i].IsDir && shared[i].RawContent == nil {
@@ -71,6 +72,34 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	}
 	dropShadowedByShared(allOutputs, cfg.BaseDir, wantAgentsMD, wantSkills, targeted)
 	allOutputs[sharedOutputsKey] = shared
+}
+
+// sharedSkillTargets is the frontmatter targets of the skills and of the commands
+// written as skills: those items keep their per-preset path.
+func sharedSkillTargets(content *config.ContentTree) skillTargets {
+	targeted := skillTargets(presets.SkillTargets(content))
+	for id, targets := range presets.CommandSkillTargets(content) {
+		targeted[id] = targets
+	}
+	return targeted
+}
+
+// sharedSkillOutputs renders the shared .agents/skills tree for readers: the
+// skills, plus the commands (and Codex's invocation policy for them) when a
+// reader runs a command as a skill.
+func sharedSkillOutputs(cfg *config.Config, content *config.ContentTree, readers []string) []config.OutputFile {
+	var commands []config.ContentFile
+	if slices.ContainsFunc(readers, func(preset string) bool {
+		consumer, ok := config.SharedOutputConsumerFor(preset)
+		return ok && consumer.CommandsAsSkills
+	}) {
+		commands = presets.SharedCommandSkills(cfg.Diag, content)
+	}
+	outputs := presets.SharedAgentSkills(sharedSkillsContent(cfg, content, readers), cfg.BaseDir, commands...)
+	if slices.Contains(readers, string(config.PresetCodex)) {
+		outputs = append(outputs, presets.SharedCodexCommandPolicy(commands, cfg.BaseDir)...)
+	}
+	return outputs
 }
 
 // sharedSkillsContent is the content the shared .agents/skills tree renders:

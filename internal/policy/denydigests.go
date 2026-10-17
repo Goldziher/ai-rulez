@@ -29,13 +29,20 @@ func (a *applier) denyDigests() {
 			"%s %q: %s pins %s, which the policy denies (origin: %s)", what, subject.Name, lockfile.FileName, subject.Digest, a.origin("sources.deny_digests"))
 		a.out.Violations[len(a.out.Violations)-1].Subject = &subject
 	}
-	dropped := map[string]map[string]bool{lockfile.KindInclude: {}, lockfile.KindSkill: {}, lockfile.KindSource: {}}
-	for kind, entries := range map[string][]lockfile.Entry{lockfile.KindInclude: lock.Include, lockfile.KindSkill: lock.Skill, lockfile.KindSource: lock.Source} {
-		for i := range entries {
-			e := &entries[i]
+	dropped := map[string]map[string]bool{lockfile.KindInclude: {}, lockfile.KindSkill: {}, lockfile.KindSource: {}, lockfile.KindMarketplace: {}, lockfile.KindPlugin: {}}
+	// A slice, not a map: violations are reported in a fixed order.
+	for _, group := range []struct {
+		kind    string
+		entries []lockfile.Entry
+	}{
+		{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill}, {lockfile.KindSource, lock.Source},
+		{lockfile.KindMarketplace, lock.Marketplace}, {lockfile.KindPlugin, lock.Plugin},
+	} {
+		for i := range group.entries {
+			e := &group.entries[i]
 			if denied(e.Digest) {
-				report(kind, config.PolicySubject{Kind: kind, Name: e.Name, Digest: e.Digest})
-				dropped[kind][e.Name] = true
+				report(group.kind, config.PolicySubject{Kind: group.kind, Name: e.Name, Digest: e.Digest})
+				dropped[group.kind][e.Name] = true
 			}
 		}
 	}
@@ -55,4 +62,8 @@ func (a *applier) denyDigests() {
 	cfg.Includes = filterSlice(cfg.Includes, func(i config.IncludeConfig) bool { return !dropped[lockfile.KindInclude][i.Name] })
 	cfg.InstalledSkills = filterSlice(cfg.InstalledSkills, func(s config.InstalledSkillConfig) bool { return !dropped[lockfile.KindSkill][s.Name] })
 	cfg.SkillSources = filterSlice(cfg.SkillSources, func(s config.SkillSourceConfig) bool { return !dropped[lockfile.KindSource][s.Name] })
+	cfg.InstalledPlugins = filterSlice(cfg.InstalledPlugins, func(p config.InstalledPluginConfig) bool { return !dropped[lockfile.KindPlugin][p.Name] })
+	cfg.InstalledMarketplaces = filterSlice(cfg.InstalledMarketplaces, func(m config.InstalledMarketplaceConfig) bool {
+		return !dropped[lockfile.KindMarketplace][m.Name]
+	})
 }

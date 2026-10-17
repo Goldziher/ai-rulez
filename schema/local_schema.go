@@ -24,7 +24,7 @@ const (
 
 // removableListKeys are the named lists whose overlay entries may carry
 // `remove = true`.
-var removableListKeys = []string{"mcp_servers", "plugins", "includes", "installed_skills", "marketplaces", "scopes", "roles", "plugins_authoring", "marketplaces_authoring"}
+var removableListKeys = []string{"mcp_servers", "plugins", "includes", "installed_skills", "installed_marketplaces", "installed_plugins", "marketplaces", "scopes", "roles", "plugins_authoring", "marketplaces_authoring"}
 
 // DeriveLocalSchema derives the overlay schema from the main config schema:
 // nothing is required, list entries accept `remove`, and presets accept
@@ -42,7 +42,7 @@ func DeriveLocalSchema(main []byte) ([]byte, error) {
 		doc["$id"] = strings.Replace(id, ConfigSchemaFile, LocalSchemaFile, 1)
 	}
 	doc["title"] = "AI Rules Local Overlay Configuration"
-	doc["description"] = "Schema for config.local.toml machine-local overlay files merged onto the shared ai-rulez config"
+	doc["description"] = "Schema for config.local.toml (ai-rulez.local.toml beside a root ai-rulez.toml) machine-local overlay files merged onto the shared ai-rulez config"
 
 	props, ok := doc[propertiesField].(map[string]any)
 	if !ok {

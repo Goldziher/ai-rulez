@@ -621,6 +621,9 @@ func (g *Generator) renderItem(typ string, spec *OutputSpec, item config.Content
 // derive from a sanitized name.
 func computeItemID(typ string, item config.ContentFile) string {
 	if typ == OutputTypeSkills {
+		if item.ID != "" {
+			return item.ID
+		}
 		// Path format: .../skills/{skill-id}/SKILL.md → {skill-id}
 		dir := filepath.Dir(item.Path)
 		return filepath.Base(dir)
@@ -969,6 +972,10 @@ const agentsMDImportLine = "@AGENTS.md"
 // all, and the skip is reported so the preset list can be trimmed. A root with
 // any content, and any root that is not plugin-authoring, is unchanged.
 func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (out config.OutputFile, emit bool, err error) { //nolint:gocyclo // a flat sequence of independent gates; splitting it scatters the rules
+	// The project keeps its instruction files by hand: write none of them.
+	if cfg.SkipsRootFiles() {
+		return config.OutputFile{}, false, nil
+	}
 	if content.IsEmpty() && cfg.HasPluginAuthoring() {
 		g.warnEmptyRootFile(cfg)
 		return config.OutputFile{}, false, nil

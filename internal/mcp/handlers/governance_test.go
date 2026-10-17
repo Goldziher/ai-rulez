@@ -16,6 +16,8 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const governanceConfig = `version = "5.0"
@@ -175,7 +177,7 @@ func TestGovernanceTools_NeverFetch(t *testing.T) {
 	shim := "#!/bin/sh\ncase \" $* \" in\n *\" ls-remote \"*|*\" fetch \"*|*\" clone \"*|*\" pull \"*) echo \"$@\" >> " + marker + "; exit 1;;\nesac\nexec " + realGit + " \"$@\"\n"
 	require.NoError(t, os.WriteFile(filepath.Join(shimDir, "git"), []byte(shim), 0o755)) //nolint:gosec // test shim must be executable
 	t.Setenv("PATH", shimDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	t.Setenv("HTTP_PROXY", proxy.URL)
 	t.Setenv("HTTPS_PROXY", proxy.URL)

@@ -16,9 +16,11 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
+const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\nsession_start = { generate = false }\n"
 
 // project writes files under a fresh temp dir and returns it.
 func project(t *testing.T, files map[string]string) string {
@@ -62,7 +64,7 @@ func gitInit(t *testing.T, dir string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
-	if out, err := exec.Command("git", "-C", dir, "init", "-q").CombinedOutput(); err != nil {
+	if out, err := gitutil.CommandNoContext(dir, "init", "-q").CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v\n%s", err, out)
 	}
 }
@@ -122,7 +124,7 @@ func TestRun_ReportsEachCheckWithItsDuration(t *testing.T) {
 		t.Fatalf("findings = %+v, want none", report.Findings)
 	}
 	want := []string{"config", "policy", "presets", "source", "mcp-env", "mcp-scope", "drift", "gitignore", "documents", "okf",
-		"hooks", "includes", "lock", "llm", "tools", "role-modes"}
+		"hooks", "includes", "lock", "llm", "tools", "session-start", "role-modes", "index-cache"}
 	if !slices.Equal(names, want) {
 		t.Errorf("checks = %v, want %v", names, want)
 	}
@@ -138,7 +140,7 @@ func TestCheckConfig(t *testing.T) {
 		want  string
 	}{
 		{name: "unparseable config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\npresets = [\n"}, want: "config"},
-		{name: "invalid config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"t\"\npresets = []\n"}, want: "config"},
+		{name: "invalid config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\npresets = [\"claude\"]\n"}, want: "config"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -500,7 +502,7 @@ func TestCheckIncludes_ReportsAnUncachedRemoteInclude(t *testing.T) {
 	cfg := baseConfig + "\n[[includes]]\nname = \"shared\"\nsource = \"https://github.com/acme/rules.git\"\nref = \"main\"\n"
 	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 
 	// Act
 	got := byCheck(run(t, dir), CheckIncludes)

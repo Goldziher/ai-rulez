@@ -20,7 +20,7 @@ import (
 // KnownKind reports whether kind is an entry kind `lock --kind` accepts.
 func KnownKind(kind string) bool {
 	switch kind {
-	case lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindServed:
+	case lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindServed, lockfile.KindMarketplace, lockfile.KindPlugin:
 		return true
 	}
 	return false
@@ -28,7 +28,7 @@ func KnownKind(kind string) bool {
 
 // HasName reports whether f pins a remote source or served skill called name.
 func HasName(f *lockfile.File, name string) bool {
-	for _, kind := range []string{lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource} {
+	for _, kind := range []string{lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindMarketplace, lockfile.KindPlugin} {
 		if f.Find(kind, name) != nil {
 			return true
 		}
@@ -46,7 +46,7 @@ func HasName(f *lockfile.File, name string) bool {
 // the default one carries the view in its name.
 func Entries(f *lockfile.File) []lockfile.Entry {
 	var all []lockfile.Entry
-	for _, list := range [][]lockfile.Entry{f.Include, f.Skill, f.Source, f.Served} {
+	for _, list := range [][]lockfile.Entry{f.Include, f.Skill, f.Source, f.Marketplace, f.Plugin, f.Served} {
 		all = append(all, list...)
 	}
 	for i := range all {

@@ -602,8 +602,9 @@ func (g *Generator) isPrunableDir(dir string) bool {
 		}
 	}
 	// isUnderBaseDir is true for the directory itself, so this rejects the config
-	// dir along with everything in it.
-	return g.config.ConfigDir == "" || !isUnderBaseDir(g.config.ConfigDir, clean)
+	// dir along with everything in it. A configuration without a folder has none:
+	// its ConfigDir is the project root, which must not shield every directory.
+	return g.config.Contentless() || g.config.ConfigDir == "" || !isUnderBaseDir(g.config.ConfigDir, clean)
 }
 
 // removeEmptyDir is removeDirIfEmpty, which in user scope first refuses a

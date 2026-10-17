@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch/setup"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,7 +78,7 @@ func searchCatalog(t *testing.T) *Catalog {
 // index built from the catalog (when build is true).
 func searchServer(t *testing.T, mode string, build bool, emb *conceptEmbedder) (*rpcPeer, string) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cat := searchCatalog(t)
 	dir := filepath.Join(t.TempDir(), ".ai-rulez")

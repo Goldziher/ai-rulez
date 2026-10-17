@@ -62,8 +62,8 @@ const (
 // the remote entry kinds. "mcp_server" selects the pinned MCP server
 // declarations (the settings item "mcp-servers").
 var ApprovalKinds = []string{
-	"rule", "context", ItemKindSkill, "agent", ItemKindCommand, "check", "hook", "role", "settings", "verifier", "rubric", "local-include",
-	"include", "installed-skill", "source", "served", "mcp_server", "role-output",
+	"rule", "context", ItemKindSkill, string(OutputKindAgent), ItemKindCommand, "check", "hook", "role", "settings", "verifier", "rubric", "local-include", "local-skill", "local-marketplace", "local-plugin",
+	"include", "installed-skill", "source", "served", "mcp_server", "role-output", "marketplace", "installed-plugin",
 }
 
 // ParseApprovalSelector validates one require_approval entry and returns the

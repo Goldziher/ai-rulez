@@ -34,12 +34,16 @@ const (
 
 // keyDigest is the JSON key digests are reported under.
 const (
-	keyDigest     = "digest"
-	keyURI        = "uri"
-	keyName       = "name"
-	keySize       = "size"
-	keyResources  = "resources"
-	keyResultType = "resultType"
+	keyDigest      = "digest"
+	keyURI         = "uri"
+	keyName        = "name"
+	keySize        = "size"
+	keyResources   = "resources"
+	keyResultType  = "resultType"
+	keyDescription = "description"
+	keyCount       = "count"
+	keyResults     = "results"
+	keyKind        = "kind"
 	// domainRoot names the skills that belong to no domain.
 	domainRoot = "root"
 )
@@ -100,6 +104,7 @@ func newServingServer(version string, catalog *Catalog, opts ServeOptions, autho
 		instructions = mergedServerInstructions
 		caps.Prompts = &sdkmcp.PromptCapabilities{}
 	}
+	instructions += scopeSummary(catalog.repository())
 	caps.AddExtension(SkillsExtensionID, map[string]any{"directoryRead": true})
 	srv := &Server{version: version, catalog: catalog, serve: newServeState(opts), authoring: merged}
 	for _, opt := range authoring {
@@ -122,6 +127,7 @@ func newServingServer(version string, catalog *Catalog, opts ServeOptions, autho
 	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
 	srv.registerSkillsExtension()
 	srv.registerSkillResources()
+	srv.registerIndexResource()
 	srv.registerSkillTools()
 	srv.registerServeTools()
 	if merged {
@@ -180,6 +186,14 @@ func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 		return func(ctx context.Context, method string, request sdkmcp.Request) (sdkmcp.Result, error) {
 			if method == methodResourcesRead {
 				if req, ok := request.(*sdkmcp.ReadResourceRequest); ok && req.Params != nil {
+					if strings.HasPrefix(req.Params.URI, contextScheme) {
+						return s.readContextResource(ctx, req)
+					}
+					if s.authoring && isCatalogQuery(req.Params.URI) {
+						// A query value may hold a raw slash, which the registered
+						// URI template does not match: route it here.
+						return s.readAuthoringResource(ctx, req)
+					}
 					if !s.resourceKnown(req.Params.URI) {
 						return nil, resourceNotFound(req.Params.URI)
 					}
@@ -194,6 +208,9 @@ func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 // served skill file, or, on the authoring and merged servers, a config, catalog
 // or item URI (ai-rulez://...).
 func (s *Server) resourceKnown(uri string) bool {
+	if uri == uriIndex {
+		return s.cat().repository() != nil
+	}
 	if cat := s.cat(); cat != nil {
 		if _, served := cat.File(uri); served {
 			return true
@@ -245,7 +262,7 @@ func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolReques
 			break
 		}
 	}
-	return handlers.ToolSuccess(map[string]any{"profile": s.cat().Profile, "count": len(results), "results": results})
+	return handlers.ToolSuccess(map[string]any{"profile": s.cat().Profile, keyCount: len(results), keyResults: results})
 }
 
 func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
@@ -341,12 +358,12 @@ func domainLabel(domain string) string {
 // an installed skill came from so an audit log can pin exactly what was loaded.
 func skillSummary(s *CatalogSkill, score int) map[string]any {
 	out := map[string]any{
-		keyName:       s.Name,
-		keyURI:        s.URI,
-		"description": s.Description,
-		"domain":      domainLabel(s.Domain),
-		keyDigest:     s.Digest,
-		"files":       len(s.Files),
+		keyName:        s.Name,
+		keyURI:         s.URI,
+		keyDescription: s.Description,
+		"domain":       domainLabel(s.Domain),
+		keyDigest:      s.Digest,
+		"files":        len(s.Files),
 	}
 	if s.Source != "" {
 		out["source"] = s.Source

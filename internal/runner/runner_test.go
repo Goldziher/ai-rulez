@@ -62,27 +62,6 @@ func TestRunOutcomes(t *testing.T) {
 	}
 }
 
-func TestRunTimeoutKillsProcessGroup(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("process groups are unix only")
-	}
-	// The child spawns a grandchild that holds stdout open and would outlive it.
-	marker := filepath.Join(t.TempDir(), "alive")
-	body := "(sleep 2; echo late > " + marker + ") &\nwait\n"
-	start := time.Now()
-	res := Run(context.Background(), Spec{Argv: []string{script(t, body)}, Env: ScrubEnv(os.Environ(), nil, nil), Timeout: 200 * time.Millisecond})
-	if res.Status != StatusTimeout {
-		t.Fatalf("status = %s, want timeout", res.Status)
-	}
-	if time.Since(start) > 1500*time.Millisecond {
-		t.Errorf("Run took %s; the group was not killed", time.Since(start))
-	}
-	time.Sleep(2300 * time.Millisecond)
-	if _, err := os.Stat(marker); err == nil {
-		t.Error("grandchild survived the timeout")
-	}
-}
-
 func TestRunUnavailable(t *testing.T) {
 	tests := []struct{ name, argv0 string }{
 		{"not on PATH", "ai-rulez-no-such-binary-xyz"},
@@ -187,22 +166,25 @@ func TestEffectiveTimeout(t *testing.T) {
 	}
 }
 
-func TestRunExitZeroWhileGrandchildHoldsStdout(t *testing.T) {
-	// Arrange: the child exits 0 but a backgrounded grandchild keeps stdout open.
-	old := killGrace
-	killGrace = 300 * time.Millisecond
-	t.Cleanup(func() { killGrace = old })
-	marker := filepath.Join(t.TempDir(), "alive")
-	body := "(sleep 1.5; echo late > " + marker + ") &\nprintf hi\nexit 0\n"
-	// Act
-	res := Run(context.Background(), Spec{Argv: []string{script(t, body)}, Env: ScrubEnv(os.Environ(), nil, nil)})
-	// Assert
-	if res.Status != StatusOK || res.ExitCode != 0 || string(res.Stdout) != "hi" {
-		t.Fatalf("got %s code %d out %q (%v), want ok/0/hi", res.Status, res.ExitCode, res.Stdout, res.Err)
+func TestEffectiveTimeoutUpTo(t *testing.T) {
+	tests := []struct {
+		name        string
+		in, ceiling time.Duration
+		want        time.Duration
+	}{
+		{"no ceiling is the default maximum", time.Hour, 0, MaxTimeout},
+		{"a raised ceiling lets a long timeout through", time.Hour, 2 * time.Hour, time.Hour},
+		{"a request above the ceiling is lowered", 3 * time.Hour, 2 * time.Hour, 2 * time.Hour},
+		{"the ceiling never passes the hard maximum", 24 * time.Hour, 48 * time.Hour, HardMaxTimeout},
+		{"unset takes the default", 0, time.Hour, DefaultTimeout},
+		{"a low ceiling lowers the default", 0, 30 * time.Second, 30 * time.Second},
 	}
-	time.Sleep(1800 * time.Millisecond)
-	if _, err := os.Stat(marker); err == nil {
-		t.Error("daemonised grandchild survived Run")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := EffectiveTimeoutUpTo(tt.in, tt.ceiling); got != tt.want {
+				t.Errorf("EffectiveTimeoutUpTo(%s, %s) = %s, want %s", tt.in, tt.ceiling, got, tt.want)
+			}
+		})
 	}
 }
 

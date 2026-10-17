@@ -240,6 +240,8 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `publish` | Turns a verified plugin bundle into release artifacts and emitter output |
 | `releasetime` | Finds when a git tag was released, for minimum-age gates |
 | `render` | Separates what a command produces from what it says about it |
+| `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there |
+| `indexcache` | Keeps the repository index summaries and scan verdicts between runs of the MCP server: location (user cache or project), authenticated index file, lock, status and clear |
 | `review` | Scores skills, agents, commands and rules against a rubric |
 | `roles` | Builds the roles manifest |
 | `runner` | Runs an external command with the limits a tool needs |

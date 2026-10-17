@@ -107,3 +107,27 @@ func TestInitProjectHandler_WritesTheRootIndex(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(root), "okf_version")
 }
+
+func TestInitProjectHandler_RefusesARootLayoutProject(t *testing.T) {
+	for _, source := range []string{"", config.SourceAIRulez, config.SourceAgents} {
+		t.Run("source "+source, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, config.RootConfigFilename), []byte("version = \"5.0\"\n"), 0o644))
+			args := map[string]any{"project_name": "demo", "working_directory": dir}
+			if source != "" {
+				args["source"] = source
+			}
+
+			// Act
+			res, err := InitProjectHandler(t.Context(), newRequestWithArgs(args))
+
+			// Assert
+			require.NoError(t, err)
+			require.True(t, res.IsError)
+			assert.Contains(t, textOf(t, res), config.RootConfigFilename)
+			assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
+			assert.NoDirExists(t, filepath.Join(dir, ".agents"))
+		})
+	}
+}

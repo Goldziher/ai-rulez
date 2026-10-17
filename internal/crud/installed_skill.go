@@ -19,41 +19,31 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return op.installSkillLocal(ctx, req)
 	}
 
-	baseDir := op.baseDir
-
-	cfg, err := op.load(config.WithUnresolvedIncludesTolerated(ctx), config.WithoutLocal())
-	if err != nil {
-		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
-	}
-
-	// Check if skill is already installed
-	for i := range cfg.InstalledSkills {
-		if cfg.InstalledSkills[i].Name == req.Name {
-			return oops.
-				With("name", req.Name).
-				Hint("Choose a different name or remove the existing skill first").
-				Errorf("skill '%s' is already installed", req.Name)
-		}
-	}
-
-	// Validate the source is accessible
-	sourceType, err := validateSkillSource(req.Source)
+	sourceType, err := validateSkillSource(op.baseDir, req.Source)
 	if err != nil {
 		return err
 	}
-
-	// Create the installed skill config entry
-	skillConfig := config.InstalledSkillConfig{
-		Name:   req.Name,
-		Source: req.Source,
-		Path:   req.Path,
-		Ref:    req.Ref,
+	entry := req.entry()
+	if err := validateInstalledSkillEntry(&entry); err != nil {
+		return err
 	}
 
-	cfg.InstalledSkills = append(cfg.InstalledSkills, skillConfig)
-
-	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
-		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
+	// Edited on the raw config.toml, like UninstallSkill: entries already there
+	// are written back as the user spelled them (GitHub shorthand stays shorthand).
+	err = op.editSharedConfig(func(cfg *config.Config) error {
+		for i := range cfg.InstalledSkills {
+			if cfg.InstalledSkills[i].Name == req.Name {
+				return oops.
+					With("name", req.Name).
+					Hint("Choose a different name or remove the existing skill first").
+					Errorf("skill '%s' is already installed", req.Name)
+			}
+		}
+		cfg.InstalledSkills = append(cfg.InstalledSkills, entry)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	op.logger().Info("Skill installed successfully",
@@ -117,10 +107,7 @@ func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSki
 	var infos []InstalledSkillInfo
 	for i := range cfg.InstalledSkills {
 		skill := &cfg.InstalledSkills[i]
-		sourceType := sourceTypeLocal
-		if isGitURL(skill.Source) {
-			sourceType = sourceTypeGit
-		}
+		sourceType := skillSourceType(baseDir, skill.Source)
 
 		infos = append(infos, InstalledSkillInfo{
 			Name:   skill.Name,
@@ -156,9 +143,41 @@ func validateInstallSkillRequest(req *InstallSkillRequest) error {
 }
 
 // validateSkillSource validates that the skill source is accessible
-func validateSkillSource(source string) (string, error) {
+func validateSkillSource(baseDir, source string) (string, error) {
 	if isGitURL(source) {
 		return sourceTypeGit, validateGitURL(source)
 	}
-	return sourceTypeLocal, nil
+	return skillSourceType(baseDir, source), nil
+}
+
+// skillSourceType is "git" for a source the resolver clones (an https or ssh URL,
+// git@host:path, owner/repo or github:owner/repo, unless owner/repo names a
+// directory below baseDir) and "local" otherwise.
+func skillSourceType(baseDir, source string) string {
+	entries := []config.InstalledSkillConfig{{Source: source}}
+	config.NormalizeInstalledSkillSources(baseDir, entries)
+	if incl.IsGitURL(entries[0].Source) {
+		return sourceTypeGit
+	}
+	return sourceTypeLocal
+}
+
+// entry is the installed_skills entry the request describes.
+func (req *InstallSkillRequest) entry() config.InstalledSkillConfig {
+	return config.InstalledSkillConfig{
+		Name: req.Name, Source: req.Source, Path: req.Path, Ref: req.Ref,
+		Include: req.Include, Exclude: req.Exclude, NamePrefix: req.NamePrefix,
+		Trust: req.Trust, Resources: req.Resources, Version: req.Version,
+		Domain: req.Domain, Profiles: req.Profiles, LocalOverride: req.LocalOverride,
+		TagPrefix: req.TagPrefix, IncludePrerelease: req.IncludePrerelease, MinReleaseAge: req.MinReleaseAge,
+	}
+}
+
+// validateInstalledSkillEntry applies the checks config load applies to an
+// entry, so a flag value the loader would refuse is refused before it is written.
+func validateInstalledSkillEntry(entry *config.InstalledSkillConfig) error {
+	if err := config.ValidateInstalledSkillFields(entry); err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	return config.ValidateInstalledSkillVersion(entry) //nolint:wrapcheck // already contextual
 }

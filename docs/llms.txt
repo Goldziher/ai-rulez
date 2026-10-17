@@ -24,7 +24,9 @@
 - [Roles](https://goldziher.github.io/ai-rulez/roles/): A profile picks domains for a project.
 - [Includes](https://goldziher.github.io/ai-rulez/includes/): Reuse configurations across multiple projects through inheritance and composition.
 - [Installed Skills](https://goldziher.github.io/ai-rulez/installed-skills/): Install named skills from external repositories.
+- [Installed Plugins](https://goldziher.github.io/ai-rulez/installed-plugins/): If a harness can install a plugin or a marketplace, ai-rulez can import it, use it and lock it.
 - [.agents as a Source](https://goldziher.github.io/ai-rulez/agents-source/): ai-rulez reads its content from the .ai-rulez tree by default.
+- [Config without a .ai-rulez folder](https://goldziher.github.io/ai-rulez/config-without-folder/): Keep the whole ai-rulez configuration in one file, ai-rulez.toml at the project root, and no .ai-rulez/ directory.
 - [Local Configuration](https://goldziher.github.io/ai-rulez/local-overrides/): Personal, machine-local configuration that is never committed.
 - [Catalog](https://goldziher.github.io/ai-rulez/catalog/): ai-rulez catalog describes everything a repository defines: rules, context, skills, agents, commands and checks, with owner, version, size, the digest ai-rulez.lock pins, the roles that keep each...
 - [Monorepo](https://goldziher.github.io/ai-rulez/monorepo/): For large projects with multiple teams, organize your .ai-rulez/ configuration using domains and profiles to provide relevant context while avoiding overwhelming AI assistants with irrelevant...
@@ -34,8 +36,10 @@
 
 - [Supported Harnesses](https://goldziher.github.io/ai-rulez/harnesses/): ai-rulez ships 52 built-in presets, one per AI coding harness.
 - [AGENTS.md and .agents/skills](https://goldziher.github.io/ai-rulez/agents-md/): AGENTS.md and .agents/skills/ are the closest thing to a cross-tool convention for project instructions and Agent Skills.
+- [Managing Only Remote Skills](https://goldziher.github.io/ai-rulez/managing-remote-skills/): Use this when you write CLAUDE.md, AGENTS.md and your own skills by hand and want ai-rulez to manage the configured components: skills installed from a remote repository, plugins, MCP servers...
 - [llms.txt](https://goldziher.github.io/ai-rulez/llms-txt/): llms.txt is a markdown file at the root of a site or repository that tells language models what is there and where to read it.
 - [Hooks and Permissions](https://goldziher.github.io/ai-rulez/settings/): ai-rulez generate can write the lifecycle hooks, permission rules and a few other settings keys of a project into each harness's native settings file, without shipping a plugin.
+- [Run Generate in Remote Sessions](https://goldziher.github.io/ai-rulez/session-start/): A remote (cloud) agent session starts from a fresh clone.
 - [Permissions](https://goldziher.github.io/ai-rulez/permissions/): The top-level \[permissions\] block is one allow/ask/deny list for every harness that has a native permission surface.
 - [User-level Configuration](https://goldziher.github.io/ai-rulez/user-scope/): ai-rulez generate writes inside the project.
 - [Custom Presets](https://goldziher.github.io/ai-rulez/profiles/): Set presets in .ai-rulez/config.toml to control which tools ai-rulez generates for.

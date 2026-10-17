@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/indexcache"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -131,6 +132,16 @@ type Options struct {
 	// harnesses' user and local MCP files (for example ~/.claude.json) outside
 	// the project. It is off by default so a run never reads outside the project.
 	ReadUserMCP bool
+	// Runner answers the repository question of the session-start check (is the settings file ignored);
+	// nil means runner.Exec.
+	Runner runner.Runner
+	// Probe answers an HTTPS GET of the session-start check (is the npm registry reachable from a remote
+	// session); nil skips the probe. It returns the HTTP status, or an error when there was no response.
+	Probe func(ctx context.Context, url string) (status int, err error)
+	// IndexCache, when set, places the index cache of a loaded project for the
+	// index-cache check (it knows the secret that authenticates the cache). Nil
+	// skips the check.
+	IndexCache func(cfg *config.Config) indexcache.Options
 	// OnCheck, when set, is called after each check with its name and how long it
 	// took, in run order. It is how a slow run says where the time went.
 	OnCheck func(name string, elapsed time.Duration)
@@ -189,7 +200,9 @@ func Run(ctx context.Context, o Options) *Report {
 		{"lock", checkLock},
 		{"llm", checkLLM},
 		{"tools", checkTools},
+		{CheckSessionStart, checkSessionStart},
 		{"role-modes", checkRoleModes},
+		{CheckIndexCache, checkIndexCache},
 	}
 	for _, c := range checks {
 		if s.cfg != nil && s.cfg.Implicit && !runsWithoutConfiguration(c.name) {

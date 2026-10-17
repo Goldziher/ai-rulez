@@ -3,6 +3,8 @@ package lockfile
 import (
 	"net/url"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
@@ -31,6 +33,15 @@ func IsGitSource(source string) bool {
 	return colon > 0 && at > 0 && at < colon && !strings.ContainsAny(source[:colon], `/\`)
 }
 
+// githubShorthand is the GitHub "owner/repo" form.
+var githubShorthand = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9._-]+$`)
+
+// IsGitHubShorthand reports whether s is a GitHub "owner/repo" shorthand.
+func IsGitHubShorthand(s string) bool { return githubShorthand.MatchString(s) }
+
+// GitHubURL is the https clone URL of an "owner/repo" shorthand.
+func GitHubURL(shorthand string) string { return "https://github.com/" + shorthand }
+
 // FileURLPath returns the filesystem path a file:// (or git+file://) source
 // names, and false for every other source.
 func FileURLPath(source string) (string, bool) {
@@ -45,8 +56,19 @@ func FileURLPath(source string) (string, bool) {
 	if err != nil || u.Path == "" {
 		return strings.TrimPrefix(s[len("file://"):], "/"), true
 	}
-	return filepath.FromSlash(u.Path), true
+	path := u.Path
+	switch {
+	case len(u.Host) == 2 && u.Host[1] == ':' && isASCIILetter(u.Host[0]):
+		// With two slashes the URL parser takes the drive letter for the host.
+		path = u.Host + path
+	case runtime.GOOS == "windows" && len(path) >= 3 && path[0] == '/' && path[2] == ':' && isASCIILetter(path[1]):
+		// With three slashes the path keeps a leading slash before the drive letter.
+		path = path[1:]
+	}
+	return filepath.FromSlash(path), true
 }
+
+func isASCIILetter(b byte) bool { return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') }
 
 // EnvAllowFileURLs, when set to "1" in the environment of the user running
 // ai-rulez, lets a file:// git source outside the project resolve from the

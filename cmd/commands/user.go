@@ -52,7 +52,7 @@ func newUserGenerator(ctx context.Context) (*generator.Generator, *config.Config
 	if err := requireUserConfig(path); err != nil {
 		return nil, nil, err
 	}
-	cfg, err := loadProjectFile(ctx, path, config.WithoutLocal())
+	cfg, err := loadProjectFile(ctx, path, config.WithoutLocal(), config.WithUserScope())
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // already contextual
 	}

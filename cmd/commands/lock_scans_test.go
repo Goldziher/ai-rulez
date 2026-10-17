@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // scanLockProject is a lock project with one staged fake scanner that reports a
@@ -22,7 +23,7 @@ func scanLockProject(t *testing.T) (root string) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake scanners are POSIX shell scripts")
 	}
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config"))
 	script := filepath.Join(t.TempDir(), "fake-scan")
 	body := `#!/bin/sh

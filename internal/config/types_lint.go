@@ -178,7 +178,9 @@ type LintExternal struct {
 	// false scrubs the environment and rejects known egress flags; true runs the
 	// scanner only when its name is passed to --allow-egress.
 	Egress *bool `yaml:"egress,omitempty" json:"egress,omitempty" toml:"egress,omitempty"`
-	// Timeout is a Go duration such as "90s"; default 2m, at most 15m.
+	// Timeout is a Go duration such as "90s"; default 2m, at most 15m (or
+	// [lint.scanner_policy] max_timeout). It bounds each run of the command: each
+	// batch of a batch_size scanner gets the whole timeout.
 	Timeout string `yaml:"timeout,omitempty" json:"timeout,omitempty" toml:"timeout,omitempty"`
 	// EnvPass lists extra environment variable names passed through the scrubbed
 	// environment. Proxy and credential-like names are rejected when egress is false.
@@ -202,6 +204,41 @@ type LintExternal struct {
 	// Version is a semantic version range the scanner's --version output must
 	// satisfy (">=1.0.0, <2"); a scanner outside it is not run (AR9E2).
 	Version string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	// VersionCommand is the argv that prints the scanner's version for the
+	// Version check. Default: command[0] --version, which names the launcher
+	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
+	// from the project root, in the scanner's isolation mode; needs Version.
+	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
+	// BatchSize splits the skill directories handed to a command that passes
+	// {skill_dirs} into runs of at most this many directories, each with its own
+	// timeout and cached on its own. 0 (default) hands the scanner all of them
+	// at once, subject to the command-line size limit.
+	BatchSize int `yaml:"batch_size,omitempty" json:"batch_size,omitempty" toml:"batch_size,omitempty"` //nolint:tagliatelle
+	// Parallel runs up to this many batches at the same time (1 to 16; default 1).
+	// Each batch gets its own {out} file and temp directory.
+	Parallel int `yaml:"parallel,omitempty" json:"parallel,omitempty" toml:"parallel,omitempty"`
+	// StageGlobs narrows the files of a staged skill directory to the ones
+	// matching a glob (relative to the skill directory; a pattern with no slash
+	// matches at any depth, ** crosses directories). SKILL.md is always staged.
+	// Unset stages every regular file of the directory.
+	StageGlobs []string `yaml:"stage_globs,omitempty" json:"stage_globs,omitempty" toml:"stage_globs,omitempty"` //nolint:tagliatelle
+	// StageExclude leaves out the files of a staged skill directory that match a
+	// glob (same syntax as StageGlobs); it wins over StageGlobs. SKILL.md is
+	// always staged.
+	StageExclude []string `yaml:"stage_exclude,omitempty" json:"stage_exclude,omitempty" toml:"stage_exclude,omitempty"` //nolint:tagliatelle
+	// CacheFiles lists globs, relative to the project root, of files the scanner
+	// reads besides the staged content (a rules file, a config). Their content is
+	// part of the result cache key. The script a command runs through an
+	// interpreter (python3 scan.py) is hashed without being listed.
+	CacheFiles []string `yaml:"cache_files,omitempty" json:"cache_files,omitempty" toml:"cache_files,omitempty"` //nolint:tagliatelle
+	// FailOn is the lowest severity of this scanner's findings that fails the run
+	// ("error", "warning" or "info"). It replaces [lint.scanner_policy] fail_on for
+	// this scanner, and the run's own threshold (--strict, --fail-on) for its findings.
+	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
+	// MaxMessage is the number of characters of a finding message kept in text
+	// output (default 500, at most 100000). The full text stays in the JSON
+	// report and SARIF output. It wins over [lint.scanner_policy] max_message.
+	MaxMessage int `yaml:"max_message,omitempty" json:"max_message,omitempty" toml:"max_message,omitempty"` //nolint:tagliatelle
 	// Required makes a missing, outdated or failing scanner an error instead of a notice.
 	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 }
@@ -215,8 +252,17 @@ type LintScannerPolicy struct {
 	// Required lists scanner names whose absence or failure is an error.
 	Required []string `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 	// FailOn is the lowest severity of a scanner finding that makes the run fail:
-	// "error", "warning" or "info". It applies to scanner findings only.
+	// "error", "warning" or "info". It applies to scanner findings only, and replaces the run's own
+	// threshold (--strict, --fail-on) for them; a scanner entry's fail_on wins.
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
+	// MaxMessage is the default number of characters of a scanner finding message
+	// kept in text output (default 500, at most 100000); a scanner's own
+	// max_message wins. The JSON report and SARIF output keep the full text.
+	MaxMessage int `yaml:"max_message,omitempty" json:"max_message,omitempty" toml:"max_message,omitempty"` //nolint:tagliatelle
+	// MaxTimeout is the longest timeout one run of a scanner may be given, a Go
+	// duration up to 6h (default 15m). Per-scanner timeout values above it are
+	// refused. Only the policy can raise it: an entry cannot lift its own bound.
+	MaxTimeout string `yaml:"max_timeout,omitempty" json:"max_timeout,omitempty" toml:"max_timeout,omitempty"` //nolint:tagliatelle
 	// Baseline is the scanner baseline file, relative to the project root
 	// (default: scanner-baseline.json in the configuration directory).
 	Baseline string `yaml:"baseline,omitempty" json:"baseline,omitempty" toml:"baseline,omitempty"`

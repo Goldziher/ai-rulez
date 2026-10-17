@@ -97,19 +97,19 @@ func TestScanCommand(t *testing.T) {
 
 func TestEnforceScanImports(t *testing.T) {
 	cfg := importingConfig(t, "error")
-	if err := enforceScanImports(cfg); err == nil {
+	if err := enforceScanImports(cfg, nil); err == nil {
 		t.Fatal("an imported secret must stop generation at level error")
 	}
 	cfg = importingConfig(t, "warn")
-	if err := enforceScanImports(cfg); err != nil {
+	if err := enforceScanImports(cfg, nil); err != nil {
 		t.Fatalf("level warn must only log: %v", err)
 	}
 	cfg = importingConfig(t, "")
-	if err := enforceScanImports(cfg); err == nil {
+	if err := enforceScanImports(cfg, nil); err == nil {
 		t.Fatal("scanning is on by default: an imported secret is an error-level finding and must stop generation")
 	}
 	cfg = importingConfig(t, "off")
-	if err := enforceScanImports(cfg); err != nil {
+	if err := enforceScanImports(cfg, nil); err != nil {
 		t.Fatalf("scan_imports = \"off\" opts out: %v", err)
 	}
 }

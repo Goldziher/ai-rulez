@@ -133,7 +133,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	allSkills := allSkills(content)
 	for idx := range allSkills {
 		skill := allSkills[idx]
-		skillID := extractSkillID(skill.Path)
+		skillID := skillIDOf(skill)
 
 		skillDir := filepath.Join(baseDir, ".opencode", "skills", skillID)
 		outputs = append(outputs,

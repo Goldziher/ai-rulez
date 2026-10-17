@@ -174,7 +174,7 @@ var projectTrapKinds = []string{
 // layout of the built-in table; code, source, quote and verified_on are
 // optional. A file or row that cannot be used is reported as AR9CA and skipped.
 func (r *runner) projectTraps() []Trap {
-	if r.cfg == nil || r.cfg.ConfigDir == "" {
+	if r.cfg == nil || r.cfg.ConfigDir == "" || r.cfg.Contentless() {
 		return nil
 	}
 	dir := filepath.Join(r.cfg.ConfigDir, "traps")

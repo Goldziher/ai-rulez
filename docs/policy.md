@@ -270,8 +270,12 @@ A pattern is a host, optionally followed by a path prefix, compared case-insensi
 
 Matching is by path prefix, so a trailing `/**` means the same as leaving it out. A bare `*` host is refused. A source
 is read from its URL: `https://github.com/example-org/rules.git`, `git@github.com:example-org/rules.git` and
-`ssh://git@host:2222/org/repo` all give a host and a path. A local path names no host and is not governed by
-`sources`.
+`ssh://git@host:2222/org/repo` all give a host and a path. The host is the one git connects to: a user, a port, a
+trailing dot and letter case are ignored, and an IPv6 literal is written `[::1]` in a pattern and a source. A source
+whose location cannot be read unambiguously (a backslash, whitespace, a malformed authority) is refused as not allowed
+rather than guessed, so `https://evil.example?@github.com/org/repo` is read as `evil.example`. Installed skill,
+marketplace and plugin sources are also rejected at validation when the authority carries `?`, `#`, a backslash,
+whitespace or, for web and `git://` URLs, a user. A local path names no host and is not governed by `sources`.
 
 `lint.security.allowed_hosts` lists hosts only (no path), because it bounds the hosts URLs inside content may point
 to.

@@ -32,6 +32,45 @@ func TestServeSetupFromFlags_MaxCloneBytes(t *testing.T) {
 	}
 }
 
+func TestServeSetupFromFlags_DiscoverSkills(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"unset leaves the configuration in charge", nil, ""},
+		{"the flag without a value means repo", []string{"--discover-skills"}, "repo"},
+		{"repo", []string{"--discover-skills=repo"}, "repo"},
+		{"all", []string{"--discover-skills=all"}, "all"},
+		{"off", []string{"--discover-skills=off"}, "off"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			require.NoError(t, MCPCmd.Flags().Parse(tt.args))
+			t.Cleanup(func() {
+				f := MCPCmd.Flags().Lookup(flagServeDiscover)
+				_ = f.Value.Set("") //nolint:errcheck // resets the flag for the next case
+				f.Changed = false
+			})
+
+			// Act
+			setup, err := serveSetupFromFlags(MCPCmd)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, setup.DiscoverSkills)
+		})
+	}
+}
+
+func TestMCPCmd_DiscoverSkillsOnlyMakesSenseWhenServing(t *testing.T) {
+	assert.Contains(t, dynamicServeFlagNames, flagServeDiscover)
+	flag := MCPCmd.Flags().Lookup(flagServeDiscover)
+	require.NotNil(t, flag)
+	assert.Equal(t, "repo", flag.NoOptDefVal)
+}
+
 func TestMCPCmd_ServeOnlyFlagsIncludeMaxCloneBytes(t *testing.T) {
 	assert.Contains(t, dynamicServeFlagNames, flagServeMaxClone)
 	assert.NotNil(t, MCPCmd.Flags().Lookup(flagServeMaxClone))
