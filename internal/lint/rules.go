@@ -246,6 +246,9 @@ type FindingMeta struct {
 	// finding: one at least this severe fails the run even when it is below the
 	// run's own threshold.
 	ScannerFailOn string
+	// FullMessage is a scanner finding's whole message when Message was cut to
+	// the scanner's max_message; JSON reports and SARIF output carry it.
+	FullMessage string
 	// Analyzer and Scope classify the rule that produced the finding.
 	Analyzer, Scope string
 	// Source says where the file of the finding comes from when it is not
@@ -304,6 +307,15 @@ func (f *Finding) Hop() string {
 	return f.Meta.Hop
 }
 
+// FullMessage returns the uncut message of a scanner finding whose Message was
+// truncated to max_message, or "" when Message is whole.
+func (f *Finding) FullMessage() string {
+	if f.Meta == nil {
+		return ""
+	}
+	return f.Meta.FullMessage
+}
+
 // IsAccepted reports whether the baseline accepts the finding.
 func (f *Finding) IsAccepted() bool { return f.Meta != nil && f.Meta.Accepted }
 
@@ -326,6 +338,7 @@ type findingJSON struct {
 	Hint         string   `json:"hint,omitempty"`
 	Hop          string   `json:"hop,omitempty"`
 	Source       string   `json:"source,omitempty"`
+	FullMessage  string   `json:"full_message,omitempty"`
 }
 
 // MarshalJSON flattens Meta's reportable fields next to the core ones.
@@ -342,6 +355,7 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 		out.Analyzer, out.Scope = f.Meta.Analyzer, f.Meta.Scope
 		out.Hop = f.Meta.Hop
 		out.Source = f.Meta.Source
+		out.FullMessage = f.Meta.FullMessage
 	}
 	return json.Marshal(out) //nolint:wrapcheck // plain struct
 }

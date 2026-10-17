@@ -211,6 +211,10 @@ type LintExternal struct {
 	// ("error", "warning" or "info"). It replaces [lint.scanner_policy] fail_on for
 	// this scanner, and the run's own threshold (--strict, --fail-on) for its findings.
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
+	// MaxMessage is the number of characters of a finding message kept in text
+	// output (default 500, at most 100000). The full text stays in the JSON
+	// report and SARIF output. It wins over [lint.scanner_policy] max_message.
+	MaxMessage int `yaml:"max_message,omitempty" json:"max_message,omitempty" toml:"max_message,omitempty"` //nolint:tagliatelle
 	// Required makes a missing, outdated or failing scanner an error instead of a notice.
 	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 }
@@ -227,6 +231,10 @@ type LintScannerPolicy struct {
 	// "error", "warning" or "info". It applies to scanner findings only, and replaces the run's own
 	// threshold (--strict, --fail-on) for them; a scanner entry's fail_on wins.
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
+	// MaxMessage is the default number of characters of a scanner finding message
+	// kept in text output (default 500, at most 100000); a scanner's own
+	// max_message wins. The JSON report and SARIF output keep the full text.
+	MaxMessage int `yaml:"max_message,omitempty" json:"max_message,omitempty" toml:"max_message,omitempty"` //nolint:tagliatelle
 	// Baseline is the scanner baseline file, relative to the project root
 	// (default: scanner-baseline.json in the configuration directory).
 	Baseline string `yaml:"baseline,omitempty" json:"baseline,omitempty" toml:"baseline,omitempty"`

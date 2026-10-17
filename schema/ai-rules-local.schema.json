@@ -1758,6 +1758,12 @@
                 "description": "Ceiling for this scanner's findings.",
                 "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
               },
+              "max_message": {
+                "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text.",
+                "maximum": 100000,
+                "minimum": 1,
+                "type": "integer"
+              },
               "name": {
                 "type": "string"
               },
@@ -1947,6 +1953,12 @@
             "isolation": {
               "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines.",
               "enum": ["auto", "none", "require"]
+            },
+            "max_message": {
+              "description": "Default characters of a scanner finding message kept in text output (500 when unset); a scanner's own max_message wins. The JSON report and SARIF output keep the whole text.",
+              "maximum": 100000,
+              "minimum": 1,
+              "type": "integer"
             },
             "preset": {
               "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off.",

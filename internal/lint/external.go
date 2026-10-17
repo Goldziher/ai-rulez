@@ -53,6 +53,9 @@ func externalProblems(ex config.LintExternal) []string {
 			problems = append(problems, fmt.Sprintf("version %q is not a version range such as \">=1.0.0, <2\": %v", ex.Version, err))
 		}
 	}
+	if !validMaxMessage(ex.MaxMessage) {
+		problems = append(problems, fmt.Sprintf("max_message %d is not between 1 and %d", ex.MaxMessage, maxScannerMessageLimit))
+	}
 	problems = append(problems, versionCommandProblems(ex)...)
 	if !validScannerFailOn(ex.FailOn) {
 		problems = append(problems, fmt.Sprintf("fail_on %q is not error, warning or info", ex.FailOn))
