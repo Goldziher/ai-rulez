@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"github.com/spf13/pflag"
 
 	"path/filepath"
@@ -92,10 +93,16 @@ func explicitConfigDir() string {
 
 // openOperator opens the CRUD operator for the project the global flags select:
 // the config directory of -C/--config-dir, else the one discovered in the
-// working directory.
+// nearest project at or above the working directory (the same walk-up as
+// generate and validate).
 func openOperator() (*crud.OperatorImpl, error) {
 	if dir := explicitConfigDir(); dir != "" {
 		return crud.NewOperatorAt(dir)
 	}
-	return crud.NewOperator(".")
+	root, err := discoverProjectRoot(context.Background())
+	if err != nil {
+		// No configuration anywhere above: the working directory reports it.
+		root = "."
+	}
+	return crud.NewOperator(root)
 }
