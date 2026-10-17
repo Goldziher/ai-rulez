@@ -36,24 +36,33 @@ func (ix *Index) Resolve(p string) (Resolution, error) {
 	for cur := clean; ; cur = parentOf(cur) {
 		if _, ok := ix.scopeByKey[cur]; ok {
 			out.Scopes = append(out.Scopes, cur)
-			for _, it := range ix.byScope[cur] {
-				r := Resolved{Item: it}
-				if shadows(it.Kind) {
-					key := string(it.Kind) + "\x00" + it.Name
-					if first, seen := owner[key]; seen && first != cur {
-						r.ShadowedBy = first
-					} else if !seen {
-						owner[key] = cur
-					}
-				}
-				out.Items = append(out.Items, r)
-			}
+			out.Items = append(out.Items, ix.resolveScope(cur, owner)...)
 		}
 		if cur == RootScope {
 			break
 		}
 	}
 	return out, nil
+}
+
+// resolveScope lists the items of one scope, marking those a nearer scope
+// shadows. owner holds the nearest scope that claimed each shadowing name so far.
+func (ix *Index) resolveScope(scope string, owner map[string]string) []Resolved {
+	items := ix.byScope[scope]
+	out := make([]Resolved, 0, len(items))
+	for _, it := range items {
+		r := Resolved{Item: it}
+		if shadows(it.Kind) {
+			key := string(it.Kind) + "\x00" + it.Name
+			if first, seen := owner[key]; !seen {
+				owner[key] = scope
+			} else if first != scope {
+				r.ShadowedBy = first
+			}
+		}
+		out = append(out, r)
+	}
+	return out
 }
 
 // shadows reports whether a kind is resolved by name, the nearest scope winning.
