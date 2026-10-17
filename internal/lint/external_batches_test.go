@@ -58,8 +58,9 @@ func TestBatchSizeSplitsSkillDirsIntoSeparatelyCachedRuns(t *testing.T) {
 }
 
 func TestEachBatchGetsItsOwnTimeout(t *testing.T) {
-	// Arrange: four batches of 300ms each, 1.2s in all, under a 1s timeout per run.
-	p, _ := batchProject(t, "", "batch_size = 1\ntimeout = \"1s\"\n", 4, "--sleep", "300ms")
+	// Arrange: four batches of 1s each, 4s in all, under a 3s timeout per run: the whole run outlasts the
+	// timeout, so it only passes when the timeout applies to each batch. The margin absorbs slow process starts.
+	p, _ := batchProject(t, "", "batch_size = 1\ntimeout = \"3s\"\n", 4, "--sleep", "1s")
 
 	// Act
 	findings := p.run(Options{})
@@ -73,15 +74,22 @@ func TestParallelRunsBatchesConcurrentlyAndKeepsTheirOutputApart(t *testing.T) {
 	tests := []struct {
 		name         string
 		keys         string
+		rendezvous   bool
 		wantParallel bool
 	}{
-		{"default is one at a time", "batch_size = 1\n", false},
-		{"parallel = 3 overlaps batches", "batch_size = 1\nparallel = 3\n", true},
+		{"default is one at a time", "batch_size = 1\n", false, false},
+		{"parallel = 3 overlaps batches", "batch_size = 1\nparallel = 3\n", true, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Arrange: each batch writes its report to its own {out} file and takes a moment.
-			p, logFile := batchProject(t, "", tt.keys, 3, "--sleep", "500ms", "--out", "{out}")
+			// Arrange: each batch writes its report to its own {out} file. Parallel batches wait for one
+			// another at a rendezvous, so they can only finish when all three ran at the same time; the
+			// serial ones just take a moment.
+			args := []string{"--sleep", "100ms", "--out", "{out}"}
+			if tt.rendezvous {
+				args = append(args, "--rendezvous", t.TempDir(), "--rendezvous-count", "3")
+			}
+			p, logFile := batchProject(t, "", tt.keys, 3, args...)
 
 			// Act
 			findings := scannerFindings(p.run(Options{}))
@@ -91,7 +99,7 @@ func TestParallelRunsBatchesConcurrentlyAndKeepsTheirOutputApart(t *testing.T) {
 			runs := invocations(t, logFile)
 			require.Len(t, runs, 3)
 			if tt.wantParallel {
-				assert.GreaterOrEqual(t, maxConcurrent(runs), 2, "batches overlapped")
+				assert.Equal(t, 3, maxConcurrent(runs), "batches overlapped")
 			} else {
 				assert.Equal(t, 1, maxConcurrent(runs), "batches ran one after the other")
 			}

@@ -72,6 +72,26 @@ func (s fakeScan) log(kind string) {
 	}
 }
 
+// rendezvous waits until the number of runs --rendezvous-count asks for has started, each leaving a marker in the
+// --rendezvous directory. It gives up after 10s so a scanner that is never joined cannot hang the test.
+func (s fakeScan) rendezvous() {
+	dir := s.opts["--rendezvous"]
+	want, err := strconv.Atoi(s.opts["--rendezvous-count"])
+	if dir == "" || err != nil {
+		return
+	}
+	if err := os.WriteFile(filepath.Join(dir, strconv.Itoa(os.Getpid())), nil, 0o600); err != nil {
+		return
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if entries, rerr := os.ReadDir(dir); rerr == nil && len(entries) >= want {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 // message is the text of every finding.
 func (s fakeScan) message() string {
 	if n, err := strconv.Atoi(s.opts["--msg-len"]); err == nil {
@@ -120,6 +140,8 @@ func (s fakeScan) results() []map[string]any {
 //	--msg TEXT | --msg-len N   message of every finding (default "found")
 //	--rule ID, --level L       SARIF rule id and level (default FAKE1, warning)
 //	--sleep D                  wait before answering
+//	--rendezvous DIR           with --rendezvous-count N: leave a marker in DIR and wait (up to 10s) until N runs
+//	                           have, so a test proves runs overlapped without depending on timing
 //	--log FILE                 append one line at the start and one at the end, with the arguments
 //	--out FILE                 write the report there instead of stdout
 //	--print-version V          print "fake-scanner V" and exit
@@ -139,6 +161,7 @@ func RunFakeScanner(args []string) int {
 	if d, err := time.ParseDuration(s.opts["--sleep"]); err == nil {
 		time.Sleep(d)
 	}
+	s.rendezvous()
 	doc, _ := json.Marshal(map[string]any{"version": "2.1.0", "runs": []any{map[string]any{"results": s.results()}}}) //nolint:errcheck // plain values
 	var w io.Writer = os.Stdout
 	if out := s.opts["--out"]; out != "" {
