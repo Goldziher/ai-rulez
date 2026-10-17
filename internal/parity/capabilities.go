@@ -420,6 +420,7 @@ func cliOnlyCapabilities() []Capability {
 		only("roles-show", "a presentation of one role; resolve_role returns what the role keeps", "roles show"),
 		only("catalog-diff", "compares two catalogs through git subprocesses", "catalog diff"),
 		only("list-placement", "prints where skills and commands land per harness; generate_outputs dry_run returns the same plan", "list"),
+		only("cache", "inspects and deletes the index cache the MCP server keeps in the user cache directory; a tool client has no use for the host's disk layout, and deleting is a human decision", "cache *"),
 		only("mcp", "starts the MCP server itself", "mcp"),
 		only("guard", "a hook entry point the harness calls on tool use", "guard"),
 		only("session-start", "a hook entry point the harness calls when a session starts; it runs generate", "session-start"),

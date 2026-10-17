@@ -286,6 +286,66 @@ ai-rulez builtins show security --format json
 | ---- | ---- | ------- | ----------- |
 | `--format` | string | `text` | Output format: text, json |
 
+## `ai-rulez cache`
+
+Show or clear the repository index cache
+
+```text
+ai-rulez cache [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cache status
+ai-rulez cache clear
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+## `ai-rulez cache clear`
+
+Remove the index cache of this project
+
+```text
+ai-rulez cache clear [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cache clear
+ai-rulez cache clear --all
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--all` | bool |  | Remove the index caches of every project in the user cache |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+## `ai-rulez cache status`
+
+Show where the index cache is, its size and its entry count
+
+```text
+ai-rulez cache status [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cache status
+ai-rulez cache status --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
 ## `ai-rulez catalog`
 
 List every item with owner, version, tokens, roles and lock status, or a static site

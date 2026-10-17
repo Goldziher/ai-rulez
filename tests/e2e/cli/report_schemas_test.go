@@ -133,6 +133,8 @@ func TestEveryJSONContractValidatesAgainstItsSchema(t *testing.T) {
 		{"eval run", []string{"eval", "run", "--dry-run"}, 0},
 		{"judge", []string{"judge", "--estimate", "--model", "openai/gpt-4o-mini"}, 0},
 		{"verify --approvals", []string{"verify", "--approvals"}, 0},
+		{"cache status", []string{"cache", "status"}, 0},
+		{"cache clear", []string{"cache", "clear"}, 0},
 		{"sbom", []string{"sbom", "--output", filepath.Join(t.TempDir(), "sbom.json")}, 0},
 	})
 

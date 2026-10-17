@@ -141,7 +141,7 @@ func init() {
 	RootCmd.AddCommand(SessionStartCmd)
 	RootCmd.AddCommand(VerifiersCmd)
 	RootCmd.AddCommand(ScannersCmd)
-	RootCmd.AddCommand(VersionCmd, newConfigCmd())
+	RootCmd.AddCommand(VersionCmd, newConfigCmd(), newCacheCmd())
 	RootCmd.AddCommand(InitCmd)
 	RootCmd.AddCommand(ConvertCmd)
 	RootCmd.AddCommand(MCPCmd)

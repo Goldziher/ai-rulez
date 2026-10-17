@@ -167,6 +167,8 @@ The schema files are available in the repository:
 | `schema/okf-validate.schema.json` | JSON Schema | v1      | `ai-rulez okf validate --format json` |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json` |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
+| `schema/cache-status.schema.json` | JSON Schema | v1     | `ai-rulez cache status --format json`: where the index cache is, its size and entry counts, and warnings |
+| `schema/cache-clear.schema.json` | JSON Schema | v1     | `ai-rulez cache clear --format json`: the cache directories removed |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
 | `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |

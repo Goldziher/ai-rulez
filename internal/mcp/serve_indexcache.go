@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime/debug"
@@ -50,13 +51,16 @@ type IndexCacheReport struct {
 
 // indexCacheKey loads the secret that authenticates the cache, kept outside the
 // cache like the serve catalog cache's. nil when there is none.
-func (st *ServeSetup) indexCacheKey() (key []byte, why string) {
+func (st *ServeSetup) indexCacheKey(create bool) (key []byte, why string) {
 	secret := llm.UserSecretPath(indexCacheSecretFile)
 	if st.CacheDir != "" {
 		secret = filepath.Join(st.CacheDir, "."+indexCacheSecretFile)
 	}
 	if secret == "" {
 		return nil, "there is no home directory to keep the secret that authenticates the index cache"
+	}
+	if _, statErr := os.Lstat(secret); statErr != nil && !create {
+		return nil, "the index cache has not been used yet, so its secret does not exist"
 	}
 	key, err := llm.LoadSecretFile(secret)
 	if err != nil {
@@ -66,10 +70,12 @@ func (st *ServeSetup) indexCacheKey() (key []byte, why string) {
 }
 
 // IndexCacheOptions are the options of the index cache of a project: where it
-// is, what authenticates it and which scanner it was recorded for.
-func (st *ServeSetup) IndexCacheOptions(ctx context.Context, cfg *config.Config) (o indexcache.Options, why string) {
+// is, what authenticates it and which scanner it was recorded for. With create
+// false the secret that authenticates the cache is read but never created, for
+// the read-only commands; without it the options carry no key.
+func (st *ServeSetup) IndexCacheOptions(ctx context.Context, cfg *config.Config, create bool) (o indexcache.Options, why string) {
 	host := ambient.Host{Log: st.Log, Clock: st.Clock}
-	key, why := st.indexCacheKey()
+	key, why := st.indexCacheKey(create)
 	o = indexcache.Options{
 		Host: host, Root: cfg.BaseDir, CacheDir: st.CacheDir, Mode: cfg.IndexCacheMode(), Key: key,
 		Fingerprint: scanFingerprint(st.Version, cfg), Tree: indexcache.TreeState(ctx, host, cfg.BaseDir),
@@ -83,7 +89,7 @@ func (st *ServeSetup) IndexCacheOptions(ctx context.Context, cfg *config.Config)
 // openIndexCache opens the cache of the project; never nil: a cache that is off
 // or cannot be opened is an inert store whose location says why.
 func (st *ServeSetup) openIndexCache(ctx context.Context, cfg *config.Config) (store *indexcache.Store, warning string) {
-	o, why := st.IndexCacheOptions(ctx, cfg)
+	o, why := st.IndexCacheOptions(ctx, cfg, true)
 	store, err := indexcache.Open(ctx, o)
 	if err != nil {
 		st.logger().Warn("Could not open the index cache", "error", err.Error())

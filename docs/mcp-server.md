@@ -253,6 +253,7 @@ rewrites them), and the test fails when they are stale.
 | ------- | -------------------- |
 | `edit agent` | partial field edits and stdin input; update_agent is the whole-item replacement for a tool client |
 | `approve` | approving, revoking, denying and signing are identity-bound human attestations; an agent must not make them |
+| `cache *` | inspects and deletes the index cache the MCP server keeps in the user cache directory; a tool client has no use for the host's disk layout, and deleting is a human decision |
 | `catalog diff` | compares two catalogs through git subprocesses |
 | `edit check` | partial field edits and stdin input; update_check is the whole-item replacement for a tool client |
 | `edit command` | partial field edits and stdin input; update_command is the whole-item replacement for a tool client |

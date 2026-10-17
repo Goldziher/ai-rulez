@@ -70,6 +70,9 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez builtins` | Manage built-in domains |
 | `ai-rulez builtins list` | List all available built-in domains |
 | `ai-rulez builtins show` | Show the full content of a built-in domain |
+| `ai-rulez cache` | Show or clear the repository index cache |
+| `ai-rulez cache clear` | Remove the index cache of this project |
+| `ai-rulez cache status` | Show where the index cache is, its size and its entry count |
 | `ai-rulez catalog` | List every item with owner, version, tokens, roles and lock status, or a static site |
 | `ai-rulez catalog diff` | Compare two catalogs: JSON files or git revisions |
 | `ai-rulez clean` | Remove files produced by generate |
@@ -2767,6 +2770,19 @@ ai-rulez version
 ai-rulez version --format json   # {"schema_version": 1, "version": "5.0.0"}
 ```
 
+### `ai-rulez cache status|clear`
+
+Manage the index cache of `mcp --serve-skills --discover-skills`: the summaries of the instruction files, rules, agents and skills a repository keeps at any depth, and the scan verdicts of content found clean. It never holds a file body. The cache lives in `<user cache>/ai-rulez/monorepo-index/<repo-id>/`, or in `.ai-rulez/.cache/` (`.ai-rulez-cache/` in the root layout) when the user cache is not writable; `[mcp] index_cache = "user" | "repo" | "off"` chooses. See [The index cache](mcp-server.md#the-index-cache).
+
+```bash
+ai-rulez cache status                 # location, size, entry and verdict counts, warnings
+ai-rulez cache status --format json   # schema/cache-status.schema.json
+ai-rulez cache clear                  # remove this project's cache
+ai-rulez cache clear --all            # remove the index caches of every project in the user cache
+```
+
+`clear` needs no confirmation: a cache is rebuilt on the next start. `--format json` follows `schema/cache-clear.schema.json`. Both commands work in a directory with no configuration.
+
 ## MCP Server
 
 ### `ai-rulez mcp`
@@ -3059,6 +3075,8 @@ entry in this table (`schema.JSONContracts`).
 | `ai-rulez update --format json` | [`schema/update.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/update.schema.json) |
 | `ai-rulez sbom --format json` | [`schema/sbom-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/sbom-report.schema.json) |
 | `ai-rulez sign --format json` | [`schema/sign-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/sign-report.schema.json) |
+| `ai-rulez cache status --format json` | [`schema/cache-status.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/cache-status.schema.json) |
+| `ai-rulez cache clear --format json` | [`schema/cache-clear.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/cache-clear.schema.json) |
 | `ai-rulez scanners list --format json` | [`schema/scanners-list.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/scanners-list.schema.json) |
 | `ai-rulez scanners doctor --format json` | [`schema/scanners-doctor.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/scanners-doctor.schema.json) |
 | `ai-rulez roles list --format json` | [`schema/roles-manifest.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-manifest.schema.json) |
