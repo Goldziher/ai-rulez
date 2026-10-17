@@ -266,6 +266,9 @@ func (op *OperatorImpl) ContentPath(domain, ftype, name string) string {
 
 // RemoveFile deletes a file or skill directory
 func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
 	if err := op.RequireContent(ctx, domain, ftype, name); err != nil {
 		return err
 	}
@@ -296,6 +299,9 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 // domain, nothing of that name) without touching anything. A caller asks it
 // before it asks the user to confirm a removal or reads the item.
 func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
 	// Validate inputs
 	if err := ValidateFileName(name); err != nil {
 		return err
