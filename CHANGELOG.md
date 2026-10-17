@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- A configuration without a `.ai-rulez/` folder: `ai-rulez.toml` at the project root (overlay `ai-rulez.local.toml`) declares installed skills, skill sources, includes, MCP servers, hooks, permissions and lint settings, with `ai-rulez.lock` beside it. `generate` writes no instruction files and leaves hand-written `CLAUDE.md` and `AGENTS.md` alone; the manifests are `.ai-rulez-manifest.json` and `.ai-rulez-manifest.local.json` in the root. A config directory still wins over the file. `ai-rulez init --minimal` creates it. See [Config without a .ai-rulez folder](https://goldziher.github.io/ai-rulez/config-without-folder/).
+
 ## [5.4.1] - 2026-10-16
 
 ### Added

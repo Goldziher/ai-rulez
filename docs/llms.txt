@@ -25,6 +25,7 @@
 - [Includes](https://goldziher.github.io/ai-rulez/includes/): Reuse configurations across multiple projects through inheritance and composition.
 - [Installed Skills](https://goldziher.github.io/ai-rulez/installed-skills/): Install named skills from external repositories.
 - [.agents as a Source](https://goldziher.github.io/ai-rulez/agents-source/): ai-rulez reads its content from the .ai-rulez tree by default.
+- [Config without a .ai-rulez folder](https://goldziher.github.io/ai-rulez/config-without-folder/): Keep the whole ai-rulez configuration in one file, ai-rulez.toml at the project root, and no .ai-rulez/ directory.
 - [Local Configuration](https://goldziher.github.io/ai-rulez/local-overrides/): Personal, machine-local configuration that is never committed.
 - [Catalog](https://goldziher.github.io/ai-rulez/catalog/): ai-rulez catalog describes everything a repository defines: rules, context, skills, agents, commands and checks, with owner, version, size, the digest ai-rulez.lock pins, the roles that keep each...
 - [Monorepo](https://goldziher.github.io/ai-rulez/monorepo/): For large projects with multiple teams, organize your .ai-rulez/ configuration using domains and profiles to provide relevant context while avoiding overwhelming AI assistants with irrelevant...
