@@ -75,6 +75,8 @@ type judgeRig struct {
 	reply      func(req llm.ChatRequest) (string, error)
 	// refuse makes every reviewer answer with a content-filter stop.
 	refuse bool
+	// maxUnits lowers the per-run unit limit so a test does not need hundreds of units.
+	maxUnits int
 }
 
 func newJudgeRig(t *testing.T) *judgeRig {
@@ -110,6 +112,7 @@ func (r *judgeRig) deps() judgeDeps {
 		},
 		getenv:       func(name string) string { return r.env[name] },
 		policyLocked: func(string) bool { return r.locked },
+		maxUnits:     r.maxUnits,
 	}
 }
 
