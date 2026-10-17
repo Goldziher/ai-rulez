@@ -25,6 +25,10 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 		dirNames = []string{AgentsDirName, aiRulezDirName, altConfigDirName}
 	}
 	configNames := configNamesForDirNames(dirNames)
+	if configDirName == aiRulezDirName {
+		// The single-file layout comes last: a config directory at the same level wins.
+		configNames = append(configNames, RootConfigFilename)
+	}
 
 	dir, err := filepath.Abs(startDir)
 	if err != nil {
@@ -61,7 +65,7 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 	return "", noConfig{oops.
 		With("search_dir", startDir).
 		With("supported_names", configNames).
-		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate %s/config.toml (or %s/config.toml)\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName)).
+		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate %s/config.toml (or %s/config.toml, or %s at the project root)\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName, RootConfigFilename)).
 		Errorf("no configuration file found")}
 }
 

@@ -60,7 +60,7 @@ func OwnershipChanges(ctx context.Context, cfg *config.Config, rev string) ([]st
 			}
 		}
 	}
-	rel := gitutil.RepoRelative(top, filepath.Join(cfg.ConfigDir, "config.toml"))
+	rel := gitutil.RepoRelative(top, cfg.ConfigPath())
 	if rel == "" {
 		return out, nil
 	}

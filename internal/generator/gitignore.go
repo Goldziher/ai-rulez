@@ -27,14 +27,14 @@ func (g *Generator) localInputRels() []string {
 		return nil
 	}
 	var rels []string
-	if matches, err := filepath.Glob(filepath.Join(dir, "config.local.*")); err == nil {
+	if matches, err := filepath.Glob(filepath.Join(dir, g.localOverlayGlob())); err == nil {
 		for _, m := range matches {
 			if rel := filepath.ToSlash(g.convertToRelativePath(m)); rel != "" {
 				rels = append(rels, rel)
 			}
 		}
 	}
-	if info, err := os.Stat(filepath.Join(dir, localSourceDirName)); err == nil && info.IsDir() {
+	if info, err := os.Stat(filepath.Join(dir, localSourceDirName)); err == nil && info.IsDir() && !g.config.Contentless() {
 		if rel := filepath.ToSlash(g.convertToRelativePath(filepath.Join(dir, localSourceDirName))); rel != "" {
 			rels = append(rels, rel)
 		}
@@ -52,7 +52,7 @@ func (g *Generator) ignoreLocalInputs() error {
 		return nil
 	}
 	// The overlay's lock and temp files come and go: ignore them before they exist.
-	patterns = append(patterns, g.configDirName()+"/.config.local.*")
+	patterns = append(patterns, g.localLockGlob())
 	if g.gitignoreSink != nil {
 		if err := g.gitignoreSink.Add(g.log(), g.gitignorePrefix, patterns); err != nil {
 			return oops.Wrapf(err, "gitignore the machine-local inputs")
@@ -75,6 +75,9 @@ func (g *Generator) localInputPatterns() []string {
 	patterns := []string{
 		g.configDirName() + "/" + localSourceDirName + "/",
 		g.configDirName() + "/config.local.*",
+	}
+	if g.config.Contentless() {
+		patterns = []string{g.localOverlayGlob()}
 	}
 	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
 		patterns = append(patterns, rel)
@@ -116,13 +119,18 @@ func (g *Generator) localGitignorePatternsOnDisk() []string {
 		return nil
 	}
 	prefix := g.configDirName() + "/"
+	overlayNames := []string{"config.local.*", ".config.local.*"}
+	if g.config.Contentless() {
+		// The project root is not a config directory: its patterns carry no prefix.
+		prefix, overlayNames = "", []string{g.localOverlayGlob(), ".ai-rulez-local.*"}
+	}
 	var patterns []string
-	for _, p := range []string{"config.local.*", ".config.local.*"} {
+	for _, p := range overlayNames {
 		if matches, err := filepath.Glob(filepath.Join(dir, p)); err == nil && len(matches) > 0 {
 			patterns = append(patterns, prefix+p)
 		}
 	}
-	if info, err := os.Stat(filepath.Join(dir, localSourceDirName)); err == nil && info.IsDir() {
+	if info, err := os.Stat(filepath.Join(dir, localSourceDirName)); err == nil && info.IsDir() && !g.config.Contentless() {
 		patterns = append(patterns, prefix+localSourceDirName+"/")
 	}
 	return patterns
@@ -213,7 +221,7 @@ func (g *Generator) addLocalSourcePatterns(paths map[string]bool, includeCommitt
 	// With managed ignores on, the directory is covered even before it exists:
 	// `telemetry record` creates files in it between two generates, and they
 	// must not show up as untracked.
-	if includeCommitted && !g.userMode {
+	if includeCommitted && !g.userMode && !g.config.Contentless() {
 		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
 	}
 
@@ -313,10 +321,31 @@ func (g *Generator) relativeToBase(abs string) (string, error) {
 
 // shouldSkipPath checks if a path should be skipped for .gitignore
 func (g *Generator) shouldSkipPath(relPath string) bool {
+	if g.config.Contentless() {
+		// The project root is the config directory: only the config file itself is off limits.
+		return relPath == config.RootConfigFilename
+	}
 	configDir := g.configDirName()
 	return relPath == configDir ||
 		strings.HasPrefix(relPath, configDir+"/") ||
 		strings.HasPrefix(relPath, configDir+"\\")
+}
+
+// localOverlayGlob is the glob (relative to the config directory) that matches
+// the machine-local overlay file.
+func (g *Generator) localOverlayGlob() string {
+	if g.config.Contentless() {
+		return "ai-rulez.local.*"
+	}
+	return "config.local.*"
+}
+
+// localLockGlob is the ignore pattern of the overlay's lock and temp files.
+func (g *Generator) localLockGlob() string {
+	if g.config.Contentless() {
+		return ".ai-rulez-local.*"
+	}
+	return g.configDirName() + "/.config.local.*"
 }
 
 func (g *Generator) configDirName() string {

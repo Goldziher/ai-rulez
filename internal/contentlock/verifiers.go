@@ -66,7 +66,7 @@ func (c *collector) addVerifier(id, path string, decl any) error {
 // validated), so a malformed or unknown key still changes the pin; a file that
 // cannot be read or parsed is a problem a check fails on.
 func (c *collector) collectVerifierFiles() error {
-	if c.cfg.ConfigDir == "" {
+	if c.cfg.ConfigDir == "" || c.cfg.Contentless() {
 		return nil
 	}
 	dir := filepath.Join(c.cfg.ConfigDir, config.VerifiersDirName)
