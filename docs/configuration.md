@@ -128,6 +128,18 @@ name = "acme-platform"
 
 Every project has one name; the value is used verbatim in generated headers.
 
+## Lint-only configuration
+
+`presets` is optional. A configuration with no preset (omitted or `presets = []`) and no `[plugin]` block is a lint-only configuration: `validate`, `scan` and `[[lint.external]]` run against the files already in the repository, while `generate` prints `No presets are configured: nothing to generate`, writes nothing (not `AGENTS.md`, not `.mcp.json`) and exits 0. `generate --check` and `doctor` report no drift. It works in the directory layout and in the [root `ai-rulez.toml` layout](config-without-folder.md#lint-only-configuration).
+
+```toml
+version = "5.0"
+name = "lint"
+
+[lint]
+profile = "strict"
+```
+
 ## Content Layout
 
 ### Symlinks in content

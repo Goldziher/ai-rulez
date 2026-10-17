@@ -35,7 +35,6 @@
     "presets": {
       "type": "array",
       "description": "List of presets to generate (built-in tool names or custom preset objects)",
-      "minItems": 1,
       "items": {
         "oneOf": [
           {

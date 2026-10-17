@@ -1315,6 +1315,7 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 
 func TestGenerator_InvalidProfile_SortedHint(t *testing.T) {
 	cfg := &config.Config{
+		Presets: []config.Preset{{BuiltIn: "claude"}},
 		Profiles: map[string][]string{
 			"zebra":  {},
 			"alpha":  {},

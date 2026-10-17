@@ -1354,6 +1354,18 @@ name = "acme-platform"
 
 Every project has one name; the value is used verbatim in generated headers.
 
+#### Lint-only configuration
+
+`presets` is optional. A configuration with no preset (omitted or `presets = []`) and no `[plugin]` block is a lint-only configuration: `validate`, `scan` and `[[lint.external]]` run against the files already in the repository, while `generate` prints `No presets are configured: nothing to generate`, writes nothing (not `AGENTS.md`, not `.mcp.json`) and exits 0. `generate --check` and `doctor` report no drift. It works in the directory layout and in the [root `ai-rulez.toml` layout](config-without-folder.md#lint-only-configuration).
+
+```toml
+version = "5.0"
+name = "lint"
+
+[lint]
+profile = "strict"
+```
+
 #### Content Layout
 
 ##### Symlinks in content
@@ -7454,6 +7466,20 @@ Both keep the configuration in a file named `ai-rulez.toml`. In the [`.agents` s
 - `skill install|remove`, `include add|remove`, `lock`, `update --write-config` and the `local` commands edit `ai-rulez.toml` and `ai-rulez.local.toml`. Rewriting through a command drops comments, as it does for `config.toml`.
 - `add|remove rule|context|skill|agent|command|check` and `domain add` fail: there is no content tree.
 - `validate` and `scan` lint the configuration, the lock, the installed and included content, and any hand-written instruction files they detect. `doctor` does not lint instruction files; it reports drift, a missing generated file and the other environment checks. An empty content tree is not an error.
+
+#### Lint-only configuration
+
+A project that uses ai-rulez only as a linter needs no preset. Leave `presets` out, or set `presets = []`:
+
+```toml
+version = "5.0"
+name = "lint"
+
+[lint]
+profile = "strict"
+```
+
+With no preset (and no `[plugin]` block) `validate`, `scan`, `[[lint.external]]`, `lock`, `sbom` and the other read commands work as usual. `generate` prints `No presets are configured: nothing to generate`, writes nothing and exits 0, so hand-written files such as `AGENTS.md` or `.claude/skills/` are never touched, and `agents_md = true` (the default) does not make it write `AGENTS.md`. `generate --check` and `doctor` report no drift. Files an earlier run wrote stay until you run `ai-rulez clean`.
 
 #### The ai-rulez MCP server
 

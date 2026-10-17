@@ -63,6 +63,20 @@ Both keep the configuration in a file named `ai-rulez.toml`. In the [`.agents` s
 - `add|remove rule|context|skill|agent|command|check` and `domain add` fail: there is no content tree.
 - `validate` and `scan` lint the configuration, the lock, the installed and included content, and any hand-written instruction files they detect. `doctor` does not lint instruction files; it reports drift, a missing generated file and the other environment checks. An empty content tree is not an error.
 
+## Lint-only configuration
+
+A project that uses ai-rulez only as a linter needs no preset. Leave `presets` out, or set `presets = []`:
+
+```toml
+version = "5.0"
+name = "lint"
+
+[lint]
+profile = "strict"
+```
+
+With no preset (and no `[plugin]` block) `validate`, `scan`, `[[lint.external]]`, `lock`, `sbom` and the other read commands work as usual. `generate` prints `No presets are configured: nothing to generate`, writes nothing and exits 0, so hand-written files such as `AGENTS.md` or `.claude/skills/` are never touched, and `agents_md = true` (the default) does not make it write `AGENTS.md`. `generate --check` and `doctor` report no drift. Files an earlier run wrote stay until you run `ai-rulez clean`.
+
 ## The ai-rulez MCP server
 
 `[mcp] self_server` defaults to `true`, so `generate` also writes `.mcp.json` with an `ai-rulez` server entry

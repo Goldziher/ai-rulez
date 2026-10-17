@@ -514,22 +514,10 @@ func (c *Config) validateName() error {
 	return nil
 }
 
-// validatePresets validates that at least one preset exists and all are valid
+// validatePresets validates every declared preset. A configuration with no
+// preset is valid: it is a lint-only configuration (validate, scan and
+// [[lint.external]]) and generates nothing.
 func (c *Config) validatePresets() error {
-	// A config that only authors a plugin bundle ([plugin] block) or a monorepo
-	// marketplace ([marketplace] with members) need not declare any presets: the
-	// plugin generator renders runtime manifests directly rather than through the
-	// preset pipeline.
-	if len(c.Presets) == 0 {
-		if c.HasPluginAuthoring() {
-			return nil
-		}
-		return oops.
-			With("field", "presets").
-			Hint("Add at least one preset to your config file\nExample: presets: [claude]\nAvailable built-in presets: " + strings.Join(AllPresetNames(), ", ")).
-			Errorf("at least one preset is required")
-	}
-
 	for i := range c.Presets {
 		if err := c.validatePreset(&c.Presets[i], i); err != nil {
 			return err

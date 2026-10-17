@@ -163,6 +163,10 @@ func (diskApplier) lifecycle() runLifecycle { return runLifecycle{downgrades: tr
 // secret-carrying outputs are git-ignored before they are written, and the run
 // can be refused before any write.
 func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
+	if g.config.LintOnly() {
+		g.log().Info("No presets are configured: nothing to generate (lint-only configuration)")
+		return &ApplyResult{}, nil
+	}
 	flatOutputs := p.Outputs
 
 	// Nothing is written, ignored or removed when a file ai-rulez cannot prove it
