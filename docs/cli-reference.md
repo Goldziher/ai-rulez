@@ -1095,6 +1095,7 @@ ai-rulez generate --locked
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
 | `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE) |
 | `--recursive` | bool |  | Find and process configuration files recursively |
+| `--refresh-remote` | bool |  | Before generating, re-resolve remote installed skills, includes and skill sources to their latest allowed version and rewrite ai-rulez.lock; the security scan of the new trees runs first and a refusal aborts before any output is written (or set [lock] refresh_on_generate) |
 | `--role` | string |  | Generate the slice of content a role selects instead of a profile, or a comma-separated list to compose several (the union); see 'ai-rulez roles resolve'; mutually exclusive with --profile (or AI_RULEZ_ROLE) |
 | `--strict-config` | bool |  | Fail on unknown or invalid configuration keys instead of warning (env AI_RULEZ_STRICT=1) |
 | `--user` | bool |  | Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent |

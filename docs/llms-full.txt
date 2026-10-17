@@ -1865,6 +1865,30 @@ Quick reference:
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
 
+##### `skip_outputs`
+
+Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them and still let ai-rulez emit
+the rest (installed skills, plugins, MCP servers, hooks, permissions). The default is empty: nothing is skipped.
+
+```toml
+skip_outputs = ["instructions"]
+```
+
+| Value          | Skips |
+| -------------- | ----- |
+| `instructions` | Every root instruction file: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` and the other presets' root files, the `*.local.md` and `AGENTS.override.md` variants, and scope roots. Overrides `agents_md` and `claude_md`. |
+| `agents_md`    | Only the shared `AGENTS.md` (and `AGENTS.override.md`) and the shared `.agents/skills` tree. |
+| `claude_md`    | Only `CLAUDE.md` (root and scopes). |
+| `rules`        | Rule files in every preset (`.claude/rules`, `.cursor/rules`, ...). |
+| `skills`       | Skill directories in every preset, installed skills included. |
+| `agents`       | Agent definition files. |
+| `commands`     | Command and prompt files. |
+
+An unknown value fails validation and names the valid ones. `config.local.toml` accepts the key too. Skipped files leave
+the manifest, the managed `.gitignore` block, `generate --check`, the lock output digests and `clean`, so none of them
+reads or removes a hand-written file. A file an earlier run generated and that is now skipped is left in place and
+reported once as no longer managed. See [Managing only remote skills and plugins](managing-remote-skills.md).
+
 ##### `claude_md`
 
 Controls whether the `claude` preset writes its `CLAUDE.md` when `agents_md` is on. The default, `"shim"`, keeps the
@@ -8678,6 +8702,10 @@ agents_md = true    # the default
 `update_context` and `delete_context` then act on that one section, never the whole file), and an `AGENTS.md` in a
 subdirectory is read as context scoped to that directory.
 
+To write `AGENTS.md`, `CLAUDE.md` or the shared skills by hand and keep ai-rulez away from them, list them in
+[`skip_outputs`](configuration.md#skip_outputs): `"agents_md"` skips the shared `AGENTS.md` and `.agents/skills`,
+`"claude_md"` skips `CLAUDE.md`, and `"instructions"` skips every root instruction file and overrides both.
+
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).
@@ -8939,6 +8967,65 @@ The flag is on unless you set `agents_md = false`; the two lists below describe 
 
 See also: [Configuration: `agents_md`](configuration.md#agents_md), [Rules and native rules folders](rules.md),
 [Local Overrides](local-overrides.md), [Monorepo](monorepo.md).
+
+## Managing Only Remote Skills
+
+Source: https://goldziher.github.io/ai-rulez/managing-remote-skills/
+
+Use this when you write `CLAUDE.md`, `AGENTS.md` and your own skills by hand and want ai-rulez to manage only the
+configured components: skills installed from a remote repository, plugins, MCP servers, hooks and permissions, all
+pinned in `ai-rulez.lock`. ai-rulez never writes, overwrites or deletes the hand-written files.
+
+#### Configure
+
+```toml
+version = "5.0"
+presets = ["claude", "codex"]
+
+# Hand-written: CLAUDE.md, AGENTS.md and every other root instruction file.
+skip_outputs = ["instructions"]
+
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+version = "^1.2"
+
+[[mcp_servers]]
+name = "docs"
+command = "uvx"
+args = ["docs-mcp"]
+```
+
+`instructions` skips every root instruction file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, the files of the other
+presets, their `*.local.md` and `AGENTS.override.md` variants, and each scope's root). Installed skills, MCP servers,
+hooks and permissions are still emitted. Skills you write by hand under `.claude/skills/` or `.agents/skills/` are
+left alone as long as their names differ from the skills ai-rulez writes: ai-rulez only deletes files that carry its
+own `Content-Hash` header or that its manifest lists. Do not add `skills` to `skip_outputs` unless you want to drop
+installed skills too; it skips every skill directory.
+
+For a narrower choice, `agents_md` skips only the shared `AGENTS.md` and `.agents/skills`, and `claude_md` skips only
+`CLAUDE.md`. See [`skip_outputs`](configuration.md#skip_outputs) for all values.
+
+#### Lock and generate
+
+```bash
+ai-rulez lock                 # pin the remote skills and the generated outputs
+ai-rulez generate --locked    # fail if ai-rulez.lock does not match
+ai-rulez generate --check     # report drift; hand-written files are never reported
+```
+
+To pick up new releases of the remote skills on every run, add `refresh_on_generate = true` to `[lock]`, or run
+`ai-rulez generate --refresh-remote` once. The refresh re-resolves each source to the newest version its constraint
+allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
+[Refreshing on generate](lockfile.md#refreshing-on-generate).
+
+#### What happens to existing files
+
+- A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
+  `generate` or `clean`.
+- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns once that it is no
+  longer managed and drops it from the manifest, so you can edit or delete it yourself.
+- `generate` stays quiet about a missing `AGENTS.md` when the skip is intentional.
 
 ## llms.txt
 
@@ -17568,6 +17655,18 @@ ls-remote` per repository (no content is fetched) compares each locked tag with 
 used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline`, `--frozen` and `--offline`;
 the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
 
+###### Refreshing on generate
+
+`generate --refresh-remote` (or `[lock] refresh_on_generate = true`) runs a lock refresh before the outputs are
+written: every remote include, installed skill and skill source moves to the newest version its constraint allows (a
+plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
+is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
+error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
+tags. Any refusal ends the run before an output is written and leaves the lock as it was. The import gate
+(`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
+key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
+`--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.
+
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
 pins as they are. Use `update --kind skill` to move range pins.
 
@@ -17852,6 +17951,7 @@ scope = "all"            # "skills": pin only skills, remote includes and instal
 min_release_age = "7d"   # default minimum age of a tag for sources with a version constraint
 min_release_age_source = "auto"  # auto | forge | first-seen | commit
 verify_tags = false      # true: generate and lock --check ask the remotes whether a pinned tag moved
+refresh_on_generate = false  # true: generate re-resolves remote sources and rewrites the lock first (like generate --refresh-remote)
 ```
 
 `scope = "skills"` is for projects that only care about the skill supply chain; it implies no output pins. The
@@ -26908,6 +27008,7 @@ ai-rulez generate [flags]
 | `--recursive`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--offline`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--verify-tags`                 | boolean | false         | Before generating, ask the remotes whether a tag pinned in `ai-rulez.lock` moved (`AR732`, exit 2) or was deleted (`AR735`); needs the network. Also `[lock] verify_tags = true` |
+| `--refresh-remote`              | boolean | false         | Before generating, re-resolve remote installed skills, includes and skill sources to the newest version their constraint allows and rewrite `ai-rulez.lock`. The security scan of the new trees runs first and a refusal aborts before any output is written. Also `[lock] refresh_on_generate = true`. Needs the network; cannot be combined with `--check`, `--dry-run`, `--emit-plan`, `--locked`, `--frozen`, `--offline`, `--watch`, `--recursive`, `--user` or `--plugin` |
 | `--emit-plan FILE`              | string  |               | Write the generation plan as JSON to FILE (`-` for stdout) and apply nothing ([details](#embedding-the-plan)) |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
 | `--check`                       | boolean | false         | Write nothing; compare the sources with the files on disk, list the differing ones (`missing:`, `stale:`, `edited:`, `orphan:`) and exit 2 on drift. Works with `--recursive`, `--profile`, `--no-local` ([details](#detecting-drift)) |
@@ -29999,6 +30100,7 @@ ai-rulez generate --locked
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
 | `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE) |
 | `--recursive` | bool |  | Find and process configuration files recursively |
+| `--refresh-remote` | bool |  | Before generating, re-resolve remote installed skills, includes and skill sources to their latest allowed version and rewrite ai-rulez.lock; the security scan of the new trees runs first and a refusal aborts before any output is written (or set [lock] refresh_on_generate) |
 | `--role` | string |  | Generate the slice of content a role selects instead of a profile, or a comma-separated list to compose several (the union); see 'ai-rulez roles resolve'; mutually exclusive with --profile (or AI_RULEZ_ROLE) |
 | `--strict-config` | bool |  | Fail on unknown or invalid configuration keys instead of warning (env AI_RULEZ_STRICT=1) |
 | `--user` | bool |  | Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent |

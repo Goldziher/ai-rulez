@@ -264,6 +264,15 @@
       "items": { "type": "string" },
       "description": "Ignore patterns left out of the managed .gitignore block, for generated outputs the project commits on purpose (for example AGENTS.md, **/CLAUDE.md, .claude/skills/, .opencode/skills/). Gitignore notation: an entry without '/' matches at any depth, '**' crosses directories, a trailing '/' names a directory and covers what is below it. Machine-local and secret outputs are never excluded. Each root applies its own list to its own outputs. Has no effect unless the block is written"
     },
+    "skip_outputs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["instructions", "agents_md", "claude_md", "rules", "skills", "agents", "commands"]
+      },
+      "uniqueItems": true,
+      "description": "Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them while ai-rulez emits only the rest (skills installed from a remote, plugins, MCP servers, hooks, permissions). 'instructions' skips every root instruction file (CLAUDE.md, AGENTS.md, GEMINI.md and the other presets' root files, their .local.md and AGENTS.override.md variants, scope roots) and overrides agents_md and claude_md; 'agents_md' skips only the shared AGENTS.md and the shared .agents/skills tree; 'claude_md' skips only CLAUDE.md; 'rules', 'skills', 'agents' and 'commands' skip those files in every preset. A file an earlier run generated and that is now skipped stays in place and is reported once as unmanaged. Default empty (nothing skipped). Also accepted in config.local.toml."
+    },
     "gitignore": {
       "type": "boolean",
       "description": "Opt in to a managed block in .gitignore listing the generated output patterns. Off by default in v5 (committed outputs are not ignored); machine-local outputs are always ignored",
@@ -1100,6 +1109,10 @@
         "min_release_age_source": {
           "enum": ["auto", "forge", "first-seen", "commit"],
           "description": "Where a tag's release time comes from: auto (default) tries the forge publish time, then the first time this machine saw the tag, then the commit date; the others use one source only. The commit date can be forged by anyone who can push."
+        },
+        "refresh_on_generate": {
+          "type": "boolean",
+          "description": "Make generate re-resolve remote includes, installed skills and skill sources to their latest allowed version and rewrite ai-rulez.lock before writing outputs, as generate --refresh-remote does. The security scan of the new trees runs first and a refusal aborts before any output is written. Needs the network; skipped with --check, --dry-run, --emit-plan, --locked, --frozen and --offline. Default false."
         },
         "verify_tags": {
           "type": "boolean",

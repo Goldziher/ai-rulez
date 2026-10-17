@@ -37,6 +37,7 @@ type tomlOutput struct {
 	Description           string                  `toml:"description,omitempty"`
 	Gitignore             *bool                   `toml:"gitignore,omitempty"`
 	GitignoreExclude      []string                `toml:"gitignore_exclude,omitempty"`
+	SkipOutputs           []string                `toml:"skip_outputs,omitempty"`
 	Compact               *bool                   `toml:"compact,omitempty"`
 	AgentsMD              *bool                   `toml:"agents_md,omitempty"`
 	BundleExclude         []string                `toml:"bundle_exclude,omitempty"`
@@ -148,6 +149,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Description:           cfg.Description,
 		Gitignore:             cfg.Gitignore,
 		GitignoreExclude:      cfg.GitignoreExclude,
+		SkipOutputs:           cfg.SkipOutputs,
 		Compact:               cfg.Compact,
 		AgentsMD:              agentsMDForWrite(cfg),
 		BundleExclude:         cfg.BundleExclude,
