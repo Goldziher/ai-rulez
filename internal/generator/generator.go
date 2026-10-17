@@ -94,6 +94,7 @@ type Generator struct {
 	userLayouts map[string]*userscope.Layout
 	userHomes   []string
 	warned      map[string]bool // merged-document warnings already issued by this Generator
+	noticed     []string        // skipped files this run reported as no longer managed; recorded by the manifest write
 	// userDirs are the directories below the home directory that ai-rulez created
 	// (absolute); userDirsRecorded is false for a manifest that predates them.
 	userDirs         map[string]bool
@@ -156,6 +157,10 @@ type generatedManifest struct {
 	// below the home directory (slash paths relative to it), so clean removes
 	// those once empty and never one that existed before. Nil: not recorded.
 	Dirs *[]string `json:"dirs,omitempty"`
+	// Unmanaged lists, in the machine-local manifest, the generated files that
+	// skip_outputs now excludes and that a generate has already reported as no
+	// longer managed, so the notice is given once per file and not on every run.
+	Unmanaged []string `json:"unmanaged,omitempty"`
 }
 
 // SetHost makes the generator use host's environment, clock, process runner and

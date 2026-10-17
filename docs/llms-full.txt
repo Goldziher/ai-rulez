@@ -9305,7 +9305,9 @@ allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts 
 - A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
   `generate` or `clean`.
 - A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns once that it is no
-  longer managed and drops it from the manifest, so you can edit or delete it yourself.
+  longer managed and drops it from the manifest, so you can edit or delete it yourself. The notice is recorded in the
+  machine-local manifest, so later runs of `generate`, `generate --check` and `clean` do not repeat it; deleting the
+  file clears the record.
 - `generate` stays quiet about a missing `AGENTS.md` when the skip is intentional.
 
 ## llms.txt
