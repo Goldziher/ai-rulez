@@ -312,3 +312,10 @@ func (st *ServeSetup) newDiscovery(cfg *config.Config, gen *generator.Generator,
 	}
 	return d
 }
+
+// configDirSkip is the configuration directory relative to the project root,
+// as a list: the file watcher leaves it to the poll of the configuration.
+func configDirSkip(cfg *config.Config) []string {
+	d := &discovery{cfg: cfg}
+	return d.skippedPrefixes()
+}

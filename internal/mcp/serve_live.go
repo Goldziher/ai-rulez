@@ -47,6 +47,9 @@ func (s *Server) Replace(next *Catalog) {
 		}
 		s.registerSkillFiles(skill)
 	}
+	if next.repository() != nil && next.repository().signature() != prev.repository().signature() {
+		s.announceIndex()
+	}
 }
 
 func (s *Server) registerSkillFiles(skill *CatalogSkill) {
@@ -85,10 +88,20 @@ func (s *Server) Watch(ctx context.Context) {
 	}
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
+	refresh := make(chan struct{}, 1)
+	if iw := w.o.IndexWatch; iw != nil && w.reload {
+		done := make(chan struct{})
+		watchCtx, stop := context.WithCancel(ctx)
+		go func() { defer close(done); runIndexWatch(watchCtx, iw, w.log, refresh) }()
+		defer func() { stop(); <-done }()
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-refresh:
+			w.refresh()
+			continue
 		case <-ticker.C:
 		}
 		if w.reloadIfChanged() {
@@ -154,6 +167,23 @@ func (w *watcher) reloadIfChanged() bool {
 	if err != nil || cur == w.last || (w.clock.Now().Before(w.retryAt) && cur == w.failedAt) {
 		return false
 	}
+	return w.rebuild(cur)
+}
+
+// refresh rebuilds the catalog because the file watcher saw a change the
+// fingerprint of the skill roots does not cover (a nested instruction file, a
+// new skills directory).
+func (w *watcher) refresh() {
+	cur, err := w.o.Fingerprint()
+	if err != nil {
+		cur = w.last
+	}
+	w.rebuild(cur)
+}
+
+// rebuild builds the catalog for the files at fingerprint cur and swaps it in;
+// it reports true because it tried.
+func (w *watcher) rebuild(cur string) bool {
 	next, err := w.o.Rebuild()
 	if err != nil {
 		// Keep `last`: the change is still unapplied, so the rebuild is tried
