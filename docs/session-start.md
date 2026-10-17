@@ -14,7 +14,7 @@ It is on by default for a project that generates for Claude Code, and it does no
 # when = "remote"        # "remote": act only when CLAUDE_CODE_REMOTE is set; "always": every session
 # mode = "auto"          # auto | locked | frozen | plain
 # timeout = 120          # seconds the whole run may take before it is killed
-# version = "5.5.0"      # pin for npx and uvx; default is the generating binary's version
+# version = "5.5.0"      # pin npx and uvx to a release; default is the latest published one
 # command = ["ai-rulez"] # replaces the launcher; runs without a shell; excludes version
 # prompt = true          # inject the short briefing
 # prompt_text = "..."    # replaces the briefing; {{server}} is the ai-rulez MCP server's name
@@ -75,13 +75,21 @@ hook groups ai-rulez owns, because a clone cannot tell the file is wholly ai-rul
 The hook is a short `sh` script that tries, in order, and stops at the first that runs:
 
 1. `ai-rulez` on `PATH`: `ai-rulez session-start`
-2. `npx -y ai-rulez@<version> session-start`
-3. `uvx --from ai-rulez==<version> ai-rulez session-start`
+2. `npx -y ai-rulez@latest session-start`
+3. `uvx --from ai-rulez@latest ai-rulez session-start`
 
-`<version>` is the version of the binary that ran `generate` (`latest` for a dev build), or `version` from the table.
-It is never a range. An attempt that cannot start, or exits non-zero, falls through to the next. When none runs the
-script prints one line on stderr and exits 0, so the session starts. `ai-rulez doctor` prints this order with the
-version each step pins.
+The fallbacks run the latest published release, so the generated line does not change when ai-rulez does. Set
+`version` in the table to pin one (`npx -y ai-rulez@<version>`, `uvx --from ai-rulez==<version>`); it is never a
+range. An attempt that cannot start, or exits non-zero, falls through to the next. When none runs the script prints
+one line on stderr and exits 0, so the session starts. `ai-rulez doctor` prints this order.
+
+The `npx` and `uvx` attempts run from a new, empty private directory under `TMPDIR` (or `/tmp`), not from the
+project, so a project `.npmrc`, `node_modules/.bin` or uv configuration cannot substitute the package that runs. The
+script exports `CLAUDE_PROJECT_DIR` first (keeping the harness's value), and `session-start` reads the project from
+it, then from the hook payload's `cwd`, so it never depends on its own working directory. The installed `ai-rulez`
+runs in the project directory. The lock file that serializes two hooks lives in a private per-user directory of the
+temp directory, and the failure reason injected into the agent's context is cut to a short line of letters, digits
+and basic punctuation.
 
 `when = "remote"` puts the environment check at the top of the script, before any launcher: on a developer's machine
 the hook returns immediately and never makes `npx` download anything. `CLAUDE_CODE_REMOTE` is `true` in a remote
