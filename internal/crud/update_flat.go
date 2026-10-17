@@ -13,6 +13,9 @@ var ErrEmptyContent = errors.New("content is empty")
 // with content as given. Unlike UpdateFile it adds no priority or targets
 // frontmatter: those two kinds carry none of their own.
 func (op *OperatorImpl) UpdateFlatItem(ctx context.Context, domain, ftype, name, content string) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if err := ValidateFileName(name); err != nil {
 		return nil, err
 	}

@@ -80,6 +80,9 @@ func (op *OperatorImpl) RemoveDomain(ctx context.Context, name string) error {
 // CheckDomainRemovable reports why RemoveDomain would fail (a bad name, no such
 // domain, a profile that still lists it), without removing anything.
 func (op *OperatorImpl) CheckDomainRemovable(ctx context.Context, name string) error {
+	if err := op.requireContentTree(); err != nil {
+		return err
+	}
 	// Validate domain name
 	if err := ValidateDomainName(name); err != nil {
 		return err
