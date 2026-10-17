@@ -368,6 +368,7 @@ func servingCapabilities() []Capability {
 			},
 			ToolArgs: []Exclusion{
 				{Names: []string{"task"}, Reason: "the CLI takes the query as positional words"},
+				{Names: []string{"path", "scope", "recursive"}, Reason: "narrow the ranking to what applies to a path or scope of a repository the server indexed with --discover-skills; the CLI search does not index the working tree"},
 			},
 		},
 		{ID: "search-skills", Kind: MCPOnly, Tool: "search_skills", Server: Skills,
