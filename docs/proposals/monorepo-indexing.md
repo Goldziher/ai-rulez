@@ -1,6 +1,6 @@
 # Monorepo indexing over MCP
 
-Status: accepted, in implementation. Branch `claude/monorepo-index`.
+Status: accepted, in implementation (phases 1 and 2 done). Branch `claude/monorepo-index`.
 
 ## Problem
 
@@ -68,12 +68,21 @@ Instruction files and rules are read-only over MCP in this iteration.
 
 ## Phases
 
-1. Scope model and index (kinds, scopes, resolution, collisions), `find_skill` `path`/`scope`, catalog `scopes`.
-2. Nested instruction files, rules and agents: `find_context`, `load_context`, `context://` resources, server-instruction summary.
+1. Scope model and index (kinds, scopes, resolution, collisions), `find_skill` `path`/`scope`, catalog `scopes`. **Done** (`internal/repoindex`).
+2. Nested instruction files, rules and agents: `find_context`, `load_context`, `context://` resources, server-instruction summary. **Done.**
 3. Cache (user, repo fallback, off), `ai-rulez cache clear`, doctor reporting, and the watcher with `list_changed`.
 4. Scoped write path.
 
 Each phase is test-first, ships with its documentation, and leaves the previous behavior unchanged when the feature is off.
+
+## Implementation notes (phases 1 and 2)
+
+- Shadowing by name applies to skills, agents and commands. Instruction files and rules add up across scopes, as harnesses load them.
+- Commands are indexed and counted in the catalog but not served by `find_context`.
+- `skills/` and the enabled presets' skill directories are skill roots at any depth, not only at the project root.
+- `find_context` and `load_context` are registered only when discovery is on, so the tool list is unchanged otherwise.
+- The catalog narrows through query parameters on the `ai-rulez://catalog` resource; the `catalog` tool is unchanged.
+- `context://` is a resource template and is not enumerated by `resources/list`.
 
 ## Open points
 

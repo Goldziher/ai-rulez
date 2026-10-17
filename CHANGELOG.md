@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`find_skill` takes `path` and `scope` when the server discovers the repository.** `path` keeps the skills that apply to a file (its scope and the ancestor scopes, the nearest scope winning a skill name); `scope` lists one scope, with the scopes below it when `recursive` is true. Each discovered result names its `scope`. See [Monorepos: scopes and nested context](https://goldziher.github.io/ai-rulez/mcp-server/#monorepos-scopes-and-nested-context).
+- **The `ai-rulez://catalog` resource gains a `scopes` section** with each repository scope's per-kind counts and sources, narrowed by `?path=`, `?scope=` and `&recursive=true`; `skill_discovery.index` reports the index size. See [Monorepos: scopes and nested context](https://goldziher.github.io/ai-rulez/mcp-server/#monorepos-scopes-and-nested-context).
+- **`find_context`, `load_context` and `context://<scope>/<name>` resources serve nested instruction files, rules and agents** (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, Copilot instructions, rules and agents directories of the enabled presets) under the same scan, session budget and `--allow`/`--deny` rules as skills; the body is read from the repository on each call, never from the index. Registered only with `--discover-skills` or `[mcp] discover_skills`. See [Monorepos: scopes and nested context](https://goldziher.github.io/ai-rulez/mcp-server/#monorepos-scopes-and-nested-context).
+- **The server instructions name the first eight repository scopes by depth** (then "and N more") when discovery is on, and the repository index holds at most 20000 items, warning at start-up when it keeps only the shallowest scopes.
+
+### Changed
+
+- **Skill discovery finds `skills/` and the enabled presets' skill directories at any depth**, as it already did for `.claude/skills`, and each discovered skill in `skill_discovery.served` carries its `scope`. A `skills/` directory inside a hidden directory such as `.agents/` is left to that convention.
+
 ## [5.5.0] - 2026-10-17
 
 ### Added
