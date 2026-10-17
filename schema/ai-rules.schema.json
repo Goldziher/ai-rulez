@@ -2713,6 +2713,11 @@
                 "maximum": 100000,
                 "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text."
               },
+              "cache_files": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Globs, relative to the project root, of files the scanner reads besides the staged content (a rules file, a configuration). Their content is part of the result cache key, so editing one runs the scanner again. The script a command runs through a known interpreter (python3 scan.py, node scan.js, sh run.sh, uv run scan.py) is hashed without being listed."
+              },
               "fail_on": {
                 "enum": ["error", "warning", "info"],
                 "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings."
