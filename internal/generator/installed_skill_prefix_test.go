@@ -62,3 +62,35 @@ func TestGenerate_NamePrefixAppliesToTheInstalledSkillDirectory(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerate_RootLayoutPrunesTheDirectoryOfARenamedInstalledSkill(t *testing.T) {
+	// Arrange: a project without a config folder, generated under one prefix
+	root := t.TempDir()
+	write := func(rel, content string) {
+		path := filepath.Join(root, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+	}
+	toml := func(prefix string) string {
+		return "version = \"5.0\"\nname = \"pfx\"\ngitignore = false\npresets = [\"claude\"]\n" +
+			"[[installed_skills]]\nname = \"one\"\nsource = \"vendor/a\"\npath = \"skills\"\nname_prefix = \"" + prefix + "\"\n"
+	}
+	generate := func() {
+		cfg, err := config.LoadConfig(context.Background(), root, config.WithResolvers(includes.Resolvers("", nil)))
+		require.NoError(t, err)
+		require.True(t, cfg.Contentless())
+		require.NoError(t, NewGenerator(cfg).Generate(""))
+	}
+	write("vendor/a/skills/pdf/SKILL.md", "---\ndescription: Pdf\n---\nBODY\n")
+	write("ai-rulez.toml", toml("v-"))
+	generate()
+	require.FileExists(t, filepath.Join(root, ".claude", "skills", "v-pdf", "SKILL.md"))
+
+	// Act
+	write("ai-rulez.toml", toml("w-"))
+	generate()
+
+	// Assert
+	assert.FileExists(t, filepath.Join(root, ".claude", "skills", "w-pdf", "SKILL.md"))
+	assert.NoDirExists(t, filepath.Join(root, ".claude", "skills", "v-pdf"), "the stale directory is pruned")
+}
