@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func hardeningSkill(t *testing.T, files map[string]string) string {
@@ -84,8 +85,8 @@ func TestInstalledSkillBundle_SymlinkOutsideAndFIFONeverBundled(t *testing.T) {
 	dir := hardeningSkill(t, map[string]string{"keep.md": "# keep\n"})
 	outside := filepath.Join(t.TempDir(), "outside.md")
 	require.NoError(t, os.WriteFile(outside, []byte("outside"), 0o644))
-	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "link.md")))
-	require.NoError(t, os.Symlink(filepath.Dir(outside), filepath.Join(dir, "linkdir")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, "link.md"))
+	testutil.SymlinkOrSkip(t, filepath.Dir(outside), filepath.Join(dir, "linkdir"))
 	require.NoError(t, syscall.Mkfifo(filepath.Join(dir, "pipe"), 0o644))
 
 	// Act
