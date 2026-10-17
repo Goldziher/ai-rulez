@@ -50,6 +50,6 @@ func TestGenerateOutputsHandler_ReturnsNewCommands(t *testing.T) {
 	assert.NotContains(t, line, "abcdef123456")
 	assert.NotContains(t, line, "\x1b")
 	assert.Contains(t, lines[1], "SessionStart: sh -c")
-	assert.Contains(t, lines[1], "ai-rulez session-start")
+	assert.Contains(t, lines[1], "-> claude", "the summary names the harness the hook is written for")
 	assert.NotContains(t, resultPayload(t, second), "new_commands", "an unchanged run reports nothing")
 }
