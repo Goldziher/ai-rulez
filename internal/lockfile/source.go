@@ -59,10 +59,10 @@ func FileURLPath(source string) (string, bool) {
 	path := u.Path
 	switch {
 	case len(u.Host) == 2 && u.Host[1] == ':' && isASCIILetter(u.Host[0]):
-		// file://D:/a/repo parses with the drive letter as the host.
+		// With two slashes the URL parser takes the drive letter for the host.
 		path = u.Host + path
 	case runtime.GOOS == "windows" && len(path) >= 3 && path[0] == '/' && path[2] == ':' && isASCIILetter(path[1]):
-		// file:///D:/a/repo parses to /D:/a/repo.
+		// With three slashes the path keeps a leading slash before the drive letter.
 		path = path[1:]
 	}
 	return filepath.FromSlash(path), true
