@@ -280,7 +280,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 12676 a608ee09502e9feb2b9516b604031fe0955560c3d8913282a8c470e0f9204ff3
+.ai-rulez/.generated-manifest.local.json file 0644 12676 05f12625deaedaff4ab62d1a892672ba35032ac1f78c38b2fdb0c5346851d69d
 >>>>
 {
   "version": "1",
@@ -304,7 +304,7 @@ policy:
         ],
         "elementSums": [
           "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86",
-          "476835da867c49da3395b1e6983bcdd810e002523b2ff379f22152281dad91a2"
+          "7d27dd6f414248f8eb315dbf0293f3ca0ce793752c360e49ba8605d987e15a10"
         ]
       },
       {
@@ -680,7 +680,7 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "8d6cbdd57fa9942a5b0ac505bdc6b4a264a0d812fb1d66e48c3e692c37f17da9",
+    ".claude/settings.json": "2bc9a14910cf29125eb9e4aa8a40037867ec5c9c3e06edb2f451a3ac1b870a71",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
@@ -1014,7 +1014,7 @@ Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d95
 
 Use strict mode.
 <<<<
-.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
+.claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 >>>>
 {
   "hooks": {
@@ -1054,7 +1054,7 @@ Use strict mode.
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; export CLAUDE_PROJECT_DIR=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; n() { d=$(mktemp -d 2\u003e/dev/null) || d=/; (cd \"$d\" 2\u003e/dev/null || exit 1; \"$@\"); r=$?; if [ \"$d\" != / ]; then rmdir \"$d\" 2\u003e/dev/null; fi; return $r; }; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n npx -y ai-rulez@latest session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n uvx --from ai-rulez@latest ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; export CLAUDE_PROJECT_DIR=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; n() { d=$(mktemp -d \"${TMPDIR:-/tmp}/ai-rulez.XXXXXX\" 2\u003e/dev/null) || d=/; (cd \"$d\" 2\u003e/dev/null || exit 1; \"$@\"); r=$?; if [ \"$d\" != / ]; then rmdir \"$d\" 2\u003e/dev/null; fi; return $r; }; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n npx -y ai-rulez@latest session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n uvx --from ai-rulez@latest ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
             "timeout": 150
           }
         ]
