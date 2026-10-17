@@ -134,12 +134,22 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez local show` | Show what the local overlay overrides |
 | `ai-rulez local unset` | Remove a key from the local overlay |
 | `ai-rulez lock` | Pin remote includes, installed skills and authored content in ai-rulez.lock |
+| `ai-rulez marketplace` | Manage installed plugin marketplaces |
+| `ai-rulez marketplace add` | Add a plugin marketplace from a repository, a local directory or an https URL |
+| `ai-rulez marketplace list` | List installed marketplaces |
+| `ai-rulez marketplace remove` | Remove an installed marketplace |
+| `ai-rulez marketplace update` | Re-pin installed marketplaces (and their plugins) in ai-rulez.lock to the current remote commit |
 | `ai-rulez mcp` | Start Model Context Protocol (MCP) server |
 | `ai-rulez migrate` | Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF |
 | `ai-rulez migrate okf` | Convert the .ai-rulez/ content tree to an OKF bundle, in place |
 | `ai-rulez migrate v5` | Migrate a 4.x configuration to the 5.0 format |
 | `ai-rulez okf` | Work with OKF (Open Knowledge Format) bundles |
 | `ai-rulez okf validate` | Lint an OKF bundle (works on third-party bundles) |
+| `ai-rulez plugin` | Manage installed plugins imported from marketplaces or repositories |
+| `ai-rulez plugin install` | Install a plugin from a marketplace, a repository or a local directory |
+| `ai-rulez plugin list` | List installed plugins |
+| `ai-rulez plugin remove` | Remove an installed plugin |
+| `ai-rulez plugin update` | Re-pin installed plugins in ai-rulez.lock to their current remote commit |
 | `ai-rulez profile` | Manage profiles |
 | `ai-rulez profile add` | Add a new profile |
 | `ai-rulez profile list` | List all profiles |

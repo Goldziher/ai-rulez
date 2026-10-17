@@ -26,6 +26,7 @@ nav = [
     { "Roles" = "roles.md" },
     { "Includes" = "includes.md" },
     { "Installed Skills" = "installed-skills.md" },
+    { "Installed Plugins" = "installed-plugins.md" },
     { ".agents as a Source" = "agents-source.md" },
     { "Local Configuration" = "local-overrides.md" },
     { "Catalog" = "catalog.md" },
