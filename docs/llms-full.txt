@@ -6805,7 +6805,9 @@ source leave the project.
 The entry root is `path` (default `skills/<name>`, or `skills` when `include`/`exclude` is set). Below it, every
 directory that holds a `SKILL.md` is a skill, to six levels deep; a skill directory is not searched further.
 Symlinks, hidden directories and `node_modules` are never entered. Two skills with the same directory name keep the
-shallowest and the other is skipped with a warning. An entry may resolve to at most 200 skills.
+shallowest and the other is skipped with a warning. An entry may resolve to at most 200 skills. The search itself
+stops after 5000 skill directories (in name order) with a warning; narrow the entry with `path`. A skill whose
+`SKILL.md` cannot be read is skipped with a warning and the rest of the entry still resolves.
 
 When the entry sets no `path` and nothing is at the default location, the source is searched where harnesses keep
 skills: a `SKILL.md` at the root is one skill named after the entry; otherwise `skills/`, `.claude/skills/`,

@@ -162,6 +162,9 @@ func resolveSkillLocal(ctx context.Context, cfg *config.Config, skillConf *confi
 	}
 	// The entry root is the skill path within the local source.
 	root := filepath.Join(localPath, skillConf.GetPath())
+	if err := checkedSkillRoot(cfg, skillConf, root); err != nil {
+		return nil, err
+	}
 	if link := symlinkedMarker(root); link != "" {
 		return nil, oops.
 			With("path", link).
@@ -201,6 +204,16 @@ func checkedLocalSkillPath(cfg *config.Config, skillConf *config.InstalledSkillC
 		return "", err
 	}
 	return localPath, nil
+}
+
+// checkedSkillRoot applies the inside-project rule to the entry root itself: a
+// path with ".." or a symlinked component must not lead out of a source that
+// passed the check.
+func checkedSkillRoot(cfg *config.Config, skillConf *config.InstalledSkillConfig, root string) error {
+	if _, viaFileURL := lockfile.FileURLPath(skillConf.Source); viaFileURL && lockfile.AllowFileURLsOutside(cfg.Host.Env) {
+		return nil
+	}
+	return checkSkillInsideProject(cfg, cfg.BaseDir, "source", skillConf.Name, root)
 }
 
 // checkSkillInsideProject refuses a local installed-skill path that resolves

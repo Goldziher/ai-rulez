@@ -116,6 +116,8 @@ func skillResourcePatternProblem(pattern string) string {
 		return "must be relative to the skill directory"
 	case hasControl(raw):
 		return reasonControlChars
+	case strings.Contains(raw, "\\"):
+		return "must use '/' separators; a backslash escapes the next character and the pattern would match nothing"
 	}
 	for _, seg := range strings.Split(raw, "/") {
 		if seg == ".." {
