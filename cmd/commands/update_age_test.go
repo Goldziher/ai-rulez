@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const longAgo = "2020-01-01T00:00:00Z"
@@ -60,7 +61,7 @@ func tomlEscape(s string) string {
 
 func newAgeFixture(t *testing.T, lockTable, includeLines string) *ageFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetUpdateFlags(t)
 	resetLockViewFlags(t)
 	resetAgeFlags(t)
@@ -186,7 +187,7 @@ func TestMinReleaseAge_ForgeIsTheFirstSourceForGitHubRepositories(t *testing.T) 
 	prev := newForgeClient
 	newForgeClient = func(*config.Config, bool) forge.Client { return fake }
 	t.Cleanup(func() { newForgeClient = prev })
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cfg := &config.Config{Lock: &config.LockConfig{MinReleaseAge: "7d"}}
 	gates := newAgeGates(cfg)
 	w := lockfile.Want{Kind: lockfile.KindInclude, Name: "shared", Source: "https://github.com/o/r", Constraint: "^1"}

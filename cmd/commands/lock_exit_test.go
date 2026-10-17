@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestWorstExit(t *testing.T) {
@@ -36,7 +37,7 @@ func addRefusedSkill(t *testing.T, root string) {
 }
 
 func TestRunLockFor_ExitCodes(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	t.Cleanup(func() { cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false; lockUnpinned = nil })
 	resetLockViewFlags(t)
@@ -65,7 +66,7 @@ func TestRunLockFor_ExitCodes(t *testing.T) {
 }
 
 func TestRunLockFor_RecursiveTakesTheMostSevereCode(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	t.Cleanup(func() {
 		cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false

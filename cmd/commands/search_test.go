@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func searchProject(t *testing.T) string {
@@ -31,7 +33,7 @@ func searchProject(t *testing.T) string {
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
 	}
 	t.Chdir(root)
-	t.Setenv("HOME", t.TempDir()) // the user config and cache must not leak in
+	testutil.IsolateHome(t) // the user config and cache must not leak in
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	return root

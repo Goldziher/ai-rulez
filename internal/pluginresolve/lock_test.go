@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/pluginimport"
 	"github.com/Goldziher/ai-rulez/v5/internal/pluginimport/plugintest"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // writeLock runs `ai-rulez lock` over the project.
@@ -236,7 +237,7 @@ func TestLock_RequireFrozenAndOffline(t *testing.T) {
 	t.Run("frozen with nothing cached fails", func(t *testing.T) {
 		w := newWorld(t)
 		mustLock(t, w.project)
-		t.Setenv("HOME", t.TempDir()) // an empty cache
+		testutil.IsolateHome(t) // an empty cache
 		_, err := withPolicy(t, w.project, config.LockPolicy{Mode: config.LockFrozen, Offline: true})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, config.ErrLockViolation) || errors.Is(err, config.ErrPluginUnresolved), err.Error())

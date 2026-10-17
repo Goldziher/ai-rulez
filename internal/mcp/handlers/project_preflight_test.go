@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const preflightMCPConfig = generateSharedConfig + `
@@ -19,7 +21,7 @@ command = "echo \u001b[2Jhi --token=abcdef123456"
 
 func TestGenerateOutputsHandler_ReturnsNewCommands(t *testing.T) {
 	// Arrange
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("AI_RULEZ_ACK_COMMANDS", "")
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")

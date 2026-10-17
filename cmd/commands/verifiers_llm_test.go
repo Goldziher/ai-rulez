@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const verifiersLLMSpec = verifiersBase + "[[verifiers]]\nname = \"actionable\"\nrule = \"r\"\nseverity = \"error\"\nwhen_changed = [\"*.txt\"]\n" +
@@ -24,7 +26,7 @@ func verifiersLLMProject(t *testing.T, extra string) {
 	writeFile(t, filepath.Join(root, "a.txt"), "x\n")
 	chdir(t, root)
 	// Never read a real user config or key while testing.
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	t.Setenv("AI_RULEZ_LLM_ALLOW_NETWORK", "")

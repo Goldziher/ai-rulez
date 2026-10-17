@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestCollect_AnnouncesTheSessionStartHookForClaudeOnly(t *testing.T) {
@@ -51,7 +52,7 @@ func TestCollect_AnnouncesTheSessionStartHookForClaudeOnly(t *testing.T) {
 }
 
 func TestNewCommands_ASessionStartHookIsAnnouncedOnceAndAgainWhenItChanges(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	baseDir, configDir := t.TempDir(), t.TempDir()
 	build := func(version string) *config.Config {
 		cfg := &config.Config{BaseDir: baseDir, ConfigDir: configDir, Presets: []config.Preset{{Name: config.HarnessClaude}},
