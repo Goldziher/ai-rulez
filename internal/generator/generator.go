@@ -196,7 +196,7 @@ func NewGenerator(cfg *config.Config) *Generator {
 		// [guard] generated = true adds the built-in PreToolUse hook to Hooks, so
 		// every hook renderer treats it as any other group.
 		cfg.EnableGuardHooks(schema.Version)
-		cfg.EnableSessionStartHooks(schema.Version)
+		cfg.EnableSessionStartHooks()
 	}
 	if cfg != nil && cfg.RulesDirs == nil {
 		// Created here, before any copy of the config is made or any goroutine adds

@@ -12,7 +12,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // CheckSessionStart is the check of the [session_start] hook.
@@ -33,7 +32,7 @@ func checkSessionStart(ctx context.Context, s *state) []Finding {
 	if s.cfg == nil || !s.cfg.HasSessionStart() {
 		return nil
 	}
-	launchers := s.cfg.SessionStartLaunchers(schema.Version)
+	launchers := s.cfg.SessionStartLaunchers()
 	steps := make([]string, len(launchers))
 	for i, l := range launchers {
 		steps[i] = l.Command
