@@ -118,7 +118,7 @@ enable_hooks = true
 		isolate(t)
 		outside := t.TempDir()
 		testutil.WriteTree(t, outside, marketFiles(pluginimport.IndexClaude))
-		project := plugintest.Project(t, "[[installed_marketplaces]]\nname = \"acme\"\nsource = \""+outside+"\"\n")
+		project := plugintest.Project(t, "[[installed_marketplaces]]\nname = \"acme\"\nsource = "+testutil.TOMLString(outside)+"\n")
 
 		// Act
 		_, err := load(t, project)
