@@ -67,8 +67,8 @@ func (s fakeScan) log(kind string) {
 		return
 	}
 	if f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil { //nolint:gosec // a test log
-		fmt.Fprintf(f, "%s %d %s\n", kind, time.Now().UnixNano(), strings.Join(s.args, " "))
-		_ = f.Close()
+		fmt.Fprintf(f, "%s %d %s\n", kind, time.Now().UnixNano(), strings.Join(s.args, " ")) //nolint:errcheck,gosec // a test log
+		f.Close()                                                                            //nolint:errcheck,gosec // a test log
 	}
 }
 
@@ -81,7 +81,7 @@ func (s fakeScan) message() string {
 		return msg
 	}
 	if len(s.scripts) > 0 {
-		data, _ := os.ReadFile(s.scripts[0]) //nolint:gosec // a test script
+		data, _ := os.ReadFile(s.scripts[0]) //nolint:gosec,errcheck // a test script; unreadable means no message
 		if msg := strings.TrimSpace(string(data)); msg != "" {
 			return msg
 		}
@@ -132,7 +132,7 @@ func (s fakeScan) results() []map[string]any {
 func RunFakeScanner(args []string) int {
 	s := parseFakeScan(args)
 	if v, ok := s.opts["--print-version"]; ok {
-		fmt.Fprintln(os.Stdout, "fake-scanner "+v)
+		fmt.Fprintln(os.Stdout, "fake-scanner "+v) //nolint:errcheck // test scanner output
 		return 0
 	}
 	s.log("start")
@@ -147,7 +147,7 @@ func RunFakeScanner(args []string) int {
 		}
 		w = io.Discard
 	}
-	fmt.Fprintln(w, string(doc))
+	fmt.Fprintln(w, string(doc)) //nolint:errcheck // test scanner output
 	s.log("end")
 	return 0
 }

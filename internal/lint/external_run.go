@@ -311,7 +311,7 @@ func (r *runner) cacheState(sc resolvedScanner, c *ScanCache, key string) string
 		return levelOff
 	default:
 		if _, ok := r.cacheGet(sc, c, key); ok {
-			return "hit"
+			return cacheStateHit
 		}
 		return "miss"
 	}

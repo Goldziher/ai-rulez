@@ -327,12 +327,12 @@ func (r *runner) cacheBatch(sc resolvedScanner, units []skillUnit, b unitBatch, 
 		if outOfScope > 0 {
 			return
 		}
-		for _, f := range norm {
-			owner := ownerDir(f.File, dirs)
+		for i := range norm {
+			owner := ownerDir(norm[i].File, dirs)
 			if owner == "" {
 				return
 			}
-			per[owner] = append(per[owner], f)
+			per[owner] = append(per[owner], norm[i])
 		}
 	}
 	for _, ui := range b.units {
@@ -360,7 +360,7 @@ func (r *runner) planSkillUnits(sc resolvedScanner, root, binary string, units [
 	}
 	for i := range units {
 		u := &units[i]
-		state := "hit"
+		state := cacheStateHit
 		switch {
 		case u.skip:
 			state = "skipped (no changed file)"
@@ -369,7 +369,7 @@ func (r *runner) planSkillUnits(sc resolvedScanner, root, binary string, units [
 		case missing[i]:
 			state = "miss"
 		}
-		if state == "hit" {
+		if state == cacheStateHit {
 			hits++
 		}
 		if !u.skip {

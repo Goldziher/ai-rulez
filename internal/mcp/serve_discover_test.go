@@ -59,7 +59,7 @@ func TestDiscoverSkills_ModeSelectsWhatIsServed(t *testing.T) {
 		mode   string
 		want   []string
 	}{
-		{name: "off is today's behaviour", mode: "off", want: []string{"own"}},
+		{name: "off is today's behavior", mode: "off", want: []string{"own"}},
 		{name: "unset is off", mode: "", want: []string{"own"}},
 		{name: "repo indexes the working tree", mode: "repo", want: []string{"bar", "baz", "foo", "own", "qux"}},
 		{name: "all includes repo", mode: "all", want: []string{"bar", "baz", "foo", "own", "qux"}},
@@ -208,7 +208,7 @@ func TestDiscoverSkills_GeneratedSkillsAreNotServedTwice(t *testing.T) {
 
 	assert.Equal(t, []string{"foo", "own"}, catalogNames(srv.Catalog()))
 	assert.Empty(t, srv.Catalog().Discovery().Shadowed, "generated copies are skipped, not reported as shadowed")
-	assert.Equal(t, 2, srv.Catalog().Discovery().Generated, "both generated copies were recognised")
+	assert.Equal(t, 2, srv.Catalog().Discovery().Generated, "both generated copies were recognized")
 }
 
 func TestDiscoverSkills_GeneratedHeaderRecognisesACopyWithoutTheManifest(t *testing.T) {
@@ -243,7 +243,7 @@ func TestDiscoverSkills_HandEditedCopyWithoutTheManifestIsARepositorySkill(t *te
 
 	assert.Equal(t, []string{"own"}, catalogNames(srv.Catalog()))
 	report := srv.Catalog().Discovery()
-	assert.Equal(t, 1, report.Generated, "the untouched copy is still recognised")
+	assert.Equal(t, 1, report.Generated, "the untouched copy is still recognized")
 	require.Len(t, report.Shadowed, 1, "an edited copy is not generated output; the source skill shadows it")
 	assert.Equal(t, ".claude/skills/own", report.Shadowed[0].Path)
 }

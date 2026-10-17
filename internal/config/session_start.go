@@ -81,7 +81,7 @@ func validLauncherVersion(v string) bool {
 		return false
 	}
 	for _, r := range v {
-		if r > unicode.MaxASCII || !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '_' || r == '-') {
+		if r > unicode.MaxASCII || (!unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '.' && r != '_' && r != '-') {
 			return false
 		}
 	}
@@ -142,7 +142,7 @@ type SessionStartLauncher struct {
 func (c *Config) SessionStartLaunchers(binaryVersion string) []SessionStartLauncher {
 	s := c.SessionStart
 	if s != nil && len(s.Command) > 0 {
-		return []SessionStartLauncher{{Name: "command", Command: shellJoinArgs(append(slices.Clone(s.Command), sessionStartSubcommand))}}
+		return []SessionStartLauncher{{Name: ItemKindCommand, Command: shellJoinArgs(append(slices.Clone(s.Command), sessionStartSubcommand))}}
 	}
 	configured := ""
 	if s != nil {
@@ -151,7 +151,7 @@ func (c *Config) SessionStartLaunchers(binaryVersion string) []SessionStartLaunc
 	v := resolveLauncherVersion(configured, binaryVersion)
 	return []SessionStartLauncher{
 		{Name: "path", Command: "ai-rulez " + sessionStartSubcommand},
-		{Name: "npx", Command: "npx -y ai-rulez@" + v + " " + sessionStartSubcommand},
+		{Name: SelfLauncherNPX, Command: "npx -y ai-rulez@" + v + " " + sessionStartSubcommand},
 		{Name: "uvx", Command: "uvx --from ai-rulez==" + v + " ai-rulez " + sessionStartSubcommand},
 	}
 }
@@ -283,7 +283,7 @@ func (c *Config) SessionStartContext(failure string) string {
 			"in the harness folders, AGENTS.md and CLAUDE.md are generated from the sources in `%s/`; a change belongs in the "+
 			"source, then `ai-rulez generate` renders it, and an edit to a generated file is overwritten.", dir))
 		if c.HasSelfServer() {
-			parts = append(parts, fmt.Sprintf("The `%s` MCP server offers tools to create, update, validate and generate this configuration.", server))
+			parts = append(parts, fmt.Sprintf("The %#q MCP server offers tools to create, update, validate and generate this configuration.", server))
 		}
 		if text, show := c.SkillsInstructions(); show {
 			parts = append(parts, text)

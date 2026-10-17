@@ -207,14 +207,14 @@ func (g *Generator) noticeUnmanaged(rel string) {
 // cache the manifest as readManifest does: a write follows, and the readers after
 // it must see the file as written.
 func (g *Generator) recordedUnmanaged() []string {
-	path := g.localManifestPath()
-	if manifest, ok := g.manifests[path]; ok {
+	manifestPath := g.localManifestPath()
+	if manifest, ok := g.manifests[manifestPath]; ok {
 		return slices.Clone(manifest.Unmanaged)
 	}
 	if g.localManifestUntrusted() {
 		return nil
 	}
-	return readManifestFile(g.log(), g.config.ReadExisting, path).Unmanaged
+	return readManifestFile(g.log(), g.config.ReadExisting, manifestPath).Unmanaged
 }
 
 // unmanagedRecord is the notices the machine-local manifest keeps after this

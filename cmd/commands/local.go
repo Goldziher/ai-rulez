@@ -227,7 +227,7 @@ func init() {
 
 // stringFields are keys whose value is always text, whatever it looks like.
 var stringFields = map[string]bool{
-	"url": true, "command": true, keySource: true, "path": true, "ref": true,
+	"url": true, "command": true, keySource: true, "path": true, keyRef: true,
 	keyDesc: true, "name": true, "transport": true, "default": true, "version": true,
 }
 

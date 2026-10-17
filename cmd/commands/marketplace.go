@@ -78,7 +78,7 @@ range (--version ^1.2); "ai-rulez lock" records the commit and the tree digest.`
 	addJSONFormat(list.Flags(), &f.asJSON, "j")
 
 	update := &cobra.Command{
-		Use:   "update [name...]",
+		Use:   useUpdate,
 		Short: "Re-pin installed marketplaces (and their plugins) in ai-rulez.lock to the current remote commit",
 		Long: `Resolve the named marketplaces (all of them without names) from their remote and
 record the commit and content digest in ai-rulez.lock; the plugins installed from them are
@@ -141,7 +141,7 @@ func (f *marketplaceFlags) list(cmd *cobra.Command, _ []string) error {
 		rows := make([]map[string]interface{}, len(list))
 		for i := range list {
 			m := &list[i]
-			rows[i] = map[string]interface{}{keyName: m.Name, keySource: incl.RedactURL(m.Source), keyPath: m.Path, "ref": m.RequestedRef(),
+			rows[i] = map[string]interface{}{keyName: m.Name, keySource: incl.RedactURL(m.Source), keyPath: m.Path, keyRef: m.RequestedRef(),
 				keyType: config.ClassifyPluginSource(m.Source)}
 		}
 		return writeListJSON(out.Stdout(), rows)

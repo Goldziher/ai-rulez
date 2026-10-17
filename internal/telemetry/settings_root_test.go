@@ -29,7 +29,7 @@ func TestLoadRepo_RootLayoutReadsOnlyTheAIRulezFiles(t *testing.T) {
 			wantNil: true,
 		},
 		{
-			name: "an opt-out in ai-rulez.toml is honoured over a stray config.toml",
+			name: "an opt-out in ai-rulez.toml is honored over a stray config.toml",
 			files: map[string]string{
 				"ai-rulez.toml": "version = \"5.0\"\n[telemetry]\nenabled = false\n",
 				"config.toml":   "[telemetry]\nenabled = true\n",

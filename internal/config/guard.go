@@ -70,7 +70,7 @@ func (c *Config) GuardCommand(binaryVersion string) string {
 		if c.Guard != nil {
 			configured = c.Guard.Version
 		}
-		argv = []string{"npx", "-y", "ai-rulez@" + resolveLauncherVersion(configured, binaryVersion)}
+		argv = []string{SelfLauncherNPX, "-y", "ai-rulez@" + resolveLauncherVersion(configured, binaryVersion)}
 	}
 	argv = append(argv, "guard")
 	parts := make([]string, len(argv))
