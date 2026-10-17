@@ -246,3 +246,29 @@ func TestBuildAll_IgnoringTheLockLoadsTheProjectOnce(t *testing.T) {
 		assert.Same(t, views[0].lock, v.lock, "view %q read the lock again", v.view)
 	}
 }
+
+func TestLockViews_LintOnlyConfigurationServesNothing(t *testing.T) {
+	tests := []struct {
+		name string
+		toml string
+	}{
+		{"no presets key", "version = \"5.0\"\nname = \"p\"\n"},
+		{"empty presets", "version = \"5.0\"\nname = \"p\"\npresets = []\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := project(t, tt.toml, map[string]string{
+				"skills/own/SKILL.md": skillFile("own", "The own skill", "delivery: served\n"),
+			})
+			setup := &ServeSetup{WorkDir: root, NoWatch: true, Offline: true, CacheDir: filepath.Join(t.TempDir(), "cache")}
+
+			// Act
+			res, err := setup.LockViews(context.Background(), nil)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Empty(t, res.Served)
+		})
+	}
+}
