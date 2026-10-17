@@ -65,6 +65,8 @@ const (
 	// SessionStartContextLimit caps the context injected into the agent, in bytes.
 	SessionStartContextLimit = 2048
 	sessionStartSubcommand   = "session-start"
+	// sessionStartLauncherPath names the launcher that runs an installed ai-rulez.
+	sessionStartLauncherPath = "path"
 	sessionStartFailureLimit = 200
 )
 
@@ -149,7 +151,7 @@ func (c *Config) SessionStartLaunchers() []SessionStartLauncher {
 		npxSpec, uvxSpec = "ai-rulez@"+s.Version, "ai-rulez=="+s.Version
 	}
 	return []SessionStartLauncher{
-		{Name: "path", Command: "ai-rulez " + sessionStartSubcommand},
+		{Name: sessionStartLauncherPath, Command: "ai-rulez " + sessionStartSubcommand},
 		{Name: SelfLauncherNPX, Command: "npx -y " + npxSpec + " " + sessionStartSubcommand},
 		{Name: "uvx", Command: "uvx --from " + uvxSpec + " ai-rulez " + sessionStartSubcommand},
 	}
@@ -187,7 +189,7 @@ func (c *Config) SessionStartCommand() string {
 	for _, l := range launchers {
 		bin, _, _ := strings.Cut(l.Command, " ")
 		run := l.Command
-		if l.Name != "path" {
+		if l.Name != sessionStartLauncherPath {
 			run = "n " + l.Command
 		}
 		fmt.Fprintf(&b, "if command -v %s >/dev/null 2>&1 && %s; then exit 0; fi; ", bin, run)
