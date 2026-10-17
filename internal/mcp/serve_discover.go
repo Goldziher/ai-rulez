@@ -42,6 +42,8 @@ type DiscoveryReport struct {
 	Shadowed []ShadowedSkill `json:"shadowed"`
 	// Generated counts the skill directories left out because ai-rulez wrote them.
 	Generated int `json:"generated_skipped"`
+	// Index sizes the repository index the discovery built.
+	Index *IndexReport `json:"index,omitempty"`
 }
 
 // DiscoveredSkill is a repository skill that is served.
@@ -212,6 +214,7 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 		return nil
 	}
 	d.index = ix
+	d.report.Index = &IndexReport{Items: len(ix.Items()), Limit: ix.Limit(), Truncated: ix.Truncated()}
 	for _, p := range ix.Problems() {
 		if path.Base(p.Path) == skillMarkdown {
 			d.st.logger().Warn("Skipping a repository skill that cannot be read", "path", path.Dir(p.Path), "error", p.Err)
