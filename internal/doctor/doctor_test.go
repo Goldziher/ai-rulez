@@ -138,7 +138,7 @@ func TestCheckConfig(t *testing.T) {
 		want  string
 	}{
 		{name: "unparseable config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\npresets = [\n"}, want: "config"},
-		{name: "invalid config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"t\"\npresets = []\n"}, want: "config"},
+		{name: "invalid config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\npresets = [\"claude\"]\n"}, want: "config"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

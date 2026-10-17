@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Changed
+
+- **A configuration without presets is valid: a lint-only configuration.** `presets` may be omitted or `[]` (it no longer fails with `at least one preset is required`, nor does the schema require `minItems: 1`). `generate` then prints one line, writes nothing and exits 0; `generate --check` and `doctor` report no drift; `validate`, `scan` and `[[lint.external]]` work. See [Lint-only configuration](https://goldziher.github.io/ai-rulez/config-without-folder/#lint-only-configuration) ([#430](https://github.com/Goldziher/ai-rulez/issues/430)).
+
 ### Fixed
 
 - MCP `init_project` now refuses in a directory whose configuration is `ai-rulez.toml`, instead of scaffolding a `.ai-rulez/` that would shadow it.

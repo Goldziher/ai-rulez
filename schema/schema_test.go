@@ -113,6 +113,21 @@ mcp_servers:
 
 // A resource may name the domain it belongs to: the schema accepts the `domain`
 // string on mcp_servers, installed_skills and skill_sources.
+func TestValidateWithSchema_LintOnlyConfiguration(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  string
+	}{
+		{name: "presets omitted", cfg: "version: \"5.0\"\nname: lint\n"},
+		{name: "empty presets", cfg: "version: \"5.0\"\nname: lint\npresets: []\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, schema.ValidateWithSchema([]byte(tt.cfg)))
+		})
+	}
+}
+
 func TestValidateWithSchema_ResourceDomains(t *testing.T) {
 	const head = "version: \"5.0\"\nname: \"test-project\"\npresets:\n  - claude\n"
 	cfg := head + `
