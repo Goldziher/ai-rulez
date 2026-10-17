@@ -197,7 +197,13 @@ func (s *LocalSource) filterContent(tree *config.ContentTree) *config.ContentTre
 // Both paths are compared after symlinks are resolved, so a link inside the
 // project does not smuggle an outside directory in.
 func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) error {
-	if cfg != nil && (cfg.UserScope || overlaySetsField(cfg, "includes", name, field)) {
+	return checkEntryInsideProject(cfg, "includes", "include", baseDir, field, name, path)
+}
+
+// checkEntryInsideProject is checkInsideProject for the entry of listKey
+// ("includes", "installed_skills") that noun names in the error.
+func checkEntryInsideProject(cfg *config.Config, listKey, noun, baseDir, field, name, path string) error {
+	if cfg != nil && (cfg.UserScope || overlaySetsField(cfg, listKey, name, field)) {
 		return nil
 	}
 	abs := path
@@ -210,8 +216,8 @@ func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) e
 	rel, err := filepath.Rel(project, abs)
 	if err != nil || safefs.RelEscapes(rel) || filepath.IsAbs(rel) {
 		return oops.With("name", name).With("path", abs).With("project", project).
-			Hint("Put the path in config.local.toml (machine-local, not committed), declare the include in your user config, or copy the content into the project").
-			Wrapf(config.ErrIncludeOutsideProject, "include %q: local path %s is outside the project %s; a local include in the project config must stay inside the project", name, abs, project)
+			Hint("Put the path in config.local.toml (machine-local, not committed), declare the "+noun+" in your user config, or copy the content into the project").
+			Wrapf(config.ErrIncludeOutsideProject, "%s %q: local path %s is outside the project %s; a local %s in the project config must stay inside the project", noun, name, abs, project, noun)
 	}
 	return nil
 }
