@@ -219,7 +219,7 @@ func TestResolveInstalledSkills_GitProbesConventionalDirectories(t *testing.T) {
 	repoDir := initLocalRepo(t)
 	commitFile(t, repoDir, ".claude/skills/alpha/SKILL.md", "---\nname: alpha\n---\n# Alpha\n")
 	commitFile(t, repoDir, ".claude/skills/beta/SKILL.md", "---\nname: beta\n---\n# Beta\n")
-	t.Setenv("HOME", t.TempDir()) // keep the fetch cache out of the real home
+	testutil.IsolateHome(t) // keep the fetch cache out of the real home
 	tests := []struct {
 		name  string
 		entry config.InstalledSkillConfig

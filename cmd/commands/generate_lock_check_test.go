@@ -9,13 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // lockedProject is a project with a lock and generated outputs, whose rule is
 // then edited and regenerated: the outputs match the sources, the lock does not.
 func lockedProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	t.Cleanup(func() {
 		cliLockPolicy.Mode, cliLockPolicy.Offline, cliLockPolicy.RequireWhenEnforced = includes.LockAuto, false, false

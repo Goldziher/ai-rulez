@@ -20,6 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // gitSpy puts a `git` wrapper first on PATH that records its arguments, and
@@ -75,7 +76,7 @@ const sbomBaseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\
 // sbomProject writes a project, makes it the working directory and returns its root.
 func sbomProject(t *testing.T, cfg string, files map[string]string) string {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	root := t.TempDir()

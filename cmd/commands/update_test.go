@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 type updateFixture struct {
@@ -48,7 +49,7 @@ func resetUpdateFlags(t *testing.T) {
 
 func newUpdateFixture(t *testing.T, include string) *updateFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetUpdateFlags(t)
 	resetLockViewFlags(t)
 	repo := tagtest.New(t)

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func resetCatalogDiffFlags(t *testing.T) {
@@ -26,7 +27,7 @@ func resetCatalogDiffFlags(t *testing.T) {
 func catalogDiffRepo(t *testing.T) (root string) {
 	t.Helper()
 	root = rolesCmdProject(t)
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	gitIn(t, root, "init", "-q", "-b", "main")
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-q", "-m", "one")

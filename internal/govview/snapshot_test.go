@@ -36,7 +36,7 @@ func snapWrite(t *testing.T, path, content string) {
 // untracked machine-local file.
 func snapRepo(t *testing.T) (dir, first, second string) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	dir = t.TempDir()
 	snapGit(t, dir, "init", "-q", "-b", "main")
 	snapWrite(t, filepath.Join(dir, "svc", ".ai-rulez", "rules", "a.md"), "one\n")
@@ -130,7 +130,7 @@ func TestExtractRevision_Refusals(t *testing.T) {
 func TestExtractRevision_SymlinksAreReportedNotMaterialised(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	snapGit(t, dir, "init", "-q", "-b", "main")
 	snapWrite(t, filepath.Join(dir, ".ai-rulez", "rules", "a.md"), "one\n")
 	testutil.SymlinkOrSkip(t, "/etc/passwd", filepath.Join(dir, ".ai-rulez", "rules", "link.md"))

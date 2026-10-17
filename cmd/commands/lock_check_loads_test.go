@@ -8,12 +8,13 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // TestCheckLockAtLoadsTheConfigurationOnce guards the single load that serves the
 // content comparison, the tag check and the signature check of `lock --check`.
 func TestCheckLockAtLoadsTheConfigurationOnce(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	t.Cleanup(func() { cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false })
 	resetLockViewFlags(t)
