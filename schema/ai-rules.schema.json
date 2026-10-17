@@ -425,6 +425,12 @@
         "skills_instructions_text": {
           "type": "string",
           "description": "Replace the default skills section. {{server}} is the MCP server that serves the skills and {{skills_dir}} the config directory's skills folder, relative to the instruction file. Requires skills_instructions to be on."
+        },
+        "discover_skills": {
+          "type": "string",
+          "enum": ["off", "repo", "all"],
+          "default": "off",
+          "description": "Make `mcp --serve-skills` also serve the skills already in the repository: \"repo\" indexes the skill directories of the working tree (root skills/, .claude/skills at any depth and the skill directories of the configured presets, respecting .gitignore and skipping generated copies); \"all\" adds the installed and included skills whatever their delivery. The --discover-skills flag overrides it."
         }
       },
       "additionalProperties": false
