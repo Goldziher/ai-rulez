@@ -7,12 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	itestutil "github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 )
@@ -30,7 +32,7 @@ func sessionStartProject(t *testing.T, config string) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
-	out, err := exec.Command("git", "-C", dir, "init", "-q").CombinedOutput()
+	out, err := gitutil.CommandNoContext(dir, "init", "-q").CombinedOutput()
 	require.NoError(t, err, string(out))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez", "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(config), 0o644))
@@ -77,6 +79,9 @@ type hookRun struct {
 // that holds only PATH (the stub directory), HOME and the given variables.
 func runHook(t *testing.T, dir, command, stubDir, stdin string, env ...string) hookRun {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the hook command and its stubs are POSIX sh scripts")
+	}
 	sh, err := exec.LookPath("sh")
 	require.NoError(t, err)
 	if _, err := os.Lstat(filepath.Join(stubDir, "sh")); err != nil {
@@ -381,8 +386,8 @@ func TestSessionStartE2E_FreshCloneKeepsItsCommittedSettings(t *testing.T) {
 	testutil.RunCLIExpectSuccess(t, dir, "lock")
 	runGit := func(workDir string, args ...string) {
 		t.Helper()
-		full := append([]string{"-c", "user.email=a@example.com", "-c", "user.name=a"}, args...)
-		out, err := exec.Command("git", append([]string{"-C", workDir}, full...)...).CombinedOutput() //nolint:gosec // fixed test arguments
+		itestutil.GitIdentity(t)
+		out, err := gitutil.CommandNoContext(workDir, args...).CombinedOutput()
 		require.NoError(t, err, string(out))
 	}
 	runGit(dir, "add", "-A")

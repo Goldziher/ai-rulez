@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const driftShared = `version = "5.0"
@@ -76,7 +78,8 @@ func (p *driftProject) git(t *testing.T, args ...string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	cmd := exec.Command("git", append([]string{"-C", p.base, "-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)...) //nolint:gosec // test
+	testutil.GitIdentity(t)
+	cmd := gitutil.CommandNoContext(p.base, args...)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 }

@@ -16,6 +16,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\nsession_start = { generate = false }\n"
@@ -62,7 +64,7 @@ func gitInit(t *testing.T, dir string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
-	if out, err := exec.Command("git", "-C", dir, "init", "-q").CombinedOutput(); err != nil {
+	if out, err := gitutil.CommandNoContext(dir, "init", "-q").CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v\n%s", err, out)
 	}
 }
@@ -500,7 +502,7 @@ func TestCheckIncludes_ReportsAnUncachedRemoteInclude(t *testing.T) {
 	cfg := baseConfig + "\n[[includes]]\nname = \"shared\"\nsource = \"https://github.com/acme/rules.git\"\nref = \"main\"\n"
 	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 
 	// Act
 	got := byCheck(run(t, dir), CheckIncludes)
