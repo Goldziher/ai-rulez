@@ -502,12 +502,20 @@ name = "my-scanner"
 command = ["my-scanner", "--sarif"]
 format = "sarif"                   # sarif (default) | json | adapter:snyk-json | adapter:claude-validate-json
 egress = false                     # required for hardening; see External scanners
-timeout = "120s"                   # default 2m, max 15m
+timeout = "120s"                   # default 2m, max 15m (or [lint.scanner_policy] max_timeout); bounds each run
 env_pass = []                      # extra environment variable names for an egress = false scanner
 # inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
 # profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
 # version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
+# version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
 # required = true                  # a missing, outdated or failing scanner is an error
+# batch_size = 10                  # hand {skill_dirs} to the scanner at most 10 skills per run, each run with its own timeout
+# parallel = 4                     # run up to 4 batches at once (default 1, at most 16)
+# stage_globs = ["**/*.md"]        # stage only these skill files (relative to the skill directory; SKILL.md always)
+# stage_exclude = ["evals/**"]     # leave these skill files out (wins over stage_globs)
+# fail_on = "error"                # lowest severity of this scanner's findings that fails the run
+# cache_files = ["tools/**/*.py"]  # files the scanner reads; part of the result cache key (a script run through python3, node, sh... is hashed anyway)
+# max_message = 1000               # characters of a finding message kept in text output (default 500)
 
 [lint.scanner_policy]
 preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
@@ -842,7 +850,8 @@ its meaning depends on the current directory. One that times out, overflows the 
 a run with `executionSuccessful = false`, a tool notification at level `error`, an empty `runs` (SARIF) or an empty list or `null` (JSON) with a non-zero
 exit, is reported as `AR9E3`: it is never ingested in part, and a crashed scanner never looks clean. Results the
 tool marked suppressed are dropped. Messages are cleaned before printing (escape sequences, control,
-bidirectional, zero-width and tag characters removed, one line, 500 characters, secret-shaped text masked), and a
+bidirectional, zero-width and tag characters removed, one line, secret-shaped text masked, and cut to `max_message`
+characters, 500 by default; see Long messages), and a
 reported path is normalised (`file://`, percent-encoding, Windows separators on Windows only; a backslash is an
 ordinary character on Unix). A SARIF `uriBaseId` is resolved against the base the log declares in
 `originalUriBaseIds` (an undeclared id is resolved against the project root). A path outside the project, a
@@ -853,7 +862,7 @@ project is attributed to `config.toml` with a note.
 
 An entry that sets `inputs` runs on a **staged copy** instead of the project. The copy holds exactly the listed kinds
 of content (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `hooks`, `mcp`, `imports`) in a scratch
-directory outside the project: skills with their `scripts/` and `references/`, files byte for byte as on disk,
+directory outside the project: skills with every regular file of their directory (see Staged skill files), files byte for byte as on disk,
 `imports` only when listed. Content keeps its repository path (`.ai-rulez/rules/x.md`, `.ai-rulez/skills/<name>/SKILL.md`
 with its resource files); imported items go under `<config dir>/imports/<kind>/<name>`. `hooks` is written as
 `<config dir>/hooks.json` (the `[[hooks]]` entries as configured) and `mcp` as `<config dir>/mcp-servers.json`, one
@@ -863,6 +872,31 @@ header **values** are never staged, credential-looking arguments (the value afte
 mode 0500 and files 0400; no symlink is ever copied. The scanner runs with the stage as its working directory, a
 scrubbed environment (plus `env_pass`), `HOME` and `TMPDIR` set to scratch directories, and no path appended. The
 scratch directory is removed afterwards. Nothing is run when nothing is staged.
+
+#### Staged skill files
+
+A skill's whole directory is staged, not only `scripts/`, `references/` and `assets/`: a file at the skill root
+(`notes.md`, `LICENSE`), in a folder of its own (`rules/`, `templates/`) or in `evals/` reaches the scanner, so a
+payload cannot hide beside `SKILL.md`. The limits are those of an installed skill: git-ignored files and the
+bundle excludes (`.git`, `.venv*`, `venv`, `__pycache__`, `*.pyc`, `node_modules` and the `bundle_exclude` key) stay
+out, symbolic links are never followed, credential-like names (`.env`, `id_rsa*`, `*.pem`, `*.key`,
+`credentials.json`, `*.tfstate` and the like) and files over 8 MiB are skipped, and a skill over 2000 files or
+16 MiB keeps only its canonical directories (a warning names it). `--dry-run` lists exactly these files.
+
+`stage_globs` and `stage_exclude` on a `[[lint.external]]` entry choose among them. Both are globs relative to the
+skill directory (a pattern without a slash matches at any depth, `**` crosses directories); `SKILL.md` is always
+staged. With `stage_globs`, only matching files are staged; `stage_exclude` removes matches and wins. An absolute
+pattern, one with `..` or a malformed one is `AR9E0`.
+
+```toml
+[[lint.external]]
+name = "docs-only"
+command = ["scanner", "{skill_dirs}"]
+inputs = ["skills"]
+egress = false
+stage_globs = ["**/*.md", "scripts/**"]
+stage_exclude = ["evals/**"]
+```
 
 Placeholders in `command` are expanded as arguments, never through a shell: `{stage}` and `{root}` the stage root,
 `{files}` one argument per staged file, `{skill_dirs}` one per staged skill directory (each on its own, not inside a
@@ -924,9 +958,11 @@ later features that execute commands.
 | --- | --- |
 | `preset` | `off` (default), `baseline` or `strict`: the embedded profiles that run with `--external` without a `[[lint.external]]` entry |
 | `required` | Scanner names whose absence, outdated version or failure is an error (`AR9E2` becomes an error; a name no entry or preset provides is reported the same way) |
-| `fail_on` | The lowest severity of a **scanner** finding that fails the run (`error`, `warning`, `info`), even when `--fail-on` or `[lint] fail_on` is higher. `strict` implies `warning` |
+| `fail_on` | The lowest severity of a **scanner** finding (`AR011`) that fails the run: `error`, `warning` or `info`. It replaces the run's threshold (`--strict`, `--fail-on`, `[lint] fail_on`) for scanner findings, in both directions; see Failing on scanner findings. The `strict` preset implies `warning` |
+| `max_message` | Characters of a scanner finding message kept in text output (default 500, at most 100000); an entry's own `max_message` wins. The JSON report and SARIF output keep the whole text |
 | `baseline` | The scanner baseline file, relative to the project root; an absolute path or one that leaves the project is `AR9E0`. `--scanner-baseline` wins |
 | `isolation` | `auto` (default), `none` or `require`, see Isolation |
+| `max_timeout` | The longest `timeout` one run of a scanner may be given: a Go duration from `1s` to `6h` (default `15m`). A scanner's `timeout` above it is `AR9E0`. See Batches and timeouts |
 | `allow_egress` | Unset: `--allow-egress=<name>` alone allows an egress scanner. Set (even `[]`): the name must also be listed, so a committed list narrows what a CI flag can enable. Presets never read it |
 
 The profiles live in the binary (`internal/lint/scanners/profiles.toml`), each with `source`, `verified_on` and
@@ -944,6 +980,91 @@ A preset member is replaced by an entry with the same name or the same `profile`
 `profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
 less egress than the profile: `AR9E0`), severity map and flag deny-list; keys set on the entry win.
 `ai-rulez scanners list` shows the preset of each scanner.
+
+### Long messages
+
+A scanner finding's message is cut to `max_message` characters (default 500, at most 100000) so a text report stays
+readable. Set it for every scanner in `[lint.scanner_policy]` or for one `[[lint.external]]` entry; the entry wins.
+A cut message ends in `...`, and nothing is lost: the JSON report carries the whole text as `full_message` on the
+finding, and SARIF output as the result property `fullMessage`. With `--debug`, the run logs how many messages of
+each scanner were cut. Fingerprints, the baseline and the result cache do not depend on the limit.
+
+```toml
+[lint.scanner_policy]
+max_message = 2000
+
+[[lint.external]]
+name = "verbose-scanner"
+max_message = 200
+```
+
+### Batches and timeouts
+
+`timeout` bounds one run of the scanner (default 2 minutes, at most 15). A scanner that takes minutes per skill
+cannot scan fifty skills in one run, so a command that passes `{skill_dirs}` (and none of `{stage}`, `{root}`,
+`{files}`) can be split:
+
+```toml
+[lint.scanner_policy]
+max_timeout = "1h"        # optional: the longest timeout any run may be given (default 15m, at most 6h)
+
+[[lint.external]]
+name = "deep-scan"
+command = ["deep-scan", "{skill_dirs}"]
+inputs = ["skills"]
+egress = false
+timeout = "20m"           # for each batch
+batch_size = 5            # at most 5 skill directories per run
+parallel = 4              # up to 4 runs at the same time
+```
+
+`batch_size` divides the skills that still need a scan into runs of at most that many directories. Every run gets
+the whole `timeout`, and its skills are cached as soon as it succeeds, so a later run does not repeat a finished
+batch after another one timed out. Without `batch_size` the scanner gets all of them in one run, split anyway when
+the arguments would pass the operating system limit (128 KiB on Unix, 24 KiB on Windows). `parallel` runs up to
+that many batches at once (1 to 16, default 1); each gets its own `{out}` file and temp directory, `HOME` stays
+shared, and results are merged in batch order, so the report does not depend on which batch finished first. A failed
+batch stops the batches that have not started; those that finished keep their results.
+
+The `timeout` of a run stays bounded: the runner never lets one command run longer than 6 hours. Only
+`[lint.scanner_policy] max_timeout` raises the 15 minute default ceiling, so a `timeout` written in an entry (or a
+pull request that edits one) cannot lift its own limit past what the policy allows. `scanners doctor` shows the effective
+timeout.
+
+### Failing on scanner findings
+
+`--strict` is `--fail-on warning`, so a project that wants every content warning to fail the build also fails on
+every scanner warning, and `--strict --fail-on error` is rejected as contradictory. To judge scanner findings by
+their own bar, set `fail_on` in `[lint.scanner_policy]` or on one `[[lint.external]]` entry:
+
+```toml
+[lint.scanner_policy]
+fail_on = "error"        # scanner warnings are reported but do not fail, even under --strict
+
+[[lint.external]]
+name = "cisco"
+fail_on = "warning"      # this scanner's warnings do fail
+```
+
+The threshold of a scanner finding (`AR011`) is the first of: the entry's `fail_on`, `[lint.scanner_policy] fail_on`,
+the `strict` preset's `warning`, then the run's own threshold (`--fail-on`, `--strict`, `[lint] fail_on`, `error`).
+When a scanner threshold applies it replaces the run's: `--strict` with `fail_on = "error"` fails on a scanner
+error and not on a scanner warning, and `--fail-on error` with `fail_on = "warning"` fails on a scanner warning.
+`--fail-on none` still disables every gate. Everything else, including the scanner's own configuration findings
+(`AR9E0` to `AR9E7`), keeps the run's threshold. Findings accepted by the scanner baseline never fail.
+`ai-rulez lock` records `pass` or `fail` per scanner with the same threshold.
+
+### Version pins
+
+`version = ">=1.0.0, <2"` is checked before every run against the first version number in the output of
+`<command[0]> --version`. When `command[0]` is a launcher or interpreter (`python3 scan.py`, `node scan.js`,
+`uvx scanner`), that is the launcher's version, not the scanner's: set `version_command` to the argv that prints
+the scanner's own version (`["python3", "scan.py", "--version"]`). It runs from the project root, through the same
+isolation as the probe, with a 10 second timeout; it needs `version` (`AR9E0` otherwise). A scanner outside the range,
+or one whose version output holds no version number, is not run (`AR9E2`).
+`ai-rulez scanners doctor --external` applies the same check and reports `not healthy` for a scanner that
+`validate --external` would refuse to run; without `--external` doctor starts nothing and prints `unverified` for an
+entry that has a `version` range.
 
 ### Isolation
 
@@ -981,7 +1102,8 @@ shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR
 ### Result cache and dry runs
 
 The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
-the staged content, the scanner binary (path, size, modification time), its command line, its mapping keys
+the staged content, the scanner binary (path, size, modification time), the content of the script it runs
+through an interpreter and of the files `cache_files` lists, its command line, its mapping keys
 (`format`, `inputs`, `env_pass`, `severity_map`, `max_severity`, `--show-suppressed`), a hash of each `env_pass`
 value, the isolation mode and backend, and the version of the report-mapping code are unchanged, so an unchanged
 tree costs no scanner run. A result produced under one isolation mode is never served under another, so an unconfined
@@ -993,10 +1115,40 @@ must not do), so a launcher scanner (`npx`, `uvx`, `pipx`, `bunx`, `npm`, `pnpm`
 changes without its launcher binary changing, is served from the cache for 24 hours at most. Pin the version in
 the command, or pass `--no-scan-cache`, to control it.
 
+For a scanner that is a script (`command = ["python3", "scan.py", "{stage}"]`), the binary is the interpreter, so
+the key also hashes the script: the first argument that does not start with a dash and names an existing file, when
+`command[0]` is `sh`, `bash`, `zsh`, `dash`, `ksh`, `fish`, `python` (including `python3.12`), `pypy`, `node`, `deno`,
+`bun`, `tsx`, `ruby`, `perl`, `php`, `lua`, `Rscript`, `pwsh`, `uv` or `pipx` (a relative path is read from the
+project root). Editing the script runs the scanner again. A scanner that loads other files (a rules file, a
+configuration, modules next to the script) lists them in `cache_files`, globs relative to the project root (`**`
+crosses directories; an absolute pattern or one with `..` is `AR9E0`; symbolic links are not followed; at most 20000
+files are hashed):
+
+```toml
+[[lint.external]]
+name = "house-rules"
+command = ["python3", "tools/scan.py", "{stage}"]
+inputs = ["skills"]
+egress = false
+cache_files = ["tools/**/*.py", "tools/rules/*.yaml"]
+```
+
+A scanner whose command passes `{skill_dirs}` and none of `{stage}`, `{root}` and `{files}` judges each skill
+directory on its own, so its result is cached **per skill**: the key is the tree hash of that skill (every staged
+file of its directory), the command line with the directories left out, the scanner's identity and the values above.
+A run hands the scanner only the skills without a cached result, so editing one skill of fifty costs one skill's
+scan; adding a skill scans that skill. Under `--changed` or `--since`, only the skills that hold a changed file are
+handed to the scanner (or read from the cache), and the others are neither run nor reported. `--no-scan-cache` still
+bypasses the cache, and `--write-baseline` ignores `--changed` so the baseline stays complete. A scanner that
+reports a result naming no file of any skill (or a path outside the stage) cannot have that result replayed from one
+skill's entry, so a run of several skills with such a result is not cached; a run of one skill caches all of it.
+`ai-rulez lock` sums the per-skill entries into one `[[scan]]` record, which exists only when every skill has one.
+
 `scan --external --dry-run` (also `validate --strict --external --dry-run`) prints, for each scanner that would run,
 its binary, command (stage paths shown as `<stage>` and `<scratch>`), isolation, the names of the environment
 variables it would receive (never values), the staged files and the cache state (`hit`, `miss`, `off`), and starts
-nothing. It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
+nothing. For a per-skill scanner the cache line counts hits and misses and each skill is listed with its state
+(`hit`, `miss`, `not cached` or `skipped (no changed file)` under `--changed`). It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
 to stderr so stdout stays the report format.
 
 ### Adapters

@@ -187,6 +187,28 @@ func TestEffectiveTimeout(t *testing.T) {
 	}
 }
 
+func TestEffectiveTimeoutUpTo(t *testing.T) {
+	tests := []struct {
+		name        string
+		in, ceiling time.Duration
+		want        time.Duration
+	}{
+		{"no ceiling is the default maximum", time.Hour, 0, MaxTimeout},
+		{"a raised ceiling lets a long timeout through", time.Hour, 2 * time.Hour, time.Hour},
+		{"a request above the ceiling is lowered", 3 * time.Hour, 2 * time.Hour, 2 * time.Hour},
+		{"the ceiling never passes the hard maximum", 24 * time.Hour, 48 * time.Hour, HardMaxTimeout},
+		{"unset takes the default", 0, time.Hour, DefaultTimeout},
+		{"a low ceiling lowers the default", 0, 30 * time.Second, 30 * time.Second},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := EffectiveTimeoutUpTo(tt.in, tt.ceiling); got != tt.want {
+				t.Errorf("EffectiveTimeoutUpTo(%s, %s) = %s, want %s", tt.in, tt.ceiling, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRunExitZeroWhileGrandchildHoldsStdout(t *testing.T) {
 	// Arrange: the child exits 0 but a backgrounded grandchild keeps stdout open.
 	old := killGrace

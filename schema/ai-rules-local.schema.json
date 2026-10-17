@@ -1721,6 +1721,18 @@
             "additionalProperties": false,
             "anyOf": [{}, {}],
             "properties": {
+              "batch_size": {
+                "description": "Split the {skill_dirs} handed to the command into runs of at most this many skill directories, each with its own timeout and cached on its own. 0 (default) hands the scanner all of them at once. Needs {skill_dirs} in command, without {stage}, {root} or {files}.",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "cache_files": {
+                "description": "Globs, relative to the project root, of files the scanner reads besides the staged content (a rules file, a configuration). Their content is part of the result cache key, so editing one runs the scanner again. The script a command runs through a known interpreter (python3 scan.py, node scan.js, sh run.sh, uv run scan.py) is hashed without being listed.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "command": {
                 "items": {
                   "type": "string"
@@ -1739,6 +1751,10 @@
                 },
                 "type": "array"
               },
+              "fail_on": {
+                "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings.",
+                "enum": ["error", "warning", "info"]
+              },
               "format": {
                 "enum": ["sarif", "json", "adapter:snyk-json", "adapter:claude-validate-json"],
                 "type": "string"
@@ -1754,8 +1770,20 @@
                 "description": "Ceiling for this scanner's findings.",
                 "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
               },
+              "max_message": {
+                "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text.",
+                "maximum": 100000,
+                "minimum": 1,
+                "type": "integer"
+              },
               "name": {
                 "type": "string"
+              },
+              "parallel": {
+                "description": "Run up to this many batches at the same time (default 1). Each batch gets its own {out} file and temp directory. Same command requirement as batch_size.",
+                "maximum": 16,
+                "minimum": 1,
+                "type": "integer"
               },
               "profile": {
                 "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's.",
@@ -1773,13 +1801,35 @@
                 "description": "Maps a scanner rule id (glob) to a severity. Applied before any other mapping.",
                 "type": "object"
               },
+              "stage_exclude": {
+                "description": "Leave out the files of a staged skill directory that match a glob (same syntax as stage_globs); it wins over stage_globs. SKILL.md is always staged.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "stage_globs": {
+                "description": "Narrow the files staged from each skill directory to the ones matching a glob (relative to the skill directory; a pattern with no slash matches at any depth, ** crosses directories). SKILL.md is always staged. Unset stages every regular file of the directory.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "timeout": {
-                "description": "Go duration such as \"90s\". Default 2m, at most 15m.",
+                "description": "Go duration such as \"90s\". Default 2m, at most 15m (or [lint.scanner_policy] max_timeout). Bounds each run of the command: every batch of a batch_size scanner gets the whole timeout.",
                 "type": "string"
               },
               "version": {
                 "description": "Version range the scanner's --version output must satisfy (\">=1.0.0, <2\"). A scanner outside it is not run (AR9E2).",
                 "type": "string"
+              },
+              "version_command": {
+                "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check.",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
               }
             },
             "type": "object"
@@ -1929,12 +1979,22 @@
               "type": "string"
             },
             "fail_on": {
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning.",
+              "description": "Lowest severity of a scanner finding (AR011) that fails the run. Scanner findings only; it replaces the run's own threshold (--strict, --fail-on) for them, and a scanner's own fail_on wins. strict implies warning.",
               "enum": ["error", "warning", "info"]
             },
             "isolation": {
               "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines.",
               "enum": ["auto", "none", "require"]
+            },
+            "max_message": {
+              "description": "Default characters of a scanner finding message kept in text output (500 when unset); a scanner's own max_message wins. The JSON report and SARIF output keep the whole text.",
+              "maximum": 100000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "max_timeout": {
+              "description": "Longest timeout one run of a scanner may be given, a Go duration from 1s to 6h (default 15m). A scanner's timeout above it is refused (AR9E0). Only the policy can raise it.",
+              "type": "string"
             },
             "preset": {
               "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off.",

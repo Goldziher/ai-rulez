@@ -58,27 +58,26 @@ func ScanRecords(cfg *config.Config, tree *Tree, so Options, opts ...Option) ([]
 func (r *runner) scanRecords(root string) []ScanRecord {
 	var out []ScanRecord
 	cache := r.opts.Scanner.Cache
-	threshold := SeverityError
-	if t, ok := ParseSeverity(policyOf(&r.lc).failOn); ok && t != SeverityOff {
-		threshold = t
-	}
+	pol := policyOf(&r.lc)
 	scanners := r.scanners()
 	for i := range scanners {
 		sc := scanners[i]
+		threshold := SeverityError
+		if t, ok := ParseSeverity(sc.failOnOf(pol)); ok && t != SeverityOff {
+			threshold = t
+		}
 		if len(sc.Inputs) == 0 || sc.Egress == nil || *sc.Egress || len(sc.allProblems()) > 0 {
 			continue
 		}
-		want := map[string]bool{}
-		for _, in := range sc.Inputs {
-			want[in] = true
-		}
-		files := r.stageFiles(want, sc.Layout)
+		files := r.stageFilesFor(sc)
 		if len(files) == 0 {
 			continue
 		}
 		rec := ScanRecord{Scanner: sc.Name, Tree: digestStage(files)}
 		binary := lookExecutable(sc.Command[0], root)
-		if key, ok := scanKeyFor(sc, binary, rec.Tree, r.opts.Scanner.ShowSuppressed, r.isolationKey()); ok {
+		if perSkillCommand(sc.Command) {
+			r.perSkillRecord(&rec, sc, binary, root, files, threshold)
+		} else if key, ok := scanKeyFor(sc, binary, rec.Tree, keyFiles(sc, root), r.opts.Scanner.ShowSuppressed, r.isolationKey()); ok {
 			if hit, found := r.cacheGet(sc, cache, key); found {
 				rec.Cached, rec.Version = true, hit.Version
 				rec.Findings, rec.MaxSeverity, rec.Pass = summarize(sc, hit, threshold)
@@ -88,6 +87,42 @@ func (r *runner) scanRecords(root string) []ScanRecord {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Scanner < out[j].Scanner })
 	return out
+}
+
+// perSkillRecord fills rec from the per-skill cache entries of a scanner handed
+// {skill_dirs}: it is cached only when every skill has an entry, and then holds
+// the sum of their findings, the highest severity and whether all of them pass.
+func (r *runner) perSkillRecord(rec *ScanRecord, sc resolvedScanner, binary, root string, files []stagedFile, threshold Severity) {
+	units := skillUnits(files)
+	if len(units) == 0 {
+		return
+	}
+	extra := keyFiles(sc, root)
+	rec.Pass = true
+	top := SeverityOff
+	for i := range units {
+		key, ok := scanKeyFor(sc, binary, digestStage(units[i].files), extra, r.opts.Scanner.ShowSuppressed, r.isolationKey())
+		if !ok {
+			*rec = ScanRecord{Scanner: rec.Scanner, Tree: rec.Tree}
+			return
+		}
+		hit, found := r.cacheGet(sc, r.opts.Scanner.Cache, key)
+		if !found {
+			*rec = ScanRecord{Scanner: rec.Scanner, Tree: rec.Tree}
+			return
+		}
+		count, maxSeverity, pass := summarize(sc, hit, threshold)
+		rec.Version = firstNonEmpty(rec.Version, hit.Version)
+		rec.Findings += count
+		rec.Pass = rec.Pass && pass
+		if sev, known := ParseSeverity(maxSeverity); known && (top == SeverityOff || sev.AtLeast(top)) {
+			top = sev
+		}
+	}
+	rec.Cached = true
+	if top != SeverityOff {
+		rec.MaxSeverity = string(top)
+	}
 }
 
 // summarize counts a cached result's findings and finds the highest severity.

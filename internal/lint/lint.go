@@ -126,7 +126,7 @@ func Failed(findings []Finding, failOn string) bool {
 		if findings[i].IsAccepted() {
 			continue
 		}
-		if findings[i].Severity.AtLeast(threshold) || findings[i].failsScannerPolicy() {
+		if findings[i].failsAt(threshold) {
 			return true
 		}
 	}
@@ -157,7 +157,9 @@ type runner struct {
 	injOnce      sync.Once
 	secOnce      sync.Once
 	secRes       []secretPattern
-	relMemo      sync.Map // absolute path -> tree-relative path, see rel
+	relMemo      sync.Map   // absolute path -> tree-relative path, see rel
+	skillFiles   sync.Map   // skill directory -> every file below it, see stageSkillFiles
+	runMu        sync.Mutex // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -66,6 +67,25 @@ func scannerOptions() (lint.ScannerOptions, error) {
 		if structuredFormat(validateFormat) {
 			opts.Out = os.Stderr // the report format owns stdout
 		}
+	}
+	return opts, nil
+}
+
+// scannerOptionsFor is scannerOptions for one root: it attaches the project's
+// result cache and, under --changed or --since, the files changed since the
+// revision, so a scanner handed {skill_dirs} gets only the changed skills.
+func scannerOptionsFor(ctx context.Context, cfg *config.Config) (lint.ScannerOptions, error) {
+	opts, err := scannerOptions()
+	if err != nil {
+		return opts, err
+	}
+	opts = withScannerCache(opts, cfg)
+	if validateExtern && changedRev() != "" {
+		changed, cerr := changedFiles(ctx, cfg, changedRev(), map[string][]string{})
+		if cerr != nil {
+			return opts, cerr
+		}
+		opts.ChangedFiles = append([]string{}, changed...) // non-nil: an empty list means nothing changed
 	}
 	return opts, nil
 }
