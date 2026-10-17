@@ -33,6 +33,7 @@ func (r *Resolved) ApplyContent(cfg *config.Config) []config.PolicyViolation {
 	}
 	c := &contentApplier{res: r, cfg: cfg, forbidHooks: forbidHooks, boundMCP: boundMCP}
 	c.tree(cfg.Content)
+	c.plugins()
 	sort.SliceStable(c.found, func(i, j int) bool {
 		x, y := c.found[i], c.found[j]
 		if x.Key != y.Key {
