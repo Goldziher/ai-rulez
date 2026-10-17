@@ -126,15 +126,15 @@ func commentAddressesAgent(body string) bool {
 	return len(credentialMentions(body, false)) > 0 && credReadRe().MatchString(body) && credSinkRe().MatchString(body)
 }
 
-// credentialLineStems are literals every line credentialTarget can name a store
-// on holds one of, besides the credentialStems paths: the words of credPhraseRe
-// and of the keychain and secrecy forms.
-var credentialLineStems = []string{"credential", "token", "private key", "config", "keychain", "netrc", "npmrc", ".env"}
+// stemNetrc is the word of the .netrc file in prose and in credPhraseRe.
+const stemNetrc = "netrc"
 
 // mayNameCredential is a cheap necessary condition for credentialTarget to
-// return a store: a path stem, or one of the words a store is named by.
+// return a store: a path stem, or one of the words a store is named by (those of
+// credPhraseRe, the keychain and the .env file), compared without case.
 func mayNameCredential(line string) bool {
-	return containsAnyStem(line, false, credentialStems) || containsAnyFold(line, credentialLineStems)
+	return containsAnyStem(line, false, credentialStems) ||
+		containsAnyFold(line, []string{"credential", "token", "private key", "config", "keychain", stemNetrc, "npmrc", ".env"})
 }
 
 func scanCredentialInstruction(r *runner, t *scanText) {
