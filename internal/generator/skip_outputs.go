@@ -82,26 +82,42 @@ func (m *skipMatcher) skips(rel string, isDir bool) bool {
 	}
 	rel = path.Clean(filepath.ToSlash(rel))
 	if m.isRoot(rel) {
-		base := path.Base(rel)
-		switch {
-		case m.cfg.SkipsOutput(config.SkipInstructions):
-			return true
-		case m.cfg.SkipsOutput(config.SkipClaudeMD) && base == claudeMDFile:
-			return true
-		case m.cfg.SkipsOutput(config.SkipAgentsMD) && (base == string(config.SharedAgentsMD) || base == agentsOverrideName):
-			return true
-		}
-		return false
+		return m.skipsRoot(path.Base(rel))
 	}
 	probe := rel
 	if isDir {
 		probe += "/_"
 	}
-	shared := string(config.SharedAgentSkills) + "/"
-	if m.cfg.SkipsOutput(config.SkipAgentsMD) && (strings.HasPrefix(probe, shared) || strings.Contains(probe, "/"+shared)) {
+	if m.skipsSharedSkills(probe) {
 		return true
 	}
-	switch config.InferOutputKind(probe, "") {
+	return m.skipsKind(config.InferOutputKind(probe, ""))
+}
+
+// skipsRoot reports whether skip_outputs excludes the root instruction file whose
+// base name is base.
+func (m *skipMatcher) skipsRoot(base string) bool {
+	switch {
+	case m.cfg.SkipsOutput(config.SkipInstructions):
+		return true
+	case m.cfg.SkipsOutput(config.SkipClaudeMD) && base == claudeMDFile:
+		return true
+	case m.cfg.SkipsOutput(config.SkipAgentsMD) && (base == string(config.SharedAgentsMD) || base == agentsOverrideName):
+		return true
+	}
+	return false
+}
+
+// skipsSharedSkills reports whether probe lies in the shared .agents/skills tree
+// that skip_outputs = ["agents_md"] leaves out.
+func (m *skipMatcher) skipsSharedSkills(probe string) bool {
+	shared := string(config.SharedAgentSkills) + "/"
+	return m.cfg.SkipsOutput(config.SkipAgentsMD) && (strings.HasPrefix(probe, shared) || strings.Contains(probe, "/"+shared))
+}
+
+// skipsKind reports whether skip_outputs excludes outputs of the given kind.
+func (m *skipMatcher) skipsKind(kind config.OutputKind) bool {
+	switch kind {
 	case config.OutputKindRuleFile:
 		return m.cfg.SkipsOutput(config.SkipRules)
 	case config.OutputKindSkill, config.OutputKindResource:
