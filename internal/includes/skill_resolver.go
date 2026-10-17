@@ -136,7 +136,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
 		}
-		source.ref = ref
+		source.ref, source.probe = ref, skillConf.Path == ""
 		source.pin, source.baseDir, source.state = p, baseDir, stateFor(cfg)
 		return source.DiscoverSkills(ctx, skillConf.Include, skillConf.Exclude, skillConf.NamePrefix)
 
@@ -164,12 +164,18 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 				With("path", link).
 				Errorf("skill '%s': %s is a symlink, and symlinks are not followed", skillConf.Name, link)
 		}
-		if !hasSkillMarker(root) && len(skillSubdirs(root)) == 0 {
+		// Without a path, a source that has nothing at the default location is
+		// searched for skills where harnesses keep them.
+		probed := false
+		if skillConf.Path == "" && !holdsSkills(root) && len(probeRoots(localPath)) > 0 {
+			root, probed = localPath, true
+		}
+		if !probed && !holdsSkills(root) {
 			return nil, oops.
 				With("path", root).
 				Errorf("no SKILL.md found at local path for skill '%s'", skillConf.Name)
 		}
-		return scanSelectedSkills(logger.WithContext(ctx, cfg.Host.Log), root, skillConf.NamePrefix, skillConf.Name, skillConf.Include, skillConf.Exclude)
+		return scanEntrySkills(logger.WithContext(ctx, cfg.Host.Log), root, probed, skillConf.NamePrefix, skillConf.Name, skillConf.Include, skillConf.Exclude)
 
 	default:
 		return nil, oops.Errorf("unknown source type for skill '%s': %s", skillConf.Name, sourceType)

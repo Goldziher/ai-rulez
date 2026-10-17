@@ -311,7 +311,9 @@ func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind st
 			if err != nil {
 				return "", "", treeKind
 			}
-			dir, cacheDir = src.cachedRoot(), src.cacheDir
+			src.probe = sk.Path == ""
+			dir, _ = src.cachedRoot()
+			cacheDir = src.cacheDir
 		}
 	}
 	return dir, cacheDir, treeKind
