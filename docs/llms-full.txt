@@ -3130,7 +3130,7 @@ body_file = "stub.md"                                   # relative to .ai-rulez/
 
 | Key | Meaning |
 | --- | ------- |
-| `description` | Replaces the frontmatter description. Must not be blank. |
+| `description` | Replaces the frontmatter description. Must not be whitespace-only; an empty string is the same as leaving the key out. |
 | `body` | Replaces the stub's text. Multi-line TOML (`"""`) works. |
 | `body_file` | Reads the text from a file relative to the config directory (`.ai-rulez/`); the path must stay inside it. A missing file is a load error. Mutually exclusive with `body`. |
 
