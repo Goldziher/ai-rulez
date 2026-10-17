@@ -2701,6 +2701,12 @@
                 "type": "string",
                 "description": "Version range the scanner's --version output must satisfy (\">=1.0.0, <2\"). A scanner outside it is not run (AR9E2)."
               },
+              "version_command": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check."
+              },
               "required": {
                 "type": "boolean",
                 "description": "A missing, outdated or failing scanner is an error instead of a notice."
