@@ -13,7 +13,7 @@ import (
 )
 
 // A hand-written skill is only linted, so a subdirectory generate would not copy is no warning;
-// loading the same skill for generate still names it.
+// an installed skill is bundled whole, and one narrowed by `resources` still names what is left out.
 func TestUnrecognizedSkillSubdirectoryWarning(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -24,8 +24,13 @@ func TestUnrecognizedSkillSubdirectoryWarning(t *testing.T) {
 			_, ok := LoadSkillDir(logger.WithContext(t.Context(), log), root, skillDir)
 			require.True(t, ok)
 		}, false},
-		{"loading a skill for generate", func(t *testing.T, _, skillDir string, log logger.Logger) {
+		{"loading an installed skill bundles hooks/ whole", func(t *testing.T, _, skillDir string, log logger.Logger) {
 			_, err := LoadSkillResourcesContext(logger.WithContext(t.Context(), log), skillDir)
+			require.NoError(t, err)
+		}, false},
+		{"loading an installed skill narrowed to the canonical layout still names hooks/", func(t *testing.T, _, skillDir string, log logger.Logger) {
+			ctx := WithSkillResources(logger.WithContext(t.Context(), log), []string{"none"})
+			_, err := LoadSkillResourcesContext(ctx, skillDir)
 			require.NoError(t, err)
 		}, true},
 	}

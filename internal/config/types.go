@@ -1151,6 +1151,16 @@ type InstalledSkillConfig struct {
 	// Exclude drops skills whose directory name matches one of these globs; it
 	// wins over Include.
 	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
+	// Resources narrows or widens what is bundled from each skill's directory. An
+	// installed skill is bundled whole by default (everything but SKILL.md, evals/,
+	// agents/ and hidden files), so a skill with rules/ or a cli.md beside SKILL.md
+	// arrives complete. references/, scripts/ and assets/ are always bundled;
+	// setting Resources replaces the default for everything else. A pattern is a
+	// name, a path or a glob; a name matches that file or directory at any depth,
+	// and a "!" prefix removes what an earlier pattern added. ["none"] (a name no
+	// file has) keeps the canonical directories only; ["*"] also bundles evals/,
+	// agents/ and hidden files.
+	Resources []string `yaml:"resources,omitempty" json:"resources,omitempty" toml:"resources,omitempty"`
 	// NamePrefix is prepended to every resolved skill name, so two entries
 	// cannot collide.
 	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
