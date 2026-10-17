@@ -62,7 +62,8 @@ func TestSplitLocation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.source, func(t *testing.T) {
-			host, segs, ok := splitLocation(tt.source)
+			host, segs, ok, err := splitLocation(tt.source)
+			require.NoError(t, err)
 			assert.Equal(t, tt.remote, ok)
 			assert.Equal(t, tt.wantHost, host)
 			assert.Equal(t, tt.wantPath, strings.Join(segs, "/"))
