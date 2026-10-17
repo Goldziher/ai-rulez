@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
@@ -215,8 +215,7 @@ func TestSkillGitSourceLocate_ASymlinkedSkillMarkerInTheRemoteIsRefused(t *testi
 	link := filepath.Join(repo, "skills", "myskill", "SKILL.md")
 	testutil.SymlinkOrSkip(t, "real.md", link)
 	for _, args := range [][]string{{"add", "skills/myskill/SKILL.md"}, {"-c", "user.name=t", "-c", "user.email=t@t", "commit", "-m", "link"}} {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = repo
+		cmd := gitutil.CommandNoContext(repo, args...)
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, "git %v: %s", args, out)
 	}

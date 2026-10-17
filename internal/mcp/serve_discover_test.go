@@ -281,10 +281,8 @@ func TestDiscoverSkills_AllowAndDenyApply(t *testing.T) {
 
 func TestDiscoverSkills_SymlinkLoopsAreNotFollowed(t *testing.T) {
 	root := discoverProject(t, discoverConfig)
-	if err := os.Symlink("..", filepath.Join(root, "skills", "loop")); err != nil {
-		t.Skipf("symlinks are not available: %v", err)
-	}
-	require.NoError(t, os.Symlink(filepath.Join(root, "skills", "foo"), filepath.Join(root, ".claude", "skills", "alias")))
+	testutil.SymlinkOrSkip(t, "..", filepath.Join(root, "skills", "loop"))
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "skills", "foo"), filepath.Join(root, ".claude", "skills", "alias"))
 
 	got := discoverNames(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo"})
 
