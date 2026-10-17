@@ -3325,15 +3325,21 @@ ai-rulez skill install my-skill --source ./local-repo --path custom/path
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Place the skills in this domain, so a profile or role selects them by domain |
 | `--exclude` | string list |  | Glob of skill directory names to skip; wins over --include (repeatable) |
 | `--format` | string | `text` | Output format: text, json |
 | `--include` | string list |  | Glob of skill directory names to install from a directory of skills (repeatable) |
+| `--include-prerelease` | bool |  | Let --version match pre-release tags |
 | `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--local-override` | string |  | Directory used instead of the source while it exists (local development of a remote skill) |
+| `--min-release-age` | string |  | Skip tags younger than this, such as 7d (holds back brand-new releases) |
 | `--name-prefix` | string |  | Prefix added to every installed skill name |
 | `--path` | string |  | Path within repo to skill directory (defaults to skills/<name>) |
+| `--profile` | string list |  | Restrict the skills to these profiles (repeatable) |
 | `--ref` | string |  | Git reference: branch, tag, or commit hash |
 | `--resources` | string list |  | Extra file patterns to bundle with each skill, "!" removes (repeatable) |
 | `--source` | string |  | Git URL or local path (required) |
+| `--tag-prefix` | string |  | Only consider tags with this prefix when resolving --version, such as v or skills/ |
 | `--trust` | string |  | Scan level for the installed skills: error (default) or warn |
 | `--version` | string |  | Version range of the source's tags, such as ^1.2 (instead of --ref) |
 

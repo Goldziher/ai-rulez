@@ -230,7 +230,16 @@ func (op *OperatorImpl) installSkillLocal(ctx context.Context, req *InstallSkill
 	setIfNotEmpty(fields, "name_prefix", req.NamePrefix)
 	setIfNotEmpty(fields, "trust", req.Trust)
 	setIfNotEmpty(fields, "version", req.Version)
-	for key, list := range map[string][]string{"include": req.Include, "exclude": req.Exclude, "resources": req.Resources} {
+	setIfNotEmpty(fields, "domain", req.Domain)
+	setIfNotEmpty(fields, "local_override", req.LocalOverride)
+	setIfNotEmpty(fields, "tag_prefix", req.TagPrefix)
+	setIfNotEmpty(fields, "min_release_age", req.MinReleaseAge)
+	if req.IncludePrerelease {
+		fields["include_prerelease"] = true
+	}
+	for key, list := range map[string][]string{
+		"include": req.Include, "exclude": req.Exclude, "resources": req.Resources, "profiles": req.Profiles,
+	} {
 		if len(list) > 0 {
 			fields[key] = list
 		}
