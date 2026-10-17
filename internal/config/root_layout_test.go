@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -275,8 +276,10 @@ func TestLocalDoc_RootLayout(t *testing.T) {
 	assert.Equal(t, path, doc.Path)
 	assert.Equal(t, []string{"ai-rulez.local.*", ".ai-rulez-local.*"}, doc.gitignorePatterns())
 	assert.Equal(t, []string{"ai-rulez.local.*", ".ai-rulez-local.*"}, LocalGitignorePatterns(root))
-	_, statErr := os.Stat(filepath.Join(root, ".ai-rulez-local.lock"))
-	assert.NoError(t, statErr, "the edit lock sits beside the overlay under its own name")
+	if runtime.GOOS != "windows" { // overlay edits are not serialized across processes on Windows
+		_, statErr := os.Stat(filepath.Join(root, ".ai-rulez-local.lock"))
+		assert.NoError(t, statErr, "the edit lock sits beside the overlay under its own name")
+	}
 }
 
 func TestLayoutOf_RootLayout(t *testing.T) {
