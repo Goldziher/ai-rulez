@@ -86,6 +86,9 @@ func resultProperties(f *Finding) map[string]any {
 	if src := f.Source(); src != "" {
 		props["source"] = src
 	}
+	if full := f.FullMessage(); full != "" {
+		props["fullMessage"] = full
+	}
 	return props
 }
 

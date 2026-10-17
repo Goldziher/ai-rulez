@@ -13644,6 +13644,7 @@ env_pass = []                      # extra environment variable names for an egr
 # version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
 # required = true                  # a missing, outdated or failing scanner is an error
 # fail_on = "error"                # lowest severity of this scanner's findings that fails the run
+# max_message = 1000               # characters of a finding message kept in text output (default 500)
 
 [lint.scanner_policy]
 preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
@@ -13978,7 +13979,8 @@ its meaning depends on the current directory. One that times out, overflows the 
 a run with `executionSuccessful = false`, a tool notification at level `error`, an empty `runs` (SARIF) or an empty list or `null` (JSON) with a non-zero
 exit, is reported as `AR9E3`: it is never ingested in part, and a crashed scanner never looks clean. Results the
 tool marked suppressed are dropped. Messages are cleaned before printing (escape sequences, control,
-bidirectional, zero-width and tag characters removed, one line, 500 characters, secret-shaped text masked), and a
+bidirectional, zero-width and tag characters removed, one line, secret-shaped text masked, and cut to `max_message`
+characters, 500 by default; see Long messages), and a
 reported path is normalised (`file://`, percent-encoding, Windows separators on Windows only; a backslash is an
 ordinary character on Unix). A SARIF `uriBaseId` is resolved against the base the log declares in
 `originalUriBaseIds` (an undeclared id is resolved against the project root). A path outside the project, a
@@ -14061,6 +14063,7 @@ later features that execute commands.
 | `preset` | `off` (default), `baseline` or `strict`: the embedded profiles that run with `--external` without a `[[lint.external]]` entry |
 | `required` | Scanner names whose absence, outdated version or failure is an error (`AR9E2` becomes an error; a name no entry or preset provides is reported the same way) |
 | `fail_on` | The lowest severity of a **scanner** finding (`AR011`) that fails the run: `error`, `warning` or `info`. It replaces the run's threshold (`--strict`, `--fail-on`, `[lint] fail_on`) for scanner findings, in both directions; see Failing on scanner findings. The `strict` preset implies `warning` |
+| `max_message` | Characters of a scanner finding message kept in text output (default 500, at most 100000); an entry's own `max_message` wins. The JSON report and SARIF output keep the whole text |
 | `baseline` | The scanner baseline file, relative to the project root; an absolute path or one that leaves the project is `AR9E0`. `--scanner-baseline` wins |
 | `isolation` | `auto` (default), `none` or `require`, see Isolation |
 | `allow_egress` | Unset: `--allow-egress=<name>` alone allows an egress scanner. Set (even `[]`): the name must also be listed, so a committed list narrows what a CI flag can enable. Presets never read it |
@@ -14080,6 +14083,23 @@ A preset member is replaced by an entry with the same name or the same `profile`
 `profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
 less egress than the profile: `AR9E0`), severity map and flag deny-list; keys set on the entry win.
 `ai-rulez scanners list` shows the preset of each scanner.
+
+##### Long messages
+
+A scanner finding's message is cut to `max_message` characters (default 500, at most 100000) so a text report stays
+readable. Set it for every scanner in `[lint.scanner_policy]` or for one `[[lint.external]]` entry; the entry wins.
+A cut message ends in `...`, and nothing is lost: the JSON report carries the whole text as `full_message` on the
+finding, and SARIF output as the result property `fullMessage`. With `--debug`, the run logs how many messages of
+each scanner were cut. Fingerprints, the baseline and the result cache do not depend on the limit.
+
+```toml
+[lint.scanner_policy]
+max_message = 2000
+
+[[lint.external]]
+name = "verbose-scanner"
+max_message = 200
+```
 
 ##### Failing on scanner findings
 
