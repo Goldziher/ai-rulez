@@ -1,0 +1,70 @@
+# Config without a .ai-rulez folder
+
+Keep the whole ai-rulez configuration in one file, `ai-rulez.toml` at the project root, and no `.ai-rulez/` directory.
+
+## When to use it
+
+Use it when the repository already has hand-written `CLAUDE.md`, `AGENTS.md` and skills, and you only want ai-rulez for what a config file can declare:
+
+- remote `[[installed_skills]]`, `[[skill_sources]]` and `[[includes]]`
+- `[[mcp_servers]]`, `[[hooks]]` and `[permissions]`, translated into each tool's native format
+- `[lint]` settings for `ai-rulez validate`
+- `ai-rulez.lock`, which pins the remote sources and the generated outputs
+
+If you want ai-rulez to own the rules, context, skills and agents, use the [directory layout](configuration.md) instead.
+
+## Create it
+
+```bash
+ai-rulez init --minimal
+```
+
+This writes only `ai-rulez.toml`, with a `#:schema` first line (editors such as taplo and Even Better TOML read it to find the [JSON schema](schema.md)) and commented examples of `[[installed_skills]]` and `[lint]`. `--minimal` cannot be combined with `--source`, `--from`, `--domains` or `--config-dir`. An existing file is only replaced with `--force`.
+
+```toml
+version = "5.0"
+name = "my-project"
+presets = ["claude", "codex"]
+
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+```
+
+## What it does
+
+`ai-rulez generate` installs the skills into each tool's skill folder, and writes MCP servers, hooks and permissions. It writes no instruction file: `AGENTS.md`, `CLAUDE.md`, rule files and the `llms-txt` and `okf` indexes are never rendered, and a hand-written file at those paths is never overwritten or deleted. `clean` removes only what `generate` wrote.
+
+Files it creates in the project root:
+
+| File | Purpose | Committed |
+| --- | --- | --- |
+| `ai-rulez.toml` | The configuration | yes |
+| `ai-rulez.lock` | Pins from `ai-rulez lock` | yes |
+| `.ai-rulez-manifest.json` | The paths `generate` wrote | yes |
+| `.ai-rulez-manifest.local.json` | Machine-local claims and digests | no, ignored |
+| `ai-rulez.local.toml` | Optional [machine-local overlay](local-overrides.md) | no, ignored |
+
+The managed `.gitignore` block covers the local manifest, the overlay and its lock. With `gitignore = true` it also lists the generated outputs and `.ai-rulez-manifest.json`.
+
+## Discovery order
+
+Per directory, while walking up: `.agents/ai-rulez.toml`, `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml`, then `ai-rulez.toml`. A config directory always wins; when one exists beside an `ai-rulez.toml`, `generate` and `doctor` warn that the file is ignored. `--config ai-rulez.toml` (or `--config .`) selects the file explicitly. `generate --recursive` finds an `ai-rulez.toml` that has no config directory beside it. A flat `ai-rulez.yaml` is still refused with the `ai-rulez migrate v5` message.
+
+## How it differs from the `.agents` layout
+
+Both keep the configuration in a file named `ai-rulez.toml`. In the [`.agents` source](agents-source.md) the file lives in `.agents/`, the content is AGENTS.md and `.agents/`, and the manifest, lock and local state sit in `.agents/.ai-rulez/`. In this layout the file is in the project root, there is no content at all, and the state files sit in the root with the names above.
+
+## CLI behavior
+
+- `skill install|remove`, `include add|remove`, `lock`, `update --write-config` and the `local` commands edit `ai-rulez.toml` and `ai-rulez.local.toml`. Rewriting through a command drops comments, as it does for `config.toml`.
+- `add|remove rule|context|skill|agent|command|check` and `domain add` fail: there is no content tree.
+- `validate`, `scan` and `doctor` lint the configuration, the lock, the installed and included content, and any hand-written instruction files they detect. An empty content tree is not an error.
+
+## Limits
+
+- No content is read: `rules/`, `context/`, `skills/`, `agents/`, `commands/`, `checks/`, `domains/` and `verifiers/` folders in the project root are not ai-rulez content. Verifiers come from `[[verifiers]]` and imports.
+- Rules or context brought in by an `[[includes]]` entry have no instruction file to land in; only the files that are not root instruction files (skills, rule files of tools that read a rules folder) are written.
+- `default_layers` and `config.<name>.toml` layers are not supported.
+- Opt-in state (skills index, role manifest, scanner baseline, eval results) is written to the project root, and usage logs to `.ai-rulez-local.d/`. Telemetry commands and `improve` still look for `.ai-rulez/`.
+- `ai-rulez mcp` `init_project` creates the directory layout only.
