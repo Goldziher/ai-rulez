@@ -142,6 +142,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 		marker = commandMarkerFile
 	}
 	filter := newBundleFilterWith(s.ctx, s.git, s.logger(), root, marker, extraExcludes, s.bundleSnaps())
+	s.bundledFiles, s.bundledBytes = 0, 0
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {
@@ -358,7 +359,8 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 // keep is false when the file is not admitted by the scanner's policy or is
 // filtered out of the bundle.
 func (s *contentScanner) readSkillResource(skillDir, path, name, kind string, filter *bundleFilter) (resource SkillResource, keep bool, err error) {
-	if info, ok := s.admit(path); !ok || !info.Mode().IsRegular() {
+	info, ok := s.admit(path)
+	if !ok || !info.Mode().IsRegular() {
 		return SkillResource{}, false, nil
 	}
 
@@ -375,17 +377,28 @@ func (s *contentScanner) readSkillResource(skillDir, path, name, kind string, fi
 		return SkillResource{}, false, nil
 	}
 
+	if s.bundleLimited() {
+		if isSecretFileName(name) {
+			s.logger().Warn("Skipping a credential-like file in an installed skill", "path", path)
+			return SkillResource{}, false, nil
+		}
+		if info.Size() > maxContentFileBytes {
+			s.logger().Warn("Skipping a file over the size limit in an installed skill",
+				"path", path, "limit_mib", maxContentFileBytes>>20)
+			return SkillResource{}, false, nil
+		}
+	}
+
 	data, err := readCapped(s.v, path)
 	if err != nil {
 		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "read skill resource")
 	}
-
-	// Capture file mode (of the target, for a followed link) so the
-	// executable bit on bundled scripts survives generation.
-	info, err := s.v.Stat(path)
-	if err != nil {
-		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "stat skill resource")
+	if err := s.countBundled(skillDir, len(data)); err != nil {
+		return SkillResource{}, false, err
 	}
+
+	// info is the file's (the target's, for a followed link): its mode keeps the
+	// executable bit on bundled scripts through generation.
 
 	resource = SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: resourceMode(info.Mode())}
 	if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(name), ".md") {
