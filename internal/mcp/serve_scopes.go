@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
 	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
@@ -93,7 +94,19 @@ type repoView struct {
 	// skillDir maps a served skill name to its directory in the repository, and
 	// skillScope to the scope that holds the directory.
 	skillDir, skillScope map[string]string
+	// root is the project root; the index's paths are relative to it.
+	root string
+	// adm is the scan setup an item of context goes through, again at load time.
+	adm Admission
+	// generated tells a file ai-rulez wrote from one a person did.
+	generated func(path string, content []byte) bool
+	// refused maps a scope and name to why the scan refused the item at start-up.
+	refused map[string]string
 }
+
+func refusedKey(scope, name string) string { return scope + "\x00" + name }
+
+func joinRoot(root, rel string) string { return filepath.Join(root, filepath.FromSlash(rel)) }
 
 // repository returns the repository view of the catalog; nil when discovery did
 // not index (and for the authoring server, which has no catalog).
@@ -114,7 +127,15 @@ func (d *discovery) view() *repoView {
 	for _, s := range d.report.Served {
 		dirs[s.Name], scopes[s.Name] = s.Path, s.Scope
 	}
-	return &repoView{index: d.index, skillDir: dirs, skillScope: scopes}
+	v := &repoView{
+		index: d.index, skillDir: dirs, skillScope: scopes, root: d.cfg.BaseDir,
+		adm: d.admission(), generated: d.isGenerated, refused: map[string]string{},
+	}
+	refusals := d.index.Refusals()
+	for i := range refusals {
+		v.refused[refusedKey(refusals[i].Item.Scope, refusals[i].Item.Name)] = refusals[i].Reason
+	}
+	return v
 }
 
 // skillSelection says which served skills a query keeps.
@@ -139,8 +160,8 @@ func (v *repoView) selectSkills(q scopeQuery) (skillSelection, error) {
 			return skillSelection{}, err //nolint:wrapcheck // names the path
 		}
 		scopes = res.Scopes
-		for _, r := range res.Items {
-			if r.Kind == repoindex.KindSkill && r.ShadowedBy == "" {
+		for i := range res.Items {
+			if r := &res.Items[i]; r.Kind == repoindex.KindSkill && r.ShadowedBy == "" {
 				dirs[r.Path] = true
 			}
 		}
