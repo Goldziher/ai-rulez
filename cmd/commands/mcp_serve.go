@@ -60,8 +60,8 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 // skills that are served, scans them, and wraps them in the read-only server.
 // It starts the live-reload watcher on ctx. Nothing is written to disk except
 // the optional usage log and the source cache.
-func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
-	setup, err := serveSetupFromFlags(cmd)
+func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command, settings mcpSettings) (*mcp.Server, error) {
+	setup, err := serveSetupFor(cmd, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,17 @@ func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Serv
 	return srv, nil
 }
 
+// serveSetupFor is the setup of this run: the flags of `mcp --serve-skills`,
+// with the settings the flags and the project's [mcp] table resolved to.
+func serveSetupFor(cmd *cobra.Command, settings mcpSettings) (*mcp.ServeSetup, error) {
+	setup, err := serveSetupFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+	settings.applyTo(setup)
+	return setup, nil
+}
+
 // serveSetupFromFlags reads the flags of `mcp --serve-skills`.
 func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	flags := cmd.Flags()
@@ -80,11 +91,8 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	// The merged server registers the authoring surface too, so `mcp
 	// --serve-skills` is the one MCP entry a project needs. The engines and the
 	// directory confinement come from the command line exactly as for `mcp`;
-	// --read-only narrows the authoring tools to the read-only ones.
+	// serveSetupFor narrows them with the read-only and tool settings.
 	setup.Authoring = append(engineOptions(), authoringOptions(cmd)...)
-	if readOnly, _ := flags.GetBool(flagMCPReadOnly); readOnly { //nolint:errcheck // the flag is registered in init
-		setup.Authoring = append(setup.Authoring, mcp.WithReadOnly())
-	}
 	var err error
 	read := func(name string, f func() error) {
 		if err == nil {

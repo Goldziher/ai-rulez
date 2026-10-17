@@ -333,6 +333,7 @@ ai-rulez mcp --serve-skills --read-only          # serve skills and inspect, nev
 | `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
 | `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. The `judge` tool is not registered either: it sends file content to a model provider and spends money. |
+| `--tools` | Register only these tools (repeatable or comma separated), for example `--tools find_skill,load_skill,find_context,load_context` for a server that can only read skills and context. Applies to `mcp` and to `mcp --serve-skills`. An unknown name is an error that lists the valid tools; a valid name the server would not register anyway (a writing tool under `--read-only`, a context tool without discovery) is simply absent. |
 | `--root` / `--allow-any-dir` | Confine the authoring tools to a directory, as for plain `mcp`. |
 
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
@@ -541,6 +542,36 @@ The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`,
 `--serve-skills`. The authoring tools are registered too, so one process serves both; `--read-only` registers
 only the read-only tools, so a project can be inspected but never changed.
 
+### Settings in the configuration
+
+A project can pin how `mcp` runs in its `[mcp]` table, so every launcher (`.mcp.json`, a plugin, a teammate's
+editor) does not repeat the flags. The keys are accepted in `.ai-rulez/config.toml`, a root `ai-rulez.toml`, the
+`config.<name>.toml` layers and `config.local.toml`; a list in a later layer replaces the earlier one.
+
+```toml
+[mcp]
+read_only = true                                                  # --read-only
+tools     = ["find_skill", "load_skill", "find_context", "load_context"]   # --tools
+allow     = ["review-*"]                                          # --allow (--serve-skills)
+deny      = ["draft-*"]                                           # --deny (--serve-skills)
+daemon    = true                                                  # --daemon (--serve-skills)
+no_watch  = true                                                  # --no-watch (--serve-skills)
+```
+
+- **A flag wins.** A flag given on the command line replaces the key, including `--read-only=false` and an empty
+  `--tools=`. A flag that is not given leaves the key in charge.
+- **Read at start.** The settings are read when the server starts; change them and restart the server. They are
+  read from the project the server was started in (or the project above it), offline. A project that cannot be read is
+  reported on stderr and the command line decides; a tool name that does not exist stops the server with the list of
+  valid ones.
+- **Policy only tightens.** An [organization policy](policy.md) with `[mcp] read_only = true` makes the server
+  read-only whatever `[mcp] read_only` and `--read-only=false` say; a repository that sets `read_only = false` under
+  it is reported as `AR740` and the server stays read-only.
+- **The surface follows the tools.** The server instructions are written from the tools that are registered, and
+  each authoring prompt (`add-rule`, `author-skill`, `review-config`, `trim-context`) is listed only when every
+  tool it calls is. A read-only server therefore does not tell the model to use the CRUD tools or `generate_outputs`,
+  and offers `review-config` alone.
+
 ### Discovering skills already in the repository
 
 A repository often keeps skills that ai-rulez does not define: a `skills/` folder, `.claude/skills` in a package,
@@ -606,6 +637,14 @@ findings, warns on the rest). With `[lock] enforce`, it must be pinned like any 
 cached while discovery is on, and live reload watches the skill roots found at start (and `skills/`, `.claude/skills`
 and the preset directories at the project root when they exist): a new skill folder in an existing root is picked
 up, a new `.claude/skills` elsewhere needs a restart.
+
+**Without a configuration.** `--discover-skills` works in a directory with no `.ai-rulez/` or `ai-rulez.toml`. The
+server then has no configuration to manage, so it registers only the tools that work without one (`find_skill`,
+`load_skill`, `list_skill_resources`, `search_skills`, `get_skill`, `read_skill_file`, `find_context`,
+`load_context`, `get_version`, `list_builtins`, `show_builtin`, `policy_show`, `okf_validate` and `init_project`)
+and no authoring prompt. `ai-rulez://config` and the `ai-rulez://{kind}/{name}` item resources are not listed;
+`ai-rulez://catalog` is, and is built from what was discovered: the served skills as `items`, the `scopes` with the
+instruction files, rules and agents found, and the `skill_discovery` report.
 
 ### Monorepos: scopes and nested context
 

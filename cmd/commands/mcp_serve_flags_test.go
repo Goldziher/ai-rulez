@@ -77,25 +77,47 @@ func TestMCPCmd_ServeOnlyFlagsIncludeMaxCloneBytes(t *testing.T) {
 }
 
 // `mcp --serve-skills` now registers the authoring surface too, so the setup
-// carries the authoring options; --read-only narrows them.
-func TestServeSetupFromFlags_MergesTheAuthoringSurface(t *testing.T) {
+// carries the authoring options; the read-only setting narrows them.
+func TestServeSetupFor_MergesTheAuthoringSurface(t *testing.T) {
 	// Arrange
 	require.NoError(t, MCPCmd.Flags().Parse(nil))
-	t.Cleanup(func() { _ = MCPCmd.Flags().Set(flagMCPReadOnly, "false") })
 
 	// Act
-	setup, err := serveSetupFromFlags(MCPCmd)
+	setup, err := serveSetupFor(MCPCmd, mcpSettings{})
 
 	// Assert
 	require.NoError(t, err)
 	assert.NotEmpty(t, setup.Authoring, "mcp --serve-skills registers the authoring tools too")
 	plain := len(setup.Authoring)
 
-	// Act: --read-only adds the narrowing option.
-	require.NoError(t, MCPCmd.Flags().Set(flagMCPReadOnly, "true"))
-	setup, err = serveSetupFromFlags(MCPCmd)
+	// Act: read-only adds the narrowing option.
+	setup, err = serveSetupFor(MCPCmd, mcpSettings{readOnly: true})
 
 	// Assert
 	require.NoError(t, err)
-	assert.Len(t, setup.Authoring, plain+1, "--read-only adds WithReadOnly")
+	assert.Len(t, setup.Authoring, plain+1, "read-only adds WithReadOnly")
+
+	// Act: a tool allow-list adds its option too.
+	setup, err = serveSetupFor(MCPCmd, mcpSettings{tools: []string{"find_skill"}})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Len(t, setup.Authoring, plain+1, "tools add WithTools")
+}
+
+func TestServeSetupFor_AppliesTheResolvedSettings(t *testing.T) {
+	// Arrange
+	require.NoError(t, MCPCmd.Flags().Parse(nil))
+	settings := mcpSettings{daemon: true, noWatch: true, allow: []string{"a-*"}, deny: []string{"b"}}
+
+	// Act
+	setup, err := serveSetupFor(MCPCmd, settings)
+
+	// Assert
+	require.NoError(t, err)
+	assert.True(t, setup.NoWatch)
+	assert.True(t, setup.Daemon)
+	assert.Equal(t, daemonIdentity(), setup.DaemonIdentity, "a daemon turned on by the configuration gets the same identity as one turned on by the flag")
+	assert.Equal(t, []string{"a-*"}, setup.Filter.Allow)
+	assert.Equal(t, []string{"b"}, setup.Filter.Deny)
 }
