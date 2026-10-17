@@ -192,7 +192,12 @@ func (a *applier) sourceChecker() func(kind, name, source string) bool {
 		}
 	}
 	check := func(kind, name, source string) bool {
-		host, segs, remote := splitLocation(source)
+		host, segs, remote, err := splitLocation(source)
+		if err != nil {
+			a.violate(lint.CodeSourceNotAllowed, "sources", source,
+				"%s %q: the location of %q cannot be read safely (%v); the source is not loaded", kind, name, source, err)
+			return false
+		}
 		if !remote {
 			return true
 		}
