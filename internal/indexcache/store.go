@@ -142,6 +142,10 @@ func (s *Store) Location() Location {
 	return s.loc
 }
 
+// Enabled reports whether the store keeps anything; false for nil and for a
+// cache that is off.
+func (s *Store) Enabled() bool { return s.active() }
+
 // active reports whether the store keeps anything.
 func (s *Store) active() bool { return s != nil && s.loc.Kind != KindOff }
 
