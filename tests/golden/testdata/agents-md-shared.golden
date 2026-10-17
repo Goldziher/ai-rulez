@@ -19,11 +19,15 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
-INFO  Generation complete files=44
+INFO  Generation complete files=48
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755
+.agents/skills/build/ dir 0755
+.agents/skills/build/SKILL.md file 0644 208 46b69b72e18269edf5eebfbca6e27e758458e9cef50f0d490ca48843d9b8ea09
+.agents/skills/build/agents/ dir 0755
+.agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .agents/skills/deployer/ dir 0755
 .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
@@ -32,9 +36,13 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 184 6b822e098b5ea716fc05e66c57a0617b08a030c3f138b086712a80d7be4479d5
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3150 707ee59103048520f48caa84007379b8c64514e269e850ffbded3907f6fe4011
-.ai-rulez/.generated-manifest.local.json file 0644 10141 9d9ccce8cffe454026c56a296aff433f819ce38e2ac2b8b7dea6e863a3f4b1a9
+.ai-rulez/.generated-manifest.json file 0644 3316 6c28c0a8f91d52f57e698642374315efed5f78e0eed89915ad93d5174ad03702
+.ai-rulez/.generated-manifest.local.json file 0644 10370 278f33b46707a0b793933b3d604d8002256886240fb81157a3b4441e4a6dd3eb
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
