@@ -98,6 +98,7 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.guard()
 	a.governance()
 	a.mcpServers()
+	a.mcpReadOnly()
 	a.hooks()
 	a.signing()
 	sort.SliceStable(a.out.Violations, func(i, j int) bool {

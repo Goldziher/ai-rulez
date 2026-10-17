@@ -222,6 +222,7 @@ type contextOut struct {
 }
 
 func (s *Server) registerContextTools() {
+	s.noteKnown(toolFindContext, toolLoadContext)
 	if s.cat().repository() == nil {
 		return
 	}

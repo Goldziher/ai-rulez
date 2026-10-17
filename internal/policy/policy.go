@@ -415,6 +415,9 @@ func (d *fileDoc) looseSwitches() []string {
 		off(switchGovernanceEnforce, d.Governance.Enforce)
 		off(switchForbidSelfApproval, d.Governance.ForbidSelfApproval)
 	}
+	if d.MCP != nil {
+		off(switchMCPReadOnly, d.MCP.ReadOnly)
+	}
 	if d.Hooks != nil {
 		on(switchHooksAllow, d.Hooks.Allow)
 	}

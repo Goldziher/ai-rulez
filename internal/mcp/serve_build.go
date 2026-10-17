@@ -217,7 +217,13 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	st.warnShadowed(first.catalog.Discovery())
 	st.warnIndexLimit(first.catalog.Discovery())
 	if st.Authoring != nil {
-		srv = NewMergedServer(st.Version, first.catalog, opts, st.Authoring...)
+		authoring := st.Authoring
+		if first.cfg.ConfigDir == "" {
+			// No configuration was found, so the build served what discovery
+			// found: offer only what works without one.
+			authoring = append(slices.Clone(authoring), WithoutProject())
+		}
+		srv = NewMergedServer(st.Version, first.catalog, opts, authoring...)
 	} else {
 		srv = NewSkillServerWith(st.Version, first.catalog, opts)
 	}

@@ -140,6 +140,7 @@ func (pv *provenanceOf) signing(eff Policy) {
 	pv.all("signing.thresholds", func(p Policy) bool { return len(p.Signing.Thresholds) > 0 })
 	pv.all("mcp.allowed_commands", func(p Policy) bool { return p.MCP.AllowedCommands.Set })
 	pv.all("mcp.deny_transports", func(p Policy) bool { return len(p.MCP.DenyTransports) > 0 })
+	pv.firstWith(switchMCPReadOnly, func(p Policy) bool { return p.MCP.ReadOnly })
 	pv.firstWith("hooks.allow", func(p Policy) bool { return p.Hooks.Forbidden })
 	pv.firstWith("guard.generated", func(p Policy) bool { return p.Guard.Generated })
 }

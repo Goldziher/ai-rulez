@@ -247,6 +247,7 @@ issuer   = "https://token.actions.githubusercontent.com"
 [mcp]
 allowed_commands = ["npx", "uvx"]                               # the only commands a stdio MCP server may run
 deny_transports  = ["http", "sse"]                              # no remote MCP endpoint
+read_only        = true                                         # `ai-rulez mcp` registers only its read-only tools
 
 [hooks]
 allow = false                                                   # any [[hooks]] group is a violation
@@ -325,6 +326,7 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `signing.thresholds` | per subject, the larger value; a subject the repository leaves unset takes the floor | a lower explicit `[signing.thresholds]` value | `AR740` |
 | `mcp.allowed_commands` | the stdio servers whose command the list names (compared as written); an empty list allows none | an MCP server running another command; the server is not loaded. An imported agent, skill or command with such an inline `mcpServers` entry loses the whole `mcpServers` key | `AR748` |
 | `mcp.deny_transports` | union of layers | an MCP server on a denied transport (`stdio`, `http`, `sse`); the server is not loaded (inline `mcpServers` of imported content: as above) | `AR748` |
+| `mcp.read_only` | `true` (any layer; layers union) | `[mcp] read_only = false`; the server is read-only anyway, and `--read-only=false` cannot turn it off | `AR740` |
 | `hooks.allow` | `false` forbids every hook group | a `[[hooks]]` group; it is not loaded. An imported agent, skill or command that declares `hooks` in its frontmatter loses the key | `AR748` |
 | `governance.approvers` | the repository's entries that the list names; the policy list when it sets none or none is left. An empty policy list means nobody may approve | an entry the list does not name; the entry is dropped | `AR740` |
 

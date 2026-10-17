@@ -20,6 +20,7 @@ func TestExtendsRejectsAChildThatSwitchesAParentRestrictionOff(t *testing.T) {
 		{"governance enforce", "[governance]\nenforce = true\n", "[governance]\nenforce = false\n", "governance.enforce"},
 		{"forbid_self_approval", "[governance]\nforbid_self_approval = true\n", "[governance]\nforbid_self_approval = false\n", "governance.forbid_self_approval"},
 		{"hooks", "[hooks]\nallow = false\n", "[hooks]\nallow = true\n", "hooks.allow"},
+		{"mcp read_only", "[mcp]\nread_only = true\n", "[mcp]\nread_only = false\n", "mcp.read_only"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

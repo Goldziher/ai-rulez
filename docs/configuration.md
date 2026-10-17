@@ -749,6 +749,12 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 # skills_instructions_text = "..."           # replace that section; {{server}}, {{skills_dir}}
 # discover_skills = "repo"                   # mcp --serve-skills also serves the skills already in the repository
 # index_cache = "user"                       # "user" (default), "repo" or "off": where the repository index is cached
+# read_only = true                           # mcp registers only its read-only tools (--read-only)
+# tools = ["find_skill", "load_skill"]       # mcp registers only these tools (--tools)
+# allow = ["review-*"]                       # mcp --serve-skills serves only matching skills (--allow)
+# deny = ["draft-*"]                         # mcp --serve-skills never serves matching skills (--deny)
+# daemon = true                              # mcp --serve-skills shares one server per repository (--daemon)
+# no_watch = true                            # mcp --serve-skills does not reload on file changes (--no-watch)
 ```
 
 | Field                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -761,6 +767,12 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 | `skills_instructions_text` | Replaces the default section (write your own heading). `{{server}}` is the MCP server that serves the skills, `{{skills_dir}}` the config directory's skills folder (`.ai-rulez/skills`). Unknown variables, blank text, and text beside `skills_instructions = false` are configuration errors.                                                                                                                                                                                                                                                |
 | `discover_skills`          | `off` (the default), `repo` or `all`: whether `mcp --serve-skills` also serves the skills the repository already keeps (`skills/`, `.claude/skills` at any depth, the configured presets' skill directories). `all` adds the installed and included skills whatever their delivery. The `--discover-skills` flag overrides it. See [Discovering skills already in the repository](mcp-server.md#discovering-skills-already-in-the-repository). |
 | `index_cache`              | `user` (the default), `repo` or `off`: where the repository index of the discovery keeps its cache of item summaries and scan verdicts, never file bodies. `user` is the user cache directory, with a gitignored directory in the project (`.ai-rulez/.cache/`, or `.ai-rulez-cache/` in the root layout) as the fallback when it is not writable; `repo` always uses that directory; `off` keeps none. See [The index cache](mcp-server.md#the-index-cache). |
+| `read_only`                | `true` registers only the read-only tools, as `mcp --read-only` does; the server instructions and prompts follow. The `--read-only` flag overrides it. An organization policy with `[mcp] read_only = true` cannot be loosened by it (`AR740`). |
+| `tools`                    | The only tools the server registers, as `mcp --tools` does, for example `["find_skill", "load_skill", "find_context", "load_context"]`. An unknown name stops the server and lists the valid ones. The `--tools` flag overrides it. |
+| `allow`, `deny`            | Glob patterns on the served skill names (`mcp --serve-skills --allow` and `--deny`); `deny` wins. The flags override them. |
+| `daemon`, `no_watch`       | `mcp --serve-skills --daemon` (one shared server per repository) and `--no-watch` (no live reload). The flags override them. |
+
+The `mcp` serve keys are read when the server starts. See [Settings in the configuration](mcp-server.md#settings-in-the-configuration).
 
 Behavior:
 
