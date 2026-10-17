@@ -924,6 +924,11 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		return ToolError(err)
 	}
 
+	// A configuration in ai-rulez.toml would be shadowed by the directory this scaffolds.
+	if config.IsRootConfigDir(baseDir) {
+		return ToolError(fmt.Errorf("%s already exists; init_project does not overwrite a configuration", filepath.Join(baseDir, config.RootConfigFilename)))
+	}
+
 	switch source := request.GetString("source", ""); source {
 	case "", config.SourceAIRulez:
 	case config.SourceAgents:
