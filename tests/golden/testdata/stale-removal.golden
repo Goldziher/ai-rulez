@@ -24,7 +24,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-.ai-rulez/.generated-manifest.local.json file 0644 5116 8ac27a6c1eea4d7fc65842af6ae72c8a939a4b39d322faa67f5dbedc57b8eaba
+.ai-rulez/.generated-manifest.local.json file 0644 5116 239ace3d891c643f60f997a5d700ed846709cb6f396bdbf1333d5fe36490ec06
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -63,7 +63,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
+.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
@@ -121,7 +121,7 @@ INFO  Generation complete files=16
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1131 07de181dd67437c62d4207a58ade45c79dbba4d31ad6a1fe1a0d818a52da0d6d
-~ .ai-rulez/.generated-manifest.local.json file 0644 2470 3c92e25dd9ee8627bc7dfea6cd84df20e39f7c79d06c437c96aa0084393ae3fa
+~ .ai-rulez/.generated-manifest.local.json file 0644 2470 97405f492b367ee0b3cb189e8eec3fbc266ef6c56643170ac70f67555d21660b
 ~ .gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
 - .agents/ dir 0755
 - .agents/skills/ dir 0755
@@ -218,7 +218,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2103 b312bf9e4af85e94ca8cd7d20359a547295e605bccc8e394fd318eaa399d51a1
-.ai-rulez/.generated-manifest.local.json file 0644 5116 8ac27a6c1eea4d7fc65842af6ae72c8a939a4b39d322faa67f5dbedc57b8eaba
+.ai-rulez/.generated-manifest.local.json file 0644 5116 239ace3d891c643f60f997a5d700ed846709cb6f396bdbf1333d5fe36490ec06
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
@@ -249,7 +249,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
+.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3

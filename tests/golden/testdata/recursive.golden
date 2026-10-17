@@ -9,14 +9,14 @@ exit: 0
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
-a/.ai-rulez/.generated-manifest.local.json file 0644 692 046b1ec00b2d5648dd5c7ba1c3034294b5c1c0d79e878439b5649f3905737d7b
+a/.ai-rulez/.generated-manifest.local.json file 0644 692 c09f2c6d0cd26b5d03b271fbdfb4cea74ef43842ae9dfa77273bbfd60bb669b5
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
 a/.claude/ dir 0755
 a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
-a/.claude/settings.json file 0644 745 3b6bb26a99f2b0a54c95c1a2bef4ba328403790b3df723d0dc1ba7bd2bcd9a33
+a/.claude/settings.json file 0644 977 183da4d2cbf7ea2ce254d1a2460ff79b815577de4affb37d342846629dd22790
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
 b/ dir 0755
@@ -44,14 +44,14 @@ exit: 0
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
-a/.ai-rulez/.generated-manifest.local.json file 0644 692 046b1ec00b2d5648dd5c7ba1c3034294b5c1c0d79e878439b5649f3905737d7b
+a/.ai-rulez/.generated-manifest.local.json file 0644 692 c09f2c6d0cd26b5d03b271fbdfb4cea74ef43842ae9dfa77273bbfd60bb669b5
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
 a/.claude/ dir 0755
 a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
-a/.claude/settings.json file 0644 745 3b6bb26a99f2b0a54c95c1a2bef4ba328403790b3df723d0dc1ba7bd2bcd9a33
+a/.claude/settings.json file 0644 977 183da4d2cbf7ea2ce254d1a2460ff79b815577de4affb37d342846629dd22790
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
 b/ dir 0755
