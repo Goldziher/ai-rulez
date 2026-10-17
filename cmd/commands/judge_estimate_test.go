@@ -29,13 +29,14 @@ func TestJudgeEstimateCoversMoreUnitsThanARunMayJudge(t *testing.T) {
 		wantErr  string
 	}{
 		{"estimate", []string{"--estimate", "--max-cost", "0", "--format", "json"}, 0, true, ""},
-		{"real run", []string{"--allow-llm", "--model", judgeTestModel, "--no-cache", "--max-cost", "0", "--format", "json"}, 1, false, "the limit is 200 per run"},
+		{"real run", []string{"--allow-llm", "--model", judgeTestModel, "--no-cache", "--max-cost", "0", "--format", "json"}, 1, false, "the limit is 5 per run"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Arrange
-			judgeProject(t, manySkills(201))
+			judgeProject(t, manySkills(6))
 			rig := newJudgeRig(t)
+			rig.maxUnits = 5
 
 			// Act
 			stdout, code := rig.run(t, tc.args...)
@@ -45,9 +46,9 @@ func TestJudgeEstimateCoversMoreUnitsThanARunMayJudge(t *testing.T) {
 			assert.Contains(t, rig.stderr.String(), tc.wantErr)
 			if tc.wantNote {
 				doc := parseJudgeDoc(t, stdout)
-				assert.Equal(t, 201, doc.Run.Estimate.Units)
+				assert.Equal(t, 6, doc.Run.Estimate.Units)
 				require.NotEmpty(t, doc.Run.Notices)
-				assert.Contains(t, doc.Run.Notices[0], "201 units match; a real run is limited to 200 units and would be refused")
+				assert.Contains(t, doc.Run.Notices[0], "6 units match; a real run is limited to 5 units and would be refused")
 			}
 		})
 	}
@@ -141,6 +142,22 @@ func TestJudgeRefusesANamedPathThroughAnInRepoSymlink(t *testing.T) {
 			}
 			require.Equal(t, 0, code, rig.stderr.String())
 			assert.Equal(t, []string{"real/AGENTS.md"}, parseJudgeDoc(t, stdout).paths())
+		})
+	}
+}
+
+func TestJudgeUnitLimit(t *testing.T) {
+	tests := []struct {
+		name string
+		deps judgeDeps
+		want int
+	}{
+		{"the default limit", judgeDeps{}, 200},
+		{"a lowered limit", judgeDeps{maxUnits: 5}, 5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.deps.unitLimit())
 		})
 	}
 }
