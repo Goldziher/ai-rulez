@@ -45,9 +45,9 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/pluginresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -372,7 +372,7 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	}
 	resolvers := config.Resolvers{}
 	if o.Remote {
-		resolvers = includes.Resolvers(o.GitToken, lint.OKFScanner(nil))
+		resolvers = pluginresolve.Resolvers(o.GitToken, lint.OKFScanner(nil))
 	} else {
 		opts = append(opts, config.WithoutRemote())
 	}

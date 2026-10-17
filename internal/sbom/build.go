@@ -149,6 +149,7 @@ func treeOf(snap *contentlock.Snapshot, lock *lockfile.File) string {
 	computed := &lockfile.File{Item: snap.Items}
 	if lock != nil {
 		computed.Include, computed.Skill, computed.Source, computed.Served = lock.Include, lock.Skill, lock.Source, lock.Served
+		computed.Marketplace, computed.Plugin = lock.Marketplace, lock.Plugin
 	}
 	return contentlock.TreeOf(computed)
 }
@@ -316,7 +317,37 @@ func (b *builder) sourceComponents() []Component {
 		ss := &b.cfg.SkillSources[i]
 		add(lockfile.KindSource, approval.KindSource, ss.Name, ss.URL, ss.RequestedRef(), ss.Path)
 	}
+	for i := range b.cfg.InstalledMarketplaces {
+		mp := &b.cfg.InstalledMarketplaces[i]
+		add(lockfile.KindMarketplace, approval.KindMarketplace, mp.Name, mp.Source, mp.RequestedRef(), mp.Path)
+	}
+	for i := range b.cfg.InstalledPlugins {
+		pl := &b.cfg.InstalledPlugins[i]
+		if !b.scope.keepScoped(pl.Profiles) {
+			continue
+		}
+		add(lockfile.KindPlugin, approval.KindInstalledPlugin, pl.Name, b.pluginSource(pl), pl.RequestedRef(), pl.Path)
+	}
 	return out
+}
+
+// pluginSource is where a plugin was fetched from: its own source, else the
+// origin the lock recorded for it, else the marketplace it is installed from.
+func (b *builder) pluginSource(pl *config.InstalledPluginConfig) string {
+	if pl.Source != "" {
+		return pl.Source
+	}
+	if b.lock != nil {
+		if e := b.lock.Find(lockfile.KindPlugin, pl.Name); e != nil && e.Origin != "" {
+			return e.Origin
+		}
+	}
+	for i := range b.cfg.InstalledMarketplaces {
+		if b.cfg.InstalledMarketplaces[i].Name == pl.Marketplace {
+			return b.cfg.InstalledMarketplaces[i].Source
+		}
+	}
+	return ""
 }
 
 func sourceComponent(kind, name, source, ref, subpath string, pin *lockfile.Entry) Component {
