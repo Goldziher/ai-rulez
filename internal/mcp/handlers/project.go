@@ -935,13 +935,9 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		return ToolError(err)
 	}
 
-	if ancestor := ancestorConfig(ctx, baseDir); ancestor != "" {
-		return ToolError(fmt.Errorf("%s already configures this repository; init_project does not create a nested configuration under it (use a directory outside the project, or edit that configuration)", ancestor))
-	}
-
 	// A configuration in ai-rulez.toml would be shadowed by the directory this scaffolds.
-	if config.IsRootConfigDir(baseDir) {
-		return ToolError(fmt.Errorf("%s already exists; init_project does not overwrite a configuration", filepath.Join(baseDir, config.RootConfigFilename)))
+	if err := configConflict(ctx, baseDir); err != nil {
+		return ToolError(err)
 	}
 
 	switch source := request.GetString("source", ""); source {
@@ -980,6 +976,19 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		keyMessage: "Project initialized successfully",
 		keyPath:    configPath,
 	})
+}
+
+// configConflict is why init_project must not scaffold in baseDir: an
+// ai-rulez.toml there would be shadowed by the directory it creates, and a
+// configuration above it in the same repository already configures the project.
+func configConflict(ctx context.Context, baseDir string) error {
+	if config.IsRootConfigDir(baseDir) {
+		return fmt.Errorf("%s already exists; init_project does not overwrite a configuration", filepath.Join(baseDir, config.RootConfigFilename))
+	}
+	if ancestor := ancestorConfig(ctx, baseDir); ancestor != "" {
+		return fmt.Errorf("%s already configures this repository; init_project does not create a nested configuration under it (use a directory outside the project, or edit that configuration)", ancestor)
+	}
+	return nil
 }
 
 // ancestorConfig returns the configuration file of a directory above dir
