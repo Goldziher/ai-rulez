@@ -42,6 +42,8 @@ type contentScanner struct {
 	extraResources []string
 	// bundledFiles and bundledBytes count what one installed skill has bundled so far.
 	bundledFiles, bundledBytes int
+	// budget, when set, is the running total of the whole installed_skills entry.
+	budget *skillBundleBudget
 	// git answers which files a work tree ignores (bundle filtering); the zero
 	// value runs real git.
 	git gitutil.Git

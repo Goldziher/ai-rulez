@@ -97,6 +97,7 @@ func LoadSkillResourcesContext(ctx context.Context, skillDir string) ([]SkillRes
 	s.log = logger.FromContext(ctx)
 	s.git = gitutil.New(runner.FromContext(ctx))
 	s.extraResources = skillResourcesFrom(ctx)
+	s.budget = skillBundleBudgetFrom(ctx)
 	return s.loadResources(skillDir, ItemKindSkill, nil)
 }
 
