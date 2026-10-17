@@ -99,9 +99,9 @@ func TestLoad_HooksAreOffUnlessEnabled(t *testing.T) {
 				scanPaths = append(scanPaths, f.Path)
 			}
 			if tt.scanned {
-				assert.Contains(t, scanPaths, dir+"/hooks/hooks.json")
+				assert.Contains(t, scanPaths, filepath.Join(dir, "hooks", "hooks.json"))
 			} else {
-				assert.NotContains(t, scanPaths, dir+"/hooks/hooks.json")
+				assert.NotContains(t, scanPaths, filepath.Join(dir, "hooks", "hooks.json"))
 			}
 		})
 	}
@@ -191,7 +191,9 @@ func TestLoad_ReferencedScriptsAreQueuedForTheScan(t *testing.T) {
 	// Assert
 	got := map[string]string{}
 	for _, f := range res.Scan {
-		got[strings.TrimPrefix(f.Path, dir+"/")] = f.Trust
+		rel, err := filepath.Rel(dir, f.Path)
+		require.NoError(t, err)
+		got[filepath.ToSlash(rel)] = f.Trust
 	}
 	assert.Equal(t, map[string]string{
 		"hooks/hooks.json": config.TrustWarn, "scripts/stop.sh": config.TrustWarn, ".mcp.json": config.TrustWarn, "bin/serve": config.TrustWarn,
@@ -223,7 +225,7 @@ func TestLoad_ManifestPathsAreConfined(t *testing.T) {
 		manifest string
 	}{
 		{"parent traversal", `{"agents": "../outside", "skills": ["../../x"], "commands": "./../c"}`},
-		{"absolute paths", `{"agents": "` + outside + `/agents", "skills": "` + outside + `/skills"}`},
+		{"absolute paths", jsonObject(map[string]string{"agents": filepath.Join(outside, "agents"), "skills": filepath.Join(outside, "skills")})},
 		{"backslash", `{"agents": "..\\outside"}`},
 		{"hooks and mcp traversal", `{"hooks": "../h.json", "mcpServers": "../../m.json"}`},
 	}
@@ -478,4 +480,14 @@ func TestLoad_PluginRootVariableForms(t *testing.T) {
 			})
 		}
 	}
+}
+
+// jsonObject renders a JSON object of strings, escaping each value: a Windows
+// path holds backslashes that are not valid JSON escapes.
+func jsonObject(m map[string]string) string {
+	b, err := json.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }

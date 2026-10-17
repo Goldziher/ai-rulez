@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -106,6 +107,9 @@ func TestReadIndexFile(t *testing.T) {
 }
 
 func TestSafeJoin_ReportsAnUnreadableComponent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows reports a path below a regular file as not existing, not as ENOTDIR")
+	}
 	// Arrange: a regular file used as a directory makes the stat fail with ENOTDIR, not ENOENT
 	root := t.TempDir()
 	testutil.WriteTree(t, root, map[string]string{"file.md": "x"})
