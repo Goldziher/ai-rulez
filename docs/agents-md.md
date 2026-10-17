@@ -17,6 +17,10 @@ agents_md = true    # the default
 `update_context` and `delete_context` then act on that one section, never the whole file), and an `AGENTS.md` in a
 subdirectory is read as context scoped to that directory.
 
+To write `AGENTS.md`, `CLAUDE.md` or the shared skills by hand and keep ai-rulez away from them, list them in
+[`skip_outputs`](configuration.md#skip_outputs): `"agents_md"` skips the shared `AGENTS.md` and `.agents/skills`,
+`"claude_md"` skips `CLAUDE.md`, and `"instructions"` skips every root instruction file and overrides both.
+
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).
