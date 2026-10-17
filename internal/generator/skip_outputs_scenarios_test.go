@@ -241,3 +241,31 @@ func TestSkipOutputs_SkippedFileTheUserEditsIsNeverTouched(t *testing.T) {
 	_, statErr := os.Stat(filepath.Join(root, "AGENTS.md"))
 	assert.True(t, os.IsNotExist(statErr), "clean removed the output it still manages")
 }
+
+func TestSkipOutputs_DoesNotMisclassifyNestedFilesNamedLikeARoot(t *testing.T) {
+	tests := []struct {
+		name string
+		skip []string
+		rel  string
+		want bool
+	}{
+		{"skill resource CLAUDE.md under instructions", []string{"instructions"}, ".claude/skills/x/references/CLAUDE.md", false},
+		{"skill resource AGENTS.md under agents_md", []string{"agents_md"}, ".claude/skills/x/references/AGENTS.md", false},
+		{"rule named AGENTS.md under instructions", []string{"instructions"}, ".cursor/rules/AGENTS.md", false},
+		{"scope GEMINI.md under instructions", []string{"instructions"}, "docs/GEMINI.md", true},
+		{"skill resource CLAUDE.md under skills", []string{"skills"}, ".claude/skills/x/references/CLAUDE.md", true},
+		{"rule named AGENTS.md under rules", []string{"rules"}, ".cursor/rules/AGENTS.md", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := newTestRegistryConfig(t, tt.skip)
+
+			// Act
+			got := skipOutputsMatcher(cfg).skips(tt.rel, false)
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
