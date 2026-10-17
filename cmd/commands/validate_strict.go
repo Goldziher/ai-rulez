@@ -235,11 +235,10 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if outputsRequested(cfg) {
 		opts = append(opts, lint.WithOutputs(generatedOutputFiles(ctx, cfg)))
 	}
-	scanner, err := scannerOptions()
+	scanner, err := scannerOptionsFor(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	scanner = withScannerCache(scanner, cfg)
 	report, err := lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
 		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),

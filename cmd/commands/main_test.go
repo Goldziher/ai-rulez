@@ -10,6 +10,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	testutil.RunFakeScannerIfAsked()
 	testutil.CeilGit()
 	signing.UseBackend(sigstore.New())
 	prepareCommandTree(RootCmd)

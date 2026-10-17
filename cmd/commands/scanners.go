@@ -67,9 +67,11 @@ problem that stops "scan --external" from running it (AR9E0, AR9E4).
 
 A scanner command comes from the repository's configuration, so doctor starts
 nothing unless you pass --external (the same consent "scan --external" needs), and
-then only the scanners you name or --all. Exit 0 when every checked scanner is healthy, 2 when
-one is not installed, is misconfigured, or has a network flag on an egress = false
-entry, 1 when the configuration cannot be loaded or a name is unknown.`,
+then only the scanners you name or --all. With --external an entry that has a "version" range is checked
+like a run checks it (version_command, else --version), so doctor never calls a scanner healthy that
+"validate --external" refuses to run; without it the range is reported as unverified. Exit 0 when every checked
+scanner is healthy, 2 when one is not installed, is misconfigured, is outside its version range, or has a network
+flag on an egress = false entry, 1 when the configuration cannot be loaded or a name is unknown.`,
 	Args:    cobra.ArbitraryArgs,
 	PreRunE: checkScannersFormat,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -177,11 +179,12 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) error 
 
 // doctorScannersJSON prints the --format json document of scanners doctor.
 func doctorScannersJSON(ctx context.Context, out io.Writer, selected []lint.ScannerInfo) error {
+	if scannersProbe {
+		selected = probeScanners(ctx, selected)
+	}
 	versions := map[string]string{}
 	for i := range selected {
-		if s := &selected[i]; s.Found() && scannersProbe {
-			versions[s.Name], _ = lint.ProbeScannerVersion(ctx, *s) //nolint:errcheck // a refused probe leaves the version empty
-		}
+		versions[selected[i].Name] = selected[i].VersionLine
 	}
 	if err := writeScannersJSON(out, selected, true, versions); err != nil {
 		return fail(err)
@@ -225,30 +228,49 @@ func selectScanners(infos []lint.ScannerInfo, names []string, all bool) (selecte
 	return selected, unknown
 }
 
-// scannerVersionText is the version row of a scanner found on PATH: probed with
-// --version only when probe is set.
-func scannerVersionText(ctx context.Context, s lint.ScannerInfo, probe bool) string {
-	if !probe {
-		return "not probed (pass --external)"
+// probeScanners starts each installed scanner once to ask its version
+// (version_command, else --version) and applies its version range exactly as a
+// run does, so doctor never calls a scanner healthy that validate refuses to run.
+func probeScanners(ctx context.Context, infos []lint.ScannerInfo) []lint.ScannerInfo {
+	out := append([]lint.ScannerInfo(nil), infos...)
+	for i := range out {
+		s := &out[i]
+		if !s.Found() {
+			continue
+		}
+		if s.Version != "" {
+			check := lint.CheckScannerVersion(ctx, *s)
+			s.VersionLine, s.VersionProblem = check.Line, check.Problem
+			continue
+		}
+		s.VersionLine, _ = lint.ProbeScannerVersion(ctx, *s) //nolint:errcheck // a refused probe leaves the version empty
 	}
-	v, err := lint.ProbeScannerVersion(ctx, s)
+	return out
+}
+
+// scannerVersionText is the version row of a scanner found on PATH: it shows
+// what the probe printed only when probe is set.
+func scannerVersionText(s lint.ScannerInfo, probe bool) string {
 	switch {
-	case err != nil:
-		return "not probed (" + err.Error() + ")"
-	case v == "":
-		return "unknown (--version printed nothing usable)"
+	case !probe:
+		return "not probed (pass --external)"
+	case s.VersionLine != "":
+		return s.VersionLine
 	}
-	return v
+	return "unknown (the version command printed nothing usable)"
 }
 
 // writeDoctor prints one scanner's report and reports whether it is healthy.
 func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe bool) bool {
+	if probe {
+		s = probeScanners(ctx, []lint.ScannerInfo{s})[0]
+	}
 	rw := reportWriter{out}
 	row := func(key, value string) { rw.printf("  %-9s %s\n", key, value) }
 	rw.printf("%s\n", s.Name)
 	if s.Found() {
 		row("binary", s.Path)
-		row("version", scannerVersionText(ctx, s, probe))
+		row("version", scannerVersionText(s, probe))
 	} else {
 		row("binary", s.Command+": not found on PATH (or only through a relative PATH entry)")
 	}
@@ -261,20 +283,8 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 	if s.Required {
 		row("required", "yes: missing, outdated or failing is an error")
 	}
-	if s.Version != "" {
-		row("range", s.Version+" (checked against --version before every run)")
-	}
-	switch s.Egress {
-	case valueTrue:
-		row("egress", "true: content may leave the machine; runs only with --allow-egress="+s.Name)
-		if len(s.DataSent) > 0 {
-			row("", "the vendor documents receiving: "+strings.Join(s.DataSent, "; "))
-		}
-	case "false":
-		row("egress", "false: scrubbed environment; network flags are rejected")
-	default:
-		row("egress", "undeclared (AR9E1): runs with the full environment unless inputs is set")
-	}
+	doctorVersionRows(row, s)
+	doctorEgressRows(row, s)
 	if s.EgressFlag != "" {
 		row("", "network flag "+s.EgressFlag+" on an egress = false scanner (AR9E4): the scanner is not run")
 	}
@@ -295,11 +305,40 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 		row("problem", p+" (AR9E0)")
 	}
 	verdict := "ok"
-	if !s.Healthy() {
+	switch {
+	case !s.Healthy():
 		verdict = "not healthy"
+	case s.Version != "" && !probe && s.Found():
+		verdict = "unverified: the version range was not checked (pass --external)"
 	}
 	row("result", verdict)
 	return s.Healthy()
+}
+
+// doctorVersionRows prints the version range of a scanner and why it failed.
+func doctorVersionRows(row func(key, value string), s lint.ScannerInfo) {
+	if s.Version == "" {
+		return
+	}
+	row("range", s.Version+" (checked against "+versionSource(s)+" before every run)")
+	if s.VersionProblem != "" {
+		row("problem", s.VersionProblem)
+	}
+}
+
+// doctorEgressRows prints the egress declaration of a scanner.
+func doctorEgressRows(row func(key, value string), s lint.ScannerInfo) {
+	switch s.Egress {
+	case valueTrue:
+		row("egress", "true: content may leave the machine; runs only with --allow-egress="+s.Name)
+		if len(s.DataSent) > 0 {
+			row("", "the vendor documents receiving: "+strings.Join(s.DataSent, "; "))
+		}
+	case "false":
+		row("egress", "false: scrubbed environment; network flags are rejected")
+	default:
+		row("egress", "undeclared (AR9E1): runs with the full environment unless inputs is set")
+	}
 }
 
 // isolationText says how this system would confine the scanner.
@@ -380,4 +419,12 @@ func nonNil(in []string) []string {
 		return []string{}
 	}
 	return in
+}
+
+// versionSource names the command that prints a scanner's version.
+func versionSource(s lint.ScannerInfo) string {
+	if len(s.VersionCommand) > 0 {
+		return "version_command (" + strings.Join(s.VersionCommand, " ") + ")"
+	}
+	return "--version"
 }

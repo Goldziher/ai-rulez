@@ -100,6 +100,21 @@ func LoadSkillResourcesContext(ctx context.Context, skillDir string) ([]SkillRes
 	return s.loadResources(skillDir, ItemKindSkill, nil)
 }
 
+// LoadAllSkillFiles loads every regular file below skillDir besides SKILL.md,
+// whatever directory it sits in (the root, references/, a folder of its own).
+// It applies the limits of an installed skill: files git ignores, the bundle
+// excludes (DefaultBundleExcludes and extraExcludes), symbolic links, credential
+// names, files over 8 MiB and the 2000 file / 16 MiB total are left out or, for
+// the total, refused with a SkillBundleLimitError. The external scanners stage
+// a skill with it.
+func LoadAllSkillFiles(ctx context.Context, skillDir string, extraExcludes []string) ([]SkillResource, error) {
+	s := newIncludeScanner(ctx, osView(skillDir))
+	s.log = logger.FromContext(ctx)
+	s.git = gitutil.New(runner.FromContext(ctx))
+	s.extraResources = []string{"*"}
+	return s.loadResources(skillDir, ItemKindSkill, extraExcludes)
+}
+
 // LoadResources is LoadResourcesWith with only the default bundle excludes.
 func LoadResources(root, itemKind string) ([]SkillResource, error) {
 	return LoadResourcesWith(root, itemKind, nil)
