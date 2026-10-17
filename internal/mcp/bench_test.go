@@ -95,3 +95,72 @@ func BenchmarkSkillServer(b *testing.B) {
 		}
 	}
 }
+
+const benchDiscoverConfig = "version = \"5.0\"\nname = \"bench\"\ngitignore = false\npresets = [\"claude\"]\n"
+
+// benchMonorepo writes the monorepo of the given scope count with an
+// ai-rulez configuration, staged in git.
+func benchMonorepo(b *testing.B, files, scopes int) string {
+	b.Helper()
+	return testutil.BuildMonorepo(b, testutil.MonorepoSpec{
+		Files: files, Scopes: scopes, Git: true,
+		Extra: map[string]string{".ai-rulez/config.toml": benchDiscoverConfig},
+	})
+}
+
+func benchServer(b *testing.B, root string) *Server {
+	b.Helper()
+	setup := &ServeSetup{WorkDir: root, DiscoverSkills: "repo", NoWatch: true, CacheDir: b.TempDir()}
+	srv, err := setup.NewServer(context.Background())
+	if err != nil {
+		b.Fatal(err)
+	}
+	return srv
+}
+
+// BenchmarkDiscoveryCatalog times building the served catalog of a monorepo
+// with repository discovery on: the config load, the repository index and one
+// served skill per discovered directory (up to the discovery cap).
+func BenchmarkDiscoveryCatalog(b *testing.B) {
+	for _, scopes := range []int{10, 100, 500} {
+		b.Run(fmt.Sprintf("scopes=%d", scopes), func(b *testing.B) {
+			root := benchMonorepo(b, testutil.MonorepoLargest(), scopes)
+			b.ResetTimer()
+			b.ReportAllocs()
+			for range b.N {
+				benchServer(b, root)
+			}
+		})
+	}
+}
+
+// BenchmarkRepositoryQueries times find_skill and find_context over the
+// in-memory transport against the largest monorepo, once per scope count.
+func BenchmarkRepositoryQueries(b *testing.B) {
+	for _, scopes := range []int{10, 100, 500} {
+		b.Run(fmt.Sprintf("scopes=%d", scopes), func(b *testing.B) {
+			root := benchMonorepo(b, testutil.MonorepoLargest(), scopes)
+			session := benchSession(b, benchServer(b, root))
+			deep := testutil.MonorepoScopeDir(scopes-1) + "/src/pkg001/file.go"
+			for _, tc := range []struct {
+				name string
+				tool string
+				args map[string]any
+			}{
+				{"find_skill/task", "find_skill", map[string]any{"task": "work in a service of the monorepo"}},
+				{"find_skill/path", "find_skill", map[string]any{"task": "work in a service of the monorepo", "path": deep}},
+				{"find_skill/scope", "find_skill", map[string]any{"task": "synthetic monorepo", "scope": testutil.MonorepoScopeDir(1), "recursive": true}},
+				{"find_context/path", "find_context", map[string]any{"path": deep}},
+				{"find_context/task", "find_context", map[string]any{"task": "conventions of the service", "path": deep}},
+				{"find_context/root-recursive", "find_context", map[string]any{"scope": ".", "recursive": true}},
+			} {
+				b.Run(tc.name, func(b *testing.B) {
+					b.ReportAllocs()
+					for range b.N {
+						benchCall(b, session, tc.tool, tc.args)
+					}
+				})
+			}
+		})
+	}
+}
