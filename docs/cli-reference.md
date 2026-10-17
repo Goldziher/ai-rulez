@@ -1063,6 +1063,7 @@ ai-rulez generate --locked
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
+| `--accept-findings` | bool |  | With --refresh-remote or [lock] refresh_on_generate: pin a remote tree although its security scan has error findings (review them first), as 'ai-rulez lock --accept-findings' |
 | `--allow-local-drift` | bool |  | Write output even when machine-local config would change files shared with the team |
 | `--check` | bool |  | Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |

@@ -9297,7 +9297,7 @@ ai-rulez generate --check     # report drift; hand-written files are never repor
 
 To pick up new releases of the remote skills on every run, add `refresh_on_generate = true` to `[lock]`, or run
 `ai-rulez generate --refresh-remote` once. The refresh re-resolves each source to the newest version its constraint
-allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
+allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written (review it, then add `--accept-findings`). See
 [Refreshing on generate](lockfile.md#refreshing-on-generate).
 
 #### What happens to existing files
@@ -17945,7 +17945,8 @@ written: every remote include, installed skill and skill source moves to the new
 plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
 is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
 error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
-tags. Any refusal ends the run before an output is written and leaves the lock as it was. The import gate
+tags. Any refusal ends the run before an output is written and leaves the lock as it was; after reviewing the findings,
+`generate --refresh-remote --accept-findings` pins the trees anyway, as `lock --accept-findings` does. The import gate
 (`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
 key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
 `--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.
@@ -30361,6 +30362,7 @@ ai-rulez generate --locked
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
+| `--accept-findings` | bool |  | With --refresh-remote or [lock] refresh_on_generate: pin a remote tree although its security scan has error findings (review them first), as 'ai-rulez lock --accept-findings' |
 | `--allow-local-drift` | bool |  | Write output even when machine-local config would change files shared with the team |
 | `--check` | bool |  | Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |

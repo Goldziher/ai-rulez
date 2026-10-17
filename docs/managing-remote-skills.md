@@ -44,7 +44,7 @@ ai-rulez generate --check     # report drift; hand-written files are never repor
 
 To pick up new releases of the remote skills on every run, add `refresh_on_generate = true` to `[lock]`, or run
 `ai-rulez generate --refresh-remote` once. The refresh re-resolves each source to the newest version its constraint
-allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
+allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written (review it, then add `--accept-findings`). See
 [Refreshing on generate](lockfile.md#refreshing-on-generate).
 
 ## What happens to existing files
