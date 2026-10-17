@@ -216,7 +216,7 @@ func (op *OperatorImpl) installSkillLocal(ctx context.Context, req *InstallSkill
 				Errorf("skill '%s' is already installed", req.Name)
 		}
 	}
-	sourceType, err := validateSkillSource(req.Source)
+	sourceType, err := validateSkillSource(op.baseDir, req.Source)
 	if err != nil {
 		return err
 	}
