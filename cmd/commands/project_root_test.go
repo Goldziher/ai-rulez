@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 const rootTestConfig = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\ngitignore = false\n"
@@ -81,7 +82,7 @@ func TestLoadConfigOrNoConfig_StopsAtTheGitRoot(t *testing.T) {
 	repo := filepath.Join(outer, "repo")
 	sub := filepath.Join(repo, "sub")
 	require.NoError(t, os.MkdirAll(sub, 0o755))
-	require.NoError(t, exec.Command("git", "init", "-q", repo).Run())
+	require.NoError(t, gitutil.CommandNoContext("", "init", "-q", repo).Run())
 	t.Chdir(sub)
 
 	_, err := loadConfigOrNoConfig(context.Background())
