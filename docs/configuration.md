@@ -671,9 +671,9 @@ skip_outputs = ["instructions"]
 | `agents_md`    | Only the shared `AGENTS.md` (and `AGENTS.override.md`) and the shared `.agents/skills` tree. |
 | `claude_md`    | Only `CLAUDE.md` (root and scopes). |
 | `rules`        | Rule files in every preset (`.claude/rules`, `.cursor/rules`, ...). |
-| `skills`       | Skill directories in every preset, installed skills included. |
+| `skills`       | Skill directories in every preset, installed skills included. A command a harness runs as a skill (`.claude/skills/<command>`, `.agents/skills/<command>`) is a command, not a skill. |
 | `agents`       | Agent definition files. |
-| `commands`     | Command and prompt files. |
+| `commands`     | Command and prompt files, and the skills that carry a command (including `agents/openai.yaml` for Codex). |
 
 An unknown value fails validation and names the valid ones. `config.local.toml` accepts the key too. Skipped files leave
 the manifest, the managed `.gitignore` block, `generate --check`, the lock output digests and `clean`, so none of them
