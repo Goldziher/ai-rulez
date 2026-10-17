@@ -89,6 +89,24 @@ func skillResourcesFrom(ctx context.Context) []string {
 	return DefaultInstalledSkillResources()
 }
 
+// skillResourcesExplicit reports whether ctx carries the entry's own `resources`.
+func skillResourcesExplicit(ctx context.Context) bool {
+	patterns, ok := ctx.Value(skillResourcesKey{}).([]string)
+	return ok && len(patterns) > 0
+}
+
+// resourcesNameDir reports whether the entry's explicit `resources` decide on the
+// subdirectory dir: a pattern, or a "!" exclusion, matches its name, or "none"
+// leaves out everything beyond the canonical directories.
+func (s *contentScanner) resourcesNameDir(dir string) bool {
+	if !s.explicitResources {
+		return false
+	}
+	return slices.ContainsFunc(s.extraResources, func(pattern string) bool {
+		return pattern == "none" || matchesPattern(strings.TrimPrefix(pattern, "!"), []string{dir})
+	})
+}
+
 // LoadSkillResourcesContext is LoadSkillResources reporting through the logger
 // ctx carries (logger.WithContext) and asking the VCS, to leave out ignored
 // files, through the runner ctx carries.
@@ -97,6 +115,7 @@ func LoadSkillResourcesContext(ctx context.Context, skillDir string) ([]SkillRes
 	s.log = logger.FromContext(ctx)
 	s.git = gitutil.New(runner.FromContext(ctx))
 	s.extraResources = skillResourcesFrom(ctx)
+	s.explicitResources = skillResourcesExplicit(ctx)
 	s.budget = skillBundleBudgetFrom(ctx)
 	return s.loadResources(skillDir, ItemKindSkill, nil)
 }
@@ -210,6 +229,8 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	warnings = slices.DeleteFunc(warnings, func(w resourceWarning) bool {
 		return slices.ContainsFunc(extras, func(r SkillResource) bool { return strings.HasPrefix(r.RelPath, w.Subdirectory+"/") })
 	})
+	// So is one the entry's `resources` name, as included or as excluded.
+	warnings = slices.DeleteFunc(warnings, func(w resourceWarning) bool { return s.resourcesNameDir(w.Subdirectory) })
 	if s.quietUnrecognized {
 		warnings = nil
 	}
