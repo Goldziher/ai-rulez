@@ -83,32 +83,48 @@ func (c *collector) collectVerifierFiles() error {
 			continue
 		}
 		rel := config.VerifiersDirName + "/" + e.Name()
-		path := filepath.Join(dir, e.Name())
-		if info, statErr := os.Lstat(path); statErr != nil || !info.Mode().IsRegular() {
-			c.problems = append(c.problems, "verifier file "+rel+" is not a regular file, so it cannot be pinned")
-			continue
-		}
-		data, readErr := os.ReadFile(path)
-		if readErr != nil {
-			c.problems = append(c.problems, "verifier file "+rel+" cannot be read: "+readErr.Error())
-			continue
-		}
-		var doc struct {
-			Verifiers []map[string]any `toml:"verifiers"`
-		}
-		if err := toml.Unmarshal(data, &doc); err != nil {
-			c.problems = append(c.problems, "verifier file "+rel+" is not valid TOML, so it cannot be pinned")
-			continue
-		}
-		for i, table := range doc.Verifiers {
-			id, ok := table["id"].(string)
-			if !ok || id == "" {
-				id = rel + "#" + strconv.Itoa(i+1)
-			}
-			if err := c.addVerifier(id, rel, table); err != nil {
-				return err
-			}
+		if err := c.collectVerifierFile(filepath.Join(dir, e.Name()), rel); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+// collectVerifierFile pins the [[verifiers]] tables of one declaration file; an
+// unreadable or malformed file is recorded as a problem, not returned.
+func (c *collector) collectVerifierFile(path, rel string) error {
+	tables, problem := readVerifierTables(path, rel)
+	if problem != "" {
+		c.problems = append(c.problems, problem)
+		return nil
+	}
+	for i, table := range tables {
+		id, ok := table["id"].(string)
+		if !ok || id == "" {
+			id = rel + "#" + strconv.Itoa(i+1)
+		}
+		if err := c.addVerifier(id, rel, table); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// readVerifierTables reads the generic [[verifiers]] tables of one file, or
+// returns the problem that stops it being pinned.
+func readVerifierTables(path, rel string) (tables []map[string]any, problem string) {
+	if info, statErr := os.Lstat(path); statErr != nil || !info.Mode().IsRegular() {
+		return nil, "verifier file " + rel + " is not a regular file, so it cannot be pinned"
+	}
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return nil, "verifier file " + rel + " cannot be read: " + readErr.Error()
+	}
+	var doc struct {
+		Verifiers []map[string]any `toml:"verifiers"`
+	}
+	if err := toml.Unmarshal(data, &doc); err != nil {
+		return nil, "verifier file " + rel + " is not valid TOML, so it cannot be pinned"
+	}
+	return doc.Verifiers, ""
 }

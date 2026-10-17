@@ -478,9 +478,6 @@ func (st *scannerStage) tmpDirN(idx int) string {
 	return filepath.Join(st.scratch, "tmp-"+strconv.Itoa(idx))
 }
 
-// outFile is the path of the {out} file.
-func (st *scannerStage) outFile() string { return st.outFileN(0) }
-
 // expand turns a command template into argv. list placeholders become one
 // argument per path; the others are replaced inside the argument. No shell is involved.
 func (st *scannerStage) expand(cmd []string) []string {

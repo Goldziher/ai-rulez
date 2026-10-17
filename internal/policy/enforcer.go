@@ -3,9 +3,10 @@ package policy
 import (
 	"context"
 	"fmt"
-	"github.com/samber/oops"
 	"slices"
 	"sync"
+
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
@@ -164,7 +165,7 @@ func (e *Enforcer) EnforceContent(_ context.Context, cfg *config.Config) []confi
 func (e *Enforcer) CheckSource(cfg *config.Config, kind, name, source string) error {
 	r, err := e.LoadFor(cfg.PolicyProjectDir())
 	if err != nil || r == nil {
-		return nil // Enforce already failed the load on a policy that cannot be used
+		return nil //nolint:nilerr // Enforce already failed the load on a policy that cannot be used
 	}
 	a := &applier{res: r, cfg: cfg, out: &config.PolicyOutcome{}}
 	check := a.sourceChecker()

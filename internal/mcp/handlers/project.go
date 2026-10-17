@@ -454,15 +454,10 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 	var dirs []string
 	err := filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			if d != nil && d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
+			return skipUnreadable(d)
 		}
 		if !d.IsDir() {
-			// An ai-rulez.toml with no config directory beside it is a project of its own.
-			if useConventionFallback && d.Name() == config.RootConfigFilename &&
-				config.ResolveConfigDirName(filepath.Dir(path)) == config.RootConfigDirName {
+			if useConventionFallback && isStandaloneRootConfig(path, d.Name()) {
 				dirs = append(dirs, filepath.Dir(path))
 			}
 			return nil
@@ -490,6 +485,22 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 		return recursiveWalkDecision(path, name, configDirName)
 	})
 	return dirs, err
+}
+
+// skipUnreadable is the walk's answer to an entry it could not read: skip an
+// unreadable directory, ignore anything else.
+func skipUnreadable(d os.DirEntry) error {
+	if d != nil && d.IsDir() {
+		return filepath.SkipDir
+	}
+	return nil
+}
+
+// isStandaloneRootConfig reports whether the file at path is an ai-rulez.toml
+// with no config directory beside it, which is a project of its own.
+func isStandaloneRootConfig(path, name string) bool {
+	return name == config.RootConfigFilename &&
+		config.ResolveConfigDirName(filepath.Dir(path)) == config.RootConfigDirName
 }
 
 // ownsRecursiveConfig reports whether the config directory at path holds the

@@ -79,8 +79,9 @@ func pluginWants(cfg *config.Config) []lockfile.Want {
 			add(w)
 		}
 	}
-	for _, w := range stateFor(cfg).extraWants(cfg.BaseDir) {
-		add(w)
+	extra := stateFor(cfg).extraWants(cfg.BaseDir)
+	for i := range extra {
+		add(extra[i])
 	}
 	return wants
 }

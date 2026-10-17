@@ -53,7 +53,7 @@ func (c *Config) validateARD() error {
 	}
 	if a.BaseURL != "" {
 		u, err := url.Parse(a.BaseURL)
-		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
+		if err != nil || u.Scheme != schemeHTTPS || u.Host == "" || u.User != nil {
 			return oops.With("field", "ard.base_url").Hint("Use an absolute https URL without credentials").
 				Errorf("ard.base_url %q must be an https URL", a.BaseURL)
 		}

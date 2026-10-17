@@ -19,6 +19,12 @@ import (
 // UpdateSchemaVersion versions the JSON of `update --format json`.
 const UpdateSchemaVersion = 1
 
+// Literals shared by the update, skill, plugin and marketplace commands.
+const (
+	useUpdate = "update [name...]"
+	keyRef    = "ref"
+)
+
 var (
 	updateDryRun         bool
 	updateAllowDowngrade bool
@@ -33,7 +39,7 @@ var (
 
 // UpdateCmd moves the pins of sources that use a version constraint.
 var UpdateCmd = &cobra.Command{
-	Use:   "update [name...]",
+	Use:   useUpdate,
 	Short: "Move the pins of sources that use a version constraint to the newest allowed tag",
 	Long: `Move the lock entries of remote includes, installed skills, skill sources,
 installed marketplaces and installed plugins that ask for a version range (version = ^1.2) to the newest tag the range

@@ -99,7 +99,7 @@ pinned by "ai-rulez lock"; its content is merged into the generated outputs.`,
 	addJSONFormat(list.Flags(), &f.asJSON, "j")
 
 	update := &cobra.Command{
-		Use:   "update [name...]",
+		Use:   useUpdate,
 		Short: "Re-pin installed plugins in ai-rulez.lock to their current remote commit",
 		Long: `Resolve the named plugins (all of them without names) from their remote and record the
 commit and content digest in ai-rulez.lock. A plugin that uses a version range keeps a pin that
@@ -172,7 +172,7 @@ func (f *pluginFlags) list(cmd *cobra.Command, _ []string) error {
 		for i := range list {
 			p := &list[i]
 			rows[i] = map[string]interface{}{keyName: p.Name, "marketplace": p.Marketplace, keySource: incl.RedactURL(p.Source), keyPath: p.Path,
-				"ref": p.RequestedRef(), "enable_hooks": p.EnableHooks, "include": p.Include, "exclude": p.Exclude}
+				keyRef: p.RequestedRef(), "enable_hooks": p.EnableHooks, "include": p.Include, "exclude": p.Exclude}
 		}
 		return writeListJSON(out.Stdout(), rows)
 	}

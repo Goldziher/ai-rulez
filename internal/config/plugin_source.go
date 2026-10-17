@@ -19,6 +19,9 @@ const (
 	PluginSourceIndexURL = "index-url"
 )
 
+// schemeHTTPS is the URL scheme remote sources and endpoints must use.
+const schemeHTTPS = "https"
+
 const githubBase = "https://github.com/"
 
 var githubShorthand = sync.OnceValue(func() *regexp.Regexp {
@@ -100,7 +103,7 @@ func pluginSourceProblem(source string) string {
 	switch ClassifyPluginSource(src) {
 	case PluginSourceIndexURL:
 		u, err := url.Parse(src)
-		if err != nil || u.Scheme != "https" || u.Host == "" {
+		if err != nil || u.Scheme != schemeHTTPS || u.Host == "" {
 			return "a marketplace index URL must be https"
 		}
 		if u.User != nil {
@@ -123,7 +126,7 @@ func gitCredentialProblem(src string) string {
 	if err != nil || u.User == nil || u.Scheme == "ssh" {
 		return ""
 	}
-	if _, hasPassword := u.User.Password(); hasPassword || u.Scheme == "https" || u.Scheme == "http" {
+	if _, hasPassword := u.User.Password(); hasPassword || u.Scheme == schemeHTTPS || u.Scheme == "http" {
 		return "must not embed credentials in the URL (use the git credential helper or AI_RULEZ_GIT_TOKEN)"
 	}
 	return ""

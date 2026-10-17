@@ -200,7 +200,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 // path names, else the .ai-rulez path, else the cache root when it is itself a
 // skill. It handles the network and cache work; discovering and scanning the
 // skills below the root is the caller's job.
-func (s *SkillGitSource) locate(ctx context.Context) (string, bool, error) {
+func (s *SkillGitSource) locate(ctx context.Context) (root string, probed bool, err error) {
 	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
 	if config.OfflineIncludes(ctx) {

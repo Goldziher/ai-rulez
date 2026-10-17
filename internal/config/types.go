@@ -491,7 +491,7 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	}
 	return map[string]any{
 		mcpKeyType:    "stdio",
-		mcpKeyCommand: "npx",
+		mcpKeyCommand: SelfLauncherNPX,
 		"args":        args,
 	}
 }

@@ -176,12 +176,6 @@ func selectedSkillDir(name string, include, exclude []string) bool {
 	return len(include) == 0 || match(include)
 }
 
-// scanSelectedSkills scans the skills an entry selected below its root into
-// ContentFiles; see scanEntrySkills.
-func scanSelectedSkills(ctx context.Context, root, namePrefix, entryName string, include, exclude []string) ([]config.ContentFile, error) {
-	return scanEntrySkills(ctx, root, false, namePrefix, entryName, include, exclude)
-}
-
 // scanEntrySkills scans the skill directories an entry selected into
 // ContentFiles. A base that holds a SKILL.md is one skill named namePrefix +
 // entryName (so a path that names a skill directory behaves as before, the

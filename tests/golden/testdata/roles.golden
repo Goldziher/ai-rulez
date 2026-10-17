@@ -35,7 +35,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2187 6d4eb3966fef2eccc24374d7c4d299fe0313ab401b1ad612bb3f76acca865315
-.ai-rulez/.generated-manifest.local.json file 0644 4645 8ce0d3d8b0b98396abdf3bb2951d503afb83957f95c39960bff5d137c0adbe87
+.ai-rulez/.generated-manifest.local.json file 0644 4645 2de31ae177e5f3f7beeadf1e0eb9711038b82271846d8e26e60c9f33aa973e66
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -146,7 +146,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 ~ .ai-rulez/.generated-manifest.json file 0644 2350 af68f39be8125430017c26c66a9fa113e3eee466c0dd3a00584ea0ef14f78edf
-~ .ai-rulez/.generated-manifest.local.json file 0644 4764 2d58fed83a33c0cc86ec898c4ae4a6cc70c4d0c929961feec0f457e7b0d39dbe
+~ .ai-rulez/.generated-manifest.local.json file 0644 4764 b23113fa1fceb1698fc4ea6b9bb940ce79c295c762454850d2f9ede24b14d71f
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 ~ .claude/settings.json file 0644 1698 da72190501950a60ecdad804c8bcef2c8de4cb6d727a54ea0dbe011f1e710deb
 + .claude/skills/storybook/ dir 0755
@@ -173,7 +173,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/deployer/ dir 0755
 + .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 ~ .ai-rulez/.generated-manifest.json file 0644 2101 6c518c6bf0fd0d3e567b6b3b749f27e84d6dda4bb55c07b5b1bf957c56ab9270
-~ .ai-rulez/.generated-manifest.local.json file 0644 4370 3f6527f38e2bbd560e10a7aab5e8149f9da3330c3141d3396cbbb599a99eb200
+~ .ai-rulez/.generated-manifest.local.json file 0644 4370 3ad8e1a345af46029a42a2c93d0baca480a21f90a5b16aea63196e24730dd445
 ~ .claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
 + .claude/skills/deployer/ dir 0755
 + .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
@@ -410,7 +410,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2101 6c518c6bf0fd0d3e567b6b3b749f27e84d6dda4bb55c07b5b1bf957c56ab9270
-.ai-rulez/.generated-manifest.local.json file 0644 4370 3f6527f38e2bbd560e10a7aab5e8149f9da3330c3141d3396cbbb599a99eb200
+.ai-rulez/.generated-manifest.local.json file 0644 4370 3ad8e1a345af46029a42a2c93d0baca480a21f90a5b16aea63196e24730dd445
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

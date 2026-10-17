@@ -233,7 +233,8 @@ func (c *loader) collectMCP() {
 			servers, notes = importer.PluginMCP(doc.name, doc.data)
 		}
 		c.res.Findings = append(c.res.Findings, notes...)
-		for _, s := range servers {
+		for i := range servers {
+			s := servers[i]
 			if !ValidName(s.Name) {
 				c.note(importer.StatusDropped, doc.name, "mcpServers."+s.Name, fmt.Sprintf("%q is not a valid server name", s.Name))
 				continue

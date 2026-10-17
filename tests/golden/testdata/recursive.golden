@@ -9,7 +9,7 @@ exit: 0
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
-a/.ai-rulez/.generated-manifest.local.json file 0644 692 8b450778bf8cd890a876627fe07af436ef90a4f039b040b2c989bd2f1502c6d4
+a/.ai-rulez/.generated-manifest.local.json file 0644 692 046b1ec00b2d5648dd5c7ba1c3034294b5c1c0d79e878439b5649f3905737d7b
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
@@ -44,7 +44,7 @@ exit: 0
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
-a/.ai-rulez/.generated-manifest.local.json file 0644 692 8b450778bf8cd890a876627fe07af436ef90a4f039b040b2c989bd2f1502c6d4
+a/.ai-rulez/.generated-manifest.local.json file 0644 692 046b1ec00b2d5648dd5c7ba1c3034294b5c1c0d79e878439b5649f3905737d7b
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a

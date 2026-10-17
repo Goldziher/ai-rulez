@@ -163,7 +163,7 @@ type rawEntry struct {
 
 // inlineFields are the component fields a non-strict entry can declare.
 func inlineFields() []string {
-	return []string{"skills", "agents", "commands", "hooks", "mcpServers", "rules"}
+	return []string{dirSkills, dirAgents, dirCommands, "hooks", "mcpServers", "rules"}
 }
 
 // ParseIndex parses the bytes of a marketplace index of the given format. It
@@ -263,7 +263,7 @@ type rawSource struct {
 // parseSource reads the three shapes an entry's source takes: a relative path
 // string, a {source: github|url|git|git-subdir, ...} object and a
 // {source: local, path} object.
-func parseSource(msg json.RawMessage, pluginRoot string) (Source, string) {
+func parseSource(msg json.RawMessage, pluginRoot string) (src Source, problem string) {
 	var asString string
 	if json.Unmarshal(msg, &asString) == nil {
 		return pathSource(asString, pluginRoot)
@@ -307,7 +307,7 @@ func githubRepo(repo string) bool {
 	return config.ClassifyPluginSource(repo) == config.PluginSourceGitHub && !strings.Contains(repo, "://") && !strings.HasPrefix(repo, ".")
 }
 
-func pathSource(p, pluginRoot string) (Source, string) {
+func pathSource(p, pluginRoot string) (src Source, problem string) {
 	explicit := strings.HasPrefix(p, "./")
 	clean, err := CleanRel(p)
 	if err != nil {
@@ -322,7 +322,7 @@ func pathSource(p, pluginRoot string) (Source, string) {
 	return Source{Kind: SourcePath, Path: clean}, ""
 }
 
-func repoSource(rawURL, ref, sha, subdir string) (Source, string) {
+func repoSource(rawURL, ref, sha, subdir string) (src Source, problem string) {
 	if rawURL == "" {
 		return Source{}, "the source has no url or repo"
 	}

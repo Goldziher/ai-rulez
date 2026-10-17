@@ -107,7 +107,7 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 	return 0
 }
 
-// probeURL asks url with a short GET, honouring the proxy settings of the environment, and
+// probeURL asks url with a short GET, honoring the proxy settings of the environment, and
 // returns the HTTP status. It backs the session-start check's registry probe.
 func probeURL(ctx context.Context, url string) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

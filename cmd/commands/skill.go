@@ -63,7 +63,7 @@ var skillListCmd = &cobra.Command{
 }
 
 var skillUpdateCmd = &cobra.Command{
-	Use:   "update [name...]",
+	Use:   useUpdate,
 	Short: "Re-pin installed skills in ai-rulez.lock to their current remote commit",
 	Long: `Resolve the named installed skills (all of them without names) from their
 remote and record the commit and content digest in .ai-rulez/ai-rulez.lock.
@@ -202,7 +202,7 @@ func runSkillList(cmd *cobra.Command, _ []string) error {
 				keyName:   s.Name,
 				keySource: incl.RedactURL(s.Source),
 				keyPath:   s.Path,
-				"ref":     s.Ref,
+				keyRef:    s.Ref,
 				keyType:   s.Type,
 			}
 		}

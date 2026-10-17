@@ -38,8 +38,8 @@ func resolveInstalledPluginsIfNeeded(ctx context.Context, config *Config, resolv
 	}
 	m := &pluginMerger{cfg: config, log: log, taken: map[string]bool{}, seeded: map[string]bool{}}
 	m.files(ItemKindSkill, res.Skills)
-	m.files("agent", res.Agents)
-	m.files("command", res.Commands)
+	m.files(string(OutputKindAgent), res.Agents)
+	m.files(ItemKindCommand, res.Commands)
 	m.files("rule", res.Rules)
 	m.hooks(res.Hooks)
 	m.mcp(res.MCP)
@@ -62,9 +62,9 @@ func (m *pluginMerger) existing(kind string) []ContentFile {
 	switch kind {
 	case ItemKindSkill:
 		return t.Skills
-	case "agent":
+	case string(OutputKindAgent):
 		return t.Agents
-	case "command":
+	case ItemKindCommand:
 		return t.Commands
 	}
 	return t.Rules
@@ -74,9 +74,9 @@ func (m *pluginMerger) domainList(kind string, d *Domain) *[]ContentFile {
 	switch kind {
 	case ItemKindSkill:
 		return &d.Skills
-	case "agent":
+	case string(OutputKindAgent):
 		return &d.Agents
-	case "command":
+	case ItemKindCommand:
 		return &d.Commands
 	}
 	return &d.Rules
@@ -87,9 +87,9 @@ func (m *pluginMerger) rootList(kind string) *[]ContentFile {
 	switch kind {
 	case ItemKindSkill:
 		return &t.Skills
-	case "agent":
+	case string(OutputKindAgent):
 		return &t.Agents
-	case "command":
+	case ItemKindCommand:
 		return &t.Commands
 	}
 	return &t.Rules
@@ -103,12 +103,14 @@ func (m *pluginMerger) files(kind string, files []ContentFile) {
 	}
 	if !m.seeded[kind] {
 		m.seeded[kind] = true
-		for _, f := range m.existing(kind) {
-			m.taken[kind+"\x00"+f.Name] = true
+		existing := m.existing(kind)
+		for i := range existing {
+			m.taken[kind+"\x00"+existing[i].Name] = true
 		}
 		for _, d := range m.cfg.Content.Domains {
-			for _, f := range *m.domainList(kind, d) {
-				m.taken[kind+"\x00"+f.Name] = true
+			list := *m.domainList(kind, d)
+			for i := range list {
+				m.taken[kind+"\x00"+list[i].Name] = true
 			}
 		}
 	}

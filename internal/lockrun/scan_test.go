@@ -253,7 +253,7 @@ func TestScanTreeListsAtMostTwentyFindingsButCountsThemAll(t *testing.T) {
 
 func TestPrintPinScan(t *testing.T) {
 	sum := &ScanSummary{Errors: 1, Warnings: 2, Findings: []ScanFinding{
-		{Code: "AR001", Severity: "error", File: "a/‮b.sh", Line: 3, Message: "secret\x1b[31m"},
+		{Code: "AR001", Severity: "error", File: "a/\u202eb.sh", Line: 3, Message: "secret\x1b[31m"},
 	}}
 	tests := []struct {
 		name    string
@@ -415,6 +415,6 @@ func TestScanNewPinsSkipsAnEntryWhoseTreeIsNotCached(t *testing.T) {
 }
 
 func TestSafeTextEscapesWhatCouldHideTextFromAReviewer(t *testing.T) {
-	assert.Equal(t, "ok\\u{202E}\\u{200B}\\u{1B}", SafeText("ok‮​\x1b"))
+	assert.Equal(t, "ok\\u{202E}\\u{200B}\\u{1B}", SafeText("ok\u202e\u200b\x1b"))
 	assert.Equal(t, "a\tb", SafeText("a\tb"))
 }

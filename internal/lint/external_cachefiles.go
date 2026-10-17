@@ -31,7 +31,7 @@ const (
 // `uv run script.py` and `pipx run script.py`.
 func isInterpreter(command string) bool {
 	name := strings.ToLower(path.Base(strings.ReplaceAll(command, `\`, "/")))
-	for _, ext := range []string{".exe", ".cmd", ".bat"} {
+	for _, ext := range []string{extExe, ".cmd", ".bat"} {
 		name = strings.TrimSuffix(name, ext)
 	}
 	switch strings.TrimRight(name, "0123456789.") {
@@ -98,19 +98,19 @@ func keyFiles(sc resolvedScanner, root string) []string {
 func hashFile(p string) string {
 	info, err := os.Stat(p)
 	if err != nil {
-		return "unreadable"
+		return cacheStateUnrd
 	}
 	if info.Size() > maxHashedFile {
 		return fmt.Sprintf("big:%d:%d", info.Size(), info.ModTime().UnixNano())
 	}
 	f, err := os.Open(p) //nolint:gosec // a file the configuration names
 	if err != nil {
-		return "unreadable"
+		return cacheStateUnrd
 	}
 	defer f.Close() //nolint:errcheck // read only
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return "unreadable"
+		return cacheStateUnrd
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -130,7 +130,7 @@ func expandCacheGlobs(root string, patterns []string) []string {
 				return nil //nolint:nilerr // an unreadable entry matches nothing
 			}
 			if d.IsDir() {
-				if d.Name() == ".git" || len(seen) >= maxCacheFiles {
+				if d.Name() == dirGit || len(seen) >= maxCacheFiles {
 					return fs.SkipDir
 				}
 				return nil

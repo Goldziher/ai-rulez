@@ -105,7 +105,8 @@ func (r *resolver) merge(out *config.PluginResolution, p *config.InstalledPlugin
 		stamp(group.src, p, r.cfg.PluginTrust(p))
 		*group.dst = append(*group.dst, group.src...)
 	}
-	for _, s := range res.MCP {
+	for i := range res.MCP {
+		s := res.MCP[i]
 		s.Domain, s.Profiles = p.Domain, p.Profiles
 		out.MCP = append(out.MCP, s)
 	}

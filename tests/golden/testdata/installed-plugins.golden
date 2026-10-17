@@ -22,7 +22,7 @@ INFO  Generation complete files=19
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
-.ai-rulez/.generated-manifest.local.json file 0644 2743 b0ac610a9bc6f2fd71ad19fea8cc4f821a53232ac63b735e711f5df35ff7da90
+.ai-rulez/.generated-manifest.local.json file 0644 2743 0b00c8ea21ac04ec1ac6453634a3ae04343446a3c0ae1da40bc7843a4fe38979
 .ai-rulez/config.toml file 0644 342 aef42a2395bbff68aa6289ccb5736750ba0c26ccaf5086797aa5fef46eb29f88
 .ai-rulez/rules/ dir 0755
 .ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
@@ -281,7 +281,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2743 b0ac610a9bc6f2fd71ad19fea8cc4f821a53232ac63b735e711f5df35ff7da90
+.ai-rulez/.generated-manifest.local.json file 0644 2743 0b00c8ea21ac04ec1ac6453634a3ae04343446a3c0ae1da40bc7843a4fe38979
 >>>>
 {
   "version": "1",
@@ -303,7 +303,7 @@ policy:
           "SessionStart"
         ],
         "elementSums": [
-          "890a231f3885f72e1f05bd0dd3dc08f5293e2c7af7b32ae073c3fd14b759c74d"
+          "86338303d8222d3da850524d929100fa990bdd1985bd3e261c0c8b3e19ba1176"
         ]
       }
     ],
@@ -366,7 +366,7 @@ policy:
   "digests": {
     ".agents/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "c9e060918e53f7362c6ab9225a46d2e5208390f084cd682ecbdcf7fd64fd62b2",
+    ".claude/settings.json": "b2987d9ec9953111c41de39d599083aa3dc44368cc6249c5c4a9336d5ec39016",
     ".claude/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
     ".codex/agents/planner.toml": "bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d",
     ".codex/config.toml": "8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011",

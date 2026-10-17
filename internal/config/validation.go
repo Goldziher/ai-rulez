@@ -892,24 +892,23 @@ func (c *Config) warnMissingResourceDomains() {
 		return c.hasLocalDomain(domain)
 	}
 	for i := range c.MCPServersRaw {
-		if d := c.MCPServersRaw[i].Domain; d != "" && !known(d) {
-			c.Warn("mcp server references non-existent domain", "server", c.MCPServersRaw[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "mcp server", "server", c.MCPServersRaw[i].Name, c.MCPServersRaw[i].Domain)
 	}
 	for i := range c.InstalledSkills {
-		if d := c.InstalledSkills[i].Domain; d != "" && !known(d) {
-			c.Warn("installed skill references non-existent domain", "skill", c.InstalledSkills[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "installed skill", "skill", c.InstalledSkills[i].Name, c.InstalledSkills[i].Domain)
 	}
 	for i := range c.InstalledPlugins {
-		if d := c.InstalledPlugins[i].Domain; d != "" && !known(d) {
-			c.Warn("installed plugin references non-existent domain", "plugin", c.InstalledPlugins[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "installed plugin", "plugin", c.InstalledPlugins[i].Name, c.InstalledPlugins[i].Domain)
 	}
 	for i := range c.SkillSources {
-		if d := c.SkillSources[i].Domain; d != "" && !known(d) {
-			c.Warn("skill source references non-existent domain", "source", c.SkillSources[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "skill source", "source", c.SkillSources[i].Name, c.SkillSources[i].Domain)
+	}
+}
+
+// warnUnknownDomain warns when a resource sets a domain that known rejects.
+func (c *Config) warnUnknownDomain(known func(string) bool, what, key, name, domain string) {
+	if domain != "" && !known(domain) {
+		c.Warn(what+" references non-existent domain", key, name, "domain", domain)
 	}
 }
 

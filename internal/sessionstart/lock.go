@@ -27,9 +27,9 @@ func acquire(ctx context.Context, path string, stale time.Duration, now func() t
 	for {
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) //nolint:gosec // a fixed name in the temp directory
 		if err == nil {
-			fmt.Fprintf(f, "%d\n", os.Getpid()) //nolint:errcheck // informational
-			_ = f.Close()
-			return func() { _ = os.Remove(path) }, true
+			fmt.Fprintf(f, "%d\n", os.Getpid())     //nolint:errcheck // informational
+			f.Close()                               //nolint:errcheck,gosec // best-effort close of the lock file
+			return func() { os.Remove(path) }, true //nolint:errcheck,gosec // best-effort release
 		}
 		if !errors.Is(err, os.ErrExist) {
 			// The lock cannot be created (read-only temp directory): run unlocked
@@ -37,7 +37,7 @@ func acquire(ctx context.Context, path string, stale time.Duration, now func() t
 			return func() {}, true
 		}
 		if info, statErr := os.Stat(path); statErr == nil && now().Sub(info.ModTime()) > stale {
-			_ = os.Remove(path)
+			os.Remove(path) //nolint:errcheck,gosec // best-effort removal of a stale lock; the next attempt retries
 			continue
 		}
 		select {

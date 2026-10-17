@@ -21,7 +21,7 @@ INFO  Generation complete files=12
 .agents/skills/review/references/checklist.md file 0644 36 1e9c21bd7b005d5ef6a3b6fb4a5235adf69f33ae9695e69ad9666e80ac58d218
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 738 b4ea98a7cbc3ff79cd3e3d3bdc0b919f267d7356a4dc1afb337ccd5402654dfc
-.ai-rulez/.generated-manifest.local.json file 0644 916 c25eb24562d4a620bd3ce3e830ba84c499a2221227e58741bc40ab28c4d97421
+.ai-rulez/.generated-manifest.local.json file 0644 916 4c83f21f36615f7472a1323e79ef92bac216f309f8e1047f4af23a02cac43123
 .ai-rulez/config.toml file 0644 106 de7dbd302c2f4e84644ab5781180a36cc6f99574b51c4036d98b0638fb614fc9
 .claude/ dir 0755
 .claude/agents/ dir 0755
