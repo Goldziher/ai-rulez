@@ -3,6 +3,8 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -137,6 +139,70 @@ func BenchmarkDiscoveryCatalog(b *testing.B) {
 			for range b.N {
 				benchServer(b, root)
 			}
+		})
+	}
+}
+
+// ageBenchTree puts every file's modification time an hour back, so the index
+// cache trusts it (a file changed within two seconds of a save is read again).
+func ageBenchTree(b *testing.B, root string) {
+	b.Helper()
+	old := time.Now().Add(-time.Hour)
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		return os.Chtimes(p, old, old)
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
+// BenchmarkDiscoveryCatalogCache compares a start without the index cache, a
+// cold start that fills it, and a warm start that reuses it, on the largest
+// monorepo.
+func BenchmarkDiscoveryCatalogCache(b *testing.B) {
+	for _, scopes := range []int{10, 100, 500} {
+		b.Run(fmt.Sprintf("scopes=%d", scopes), func(b *testing.B) {
+			root := benchMonorepo(b, testutil.MonorepoLargest(), scopes)
+			ageBenchTree(b, root)
+			configPath := filepath.Join(root, ".ai-rulez", "config.toml")
+			on := benchDiscoverConfig
+			off := benchDiscoverConfig + "\n[mcp]\nindex_cache = \"off\"\n"
+			start := func(b *testing.B, cacheDir string) {
+				setup := &ServeSetup{WorkDir: root, DiscoverSkills: "repo", NoWatch: true, CacheDir: cacheDir}
+				if _, err := setup.NewServer(context.Background()); err != nil {
+					b.Fatal(err)
+				}
+			}
+			b.Run("off", func(b *testing.B) {
+				if err := os.WriteFile(configPath, []byte(off), 0o600); err != nil {
+					b.Fatal(err)
+				}
+				b.ReportAllocs()
+				for range b.N {
+					start(b, b.TempDir())
+				}
+			})
+			if err := os.WriteFile(configPath, []byte(on), 0o600); err != nil {
+				b.Fatal(err)
+			}
+			b.Run("cold", func(b *testing.B) {
+				b.ReportAllocs()
+				for range b.N {
+					start(b, b.TempDir())
+				}
+			})
+			b.Run("warm", func(b *testing.B) {
+				cacheDir := b.TempDir()
+				start(b, cacheDir)
+				b.ResetTimer()
+				b.ReportAllocs()
+				for range b.N {
+					start(b, cacheDir)
+				}
+			})
 		})
 	}
 }
