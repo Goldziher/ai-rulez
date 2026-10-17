@@ -28,6 +28,7 @@ func (c *Config) Validate() error {
 		c.validateCodexSkillsDir,
 		c.validateGitignoreExclude,
 		c.validateClaudeMD,
+		c.validateSkipOutputs,
 		c.validateSelectors,
 		c.validateSkillDescriptions,
 		c.validateFrontmatter,

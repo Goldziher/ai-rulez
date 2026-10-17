@@ -419,6 +419,18 @@ ls-remote` per repository (no content is fetched) compares each locked tag with 
 used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline`, `--frozen` and `--offline`;
 the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
 
+#### Refreshing on generate
+
+`generate --refresh-remote` (or `[lock] refresh_on_generate = true`) runs a lock refresh before the outputs are
+written: every remote include, installed skill and skill source moves to the newest version its constraint allows (a
+plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
+is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
+error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
+tags. Any refusal ends the run before an output is written and leaves the lock as it was. The import gate
+(`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
+key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
+`--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.
+
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
 pins as they are. Use `update --kind skill` to move range pins.
 
@@ -703,6 +715,7 @@ scope = "all"            # "skills": pin only skills, remote includes and instal
 min_release_age = "7d"   # default minimum age of a tag for sources with a version constraint
 min_release_age_source = "auto"  # auto | forge | first-seen | commit
 verify_tags = false      # true: generate and lock --check ask the remotes whether a pinned tag moved
+refresh_on_generate = false  # true: generate re-resolves remote sources and rewrites the lock first (like generate --refresh-remote)
 ```
 
 `scope = "skills"` is for projects that only care about the skill supply chain; it implies no output pins. The

@@ -35,6 +35,7 @@ nav = [
   { "Generate" = [
     { "Supported Harnesses" = "harnesses.md" },
     { "AGENTS.md and .agents/skills" = "agents-md.md" },
+    { "Managing Only Remote Skills" = "managing-remote-skills.md" },
     { "llms.txt" = "llms-txt.md" },
     { "Hooks and Permissions" = "settings.md" },
     { "Permissions" = "permissions.md" },

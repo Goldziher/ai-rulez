@@ -643,6 +643,30 @@ Quick reference:
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
 
+### `skip_outputs`
+
+Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them and still let ai-rulez emit
+the rest (installed skills, plugins, MCP servers, hooks, permissions). The default is empty: nothing is skipped.
+
+```toml
+skip_outputs = ["instructions"]
+```
+
+| Value          | Skips |
+| -------------- | ----- |
+| `instructions` | Every root instruction file: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` and the other presets' root files, the `*.local.md` and `AGENTS.override.md` variants, and scope roots. Overrides `agents_md` and `claude_md`. |
+| `agents_md`    | Only the shared `AGENTS.md` (and `AGENTS.override.md`) and the shared `.agents/skills` tree. |
+| `claude_md`    | Only `CLAUDE.md` (root and scopes). |
+| `rules`        | Rule files in every preset (`.claude/rules`, `.cursor/rules`, ...). |
+| `skills`       | Skill directories in every preset, installed skills included. |
+| `agents`       | Agent definition files. |
+| `commands`     | Command and prompt files. |
+
+An unknown value fails validation and names the valid ones. `config.local.toml` accepts the key too. Skipped files leave
+the manifest, the managed `.gitignore` block, `generate --check`, the lock output digests and `clean`, so none of them
+reads or removes a hand-written file. A file an earlier run generated and that is now skipped is left in place and
+reported once as no longer managed. See [Managing only remote skills and plugins](managing-remote-skills.md).
+
 ### `claude_md`
 
 Controls whether the `claude` preset writes its `CLAUDE.md` when `agents_md` is on. The default, `"shim"`, keeps the
