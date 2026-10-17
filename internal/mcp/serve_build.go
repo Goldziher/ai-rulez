@@ -462,8 +462,12 @@ func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Gen
 	if cfg.Content == nil {
 		return out, nil
 	}
-	if out.preset == "" && len(cfg.Presets) == 0 && mode != config.DiscoverOff {
-		// A lint-only configuration declares no preset to render the skills with.
+	if out.preset == "" && len(cfg.Presets) == 0 {
+		// A lint-only configuration declares no preset to render the skills with:
+		// it serves none, unless discovery needs the default rendering.
+		if mode == config.DiscoverOff {
+			return out, nil
+		}
 		out.preset = defaultServePreset
 	}
 	preset, served, err := gen.ServedSkills(out.profile, out.preset)
