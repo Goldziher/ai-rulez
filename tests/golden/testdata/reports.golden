@@ -45,7 +45,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-.ai-rulez/.generated-manifest.local.json file 0644 12676 a608ee09502e9feb2b9516b604031fe0955560c3d8913282a8c470e0f9204ff3
+.ai-rulez/.generated-manifest.local.json file 0644 12676 05f12625deaedaff4ab62d1a892672ba35032ac1f78c38b2fdb0c5346851d69d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -84,7 +84,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
+.claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
@@ -224,8 +224,8 @@ runtime claude — 15 files
     agent file overhead (2)                                      32
     skill resources (2)                                          16
     per-file provenance hashes (11)                             474
-  unmodeled                                                     602
-    sidecar documents                                           602
+  unmodeled                                                     617
+    sidecar documents                                           617
 
 runtime codex — 10 files
   always loaded                                                 475
@@ -1082,7 +1082,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-.ai-rulez/.generated-manifest.local.json file 0644 12676 a608ee09502e9feb2b9516b604031fe0955560c3d8913282a8c470e0f9204ff3
+.ai-rulez/.generated-manifest.local.json file 0644 12676 05f12625deaedaff4ab62d1a892672ba35032ac1f78c38b2fdb0c5346851d69d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -1121,7 +1121,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
+.claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3

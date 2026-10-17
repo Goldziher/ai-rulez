@@ -161,12 +161,12 @@ func (c *Config) SessionStartLaunchers() []SessionStartLauncher {
 const remoteGate = `case "${CLAUDE_CODE_REMOTE:-}" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; `
 
 // neutralRun is the shell function that runs the npx and uvx launchers from an empty,
-// freshly created private directory (mktemp -d honors TMPDIR), so a project's .npmrc,
+// freshly created private directory (created under TMPDIR, with an explicit template because BSD mktemp -d ignores TMPDIR), so a project's .npmrc,
 // node_modules/.bin or uv configuration cannot substitute the package that runs. The
 // installed-binary attempt stays in the project directory. CLAUDE_PROJECT_DIR is
 // exported first, so `ai-rulez session-start` still finds the project after the cd.
 const neutralRun = `export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"; ` +
-	`n() { d=$(mktemp -d 2>/dev/null) || d=/; (cd "$d" 2>/dev/null || exit 1; "$@"); r=$?; ` +
+	`n() { d=$(mktemp -d "${TMPDIR:-/tmp}/ai-rulez.XXXXXX" 2>/dev/null) || d=/; (cd "$d" 2>/dev/null || exit 1; "$@"); r=$?; ` +
 	`if [ "$d" != / ]; then rmdir "$d" 2>/dev/null; fi; return $r; }; `
 
 // SessionStartCommand is the shell command of the session-start hook. The script

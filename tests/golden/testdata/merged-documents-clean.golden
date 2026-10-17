@@ -40,7 +40,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3108 bc6ae6889e110fa62e696fd078c20ae5dc1aea521b2622691013a8a37237f125
-.ai-rulez/.generated-manifest.local.json file 0644 7818 80c6dda52083283c6c32863b9ad17ac863dc6f9df6aca7569f510d1aa9447c1d
+.ai-rulez/.generated-manifest.local.json file 0644 7818 a23064a39eb14b7105d3c1c3c882535d79a636bc81f6126f99e7621f5b14372e
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -79,7 +79,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 1884 1482f6c135191461125494979592059feaddd5041fa6b77f6c9f75f8f18f3e5a
+.claude/settings.json file 0644 1920 a78361ca8aa49576cb3309d6f335c03bb963f850d48d667d890315fe76ad4312
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
