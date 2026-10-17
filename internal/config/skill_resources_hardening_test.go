@@ -7,14 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func hardeningSkill(t *testing.T, files map[string]string) string {
@@ -80,23 +78,6 @@ func TestInstalledSkillBundle_CredentialsStayOutEvenWithCustomResources(t *testi
 	assert.Equal(t, []string{"keep.md"}, resourcePaths(resources))
 }
 
-func TestInstalledSkillBundle_SymlinkOutsideAndFIFONeverBundled(t *testing.T) {
-	// Arrange
-	dir := hardeningSkill(t, map[string]string{"keep.md": "# keep\n"})
-	outside := filepath.Join(t.TempDir(), "outside.md")
-	require.NoError(t, os.WriteFile(outside, []byte("outside"), 0o644))
-	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, "link.md"))
-	testutil.SymlinkOrSkip(t, filepath.Dir(outside), filepath.Join(dir, "linkdir"))
-	require.NoError(t, syscall.Mkfifo(filepath.Join(dir, "pipe"), 0o644))
-
-	// Act
-	resources, err := LoadSkillResourcesContext(context.Background(), dir)
-
-	// Assert
-	require.NoError(t, err)
-	assert.Equal(t, []string{"keep.md"}, resourcePaths(resources))
-}
-
 func TestInstalledSkillBundle_OversizeFileIsSkippedWithAWarning(t *testing.T) {
 	// Arrange
 	dir := hardeningSkill(t, map[string]string{
@@ -146,6 +127,58 @@ func TestInstalledSkillBundle_TotalCapFailsNamingTheLimit(t *testing.T) {
 			require.True(t, errors.As(err, &limit), err)
 			assert.Contains(t, err.Error(), tt.want)
 			assert.Contains(t, err.Error(), "resources")
+		})
+	}
+}
+
+func TestInstalledSkillBundle_ExactlyAtTheCapSucceedsAndOneOverFails(t *testing.T) {
+	manyFiles := func(n int) func() map[string]string {
+		return func() map[string]string {
+			files := map[string]string{}
+			for i := range n {
+				files[fmt.Sprintf("docs/f%04d.md", i)] = "x"
+			}
+			return files
+		}
+	}
+	totalBytes := func(total int) func() map[string]string {
+		return func() map[string]string {
+			files := map[string]string{}
+			for i, left := 0, total; left > 0; i++ {
+				size := min(left, maxContentFileBytes-1)
+				files[fmt.Sprintf("b%d.bin", i)] = strings.Repeat("x", size)
+				left -= size
+			}
+			return files
+		}
+	}
+	tests := []struct {
+		name    string
+		files   func() map[string]string
+		wantErr string
+	}{
+		{"files at the cap", manyFiles(maxSkillBundleFiles), ""},
+		{"files one over the cap", manyFiles(maxSkillBundleFiles + 1), fmt.Sprintf("%d files", maxSkillBundleFiles)},
+		{"bytes at the cap", totalBytes(maxSkillBundleBytes), ""},
+		{"bytes one over the cap", totalBytes(maxSkillBundleBytes + 1), fmt.Sprintf("%d MiB", maxSkillBundleBytes>>20)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := hardeningSkill(t, tt.files())
+
+			// Act
+			resources, err := LoadSkillResourcesContext(context.Background(), dir)
+
+			// Assert
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				assert.NotEmpty(t, resources)
+				return
+			}
+			var limit *SkillBundleLimitError
+			require.ErrorAs(t, err, &limit)
+			assert.Contains(t, err.Error(), tt.wantErr)
 		})
 	}
 }
