@@ -47,6 +47,8 @@ type Server struct {
 	// readOnly restricts the authoring tools to the read-only ones (mcp
 	// --read-only); it is ignored when authoring is false.
 	readOnly bool
+	// indexGen counts the announcements of the repository index (serve_indexwatch.go).
+	indexGen atomic.Int64
 }
 
 // Option configures the authoring server.

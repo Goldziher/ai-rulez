@@ -109,6 +109,9 @@ type ServeOptions struct {
 	Revalidate func() *Catalog
 	// RevalidateInterval is how often Revalidate runs; 0 selects one minute.
 	RevalidateInterval time.Duration
+	// IndexWatch, when set, makes Watch follow the project tree with a file
+	// watcher and refresh the catalog when the repository index can have changed.
+	IndexWatch *IndexWatch
 	// Search ranks find_skill with the configured mode; nil ranks lexically.
 	Search *SearchRuntime
 	// Log receives the server's reports (live reload); nil is the CLI's logger.
