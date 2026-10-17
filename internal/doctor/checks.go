@@ -441,7 +441,7 @@ func lockContentFindings(cfg *config.Config, lock *lockfile.File) []Finding {
 	if err != nil {
 		return errorFinding(CheckLock, SeverityWarning, err, lockfile.FileName)
 	}
-	changes := contentlock.Compare(lock, snap).Changes
+	changes := withoutUnresolvedLocalSkills(contentlock.Compare(lock, snap).Changes)
 	if len(changes) == 0 {
 		return nil
 	}
@@ -454,6 +454,22 @@ func lockContentFindings(cfg *config.Config, lock *lockfile.File) []Finding {
 		Message: "authored content differs from its pins: " + strings.Join(lines, "; "),
 		Hint:    "review with `ai-rulez lock --diff`, then run `ai-rulez lock`",
 	}}
+}
+
+// withoutUnresolvedLocalSkills drops the "removed" changes of locally installed
+// skills. The doctor never resolves installed skills (it does not use the
+// network), so a skill that an installed_skills entry reads from a local
+// directory is missing from its snapshot whatever the directory holds; `ai-rulez
+// lock --check` compares those against the resolved tree.
+func withoutUnresolvedLocalSkills(changes []contentlock.Change) []contentlock.Change {
+	kept := make([]contentlock.Change, 0, len(changes))
+	for i := range changes {
+		if changes[i].Scope == contentlock.ScopeSource && changes[i].Kind == contentlock.KindLocalSkill && changes[i].Change == contentlock.Removed {
+			continue
+		}
+		kept = append(kept, changes[i])
+	}
+	return kept
 }
 
 // presetBinaries maps a preset to the executables of its tool; any one on PATH
