@@ -470,12 +470,15 @@ type renderedSkills struct {
 	preset  string
 	served  []generator.ServedSkill
 	taken   map[string]bool
+	// builtin maps the name of a builtin skill that still holds its name to its
+	// source: a repository skill replaces it (see appendDiscovered).
+	builtin map[string]string
 }
 
 // renderProjectSkills renders the project's skills for the view; empty when the
 // project has no content tree (a server of --source skills only).
 func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Generator, mode string) (*renderedSkills, error) {
-	out := &renderedSkills{profile: st.Profile, preset: st.Preset, taken: map[string]bool{}}
+	out := &renderedSkills{profile: st.Profile, preset: st.Preset, taken: map[string]bool{}, builtin: map[string]string{}}
 	if cfg.Content == nil {
 		return out, nil
 	}
@@ -503,6 +506,9 @@ func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Gen
 	// serve, or load_skill would hand out another procedure under its name.
 	for i := range served {
 		out.taken[catalogName(&served[i])] = true
+		if strings.HasPrefix(served[i].Source, builtinSourcePrefix) {
+			out.builtin[catalogName(&served[i])] = served[i].Source
+		}
 	}
 	out.served = selectByDelivery(served, st.IncludeStatic)
 	if mode == config.DiscoverAll {
@@ -510,6 +516,9 @@ func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Gen
 	}
 	return out, nil
 }
+
+// builtinSourcePrefix starts the source of a skill that ships with ai-rulez.
+const builtinSourcePrefix = "builtin://"
 
 // defaultServePreset renders the skills of a configuration that names no preset.
 const defaultServePreset = "claude"

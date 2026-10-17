@@ -590,7 +590,10 @@ a copy whose body was edited fails the header check and is a repository skill.
 **Names.** A skill is served under its frontmatter `name` (the directory name when it has none), and the first
 claimant keeps a name in this order:
 
-1. The skills ai-rulez defines, then the skill sources: a repository skill with their name is *shadowed*, not served.
+1. The skills ai-rulez defines (project, installed and included), then the skill sources: a repository skill with
+   their name is *shadowed*, not served. A **builtin** skill is the exception: it ranks below repository skills, so a
+   repository skill with its name (for example `.claude/skills/testing-conventions` beside `builtins = ["testing"]`)
+   replaces it, as a skill under `.ai-rulez/skills/` does. The start-up log names the builtin that was replaced.
 2. Repository skills, shallowest directory first, then by path. A later one with a name already taken is served
    under its path from the project root, `/` turned into `.` and the leading dot of each segment dropped:
    `pkg/.claude/skills/bar` becomes `pkg.claude.skills.bar` (its frontmatter `name` is rewritten to match).
