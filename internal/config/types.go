@@ -149,6 +149,8 @@ type Config struct {
 	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
 	// Guard configures the built-in hook that blocks edits to generated files.
 	Guard *GuardConfig `yaml:"guard,omitempty" json:"guard,omitempty" toml:"guard,omitempty"`
+	// SessionStart configures the built-in SessionStart hook that regenerates outputs in a remote session.
+	SessionStart *SessionStartConfig `yaml:"session_start,omitempty" json:"session_start,omitempty" toml:"session_start,omitempty"`
 	// Permissions declares allow/ask/deny rules for .claude/settings.json and, translated,
 	// for every harness with a native permission surface (docs/permissions.md).
 	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
@@ -462,9 +464,7 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	if c.MCP != nil {
 		version = c.MCP.SelfServerVersion
 	}
-	if version == "" || version == "dev" {
-		version = "latest"
-	}
+	version = resolveLauncherVersion(version, "")
 	if c.MCP != nil && c.MCP.SelfServerLauncher == SelfLauncherBinaryThenNPX {
 		args := []string{"-c", fmt.Sprintf(binaryThenNPXScript, version), "sh"}
 		if c.servesSkills() {

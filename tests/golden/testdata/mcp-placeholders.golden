@@ -67,7 +67,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .ai-rulez/.generated-manifest.json file 0644 2251 a9283820890af575caef14ea7bb50782019caa08cc68388f4eaff275225471b2
-+ .ai-rulez/.generated-manifest.local.json file 0644 5153 a1bf7401e5e20264a79174eccde65dd5ea76d0777a8191e151993cf19cc38175
++ .ai-rulez/.generated-manifest.local.json file 0644 5231 2d080781fd603211f248b28ade7b98c6fec3c6e9da54a27e1716439237f19e6e
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -78,7 +78,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 + .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 + .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-+ .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
++ .claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
 + .claude/skills/ dir 0755
 + .claude/skills/build/ dir 0755
 + .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
@@ -129,7 +129,7 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=35
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-~ .ai-rulez/.generated-manifest.local.json file 0644 5153 a32a3eb8d24d30891905e31721964d445293b467e56fddeb21ba745c26de85ad
+~ .ai-rulez/.generated-manifest.local.json file 0644 5231 badc509c1ad4ed96332d109ed7cc738554a85bfbe6ffd31f63078804f8d5f904
 ~ .cursor/mcp.json file 0600 343 6ef00d0b6bd8414858717a715a1c5f07ef9a722f90d0acb3e450025b645ccfa5
 ~ .mcp.json file 0600 539 1c020874e496e9dab075503b306f275288355aa9ff970a15794a8bf7b178b846
 --- home tree
@@ -176,15 +176,18 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
 ## step 5: ai-rulez doctor
 exit: 0
 --- stdout
-SEVERITY  CHECK    MESSAGE
-warning   mcp-env  MCP server "local-tool" env API_TOKEN references ${GOLDEN_TOKEN}, which is not set
-                     fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
-warning   mcp-env  MCP server "remote-tool" headers Authorization references ${GOLDEN_TOKEN}, which is not set
-                     fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
-info      drift    drift not checked: MCP placeholders are unresolved (see the mcp-env findings)
-info      tools    preset "cursor": cursor-agent or cursor not found on PATH; its files are still generated
+SEVERITY  CHECK          MESSAGE
+warning   mcp-env        MCP server "local-tool" env API_TOKEN references ${GOLDEN_TOKEN}, which is not set
+                           fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
+warning   mcp-env        MCP server "remote-tool" headers Authorization references ${GOLDEN_TOKEN}, which is not set
+                           fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
+warning   session-start  .claude/settings.json: .claude/settings.json is ignored by git, so a remote session's fresh clone has no SessionStart hook
+                           fix: commit the generated settings (do not ignore .claude/settings.json), or set `[session_start] generate = false`
+info      drift          drift not checked: MCP placeholders are unresolved (see the mcp-env findings)
+info      tools          preset "cursor": cursor-agent or cursor not found on PATH; its files are still generated
+info      session-start  the SessionStart hook tries, in order: ai-rulez session-start; then npx -y ai-rulez@$VERSION session-start; then uvx --from ai-rulez==$VERSION ai-rulez session-start
 
-0 errors, 2 warnings, 2 info
+0 errors, 3 warnings, 3 info
 --- stderr
 --- project tree
 .agents/ dir 0755
@@ -199,7 +202,7 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2251 a9283820890af575caef14ea7bb50782019caa08cc68388f4eaff275225471b2
-.ai-rulez/.generated-manifest.local.json file 0644 5153 a32a3eb8d24d30891905e31721964d445293b467e56fddeb21ba745c26de85ad
+.ai-rulez/.generated-manifest.local.json file 0644 5231 badc509c1ad4ed96332d109ed7cc738554a85bfbe6ffd31f63078804f8d5f904
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -238,7 +241,7 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
