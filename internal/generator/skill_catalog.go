@@ -66,6 +66,8 @@ type ServedSkill struct {
 	Imported bool
 	// Include names the [[includes]] entry that supplied the skill, when known.
 	Include string
+	// Installed marks a skill that an [[installed_skills]] entry supplied.
+	Installed bool
 	// MalformedFrontmatter marks a skill whose SKILL.md carries a frontmatter
 	// block that is not valid YAML. Its keys were dropped on load, so the
 	// served bytes do not say what the author wrote; a server must not serve it.
@@ -156,6 +158,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			skill.Triggers, skill.Delivery = owner.triggers, owner.delivery
 			skill.Imported, skill.Include, skill.Commit = owner.imported, owner.include, owner.commit
 			skill.MalformedFrontmatter = owner.malformed
+			skill.Installed = owner.installed
 		}
 		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
 			skillResourceFiles(outputs, dir)...)
@@ -196,6 +199,8 @@ type skillOwner struct {
 	commit   string
 	// malformed mirrors ContentFile.MalformedFrontmatter.
 	malformed bool
+	// installed marks a skill that an [[installed_skills]] entry supplied.
+	installed bool
 }
 
 // skillOwners maps a skill ID to the domain and origin that supplied it. Root
@@ -225,6 +230,7 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 			}
 			if inst, ok := installed[f.Name]; ok && installedOrigin(cfg, &inst, f.Path) {
 				o.source, o.ref, o.pinned = inst.Source, inst.RequestedRef(), isCommitSHA(inst.Ref)
+				o.installed = true
 			} else {
 				applyIncludeOrigin(cfg, lock, f.Path, &o)
 			}

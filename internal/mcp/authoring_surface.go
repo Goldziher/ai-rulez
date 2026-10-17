@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -147,7 +148,30 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 		content, _ := doc["content"].(string) //nolint:errcheck // an item result always carries its content
 		text = content
 	}
+	if target.catalog {
+		text = withSkillDiscovery(text, s.cat().Discovery())
+	}
 	return &sdkmcp.ReadResourceResult{Contents: []*sdkmcp.ResourceContents{{URI: req.Params.URI, MIMEType: mime, Text: text}}}, nil
+}
+
+// withSkillDiscovery adds the skill discovery report, when discovery ran, to the
+// JSON document of the catalog resource under "skill_discovery": the repository
+// skills served and the ones a skill with the same name shadows. Text that is
+// not a JSON object is returned unchanged.
+func withSkillDiscovery(text string, report *DiscoveryReport) string {
+	if report == nil {
+		return text
+	}
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(text), &doc); err != nil || doc == nil {
+		return text
+	}
+	doc["skill_discovery"] = report
+	out, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return text
+	}
+	return string(out)
 }
 
 func firstText(res *sdkmcp.CallToolResult) string {
