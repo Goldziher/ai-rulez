@@ -4207,15 +4207,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": [
-          "instructions",
-          "agents_md",
-          "claude_md",
-          "rules",
-          "skills",
-          "agents",
-          "commands"
-        ]
+        "enum": ["instructions", "agents_md", "claude_md", "rules", "skills", "agents", "commands"]
       },
       "uniqueItems": true,
       "description": "Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them while ai-rulez emits only the rest (skills installed from a remote, plugins, MCP servers, hooks, permissions). 'instructions' skips every root instruction file (CLAUDE.md, AGENTS.md, GEMINI.md and the other presets' root files, their .local.md and AGENTS.override.md variants, scope roots) and overrides agents_md and claude_md; 'agents_md' skips only the shared AGENTS.md and the shared .agents/skills tree; 'claude_md' skips only CLAUDE.md; 'rules', 'skills', 'agents' and 'commands' skip those files in every preset. A file an earlier run generated and that is now skipped stays in place and is reported once as unmanaged. Default empty (nothing skipped). Also accepted in config.local.toml."
