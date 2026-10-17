@@ -1739,6 +1739,10 @@
                 },
                 "type": "array"
               },
+              "fail_on": {
+                "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings.",
+                "enum": ["error", "warning", "info"]
+              },
               "format": {
                 "enum": ["sarif", "json", "adapter:snyk-json", "adapter:claude-validate-json"],
                 "type": "string"
@@ -1937,7 +1941,7 @@
               "type": "string"
             },
             "fail_on": {
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning.",
+              "description": "Lowest severity of a scanner finding (AR011) that fails the run. Scanner findings only; it replaces the run's own threshold (--strict, --fail-on) for them, and a scanner's own fail_on wins. strict implies warning.",
               "enum": ["error", "warning", "info"]
             },
             "isolation": {
