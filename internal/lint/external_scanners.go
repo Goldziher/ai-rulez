@@ -104,7 +104,7 @@ func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
 		if sc.Timeout != "" {
 			timeout, _ = time.ParseDuration(sc.Timeout) //nolint:errcheck // an invalid value is in Problems
 		}
-		info.Timeout = cmdrun.EffectiveTimeout(timeout)
+		info.Timeout = cmdrun.EffectiveTimeoutUpTo(timeout, sc.timeoutCeiling)
 		info.Path = lookExecutable(sc.Command[0], dir)
 		out = append(out, info)
 	}

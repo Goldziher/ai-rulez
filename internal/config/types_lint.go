@@ -178,7 +178,9 @@ type LintExternal struct {
 	// false scrubs the environment and rejects known egress flags; true runs the
 	// scanner only when its name is passed to --allow-egress.
 	Egress *bool `yaml:"egress,omitempty" json:"egress,omitempty" toml:"egress,omitempty"`
-	// Timeout is a Go duration such as "90s"; default 2m, at most 15m.
+	// Timeout is a Go duration such as "90s"; default 2m, at most 15m (or
+	// [lint.scanner_policy] max_timeout). It bounds each run of the command: each
+	// batch of a batch_size scanner gets the whole timeout.
 	Timeout string `yaml:"timeout,omitempty" json:"timeout,omitempty" toml:"timeout,omitempty"`
 	// EnvPass lists extra environment variable names passed through the scrubbed
 	// environment. Proxy and credential-like names are rejected when egress is false.
@@ -207,6 +209,14 @@ type LintExternal struct {
 	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
 	// from the project root, in the scanner's isolation mode; needs Version.
 	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
+	// BatchSize splits the skill directories handed to a command that passes
+	// {skill_dirs} into runs of at most this many directories, each with its own
+	// timeout and cached on its own. 0 (default) hands the scanner all of them
+	// at once, subject to the command-line size limit.
+	BatchSize int `yaml:"batch_size,omitempty" json:"batch_size,omitempty" toml:"batch_size,omitempty"` //nolint:tagliatelle
+	// Parallel runs up to this many batches at the same time (1 to 16; default 1).
+	// Each batch gets its own {out} file and temp directory.
+	Parallel int `yaml:"parallel,omitempty" json:"parallel,omitempty" toml:"parallel,omitempty"`
 	// StageGlobs narrows the files of a staged skill directory to the ones
 	// matching a glob (relative to the skill directory; a pattern with no slash
 	// matches at any depth, ** crosses directories). SKILL.md is always staged.
@@ -249,6 +259,10 @@ type LintScannerPolicy struct {
 	// kept in text output (default 500, at most 100000); a scanner's own
 	// max_message wins. The JSON report and SARIF output keep the full text.
 	MaxMessage int `yaml:"max_message,omitempty" json:"max_message,omitempty" toml:"max_message,omitempty"` //nolint:tagliatelle
+	// MaxTimeout is the longest timeout one run of a scanner may be given, a Go
+	// duration up to 6h (default 15m). Per-scanner timeout values above it are
+	// refused. Only the policy can raise it: an entry cannot lift its own bound.
+	MaxTimeout string `yaml:"max_timeout,omitempty" json:"max_timeout,omitempty" toml:"max_timeout,omitempty"` //nolint:tagliatelle
 	// Baseline is the scanner baseline file, relative to the project root
 	// (default: scanner-baseline.json in the configuration directory).
 	Baseline string `yaml:"baseline,omitempty" json:"baseline,omitempty" toml:"baseline,omitempty"`
