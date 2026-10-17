@@ -9,6 +9,8 @@ package repoindex
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -94,6 +96,32 @@ type Options struct {
 	// Screen, when set, judges an item with its content in hand. keep false with
 	// an empty reason drops it silently; with a reason it is recorded as refused.
 	Screen func(it Item, content []byte) (keep bool, reason string)
+	// Cache, when set, lets Build skip reading a file whose size and
+	// modification time are those of an earlier build (see Cache).
+	Cache Cache
+	// ScreenKnown, when set, judges an item that came from the cache by its
+	// hash alone, so Screen need not read its content: known false means the
+	// content is needed and Screen runs. It does not apply to an item that was
+	// read.
+	ScreenKnown func(it Item) (keep bool, reason string, known bool)
+}
+
+// CachedItem is the summary of one file a Cache keeps. It never holds the file
+// body.
+type CachedItem struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Hash        string `json:"hash"`
+	// Generated records that a generator's header was found in the file.
+	Generated bool `json:"generated,omitempty"`
+}
+
+// Cache holds the summaries of files by path, size and modification time
+// (nanoseconds since the epoch). An implementation decides how far to trust an
+// entry; Build only asks.
+type Cache interface {
+	Lookup(file string, size, mtime int64) (CachedItem, bool)
+	Store(file string, size, mtime int64, item CachedItem)
 }
 
 // Index is the result of Build. It is immutable.
@@ -226,30 +254,104 @@ func (b *builder) read() {
 	b.generated = map[Kind]int{}
 	for i := range b.cands {
 		c := &b.cands[i]
-		content, ok, err := ReadRegular(b.opts.Root, c.file, MaxFileBytes)
-		if err != nil {
-			b.problems = append(b.problems, Problem{Path: c.file, Err: err.Error()})
-			continue
-		}
-		if !ok {
-			continue
-		}
-		if b.opts.Generated != nil && b.opts.Generated(absOf(b.opts.Root, c.file), content) {
-			b.generated[c.kind]++
-			continue
-		}
-		it := newItem(c, content)
-		if b.opts.Screen != nil {
-			keep, reason := b.opts.Screen(it, content)
-			if !keep {
-				if reason != "" {
-					b.refused = append(b.refused, Refused{Item: it, Reason: reason})
-				}
+		if b.opts.Cache == nil {
+			content, ok, err := ReadRegular(b.opts.Root, c.file, MaxFileBytes)
+			if b.readFailed(c, ok, err) {
 				continue
 			}
+			b.admit(c, content)
+			continue
 		}
-		b.items = append(b.items, it)
+		b.readCached(c)
 	}
+}
+
+// readFailed records a read error as a problem and reports whether the
+// candidate is to be skipped (an error, or a path that is gone or no regular file).
+func (b *builder) readFailed(c *candidate, ok bool, err error) bool {
+	if err != nil {
+		b.problems = append(b.problems, Problem{Path: c.file, Err: err.Error()})
+		return true
+	}
+	return !ok
+}
+
+// admit builds the item of a candidate whose content was read, applies
+// Generated and Screen, and keeps it. It returns the item and whether it was
+// generated, for the cache.
+func (b *builder) admit(c *candidate, content []byte) (it Item, generated bool) {
+	if b.opts.Generated != nil && b.opts.Generated(absOf(b.opts.Root, c.file), content) {
+		b.generated[c.kind]++
+		return newItem(c, content), true
+	}
+	it = newItem(c, content)
+	if b.opts.Screen != nil {
+		keep, reason := b.opts.Screen(it, content)
+		if !keep {
+			if reason != "" {
+				b.refused = append(b.refused, Refused{Item: it, Reason: reason})
+			}
+			return it, false
+		}
+	}
+	b.items = append(b.items, it)
+	return it, false
+}
+
+// readCached reads a candidate through the cache: a file whose size and
+// modification time are unchanged is not read again.
+func (b *builder) readCached(c *candidate) {
+	abs := filepath.Join(b.opts.Root, filepath.FromSlash(c.file))
+	info, err := os.Lstat(abs)
+	switch {
+	case err != nil && os.IsNotExist(err):
+		return
+	case err != nil:
+		b.problems = append(b.problems, Problem{Path: c.file, Err: err.Error()})
+		return
+	case !info.Mode().IsRegular():
+		return
+	case info.Size() > MaxFileBytes:
+		b.problems = append(b.problems, Problem{Path: c.file, Err: ErrTooLarge.Error()})
+		return
+	}
+	size, mtime := info.Size(), info.ModTime().UnixNano()
+	if ci, ok := b.opts.Cache.Lookup(c.file, size, mtime); ok && b.fromCache(c, ci, abs) {
+		return
+	}
+	content, ok, err := ReadRegular(b.opts.Root, c.file, MaxFileBytes)
+	if b.readFailed(c, ok, err) {
+		return
+	}
+	it, generated := b.admit(c, content)
+	b.opts.Cache.Store(c.file, size, mtime, CachedItem{Name: it.Name, Description: it.Description, Hash: it.Hash, Generated: generated})
+}
+
+// fromCache applies a cached summary. It reports false when the item cannot be
+// judged without its content, which the caller then reads.
+func (b *builder) fromCache(c *candidate, ci CachedItem, abs string) bool {
+	if ci.Generated || (b.opts.Generated != nil && b.opts.Generated(abs, nil)) {
+		b.generated[c.kind]++
+		return true
+	}
+	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash}
+	if b.opts.Screen != nil {
+		if b.opts.ScreenKnown == nil {
+			return false
+		}
+		keep, reason, known := b.opts.ScreenKnown(it)
+		if !known {
+			return false
+		}
+		if !keep {
+			if reason != "" {
+				b.refused = append(b.refused, Refused{Item: it, Reason: reason})
+			}
+			return true
+		}
+	}
+	b.items = append(b.items, it)
+	return true
 }
 
 // finish groups the items into scopes.
