@@ -242,9 +242,10 @@ func TestSkipOutputs_SkipsScopeRoots(t *testing.T) {
 func TestSkipOutputs_StillEmitsInstalledSkillAndMCP(t *testing.T) {
 	// Arrange
 	quietWarnings(t)
-	remote := t.TempDir()
-	writeAgentsMDFile(t, remote, "skills/ext/SKILL.md", "---\ndescription: External skill\n---\nEXT_BODY\n")
 	root := t.TempDir()
+	// A local installed skill must stay inside the project.
+	remote := filepath.Join(root, "vendor")
+	writeAgentsMDFile(t, remote, "skills/ext/SKILL.md", "---\ndescription: External skill\n---\nEXT_BODY\n")
 	extra := skipMCPTable + "\n[[installed_skills]]\nname = \"ext\"\nsource = " + strconv.Quote(remote) + "\n"
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude", "codex"}, "agents_md = true\nskip_outputs = [\"instructions\"]\n", extra))
 	writeAgentsMDFile(t, root, "CLAUDE.md", "HAND CLAUDE\n")
