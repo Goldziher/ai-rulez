@@ -1,6 +1,7 @@
 package indexcache
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -29,8 +30,10 @@ func project(t *testing.T) (root, configDir string) {
 	return root, configDir
 }
 
+func testKey(b byte) []byte { return bytes.Repeat([]byte{b}, 32) }
+
 func opts(root, configDir, mode string) Options {
-	return Options{Root: root, ConfigDir: configDir, Mode: mode, Fingerprint: "fp1", Tree: "tree1"}
+	return Options{Root: root, ConfigDir: configDir, Mode: mode, Key: testKey(1), Fingerprint: "fp1", Tree: "tree1"}
 }
 
 func TestLocate(t *testing.T) {
@@ -302,7 +305,7 @@ func TestStore_ForgedVerdictFileWithAnotherKeyIsDiscarded(t *testing.T) {
 	dir := first.Location().Dir
 	// An attacker regenerates the whole cache with a key of their own.
 	other := t.TempDir()
-	forged := Options{Root: other, ConfigDir: filepath.Join(other, ".ai-rulez"), Mode: config.IndexCacheRepo, Fingerprint: "fp1", Tree: "tree1"}
+	forged := Options{Root: other, ConfigDir: filepath.Join(other, ".ai-rulez"), Mode: config.IndexCacheRepo, Key: testKey(2), Fingerprint: "fp1", Tree: "tree1"}
 	require.NoError(t, os.MkdirAll(forged.ConfigDir, 0o755))
 	fs, err := Open(ctx, forged)
 	require.NoError(t, err)
@@ -479,4 +482,57 @@ func rewrite(t *testing.T, path, old, replacement string) {
 	require.NoError(t, err)
 	require.Contains(t, string(data), old)
 	require.NoError(t, os.WriteFile(path, []byte(strings.Replace(string(data), old, replacement, 1)), 0o600))
+}
+
+func TestLocate_WithoutASecretThereIsNoCache(t *testing.T) {
+	root, configDir := project(t)
+	o := opts(root, configDir, config.IndexCacheUser)
+	o.Key = nil
+
+	loc, err := Locate(context.Background(), o)
+	require.NoError(t, err)
+	s, err := Open(context.Background(), o)
+	require.NoError(t, err)
+
+	assert.Equal(t, KindOff, loc.Kind)
+	assert.Contains(t, loc.Warning, "secret")
+	assert.Equal(t, KindOff, s.Location().Kind)
+}
+
+func TestVerdictKey(t *testing.T) {
+	a := SumOfContent("SKILL.md", []byte("one"))
+	b := SumOfContent("notes.md", []byte("two"))
+	base := VerdictKey("warn", []FileSum{a, b})
+
+	tests := []struct {
+		name string
+		key  string
+		same bool
+	}{
+		{name: "same inputs", key: VerdictKey("warn", []FileSum{a, b}), same: true},
+		{name: "other level", key: VerdictKey("error", []FileSum{a, b})},
+		{name: "other content", key: VerdictKey("warn", []FileSum{SumOfContent("SKILL.md", []byte("uno")), b})},
+		{name: "other name", key: VerdictKey("warn", []FileSum{SumOfContent("renamed.md", []byte("one")), b})},
+		{name: "other order", key: VerdictKey("warn", []FileSum{b, a})},
+		{name: "fewer files", key: VerdictKey("warn", []FileSum{a})},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.same, tt.key == base)
+		})
+	}
+}
+
+func TestSumOfHash_MatchesTheSumOfTheContent(t *testing.T) {
+	content := []byte("# heading\n")
+	want := SumOfContent("AGENTS.md", content)
+
+	got, ok := SumOfHash("AGENTS.md", repoindex.Hash(content))
+
+	require.True(t, ok)
+	assert.Equal(t, want, got)
+	for _, bad := range []string{"", "sha256:", "sha256:zz", "md5:abcd", "sha256:abcd"} {
+		_, ok := SumOfHash("AGENTS.md", bad)
+		assert.False(t, ok, bad)
+	}
 }
