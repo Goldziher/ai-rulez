@@ -207,6 +207,11 @@ type LintExternal struct {
 	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
 	// from the project root, in the scanner's isolation mode; needs Version.
 	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
+	// CacheFiles lists globs, relative to the project root, of files the scanner
+	// reads besides the staged content (a rules file, a config). Their content is
+	// part of the result cache key. The script a command runs through an
+	// interpreter (python3 scan.py) is hashed without being listed.
+	CacheFiles []string `yaml:"cache_files,omitempty" json:"cache_files,omitempty" toml:"cache_files,omitempty"` //nolint:tagliatelle
 	// FailOn is the lowest severity of this scanner's findings that fails the run
 	// ("error", "warning" or "info"). It replaces [lint.scanner_policy] fail_on for
 	// this scanner, and the run's own threshold (--strict, --fail-on) for its findings.

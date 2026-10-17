@@ -160,7 +160,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	}
 	binary := lookExecutable(sc.Command[0], root)
 	digest := digestStage(files)
-	key, cache := r.cacheFor(sc, binary, digest)
+	key, cache := r.cacheFor(sc, binary, digest, keyFiles(sc, root))
 	if key != "" {
 		if hit, found := r.cacheGet(sc, cache, key); found && !r.opts.Scanner.DryRun {
 			r.log().Debug("Scanner result served from the cache", "scanner", sc.Name)
@@ -247,12 +247,12 @@ func (r *runner) fromCache(sc resolvedScanner, files []stagedFile, hit cachedSca
 
 // cacheFor returns the cache and key for a run, or an empty key when the run
 // is not cacheable (no cache, egress scanner, scanner not installed).
-func (r *runner) cacheFor(sc resolvedScanner, binary, digest string) (string, *ScanCache) {
+func (r *runner) cacheFor(sc resolvedScanner, binary, digest string, files []string) (string, *ScanCache) {
 	cache := r.opts.Scanner.Cache
 	if cache == nil || r.opts.Scanner.NoCache || sc.Egress == nil || *sc.Egress || binary == "" {
 		return "", nil
 	}
-	key, ok := scanKeyFor(sc, binary, digest, r.opts.Scanner.ShowSuppressed, r.isolationKey())
+	key, ok := scanKeyFor(sc, binary, digest, files, r.opts.Scanner.ShowSuppressed, r.isolationKey())
 	if !ok {
 		return "", nil
 	}
