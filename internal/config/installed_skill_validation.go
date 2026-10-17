@@ -9,6 +9,9 @@ import (
 	"github.com/samber/oops"
 )
 
+// reasonControlChars is the problem reported for a field with a control character.
+const reasonControlChars = "must not contain control characters"
+
 // DecodeTOMLConfig parses the bytes of a config.toml. path is used for error
 // context only.
 func DecodeTOMLConfig(data []byte, path string) (*Config, error) {
@@ -103,7 +106,7 @@ func skillResourcePatternProblem(pattern string) string {
 	case strings.HasPrefix(raw, "/") || strings.HasPrefix(raw, "\\") || (len(raw) >= 2 && raw[1] == ':'):
 		return "must be relative to the skill directory"
 	case hasControl(raw):
-		return "must not contain control characters"
+		return reasonControlChars
 	}
 	for _, seg := range strings.Split(raw, "/") {
 		if seg == ".." {
@@ -137,7 +140,7 @@ func skillPathProblem(p string) string {
 	case strings.HasPrefix(p, "/") || strings.HasPrefix(p, "\\") || (len(p) >= 2 && p[1] == ':'):
 		return "must be relative to the skill repository"
 	case hasControl(p):
-		return "must not contain control characters"
+		return reasonControlChars
 	}
 	for _, seg := range strings.FieldsFunc(p, func(r rune) bool { return r == '/' || r == '\\' }) {
 		if seg == ".." {
@@ -156,7 +159,7 @@ func skillSourceProblem(source string) string {
 	case transportHelper.MatchString(src):
 		return "must not use a git transport helper such as ext::"
 	case hasControl(source):
-		return "must not contain control characters"
+		return reasonControlChars
 	case strings.HasPrefix(strings.ToLower(src), "http://"):
 		return "uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh, git@host:path, file://)"
 	}

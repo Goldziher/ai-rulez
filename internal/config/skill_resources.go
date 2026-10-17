@@ -82,7 +82,8 @@ func DefaultInstalledSkillResources() []string {
 }
 
 func skillResourcesFrom(ctx context.Context) []string {
-	if patterns, _ := ctx.Value(skillResourcesKey{}).([]string); len(patterns) > 0 {
+	patterns, ok := ctx.Value(skillResourcesKey{}).([]string)
+	if ok && len(patterns) > 0 {
 		return patterns
 	}
 	return DefaultInstalledSkillResources()
@@ -526,10 +527,7 @@ func (s *contentScanner) loadExtraResources(root, itemKind string, filter *bundl
 				}
 				continue
 			}
-			if rel == skillMarkerFile || !resourcePatternsMatch(s.extraResources, rel) {
-				continue
-			}
-			resource, keep, err := s.readSkillResource(root, path, d.Name(), extraResourceKind(d.Name()), filter)
+			resource, keep, err := s.extraResourceFile(root, path, rel, filter)
 			if err != nil {
 				return err
 			}
@@ -543,6 +541,16 @@ func (s *contentScanner) loadExtraResources(root, itemKind string, filter *bundl
 		return nil, err
 	}
 	return resources, nil
+}
+
+// extraResourceFile reads the file at root-relative rel when the entry's
+// `resources` patterns select it. SKILL.md is never a resource.
+func (s *contentScanner) extraResourceFile(root, path, rel string, filter *bundleFilter) (resource SkillResource, keep bool, err error) {
+	if rel == skillMarkerFile || !resourcePatternsMatch(s.extraResources, rel) {
+		return SkillResource{}, false, nil
+	}
+	name := filepath.Base(path)
+	return s.readSkillResource(root, path, name, extraResourceKind(name), filter)
 }
 
 // resourcePatternsMatch reports whether the root-relative slash path rel is
