@@ -22,6 +22,7 @@ const (
 	flagServeNoWatch       = "no-watch"
 	flagServePoll          = "reload-interval"
 	flagServeDaemon        = "daemon"
+	flagServeDiscover      = "discover-skills"
 	// flagServeDaemonServer marks the process the proxy spawned as the daemon
 	// itself. It is hidden: a user runs --daemon, and the proxy adds this flag
 	// on the child only.
@@ -32,7 +33,7 @@ const (
 var dynamicServeFlagNames = []string{
 	flagServeSource, flagServeRole, flagServeFrozen, flagServeOffline, flagServeIncludeStatic,
 	flagServeBudget, flagServeMaxClone, flagServeUsageLog, flagServeUsageSink, flagServeNoWatch, flagServePoll,
-	flagServeDaemon,
+	flagServeDaemon, flagServeDiscover,
 }
 
 func registerDynamicServeFlags(cmd *cobra.Command) {
@@ -49,6 +50,8 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 	f.Bool(flagServeNoWatch, false, "Do not reload skills when their files change (requires --serve-skills)")
 	f.Duration(flagServePoll, 0, "How often to check skill files for changes; default 2s (requires --serve-skills)")
 	f.Bool(flagServeDaemon, false, "Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills)")
+	f.String(flagServeDiscover, "", "Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honouring .gitignore) or all (repo plus installed and included skills); a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills)")
+	f.Lookup(flagServeDiscover).NoOptDefVal = "repo"
 	f.Bool(flagServeDaemonServer, false, "Run as the shared daemon itself instead of proxying to it; set by the spawned child, not from the command line")
 	_ = f.MarkHidden(flagServeDaemonServer) //nolint:errcheck // the flag was just registered
 }
@@ -105,6 +108,7 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	read(flagServeNoWatch, func() (e error) { setup.NoWatch, e = flags.GetBool(flagServeNoWatch); return })
 	read(flagServePoll, func() (e error) { setup.PollInterval, e = flags.GetDuration(flagServePoll); return })
 	read(flagServeDaemon, func() (e error) { setup.Daemon, e = flags.GetBool(flagServeDaemon); return })
+	read(flagServeDiscover, func() (e error) { setup.DiscoverSkills, e = flags.GetString(flagServeDiscover); return })
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped above
 	}

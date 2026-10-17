@@ -527,6 +527,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
+| `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository). |
 | `--max-clone-bytes` | Clone size limit in bytes for git skill sources that set no `max_clone_bytes`. Overrides `AI_RULEZ_MAX_CLONE_BYTES`; 0 (default) defers to it, then to 256 MiB. |
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
@@ -536,6 +537,70 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
 `--serve-skills`. The authoring tools are registered too, so one process serves both; `--read-only` registers
 only the read-only tools, so a project can be inspected but never changed.
+
+### Discovering skills already in the repository
+
+A repository often keeps skills that ai-rulez does not define: a `skills/` folder, `.claude/skills` in a package,
+a folder a teammate set up for another harness. `--discover-skills` (or `[mcp] discover_skills`) serves them through
+the same `skill://` resources, `find_skill` and `load_skill`, under the same security scan, session budget and
+`--allow`/`--deny` rules, with no `generate` run and no copy.
+
+```toml
+[mcp]
+discover_skills = "repo"   # "off" (default) | "repo" | "all"
+```
+
+```sh
+ai-rulez mcp --serve-skills --discover-skills        # repo
+ai-rulez mcp --serve-skills --discover-skills=all
+```
+
+| Mode | Serves |
+| ---- | ------ |
+| `off` | Today's behaviour: the skills ai-rulez defines and the skill sources. |
+| `repo` | The above, plus every skill directory found in the working tree. |
+| `all` | `repo`, plus the installed and included skills even when their delivery would keep them out of the served set. |
+
+The flag wins over the configuration; a bare `--discover-skills` means `repo`. A project with no configuration at all
+(or a [lint-only configuration](config-without-folder.md#lint-only-configuration)) can use it.
+
+**Where `repo` looks.** A directory with a `SKILL.md` below one of these roots, at most six levels down:
+
+- `skills/` at the project root;
+- `.claude/skills` at any depth (`packages/api/.claude/skills`);
+- the skill directory of each configured preset at the project root (`.agents/skills`, `.cursor/skills`,
+  `.github/skills`, ...), the same list `convert` reads.
+
+A `SKILL.md` inside another skill belongs to that skill and is not a skill of its own. The configuration directory
+(`.ai-rulez/`), `.git/` and `node_modules/` are never searched, symlinks are not followed, and a skill is read with
+the limits of a skill source (2 MiB a file, 8 MiB and 2000 files a skill, 500 skills in all).
+
+**Ignored and generated files.** In a git repository the search covers the files `git ls-files --cached --others
+--exclude-standard` lists, so everything `.gitignore` excludes is skipped. Without git it walks the tree and
+only skips `.git` and `node_modules`. A skill directory ai-rulez itself wrote is left out, so a skill is not served
+twice: one holding a file recorded in the generated manifest, or whose `SKILL.md` still carries the generated
+`Content-Hash` header. While the manifest records a copy it stays out even when edited by hand; without the manifest
+a copy whose body was edited fails the header check and is a repository skill.
+
+**Names.** A skill is served under its frontmatter `name` (the directory name when it has none), and the first
+claimant keeps a name in this order:
+
+1. The skills ai-rulez defines, then the skill sources: a repository skill with their name is *shadowed*, not served.
+2. Repository skills, shallowest directory first, then by path. A later one with a name already taken is served
+   under its path from the project root, `/` turned into `.` and the leading dot of each segment dropped:
+   `pkg/.claude/skills/bar` becomes `pkg.claude.skills.bar` (its frontmatter `name` is rewritten to match).
+   If that name is taken too, it is shadowed.
+
+Every shadowed skill is a start-up warning and is listed, with its path and what shadows it, under
+`skill_discovery.shadowed` in the `ai-rulez://catalog` resource, next to the served ones (`skill_discovery.served`)
+and the count of generated directories left out (`generated_skipped`).
+
+**Limits.** A discovered skill takes the default trust of a skill authored in the project (the scan blocks error
+findings, warns on the rest). With `[lock] enforce`, it must be pinned like any served skill: set
+`discover_skills` in the configuration, not only the flag, so `ai-rulez lock` sees it. The served catalog is not
+cached while discovery is on, and live reload watches the skill roots found at start (and `skills/`, `.claude/skills`
+and the preset directories at the project root when they exist): a new skill folder in an existing root is picked
+up, a new `.claude/skills` elsewhere needs a restart.
 
 ### Start-up cost and the catalog cache
 
