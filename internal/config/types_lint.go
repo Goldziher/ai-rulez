@@ -207,6 +207,15 @@ type LintExternal struct {
 	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
 	// from the project root, in the scanner's isolation mode; needs Version.
 	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
+	// StageGlobs narrows the files of a staged skill directory to the ones
+	// matching a glob (relative to the skill directory; a pattern with no slash
+	// matches at any depth, ** crosses directories). SKILL.md is always staged.
+	// Unset stages every regular file of the directory.
+	StageGlobs []string `yaml:"stage_globs,omitempty" json:"stage_globs,omitempty" toml:"stage_globs,omitempty"` //nolint:tagliatelle
+	// StageExclude leaves out the files of a staged skill directory that match a
+	// glob (same syntax as StageGlobs); it wins over StageGlobs. SKILL.md is
+	// always staged.
+	StageExclude []string `yaml:"stage_exclude,omitempty" json:"stage_exclude,omitempty" toml:"stage_exclude,omitempty"` //nolint:tagliatelle
 	// CacheFiles lists globs, relative to the project root, of files the scanner
 	// reads besides the staged content (a rules file, a config). Their content is
 	// part of the result cache key. The script a command runs through an

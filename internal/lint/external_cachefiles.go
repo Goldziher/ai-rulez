@@ -68,21 +68,7 @@ func interpreterScript(command []string, root string) string {
 
 // cacheFilesProblems lists what is wrong with an entry's cache_files patterns.
 func cacheFilesProblems(patterns []string) []string {
-	var problems []string
-	for _, p := range patterns {
-		clean := strings.ReplaceAll(strings.TrimSpace(p), `\`, "/")
-		switch {
-		case clean == "":
-			problems = append(problems, "cache_files holds an empty pattern")
-		case strings.HasPrefix(clean, "/") || filepath.IsAbs(p) || (len(clean) > 1 && clean[1] == ':'):
-			problems = append(problems, fmt.Sprintf("cache_files %q must be relative to the project", p))
-		case hasDotDot(clean):
-			problems = append(problems, fmt.Sprintf("cache_files %q must stay inside the project", p))
-		case malformedGlob(clean):
-			problems = append(problems, fmt.Sprintf("cache_files %q is not a valid glob", p))
-		}
-	}
-	return problems
+	return globListProblems("cache_files", "project", patterns)
 }
 
 func hasDotDot(p string) bool {

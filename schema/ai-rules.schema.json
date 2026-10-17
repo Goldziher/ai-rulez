@@ -2713,6 +2713,16 @@
                 "maximum": 100000,
                 "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text."
               },
+              "stage_globs": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Narrow the files staged from each skill directory to the ones matching a glob (relative to the skill directory; a pattern with no slash matches at any depth, ** crosses directories). SKILL.md is always staged. Unset stages every regular file of the directory."
+              },
+              "stage_exclude": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Leave out the files of a staged skill directory that match a glob (same syntax as stage_globs); it wins over stage_globs. SKILL.md is always staged."
+              },
               "cache_files": {
                 "type": "array",
                 "items": { "type": "string" },

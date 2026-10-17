@@ -1790,6 +1790,20 @@
                 "description": "Maps a scanner rule id (glob) to a severity. Applied before any other mapping.",
                 "type": "object"
               },
+              "stage_exclude": {
+                "description": "Leave out the files of a staged skill directory that match a glob (same syntax as stage_globs); it wins over stage_globs. SKILL.md is always staged.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "stage_globs": {
+                "description": "Narrow the files staged from each skill directory to the ones matching a glob (relative to the skill directory; a pattern with no slash matches at any depth, ** crosses directories). SKILL.md is always staged. Unset stages every regular file of the directory.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "timeout": {
                 "description": "Go duration such as \"90s\". Default 2m, at most 15m.",
                 "type": "string"

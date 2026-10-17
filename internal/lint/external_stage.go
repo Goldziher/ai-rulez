@@ -133,8 +133,22 @@ func (r *runner) buildStageFrom(files []stagedFile) (*scannerStage, error) {
 	return st, nil
 }
 
+// stageFilesFor lists the files staged for sc: its inputs in its layout, with
+// the skill files its stage_globs and stage_exclude select.
+func (r *runner) stageFilesFor(sc resolvedScanner) []stagedFile {
+	want := map[string]bool{}
+	for _, in := range sc.Inputs {
+		want[in] = true
+	}
+	return r.stageFilesWith(want, sc.Layout, newStageFilter(sc.LintExternal))
+}
+
 // stageFiles lists the files for the wanted inputs, sorted by stage path.
 func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
+	return r.stageFilesWith(want, layout, stageFilter{})
+}
+
+func (r *runner) stageFilesWith(want map[string]bool, layout string, filter stageFilter) []stagedFile {
 	var out []stagedFile
 	used := map[string]bool{}
 	claim := func(rel string) string {
@@ -153,7 +167,7 @@ func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
 		if it.isDoc || (it.owned && !want[itemInputs[it.kind]]) || (!it.owned && !want[inputImports]) {
 			continue
 		}
-		out = append(out, r.stageItem(it, layout, cfgFile, claim)...)
+		out = append(out, r.stageItem(it, layout, cfgFile, filter, claim)...)
 	}
 	if want[inputHooks] && len(r.cfg.Hooks) > 0 {
 		if data, err := json.MarshalIndent(r.cfg.Hooks, "", "  "); err == nil {
@@ -172,7 +186,7 @@ func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
 // stageItem lists the files one content item stages: the item itself and, for a
 // skill laid out as a directory, its supporting files. It is empty for an item
 // the layout leaves out.
-func (r *runner) stageItem(it *item, layout, cfgFile string, claim func(string) string) []stagedFile {
+func (r *runner) stageItem(it *item, layout, cfgFile string, filter stageFilter, claim func(string) string) []stagedFile {
 	dir, rel := r.layoutPath(it, layout)
 	if rel == "" {
 		return nil
@@ -192,9 +206,9 @@ func (r *runner) stageItem(it *item, layout, cfgFile string, claim func(string) 
 	}
 	file.skillOf = path.Dir(file.rel)
 	out := []stagedFile{file}
-	for _, res := range it.cf.Resources {
+	for _, res := range r.stageSkillFiles(it) {
 		rr := path.Clean(strings.ReplaceAll(res.RelPath, `\`, "/"))
-		if rr == "." || path.IsAbs(rr) || rr == ".." || strings.HasPrefix(rr, "../") {
+		if rr == "." || path.IsAbs(rr) || rr == ".." || strings.HasPrefix(rr, "../") || !filter.keep(rr) {
 			continue
 		}
 		src := cfgFile
