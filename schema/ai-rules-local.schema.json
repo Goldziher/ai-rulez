@@ -4259,7 +4259,7 @@
           "type": "integer"
         },
         "version": {
-          "description": "Pin the ai-rulez version the hook runs through npx and uvx. Defaults to the version of the binary that runs generate, or \"latest\" for a dev build. Mutually exclusive with command.",
+          "description": "Pin the ai-rulez version the hook runs through npx and uvx. Defaults to the latest published release. Mutually exclusive with command.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
           "type": "string"
         },

@@ -1974,6 +1974,7 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 # skills_instructions = false                # leave the "Unlisted skills" section out of instruction files
 # skills_instructions_text = "..."           # replace that section; {{server}}, {{skills_dir}}
 # discover_skills = "repo"                   # mcp --serve-skills also serves the skills already in the repository
+# index_cache = "user"                       # "user" (default), "repo" or "off": where the repository index is cached
 ```
 
 | Field                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -1985,6 +1986,7 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 | `skills_instructions`      | While skills are served, every instruction file gets a short "Unlisted skills" section telling the agent to call `find_skill`, then `load_skill`, on the MCP server that serves them, with the on-disk fallback (`.ai-rulez/skills/<name>/SKILL.md`). Default `true`; `false` leaves it out. Written when a configured preset can call MCP, and only into the root file of a harness that can; the shared `AGENTS.md` carries it once.                                                                                                          |
 | `skills_instructions_text` | Replaces the default section (write your own heading). `{{server}}` is the MCP server that serves the skills, `{{skills_dir}}` the config directory's skills folder (`.ai-rulez/skills`). Unknown variables, blank text, and text beside `skills_instructions = false` are configuration errors.                                                                                                                                                                                                                                                |
 | `discover_skills`          | `off` (the default), `repo` or `all`: whether `mcp --serve-skills` also serves the skills the repository already keeps (`skills/`, `.claude/skills` at any depth, the configured presets' skill directories). `all` adds the installed and included skills whatever their delivery. The `--discover-skills` flag overrides it. See [Discovering skills already in the repository](mcp-server.md#discovering-skills-already-in-the-repository). |
+| `index_cache`              | `user` (the default), `repo` or `off`: where the repository index of the discovery keeps its cache of item summaries and scan verdicts, never file bodies. `user` is the user cache directory, with a gitignored directory in the project (`.ai-rulez/.cache/`, or `.ai-rulez-cache/` in the root layout) as the fallback when it is not writable; `repo` always uses that directory; `off` keeps none. See [The index cache](mcp-server.md#the-index-cache). |
 
 Behavior:
 
@@ -10193,7 +10195,7 @@ It is on by default for a project that generates for Claude Code, and it does no
 # when = "remote"        # "remote": act only when CLAUDE_CODE_REMOTE is set; "always": every session
 # mode = "auto"          # auto | locked | frozen | plain
 # timeout = 120          # seconds the whole run may take before it is killed
-# version = "5.5.0"      # pin for npx and uvx; default is the generating binary's version
+# version = "5.5.0"      # pin npx and uvx to a release; default is the latest published one
 # command = ["ai-rulez"] # replaces the launcher; runs without a shell; excludes version
 # prompt = true          # inject the short briefing
 # prompt_text = "..."    # replaces the briefing; {{server}} is the ai-rulez MCP server's name
@@ -10254,13 +10256,21 @@ hook groups ai-rulez owns, because a clone cannot tell the file is wholly ai-rul
 The hook is a short `sh` script that tries, in order, and stops at the first that runs:
 
 1. `ai-rulez` on `PATH`: `ai-rulez session-start`
-2. `npx -y ai-rulez@<version> session-start`
-3. `uvx --from ai-rulez==<version> ai-rulez session-start`
+2. `npx -y ai-rulez@latest session-start`
+3. `uvx --from ai-rulez@latest ai-rulez session-start`
 
-`<version>` is the version of the binary that ran `generate` (`latest` for a dev build), or `version` from the table.
-It is never a range. An attempt that cannot start, or exits non-zero, falls through to the next. When none runs the
-script prints one line on stderr and exits 0, so the session starts. `ai-rulez doctor` prints this order with the
-version each step pins.
+The fallbacks run the latest published release, so the generated line does not change when ai-rulez does. Set
+`version` in the table to pin one (`npx -y ai-rulez@<version>`, `uvx --from ai-rulez==<version>`); it is never a
+range. An attempt that cannot start, or exits non-zero, falls through to the next. When none runs the script prints
+one line on stderr and exits 0, so the session starts. `ai-rulez doctor` prints this order.
+
+The `npx` and `uvx` attempts run from a new, empty private directory under `TMPDIR` (or `/tmp`), not from the
+project, so a project `.npmrc`, `node_modules/.bin` or uv configuration cannot substitute the package that runs. The
+script exports `CLAUDE_PROJECT_DIR` first (keeping the harness's value), and `session-start` reads the project from
+it, then from the hook payload's `cwd`, so it never depends on its own working directory. The installed `ai-rulez`
+runs in the project directory. The lock file that serializes two hooks lives in a private per-user directory of the
+temp directory, and the failure reason injected into the agent's context is cut to a short line of letters, digits
+and basic punctuation.
 
 `when = "remote"` puts the environment check at the top of the script, before any launcher: on a developer's machine
 the hook returns immediately and never makes `npx` download anything. `CLAUDE_CODE_REMOTE` is `true` in a remote
@@ -28501,7 +28511,7 @@ ai-rulez doctor [--strict] [--format json] [--profile <name>] [--no-local]
 | `documents` | A shared settings document ai-rulez merges into (`.claude/settings.json`, `.mcp.json`, `.codex/config.toml`, ...) that no longer parses as JSON, JSONC, TOML or YAML | error |
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
 | `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
-| `session-start` | The `SessionStart` hook: `info` listing the launchers it tries in order (`ai-rulez`, `npx -y ai-rulez@<version>`, `uvx --from ai-rulez==<version>`); a warning when the generated `.claude/settings.json` lacks the hook or is ignored by version control, and, inside a remote session, when none of `ai-rulez`, `npx` and `uvx` is on `PATH` or the npm registry is denied or unreachable (asked with one GET) | info, warning |
+| `session-start` | The `SessionStart` hook: `info` listing the launchers it tries in order (`ai-rulez`, `npx -y ai-rulez@latest`, `uvx --from ai-rulez@latest`); a warning when the generated `.claude/settings.json` lacks the hook or is ignored by version control, and, inside a remote session, when none of `ai-rulez`, `npx` and `uvx` is on `PATH` or the npm registry is denied or unreachable (asked with one GET) | info, warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
 
 With `--debug`, `doctor` logs one `Doctor check finished` line per check with its name and duration, to find the slow one.
@@ -34363,7 +34373,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`agents_md_split`**: With the agents source, read `AGENTS.md` as one context item per `##` heading (default `false`); see [Splitting AGENTS.md](agents-source.md#splitting-agentsmd)
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `discover_skills`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `discover_skills`, `index_cache`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle
