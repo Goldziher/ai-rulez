@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -380,6 +381,9 @@ func TestRun_ProjectDirectory(t *testing.T) {
 		assert.Equal(t, h.root, h.runner.Calls()[0].Dir, "falls back to the working directory")
 	})
 	t.Run("a read-only repository still runs: nothing is written into it by the hook", func(t *testing.T) {
+		if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+			t.Skip("directory permission bits do not stop writes on windows or for root, so the case would assert nothing")
+		}
 		h := newHarness(t, nil)
 		require.NoError(t, os.Chmod(h.root, 0o555))
 		t.Cleanup(func() { _ = os.Chmod(h.root, 0o755) })
