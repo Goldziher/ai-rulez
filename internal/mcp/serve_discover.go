@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
+	"github.com/Goldziher/ai-rulez/v5/internal/indexcache"
 	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
@@ -96,6 +97,10 @@ type discovery struct {
 	generated map[string]bool
 	// index is the repository index of this run; nil until find ran.
 	index *repoindex.Index
+	// store is the index cache of this run; nil until find ran.
+	store *indexcache.Store
+	// cacheWarning says why the cache is not where it was asked to be.
+	cacheWarning string
 }
 
 // reportOf is the report of a discovery run; nil for no run.
@@ -216,16 +221,25 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 	for i := range d.cfg.Presets {
 		presets = append(presets, d.cfg.Presets[i].GetName())
 	}
-	ix, err := repoindex.Build(ctx, repoindex.Options{
+	d.store, d.cacheWarning = d.st.openIndexCache(ctx, d.cfg)
+	if d.cacheWarning != "" {
+		d.st.logger().Warn("The index cache is not where it was asked to be", "reason", d.cacheWarning)
+	}
+	opts := repoindex.Options{
 		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Generated: d.isGenerated, Screen: d.screen,
 		MaxItems: d.st.indexLimit,
-	})
+	}
+	if d.store.Enabled() {
+		opts.Cache, opts.ScreenKnown = d.store, d.screenKnown
+	}
+	ix, err := repoindex.Build(ctx, opts)
 	if err != nil {
 		d.st.logger().Warn("Could not index the repository for skills", "error", err.Error())
 		return nil
 	}
 	d.index = ix
 	d.report.Index = &IndexReport{Items: len(ix.Items()), Limit: ix.Limit(), Truncated: ix.Truncated(), Found: ix.Found()}
+	d.report.Index.Cache = reportOfCache(d.store, d.cacheWarning)
 	for _, p := range ix.Problems() {
 		if path.Base(p.Path) == skillMarkdown {
 			d.st.logger().Warn("Skipping a repository skill that cannot be read", "path", path.Dir(p.Path), "error", p.Err)

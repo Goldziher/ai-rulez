@@ -211,7 +211,10 @@ func TestCatalogResource_ScopesSection(t *testing.T) {
 	assert.Equal(t, []any{"agents", "claude"}, scopes["pkg/api"]["sources"])
 	assert.Equal(t, []any{"skills-dir"}, scopes["pkg/web"]["sources"])
 	discovery := doc["skill_discovery"].(map[string]any)
-	assert.Equal(t, map[string]any{"items": float64(8), "limit": float64(20000), "truncated": false, "found": float64(8)}, discovery["index"])
+	index := discovery["index"].(map[string]any)
+	assert.Contains(t, index, "cache", "the index reports how it used the cache")
+	delete(index, "cache")
+	assert.Equal(t, map[string]any{"items": float64(8), "limit": float64(20000), "truncated": false, "found": float64(8)}, index)
 }
 
 func TestCatalogResource_ScopesCanBeNarrowed(t *testing.T) {
@@ -276,6 +279,7 @@ func TestDiscovery_IndexOverItsLimitWarnsAtStartupAndKeepsTheShallowScopes(t *te
 	assert.Contains(t, log.String(), "WARN The repository index is over its limit")
 	report := srv.Catalog().Discovery().Index
 	require.NotNil(t, report)
+	report.Cache = nil
 	assert.Equal(t, IndexReport{Items: 4, Limit: 4, Truncated: true, Found: 8}, *report)
 	_, session := srv, connect(t, srv)
 	out, isErr := toolJSON(t, session, "find_context", map[string]any{"scope": ".", "recursive": true})

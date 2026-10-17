@@ -110,7 +110,9 @@ func (d *discovery) screen(it repoindex.Item, content []byte) (keep bool, reason
 	if !d.st.Filter.allowsContext(&it) {
 		return false, ""
 	}
-	if r := scanContext(d.admission(), &it, content); r != nil {
+	adm := d.admission()
+	adm.Verdicts = d.verdicts() // only the build may rely on a verdict; the view's admission scans every time
+	if r := scanContext(adm, &it, content); r != nil {
 		return false, fmt.Sprintf("%s: %s", r.Code, r.Reason)
 	}
 	return true, ""

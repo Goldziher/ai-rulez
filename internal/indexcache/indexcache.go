@@ -59,6 +59,8 @@ type Options struct {
 	// ConfigDir is the absolute configuration directory; empty or equal to Root
 	// for the root layout, which has no directory of its own.
 	ConfigDir string
+	// CacheDir, when set, replaces the user cache root (<home>/.cache/ai-rulez).
+	CacheDir string
 	// Mode is [mcp] index_cache: user (the default), repo or off.
 	Mode string
 	// Key authenticates the index file (HMAC-SHA256). It is a per-user secret
@@ -99,6 +101,9 @@ func RepoID(root string) string {
 
 // userDir is the directory a user cache of the project would use.
 func (o Options) userDir() (string, error) {
+	if o.CacheDir != "" {
+		return filepath.Join(o.CacheDir, dirName, RepoID(o.Root)), nil
+	}
 	return config.CacheDirIn(o.Host.Env, dirName, RepoID(o.Root)) //nolint:wrapcheck // names what is missing
 }
 

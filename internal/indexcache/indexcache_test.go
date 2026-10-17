@@ -536,3 +536,16 @@ func TestSumOfHash_MatchesTheSumOfTheContent(t *testing.T) {
 		assert.False(t, ok, bad)
 	}
 }
+
+func TestLocate_CacheDirOptionReplacesTheUserCacheRoot(t *testing.T) {
+	root, configDir := project(t)
+	base := filepath.Join(t.TempDir(), "base")
+	o := opts(root, configDir, config.IndexCacheUser)
+	o.CacheDir = base
+
+	loc, err := Locate(context.Background(), o)
+
+	require.NoError(t, err)
+	assert.Equal(t, KindUser, loc.Kind)
+	assert.Equal(t, filepath.Join(base, "monorepo-index", RepoID(root)), loc.Dir)
+}
