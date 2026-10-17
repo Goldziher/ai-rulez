@@ -1808,8 +1808,8 @@ Each entry supports:
 | Field            | Required | Description                                                       |
 | ---------------- | -------- | ----------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill identifier                                           |
-| `source`         | Yes      | Git URL or local path                                             |
-| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories (defaults to `skills/<name>`) |
+| `source`         | Yes      | Git URL, `owner/repo` or `github:owner/repo`, `file://` URL, or local directory (`~/path` only from `config.local.toml` or the user config); see [source forms](installed-skills.md#source-forms) |
+| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories (defaults to `skills/<name>`; when omitted and nothing is there, the conventional harness skill directories are searched) |
 | `ref`            | No       | Git ref (branch, tag, commit)                                     |
 | `local_override` | No       | Local path override for development                               |
 | `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |

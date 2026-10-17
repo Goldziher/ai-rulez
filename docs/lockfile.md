@@ -53,6 +53,7 @@ how to do it with `cosign`.
 | --- | --- | --- |
 | `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them); for an agent, skill or command whose frontmatter declares `hooks`, also each project script those hooks run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
 | `skill` | the skill directory name | `SKILL.md`, every loaded resource (`references/`, `scripts/`, `assets/`) and the project scripts its frontmatter `hooks` run |
+| `local-skill` | the skill name | the directory of a skill that an `installed_skills` entry reads from a local source (`SKILL.md` and bundled files) |
 | `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`, `verifiers`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |

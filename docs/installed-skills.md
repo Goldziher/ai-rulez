@@ -83,9 +83,10 @@ trust = "warn"                # only error-severity scan findings block generate
 | Field            | Required | Description                                                      |
 | ---------------- | -------- | ---------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill name                                                |
-| `source`         | Yes      | Git URL or local path to the repository                          |
+| `source`         | Yes      | Where the skill comes from; see [Source forms](#source-forms)    |
 | `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
+| `version`        | No       | Version range of the source's tags (`^1.2`), instead of `ref` |
 | `local_override` | No       | Local path override for development                              |
 | `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
 | `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
@@ -120,6 +121,37 @@ resources = ["*"]                                                      # also ev
 
 A project's own skills under `.ai-rulez/skills/` keep the canonical layout; only installed skills are bundled whole.
 
+## Source forms
+
+`source` accepts what a harness would install from:
+
+| Form | Example | Notes |
+| --- | --- | --- |
+| Git URL | `https://github.com/org/repo`, `git@github.com:org/repo.git` | `https`, `ssh` and scp-style; plain `http://` is refused |
+| GitHub shorthand | `org/repo`, `github:org/repo` | Expands to `https://github.com/org/repo`, so the lock records the full URL. A bare `org/repo` that names an existing directory in the project stays a local path; `github:` is always a repository |
+| `file://` URL | `file:///srv/skills` | A git repository is cloned; any other directory is read as a local path |
+| Local directory | `./vendor/skills`, `/abs/path` | Read in place |
+| Home directory | `~`, `~/skills` | Local, expanded to your home directory |
+
+A local path (including `file://` and `~`) in the committed project config must resolve inside the project, symlinks
+resolved, the same rule as local includes and `[[skill_sources]]`. A path outside it is allowed only from
+`config.local.toml` (or `skill install --local`) and from the user config used by `generate --user`; in a committed
+config it fails with a hint. `~user/path` is not supported. Set `AI_RULEZ_ALLOW_FILE_URLS=1` to let a `file://` git
+source leave the project.
+
+## Discovery
+
+The entry root is `path` (default `skills/<name>`, or `skills` when `include`/`exclude` is set). Below it, every
+directory that holds a `SKILL.md` is a skill, to six levels deep; a skill directory is not searched further.
+Symlinks, hidden directories and `node_modules` are never entered. Two skills with the same directory name keep the
+shallowest and the other is skipped with a warning. An entry may resolve to at most 200 skills.
+
+When the entry sets no `path` and nothing is at the default location, the source is searched where harnesses keep
+skills: a `SKILL.md` at the root is one skill named after the entry; otherwise `skills/`, `.claude/skills/`,
+`.agents/skills/`, `.codex/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/` and `.opencode/skills/`,
+in that order. Without `include`/`exclude` the entry names one skill, the directory called `name`; with them, every
+match across those directories. A git source is fetched whole for this search only when the default location is empty.
+
 ## CLI Commands
 
 ### `ai-rulez skill install <name> --source <url> [flags]`
@@ -131,6 +163,11 @@ Install a named skill.
 - `--source <url>` (required): Git URL or local path
 - `--path <dir>` (optional): Path within repo to skill directory
 - `--ref <ref>` (optional): Git ref (branch, tag, commit)
+- `--include <glob>`, `--exclude <glob>` (optional, repeatable): Select skills from a directory of skills
+- `--name-prefix <prefix>` (optional): Prefix added to every skill name
+- `--trust error|warn` (optional): Scan level of the imported skills
+- `--resources <pattern>` (optional, repeatable): What is bundled besides the canonical folders
+- `--version <range>` (optional): Version range of the source's tags, instead of `--ref`
 - `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
 
 `skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
@@ -147,8 +184,14 @@ ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuz
 # With explicit path and ref
 ai-rulez skill install my-lib --source https://github.com/org/repo --path libs/my-lib --ref v2.0
 
-# From a local path
-ai-rulez skill install local-skill --source ../my-other-repo
+# GitHub shorthand, several skills with a prefix
+ai-rulez skill install vendor --source org/skills --include 'db-*' --name-prefix vendor-
+
+# From a local path inside the project
+ai-rulez skill install local-skill --source ./vendor/my-other-repo
+
+# From outside the project: machine-local only
+ai-rulez skill install mine --source ~/skills --local
 ```
 
 ### `ai-rulez skill remove <name> [flags]`
@@ -216,7 +259,7 @@ Files in `references/` (like `scripts/` and `assets/`) are kept as separate file
 
 ## Pinning with a lock file
 
-`ref` defaults to the repository's default branch (`HEAD`), which moves. Run `ai-rulez lock` (or `ai-rulez skill update <name>`) to record the resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`. Later `generate` runs fetch exactly that commit and fail if the files do not match the digest; `generate --locked` fails when a skill is not covered, and `--frozen` never uses the network. See the [Lock Command](cli.md#lock-command). Imported skill text is instruction text: with `[lint.security] scan_imports`, it is also scanned for secrets, hidden characters and risky commands before it is written ([Security checks](strict-validation.md#security-checks)).
+`ref` defaults to the repository's default branch (`HEAD`), which moves. Run `ai-rulez lock` (or `ai-rulez skill update <name>`) to record the resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`. Later `generate` runs fetch exactly that commit and fail if the files do not match the digest; `generate --locked` fails when a skill is not covered, and `--frozen` never uses the network. A skill read from a local directory is pinned too, as a `local-skill` item holding the tree digest of the skill directory (like a [local include](lockfile.md)); editing a file in it makes `lock --check` and `generate --locked` fail until `ai-rulez lock` is rerun. See the [Lock Command](cli.md#lock-command). Imported skill text is instruction text: with `[lint.security] scan_imports`, it is also scanned for secrets, hidden characters and risky commands before it is written ([Security checks](strict-validation.md#security-checks)).
 
 To serve a repository of skills over MCP instead of writing them into the skill trees, use `[[skill_sources]]`
 or `ai-rulez mcp --serve-skills --source`; they are pinned in the same lock (kind `source`). See
