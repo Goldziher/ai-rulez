@@ -26,10 +26,15 @@ type approvedFile = lockrun.File
 // that is not cached, a limit that was hit). It never follows a symlink.
 func subjectFiles(cfg *config.Config, s approval.Subject) (files []approvedFile, note string) {
 	switch s.Kind {
-	case approval.KindInclude, approval.KindInstalledSkill:
+	case approval.KindInclude, approval.KindInstalledSkill, approval.KindMarketplace, approval.KindInstalledPlugin:
 		want := lockfile.KindInclude
-		if s.Kind == approval.KindInstalledSkill {
+		switch s.Kind {
+		case approval.KindInstalledSkill:
 			want = lockfile.KindSkill
+		case approval.KindMarketplace:
+			want = lockfile.KindMarketplace
+		case approval.KindInstalledPlugin:
+			want = lockfile.KindPlugin
 		}
 		wants := includes.Lockable(cfg)
 		for i := range wants {
