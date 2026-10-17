@@ -2590,6 +2590,14 @@
           "enum": ["off", "repo", "all"],
           "type": "string"
         },
+        "exclude": {
+          "description": "Globs, relative to the project root, of the paths repository discovery (`mcp --serve-skills --discover-skills`) never reads: skill directories and the context index (CLAUDE.md, AGENTS.md, rules, agents) alike. `**` crosses directories, `*` and `?` do not, `{a,b}` alternates, a pattern without a slash matches at any depth and a trailing slash matches a directory and everything below it. The --exclude flag adds to this list.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
         "index_cache": {
           "default": "user",
           "description": "Where the repository index of `mcp --serve-skills --discover-skills` keeps its cache of item summaries and scan verdicts (never file bodies): \"user\" is the user cache directory, with a gitignored directory in the project (.ai-rulez/.cache/) as the fallback when it is not writable; \"repo\" always uses that project directory; \"off\" keeps no cache. The scan, allow and deny rules run again whenever an item is loaded.",
@@ -2603,14 +2611,6 @@
         "read_only": {
           "description": "Register only the read-only tools, as `mcp --read-only` does: the server can inspect the project but not change it, and its instructions and prompts follow the tools it has. The --read-only flag overrides it. An organization policy with mcp.read_only = true cannot be loosened by it.",
           "type": "boolean"
-        },
-        "exclude": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "description": "Globs, relative to the project root, of the paths repository discovery (`mcp --serve-skills --discover-skills`) never reads: skill directories and the context index (CLAUDE.md, AGENTS.md, rules, agents) alike. `**` crosses directories, `*` and `?` do not, `{a,b}` alternates, a pattern without a slash matches at any depth and a trailing slash matches a directory and everything below it. The --exclude flag adds to this list."
         },
         "self_server": {
           "default": true,
