@@ -686,8 +686,11 @@ enumerate: find items with `find_context`. Commands are indexed and counted but 
 
 The context tools apply what skills do: the `--allow` and `--deny` patterns match an item's name or `scope/name`
 (`--deny AGENTS.md` hides every `AGENTS.md`; a non-empty `--allow` is an allowlist for context too); the security
-scan runs when the index is built, so a refused file is a start-up warning and is not listed, and again on the content
-read at load time; reads count against the session budget (`--budget-bytes`), which `load_context`, `load_skill`,
+scan runs when the index is built, so a file with an error finding is withheld (not listed, not loadable) and is a
+start-up warning, and again on the content read at load time. The finding names the item by its `context://` URI and
+line, for example `AR005 risky-shell-exec at context://./CLAUDE.md:2` (`skill://` stays for skills); the scan level
+(`trust`) is a skill setting and does not change what happens to a file of context, since an error finding withholds it
+and the lesser findings are logged while the file is served; reads count against the session budget (`--budget-bytes`), which `load_context`, `load_skill`,
 `get_skill`, `read_skill_file` and `resources/read` share. A symlink is never followed and a generated copy is skipped.
 Domains, roles, the lock and approvals apply to skills only.
 

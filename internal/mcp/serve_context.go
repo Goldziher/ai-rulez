@@ -127,7 +127,7 @@ func (d *discovery) admission() Admission {
 // scanContext runs the served-skill security scan over one item of context.
 func scanContext(adm Admission, it *repoindex.Item, content []byte) *Refusal {
 	probe := &CatalogSkill{Name: it.Name, Files: []CatalogFile{{RelPath: path.Base(it.Path), Content: content}}}
-	return adm.scan(probe)
+	return adm.scanAs(probe, contextSubject(contextURI(it)))
 }
 
 // contextCandidates lists the items of context a query selects: what a path

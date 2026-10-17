@@ -310,7 +310,7 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 	}
 	refusals := ix.Refusals()
 	for i := range refusals {
-		d.st.logger().Warn("Refusing to serve repository context", "kind", string(refusals[i].Item.Kind), "path", refusals[i].Item.Path, "reason", refusals[i].Reason)
+		d.st.logger().Warn("Withholding repository context: the security scan found an error", "kind", string(refusals[i].Item.Kind), "path", refusals[i].Item.Path, "reason", refusals[i].Reason)
 	}
 	d.report.Generated += ix.GeneratedSkipped(repoindex.KindSkill)
 	skills := ix.Skills()
