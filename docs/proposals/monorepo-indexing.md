@@ -54,6 +54,17 @@ The index stores summaries only: it never stores file bodies, so a stale index c
 - **Safety.** Files are written with mode 0600 through write-and-rename; several servers on one repository share the cache under a lock file. A cache entry never bypasses the scan or the allow/deny rules, which run again at load time. A corrupt or version-mismatched cache is discarded and rebuilt.
 - **Freshness.** On start the server loads the cache and re-stats only changed paths. While running, a watcher (fsnotify, debounced) updates the index incrementally and the server sends `resources/list_changed`, so a new `.claude/skills` is picked up without a restart. `ai-rulez cache clear` drops the cache.
 
+### Measured cost
+
+A cold build of the index (`repoindex.Build`, no cache) on a synthetic monorepo takes 11 ms for 100 files, 47 ms for
+5000 files over 100 scopes and 129 ms for 20000 files over 500 scopes (1500 items) with `git ls-files`; 202 ms with
+the directory walk. Of that, the listing is 36 ms (git) or 67 ms (walk) for 20000 files and reading the items about
+20-35 us each. `Resolve` of a path on the built index is 2.4 us. So a cache of the file list and the item summaries
+would save at most 5-130 ms per start, which is small next to the rest of server start-up: building the catalog of the
+same monorepo, with the security scan of every served item, takes 65 ms, 0.3 s and 1.2 s for 30, 300 and 1500 items,
+and the scan is most of it. The cache is therefore worth building for the scan verdict keyed by content hash, not for
+the index. `docs/performance.md` has the tables and the machine they were taken on.
+
 ### Write path
 
 `create_skill` and `update_skill` accept `scope`; a skill is created at `<scope>/<harness skills dir>/<name>/SKILL.md`. Rules:
