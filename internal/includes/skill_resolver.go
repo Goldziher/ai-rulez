@@ -40,6 +40,9 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 		}
 		if err != nil {
 			switch {
+			case errors.Is(err, config.ErrIncludeOutsideProject):
+				// A path the committed config must not name is an error, not a skipped skill.
+				failures = append(failures, oops.Wrapf(errors.Join(config.ErrSkillUnresolved, err), "installed skill %q", skillConf.Name))
 			case errors.Is(err, config.ErrLockViolation) || strictLock(cfg):
 				violations = append(violations, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "installed skill %q", skillConf.Name))
 			case !tolerated(ctx) && cfg.LockPolicy.Mode != LockRefresh:
@@ -108,6 +111,12 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 
 	switch sourceType {
 	case SourceTypeGit:
+		// A file:// URL is a local path in git clothing: it stays inside the project too.
+		if path, ok := lockfile.FileURLPath(skillConf.Source); ok && !lockfile.AllowFileURLsOutside(cfg.Host.Env) {
+			if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, path); err != nil {
+				return nil, err
+			}
+		}
 		w := withVersion(lockfile.Want{
 			Kind: lockfile.KindSkill, Name: skillConf.Name, Source: lockSource(baseDir, skillConf.Source),
 			Path: skillPath, Ref: skillConf.Ref,
@@ -134,6 +143,9 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 			localPath = filepath.Join(baseDir, localPath)
 		}
 		localPath = filepath.Clean(localPath)
+		if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, localPath); err != nil {
+			return nil, err
+		}
 
 		// The entry root is the skill path within the local source.
 		root := filepath.Join(localPath, skillPath)
@@ -152,6 +164,13 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 	default:
 		return nil, oops.Errorf("unknown source type for skill '%s': %s", skillConf.Name, sourceType)
 	}
+}
+
+// checkSkillInsideProject refuses a local installed-skill path that resolves
+// outside the project, with the include rules: the machine-local overlay and the
+// user scope may leave the project, a committed config may not.
+func checkSkillInsideProject(cfg *config.Config, baseDir, field, name, path string) error {
+	return checkEntryInsideProject(cfg, "installed_skills", "installed skill", baseDir, field, name, path)
 }
 
 // resolveSkillLocalOverride resolves a local_override path for an installed skill.
