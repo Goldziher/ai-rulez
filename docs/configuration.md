@@ -26,6 +26,7 @@ When no explicit path is given, the CLI discovers configuration by walking up fr
 1. `.agents/ai-rulez.toml` — the configuration of a project whose content is [`.agents` and `AGENTS.md`](agents-source.md)
 2. `.ai-rulez/config.toml` — the tool-specific directory (default)
 3. `.config/ai-rulez/config.toml` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
+4. `ai-rulez.toml` at the project root — a [configuration without a `.ai-rulez/` folder](config-without-folder.md); a config directory at the same level wins, with a warning that the file is ignored
 
 `config.toml` is the only config format read, and its `version` must be `"5.0"`. A project that has only a
 `config.yaml`, `config.yml` or `config.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), a flat `ai-rulez.yaml`
