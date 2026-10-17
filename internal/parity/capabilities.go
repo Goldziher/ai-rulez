@@ -415,6 +415,7 @@ func cliOnlyCapabilities() []Capability {
 		only("list-placement", "prints where skills and commands land per harness; generate_outputs dry_run returns the same plan", "list"),
 		only("mcp", "starts the MCP server itself", "mcp"),
 		only("guard", "a hook entry point the harness calls on tool use", "guard"),
+		only("session-start", "a hook entry point the harness calls when a session starts; it runs generate", "session-start"),
 	}
 }
 

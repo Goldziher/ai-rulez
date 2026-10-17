@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -81,6 +82,7 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 		Profile:     doctorProfile,
 		Load:        lintLoader(),
 		ReadUserMCP: doctorMCPUserScope,
+		Probe:       probeURL,
 		OnCheck: func(name string, elapsed time.Duration) { // shown under --debug
 			logger.Debug("Doctor check finished", "check", name, "elapsed", elapsed.Round(time.Millisecond))
 		},
@@ -103,4 +105,21 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 		return exitDoctorFindings
 	}
 	return 0
+}
+
+// probeURL asks url with a short GET, honouring the proxy settings of the environment, and
+// returns the HTTP status. It backs the session-start check's registry probe.
+func probeURL(ctx context.Context, url string) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		return 0, err //nolint:wrapcheck // the caller prints the first line
+	}
+	resp, err := http.DefaultClient.Do(req) //nolint:gosec // a fixed registry URL chosen by the doctor check
+	if err != nil {
+		return 0, err //nolint:wrapcheck // the caller prints the first line
+	}
+	defer resp.Body.Close() //nolint:errcheck // nothing was read
+	return resp.StatusCode, nil
 }

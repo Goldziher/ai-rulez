@@ -173,6 +173,7 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez scanners doctor` | Check named scanners: binary, version, egress, environment and configuration |
 | `ai-rulez scanners list` | List the configured scanners with their egress declaration and whether they are installed |
 | `ai-rulez search` | Rank the served skills against a query, build the embedding index, or evaluate the ranking |
+| `ai-rulez session-start` | Regenerate outputs and brief the agent when a remote session starts (SessionStart hook) |
 | `ai-rulez show` | Show the content of a rule, context, skill, agent, command or check |
 | `ai-rulez show agent` | Show an agent |
 | `ai-rulez show check` | Show a code-review check |
@@ -1370,7 +1371,7 @@ ai-rulez generate [flags]
 
 `--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
 
-Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on each regeneration (what is new since the previous run), so a hook or MCP command that arrives with a pulled change is shown by the run that writes it.
+Before writing, `generate` also prints a summary of hook commands (the `SessionStart` hook of `[session_start]` included), command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on each regeneration (what is new since the previous run), so a hook or MCP command that arrives with a pulled change is shown by the run that writes it.
 
 Exit codes: `0` written, `1` a configuration failed to load, validate or generate (every root of a `--recursive` run is still processed), `2` `--check` found drift or `--locked`/`--frozen` found an authored source that differs from the lock (also a recursive run where every failure is lock drift). See [Exit Codes](#exit-codes).
 
@@ -1674,6 +1675,23 @@ Exit codes: `2` the call edits a generated file (the reason, with the source to 
 echo '{"tool_name":"Edit","tool_input":{"file_path":"AGENTS.md"}}' | ai-rulez guard; echo $?
 ```
 
+## Session-start Command
+
+### `ai-rulez session-start`
+
+The harness runs this command, not people. `generate` adds it as a `SessionStart` hook to `.claude/settings.json` by default for a project that generates for Claude Code ([Run generate when a remote session starts](session-start.md)). In a remote session (`CLAUDE_CODE_REMOTE=true`) it runs `generate`, then prints the hook's `additionalContext` JSON on stdout; elsewhere it does nothing unless `[session_start] when = "always"`. It always exits `0`; a problem is one line on stderr.
+
+```bash
+echo '{"source":"startup"}' | CLAUDE_CODE_REMOTE=true ai-rulez session-start
+ai-rulez session-start --when always --generate-mode plain
+```
+
+| Flag | Description |
+| --- | --- |
+| `--when remote\|always` | Override `[session_start] when` |
+| `--generate-mode auto\|locked\|frozen\|plain` | Override `[session_start] mode` |
+| `--timeout <seconds>` | Override `[session_start] timeout` (default 120) |
+
 ## Doctor Command
 
 ### `ai-rulez doctor`
@@ -1695,6 +1713,7 @@ ai-rulez doctor [--strict] [--format json] [--profile <name>] [--no-local]
 | `documents` | A shared settings document ai-rulez merges into (`.claude/settings.json`, `.mcp.json`, `.codex/config.toml`, ...) that no longer parses as JSON, JSONC, TOML or YAML | error |
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
 | `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
+| `session-start` | The `SessionStart` hook: `info` listing the launchers it tries in order (`ai-rulez`, `npx -y ai-rulez@<version>`, `uvx --from ai-rulez==<version>`); a warning when the generated `.claude/settings.json` lacks the hook or is ignored by version control, and, inside a remote session, when none of `ai-rulez`, `npx` and `uvx` is on `PATH` or the npm registry is denied or unreachable (asked with one GET) | info, warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
 
 With `--debug`, `doctor` logs one `Doctor check finished` line per check with its name and duration, to find the slow one.

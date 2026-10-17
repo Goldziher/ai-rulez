@@ -21,7 +21,7 @@ func localRuleProject(t *testing.T, preset, mode string) string {
 	t.Helper()
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
-	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\ngitignore = true\nagents_md = false\n\n[mcp]\nself_server = false\n"
+	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\nsession_start = { generate = false }\ngitignore = true\nagents_md = false\n\n[mcp]\nself_server = false\n"
 	if mode != "" {
 		cfg += "\n[rules]\nmode = \"" + mode + "\"\n"
 	}
@@ -363,7 +363,7 @@ func TestLocalRuleFiles_RoutingMatchesSharedRules(t *testing.T) {
 				presets = append(presets, strconv.Quote(p))
 			}
 			seedLocalFile(t, filepath.Join(cfgDir, "config.toml"),
-				"version = \"5.0\"\nname = \"t\"\npresets = ["+strings.Join(presets, ", ")+"]\ngitignore = true\nagents_md = false\n\n[rules]\nmode = \""+tt.mode+"\"\n"+tt.byPreset)
+				"version = \"5.0\"\nname = \"t\"\npresets = ["+strings.Join(presets, ", ")+"]\nsession_start = { generate = false }\ngitignore = true\nagents_md = false\n\n[rules]\nmode = \""+tt.mode+"\"\n"+tt.byPreset)
 			seedLocalFile(t, filepath.Join(cfgDir, "local", "rules", "y.md"), tt.rule)
 
 			// Act

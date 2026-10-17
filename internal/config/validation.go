@@ -39,6 +39,7 @@ func (c *Config) Validate() error {
 		c.validateDefaults,
 		c.validateMCP,
 		c.validateGuard,
+		c.validateSessionStart,
 		c.validateAgentEffort,
 		c.validateAuthoring,
 	}

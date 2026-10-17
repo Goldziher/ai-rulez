@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -109,6 +110,7 @@ func TestGenerate_DroppingAHookTakesItOutOfTheHandAuthoredFile(t *testing.T) {
 name = "hooks"
 presets = ["claude"]
 gitignore = false
+session_start = { generate = false }
 `
 	require.NoError(t, os.WriteFile(configPath, []byte(trimmed), 0o644))
 	generateProject(t, root)
@@ -127,7 +129,14 @@ presets = ["claude", "codex", "cursor", "gemini", "copilot"]
 gitignore = false
 `, nil)
 	generateProject(t, root)
-	assert.NoFileExists(t, filepath.Join(root, ".claude", "settings.json"))
+	// Claude Code gets only the built-in session-start hook; the other harnesses get nothing, and no warning.
+	data, err := os.ReadFile(filepath.Join(root, ".claude", "settings.json"))
+	require.NoError(t, err)
+	var doc map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(data, &doc))
+	assert.Len(t, doc, 1)
+	assert.Contains(t, doc, "hooks")
+	assert.NotContains(t, string(data), "PreToolUse")
 	assert.NoFileExists(t, filepath.Join(root, ".codex", "hooks.json"))
 	assert.NoFileExists(t, filepath.Join(root, ".cursor", "hooks.json"))
 	assert.NoFileExists(t, filepath.Join(root, ".github", "hooks", "ai-rulez.json"))
