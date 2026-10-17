@@ -45,20 +45,39 @@ files per scope); `AI_RULEZ_BENCH_LARGE=1` adds 20000 files, which take seconds 
 
 ## Regression tracking
 
-`scripts/bench.sh` runs a curated subset (benchmarks that start no process and do not fsync, so they measure the code
-and not the machine) with `-count=6` and compares the median time/op of each benchmark with
-`scripts/bench-baseline.txt`. It exits 1 when any benchmark is more than 25% slower. When `benchstat` is installed
-(or the machine is online, through `go run golang.org/x/perf/cmd/benchstat@latest`) its report is printed too.
+CI does not compare against a number recorded on another machine. The `Benchmarks` job checks out the full history
+and runs `scripts/bench.sh --compare`, which measures the base revision and `HEAD` on the same runner, in the same job:
+
+1. It picks the base: the merge base with the default branch, or the parent commit when `HEAD` is on it (`--compare REF`
+   or `BENCH_BASE` overrides it).
+2. It builds the test binary of each package of a curated subset at both revisions (benchmarks that start no process
+   and do not fsync, so they measure the code and not the machine; a package that does not build at the base is skipped
+   with a notice).
+3. It takes `BENCH_COUNT` samples (6) of each benchmark per revision, interleaved base, head, head, base, ..., so a
+   machine that warms up or is throttled favors neither.
+4. It compares the medians and runs a two-sided Mann-Whitney U test on the samples, the test `benchstat` uses.
+
+A benchmark fails the job only when it is both more than `BENCH_THRESHOLD` percent slower (20) and different at
+`BENCH_ALPHA` (0.05). A slowdown that is not significant is printed as `slower, not significant`, and a run with
+fewer than 5 samples is refused, because it cannot reach the significance level. The large synthetic sizes stay out of
+the subset; they run only with `AI_RULEZ_BENCH_LARGE=1`. The rest of the benchmarks run once in the job
+(`task test:benchmark:smoke`, `-benchtime=1x`) to prove they still run.
 
 ```bash
-scripts/bench.sh            # run, compare, fail on a >25% regression
-scripts/bench.sh --update   # re-record the baseline on this machine
+task test:benchmark:regression                    # HEAD against the merge base, on this machine
+scripts/bench.sh --compare origin/main            # the same, with an explicit base
+BENCH_THRESHOLD=10 BENCH_COUNT=10 scripts/bench.sh --compare HEAD~3
 ```
 
-Time per operation depends on the CPU, so the gate only applies when the baseline was recorded on the same CPU model
-as the run (the `cpu:` line of the output). Otherwise, or when there is no baseline, it prints a warning and exits 0.
-The CI `Benchmarks` job runs the script after the full benchmark run and uploads `bench-subset.txt`; to make the gate
-bite on the CI runners, commit that artifact as `scripts/bench-baseline.txt`.
+When a run flags a benchmark you believe is noise, run it again locally with more samples
+(`BENCH_COUNT=12`); a real regression stays significant. The job runs with `shell: bash` (so `pipefail` holds), and
+uploads `bench-subset.txt`, the head samples. A change that intentionally makes a benchmark slower is not overridden by
+a file: say so in the pull request and rerun the job; a maintainer can merge over a failure that the table explains.
+
+`scripts/bench-baseline.txt` and `scripts/bench.sh` without an argument remain as a fallback for a developer machine:
+the script compares `HEAD` with the committed file, but only when it was recorded on the same CPU model (the `cpu:` line
+of the output), and otherwise warns and exits 0. Refresh it with `scripts/bench.sh --update` (`task
+test:benchmark:baseline`). CI does not read it.
 
 ## Monorepo index
 
