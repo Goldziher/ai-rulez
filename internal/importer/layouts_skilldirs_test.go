@@ -9,6 +9,37 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 )
 
+func TestSkillDirectories(t *testing.T) {
+	tests := []struct {
+		name    string
+		presets []string
+		want    []string
+		absent  []string
+	}{
+		{name: "claude", presets: []string{"claude"}, want: []string{".claude/skills"}, absent: []string{".agents/skills"}},
+		{name: "codex shares the agents directory", presets: []string{"codex"}, want: []string{".agents/skills"}, absent: []string{".claude/skills"}},
+		{name: "several presets", presets: []string{"claude", "codex"}, want: []string{".agents/skills", ".claude/skills"}},
+		{name: "unknown preset", presets: []string{"nope"}},
+		{name: "none"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SkillDirectories(tt.presets)
+
+			for _, dir := range tt.want {
+				assert.Contains(t, got, dir)
+			}
+			for _, dir := range tt.absent {
+				assert.NotContains(t, got, dir)
+			}
+			if tt.want == nil {
+				assert.Empty(t, got)
+			}
+			assert.True(t, slices.IsSorted(got), "the list is sorted")
+		})
+	}
+}
+
 // The directories an installed skill source is probed in must include the skill
 // directories the presets themselves write, so the probe list cannot drift from
 // the layouts. (.codex, .cursor and .gemini are read by their harnesses but not
