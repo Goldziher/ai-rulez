@@ -43,7 +43,7 @@ func TestCheckSessionStart_ListsTheLauncherOrder(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, SeverityInfo, got[0].Severity)
 	assert.Equal(t, "the SessionStart hook tries, in order: ai-rulez session-start; then "+
-		"npx -y ai-rulez@latest session-start; then uvx --from ai-rulez==latest ai-rulez session-start", got[0].Message)
+		"npx -y ai-rulez@latest session-start; then uvx --from ai-rulez@latest ai-rulez session-start", got[0].Message)
 }
 
 func TestCheckSessionStart_PinnedVersionIsShown(t *testing.T) {
