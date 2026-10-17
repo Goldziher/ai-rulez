@@ -416,7 +416,7 @@ comes from an include or the local overlay) is refused with a hint to edit by ha
 opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true` for both. One `git
 ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
 `AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
-used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline`, `--frozen` and `--offline`;
+used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline` and `--frozen`;
 the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
 
 #### Refreshing on generate
@@ -621,8 +621,9 @@ needed: it compares the lock with the sources; the signature only says who vouch
 
 Limits, stated plainly: a valid signature means "produced by that identity", not "safe". The cosign recipe has no
 freshness or rollback check, so pin the signer and review lock changes. `ai-rulez verify --attestation` adds an identity
-policy, `max_age` and a per-machine rollback check on top of the same bundle (see [Signing](signing.md)). Signing
-plugin bundles and served skills is not implemented.
+policy, `max_age` and a per-machine rollback check on top of the same bundle (see [Signing](signing.md)). Plugin bundles are signed
+with `sign --bundle` and served skills are gated by a publisher signature (see
+[Signing](signing.md#bundles-skills-and-sboms)); the lock signature covers neither.
 
 ## Commands
 
