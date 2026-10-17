@@ -54,6 +54,25 @@ func TestWatchTargets_RootLayout(t *testing.T) {
 	}
 }
 
+func TestWatchTargets_RootLayoutWithIncludes(t *testing.T) {
+	// Arrange
+	root := rootLayoutProject(t, rootLayoutConfig+"\n[[includes]]\nname = \"shared\"\nsource = \"./inc\"\n")
+	writeFile(t, filepath.Join(root, "inc", ".ai-rulez", "rules", "r.md"), "# r\n\nBe terse.\n")
+	cfg, err := config.LoadConfig(context.Background(), root, config.WithoutRemote())
+	require.NoError(t, err)
+	require.True(t, cfg.Contentless())
+	require.Len(t, cfg.Includes, 1)
+
+	// Act
+	got := watchTargets(cfg)
+
+	// Assert: the config file and the include source, never the project tree
+	assert.Equal(t, []watch.Target{
+		{Path: filepath.Join(root, "ai-rulez.toml"), File: true},
+		{Path: filepath.Join(root, "inc"), File: false},
+	}, got)
+}
+
 func TestFallbackTargets_RootLayout(t *testing.T) {
 	tests := []struct {
 		name  string

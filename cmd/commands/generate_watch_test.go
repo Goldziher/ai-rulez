@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/watch"
 )
 
@@ -78,6 +79,35 @@ func TestWatchTargets(t *testing.T) {
 			want: []watch.Target{
 				{Path: filepath.Join(base, ".ai-rulez")},
 				{Path: filepath.Join(base, "..", "shared")},
+				{Path: abs},
+			},
+		},
+		{
+			name: "include and installed skill local overrides are watched even when absent",
+			cfg: &config.Config{
+				BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"), ConfigFile: "config.toml",
+				Includes: []config.IncludeConfig{
+					{Name: "shared", Source: "https://github.com/acme/rules.git", LocalOverride: "../override"},
+				},
+				InstalledSkills: []config.InstalledSkillConfig{
+					{Name: "demo", Source: "https://github.com/acme/skills", LocalOverride: "./local-skills"},
+					{Name: "gone", Source: "owner/repo"},
+				},
+			},
+			want: []watch.Target{
+				{Path: filepath.Join(base, ".ai-rulez")},
+				{Path: filepath.Join(base, "..", "override")},
+				{Path: filepath.Join(base, "local-skills")},
+			},
+		},
+		{
+			name: "a file:// source is watched as the path it names",
+			cfg: &config.Config{
+				BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"), ConfigFile: "config.toml",
+				Includes: []config.IncludeConfig{{Name: "shared", Source: "file://" + abs}},
+			},
+			want: []watch.Target{
+				{Path: filepath.Join(base, ".ai-rulez")},
 				{Path: abs},
 			},
 		},
@@ -369,7 +399,7 @@ func TestGenerateOnce_AnnouncesNewCommandsOnlyWhenTheyChange(t *testing.T) {
 	// Arrange: watch mode regenerates through generateOnce.
 	resetWatchFlags(t)
 	assumeYes = false
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv(envAckCommands, "")
 	root := t.TempDir()
 	body := validRootConfig + "\n[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"./scripts/guard.sh\"\n"
