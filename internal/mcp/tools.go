@@ -153,7 +153,7 @@ func (s *Server) registerProjectTools() {
 	addTool[initIn](s, toolSpec{
 		name: "init_project", title: "Initialize Project",
 		description: "Initialize a new ai-rulez project in the current directory. Refuses to overwrite an existing configuration.",
-		annotations: additiveAnnotations(), output: initOut{},
+		annotations: additiveAnnotations(), output: initOut{}, initializes: true,
 	}, handlers.InitProjectHandler)
 }
 
