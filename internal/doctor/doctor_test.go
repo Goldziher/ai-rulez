@@ -124,7 +124,7 @@ func TestRun_ReportsEachCheckWithItsDuration(t *testing.T) {
 		t.Fatalf("findings = %+v, want none", report.Findings)
 	}
 	want := []string{"config", "policy", "presets", "source", "mcp-env", "mcp-scope", "drift", "gitignore", "documents", "okf",
-		"hooks", "includes", "lock", "llm", "tools", "session-start", "role-modes"}
+		"hooks", "includes", "lock", "llm", "tools", "session-start", "role-modes", "index-cache"}
 	if !slices.Equal(names, want) {
 		t.Errorf("checks = %v, want %v", names, want)
 	}
