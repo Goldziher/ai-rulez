@@ -85,7 +85,35 @@ func ValidateInstalledSkillFields(skill *InstalledSkillConfig) error {
 			}
 		}
 	}
+	for _, pattern := range skill.Resources {
+		if reason := skillResourcePatternProblem(pattern); reason != "" {
+			return bad("resources", fmt.Sprintf("has an invalid pattern %q: %s", pattern, reason))
+		}
+	}
 	return nil
+}
+
+// skillResourcePatternProblem says why a resources pattern cannot select files
+// inside a skill directory ("" when it can).
+func skillResourcePatternProblem(pattern string) string {
+	raw := strings.TrimPrefix(pattern, "!")
+	switch {
+	case strings.TrimSpace(strings.Trim(raw, "/")) == "":
+		return "is empty"
+	case strings.HasPrefix(raw, "/") || strings.HasPrefix(raw, "\\") || (len(raw) >= 2 && raw[1] == ':'):
+		return "must be relative to the skill directory"
+	case hasControl(raw):
+		return "must not contain control characters"
+	}
+	for _, seg := range strings.Split(raw, "/") {
+		if seg == ".." {
+			return "must not contain '..'"
+		}
+	}
+	if _, err := pathpkg.Match(strings.Trim(raw, "/"), ""); err != nil {
+		return "is not a valid glob"
+	}
+	return ""
 }
 
 // skillRefProblem says why a ref cannot be handed to git ("" when it can).

@@ -37,6 +37,9 @@ type contentScanner struct {
 	// quietUnrecognized leaves out the warning about skill subdirectories generate would not
 	// copy: a scan that generates nothing (lint of hand-written content) has no output to lose.
 	quietUnrecognized bool
+	// extraResources are the `resources` patterns of an installed skill entry: files
+	// outside references/, scripts/ and assets/ that are bundled too.
+	extraResources []string
 	// git answers which files a work tree ignores (bundle filtering); the zero
 	// value runs real git.
 	git gitutil.Git

@@ -1155,6 +1155,14 @@
             "minLength": 1,
             "type": "string"
           },
+          "resources": {
+            "description": "What is bundled from each skill's directory besides references/, scripts/ and assets/ (always bundled). By default an installed skill is bundled whole: every file except SKILL.md, evals/, agents/ and hidden files. Setting resources replaces that default. A pattern is a name, a path or a glob (a name matches a file or directory at any depth); a leading ! removes what an earlier pattern added, for example [\"*\", \"!docs\"].",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
           "name_prefix": {
             "description": "Prepended to every resolved skill name, so two entries cannot collide.",
             "type": "string"
