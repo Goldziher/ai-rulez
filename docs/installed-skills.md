@@ -218,7 +218,7 @@ List all installed skills.
 
 1. During `ai-rulez generate`, each installed skill is fetched from its source
 2. The skill directory (`SKILL.md` + optional `references/`) is read
-3. Reference files are concatenated into the skill content
+3. `references/`, `scripts/` and `assets/` are kept as separate files beside the generated `SKILL.md`
 4. The skill is added to the root-level content tree
 5. If a local skill has the same name, the local skill wins (installed skill is skipped with a warning)
 
@@ -308,5 +308,5 @@ To make your project's skill installable by others:
 | Content types    | Rules, context, skills, agents, commands               | Skills only                               |
 | Source structure | A `.ai-rulez/` directory or a bare layout (`rules/`, `skills/`, ...), see [Repository Structure Support](includes.md#repository-structure-support) | Requires `skills/<name>/SKILL.md` |
 | Merge strategy   | Configurable (local-override, include-override, error) | Local skills always win                   |
-| Domain support   | Can install to specific domains                        | Root-level only                           |
+| Domain support   | Can install to specific domains                        | Root level, or a domain through the `domain` field |
 | Use case         | Share full governance configs                          | Add library/tool-specific AI instructions |

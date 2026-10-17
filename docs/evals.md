@@ -539,7 +539,6 @@ cap skips the rest, as for case runs. `--timeout` bounds one skill's runner call
 - The confusion matrix is reported once at the top level; each skill carries its own `stolen_by` list.
 - A record measured on an older skill digest, or one that is not signed with your key, is not judged by `AR9A1` and
   `AR9A2` (an unsigned one is reported as unverified, like `AR997`).
-- Not implemented: `--description-from` (a candidate description for one run, from the design's phase 5).
 
 ## Importing scenarios
 
