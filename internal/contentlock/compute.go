@@ -32,6 +32,11 @@ const (
 	// KindLocalSkill pins a skill an installed_skills entry reads from a local
 	// directory, the digest of the skill's directory as for an authored skill.
 	KindLocalSkill = "local-skill"
+	// KindLocalMarketplace and KindLocalPlugin pin the tree of an
+	// installed_marketplaces or installed_plugins entry read from a local
+	// directory (hooks, scripts and all).
+	KindLocalMarketplace = "local-marketplace"
+	KindLocalPlugin      = "local-plugin"
 )
 
 // Output is a generated file to pin. Data must be the rendering with the
@@ -183,6 +188,7 @@ func (c *collector) collect() error {
 	if err := c.collectLocalIncludes(); err != nil {
 		return err
 	}
+	c.collectLocalPlugins()
 	return c.collectDeclared()
 }
 
