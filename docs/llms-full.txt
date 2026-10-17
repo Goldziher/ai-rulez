@@ -6806,6 +6806,10 @@ files. Each skipped credential file is named in a warning. A single file over 8 
 A skill that bundles more than 2000 files or 16 MiB in total fails with an error naming the limit; narrow it with
 `resources`, for example `["*", "!docs", "!evals", "!agents", "!.*"]`.
 
+All the skills one `installed_skills` entry resolves together may bundle at most 20000 files and 64 MiB; past that the
+entry fails with an error naming the limit. Select fewer skills with `include` / `exclude`, or narrow what each bundles
+with `resources`.
+
 A project's own skills under `.ai-rulez/skills/` keep the canonical layout; only installed skills are bundled whole.
 
 #### Source forms
@@ -7143,10 +7147,11 @@ repository shares its commit and has its own digest. An https `marketplace.json`
 
 - **What is pinned, by source kind.** A remote repository: `[[marketplace]]` / `[[plugin]]` entries with commit and
   tree digest. An https `marketplace.json`: a digest, no commit. A local directory inside the project
-  (`source = "./vendor/market"`): no `[[marketplace]]` or `[[plugin]]` entry at all. Its content is covered only by
-  the `[[served]]` pins of its skills and the `[[output]]` pins of what `generate` wrote, so `lock --check` and
-  `generate --locked` notice an edit through those. An installed skill read from a local directory is pinned as a
-  `local-skill` item.
+  (`source = "./vendor/market"`): no `[[marketplace]]` or `[[plugin]]` entry, but a `local-marketplace` or
+  `local-plugin` item holding the tree digest of the directory (a plugin of a local marketplace is covered by the
+  marketplace item). Editing `hooks/hooks.json`, a hook script or any other file in it makes `lock --check` and
+  `generate --locked` fail until `ai-rulez lock` is rerun. An installed skill read from a local directory is pinned
+  as a `local-skill` item.
 - `generate --locked` / `--frozen` and an enforced lock fail on a missing, stale or mismatching pin (a moved branch, a
   retagged release, changed bytes); `--offline` reads the cache only.
 - `ai-rulez lock --check` compares the lock offline; `ai-rulez lock [name]` / `--kind marketplace|plugin` refreshes.
@@ -18035,6 +18040,7 @@ how to do it with `cosign`.
 | `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them); for an agent, skill or command whose frontmatter declares `hooks`, also each project script those hooks run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
 | `skill` | the skill directory name | `SKILL.md`, every loaded resource (`references/`, `scripts/`, `assets/`) and the project scripts its frontmatter `hooks` run |
 | `local-skill` | the skill name | the directory of a skill that an `installed_skills` entry reads from a local source (`SKILL.md` and bundled files) |
+| `local-marketplace`, `local-plugin` | the entry name | the whole directory tree (hooks, scripts and all) of an `installed_marketplaces` or `installed_plugins` entry whose `source` is a local directory; a plugin of a local marketplace is covered by the marketplace item |
 | `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`, `verifiers`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
@@ -18875,7 +18881,7 @@ accepted_findings = ["AR005"]
 ```
 
 - **Naming.** `kind:id` or `kind:domain/id`; a bare id works when unambiguous. Kinds are the pinned item kinds
-  (`rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`, `settings`, `verifier`, `rubric`, `local-include`) and the
+  (`rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`, `settings`, `verifier`, `rubric`, `local-include`, `local-skill`, `local-marketplace`, `local-plugin`) and the
   remote entries of the lock: `include`, `installed-skill`, `source`, `served` (a served skill, with the serve view as
   its domain), and `role-output` (the pinned outputs of a role, see [Role outputs](#role-outputs)). Only pinned content can be approved: run `ai-rulez lock` first. `approve` never fetches.
 - **What approve shows.** The files behind the item, the security scan findings, and any earlier approval. It refuses
@@ -20040,8 +20046,12 @@ A pattern is a host, optionally followed by a path prefix, compared case-insensi
 
 Matching is by path prefix, so a trailing `/**` means the same as leaving it out. A bare `*` host is refused. A source
 is read from its URL: `https://github.com/example-org/rules.git`, `git@github.com:example-org/rules.git` and
-`ssh://git@host:2222/org/repo` all give a host and a path. A local path names no host and is not governed by
-`sources`.
+`ssh://git@host:2222/org/repo` all give a host and a path. The host is the one git connects to: a user, a port, a
+trailing dot and letter case are ignored, and an IPv6 literal is written `[::1]` in a pattern and a source. A source
+whose location cannot be read unambiguously (a backslash, whitespace, a malformed authority) is refused as not allowed
+rather than guessed, so `https://evil.example?@github.com/org/repo` is read as `evil.example`. Installed skill,
+marketplace and plugin sources are also rejected at validation when the authority carries `?`, `#`, a backslash,
+whitespace or, for web and `git://` URLs, a user. A local path names no host and is not governed by `sources`.
 
 `lint.security.allowed_hosts` lists hosts only (no path), because it bounds the hosts URLs inside content may point
 to.
