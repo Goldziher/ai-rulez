@@ -229,6 +229,9 @@ func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 			return
 		}
 		if g.cleanGeneratedLeftover(abs) {
+			if len(g.keepSkipped([]string{abs})) == 0 {
+				return // excluded by skip_outputs: left in place, never an orphan
+			}
 			orphans = append(orphans, rel)
 		}
 	}
