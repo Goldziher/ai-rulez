@@ -8,6 +8,8 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // monorepoProject is a repository with a scope at three places: the root, an api
@@ -209,7 +211,7 @@ func TestCatalogResource_ScopesSection(t *testing.T) {
 	assert.Equal(t, []any{"agents", "claude"}, scopes["pkg/api"]["sources"])
 	assert.Equal(t, []any{"skills-dir"}, scopes["pkg/web"]["sources"])
 	discovery := doc["skill_discovery"].(map[string]any)
-	assert.Equal(t, map[string]any{"items": float64(8), "limit": float64(20000), "truncated": false}, discovery["index"])
+	assert.Equal(t, map[string]any{"items": float64(8), "limit": float64(20000), "truncated": false, "found": float64(8)}, discovery["index"])
 }
 
 func TestCatalogResource_ScopesCanBeNarrowed(t *testing.T) {
@@ -260,4 +262,32 @@ func TestCatalogResource_WithoutDiscoveryHasNoScopes(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotContains(t, read.Contents[0].Text, `"scopes"`)
+}
+
+func TestDiscovery_IndexOverItsLimitWarnsAtStartupAndKeepsTheShallowScopes(t *testing.T) {
+	// Arrange
+	root := monorepoProject(t)
+	log := &testutil.LogRecorder{}
+
+	// Act
+	srv := newServerFor(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo", Log: log, indexLimit: 4})
+
+	// Assert
+	assert.Contains(t, log.String(), "WARN The repository index is over its limit")
+	report := srv.Catalog().Discovery().Index
+	require.NotNil(t, report)
+	assert.Equal(t, IndexReport{Items: 4, Limit: 4, Truncated: true, Found: 8}, *report)
+	_, session := srv, connect(t, srv)
+	out, isErr := toolJSON(t, session, "find_context", map[string]any{"scope": ".", "recursive": true})
+	require.False(t, isErr)
+	assert.Equal(t, []string{"instruction:.:AGENTS.md", "rule:.:style", "agent:pkg/api:reviewer"}, contextKeys(t, out),
+		"the root scope is kept whole; the cut falls inside the first deeper scope")
+}
+
+func TestDiscovery_IndexUnderItsLimitDoesNotWarn(t *testing.T) {
+	log := &testutil.LogRecorder{}
+
+	newServerFor(t, &ServeSetup{WorkDir: monorepoProject(t), DiscoverSkills: "repo", Log: log})
+
+	assert.NotContains(t, log.String(), "over its limit")
 }

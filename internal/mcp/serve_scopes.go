@@ -257,6 +257,8 @@ type IndexReport struct {
 	// Limit is the index size cap; past it the shallowest scopes are kept.
 	Limit     int  `json:"limit"`
 	Truncated bool `json:"truncated"`
+	// Found is how many items the repository holds before the cap.
+	Found int `json:"found"`
 }
 
 // withScopes adds the scopes section to the JSON document of the catalog
