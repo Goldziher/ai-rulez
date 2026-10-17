@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
@@ -41,6 +42,8 @@ func runCLI(t *testing.T, args ...string) cliResult {
 	t.Cleanup(func() {
 		resetAllFlags()
 		progress.SetQuiet(false)
+		strictTreeCache = &lint.Loader{}                  // validate --strict caches the loaded tree
+		validateStrict, strictSecurityOnly = false, false // scan sets both from RunE, not from a flag
 	})
 	var res cliResult
 	var out, errOut bytes.Buffer
