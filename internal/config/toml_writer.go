@@ -29,68 +29,70 @@ type tomlPresetDoc struct {
 // because Presets must be flattened into strings/inline-tables rather than the
 // struct's custom (YAML/JSON-only) marshalers.
 type tomlOutput struct {
-	Schema                string                  `toml:"schema,omitempty"`
-	Source                string                  `toml:"source,omitempty"`
-	AgentsMDSplit         bool                    `toml:"agents_md_split,omitempty"`
-	Version               string                  `toml:"version"`
-	Name                  string                  `toml:"name"`
-	Description           string                  `toml:"description,omitempty"`
-	Gitignore             *bool                   `toml:"gitignore,omitempty"`
-	GitignoreExclude      []string                `toml:"gitignore_exclude,omitempty"`
-	SkipOutputs           []string                `toml:"skip_outputs,omitempty"`
-	Compact               *bool                   `toml:"compact,omitempty"`
-	AgentsMD              *bool                   `toml:"agents_md,omitempty"`
-	BundleExclude         []string                `toml:"bundle_exclude,omitempty"`
-	CodexSkillsDir        string                  `toml:"codex_skills_dir,omitempty"`
-	Default               string                  `toml:"default,omitempty"`
-	Presets               []any                   `toml:"presets,omitempty"`
-	Header                *HeaderConfig           `toml:"header,omitempty"`
-	DefaultLayers         []string                `toml:"default_layers,omitempty"`
-	Profiles              map[string][]string     `toml:"profiles,omitempty"`
-	Builtins              interface{}             `toml:"builtins,omitempty"`
-	Includes              []IncludeConfig         `toml:"includes,omitempty"`
-	InstalledSkills       []InstalledSkillConfig  `toml:"installed_skills,omitempty"` //nolint:tagliatelle
-	Defaults              *DefaultsConfig         `toml:"defaults,omitempty"`
-	Rules                 *RulesConfig            `toml:"rules,omitempty"`
-	Lint                  *LintConfig             `toml:"lint,omitempty"`
-	OKF                   *OKFConfig              `toml:"okf,omitempty"`
-	LLMsTxt               *LLMsTxtConfig          `toml:"llms_txt,omitempty"`
-	Verifiers             []VerifierConfig        `toml:"verifiers,omitempty"`
-	VerifiersSet          *VerifiersSettings      `toml:"verifiers_settings,omitempty"`
-	Usage                 *UsageConfig            `toml:"usage,omitempty"`
-	Skills                *SkillsConfig           `toml:"skills,omitempty"`
-	DomainSettings        DomainConfigs           `toml:"domains,omitempty"`
-	Delivery              *DeliveryConfig         `toml:"delivery,omitempty"`
-	SkillSources          []SkillSourceConfig     `toml:"skill_sources,omitempty"`
-	Roles                 []RoleConfig            `toml:"roles,omitempty"`
-	RoleManifest          *RoleManifestConfig     `toml:"role_manifest,omitempty"`
-	Lock                  *LockConfig             `toml:"lock,omitempty"`
-	Governance            *GovernanceConfig       `toml:"governance,omitempty"`
-	Catalog               *CatalogConfig          `toml:"catalog,omitempty"`
-	Signing               *SigningConfig          `toml:"signing,omitempty"`
-	Publish               *PublishConfig          `toml:"publish,omitempty"`
-	ARD                   *ARDConfig              `toml:"ard,omitempty"`
-	LLM                   *llm.Config             `toml:"llm,omitempty"`
-	Telemetry             *TelemetryConfig        `toml:"telemetry,omitempty"`
-	Review                *ReviewConfig           `toml:"review,omitempty"`
-	Judge                 *JudgeConfig            `toml:"judge,omitempty"`
-	Improve               *ImproveConfig          `toml:"improve,omitempty"`
-	Search                *skillsearch.Config     `toml:"search,omitempty"`
-	Scopes                []ScopeConfig           `toml:"scopes,omitempty"`
-	Plugins               []PluginConfig          `toml:"plugins,omitempty"`
-	Marketplaces          []MarketplaceConfig     `toml:"marketplaces,omitempty"`
-	MCPServers            []MCPServer             `toml:"mcp_servers,omitempty"`
-	MCP                   *MCPConfig              `toml:"mcp,omitempty"`
-	Plugin                *PluginAuthoring        `toml:"plugin,omitempty"`
-	Marketplace           *MarketplaceAuthoring   `toml:"marketplace,omitempty"`
-	PluginsAuthoring      []MarketplacePlugin     `toml:"plugins_authoring,omitempty"`
-	MarketplacesAuthoring []MarketplaceDefinition `toml:"marketplaces_authoring,omitempty"`
-	Placement             *PlacementConfig        `toml:"placement,omitempty"`
-	Claude                *ClaudeConfig           `toml:"claude,omitempty"`
-	Codex                 *CodexConfig            `toml:"codex,omitempty"`
-	Hooks                 []HookGroup             `toml:"hooks,omitempty"`
-	Guard                 *GuardConfig            `toml:"guard,omitempty"`
-	Permissions           *Permissions            `toml:"permissions,omitempty"`
+	Schema                string                       `toml:"schema,omitempty"`
+	Source                string                       `toml:"source,omitempty"`
+	AgentsMDSplit         bool                         `toml:"agents_md_split,omitempty"`
+	Version               string                       `toml:"version"`
+	Name                  string                       `toml:"name"`
+	Description           string                       `toml:"description,omitempty"`
+	Gitignore             *bool                        `toml:"gitignore,omitempty"`
+	GitignoreExclude      []string                     `toml:"gitignore_exclude,omitempty"`
+	SkipOutputs           []string                     `toml:"skip_outputs,omitempty"`
+	Compact               *bool                        `toml:"compact,omitempty"`
+	AgentsMD              *bool                        `toml:"agents_md,omitempty"`
+	BundleExclude         []string                     `toml:"bundle_exclude,omitempty"`
+	CodexSkillsDir        string                       `toml:"codex_skills_dir,omitempty"`
+	Default               string                       `toml:"default,omitempty"`
+	Presets               []any                        `toml:"presets,omitempty"`
+	Header                *HeaderConfig                `toml:"header,omitempty"`
+	DefaultLayers         []string                     `toml:"default_layers,omitempty"`
+	Profiles              map[string][]string          `toml:"profiles,omitempty"`
+	Builtins              interface{}                  `toml:"builtins,omitempty"`
+	Includes              []IncludeConfig              `toml:"includes,omitempty"`
+	InstalledSkills       []InstalledSkillConfig       `toml:"installed_skills,omitempty"`       //nolint:tagliatelle
+	InstalledMarketplaces []InstalledMarketplaceConfig `toml:"installed_marketplaces,omitempty"` //nolint:tagliatelle
+	InstalledPlugins      []InstalledPluginConfig      `toml:"installed_plugins,omitempty"`      //nolint:tagliatelle
+	Defaults              *DefaultsConfig              `toml:"defaults,omitempty"`
+	Rules                 *RulesConfig                 `toml:"rules,omitempty"`
+	Lint                  *LintConfig                  `toml:"lint,omitempty"`
+	OKF                   *OKFConfig                   `toml:"okf,omitempty"`
+	LLMsTxt               *LLMsTxtConfig               `toml:"llms_txt,omitempty"`
+	Verifiers             []VerifierConfig             `toml:"verifiers,omitempty"`
+	VerifiersSet          *VerifiersSettings           `toml:"verifiers_settings,omitempty"`
+	Usage                 *UsageConfig                 `toml:"usage,omitempty"`
+	Skills                *SkillsConfig                `toml:"skills,omitempty"`
+	DomainSettings        DomainConfigs                `toml:"domains,omitempty"`
+	Delivery              *DeliveryConfig              `toml:"delivery,omitempty"`
+	SkillSources          []SkillSourceConfig          `toml:"skill_sources,omitempty"`
+	Roles                 []RoleConfig                 `toml:"roles,omitempty"`
+	RoleManifest          *RoleManifestConfig          `toml:"role_manifest,omitempty"`
+	Lock                  *LockConfig                  `toml:"lock,omitempty"`
+	Governance            *GovernanceConfig            `toml:"governance,omitempty"`
+	Catalog               *CatalogConfig               `toml:"catalog,omitempty"`
+	Signing               *SigningConfig               `toml:"signing,omitempty"`
+	Publish               *PublishConfig               `toml:"publish,omitempty"`
+	ARD                   *ARDConfig                   `toml:"ard,omitempty"`
+	LLM                   *llm.Config                  `toml:"llm,omitempty"`
+	Telemetry             *TelemetryConfig             `toml:"telemetry,omitempty"`
+	Review                *ReviewConfig                `toml:"review,omitempty"`
+	Judge                 *JudgeConfig                 `toml:"judge,omitempty"`
+	Improve               *ImproveConfig               `toml:"improve,omitempty"`
+	Search                *skillsearch.Config          `toml:"search,omitempty"`
+	Scopes                []ScopeConfig                `toml:"scopes,omitempty"`
+	Plugins               []PluginConfig               `toml:"plugins,omitempty"`
+	Marketplaces          []MarketplaceConfig          `toml:"marketplaces,omitempty"`
+	MCPServers            []MCPServer                  `toml:"mcp_servers,omitempty"`
+	MCP                   *MCPConfig                   `toml:"mcp,omitempty"`
+	Plugin                *PluginAuthoring             `toml:"plugin,omitempty"`
+	Marketplace           *MarketplaceAuthoring        `toml:"marketplace,omitempty"`
+	PluginsAuthoring      []MarketplacePlugin          `toml:"plugins_authoring,omitempty"`
+	MarketplacesAuthoring []MarketplaceDefinition      `toml:"marketplaces_authoring,omitempty"`
+	Placement             *PlacementConfig             `toml:"placement,omitempty"`
+	Claude                *ClaudeConfig                `toml:"claude,omitempty"`
+	Codex                 *CodexConfig                 `toml:"codex,omitempty"`
+	Hooks                 []HookGroup                  `toml:"hooks,omitempty"`
+	Guard                 *GuardConfig                 `toml:"guard,omitempty"`
+	Permissions           *Permissions                 `toml:"permissions,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -162,6 +164,8 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Builtins:              builtinsVal,
 		Includes:              cfg.Includes,
 		InstalledSkills:       cfg.InstalledSkills,
+		InstalledMarketplaces: cfg.InstalledMarketplaces,
+		InstalledPlugins:      cfg.InstalledPlugins,
 		Defaults:              cfg.Defaults,
 		Rules:                 cfg.Rules,
 		Lint:                  cfg.Lint,

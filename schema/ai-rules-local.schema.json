@@ -1114,6 +1114,167 @@
       },
       "type": "array"
     },
+    "installed_marketplaces": {
+      "description": "Plugin marketplaces the project reads: a Claude Code (.claude-plugin/marketplace.json), Codex (.agents/plugins/marketplace.json) or Cursor (.cursor-plugin/marketplace.json) index in a repository, a local directory or at an https URL. An [[installed_plugins]] entry installs a plugin from one. See docs/installed-plugins.md.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "include_prerelease": {
+            "description": "Allow prerelease tags that the constraint does not itself name. Default false. Needs version.",
+            "type": "boolean"
+          },
+          "min_release_age": {
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; 0 disables). Defaults to [lock] min_release_age. Needs version.",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Marketplace name (unique identifier), referenced by installed_plugins[].marketplace",
+            "minLength": 1,
+            "type": "string"
+          },
+          "path": {
+            "description": "Directory of the repository that holds the marketplace index (defaults to the repository root)",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Branch, tag, or commit hash (repository sources only)",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "A repository URL (https://, ssh, git@host:path, file://), a GitHub owner/repo shorthand, a local directory (./path, inside the project) or an https URL of a marketplace.json. A URL must not embed a credential.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "tag_prefix": {
+            "description": "Only tags that start with this prefix are version tags. Needs version.",
+            "type": "string"
+          },
+          "trust": {
+            "description": "Security-scan level for the plugins read through this marketplace. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity.",
+            "enum": ["error", "warn"],
+            "type": "string"
+          },
+          "version": {
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md.",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "installed_plugins": {
+      "description": "Plugins whose skills, agents, commands, hooks and MCP servers the project imports, read through an installed marketplace or straight from a plugin repository or directory. Hooks stay off unless enable_hooks is set. See docs/installed-plugins.md.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "description": "Place the imported content in the named domain. MCP servers are scoped to it; hooks are not scoped.",
+            "type": "string"
+          },
+          "enable_hooks": {
+            "description": "Import the plugin's hooks. Off by default: a hook runs a command on every machine that uses the project.",
+            "type": "boolean"
+          },
+          "enable_mcp": {
+            "description": "Import the plugin's MCP servers. On by default.",
+            "type": "boolean"
+          },
+          "exclude": {
+            "description": "Do not import these component kinds; wins over include.",
+            "items": {
+              "enum": ["skills", "agents", "commands", "hooks", "mcp", "rules"],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "format": {
+            "description": "Force the plugin layout instead of detecting it.",
+            "enum": ["claude", "codex", "gemini", "cursor", "agent-plugins"],
+            "type": "string"
+          },
+          "include": {
+            "description": "Import only these component kinds.",
+            "items": {
+              "enum": ["skills", "agents", "commands", "hooks", "mcp", "rules"],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include_prerelease": {
+            "description": "Allow prerelease tags that the constraint does not itself name. Default false. Needs version.",
+            "type": "boolean"
+          },
+          "marketplace": {
+            "description": "Name of an installed_marketplaces entry. Exclusive with source.",
+            "type": "string"
+          },
+          "min_release_age": {
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; 0 disables). Defaults to [lock] min_release_age. Needs version.",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Plugin name (unique identifier)",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name_prefix": {
+            "description": "Prepended to every imported skill, agent, command and MCP server name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Directory of the plugin inside the repository (source only)",
+            "type": "string"
+          },
+          "plugin": {
+            "description": "The marketplace entry to install when it is not called like this entry (needs marketplace).",
+            "type": "string"
+          },
+          "profiles": {
+            "description": "Restrict the imported content and MCP servers to the named profiles.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ref": {
+            "description": "Branch, tag, or commit hash (source only)",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "A plugin repository or directory: repository URL, GitHub owner/repo shorthand or a local directory (./path, inside the project). Exclusive with marketplace.",
+            "type": "string"
+          },
+          "tag_prefix": {
+            "description": "Only tags that start with this prefix are version tags. Needs version.",
+            "type": "string"
+          },
+          "trust": {
+            "description": "Security-scan level for the imported content. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity.",
+            "enum": ["error", "warn"],
+            "type": "string"
+          },
+          "version": {
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md.",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "installed_skills": {
       "description": "Named skills to install from external repositories. Skills are fetched dynamically during generation.",
       "items": {
@@ -1155,14 +1316,6 @@
             "minLength": 1,
             "type": "string"
           },
-          "resources": {
-            "description": "What is bundled from each skill's directory besides references/, scripts/ and assets/ (always bundled). By default an installed skill is bundled whole: every file except SKILL.md, evals/, agents/ and hidden files. Setting resources replaces that default. A pattern is a name, a path or a glob (a name matches a file or directory at any depth); a leading ! removes what an earlier pattern added, for example [\"*\", \"!docs\"].",
-            "items": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "type": "array"
-          },
           "name_prefix": {
             "description": "Prepended to every resolved skill name, so two entries cannot collide.",
             "type": "string"
@@ -1185,6 +1338,14 @@
           "remove": {
             "description": "Set to true to delete the shared entry with the same name",
             "type": "boolean"
+          },
+          "resources": {
+            "description": "What is bundled from each skill's directory besides references/, scripts/ and assets/ (always bundled). By default an installed skill is bundled whole: every file except SKILL.md, evals/, agents/ and hidden files. Setting resources replaces that default. A pattern is a name, a path or a glob (a name matches a file or directory at any depth); a leading ! removes what an earlier pattern added, for example [\"*\", \"!docs\"].",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
           },
           "source": {
             "description": "Git repository URL (https://...), GitHub shorthand (owner/repo or github:owner/repo), file:// URL, or local directory (a relative or absolute path, or ~/path in config.local.toml or the user config only). A local path in the project config must stay inside the project. A URL must not embed a credential (https://user:token@host/...): authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable instead; a committed credential is reported as AR035.",

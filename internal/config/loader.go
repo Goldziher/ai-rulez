@@ -118,6 +118,8 @@ type ResolveInstalledSkillsCallback func(ctx context.Context, cfg *Config) ([]Co
 type Resolvers struct {
 	Includes ResolveIncludesCallback
 	Skills   ResolveInstalledSkillsCallback
+	// Plugins resolves [[installed_marketplaces]] and [[installed_plugins]].
+	Plugins ResolveInstalledPluginsCallback
 	// Agents completes the content tree of the "agents" source (AGENTS.md and
 	// generated-file screening); only a project with that source needs it.
 	Agents AgentsSourceReader
@@ -461,6 +463,10 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 		return nil, err
 	}
 
+	if err := resolveInstalledPluginsIfNeeded(ctx, config, lo.resolvers.Plugins); err != nil {
+		return nil, err
+	}
+
 	// What includes and installed skills delivered is bounded now that it is loaded.
 	applyContentPolicy(ctx, config)
 
@@ -664,68 +670,70 @@ func loadConfigTOML(v workspace.View, path string) (*Config, error) {
 // mixed-type arrays that need a conversion step. Every toml-tagged field of
 // Config must appear here (TestTomlConfigCoversConfig).
 type tomlConfig struct {
-	Schema                string                  `toml:"schema"`
-	Source                string                  `toml:"source"`
-	AgentsMDSplit         bool                    `toml:"agents_md_split"`
-	Version               string                  `toml:"version"`
-	Name                  string                  `toml:"name"`
-	Description           string                  `toml:"description"`
-	Presets               []any                   `toml:"presets"`
-	DefaultLayers         []string                `toml:"default_layers"`
-	Default               string                  `toml:"default"`
-	Profiles              map[string][]string     `toml:"profiles"`
-	Gitignore             *bool                   `toml:"gitignore"`
-	GitignoreExclude      []string                `toml:"gitignore_exclude"`
-	SkipOutputs           []string                `toml:"skip_outputs"`
-	Compact               *bool                   `toml:"compact"`
-	AgentsMD              *bool                   `toml:"agents_md"`
-	BundleExclude         []string                `toml:"bundle_exclude"`
-	CodexSkillsDir        string                  `toml:"codex_skills_dir"`
-	Includes              []IncludeConfig         `toml:"includes"`
-	InstalledSkills       []InstalledSkillConfig  `toml:"installed_skills"`
-	MCPServers            []MCPServer             `toml:"mcp_servers"`
-	Header                *HeaderConfig           `toml:"header"`
-	Builtins              interface{}             `toml:"builtins"`
-	Plugins               []PluginConfig          `toml:"plugins"`
-	Marketplaces          []MarketplaceConfig     `toml:"marketplaces"`
-	PluginsAuthoring      []MarketplacePlugin     `toml:"plugins_authoring"`
-	MarketplacesAuthoring []MarketplaceDefinition `toml:"marketplaces_authoring"`
-	Scopes                []ScopeConfig           `toml:"scopes"`
-	MCP                   *MCPConfig              `toml:"mcp"`
-	Defaults              *DefaultsConfig         `toml:"defaults"`
-	Rules                 *RulesConfig            `toml:"rules"`
-	Lint                  *LintConfig             `toml:"lint"`
-	Verifiers             []VerifierConfig        `toml:"verifiers"`
-	VerifiersSet          *VerifiersSettings      `toml:"verifiers_settings"`
-	Usage                 *UsageConfig            `toml:"usage"`
-	Skills                *SkillsConfig           `toml:"skills"`
-	DomainSettings        DomainConfigs           `toml:"domains"`
-	Delivery              *DeliveryConfig         `toml:"delivery"`
-	SkillSources          []SkillSourceConfig     `toml:"skill_sources"`
-	Roles                 []RoleConfig            `toml:"roles"`
-	RoleManifest          *RoleManifestConfig     `toml:"role_manifest"`
-	Lock                  *LockConfig             `toml:"lock"`
-	Governance            *GovernanceConfig       `toml:"governance"`
-	Catalog               *CatalogConfig          `toml:"catalog"`
-	Signing               *SigningConfig          `toml:"signing"`
-	Publish               *PublishConfig          `toml:"publish"`
-	ARD                   *ARDConfig              `toml:"ard"`
-	LLM                   *llm.Config             `toml:"llm"`
-	Telemetry             *TelemetryConfig        `toml:"telemetry"`
-	Review                *ReviewConfig           `toml:"review"`
-	Judge                 *JudgeConfig            `toml:"judge"`
-	Improve               *ImproveConfig          `toml:"improve"`
-	Search                *skillsearch.Config     `toml:"search"`
-	Plugin                *PluginAuthoring        `toml:"plugin"`
-	Marketplace           *MarketplaceAuthoring   `toml:"marketplace"`
-	Placement             *PlacementConfig        `toml:"placement"`
-	Claude                *ClaudeConfig           `toml:"claude"`
-	Codex                 *CodexConfig            `toml:"codex"`
-	Hooks                 []HookGroup             `toml:"hooks"`
-	Guard                 *GuardConfig            `toml:"guard"`
-	Permissions           *Permissions            `toml:"permissions"`
-	OKF                   *OKFConfig              `toml:"okf"`
-	LLMsTxt               *LLMsTxtConfig          `toml:"llms_txt"`
+	Schema                string                       `toml:"schema"`
+	Source                string                       `toml:"source"`
+	AgentsMDSplit         bool                         `toml:"agents_md_split"`
+	Version               string                       `toml:"version"`
+	Name                  string                       `toml:"name"`
+	Description           string                       `toml:"description"`
+	Presets               []any                        `toml:"presets"`
+	DefaultLayers         []string                     `toml:"default_layers"`
+	Default               string                       `toml:"default"`
+	Profiles              map[string][]string          `toml:"profiles"`
+	Gitignore             *bool                        `toml:"gitignore"`
+	GitignoreExclude      []string                     `toml:"gitignore_exclude"`
+	SkipOutputs           []string                     `toml:"skip_outputs"`
+	Compact               *bool                        `toml:"compact"`
+	AgentsMD              *bool                        `toml:"agents_md"`
+	BundleExclude         []string                     `toml:"bundle_exclude"`
+	CodexSkillsDir        string                       `toml:"codex_skills_dir"`
+	Includes              []IncludeConfig              `toml:"includes"`
+	InstalledSkills       []InstalledSkillConfig       `toml:"installed_skills"`
+	InstalledMarketplaces []InstalledMarketplaceConfig `toml:"installed_marketplaces"`
+	InstalledPlugins      []InstalledPluginConfig      `toml:"installed_plugins"`
+	MCPServers            []MCPServer                  `toml:"mcp_servers"`
+	Header                *HeaderConfig                `toml:"header"`
+	Builtins              interface{}                  `toml:"builtins"`
+	Plugins               []PluginConfig               `toml:"plugins"`
+	Marketplaces          []MarketplaceConfig          `toml:"marketplaces"`
+	PluginsAuthoring      []MarketplacePlugin          `toml:"plugins_authoring"`
+	MarketplacesAuthoring []MarketplaceDefinition      `toml:"marketplaces_authoring"`
+	Scopes                []ScopeConfig                `toml:"scopes"`
+	MCP                   *MCPConfig                   `toml:"mcp"`
+	Defaults              *DefaultsConfig              `toml:"defaults"`
+	Rules                 *RulesConfig                 `toml:"rules"`
+	Lint                  *LintConfig                  `toml:"lint"`
+	Verifiers             []VerifierConfig             `toml:"verifiers"`
+	VerifiersSet          *VerifiersSettings           `toml:"verifiers_settings"`
+	Usage                 *UsageConfig                 `toml:"usage"`
+	Skills                *SkillsConfig                `toml:"skills"`
+	DomainSettings        DomainConfigs                `toml:"domains"`
+	Delivery              *DeliveryConfig              `toml:"delivery"`
+	SkillSources          []SkillSourceConfig          `toml:"skill_sources"`
+	Roles                 []RoleConfig                 `toml:"roles"`
+	RoleManifest          *RoleManifestConfig          `toml:"role_manifest"`
+	Lock                  *LockConfig                  `toml:"lock"`
+	Governance            *GovernanceConfig            `toml:"governance"`
+	Catalog               *CatalogConfig               `toml:"catalog"`
+	Signing               *SigningConfig               `toml:"signing"`
+	Publish               *PublishConfig               `toml:"publish"`
+	ARD                   *ARDConfig                   `toml:"ard"`
+	LLM                   *llm.Config                  `toml:"llm"`
+	Telemetry             *TelemetryConfig             `toml:"telemetry"`
+	Review                *ReviewConfig                `toml:"review"`
+	Judge                 *JudgeConfig                 `toml:"judge"`
+	Improve               *ImproveConfig               `toml:"improve"`
+	Search                *skillsearch.Config          `toml:"search"`
+	Plugin                *PluginAuthoring             `toml:"plugin"`
+	Marketplace           *MarketplaceAuthoring        `toml:"marketplace"`
+	Placement             *PlacementConfig             `toml:"placement"`
+	Claude                *ClaudeConfig                `toml:"claude"`
+	Codex                 *CodexConfig                 `toml:"codex"`
+	Hooks                 []HookGroup                  `toml:"hooks"`
+	Guard                 *GuardConfig                 `toml:"guard"`
+	Permissions           *Permissions                 `toml:"permissions"`
+	OKF                   *OKFConfig                   `toml:"okf"`
+	LLMsTxt               *LLMsTxtConfig               `toml:"llms_txt"`
 }
 
 // decodeConfigTOML decodes TOML bytes; path is used for error context only.
@@ -795,6 +803,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		CodexSkillsDir:        raw.CodexSkillsDir,
 		Includes:              raw.Includes,
 		InstalledSkills:       raw.InstalledSkills,
+		InstalledMarketplaces: raw.InstalledMarketplaces,
+		InstalledPlugins:      raw.InstalledPlugins,
 		MCPServersRaw:         raw.MCPServers,
 		Header:                raw.Header,
 		Builtins:              builtinsCfg,

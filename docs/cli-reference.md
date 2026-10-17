@@ -1856,7 +1856,7 @@ ai-rulez lock --content-only
 | `--fail-on-outdated` | bool |  | With --outdated: exit 2 when any source has an allowed update |
 | `--format` | string | `text` | Output format: text, json |
 | `--include-static` | bool |  | Also pin the view that serves static skills too (see mcp --serve-skills --include-static) |
-| `--kind` | string |  | Limit the refresh to include, skill, source or served entries |
+| `--kind` | string |  | Limit the refresh to include, skill, source, marketplace, plugin or served entries |
 | `--offline` | bool |  | With --outdated: refuse to run (it needs the network); use --check to verify the lock offline |
 | `--outdated` | bool |  | Report sources whose version constraint allows a newer tag than the pinned one (uses the network, writes nothing) |
 | `--output` / `-o` | string |  | With --subject: write the JSON statement to this file |
@@ -1880,6 +1880,102 @@ ai-rulez lock --content-only
 | `--subject` | bool |  | Print the lock-subject digest and statement (the thing to sign); reads the lock only |
 | `--targets` | string |  | Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets) |
 | `--verify-tags` | bool |  | With --check: ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true) |
+
+## `ai-rulez marketplace`
+
+Manage installed plugin marketplaces
+
+```text
+ai-rulez marketplace [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace list
+ai-rulez marketplace add acme --source acme/plugins
+```
+
+## `ai-rulez marketplace add`
+
+Add a plugin marketplace from a repository, a local directory or an https URL
+
+```text
+ai-rulez marketplace add <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace add acme --source acme/plugins
+ai-rulez marketplace add acme --source https://github.com/acme/plugins --version "^1.2"
+ai-rulez marketplace add local --source ./vendor/marketplace
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--include-prerelease` | bool |  | Allow prerelease tags (needs --version) |
+| `--min-release-age` | string |  | Hold back tags younger than this (7d, 12h; needs --version) |
+| `--path` | string |  | Directory of the repository that holds the index (default: the root) |
+| `--ref` | string |  | Branch, tag or commit |
+| `--source` | string |  | Git URL, GitHub owner/repo, local directory or https URL of a marketplace.json (required) |
+| `--tag-prefix` | string |  | Only tags with this prefix are version tags (needs --version) |
+| `--trust` | string |  | Scan level of the plugins read through it: error (default) or warn |
+| `--version` | string |  | Version constraint resolved against the repository's tags (^1.2, ~2.1.0) |
+
+## `ai-rulez marketplace list`
+
+List installed marketplaces
+
+```text
+ai-rulez marketplace list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace list
+ai-rulez marketplace list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+## `ai-rulez marketplace remove`
+
+Remove an installed marketplace
+
+```text
+ai-rulez marketplace remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace remove acme --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+## `ai-rulez marketplace update`
+
+Re-pin installed marketplaces (and their plugins) in ai-rulez.lock to the current remote commit
+
+```text
+ai-rulez marketplace update [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace update
+ai-rulez marketplace update acme
+```
 
 ## `ai-rulez mcp`
 
@@ -2037,6 +2133,112 @@ ai-rulez okf validate https://github.com/acme/kb@v1.2.0#docs --format json
 | ---- | ---- | ------- | ----------- |
 | `--fail-on` | string | `error` | Lowest severity that fails the run: error, warning, info or none |
 | `--format` | string | `text` | Output format: text, json |
+
+## `ai-rulez plugin`
+
+Manage installed plugins imported from marketplaces or repositories
+
+```text
+ai-rulez plugin [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin list
+ai-rulez plugin install formatter --from acme
+```
+
+## `ai-rulez plugin install`
+
+Install a plugin from a marketplace, a repository or a local directory
+
+```text
+ai-rulez plugin install <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin install formatter --from acme
+ai-rulez plugin install tools --source acme/tools --exclude hooks
+ai-rulez plugin install tools --source acme/tools --enable-hooks --name-prefix acme-
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Place the imported content in this domain |
+| `--enable-hooks` | bool |  | Import the plugin's hooks (they run commands on every machine) |
+| `--enable-mcp` | bool | `true` | Import the plugin's MCP servers |
+| `--entry` | string |  | Marketplace entry to install when it is not called like the plugin |
+| `--exclude` | string list |  | Do not import these kinds |
+| `--format` | string | `text` | Output format: text, json |
+| `--from` | string |  | Name of an installed marketplace to install from |
+| `--include` | string list |  | Import only these kinds: skills, agents, commands, hooks, mcp, rules |
+| `--include-prerelease` | bool |  | Allow prerelease tags (needs --version) |
+| `--layout` | string |  | Force the plugin layout: claude, codex, gemini, cursor or agent-plugins |
+| `--min-release-age` | string |  | Hold back tags younger than this (needs --version) |
+| `--name-prefix` | string |  | Prefix for every imported name |
+| `--path` | string |  | Directory of the plugin inside the repository |
+| `--profile` | string list |  | Restrict the imported content to these profiles |
+| `--ref` | string |  | Branch, tag or commit |
+| `--source` | string |  | Git URL, GitHub owner/repo or local directory of the plugin |
+| `--tag-prefix` | string |  | Only tags with this prefix are version tags (needs --version) |
+| `--trust` | string |  | Scan level: error (default) or warn |
+| `--version` | string |  | Version constraint for a plugin installed from --source |
+
+## `ai-rulez plugin list`
+
+List installed plugins
+
+```text
+ai-rulez plugin list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin list
+ai-rulez plugin list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+## `ai-rulez plugin remove`
+
+Remove an installed plugin
+
+```text
+ai-rulez plugin remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin remove formatter --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+## `ai-rulez plugin update`
+
+Re-pin installed plugins in ai-rulez.lock to their current remote commit
+
+```text
+ai-rulez plugin update [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin update
+ai-rulez plugin update formatter
+```
 
 ## `ai-rulez profile`
 
@@ -3589,7 +3791,7 @@ ai-rulez update --kind include --write-config
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | Show what would change and write nothing |
 | `--format` | string | `text` | Output format: text, json |
-| `--kind` | string |  | Limit the update to include, skill or source |
+| `--kind` | string |  | Limit the update to include, skill, source, marketplace or plugin |
 | `--major` | bool |  | Handle only sources that have a newer major version: print the constraint that would take it |
 | `--offline` | bool |  | Refuse to run: update reads the remote's tags |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |

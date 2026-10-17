@@ -1846,6 +1846,43 @@ Each entry supports:
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
+### `installed_marketplaces` and `installed_plugins`
+
+Plugin marketplaces and the plugins imported from them (or straight from a repository). Skills, agents, commands,
+rules, hooks and MCP servers become ordinary content, pinned in `ai-rulez.lock`. See
+[Installed Plugins](installed-plugins.md) for the formats, source forms, hook and MCP policy and the lock flow.
+
+```toml
+[[installed_marketplaces]]
+name = "acme"
+source = "acme/plugins"
+version = "^1.2"
+
+[[installed_plugins]]
+name = "formatter"
+marketplace = "acme"
+exclude = ["hooks"]
+```
+
+| Field (marketplace) | Description |
+| ------------------- | ----------- |
+| `name`, `source` | Required. `source` is a repository URL, GitHub `owner/repo`, a local directory inside the project or an https `marketplace.json` URL |
+| `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | As on `includes` |
+| `trust` | Scan level of the plugins read through it: `error` (default) or `warn` |
+
+| Field (plugin) | Description |
+| -------------- | ----------- |
+| `name` | Required, unique |
+| `marketplace`, `plugin` | Install the marketplace entry `plugin` (default `name`) from an installed marketplace; exclusive with `source` |
+| `source`, `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | A plugin repository or directory, as on `installed_skills` |
+| `format` | Force the layout: `claude`, `codex`, `gemini`, `cursor`, `agent-plugins` |
+| `include`, `exclude` | Component kinds: `skills`, `agents`, `commands`, `hooks`, `mcp`, `rules` |
+| `name_prefix`, `domain`, `profiles`, `trust` | As on `installed_skills` |
+| `enable_hooks` | Import the plugin's hooks (default `false`) |
+| `enable_mcp` | Import the plugin's MCP servers (default `true`) |
+
+Manage via CLI: `ai-rulez marketplace add/remove/list/update`, `ai-rulez plugin install/remove/list/update`.
+
 ### `[skills]`, `[domains.<name>]`, `[[skill_sources]]`, `[lock]`
 
 Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)). All optional.

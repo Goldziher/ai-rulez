@@ -42,6 +42,13 @@ const (
 	// KindSource pins one [[skill_sources]] entry: the commit its ref resolved
 	// to and the digest of the fetched tree.
 	KindSource = "source"
+	// KindMarketplace pins one [[installed_marketplaces]] entry: the commit of
+	// its repository (none for an https marketplace.json) and the digest of the
+	// fetched index tree or file.
+	KindMarketplace = "marketplace"
+	// KindPlugin pins one [[installed_plugins]] entry: the commit the plugin's
+	// repository resolved to and the digest of the plugin directory.
+	KindPlugin = "plugin"
 	// KindServed pins one served skill by name: Digest is the digest the skills
 	// server reports (over the rendered files). [lock] enforce checks against it.
 	KindServed = "served"
@@ -75,6 +82,10 @@ type Entry struct {
 	// "profile:x", "static", joined by "+"); empty for the default view and for
 	// every other kind, so a project without views writes the same lock as before.
 	View string `toml:"view,omitempty"`
+	// Origin is, for a KindPlugin entry installed from a marketplace, the
+	// credential-free repository (and subdirectory) the marketplace index named
+	// for the plugin; Source then holds "marketplace:<name>". Empty otherwise.
+	Origin string `toml:"origin,omitempty"`
 }
 
 // Item pins one authored item: a rule, skill, agent, command, context file,
@@ -125,10 +136,13 @@ type File struct {
 	Skill   []Entry `toml:"skill,omitempty"`
 	// Source pins a [[skill_sources]] entry (commit and tree digest); Served pins
 	// the digest of a skill the skills server serves.
-	Source []Entry     `toml:"source,omitempty"`
-	Served []Entry     `toml:"served,omitempty"`
-	Item   []Item      `toml:"item,omitempty"`
-	Output []OutputPin `toml:"output,omitempty"`
+	Source []Entry `toml:"source,omitempty"`
+	// Marketplace and Plugin pin [[installed_marketplaces]] and [[installed_plugins]].
+	Marketplace []Entry     `toml:"marketplace,omitempty"`
+	Plugin      []Entry     `toml:"plugin,omitempty"`
+	Served      []Entry     `toml:"served,omitempty"`
+	Item        []Item      `toml:"item,omitempty"`
+	Output      []OutputPin `toml:"output,omitempty"`
 	// Approval records reviewer approvals (approval.go); outside the tree digest.
 	Approval []Approval `toml:"approval,omitempty"`
 	// Deny lists digests that can be neither approved nor used (approval.go); outside the tree digest.
@@ -224,6 +238,7 @@ func Save(configDir string, f *File) error {
 	out.Version = f.FormatVersion()
 	out.Include, out.Skill = sorted(f.Include), sorted(f.Skill)
 	out.Source, out.Served = sorted(f.Source), sorted(f.Served)
+	out.Marketplace, out.Plugin = sorted(f.Marketplace), sorted(f.Plugin)
 	out.Item, out.Output = sortedItems(f.Item), sortedOutputs(f.Output)
 	out.Approval = sortedApprovals(f.Approval)
 	out.Deny = sortedDeny(f.Deny)
@@ -307,6 +322,10 @@ func (f *File) list(kind string) *[]Entry {
 		return &f.Skill
 	case KindSource:
 		return &f.Source
+	case KindMarketplace:
+		return &f.Marketplace
+	case KindPlugin:
+		return &f.Plugin
 	case KindServed:
 		return &f.Served
 	}

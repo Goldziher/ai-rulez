@@ -152,6 +152,7 @@ func init() {
 	RootCmd.AddCommand(ProfileCmd)
 	RootCmd.AddCommand(BuiltinsCmd)
 	RootCmd.AddCommand(SkillCmd)
+	RootCmd.AddCommand(newMarketplaceCmd(), newPluginCmd())
 	RootCmd.AddCommand(LockCmd)
 	RootCmd.AddCommand(ApproveCmd)
 	RootCmd.AddCommand(SignCmd, TrustCmd)

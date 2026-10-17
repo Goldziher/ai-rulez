@@ -24,6 +24,7 @@
 - [Roles](https://goldziher.github.io/ai-rulez/roles/): A profile picks domains for a project.
 - [Includes](https://goldziher.github.io/ai-rulez/includes/): Reuse configurations across multiple projects through inheritance and composition.
 - [Installed Skills](https://goldziher.github.io/ai-rulez/installed-skills/): Install named skills from external repositories.
+- [Installed Plugins](https://goldziher.github.io/ai-rulez/installed-plugins/): If a harness can install a plugin or a marketplace, ai-rulez can import it, use it and lock it.
 - [.agents as a Source](https://goldziher.github.io/ai-rulez/agents-source/): ai-rulez reads its content from the .ai-rulez tree by default.
 - [Config without a .ai-rulez folder](https://goldziher.github.io/ai-rulez/config-without-folder/): Keep the whole ai-rulez configuration in one file, ai-rulez.toml at the project root, and no .ai-rulez/ directory.
 - [Local Configuration](https://goldziher.github.io/ai-rulez/local-overrides/): Personal, machine-local configuration that is never committed.

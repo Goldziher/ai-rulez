@@ -123,7 +123,8 @@ func patchMajor(cfg *config.Config, items []majorItem) (original []byte, mode os
 		return nil, 0, oops.With("path", file).Wrapf(err, "read %s", filepath.Base(file))
 	}
 	patched := original
-	tables := map[string]string{lockfile.KindInclude: "includes", lockfile.KindSkill: "installed_skills", lockfile.KindSource: "skill_sources"}
+	tables := map[string]string{lockfile.KindInclude: "includes", lockfile.KindSkill: "installed_skills", lockfile.KindSource: "skill_sources",
+		lockfile.KindMarketplace: "installed_marketplaces", lockfile.KindPlugin: "installed_plugins"}
 	for _, it := range items {
 		patched, err = versionpatch.SetConstraint(patched, tables[it.Kind], it.Name, it.To)
 		if err != nil {

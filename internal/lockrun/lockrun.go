@@ -281,6 +281,7 @@ func Next(ctx context.Context, cfg *config.Config, current *lockfile.File, req *
 		}
 	} else if current != nil {
 		next.Include, next.Skill = current.Include, current.Skill
+		next.Marketplace, next.Plugin = current.Marketplace, current.Plugin
 	}
 
 	// Source and served pins: refreshed with the remote pins; a content-only run
