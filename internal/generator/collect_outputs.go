@@ -20,6 +20,9 @@ import (
 )
 
 func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string, error) {
+	if g.config.LintOnly() {
+		return nil, g.resolveProfile(profile), nil
+	}
 	render, err := g.renderPresets(profile)
 	if err != nil {
 		return nil, "", err

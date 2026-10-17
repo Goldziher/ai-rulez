@@ -313,6 +313,13 @@ func (c *Config) HasPluginAuthoring() bool {
 	return c.Plugin != nil || c.HasPluginSet()
 }
 
+// LintOnly reports whether the configuration declares no preset and authors no
+// plugin: ai-rulez is used only to validate, scan and run [[lint.external]], and
+// generate has nothing to render.
+func (c *Config) LintOnly() bool {
+	return len(c.Presets) == 0 && !c.HasPluginAuthoring()
+}
+
 // ScopeConfig configures an additional scoped output root for directory-aware
 // assistants such as Codex and Claude Code.
 type ScopeConfig struct {
