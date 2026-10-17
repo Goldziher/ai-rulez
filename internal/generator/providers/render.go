@@ -621,6 +621,9 @@ func (g *Generator) renderItem(typ string, spec *OutputSpec, item config.Content
 // derive from a sanitized name.
 func computeItemID(typ string, item config.ContentFile) string {
 	if typ == OutputTypeSkills {
+		if item.ID != "" {
+			return item.ID
+		}
 		// Path format: .../skills/{skill-id}/SKILL.md → {skill-id}
 		dir := filepath.Dir(item.Path)
 		return filepath.Base(dir)

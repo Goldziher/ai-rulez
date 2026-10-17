@@ -3062,7 +3062,7 @@ Each entry supports:
 | `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs  |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory    |
 | `resources`      | No       | What is bundled besides `references/`, `scripts/` and `assets/`: the whole skill directory by default (not `SKILL.md`, `evals/`, `agents/`, hidden files); setting it replaces that. See [Installed skills](installed-skills.md#what-is-bundled-with-a-skill) |
 | `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 
@@ -6725,7 +6725,7 @@ source = "https://github.com/org/skills"
 path = "skills"               # a directory of skill directories
 include = ["db-*", "api"]     # keep only these directory names
 exclude = ["*-wip"]           # drop these; exclude wins over include
-name_prefix = "vendor-"       # every resolved skill is named vendor-<dir>
+name_prefix = "vendor-"       # every resolved skill is named, and written to, vendor-<dir>
 trust = "warn"                # only error-severity scan findings block generate
 ```
 
@@ -6743,7 +6743,7 @@ trust = "warn"                # only error-severity scan findings block generate
 | `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs. Empty keeps every skill below `path` |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name, so two entries cannot collide |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory (`.claude/skills/vendor-<dir>/`), so two entries cannot collide |
 | `resources`      | No       | What is bundled from each skill directory besides `references/`, `scripts/` and `assets/`. The default is the whole directory (see below); setting it replaces that default |
 | `trust`          | No       | Scan level of the imported skills: `error` (every finding counts, the default) or `warn` (only error-severity findings block) |
 
@@ -7058,7 +7058,8 @@ listed as not installable.
 A plugin installed from a marketplace follows the marketplace's `ref`/`version`; setting them on the plugin is an
 error. `domain` and `profiles` scope skills, agents, commands, rules and MCP servers like
 [installed skills](installed-skills.md); hooks are global. A name that already exists (local content first, then
-earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both.
+earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both. The prefix is part of the name and of the skill's output directory
+(`.claude/skills/<prefix><dir>/`).
 
 #### Hooks, MCP servers and permissions
 
@@ -33528,7 +33529,7 @@ Which of these a repository may set, and which only the user config file or the 
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
 - **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
-- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name
+- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name and output directory
 - **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
 - **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
 
