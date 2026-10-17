@@ -1152,6 +1152,9 @@ func (c *Config) validateMCP() error { //nolint:gocyclo // a flat sequence of in
 			Hint("Use a bare version or npm dist-tag such as \"4.19.0\" or \"latest\"").
 			Errorf("mcp.self_server_version %q is not a valid version", m.SelfServerVersion)
 	}
+	if _, err := ParseDiscoverSkills(m.DiscoverSkills); err != nil {
+		return err
+	}
 	return m.validateSkillsInstructions()
 }
 
