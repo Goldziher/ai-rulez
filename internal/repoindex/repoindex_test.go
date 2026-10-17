@@ -138,10 +138,23 @@ func TestBuild_InfersScopesAndItems(t *testing.T) {
 			wantItems:  []string{"skill:.:outer"},
 		},
 		{
-			name:       "a rules directory of a preset that is not enabled is ignored",
-			files:      map[string]string{"pkg/.cursor/rules/ui.mdc": ruleMD("UI")},
-			presets:    []string{"claude"},
+			name:       "rules and agents of every convention are indexed whatever the presets",
+			files:      map[string]string{"pkg/.cursor/rules/ui.mdc": ruleMD("UI"), ".claude/rules/a.md": ruleMD("A"), ".claude/agents/b.md": ruleMD("B")},
+			presets:    []string{"codex"},
 			wantScopes: []string{".", "pkg"},
+			wantItems:  []string{"agent:.:b", "rule:.:a", "rule:pkg:ui"},
+		},
+		{
+			name:       "no presets (a lint-only configuration) still indexes rules and agents",
+			files:      map[string]string{".claude/rules/a.md": ruleMD("A"), ".claude/agents/b.md": ruleMD("B")},
+			wantScopes: []string{"."},
+			wantItems:  []string{"agent:.:b", "rule:.:a"},
+		},
+		{
+			name:       "a skills directory of a preset that is not enabled is ignored",
+			files:      map[string]string{"pkg/.cursor/skills/ui/SKILL.md": skillMD("ui", "UI")},
+			presets:    []string{"claude"},
+			wantScopes: []string{"."},
 		},
 		{
 			name:       "instruction files in hidden directories are not scopes",

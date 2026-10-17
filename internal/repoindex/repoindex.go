@@ -79,8 +79,9 @@ var ErrTooLarge = errors.New("the file is larger than the index reads")
 type Options struct {
 	// Root is the project root; every path the index holds is relative to it.
 	Root string
-	// Presets are the enabled presets; their skills, rules, agents and commands
-	// directories are indexed. The skills and .claude/skills directories always are.
+	// Presets are the enabled presets; their skills directories are indexed, and
+	// the skills and .claude/skills directories always are. Rules, agents and
+	// commands are indexed in every known convention, whatever the presets.
 	Presets []string
 	// MaxItems caps the items held (0 selects DefaultMaxItems). Past it the
 	// shallowest scopes are kept.

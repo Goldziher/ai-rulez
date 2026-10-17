@@ -622,6 +622,11 @@ root is the scope `.`. Scopes are inferred from the tree; nothing is configured.
 `gemini`, `skills-dir`), a `name`, a `description` (the frontmatter `description`, else the first heading) and a content
 `hash`. The index keeps summaries only, never a file body.
 
+Instruction files, rules, agents and commands are indexed wherever a known convention keeps them (`.claude/`,
+`.agents/`, `.cursor/`, `.github/`, ...): the files present decide, not the `presets` list, so a configuration with
+`presets = []` (lint-only), `["claude"]` or no configuration at all serves the same context. Only the skill
+directories follow the presets, as in [Where `repo` looks](#discovering-skills-already-in-the-repository).
+
 **What applies to a path.** The scopes that are the path or one of its ancestors, nearest first. A skill, agent or
 command is shadowed by one of the same name in a nearer scope, as harnesses shadow by name; instruction files and rules
 add up, so none of them is shadowed. A skill name that two scopes share is served under its path from the project root

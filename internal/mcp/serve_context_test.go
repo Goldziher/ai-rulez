@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -445,4 +446,34 @@ func TestContext_NothingChangesWithDiscoveryOff(t *testing.T) {
 	assert.NotContains(t, session.InitializeResult().Instructions, "find_context")
 	_, err := session.ReadResource(context.Background(), &sdkmcp.ReadResourceParams{URI: "context://pkg/api/AGENTS.md"})
 	assert.Error(t, err)
+}
+
+func TestFindContext_ServedContextDoesNotDependOnThePresets(t *testing.T) {
+	want := []string{"instruction:.:AGENTS.md", "rule:.:style", "agent:pkg/api:reviewer", "instruction:pkg/api:AGENTS.md"}
+	tests := []struct {
+		name        string
+		presets     string
+		agentsSkill bool
+	}{
+		{name: "a lint-only configuration", presets: "presets = []"},
+		{name: "claude", presets: `presets = ["claude"]`},
+		{name: "codex", presets: `presets = ["codex"]`, agentsSkill: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := monorepoProject(t)
+			writeFile(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"p\"\ngitignore = false\n"+tt.presets+"\n")
+			writeFile(t, root, ".agents/skills/shared/SKILL.md", repoSkill("shared"))
+			srv, session := contextServer(t, root)
+
+			// Act
+			out, isErr := toolJSON(t, session, "find_context", map[string]any{})
+
+			// Assert
+			require.False(t, isErr, "%v", out)
+			assert.Equal(t, want, contextKeys(t, out))
+			assert.Equal(t, tt.agentsSkill, slices.Contains(catalogNames(srv.Catalog()), "shared"))
+		})
+	}
 }

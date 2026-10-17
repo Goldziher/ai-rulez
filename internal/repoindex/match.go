@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 )
 
@@ -63,14 +64,19 @@ func newMatcher(presets, skip []string) *matcher {
 	}
 	add(dirSkills, KindSkill, sourceSkills)
 	add(dirClaude+"/"+dirSkills, KindSkill, sourceClaude)
+	// Rules, agents and commands are indexed wherever a known convention keeps
+	// them: the files present decide, not the presets. Skill directories follow
+	// the presets.
+	every := config.IndividualPresetNames()
 	for _, kind := range []struct {
 		importer importer.Kind
 		kind     Kind
+		presets  []string
 	}{
-		{importer.KindSkill, KindSkill}, {importer.KindRule, KindRule},
-		{importer.KindAgent, KindAgent}, {importer.KindCommand, KindCommand},
+		{importer.KindSkill, KindSkill, presets}, {importer.KindRule, KindRule, every},
+		{importer.KindAgent, KindAgent, every}, {importer.KindCommand, KindCommand, every},
 	} {
-		for _, dir := range importer.KindDirectories(presets, kind.importer) {
+		for _, dir := range importer.KindDirectories(kind.presets, kind.importer) {
 			add(dir, kind.kind, sourceOfDir(dir))
 		}
 	}
