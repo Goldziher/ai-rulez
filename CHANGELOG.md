@@ -8,6 +8,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- `generate --watch` now also watches local installed-skill sources, `skill_sources`, and installed marketplaces and plugins, not only includes and `local_override`.
+
 - **A local `installed_skills` source must stay inside the project.** A committed entry could name any path, unlike includes and `[[skill_sources]]`; it now fails with the same error, with the same exceptions (`config.local.toml`, the user config).
 - **A local installed skill is pinned in `ai-rulez.lock`** as a `local-skill` item, so `generate --locked` fails when its files change. Run `ai-rulez lock` once to record the pins.
 - **`generate --user` loads the user config in user scope**, so its includes and installed skills may point outside the home project.

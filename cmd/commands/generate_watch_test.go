@@ -13,6 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/watch"
 )
@@ -455,4 +458,35 @@ func TestGeneratedOutputFilter_KnowsConfigDirOutputsBeforeTheFirstRun(t *testing
 			t.Errorf("ignore(%q) = %v, want %v", tt.path, got, tt.want)
 		}
 	}
+}
+
+func TestWatchTargetsIncludeEveryLocalSource(t *testing.T) {
+	// Arrange
+	base := t.TempDir()
+	skills := filepath.Join(base, "skills")
+	index := filepath.Join(base, "market", "marketplace.json")
+	for _, d := range []string{skills, filepath.Dir(index), filepath.Join(base, "plugin"), filepath.Join(base, "served")} {
+		require.NoError(t, os.MkdirAll(d, 0o755))
+	}
+	require.NoError(t, os.WriteFile(index, []byte("{}"), 0o600))
+	cfg := &config.Config{
+		BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"),
+		InstalledSkills:       []config.InstalledSkillConfig{{Name: "a", Source: "./skills"}, {Name: "b", Source: "owner/repo"}},
+		SkillSources:          []config.SkillSourceConfig{{Name: "s", URL: "./served"}},
+		InstalledMarketplaces: []config.InstalledMarketplaceConfig{{Name: "m", Source: "./market/marketplace.json"}},
+		InstalledPlugins:      []config.InstalledPluginConfig{{Name: "p", Source: "./plugin"}},
+	}
+
+	// Act
+	got := watchTargets(cfg)
+
+	// Assert
+	want := []watch.Target{
+		{Path: filepath.Join(base, ".ai-rulez")},
+		{Path: skills},
+		{Path: filepath.Join(base, "served")},
+		{Path: index, File: true},
+		{Path: filepath.Join(base, "plugin")},
+	}
+	assert.Equal(t, want, got)
 }
