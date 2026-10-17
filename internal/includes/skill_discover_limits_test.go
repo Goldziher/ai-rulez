@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -170,8 +171,8 @@ func TestDiscoverSkillDirsToleratesAMissingRoot(t *testing.T) {
 }
 
 func TestScanEntrySkillsSkipsASkillItCannotReadAndKeepsTheRest(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("a root user can read a file with no permission bits")
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("windows and root can read a file with no permission bits")
 	}
 	// Arrange
 	root := t.TempDir()
