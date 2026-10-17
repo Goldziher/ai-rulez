@@ -44,6 +44,17 @@ type Item struct {
 	Description string `json:"description,omitempty"`
 	Hash        string `json:"hash"`
 	Path        string `json:"path"`
+	// Only, when set, restricts a rule to the files that match it; nil means the
+	// rule applies everywhere in its scope.
+	Only *PathGlobs `json:"only,omitempty"`
+}
+
+// PathGlobs are the globs a rule names the files it applies to by, relative to
+// the rule's scope: `paths:` in the Claude Code form, `globs:` in a Cursor rule
+// that is not always applied.
+type PathGlobs struct {
+	Paths []string `json:"paths,omitempty"`
+	Globs []string `json:"globs,omitempty"`
 }
 
 // Scope is a directory that holds convention files.
@@ -115,9 +126,10 @@ type Options struct {
 // CachedItem is the summary of one file a Cache keeps. It never holds the file
 // body.
 type CachedItem struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Hash        string `json:"hash"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Hash        string     `json:"hash"`
+	Only        *PathGlobs `json:"only,omitempty"`
 	// Generated records that a generator's header was found in the file.
 	Generated bool `json:"generated,omitempty"`
 }
@@ -335,7 +347,9 @@ func (b *builder) readCached(c *candidate) {
 		return
 	}
 	it, generated := b.admit(c, content)
-	b.opts.Cache.Store(c.file, size, mtime, CachedItem{Name: it.Name, Description: it.Description, Hash: it.Hash, Generated: generated})
+	b.opts.Cache.Store(c.file, size, mtime, CachedItem{
+		Name: it.Name, Description: it.Description, Hash: it.Hash, Only: it.Only, Generated: generated,
+	})
 }
 
 // fromCache applies a cached summary. It reports false when the item cannot be
@@ -345,7 +359,7 @@ func (b *builder) fromCache(c *candidate, ci CachedItem, abs string) bool {
 		b.generated[c.kind]++
 		return true
 	}
-	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash}
+	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash, Only: ci.Only}
 	if b.opts.Screen != nil {
 		if b.opts.ScreenKnown == nil {
 			return false

@@ -673,6 +673,16 @@ description (an item with no matching word is left out), `kind` (`instruction`, 
    "description": "Code style for the whole repository", "uri": "context://./style", "hash": "sha256:..."}]}
 ```
 
+**Rules with `paths`.** A rule can name the files it applies to. With `path`, `find_context` returns such a rule only
+when the path matches one of its globs: `paths:` in the frontmatter of a Claude Code rule, and `globs:` of a Cursor
+`.mdc` rule that is not `alwaysApply`. The globs are relative to the scope directory, the one that holds `.claude`
+(or `.cursor`), as in `ai-rulez validate`: `pkg/api/.claude/rules/handlers.md` with `paths: "handlers/**"` applies to
+`pkg/api/handlers/user.go`, not to `pkg/api/other/handlers/user.go`. `paths` globs are anchored at that directory
+(`*.py` is a file directly in it, `**/*.py` any depth); Cursor `globs` also match a bare pattern such as `*.tsx` at any
+depth. A rule without either applies everywhere in its scope, and instruction files and agents are never narrowed. A
+`scope` query (no `path`) lists every rule of the scope whatever its globs. A rule's result carries its `paths` or
+`globs`, so you can see what narrows it. Pass a file as `path`: a directory matches no glob.
+
 `load_context` reads one, by `scope` and `name` or by `uri`, with an optional `budget_bytes`:
 
 ```json

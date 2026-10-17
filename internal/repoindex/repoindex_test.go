@@ -246,6 +246,59 @@ func TestBuild_ExcludeGlobs(t *testing.T) {
 	}
 }
 
+func TestBuild_RulePathsAndGlobsAreIndexed(t *testing.T) {
+	tests := []struct {
+		name      string
+		file      string
+		front     string
+		wantPaths []string
+		wantGlobs []string
+	}{
+		{name: "paths as a list", file: ".claude/rules/a.md", front: "paths:\n  - \"src/**/*.ts\"\n  - lib/*.go\n", wantPaths: []string{"src/**/*.ts", "lib/*.go"}},
+		{name: "paths as one string", file: ".claude/rules/a.md", front: "paths: \"src/**\"\n", wantPaths: []string{"src/**"}},
+		{name: "paths as a comma separated string keeps braces whole", file: ".claude/rules/a.md", front: "paths: \"a/*.{ts,tsx}, b/**\"\n", wantPaths: []string{"a/*.{ts,tsx}", "b/**"}},
+		{name: "cursor globs", file: ".cursor/rules/a.mdc", front: "globs: \"*.tsx,*.ts\"\n", wantGlobs: []string{"*.tsx", "*.ts"}},
+		{name: "cursor globs as a list", file: ".cursor/rules/a.mdc", front: "globs:\n  - \"*.tsx\"\n", wantGlobs: []string{"*.tsx"}},
+		{name: "cursor alwaysApply wins over globs", file: ".cursor/rules/a.mdc", front: "alwaysApply: true\nglobs: \"*.tsx\"\n"},
+		{name: "no restriction", file: ".claude/rules/a.md", front: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := layout(t, map[string]string{"pkg/" + tt.file: "---\ndescription: A rule\n" + tt.front + "---\n\nBody.\n"})
+
+			// Act
+			ix := build(t, root)
+
+			// Assert
+			items := ix.Items()
+			require.Len(t, items, 1)
+			if tt.wantPaths == nil && tt.wantGlobs == nil {
+				assert.Nil(t, items[0].Only)
+				return
+			}
+			require.NotNil(t, items[0].Only)
+			assert.Equal(t, tt.wantPaths, items[0].Only.Paths)
+			assert.Equal(t, tt.wantGlobs, items[0].Only.Globs)
+		})
+	}
+}
+
+func TestBuild_RulePathsSurviveTheCache(t *testing.T) {
+	root := layout(t, map[string]string{".claude/rules/a.md": "---\npaths: [\"src/**\"]\n---\n\nBody.\n"})
+	cache := newFakeCache()
+	_, err := Build(context.Background(), Options{Root: root, Cache: cache})
+	require.NoError(t, err)
+	cache.items = cache.stored
+
+	ix, err := Build(context.Background(), Options{Root: root, Cache: cache})
+
+	require.NoError(t, err)
+	require.Len(t, ix.Items(), 1)
+	require.NotNil(t, ix.Items()[0].Only)
+	assert.Equal(t, []string{"src/**"}, ix.Items()[0].Only.Paths, "a cache hit keeps the paths")
+}
+
 func TestBuild_ExcludedFilesAreNeverRead(t *testing.T) {
 	// Arrange: an excluded file that is over the size the index reads would be a problem if it were read.
 	root := layout(t, map[string]string{

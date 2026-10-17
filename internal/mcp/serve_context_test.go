@@ -513,3 +513,101 @@ func TestContext_ScanFindingsNameTheContextNotASkill(t *testing.T) {
 		})
 	}
 }
+
+// pathRuleProject is the monorepo plus rules that name the files they apply to.
+func pathRuleProject(t *testing.T) string {
+	t.Helper()
+	root := monorepoProject(t)
+	for rel, body := range map[string]string{
+		".claude/rules/go.md":                  "---\ndescription: Go files\npaths:\n  - \"**/*.go\"\n---\n\nGo rules.\n",
+		"pkg/api/.claude/rules/handlers.md":    "---\ndescription: Handlers\npaths: \"handlers/**\"\n---\n\nHandler rules.\n",
+		"pkg/web/.cursor/rules/tsx.mdc":        "---\ndescription: TSX\nglobs: \"*.tsx\"\nalwaysApply: false\n---\n\nTSX rules.\n",
+		"pkg/web/.cursor/rules/everywhere.mdc": "---\ndescription: Always\nglobs: \"*.tsx\"\nalwaysApply: true\n---\n\nAlways.\n",
+	} {
+		writeFile(t, root, rel, body)
+	}
+	return root
+}
+
+func TestFindContext_RulesWithPathsApplyOnlyToMatchingFiles(t *testing.T) {
+	tests := []struct {
+		name string
+		args map[string]any
+		want []string
+	}{
+		{
+			name: "a file the root rule names",
+			args: map[string]any{"path": "cmd/main.go", "kind": "rule"},
+			want: []string{"rule:.:go", "rule:.:style"},
+		},
+		{
+			name: "a file no paths rule names gets only the rules without paths",
+			args: map[string]any{"path": "README.md", "kind": "rule"},
+			want: []string{"rule:.:style"},
+		},
+		{
+			name: "globs are relative to the directory that holds .claude",
+			args: map[string]any{"path": "pkg/api/handlers/user.go", "kind": "rule"},
+			want: []string{"rule:pkg/api:handlers", "rule:.:go", "rule:.:style"},
+		},
+		{
+			name: "a nested rule does not match a path that only matches from the root",
+			args: map[string]any{"path": "pkg/api/other/handlers/user.go", "kind": "rule"},
+			want: []string{"rule:.:go", "rule:.:style"},
+		},
+		{
+			name: "a cursor rule's globs match at any depth below its scope",
+			args: map[string]any{"path": "pkg/web/src/ui/App.tsx", "kind": "rule"},
+			want: []string{"rule:pkg/web:everywhere", "rule:pkg/web:tsx", "rule:.:style"},
+		},
+		{
+			name: "a cursor rule that is always applied ignores its globs",
+			args: map[string]any{"path": "pkg/web/src/App.ts", "kind": "rule"},
+			want: []string{"rule:pkg/web:everywhere", "rule:.:style"},
+		},
+		{
+			name: "a scope query lists every rule of the scope",
+			args: map[string]any{"scope": "pkg/api", "kind": "rule"},
+			want: []string{"rule:pkg/api:handlers"},
+		},
+		{
+			name: "a recursive scope query lists them all",
+			args: map[string]any{"scope": ".", "recursive": true, "kind": "rule"},
+			want: []string{"rule:.:go", "rule:.:style", "rule:pkg/api:handlers", "rule:pkg/web:everywhere", "rule:pkg/web:tsx"},
+		},
+		{
+			name: "instructions and agents are not filtered by paths",
+			args: map[string]any{"path": "pkg/api/other/README.md"},
+			want: []string{"agent:pkg/api:reviewer", "instruction:pkg/api:AGENTS.md", "instruction:.:AGENTS.md", "rule:.:style"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			_, session := contextServer(t, pathRuleProject(t))
+
+			// Act
+			out, isErr := toolJSON(t, session, "find_context", tt.args)
+
+			// Assert
+			require.False(t, isErr, "%v", out)
+			assert.Equal(t, tt.want, contextKeys(t, out))
+		})
+	}
+}
+
+func TestFindContext_SummaryNamesTheGlobsOfARule(t *testing.T) {
+	_, session := contextServer(t, pathRuleProject(t))
+
+	out, isErr := toolJSON(t, session, "find_context", map[string]any{"scope": ".", "kind": "rule"})
+
+	require.False(t, isErr, "%v", out)
+	results, _ := out["results"].([]any)
+	byName := map[string]map[string]any{}
+	for _, r := range results {
+		m := r.(map[string]any)
+		byName[m["name"].(string)] = m
+	}
+	assert.Equal(t, []any{"**/*.go"}, byName["go"]["paths"])
+	assert.NotContains(t, byName["style"], "paths")
+}
