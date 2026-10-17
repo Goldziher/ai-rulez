@@ -137,6 +137,9 @@ func (f *pluginFlags) install(cmd *cobra.Command, args []string) error {
 		from = f.marketplace
 	}
 	out := outFor(cmd)
+	if !out.JSON() {
+		out.Info("Installed plugin %s (from %s) in %s\n", args[0], incl.RedactURL(from), displayPath(op.ConfigFile()))
+	}
 	return reportChange(out, out.JSON(), changeResult{
 		Status: statusCreated, Type: "installed_plugin", Name: args[0], Source: incl.RedactURL(from), Path: op.ConfigFile(),
 	}, false)
