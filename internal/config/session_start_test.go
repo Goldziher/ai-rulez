@@ -17,18 +17,14 @@ func TestSessionStartLaunchers(t *testing.T) {
 	tests := []struct {
 		name    string
 		session *SessionStartConfig
-		binary  string
 		want    []string
 	}{
-		{name: "binary version pinned in order", binary: "5.4.1", want: []string{
+		{name: "latest published release in order", want: []string{
 			"ai-rulez session-start",
-			"npx -y ai-rulez@5.4.1 session-start",
-			"uvx --from ai-rulez==5.4.1 ai-rulez session-start",
+			"npx -y ai-rulez@latest session-start",
+			"uvx --from ai-rulez@latest ai-rulez session-start",
 		}},
-		{name: "dev build resolves to latest", binary: "dev", want: []string{
-			"ai-rulez session-start", "npx -y ai-rulez@latest session-start", "uvx --from ai-rulez==latest ai-rulez session-start",
-		}},
-		{name: "configured version wins", session: &SessionStartConfig{Version: "5.0.0"}, binary: "5.4.1", want: []string{
+		{name: "configured version pins both", session: &SessionStartConfig{Version: "5.0.0"}, want: []string{
 			"ai-rulez session-start", "npx -y ai-rulez@5.0.0 session-start", "uvx --from ai-rulez==5.0.0 ai-rulez session-start",
 		}},
 		{name: "command is the only launcher", session: &SessionStartConfig{Command: []string{"/opt/my tools/ai-rulez"}},
@@ -39,7 +35,7 @@ func TestSessionStartLaunchers(t *testing.T) {
 			cfg := claudeConfig(tt.session)
 
 			var got []string
-			for _, l := range cfg.SessionStartLaunchers(tt.binary) {
+			for _, l := range cfg.SessionStartLaunchers() {
 				got = append(got, l.Command)
 			}
 
@@ -50,8 +46,8 @@ func TestSessionStartLaunchers(t *testing.T) {
 
 func TestSessionStartCommand(t *testing.T) {
 	t.Run("remote gate comes first and only for when remote", func(t *testing.T) {
-		remote := claudeConfig(nil).SessionStartCommand("5.4.1")
-		always := claudeConfig(&SessionStartConfig{When: SessionStartWhenAlways}).SessionStartCommand("5.4.1")
+		remote := claudeConfig(nil).SessionStartCommand()
+		always := claudeConfig(&SessionStartConfig{When: SessionStartWhenAlways}).SessionStartCommand()
 
 		assert.True(t, strings.HasPrefix(remote, "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in"), remote)
 		assert.NotContains(t, always, "CLAUDE_CODE_REMOTE")
@@ -59,15 +55,32 @@ func TestSessionStartCommand(t *testing.T) {
 		assert.Equal(t, 2, strings.Count(remote, "'"), "the script is one single-quoted word")
 	})
 	t.Run("order is path then npx then uvx and ends with exit 0", func(t *testing.T) {
-		cmd := claudeConfig(nil).SessionStartCommand("5.4.1")
+		cmd := claudeConfig(nil).SessionStartCommand()
 
 		path, npx, uvx := strings.Index(cmd, "ai-rulez session-start;"), strings.Index(cmd, "npx -y"), strings.Index(cmd, "uvx --from")
 		assert.Less(t, path, npx)
 		assert.Less(t, npx, uvx)
 		assert.True(t, strings.HasSuffix(cmd, "exit 0'"))
 	})
+	t.Run("npx and uvx run from a neutral directory, the installed binary does not", func(t *testing.T) {
+		cmd := claudeConfig(nil).SessionStartCommand()
+
+		assert.Contains(t, cmd, `export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"`)
+		assert.Contains(t, cmd, "mktemp -d")
+		assert.Contains(t, cmd, "&& n npx -y ai-rulez@latest session-start;")
+		assert.Contains(t, cmd, "&& n uvx --from ai-rulez@latest ai-rulez session-start;")
+		assert.Contains(t, cmd, "&& ai-rulez session-start;")
+		assert.NotContains(t, cmd, "&& n ai-rulez")
+	})
+	t.Run("a pinned version replaces latest", func(t *testing.T) {
+		cmd := claudeConfig(&SessionStartConfig{Version: "5.4.1"}).SessionStartCommand()
+
+		assert.Contains(t, cmd, "npx -y ai-rulez@5.4.1 session-start")
+		assert.Contains(t, cmd, "uvx --from ai-rulez==5.4.1 ai-rulez session-start")
+		assert.NotContains(t, cmd, "latest")
+	})
 	t.Run("command override has no shell", func(t *testing.T) {
-		cmd := claudeConfig(&SessionStartConfig{Command: []string{"ai-rulez"}}).SessionStartCommand("5.4.1")
+		cmd := claudeConfig(&SessionStartConfig{Command: []string{"ai-rulez"}}).SessionStartCommand()
 
 		assert.Equal(t, "ai-rulez session-start", cmd)
 	})
@@ -77,8 +90,8 @@ func TestEnableSessionStartHooks(t *testing.T) {
 	t.Run("adds one group, once, for claude only", func(t *testing.T) {
 		cfg := claudeConfig(nil, HookGroup{Event: "Stop"})
 
-		cfg.EnableSessionStartHooks("5.4.1")
-		cfg.EnableSessionStartHooks("5.4.1")
+		cfg.EnableSessionStartHooks()
+		cfg.EnableSessionStartHooks()
 
 		require.Len(t, cfg.Hooks, 2)
 		g := cfg.Hooks[1]
@@ -91,7 +104,7 @@ func TestEnableSessionStartHooks(t *testing.T) {
 	t.Run("hook timeout follows the configured timeout", func(t *testing.T) {
 		cfg := claudeConfig(&SessionStartConfig{Timeout: 60})
 
-		cfg.EnableSessionStartHooks("5.4.1")
+		cfg.EnableSessionStartHooks()
 
 		assert.Equal(t, 60+sessionStartHookSlackSeconds, cfg.Hooks[0].Hooks[0].Timeout)
 	})
@@ -111,7 +124,7 @@ func TestEnableSessionStartHooks(t *testing.T) {
 		t.Run("does nothing when "+name, func(t *testing.T) {
 			before := len(cfg.Hooks)
 
-			cfg.EnableSessionStartHooks("5.4.1")
+			cfg.EnableSessionStartHooks()
 
 			assert.Len(t, cfg.Hooks, before)
 		})
@@ -119,13 +132,13 @@ func TestEnableSessionStartHooks(t *testing.T) {
 	t.Run("an unrelated user SessionStart hook does not suppress it", func(t *testing.T) {
 		cfg := claudeConfig(nil, other)
 
-		cfg.EnableSessionStartHooks("5.4.1")
+		cfg.EnableSessionStartHooks()
 
 		assert.Len(t, cfg.Hooks, 2)
 	})
 	t.Run("drop removes only the synthesized group", func(t *testing.T) {
 		cfg := claudeConfig(nil, other)
-		cfg.EnableSessionStartHooks("5.4.1")
+		cfg.EnableSessionStartHooks()
 
 		cfg.DropSessionStartHooks()
 
@@ -261,7 +274,7 @@ prompt = false
 	assert.False(t, cfg.SessionStart.PromptOn())
 	assert.Empty(t, cfg.Hooks, "loading does not add the synthesized group")
 
-	cfg.EnableSessionStartHooks("5.4.1")
+	cfg.EnableSessionStartHooks()
 	out, err := MarshalTOML(cfg)
 
 	require.NoError(t, err)
