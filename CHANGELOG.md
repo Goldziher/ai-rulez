@@ -12,6 +12,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added
 
+- **Import plugins and marketplaces from other harnesses.** `[[installed_marketplaces]]` and `[[installed_plugins]]` read Claude Code, Codex and Cursor marketplace indexes (a repository, GitHub `owner/repo`, a local directory or an https `marketplace.json`) and Claude Code, Codex, Cursor, Gemini extension and Agent Plugins plugin layouts, and turn their skills, agents, commands, rules, hooks and MCP servers into ai-rulez content for every preset. Entries are pinned in `ai-rulez.lock` (new `marketplace` and `plugin` kinds, honored by `--locked`, `--frozen` and `--offline`, moved by `ai-rulez update --kind plugin|marketplace`), scanned before they are pinned and at `generate`, and covered by approvals, deny digests and the organization policy. Hooks are imported only with `enable_hooks = true`; a hook or MCP server that uses `${CLAUDE_PLUGIN_ROOT}` is kept only for a plugin inside the project. New commands: `ai-rulez marketplace add|remove|list|update` and `ai-rulez plugin install|remove|list|update`. See [Installed Plugins](https://goldziher.github.io/ai-rulez/installed-plugins/).
 - **`resources` on an `installed_skills` entry sets what is bundled.** It replaces the default with name, path or glob patterns, a leading `!` removing what an earlier pattern added, for example `["*", "!docs"]` or `["rules"]` ([#419](https://github.com/Goldziher/ai-rulez/issues/419)).
 
 ## [5.4.1] - 2026-10-16
