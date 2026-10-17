@@ -640,6 +640,151 @@
         "additionalProperties": false
       }
     },
+    "installed_marketplaces": {
+      "type": "array",
+      "description": "Plugin marketplaces the project reads: a Claude Code (.claude-plugin/marketplace.json), Codex (.agents/plugins/marketplace.json) or Cursor (.cursor-plugin/marketplace.json) index in a repository, a local directory or at an https URL. An [[installed_plugins]] entry installs a plugin from one. See docs/installed-plugins.md.",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Marketplace name (unique identifier), referenced by installed_plugins[].marketplace",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "description": "A repository URL (https://, ssh, git@host:path, file://), a GitHub owner/repo shorthand, a local directory (./path, inside the project) or an https URL of a marketplace.json. A URL must not embed a credential.",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory of the repository that holds the marketplace index (defaults to the repository root)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Branch, tag, or commit hash (repository sources only)"
+          },
+          "version": {
+            "type": "string",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md."
+          },
+          "tag_prefix": {
+            "type": "string",
+            "description": "Only tags that start with this prefix are version tags. Needs version."
+          },
+          "include_prerelease": {
+            "type": "boolean",
+            "description": "Allow prerelease tags that the constraint does not itself name. Default false. Needs version."
+          },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; 0 disables). Defaults to [lock] min_release_age. Needs version."
+          },
+          "trust": {
+            "type": "string",
+            "enum": ["error", "warn"],
+            "description": "Security-scan level for the plugins read through this marketplace. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "installed_plugins": {
+      "type": "array",
+      "description": "Plugins whose skills, agents, commands, hooks and MCP servers the project imports, read through an installed marketplace or straight from a plugin repository or directory. Hooks stay off unless enable_hooks is set. See docs/installed-plugins.md.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Plugin name (unique identifier)",
+            "minLength": 1
+          },
+          "marketplace": {
+            "type": "string",
+            "description": "Name of an installed_marketplaces entry. Exclusive with source."
+          },
+          "plugin": {
+            "type": "string",
+            "description": "The marketplace entry to install when it is not called like this entry (needs marketplace)."
+          },
+          "source": {
+            "type": "string",
+            "description": "A plugin repository or directory: repository URL, GitHub owner/repo shorthand or a local directory (./path, inside the project). Exclusive with marketplace."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory of the plugin inside the repository (source only)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Branch, tag, or commit hash (source only)"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["claude", "codex", "gemini", "cursor", "agent-plugins"],
+            "description": "Force the plugin layout instead of detecting it."
+          },
+          "include": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["skills", "agents", "commands", "hooks", "mcp", "rules"] },
+            "description": "Import only these component kinds."
+          },
+          "exclude": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["skills", "agents", "commands", "hooks", "mcp", "rules"] },
+            "description": "Do not import these component kinds; wins over include."
+          },
+          "name_prefix": {
+            "type": "string",
+            "description": "Prepended to every imported skill, agent, command and MCP server name."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Place the imported content in the named domain. MCP servers are scoped to it; hooks are not scoped."
+          },
+          "profiles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Restrict the imported content and MCP servers to the named profiles."
+          },
+          "trust": {
+            "type": "string",
+            "enum": ["error", "warn"],
+            "description": "Security-scan level for the imported content. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity."
+          },
+          "enable_hooks": {
+            "type": "boolean",
+            "description": "Import the plugin's hooks. Off by default: a hook runs a command on every machine that uses the project."
+          },
+          "enable_mcp": {
+            "type": "boolean",
+            "description": "Import the plugin's MCP servers. On by default."
+          },
+          "version": {
+            "type": "string",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md."
+          },
+          "tag_prefix": {
+            "type": "string",
+            "description": "Only tags that start with this prefix are version tags. Needs version."
+          },
+          "include_prerelease": {
+            "type": "boolean",
+            "description": "Allow prerelease tags that the constraint does not itself name. Default false. Needs version."
+          },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; 0 disables). Defaults to [lock] min_release_age. Needs version."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "includes": {
       "type": "array",
       "description": "Content sources (git repositories or local paths) to include and merge",

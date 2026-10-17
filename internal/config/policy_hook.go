@@ -87,6 +87,22 @@ type ContentEnforcer interface {
 	EnforceContent(ctx context.Context, cfg *Config) []PolicyViolation
 }
 
+// SourceChecker is a PolicyEnforcer that can judge one source at the time it is
+// fetched. A marketplace names the repositories of its plugins only once its
+// index is read, so the host rules of the policy are applied to them then.
+type SourceChecker interface {
+	CheckSource(cfg *Config, kind, name, source string) error
+}
+
+// CheckSource applies the source rules of the policy this configuration was
+// loaded under to source; it is nil without a policy.
+func (c *Config) CheckSource(kind, name, source string) error {
+	if sc, ok := c.enforcer.(SourceChecker); ok {
+		return sc.CheckSource(c, kind, name, source) //nolint:wrapcheck // already contextual
+	}
+	return nil
+}
+
 // A policy comes from a flag, the environment or a managed path, never from the
 // repository being loaded, and it belongs to the load it is given to: WithPolicy,
 // or WithPolicyContext for a call chain that passes a context but no options. A
