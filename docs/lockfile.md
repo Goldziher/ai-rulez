@@ -3,7 +3,7 @@
 `ai-rulez.lock` (in the configuration directory, committed) is the record of exactly what your AI configuration
 is made of. It pins three things:
 
-1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before).
+1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before), and every installed marketplace (`[[marketplace]]`) and plugin (`[[plugin]]`, see [Installed Plugins](installed-plugins.md#lock-update-and-refresh)).
 2. **Authored content**: a `sha256` digest of every rule, context file, skill (with its resources), agent,
    command, hook and role, with its `id`, `domain`, `owner` and `version` when the frontmatter has them.
 3. **Generated outputs**: a digest of each generated file, so a change to what agents are actually told shows up

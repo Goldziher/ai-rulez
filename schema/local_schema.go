@@ -24,7 +24,7 @@ const (
 
 // removableListKeys are the named lists whose overlay entries may carry
 // `remove = true`.
-var removableListKeys = []string{"mcp_servers", "plugins", "includes", "installed_skills", "marketplaces", "scopes", "roles", "plugins_authoring", "marketplaces_authoring"}
+var removableListKeys = []string{"mcp_servers", "plugins", "includes", "installed_skills", "installed_marketplaces", "installed_plugins", "marketplaces", "scopes", "roles", "plugins_authoring", "marketplaces_authoring"}
 
 // DeriveLocalSchema derives the overlay schema from the main config schema:
 // nothing is required, list entries accept `remove`, and presets accept

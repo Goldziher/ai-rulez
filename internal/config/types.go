@@ -36,9 +36,14 @@ type Config struct {
 	GitignoreExclude []string               `yaml:"gitignore_exclude,omitempty" json:"gitignore_exclude,omitempty" toml:"gitignore_exclude,omitempty"` //nolint:tagliatelle
 	Includes         []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty" toml:"includes,omitempty"`
 	InstalledSkills  []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
-	Header           *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
-	Defaults         *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
-	Builtins         *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
+	// InstalledMarketplaces and InstalledPlugins import the content of Claude
+	// Code, Codex, Cursor and Gemini plugins, read through plugin marketplaces
+	// or straight from a repository (see docs/installed-plugins.md).
+	InstalledMarketplaces []InstalledMarketplaceConfig `yaml:"installed_marketplaces,omitempty" json:"installed_marketplaces,omitempty" toml:"installed_marketplaces,omitempty"` //nolint:tagliatelle
+	InstalledPlugins      []InstalledPluginConfig      `yaml:"installed_plugins,omitempty" json:"installed_plugins,omitempty" toml:"installed_plugins,omitempty"`                //nolint:tagliatelle
+	Header                *HeaderConfig                `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
+	Defaults              *DefaultsConfig              `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
+	Builtins              *BuiltinsConfig              `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	// SkipOutputs lists output kinds ai-rulez never writes, overwrites or deletes
 	// ("instructions", "agents_md", "claude_md", "rules", "skills", "agents",
 	// "commands"); see skip_outputs.go.
@@ -215,9 +220,16 @@ type Config struct {
 	ActiveLayers []string `yaml:"-" json:"-" toml:"-"`
 	// LayerOrigins maps each active layer to how it was activated: "default"
 	// (default_layers), "env" (AI_RULEZ_LAYERS or AI_RULEZ_PROFILE) or "option" (WithLayers).
-	LayerOrigins  map[string]string     `yaml:"-" json:"-" toml:"-"`
-	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
-	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
+	LayerOrigins map[string]string     `yaml:"-" json:"-" toml:"-"`
+	MCPServers   map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
+	// ImportedScan lists the hook commands, hook scripts and MCP definitions of
+	// installed plugins that the import security scan reads besides the content
+	// files. Runtime-only.
+	ImportedScan []ImportedScanFile `yaml:"-" json:"-" toml:"-"`
+	// PluginMCPServers names the entries of MCPServers installed plugins
+	// delivered, so the organization policy can bound them. Runtime-only.
+	PluginMCPServers []string    `yaml:"-" json:"-" toml:"-"`
+	MCPServersRaw    []MCPServer `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 
 	// SourceHash is a blake3 hash over all sources that contribute to generated
 	// output for the active profile (config metadata, content tree, MCP servers,
