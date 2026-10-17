@@ -545,6 +545,12 @@ Consequences:
   original bytes (one-line JSON, a missing final newline, an empty `[mcp_servers]` table, `mcp_servers: {}`).
 - On a fresh clone there is no local manifest. `generate` renders the same outputs, and a stale generated file
   is removed only on its `Content-Hash`; a stale file with no header is reported and left.
+- A hook dropped from the configuration is taken out of `.claude/settings.json` (and the other merged settings
+  documents) only on a machine whose local manifest recorded writing it. A fresh clone has no such record, so a
+  hook group the config no longer renders stays in the committed file, and `generate --check` reports no drift
+  for it: the check compares what `generate` would write, and `generate` never takes back an entry it cannot prove
+  it wrote. The committed manifest is editable by anyone with push access, so it is not accepted as that proof for
+  hooks (a forged entry could strip a hook you wrote yourself). Remove the stale group by hand.
 - `generate` and `clean` never remove a file whose parent directory resolves, through a symlink, outside the
   project.
 - A settings document ai-rulez creates is gitignored with the other generated files (`gitignore = true`), so hooks
