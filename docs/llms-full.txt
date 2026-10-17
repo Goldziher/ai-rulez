@@ -1897,9 +1897,9 @@ skip_outputs = ["instructions"]
 | `agents_md`    | Only the shared `AGENTS.md` (and `AGENTS.override.md`) and the shared `.agents/skills` tree. |
 | `claude_md`    | Only `CLAUDE.md` (root and scopes). |
 | `rules`        | Rule files in every preset (`.claude/rules`, `.cursor/rules`, ...). |
-| `skills`       | Skill directories in every preset, installed skills included. |
+| `skills`       | Skill directories in every preset, installed skills included. A command a harness runs as a skill (`.claude/skills/<command>`, `.agents/skills/<command>`) is a command, not a skill. |
 | `agents`       | Agent definition files. |
-| `commands`     | Command and prompt files. |
+| `commands`     | Command and prompt files, and the skills that carry a command (including `agents/openai.yaml` for Codex). |
 
 An unknown value fails validation and names the valid ones. `config.local.toml` accepts the key too. Skipped files leave
 the manifest, the managed `.gitignore` block, `generate --check`, the lock output digests and `clean`, so none of them
@@ -7515,12 +7515,11 @@ pin. Set `self_server = false` under `[mcp]`, or pass `generate --no-self-mcp`, 
   local skill wins and `generate` warns `Installed skill name conflicts with local skill, skipping`. Rename or remove
   one of them (`ai-rulez skill remove <name>` drops the installed entry).
 - **`generate --refresh-remote` refuses with "the security scan of the new tree has error findings".** Nothing was
-  written and `ai-rulez.lock` is unchanged. The error text suggests `--accept-findings`, but `generate` has no such
-  flag. Review the listed findings in the new version first. If you accept them, run
-  `ai-rulez update --accept-findings` to move the pin to the new version (`ai-rulez lock --accept-findings` re-pins
-  what is already pinned and does not move it), then `ai-rulez generate`. `generate` scans the imported content
-  again at the entry's `trust` level, so error findings still stop it unless you set `trust = "warn"` on the entry
-  or `[lint.security] scan_imports = "warn"`.
+  written and `ai-rulez.lock` is unchanged. Review the listed findings in the new version first. If you accept
+  them, run `ai-rulez generate --refresh-remote --accept-findings` to pin the new version and generate in one step
+  (or `ai-rulez update --accept-findings`, then `ai-rulez generate`; `ai-rulez lock --accept-findings` re-pins what is
+  already pinned and does not move it). `generate` scans the imported content again at the entry's `trust` level, so
+  error findings still stop it unless you set `trust = "warn"` on the entry or `[lint.security] scan_imports = "warn"`.
 
 ## Local Configuration
 
@@ -9092,7 +9091,8 @@ What changes:
   `AGENTS.md` and their own skills directory.
 - Commands that `codex`, `antigravity`, `devin` and `warp` run as skills are written to the shared tree as
   user-invocable skills (`disable-model-invocation: true`, plus `agents/openai.yaml` for Codex), unless a skill has
-  the same id. A command with `targets` stays in each targeted preset's own skills directory.
+  the same id. A command with `targets` stays in each targeted preset's own skills directory. With `agents_md = false`
+  Devin writes its own `.devin/skills/<command>/SKILL.md`, which keeps `triggers: [user]`.
 - Everything else the tool cannot read from the shared files stays per-preset: scoped rules folders, agents,
   other commands, MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
@@ -9425,12 +9425,14 @@ served the entry runs `mcp --serve-skills`. To opt out set `self_server = false`
   local skill wins and `generate` warns `Installed skill name conflicts with local skill, skipping`. Rename or remove
   one of them (`ai-rulez skill remove <name>` drops the installed entry).
 - **`generate --refresh-remote` refuses with "the security scan of the new tree has error findings".** Nothing was
-  written and `ai-rulez.lock` is unchanged. The error text suggests `--accept-findings`, but `generate` has no such
-  flag. Review the listed findings in the new version first. If you accept them, run
-  `ai-rulez update --accept-findings` to move the pin to the new version (`ai-rulez lock --accept-findings` re-pins
-  what is already pinned and does not move it), then `ai-rulez generate`. `generate` scans the imported content
-  again at the entry's `trust` level, so error findings still stop it unless you set `trust = "warn"` on the entry
-  or `[lint.security] scan_imports = "warn"`.
+  written and `ai-rulez.lock` is unchanged. Review the listed findings in the new version first. If you accept
+  them, run `ai-rulez generate --refresh-remote --accept-findings` to pin the new version and generate in one step
+  (or `ai-rulez update --accept-findings`, then `ai-rulez generate`; `ai-rulez lock --accept-findings` re-pins what is
+  already pinned and does not move it). `generate --refresh-remote --accept-findings` also lets the accepted tree
+  through the import scan of that run, so the lock and the outputs agree. The acceptance is not recorded: a later
+  `generate` scans the imported content again at the entry's `trust` level, and error findings still stop it unless you
+  set `trust = "warn"` on the entry or `[lint.security] scan_imports = "warn"`. The served-skill scan uses the same
+  `trust` of the entry.
 
 ## llms.txt
 
@@ -10080,6 +10082,12 @@ Consequences:
   original bytes (one-line JSON, a missing final newline, an empty `[mcp_servers]` table, `mcp_servers: {}`).
 - On a fresh clone there is no local manifest. `generate` renders the same outputs, and a stale generated file
   is removed only on its `Content-Hash`; a stale file with no header is reported and left.
+- A hook dropped from the configuration is taken out of `.claude/settings.json` (and the other merged settings
+  documents) only on a machine whose local manifest recorded writing it. A fresh clone has no such record, so a
+  hook group the config no longer renders stays in the committed file, and `generate --check` reports no drift
+  for it: the check compares what `generate` would write, and `generate` never takes back an entry it cannot prove
+  it wrote. The committed manifest is editable by anyone with push access, so it is not accepted as that proof for
+  hooks (a forged entry could strip a hook you wrote yourself). Remove the stale group by hand.
 - `generate` and `clean` never remove a file whose parent directory resolves, through a symlink, outside the
   project.
 - A settings document ai-rulez creates is gitignored with the other generated files (`gitignore = true`), so hooks
@@ -20801,8 +20809,10 @@ rewrites them), and the test fails when they are stale.
 | `llm *` | model credentials and cost estimates for network calls |
 | `local *` | the machine-local overlay is per developer; tools reach it through the local argument of the item tools and update_config |
 | `lock` | writes the lock, the trust anchor of the project, after network pinning and scan acceptance; an agent must not mint trust |
+| `marketplace *` | adds, removes and updates installed marketplaces: network fetches that rewrite the configuration and the lock |
 | `mcp` | starts the MCP server itself |
 | `export okf`, `import okf` | write a whole bundle or import a foreign one into the tree |
+| `plugin *` | installs, removes and updates plugins imported from marketplaces: network fetches, hook and MCP imports that run code |
 | `publish *` | builds and signs distribution artifacts and may push them |
 | `review *`, `rubric *` | spends model tokens in its default mode; the offline heuristics are not exposed yet |
 | `roles show` | a presentation of one role; resolve_role returns what the role keeps |
@@ -21098,7 +21108,8 @@ ai-rulez mcp --serve-skills --discover-skills=all
 | `all` | `repo`, plus the installed and included skills even when their delivery would keep them out of the served set. |
 
 The flag wins over the configuration; a bare `--discover-skills` means `repo`. A project with no configuration at all
-(or a [lint-only configuration](config-without-folder.md#lint-only-configuration)) can use it.
+(or a [lint-only configuration](config-without-folder.md#lint-only-configuration)) can use it; without one it behaves
+as if the `claude` and `codex` presets were configured, so `.claude/skills` and `.agents/skills` are searched.
 
 **Where `repo` looks.** A directory with a `SKILL.md` below one of these roots, at most six levels down:
 
@@ -21604,6 +21615,10 @@ started in. A call without `working_directory` uses that directory; a relative o
 followed before the check. Start the server with `mcp --root <dir>` to confine it elsewhere, or with
 `mcp --allow-any-dir` to lift the check. The skills-serving mode takes no directory argument.
 
+**Project root.** Like the CLI, every tool except `init_project` walks up from `working_directory` to the nearest
+directory that holds a configuration in any layout, stopping at the git root and never above the home directory. A
+call that passes `config_file` or `config_dir` is not walked up.
+
 **Capabilities.** The authoring server advertises `tools`, `prompts` and `resources`, none with `listChanged` (their
 sets are fixed), pages lists at 100 entries, and sends the SDK's warnings and errors to stderr. Its lists carry a
 cache hint (`ttlMs` five minutes, `public`); resource reads are never cacheable, since the project can change between
@@ -21684,7 +21699,8 @@ returned as warnings in a success result.
 
 Initialize a new ai-rulez project in the current directory with the layout `ai-rulez init` creates:
 `.ai-rulez/config.toml` plus the `rules/`, `context/`, `skills/`, `agents/` and `domains/` directories. It refuses
-to overwrite an existing configuration.
+to overwrite an existing configuration. It initializes exactly the given directory and does not walk up, but refuses
+when a directory above it in the same repository already holds a configuration (the message names that file).
 
 **Parameters:**
 
