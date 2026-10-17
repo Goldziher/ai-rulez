@@ -159,6 +159,8 @@ func (req *InstallSkillRequest) entry() config.InstalledSkillConfig {
 		Name: req.Name, Source: req.Source, Path: req.Path, Ref: req.Ref,
 		Include: req.Include, Exclude: req.Exclude, NamePrefix: req.NamePrefix,
 		Trust: req.Trust, Resources: req.Resources, Version: req.Version,
+		Domain: req.Domain, Profiles: req.Profiles, LocalOverride: req.LocalOverride,
+		TagPrefix: req.TagPrefix, IncludePrerelease: req.IncludePrerelease, MinReleaseAge: req.MinReleaseAge,
 	}
 }
 

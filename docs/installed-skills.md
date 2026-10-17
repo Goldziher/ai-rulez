@@ -90,6 +90,9 @@ trust = "warn"                # only error-severity scan findings block generate
 | `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `version`        | No       | Version range of the source's tags (`^1.2`), instead of `ref` |
+| `tag_prefix`     | No       | With `version`, only consider tags that start with this prefix (`v`, `skills/`) |
+| `include_prerelease` | No   | With `version`, let pre-release tags match. Default `false`      |
+| `min_release_age` | No      | With `version`, skip tags younger than this (`7d`), so a brand-new release is not picked up at once |
 | `local_override` | No       | Local path override for development                              |
 | `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
 | `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
@@ -171,6 +174,10 @@ Install a named skill.
 - `--trust error|warn` (optional): Scan level of the imported skills
 - `--resources <pattern>` (optional, repeatable): What is bundled besides the canonical folders
 - `--version <range>` (optional): Version range of the source's tags, instead of `--ref`
+- `--tag-prefix <prefix>`, `--include-prerelease`, `--min-release-age <age>` (optional): Tag filter and release age gate for `--version`
+- `--domain <name>` (optional): Place the skills in a domain, so a profile or role selects them by domain
+- `--profile <name>` (optional, repeatable): Restrict the skills to these profiles
+- `--local-override <dir>` (optional): Directory used instead of the source while it exists
 - `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
 
 `skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
