@@ -562,7 +562,8 @@ ai-rulez mcp --serve-skills --discover-skills=all
 | `all` | `repo`, plus the installed and included skills even when their delivery would keep them out of the served set. |
 
 The flag wins over the configuration; a bare `--discover-skills` means `repo`. A project with no configuration at all
-(or a [lint-only configuration](config-without-folder.md#lint-only-configuration)) can use it.
+(or a [lint-only configuration](config-without-folder.md#lint-only-configuration)) can use it; without one it behaves
+as if the `claude` and `codex` presets were configured, so `.claude/skills` and `.agents/skills` are searched.
 
 **Where `repo` looks.** A directory with a `SKILL.md` below one of these roots, at most six levels down:
 
@@ -1068,6 +1069,10 @@ started in. A call without `working_directory` uses that directory; a relative o
 followed before the check. Start the server with `mcp --root <dir>` to confine it elsewhere, or with
 `mcp --allow-any-dir` to lift the check. The skills-serving mode takes no directory argument.
 
+**Project root.** Like the CLI, every tool except `init_project` walks up from `working_directory` to the nearest
+directory that holds a configuration in any layout, stopping at the git root and never above the home directory. A
+call that passes `config_file` or `config_dir` is not walked up.
+
 **Capabilities.** The authoring server advertises `tools`, `prompts` and `resources`, none with `listChanged` (their
 sets are fixed), pages lists at 100 entries, and sends the SDK's warnings and errors to stderr. Its lists carry a
 cache hint (`ttlMs` five minutes, `public`); resource reads are never cacheable, since the project can change between
@@ -1148,7 +1153,8 @@ returned as warnings in a success result.
 
 Initialize a new ai-rulez project in the current directory with the layout `ai-rulez init` creates:
 `.ai-rulez/config.toml` plus the `rules/`, `context/`, `skills/`, `agents/` and `domains/` directories. It refuses
-to overwrite an existing configuration.
+to overwrite an existing configuration. It initializes exactly the given directory and does not walk up, but refuses
+when a directory above it in the same repository already holds a configuration (the message names that file).
 
 **Parameters:**
 

@@ -35,6 +35,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **CRUD commands and the MCP tools find the project from a subdirectory.** `list`, `add`, `skill list`, `domain`, `profile` and `include` failed with ".ai-rulez directory not found" below the project root, in both layouts; they now walk up like `generate` (stopping at the git root, never above `$HOME`), as do the MCP tools. MCP `init_project` still initializes the given directory, but refuses when a directory above it in the same repository holds a configuration in any layout.
+- **`mcp --serve-skills --discover-skills` works in a repository with no configuration**, as the docs say, instead of exiting with "load configuration: .ai-rulez directory not found". Without discovery the error remains.
 - MCP `init_project` now refuses in a directory whose configuration is `ai-rulez.toml`, instead of scaffolding a `.ai-rulez/` that would shadow it.
 - `generate --watch` now also watches local installed-skill sources, `skill_sources`, and installed marketplaces and plugins, not only includes and `local_override`.
 - **`skill install` and `skill list` report `git` for `owner/repo`, `github:` and `ssh://` sources**, which they logged and listed as `local`.
