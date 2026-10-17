@@ -226,7 +226,7 @@ func describeTriggers(triggers []string) string {
 // directory, which would otherwise retrigger every run.
 func watchIgnore(path string) bool {
 	base := filepath.Base(path)
-	return strings.HasPrefix(base, ".generated-manifest") || base == ".gitignore"
+	return strings.HasPrefix(base, ".generated-manifest") || strings.HasPrefix(base, ".ai-rulez-manifest") || base == ".gitignore"
 }
 
 // watchTargets lists what to watch: the configuration directory and the local-path include sources. With no
@@ -234,6 +234,11 @@ func watchIgnore(path string) bool {
 // start still gets watched.
 func watchTargets(cfg *config.Config) []watch.Target {
 	var targets []watch.Target
+	if cfg != nil && cfg.Contentless() {
+		// The project root is the config directory: watch the config files, not the tree.
+		targets = append(targets, rootConfigTargets(cfg.BaseDir)...)
+		return append(targets, includeTargets(cfg)...)
+	}
 	if cfg != nil && cfg.ConfigDir != "" {
 		if cfg.UsesAgentsSource() {
 			// The content is AGENTS.md and .agents; a config in .agents/ai-rulez.toml
@@ -265,9 +270,23 @@ func fallbackTargets() []watch.Target {
 		name = defaultConfigDirName
 	}
 	if found, err := config.FindConfigFileInDirName(".", configDir); err == nil {
+		if filepath.Base(found) == config.RootConfigFilename && config.IsRootConfigDir(filepath.Dir(found)) {
+			return rootConfigTargets(filepath.Dir(found))
+		}
 		return []watch.Target{{Path: filepath.Dir(found)}}
 	}
 	return []watch.Target{{Path: name}}
+}
+
+// rootConfigTargets are the files of the single-file layout: ai-rulez.toml and,
+// when it exists, its machine-local overlay.
+func rootConfigTargets(baseDir string) []watch.Target {
+	targets := []watch.Target{{Path: filepath.Join(baseDir, config.RootConfigFilename), File: true}}
+	local := filepath.Join(baseDir, config.RootLocalConfigFilename)
+	if info, err := os.Stat(local); err == nil && !info.IsDir() {
+		targets = append(targets, watch.Target{Path: local, File: true})
+	}
+	return targets
 }
 
 // includeTargets are the local-path include and installed-skill sources.

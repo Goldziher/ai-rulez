@@ -84,5 +84,5 @@ func declarationFile(cfg *config.Config, res *verifiers.Result) string {
 		}
 		return filepath.Join(cfg.BaseDir, filepath.FromSlash(res.Source))
 	}
-	return filepath.Join(cfg.ConfigDir, "config.toml")
+	return cfg.ConfigPath()
 }

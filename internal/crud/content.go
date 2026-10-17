@@ -17,6 +17,9 @@ import (
 // AddRule creates a new rule file in the root or domain rules directory
 // Returns FileResult with the created file information
 func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddFileRequest cannot be nil").
@@ -88,6 +91,9 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 // AddContext creates a new context file in the root or domain context directory
 // Returns FileResult with the created file information
 func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddFileRequest cannot be nil").
@@ -159,6 +165,9 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 // AddSkill creates a new skill directory with a SKILL.md file
 // Returns FileResult with the created skill information
 func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.
 			Hint("AddFileRequest cannot be nil").
@@ -527,6 +536,9 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 
 // updateContentFile is UpdateFile for an item that is a file of its own.
 func (op *OperatorImpl) updateContentFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if err := ValidateFileName(name); err != nil {
 		return nil, err
 	}
@@ -637,6 +649,9 @@ func (op *OperatorImpl) AddCheck(ctx context.Context, req *AddFileRequest) (*Fil
 // supplied without frontmatter is written as given, since agent and command
 // frontmatter carries no priority or targets of its own to generate.
 func (op *OperatorImpl) addFlatItem(ctx context.Context, req *AddFileRequest, ftype string, template func(*AddFileRequest) string) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, oops.Hint("AddFileRequest cannot be nil").Errorf("invalid request")
 	}

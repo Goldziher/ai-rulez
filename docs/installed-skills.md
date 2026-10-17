@@ -12,6 +12,9 @@ Use installed skills to:
 - Share team skills across projects without full includes
 - Distribute AI guidance alongside your library
 
+!!! tip "No `.ai-rulez/` folder needed"
+    A repository with hand-written `CLAUDE.md` and `AGENTS.md` can declare `[[installed_skills]]` in a single root-level `ai-rulez.toml` (create it with `ai-rulez init --minimal`). `skill install` and `skill remove` edit that file. See [Config without a .ai-rulez folder](config-without-folder.md).
+
 ## Installed skills vs skill sources
 
 ai-rulez can reach a skill in another repository two ways, and they differ in *what lands where*.

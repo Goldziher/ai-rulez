@@ -150,7 +150,7 @@ func (g *Generator) GeneratedPaths() []string {
 // The roles manifest is listed whether or not it is enabled or exists yet, since
 // the first run creates it.
 func ConfigDirOutputNames() []string {
-	return []string{generatedManifestName, generatedLocalManifestName, roles.FileName}
+	return append([]string{generatedManifestName, generatedLocalManifestName, roles.FileName}, config.RootManifestNames()...)
 }
 
 // MissingMCPEnv is an MCP ${VAR} placeholder no source can resolve.
