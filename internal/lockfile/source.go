@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
@@ -55,8 +56,19 @@ func FileURLPath(source string) (string, bool) {
 	if err != nil || u.Path == "" {
 		return strings.TrimPrefix(s[len("file://"):], "/"), true
 	}
-	return filepath.FromSlash(u.Path), true
+	path := u.Path
+	switch {
+	case len(u.Host) == 2 && u.Host[1] == ':' && isASCIILetter(u.Host[0]):
+		// file://D:/a/repo parses with the drive letter as the host.
+		path = u.Host + path
+	case runtime.GOOS == "windows" && len(path) >= 3 && path[0] == '/' && path[2] == ':' && isASCIILetter(path[1]):
+		// file:///D:/a/repo parses to /D:/a/repo.
+		path = path[1:]
+	}
+	return filepath.FromSlash(path), true
 }
+
+func isASCIILetter(b byte) bool { return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') }
 
 // EnvAllowFileURLs, when set to "1" in the environment of the user running
 // ai-rulez, lets a file:// git source outside the project resolve from the
