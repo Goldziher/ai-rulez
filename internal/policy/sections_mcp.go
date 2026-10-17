@@ -16,6 +16,9 @@ type MCP struct {
 	AllowedCommands List
 	// DenyTransports lists transports no server may use ("stdio", "http", "sse").
 	DenyTransports []string
+	// ReadOnly makes `ai-rulez mcp` register only its read-only tools
+	// (read_only = true); a configuration or flag cannot turn it off.
+	ReadOnly bool
 }
 
 // Hooks governs the repository's [[hooks]].
@@ -27,6 +30,7 @@ type Hooks struct {
 type fileMCP struct {
 	AllowedCommands *[]string `toml:"allowed_commands"`
 	DenyTransports  []string  `toml:"deny_transports"`
+	ReadOnly        *bool     `toml:"read_only"`
 }
 
 type fileHooks struct {
@@ -57,6 +61,7 @@ func (m *MCP) fromDoc(d *fileMCP) error {
 		m.DenyTransports = append(m.DenyTransports, t)
 	}
 	m.DenyTransports = sortedUnique(m.DenyTransports)
+	m.ReadOnly = d.ReadOnly != nil && *d.ReadOnly
 	return nil
 }
 
@@ -71,6 +76,7 @@ func mergeMCP(a, b MCP) MCP {
 	return MCP{
 		AllowedCommands: intersectExact(a.AllowedCommands, b.AllowedCommands),
 		DenyTransports:  union(a.DenyTransports, b.DenyTransports),
+		ReadOnly:        a.ReadOnly || b.ReadOnly,
 	}
 }
 
@@ -80,6 +86,9 @@ func (m MCP) addTo(table func(path ...string) map[string]any) {
 	}
 	if len(m.DenyTransports) > 0 {
 		table("mcp")["deny_transports"] = m.DenyTransports
+	}
+	if m.ReadOnly {
+		table("mcp")["read_only"] = true
 	}
 }
 
@@ -105,6 +114,26 @@ func (a *applier) mcpServers() {
 		}
 		return true
 	})
+}
+
+// mcpReadOnly turns on [mcp] read_only when the policy requires it, and says so
+// in the outcome so the command line cannot turn it off either. A repository
+// that writes read_only = false is reported; one that says nothing is forced
+// silently.
+func (a *applier) mcpReadOnly() {
+	if !a.res.Policy.MCP.ReadOnly {
+		return
+	}
+	a.out.MCPReadOnly = true
+	if a.cfg.MCP == nil {
+		a.cfg.MCP = &config.MCPConfig{}
+	}
+	if m := a.cfg.MCP; m.ReadOnly != nil && !*m.ReadOnly {
+		a.violate(lint.CodePolicyLoosened, switchMCPReadOnly, "read_only",
+			"[mcp] read_only is false, which the policy forbids (origin: %s); the server is read-only", a.origin(switchMCPReadOnly))
+	}
+	on := true
+	a.cfg.MCP.ReadOnly = &on
 }
 
 // hooks removes the repository's hook groups when the policy forbids hooks.
