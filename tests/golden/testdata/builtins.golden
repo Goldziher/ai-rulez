@@ -46,7 +46,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/testing-conventions/SKILL.md file 0644 2903 30821ae66dc2f73a887657a4af1455365b14a9b254f115b27abe4977144a3b77
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5400 beede15ba14c6c7531e000253e0862740a4f969ec468d76d701e2db04bc9f6f2
-.ai-rulez/.generated-manifest.local.json file 0644 5116 8ac27a6c1eea4d7fc65842af6ae72c8a939a4b39d322faa67f5dbedc57b8eaba
+.ai-rulez/.generated-manifest.local.json file 0644 5116 239ace3d891c643f60f997a5d700ed846709cb6f396bdbf1333d5fe36490ec06
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -109,7 +109,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/rules/test-alongside-code.md file 0644 434 990534e059334e5efed2d35010464bf44a13b3bba4eb66e863d55a5194112136
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .claude/rules/verification-before-completion.md file 0644 664 d06c53299487aa5f176cf44a877a7889f038576dfbf33d33edef37a92bd4520f
-.claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
+.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
@@ -275,7 +275,7 @@ Universal:
 .agents/skills/testing-conventions/SKILL.md file 0644 2903 30821ae66dc2f73a887657a4af1455365b14a9b254f115b27abe4977144a3b77
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5400 beede15ba14c6c7531e000253e0862740a4f969ec468d76d701e2db04bc9f6f2
-.ai-rulez/.generated-manifest.local.json file 0644 5116 8ac27a6c1eea4d7fc65842af6ae72c8a939a4b39d322faa67f5dbedc57b8eaba
+.ai-rulez/.generated-manifest.local.json file 0644 5116 239ace3d891c643f60f997a5d700ed846709cb6f396bdbf1333d5fe36490ec06
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -338,7 +338,7 @@ Universal:
 .claude/rules/test-alongside-code.md file 0644 434 990534e059334e5efed2d35010464bf44a13b3bba4eb66e863d55a5194112136
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .claude/rules/verification-before-completion.md file 0644 664 d06c53299487aa5f176cf44a877a7889f038576dfbf33d33edef37a92bd4520f
-.claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
+.claude/settings.json file 0644 1882 c7b9a56577f86a58e22b19414d6d53c1e6dce972a8e6602fa496595589a64a85
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3

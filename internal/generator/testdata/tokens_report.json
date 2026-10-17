@@ -18,7 +18,7 @@
       "always": 569,
       "conditional": 0,
       "on_demand": 1120,
-      "unmodeled": 260,
+      "unmodeled": 354,
       "listing": 203,
       "listed_items": 5,
       "always_legacy": 387,
@@ -195,7 +195,7 @@
         {
           "label": "sidecar documents",
           "bucket": "unmodeled",
-          "tokens": 260,
+          "tokens": 354,
           "artifacts": 1
         },
         {
