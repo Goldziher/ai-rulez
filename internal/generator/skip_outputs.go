@@ -66,12 +66,27 @@ func (m *skipMatcher) addPresetRoots(gen config.PresetGenerator) {
 // isRoot reports whether rel is a root instruction file (or a machine-local
 // variant of one), at the base dir or in a scope below it.
 func (m *skipMatcher) isRoot(rel string) bool {
+	nested := nestsUnderContentDir(rel)
 	for root := range m.roots {
-		if rel == root || strings.HasSuffix(rel, "/"+root) {
+		if rel == root || (!nested && strings.HasSuffix(rel, "/"+root)) {
 			return true
 		}
 	}
 	return !strings.Contains(rel, "/") && config.InferOutputKind(rel, "") == config.OutputKindRoot
+}
+
+// nestsUnderContentDir reports whether rel lies in a skills, rules, agents or
+// commands directory, where a file named like a root (a skill's CLAUDE.md
+// resource, a rule called AGENTS.md) is content, not a scope's root file.
+func nestsUnderContentDir(rel string) bool {
+	switch config.InferOutputKind(rel, "") {
+	case config.OutputKindSkill, config.OutputKindResource, config.OutputKindRuleFile,
+		config.OutputKindAgent, config.OutputKindCommand:
+		return true
+	case config.OutputKindUnknown, config.OutputKindRoot, config.OutputKindLocalRoot,
+		config.OutputKindSidecar, config.OutputKindDirectory:
+	}
+	return false
 }
 
 // skips reports whether skip_outputs excludes the output at rel (a path relative
