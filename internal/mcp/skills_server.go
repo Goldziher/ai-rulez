@@ -180,6 +180,11 @@ func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 		return func(ctx context.Context, method string, request sdkmcp.Request) (sdkmcp.Result, error) {
 			if method == methodResourcesRead {
 				if req, ok := request.(*sdkmcp.ReadResourceRequest); ok && req.Params != nil {
+					if s.authoring && isCatalogQuery(req.Params.URI) {
+						// A query value may hold a raw slash, which the registered
+						// URI template does not match: route it here.
+						return s.readAuthoringResource(ctx, req)
+					}
 					if !s.resourceKnown(req.Params.URI) {
 						return nil, resourceNotFound(req.Params.URI)
 					}

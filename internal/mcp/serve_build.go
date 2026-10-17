@@ -395,6 +395,7 @@ func (st *ServeSetup) renderBuild(ctx context.Context, b *built, run buildRun) (
 		return nil, oops.Wrapf(err, "build skill catalog")
 	}
 	catalog.discovery = found.reportOf()
+	catalog.repo = found.view()
 	if len(catalog.Skills()) == 0 {
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
