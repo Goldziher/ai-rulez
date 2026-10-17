@@ -106,6 +106,16 @@ func (d *discovery) reportOf() *DiscoveryReport {
 	return d.report
 }
 
+// warnIndexLimit reports at startup that the repository has more items than the
+// index holds, so a planner is not told a scope is empty when it was cut.
+func (st *ServeSetup) warnIndexLimit(report *DiscoveryReport) {
+	if report == nil || report.Index == nil || !report.Index.Truncated {
+		return
+	}
+	st.logger().Warn("The repository index is over its limit and holds only the shallowest scopes",
+		"found", report.Index.Found, "limit", report.Index.Limit)
+}
+
 // warnShadowed reports at startup each repository skill that is not served
 // because a skill with its name has precedence.
 func (st *ServeSetup) warnShadowed(report *DiscoveryReport) {
@@ -208,13 +218,14 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 	}
 	ix, err := repoindex.Build(ctx, repoindex.Options{
 		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Generated: d.isGenerated, Screen: d.screen,
+		MaxItems: d.st.indexLimit,
 	})
 	if err != nil {
 		d.st.logger().Warn("Could not index the repository for skills", "error", err.Error())
 		return nil
 	}
 	d.index = ix
-	d.report.Index = &IndexReport{Items: len(ix.Items()), Limit: ix.Limit(), Truncated: ix.Truncated()}
+	d.report.Index = &IndexReport{Items: len(ix.Items()), Limit: ix.Limit(), Truncated: ix.Truncated(), Found: ix.Found()}
 	for _, p := range ix.Problems() {
 		if path.Base(p.Path) == skillMarkdown {
 			d.st.logger().Warn("Skipping a repository skill that cannot be read", "path", path.Dir(p.Path), "error", p.Err)

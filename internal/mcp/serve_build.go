@@ -118,6 +118,8 @@ type ServeSetup struct {
 	// afterLoad, when set, runs after a build loaded the configuration (tests
 	// edit files at that point).
 	afterLoad func()
+	// indexLimit, when set, replaces the repository index size cap (tests).
+	indexLimit int
 }
 
 // built is one build of the catalog with what produced it.
@@ -203,6 +205,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		st.logger().Warn(first.empty)
 	}
 	st.warnShadowed(first.catalog.Discovery())
+	st.warnIndexLimit(first.catalog.Discovery())
 	if st.Authoring != nil {
 		srv = NewMergedServer(st.Version, first.catalog, opts, st.Authoring...)
 	} else {
