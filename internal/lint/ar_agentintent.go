@@ -315,14 +315,18 @@ func scriptHostsSafe(r *runner, raw string) bool {
 type bypassPattern struct {
 	re     *regexp.Regexp
 	selfNe bool
+	// stems are literals every match holds one of, compared without case; the
+	// pattern runs only on a line that holds one. They are the rarest words of
+	// the pattern ("author" holds "auto", so that is no stem).
+	stems []string
 }
 
 var bypassPatterns = sync.OnceValue(func() []bypassPattern {
 	return []bypassPattern{
-		{regexp.MustCompile(`(?i)\b(?:run|execute)\s+(?:(?:all|any|every|shell|bash|terminal|cli)\s+)*(?:commands?|tools?|anything|everything)\b[^.\n]{0,40}?\bwithout\s+(?:asking|confirm\w*|permission|approval|prompting|checking)\b`), false},
-		{regexp.MustCompile(`(?i)\b(?:automatically|auto-?)\s*(?:install|approve|accept)s?\s+(?:any|all|every|whatever)\b|\b(?:install|approve|accept)\s+(?:any|all|every|whatever)\b[^.\n]{0,30}?\bautomatically\b`), false},
-		{regexp.MustCompile(`(?i)\b(?:never|do\s+not|don'?t)\s+(?:ask|request|prompt|wait)\s+(?:the\s+user\s+)?(?:for\s+)?(?:permission|approval)\b`), true},
-		{regexp.MustCompile(`(?i)\b(?:skip|bypass|disable)\s+(?:all\s+)?(?:permission|approval)\s+(?:prompts?|checks?|dialogs?|steps?)\b`), false},
+		{regexp.MustCompile(`(?i)\b(?:run|execute)\s+(?:(?:all|any|every|shell|bash|terminal|cli)\s+)*(?:commands?|tools?|anything|everything)\b[^.\n]{0,40}?\bwithout\s+(?:asking|confirm\w*|permission|approval|prompting|checking)\b`), false, []string{"without"}},
+		{regexp.MustCompile(`(?i)\b(?:automatically|auto-?)\s*(?:install|approve|accept)s?\s+(?:any|all|every|whatever)\b|\b(?:install|approve|accept)\s+(?:any|all|every|whatever)\b[^.\n]{0,30}?\bautomatically\b`), false, []string{"install", "approve", "accept"}},
+		{regexp.MustCompile(`(?i)\b(?:never|do\s+not|don'?t)\s+(?:ask|request|prompt|wait)\s+(?:the\s+user\s+)?(?:for\s+)?(?:permission|approval)\b`), true, []string{"permission", "approval"}},
+		{regexp.MustCompile(`(?i)\b(?:skip|bypass|disable)\s+(?:all\s+)?(?:permission|approval)\s+(?:prompts?|checks?|dialogs?|steps?)\b`), false, []string{"permission", "approval"}},
 	}
 })
 
@@ -334,6 +338,9 @@ func scanPermissionBypass(r *runner, t *scanText) {
 			continue
 		}
 		for _, b := range bypassPatterns() {
+			if !containsAnyFold(l.Text, b.stems) {
+				continue
+			}
 			loc := b.re.FindStringIndex(l.Text)
 			if len(loc) == 0 || !b.selfNe && governedSpan(l.Text, loc[0], loc[1]) {
 				continue
