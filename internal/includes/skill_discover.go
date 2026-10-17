@@ -67,6 +67,9 @@ func discoverSkillDirs(ctx context.Context, roots []string, include, exclude []s
 	for i, root := range roots {
 		walkSkillDirs(root, 0, i, &hits)
 	}
+	if len(hits) >= maxSkillHits {
+		log.Warn("Stopped looking for skills after the limit; later skills in name order are not considered", "limit", maxSkillHits)
+	}
 	sort.SliceStable(hits, func(i, j int) bool {
 		a, b := hits[i], hits[j]
 		if a.depth != b.depth {
