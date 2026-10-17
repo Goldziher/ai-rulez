@@ -1226,7 +1226,7 @@
             "type": "string"
           },
           "name_prefix": {
-            "description": "Prepended to every imported skill, agent, command and MCP server name.",
+            "description": "Prepended to every imported skill, agent, command and MCP server name (and to the output directory of a skill).",
             "type": "string"
           },
           "path": {
@@ -1317,7 +1317,7 @@
             "type": "string"
           },
           "name_prefix": {
-            "description": "Prepended to every resolved skill name, so two entries cannot collide.",
+            "description": "Prepended to every resolved skill name and to its output directory, so two entries cannot collide.",
             "type": "string"
           },
           "path": {

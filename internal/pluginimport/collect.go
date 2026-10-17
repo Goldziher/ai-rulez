@@ -111,6 +111,9 @@ func (c *loader) collectSkills() {
 				c.note(importer.StatusDropped, c.rel(dir), "", "the skill cannot be read: "+err.Error())
 				continue
 			}
+			if c.opt.NamePrefix != "" {
+				cf.ID = c.opt.NamePrefix + name // the directory carries the prefix, like the name
+			}
 			c.res.Skills = append(c.res.Skills, cf)
 			c.note(importer.StatusMapped, c.rel(dir), "", "skills."+name)
 		}

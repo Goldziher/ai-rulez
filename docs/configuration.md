@@ -1840,7 +1840,7 @@ Each entry supports:
 | `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs  |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory    |
 | `resources`      | No       | What is bundled besides `references/`, `scripts/` and `assets/`: the whole skill directory by default (not `SKILL.md`, `evals/`, `agents/`, hidden files); setting it replaces that. See [Installed skills](installed-skills.md#what-is-bundled-with-a-skill) |
 | `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 

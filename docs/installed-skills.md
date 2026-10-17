@@ -77,7 +77,7 @@ source = "https://github.com/org/skills"
 path = "skills"               # a directory of skill directories
 include = ["db-*", "api"]     # keep only these directory names
 exclude = ["*-wip"]           # drop these; exclude wins over include
-name_prefix = "vendor-"       # every resolved skill is named vendor-<dir>
+name_prefix = "vendor-"       # every resolved skill is named, and written to, vendor-<dir>
 trust = "warn"                # only error-severity scan findings block generate
 ```
 
@@ -95,7 +95,7 @@ trust = "warn"                # only error-severity scan findings block generate
 | `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs. Empty keeps every skill below `path` |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name, so two entries cannot collide |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory (`.claude/skills/vendor-<dir>/`), so two entries cannot collide |
 | `resources`      | No       | What is bundled from each skill directory besides `references/`, `scripts/` and `assets/`. The default is the whole directory (see below); setting it replaces that default |
 | `trust`          | No       | Scan level of the imported skills: `error` (every finding counts, the default) or `warn` (only error-severity findings block) |
 

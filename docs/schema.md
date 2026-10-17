@@ -105,7 +105,7 @@ Which of these a repository may set, and which only the user config file or the 
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
 - **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
-- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name
+- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name and output directory
 - **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
 - **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
 

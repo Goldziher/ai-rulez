@@ -239,7 +239,7 @@ func (g *AntigravityPresetGenerator) skillOutputs(content *config.ContentTree, b
 	allSkills := append(allSkills(content), commandAsSkills(cfg.Diag, content, presetNameAntigravity)...)
 	for idx := range allSkills {
 		skill := allSkills[idx]
-		skillID := extractSkillID(skill.Path)
+		skillID := skillIDOf(skill)
 
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
 		outputs = append(outputs, config.OutputFile{

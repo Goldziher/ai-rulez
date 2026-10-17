@@ -10,8 +10,8 @@ INFO  Generation complete files=19
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755
-.agents/skills/explain/ dir 0755
-.agents/skills/explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
+.agents/skills/cx-explain/ dir 0755
+.agents/skills/cx-explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
 .agents/skills/review/ dir 0755
 .agents/skills/review/SKILL.md file 0644 381 9fdeea076c06901b561acf90cb3b0f9bce39c0045ca3b8d4dd0a58c0d0e027da
 .agents/skills/review/references/ dir 0755
@@ -21,7 +21,7 @@ INFO  Generation complete files=19
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1586 f89946ceb64cfbf27ecf0a209324b5111eeb4772f86a5ea2c6c37b785848a8e7
+.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
 .ai-rulez/.generated-manifest.local.json file 0644 2541 5e087ad86ae804cefbe70341f6d913096291c9f6205f19152a2a748db91bf309
 .ai-rulez/config.toml file 0644 342 aef42a2395bbff68aa6289ccb5736750ba0c26ccaf5086797aa5fef46eb29f88
 .ai-rulez/rules/ dir 0755
@@ -31,8 +31,8 @@ INFO  Generation complete files=19
 .claude/agents/planner.md file 0644 181 39c7f79b9e3af5da5eb4d6d18c2d8531e7f07442d5f19d68b659833bf108e945
 .claude/settings.json file 0644 281 7c6146044153c0ea2b0bee217aca5eae7016ddd67aa37dc5a6a1575f20450db6
 .claude/skills/ dir 0755
-.claude/skills/explain/ dir 0755
-.claude/skills/explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
+.claude/skills/cx-explain/ dir 0755
+.claude/skills/cx-explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
 .claude/skills/review/ dir 0755
 .claude/skills/review/SKILL.md file 0644 379 bd570ce5f1b359b603739e272b8aa8090aff2216ab803069a6808ca6dfdc355c
 .claude/skills/review/references/ dir 0755
@@ -102,11 +102,11 @@ exit: 0
 locked cx-explain  sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359
 locked review  sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d
 locked ship  sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b
-pinned 2 item(s) and 19 output(s), tree sha256:967b88b433aff8a47cd3fe602b56bf9bd48ee71bfe4b8ae1cda6233ff6c4721f
+pinned 2 item(s) and 19 output(s), tree sha256:392467643b4d62c6cb2e7620708db305a7d6ae4ba19c23f0e6f577cd9e783963
 --- stderr
 INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 --- project tree
-+ .ai-rulez/ai-rulez.lock file 0600 3598 85ce6ac9444cf163c24f4161f2a157ca68f1534d51996e9fff5580b576e54834
++ .ai-rulez/ai-rulez.lock file 0600 3604 78c1e890516b12aea2e1bd04c3fe7beb557b2a3671d8a5e0586a1045e3fd43ed
 --- home tree
 (no change)
 
@@ -147,8 +147,8 @@ Installed marketplaces:
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755
-.agents/skills/explain/ dir 0755
-.agents/skills/explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
+.agents/skills/cx-explain/ dir 0755
+.agents/skills/cx-explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
 >>>>
 ---
 name: cx-explain
@@ -208,19 +208,19 @@ policy:
   allow_implicit_invocation: false
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1586 f89946ceb64cfbf27ecf0a209324b5111eeb4772f86a5ea2c6c37b785848a8e7
+.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
 >>>>
 {
   "version": "1",
   "files": [
-    ".agents/skills/explain/SKILL.md",
+    ".agents/skills/cx-explain/SKILL.md",
     ".agents/skills/review/SKILL.md",
     ".agents/skills/review/references/checklist.md",
     ".agents/skills/ship/SKILL.md",
     ".agents/skills/ship/agents/openai.yaml",
     ".claude/agents/planner.md",
     ".claude/settings.json",
-    ".claude/skills/explain/SKILL.md",
+    ".claude/skills/cx-explain/SKILL.md",
     ".claude/skills/review/SKILL.md",
     ".claude/skills/review/references/checklist.md",
     ".claude/skills/ship/SKILL.md",
@@ -367,7 +367,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/ai-rulez.lock file 0600 3598 85ce6ac9444cf163c24f4161f2a157ca68f1534d51996e9fff5580b576e54834
+.ai-rulez/ai-rulez.lock file 0600 3604 78c1e890516b12aea2e1bd04c3fe7beb557b2a3671d8a5e0586a1045e3fd43ed
 >>>>
 # ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
@@ -376,7 +376,7 @@ version = 1
 ai_rulez_version = '$VERSION'
 scope = 'all'
 outputs_pinned = true
-tree = 'sha256:967b88b433aff8a47cd3fe602b56bf9bd48ee71bfe4b8ae1cda6233ff6c4721f'
+tree = 'sha256:392467643b4d62c6cb2e7620708db305a7d6ae4ba19c23f0e6f577cd9e783963'
 
 [[served]]
 name = 'cx-explain'
@@ -408,8 +408,8 @@ id = 'mcp-servers'
 digest = 'sha256:00b6432df1f00369dc6e4ab4e59bfe1bfefae81125a6a35986f92bd21f243bb3'
 
 [[output]]
-path = '.agents/skills/explain/SKILL.md'
-digest = 'sha256:e216d3e721e651c833dedea1511d73757f7ef6801b203134644b446c7be4eaf1'
+path = '.agents/skills/cx-explain/SKILL.md'
+digest = 'sha256:61501b58c363e06d421546b4692a517c4a9f0c17baedcf0bc941e7a88639cd6a'
 
 [[output]]
 path = '.agents/skills/review/SKILL.md'
@@ -436,8 +436,8 @@ path = '.claude/settings.json'
 digest = 'sha256:3830d5b0ee450f5aff74205d41e5ffa31fddb3d1679dd1c9b868175bd814d44d'
 
 [[output]]
-path = '.claude/skills/explain/SKILL.md'
-digest = 'sha256:da7defb84ceb8c0e17d39e20e70945ee82df65920b5da9a9d64e4183c402bbb0'
+path = '.claude/skills/cx-explain/SKILL.md'
+digest = 'sha256:d175cbb369fd99a56671dc7fa6eaf8ef3c01fad6b2f2be9ecc2710b49f4ba391'
 
 [[output]]
 path = '.claude/skills/review/SKILL.md'
@@ -548,8 +548,8 @@ Plan before you code.
 }
 <<<<
 .claude/skills/ dir 0755
-.claude/skills/explain/ dir 0755
-.claude/skills/explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
+.claude/skills/cx-explain/ dir 0755
+.claude/skills/cx-explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
 >>>>
 ---
 description: Explain code

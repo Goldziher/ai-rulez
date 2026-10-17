@@ -125,7 +125,7 @@ func commandSkillsWhere(d *diag.Collector, content *config.ContentTree, label st
 	skillList := allSkills(content)
 	for idx := range skillList {
 		skill := skillList[idx]
-		taken[extractSkillID(skill.Path)] = true
+		taken[skillIDOf(skill)] = true
 	}
 	var skills []config.ContentFile
 	commandList := allCommands(content)
