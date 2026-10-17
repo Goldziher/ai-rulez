@@ -466,6 +466,7 @@ func ScanImports(cfg *config.Config, opts ...Option) ([]Finding, error) {
 	r.resolveSettings()
 	r.collect()
 	r.scanImported()
+	r.scanPluginFiles()
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		if r.findings[i].File != r.findings[j].File {
 			return r.findings[i].File < r.findings[j].File
