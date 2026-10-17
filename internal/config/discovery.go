@@ -2,10 +2,10 @@ package config
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
@@ -14,7 +14,7 @@ import (
 // the home directory.
 func SearchStopDir(ctx context.Context, cwd string) string {
 	stop := (gitutil.Git{}).TopLevelContext(ctx, cwd)
-	home, err := os.UserHomeDir()
+	home, err := ambient.OrOS(nil).UserHomeDir()
 	if err != nil || home == "" || !withinDir(cwd, home) {
 		return stop
 	}
