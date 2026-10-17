@@ -13,6 +13,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`generate --user` loads the user config in user scope**, so its includes and installed skills may point outside the home project.
 - **An installed skill is bundled whole, not only `references/`, `scripts/` and `assets/`.** Skills that keep documents beside `SKILL.md` (`cli.md`) or in a folder of their own (`rules/`, `templates/`) arrived without those files, so the links in `SKILL.md` were broken and generate warned that the folder was dropped. Every file in the skill directory is now bundled and listed in the generated `Resources` section, except `SKILL.md`, `evals/`, `agents/` and hidden files; a project's own skills keep the canonical layout ([#419](https://github.com/Goldziher/ai-rulez/issues/419)).
 
+- **A whole-bundled installed skill is bounded.** Credential-like files (`id_rsa*`, `*.pem`, `*.key`, `credentials.json`, `*.tfstate` and the like) are never bundled, with a warning naming each; a single file over 8 MiB is skipped with a warning instead of failing the skill; a skill over 2000 files or 16 MiB fails with an error naming the limit and pointing at `resources`. See [Installed skills](https://goldziher.github.io/ai-rulez/installed-skills/).
+- **`skip_outputs = ["instructions"]` no longer skips files that merely share a root file's name.** A skill resource, rule or docs page named `CLAUDE.md`, `AGENTS.md` or `GEMINI.md` is still written; only root files at the project root and directly in a configured scope are skipped.
+- **Telemetry in a root-layout project reads only `ai-rulez.toml`** and its local overlay, not a stray `config.toml` or `config.json` at the project root.
+
 ### Added
 
 - **`installed_skills` `source` accepts `~`, `owner/repo`, `github:owner/repo` and `file://`.** `~` paths follow the same trust rule as any local path; shorthand expands to an https URL, leaving lock keys of existing entries unchanged.

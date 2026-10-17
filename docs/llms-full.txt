@@ -6770,6 +6770,12 @@ resources = ["rules"]                                                  # only ru
 resources = ["*"]                                                      # also evals/, agents/ and hidden files
 ```
 
+Whatever `resources` says, an installed skill never bundles credential-like files (`id_rsa*`, `id_ed25519*`,
+`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.keystore`, `credentials.json`, `*.tfstate`, `.env.*`), symlinks, or special
+files. Each skipped credential file is named in a warning. A single file over 8 MiB is skipped with a warning naming it.
+A skill that bundles more than 2000 files or 16 MiB in total fails with an error naming the limit; narrow it with
+`resources`, for example `["*", "!docs", "!evals", "!agents", "!.*"]`.
+
 A project's own skills under `.ai-rulez/skills/` keep the canonical layout; only installed skills are bundled whole.
 
 #### Source forms
