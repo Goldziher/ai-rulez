@@ -85,9 +85,7 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 			problems = append(problems, fmt.Sprintf("lint.scanner_policy.preset %q is not off or one of %s", sp.Preset, strings.Join(scanners.PresetNames(), ", ")))
 		}
 	}
-	switch strings.ToLower(strings.TrimSpace(sp.FailOn)) {
-	case "", levelError, levelWarning, "info":
-	default:
+	if !validScannerFailOn(sp.FailOn) {
 		problems = append(problems, fmt.Sprintf("lint.scanner_policy.fail_on %q is not error, warning or info", sp.FailOn))
 	}
 	if _, err := sandbox.ParseMode(sp.Isolation); err != nil {
@@ -99,6 +97,24 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 		}
 	}
 	return problems
+}
+
+// validScannerFailOn reports whether v is empty or a fail_on threshold.
+func validScannerFailOn(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", levelError, levelWarning, "info":
+		return true
+	}
+	return false
+}
+
+// failOnOf is the failure threshold of a scanner's findings: its own fail_on,
+// else the policy's (the preset implies one), else "" for the run's threshold.
+func (s resolvedScanner) failOnOf(pol scannerPolicy) string {
+	if own := strings.ToLower(strings.TrimSpace(s.FailOn)); own != "" {
+		return own
+	}
+	return pol.failOn
 }
 
 // resolveScanners returns the scanners of lc in run order: the preset's members

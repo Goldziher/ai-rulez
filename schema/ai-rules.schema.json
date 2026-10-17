@@ -2707,6 +2707,10 @@
                 "minItems": 1,
                 "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check."
               },
+              "fail_on": {
+                "enum": ["error", "warning", "info"],
+                "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings."
+              },
               "required": {
                 "type": "boolean",
                 "description": "A missing, outdated or failing scanner is an error instead of a notice."
@@ -2756,7 +2760,7 @@
             },
             "fail_on": {
               "enum": ["error", "warning", "info"],
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning."
+              "description": "Lowest severity of a scanner finding (AR011) that fails the run. Scanner findings only; it replaces the run's own threshold (--strict, --fail-on) for them, and a scanner's own fail_on wins. strict implies warning."
             },
             "baseline": {
               "type": "string",

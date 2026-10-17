@@ -54,6 +54,9 @@ func externalProblems(ex config.LintExternal) []string {
 		}
 	}
 	problems = append(problems, versionCommandProblems(ex)...)
+	if !validScannerFailOn(ex.FailOn) {
+		problems = append(problems, fmt.Sprintf("fail_on %q is not error, warning or info", ex.FailOn))
+	}
 	problems = append(problems, inputProblems(ex)...)
 	return append(problems, severityMapProblems(ex.SeverityMap, ex.MaxSeverity)...)
 }

@@ -159,11 +159,11 @@ func (r *runner) scannerFingerprint(scanner string, f externalFinding, abs strin
 func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 	all = dedupeScannerFindings(all)
 	findings := make([]Finding, len(all))
-	failOn := policyOf(&r.lc).failOn
+	failOn := r.scannerFailOns()
 	for i := range all {
 		findings[i] = all[i].Finding
-		if failOn != "" {
-			findings[i].meta().ScannerFailOn = failOn
+		if t := failOn[all[i].scanner]; t != "" {
+			findings[i].meta().ScannerFailOn = t
 		}
 		if p := r.tree.Rel(all[i].abs); all[i].abs != "" && p != "" {
 			findings[i].meta().Path = p
@@ -278,12 +278,34 @@ func (r *runner) addAt(code, abs, msg string) {
 	})
 }
 
-// failsScannerPolicy reports whether a scanner finding reaches the
-// [lint.scanner_policy] fail_on threshold it was stamped with.
-func (f *Finding) failsScannerPolicy() bool {
+// scannerThreshold is the fail_on threshold a scanner finding was stamped with
+// (its entry's fail_on, else [lint.scanner_policy] fail_on); ok is false for any
+// other finding and for a scanner with no threshold of its own.
+func (f *Finding) scannerThreshold() (Severity, bool) {
 	if f.Meta == nil || f.Meta.ScannerFailOn == "" {
-		return false
+		return SeverityOff, false
 	}
 	threshold, ok := ParseSeverity(f.Meta.ScannerFailOn)
-	return ok && threshold != SeverityOff && f.Severity.AtLeast(threshold)
+	return threshold, ok && threshold != SeverityOff
+}
+
+// failsAt reports whether f fails a run whose threshold is run. A scanner
+// finding with a threshold of its own is judged by that alone, so --strict (run
+// = warning) does not fail on a scanner warning when fail_on = "error".
+func (f *Finding) failsAt(run Severity) bool {
+	if t, ok := f.scannerThreshold(); ok {
+		run = t
+	}
+	return f.Severity.AtLeast(run)
+}
+
+// scannerFailOns maps each scanner to its failure threshold ("" for the run's).
+func (r *runner) scannerFailOns() map[string]string {
+	pol := policyOf(&r.lc)
+	out := map[string]string{}
+	list := r.scanners()
+	for i := range list {
+		out[list[i].Name] = list[i].failOnOf(pol)
+	}
+	return out
 }

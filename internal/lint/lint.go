@@ -126,7 +126,7 @@ func Failed(findings []Finding, failOn string) bool {
 		if findings[i].IsAccepted() {
 			continue
 		}
-		if findings[i].Severity.AtLeast(threshold) || findings[i].failsScannerPolicy() {
+		if findings[i].failsAt(threshold) {
 			return true
 		}
 	}

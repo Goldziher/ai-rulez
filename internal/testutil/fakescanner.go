@@ -26,6 +26,90 @@ func RunFakeScannerIfAsked() {
 	}
 }
 
+// fakeScan is the parsed command line of the fake scanner.
+type fakeScan struct {
+	opts      map[string]string
+	args      []string
+	dirs      []string
+	scripts   []string
+	listFiles bool
+}
+
+func parseFakeScan(args []string) fakeScan {
+	s := fakeScan{opts: map[string]string{"--rule": "FAKE1", "--level": "warning"}, args: args}
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--list-files":
+			s.listFiles = true
+		case strings.HasPrefix(a, "--") && i+1 < len(args):
+			s.opts[a] = args[i+1]
+			i++
+		default:
+			if info, err := os.Stat(a); err == nil && info.IsDir() {
+				s.dirs = append(s.dirs, a)
+			} else if err == nil {
+				s.scripts = append(s.scripts, a)
+			}
+		}
+	}
+	return s
+}
+
+// log appends one line (kind, time, arguments) to the --log file, if any.
+func (s fakeScan) log(kind string) {
+	path := s.opts["--log"]
+	if path == "" {
+		return
+	}
+	if f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil { //nolint:gosec // a test log
+		fmt.Fprintf(f, "%s %d %s\n", kind, time.Now().UnixNano(), strings.Join(s.args, " "))
+		_ = f.Close()
+	}
+}
+
+// message is the text of every finding.
+func (s fakeScan) message() string {
+	if n, err := strconv.Atoi(s.opts["--msg-len"]); err == nil {
+		return strings.Repeat("x", n)
+	}
+	if msg := s.opts["--msg"]; msg != "" {
+		return msg
+	}
+	if len(s.scripts) > 0 {
+		data, _ := os.ReadFile(s.scripts[0]) //nolint:gosec // a test script
+		if msg := strings.TrimSpace(string(data)); msg != "" {
+			return msg
+		}
+	}
+	return "found"
+}
+
+// results is the SARIF results: one per directory argument, else one without a location.
+func (s fakeScan) results() []map[string]any {
+	msg := s.message()
+	var results []map[string]any
+	add := func(file, text string) {
+		r := map[string]any{"ruleId": s.opts["--rule"], "level": s.opts["--level"], "message": map[string]any{"text": text}}
+		if file != "" {
+			r["locations"] = []any{map[string]any{"physicalLocation": map[string]any{
+				"artifactLocation": map[string]any{"uri": filepath.ToSlash(file)}, "region": map[string]any{"startLine": 1}}}}
+		}
+		results = append(results, r)
+	}
+	for _, d := range s.dirs {
+		text := msg
+		if s.listFiles {
+			text = "files=" + strings.Join(filesUnder(d), ",")
+		}
+		add(filepath.Join(d, "SKILL.md"), text)
+	}
+	if len(s.dirs) == 0 {
+		add("", msg)
+	}
+	return results
+}
+
 // RunFakeScanner is the scanner and returns its exit status. Flags (each takes
 // the next argument as its value unless noted):
 //
@@ -41,83 +125,25 @@ func RunFakeScannerIfAsked() {
 // existing file is a script whose trimmed content is the message unless --msg
 // is given. With no directory there is one finding without a location.
 func RunFakeScanner(args []string) int {
-	opts := map[string]string{"--rule": "FAKE1", "--level": "warning"}
-	var dirs, scripts []string
-	listFiles := false
-	for i := 0; i < len(args); i++ {
-		a := args[i]
-		switch {
-		case a == "--list-files":
-			listFiles = true
-		case strings.HasPrefix(a, "--") && i+1 < len(args):
-			opts[a] = args[i+1]
-			i++
-		default:
-			if info, err := os.Stat(a); err == nil && info.IsDir() {
-				dirs = append(dirs, a)
-			} else if err == nil {
-				scripts = append(scripts, a)
-			}
-		}
-	}
-	if v, ok := opts["--print-version"]; ok {
+	s := parseFakeScan(args)
+	if v, ok := s.opts["--print-version"]; ok {
 		fmt.Println("fake-scanner " + v)
 		return 0
 	}
-	logLine := func(kind string) {
-		path := opts["--log"]
-		if path == "" {
-			return
-		}
-		if f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil { //nolint:gosec // a test log
-			fmt.Fprintf(f, "%s %d %s\n", kind, time.Now().UnixNano(), strings.Join(args, " "))
-			_ = f.Close()
-		}
-	}
-	logLine("start")
-	if d, err := time.ParseDuration(opts["--sleep"]); err == nil {
+	s.log("start")
+	if d, err := time.ParseDuration(s.opts["--sleep"]); err == nil {
 		time.Sleep(d)
 	}
-	msg := opts["--msg"]
-	if n, err := strconv.Atoi(opts["--msg-len"]); err == nil {
-		msg = strings.Repeat("x", n)
-	}
-	if msg == "" && len(scripts) > 0 {
-		data, _ := os.ReadFile(scripts[0]) //nolint:gosec // a test script
-		msg = strings.TrimSpace(string(data))
-	}
-	if msg == "" {
-		msg = "found"
-	}
-	var results []map[string]any
-	add := func(file, text string) {
-		r := map[string]any{"ruleId": opts["--rule"], "level": opts["--level"], "message": map[string]any{"text": text}}
-		if file != "" {
-			r["locations"] = []any{map[string]any{"physicalLocation": map[string]any{
-				"artifactLocation": map[string]any{"uri": filepath.ToSlash(file)}, "region": map[string]any{"startLine": 1}}}}
-		}
-		results = append(results, r)
-	}
-	for _, d := range dirs {
-		text := msg
-		if listFiles {
-			text = "files=" + strings.Join(filesUnder(d), ",")
-		}
-		add(filepath.Join(d, "SKILL.md"), text)
-	}
-	if len(dirs) == 0 {
-		add("", msg)
-	}
-	doc, _ := json.Marshal(map[string]any{"version": "2.1.0", "runs": []any{map[string]any{"results": results}}})
+	doc, _ := json.Marshal(map[string]any{"version": "2.1.0", "runs": []any{map[string]any{"results": s.results()}}}) //nolint:errcheck // plain values
 	var w io.Writer = os.Stdout
-	if out := opts["--out"]; out != "" {
+	if out := s.opts["--out"]; out != "" {
 		if err := os.WriteFile(out, doc, 0o600); err != nil {
 			return 1
 		}
 		w = io.Discard
 	}
 	fmt.Fprintln(w, string(doc))
-	logLine("end")
+	s.log("end")
 	return 0
 }
 

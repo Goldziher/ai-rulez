@@ -207,6 +207,10 @@ type LintExternal struct {
 	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
 	// from the project root, in the scanner's isolation mode; needs Version.
 	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
+	// FailOn is the lowest severity of this scanner's findings that fails the run
+	// ("error", "warning" or "info"). It replaces [lint.scanner_policy] fail_on for
+	// this scanner, and the run's own threshold (--strict, --fail-on) for its findings.
+	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
 	// Required makes a missing, outdated or failing scanner an error instead of a notice.
 	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 }
@@ -220,7 +224,8 @@ type LintScannerPolicy struct {
 	// Required lists scanner names whose absence or failure is an error.
 	Required []string `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 	// FailOn is the lowest severity of a scanner finding that makes the run fail:
-	// "error", "warning" or "info". It applies to scanner findings only.
+	// "error", "warning" or "info". It applies to scanner findings only, and replaces the run's own
+	// threshold (--strict, --fail-on) for them; a scanner entry's fail_on wins.
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
 	// Baseline is the scanner baseline file, relative to the project root
 	// (default: scanner-baseline.json in the configuration directory).
