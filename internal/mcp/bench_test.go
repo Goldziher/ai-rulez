@@ -39,7 +39,7 @@ func benchCall(b *testing.B, s *sdkmcp.ClientSession, tool string, args map[stri
 func BenchmarkProjectTools(b *testing.B) {
 	for _, s := range testutil.BenchSizes() {
 		root := testutil.BuildBenchTree(b, s.Files, testutil.BenchTreeOptions{})
-		session := benchSession(b, NewServer("bench"))
+		session := benchSession(b, NewServer("bench", WithAnyDirectory()))
 		for _, tc := range []struct {
 			tool string
 			args map[string]any
