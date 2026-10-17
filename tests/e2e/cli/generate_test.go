@@ -302,7 +302,7 @@ Test content
 func (s *GenerateCLITestSuite) TestGenerateWithoutConfig() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 
-	result.AssertStderrContains(s.T(), ".ai-rulez directory not found")
+	result.AssertStderrContains(s.T(), "no configuration file found")
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithInvalidConfig() {
