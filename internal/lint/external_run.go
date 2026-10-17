@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -19,6 +18,10 @@ import (
 
 // scannerSandbox confines staged scanners. Tests replace it.
 var scannerSandbox = sandbox.Default()
+
+// scanContext is the context scanner runs and their probes use. A lint run has
+// no cancellation of its own; the runner's timeout bounds each process.
+func scanContext() context.Context { return context.Background() }
 
 // scanScope says how a scanner's reported paths map to project files.
 type scanScope struct {
@@ -92,13 +95,13 @@ func (r *runner) requireConfigured(list []resolvedScanner) {
 }
 
 // specFor builds the run spec shared by both modes.
-func specFor(ex config.LintExternal, dir string) cmdrun.Spec {
-	spec := cmdrun.Spec{Dir: dir, InheritEnv: ex.Egress == nil}
-	if ex.Egress != nil {
-		spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), ex.EnvPass, nil)
+func specFor(sc resolvedScanner, dir string) cmdrun.Spec {
+	spec := cmdrun.Spec{Dir: dir, InheritEnv: sc.Egress == nil, MaxTimeout: sc.timeoutCeiling}
+	if sc.Egress != nil {
+		spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), sc.EnvPass, nil)
 	}
-	if ex.Timeout != "" {
-		spec.Timeout, _ = time.ParseDuration(ex.Timeout) //nolint:errcheck // validated by externalProblems
+	if sc.Timeout != "" {
+		spec.Timeout, _ = time.ParseDuration(sc.Timeout) //nolint:errcheck // validated by externalProblems
 	}
 	return spec
 }
@@ -113,7 +116,7 @@ func (r *runner) runInRoot(sc resolvedScanner, root string, files []string) (all
 		r.addRun(CodeScannerRunFailed, sc.Name, "isolation = \"require\" cannot confine a scanner that runs in the project root; set inputs so it runs on a staged copy, or set isolation = \"none\"")
 		return nil, false
 	}
-	spec := specFor(sc.LintExternal, root)
+	spec := specFor(sc, root)
 	batches := batchArgs(sc.Command, files, argvBudget)
 	if r.opts.Scanner.DryRun {
 		r.plan(sc, planInfo{binary: lookExecutable(sc.Command[0], root), argv: batches[0], dir: root, env: spec.Env, inherit: spec.InheritEnv,
@@ -122,7 +125,7 @@ func (r *runner) runInRoot(sc resolvedScanner, root string, files []string) (all
 	}
 	for _, argv := range batches {
 		spec.Argv = argv
-		res := cmdrun.Run(context.Background(), spec)
+		res := cmdrun.Run(scanContext(), spec)
 		found, good := r.parseRun(sc, res)
 		if !good {
 			return all, false
@@ -149,18 +152,17 @@ func relFiles(r *runner, abs []string) []string {
 // staged content (egress = false scanners only) and the run is confined when
 // isolation allows it.
 func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFinding, ok bool) {
-	want := map[string]bool{}
-	for _, in := range sc.Inputs {
-		want[in] = true
-	}
-	files := r.stageFiles(want, sc.Layout)
+	files := r.stageFilesFor(sc)
 	if len(files) == 0 || (slices.Contains(sc.Command, phSkillDirs) && !hasSkillDir(files)) {
 		r.log().Debug("Scanner has nothing staged to scan", "scanner", sc.Name, "inputs", sc.Inputs)
 		return nil, true
 	}
+	if perSkillCommand(sc.Command) {
+		return r.runSkillUnits(sc, root, files)
+	}
 	binary := lookExecutable(sc.Command[0], root)
 	digest := digestStage(files)
-	key, cache := r.cacheFor(sc, binary, digest)
+	key, cache := r.cacheFor(sc, binary, digest, keyFiles(sc, root))
 	if key != "" {
 		if hit, found := r.cacheGet(sc, cache, key); found && !r.opts.Scanner.DryRun {
 			r.log().Debug("Scanner result served from the cache", "scanner", sc.Name)
@@ -181,7 +183,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	if strings.ContainsAny(argv[0], `/\`) && !filepath.IsAbs(argv[0]) {
 		argv[0] = filepath.Join(root, argv[0]) // a relative command is relative to the project, not the stage
 	}
-	spec := specFor(sc.LintExternal, st.root)
+	spec := specFor(sc, st.root)
 	spec.InheritEnv = false
 	spec.Env = st.env(sc.EnvPass, cmdrun.HostEnv())
 	if r.opts.Scanner.DryRun {
@@ -193,7 +195,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 		return nil, false
 	}
 	if key != "" {
-		version, _ := r.probeVersion(binary) //nolint:errcheck // a refused probe only leaves the recorded version empty
+		version, _ := r.probeVersion(sc, binary, root) //nolint:errcheck // a refused probe only leaves the recorded version empty
 		cache.put(key, cachedScan{Findings: toCached(norm), OutOfScope: outOfScope, FirstOut: firstOut, Version: version, Stored: r.clock().Unix()})
 	}
 	return r.convertFindings(sc, stagedScope(files), norm, outOfScope, firstOut), true
@@ -202,22 +204,45 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 // execStaged starts a staged scanner (confined when isolation allows) and
 // returns its findings with stage-relative paths.
 func (r *runner) execStaged(sc resolvedScanner, st *scannerStage, spec cmdrun.Spec, argv []string, binary string) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
-	usesOut := slices.ContainsFunc(sc.Command, func(a string) bool { return strings.Contains(a, phOut) })
+	spec, usesOut, ok := r.prepareBatch(sc, st, spec, argv, binary, 0)
+	if !ok {
+		return nil, 0, "", false
+	}
+	r.banner(sc)
+	return r.finishBatch(sc, st, usesOut, 0, cmdrun.Run(scanContext(), spec))
+}
+
+// prepareBatch readies run idx of a stage: it creates the {out} file the
+// command may use and wraps argv in the process sandbox when the policy asks
+// for it. It returns the spec to run.
+func (r *runner) prepareBatch(sc resolvedScanner, st *scannerStage, spec cmdrun.Spec, argv []string, binary string, idx int) (out cmdrun.Spec, usesOut, ok bool) {
+	usesOut = slices.ContainsFunc(sc.Command, func(a string) bool { return strings.Contains(a, phOut) })
 	if usesOut {
-		if err := os.WriteFile(st.outFile(), nil, 0o600); err != nil {
+		if err := os.WriteFile(st.outFileN(idx), nil, 0o600); err != nil {
 			r.addRun(CodeScannerRunFailed, sc.Name, "could not create its output file: "+sanitizeScannerText(err.Error()))
-			return nil, 0, "", false
+			return spec, usesOut, false
+		}
+	}
+	if idx > 0 {
+		if err := os.MkdirAll(st.tmpDirN(idx), 0o700); err != nil {
+			r.addRun(CodeScannerRunFailed, sc.Name, "could not create its temp directory: "+sanitizeScannerText(err.Error()))
+			return spec, usesOut, false
 		}
 	}
 	argv, ok = r.isolate(sc, st, argv, binary)
 	if !ok {
-		return nil, 0, "", false
+		return spec, usesOut, false
 	}
 	spec.Argv = argv
-	r.banner(sc)
-	res := cmdrun.Run(context.Background(), spec)
+	return spec, usesOut, true
+}
+
+// finishBatch turns the outcome of run idx into findings with stage-relative
+// paths: the {out} file replaces stdout, the report is parsed and paths that are
+// not staged files are dropped and counted.
+func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, usesOut bool, idx int, res cmdrun.Result) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
 	if usesOut && (res.Status == cmdrun.StatusOK || res.Status == cmdrun.StatusExit) {
-		data, rerr := st.readOut()
+		data, rerr := st.readOut(idx)
 		if rerr != nil {
 			r.addRun(CodeScannerRunFailed, sc.Name, "its output file is not readable: "+sanitizeScannerText(rerr.Error()))
 			return nil, 0, "", false
@@ -247,12 +272,12 @@ func (r *runner) fromCache(sc resolvedScanner, files []stagedFile, hit cachedSca
 
 // cacheFor returns the cache and key for a run, or an empty key when the run
 // is not cacheable (no cache, egress scanner, scanner not installed).
-func (r *runner) cacheFor(sc resolvedScanner, binary, digest string) (string, *ScanCache) {
+func (r *runner) cacheFor(sc resolvedScanner, binary, digest string, files []string) (string, *ScanCache) {
 	cache := r.opts.Scanner.Cache
 	if cache == nil || r.opts.Scanner.NoCache || sc.Egress == nil || *sc.Egress || binary == "" {
 		return "", nil
 	}
-	key, ok := scanKeyFor(sc, binary, digest, r.opts.Scanner.ShowSuppressed, r.isolationKey())
+	key, ok := scanKeyFor(sc, binary, digest, files, r.opts.Scanner.ShowSuppressed, r.isolationKey())
 	if !ok {
 		return "", nil
 	}
@@ -286,7 +311,7 @@ func (r *runner) cacheState(sc resolvedScanner, c *ScanCache, key string) string
 		return levelOff
 	default:
 		if _, ok := r.cacheGet(sc, c, key); ok {
-			return "hit"
+			return cacheStateHit
 		}
 		return "miss"
 	}
@@ -304,11 +329,13 @@ func hasSkillDir(files []stagedFile) bool {
 // probeVersion asks a scanner for its version through the hardened runner,
 // confined as the policy's isolation mode asks. The error is set when the
 // probe was refused (isolation = "require" with no working backend).
-func (r *runner) probeVersion(binary string) (string, error) {
+func (r *runner) probeVersion(sc resolvedScanner, binary, root string) (string, error) {
 	if binary == "" {
 		return "", nil
 	}
-	return ProbeScannerVersion(context.Background(), ScannerInfo{Path: binary, Isolation: string(policyOf(&r.lc).isolation)})
+	return ProbeScannerVersion(scanContext(), ScannerInfo{
+		Path: binary, Isolation: string(policyOf(&r.lc).isolation), VersionCommand: sc.VersionCommand, Dir: root,
+	})
 }
 
 // versionSatisfied checks the entry's version range against `<binary> --version`.
@@ -322,26 +349,53 @@ func (r *runner) versionSatisfied(sc resolvedScanner, root string) bool {
 	if binary == "" {
 		return true
 	}
-	c, err := semver.ParseConstraint(normalizeRange(sc.Version))
-	if err != nil {
-		r.addRun(CodeScannerConfigInvalid, sc.Name, fmt.Sprintf("version %q is not a version range: %v", sc.Version, err))
-		return false
-	}
-	line, err := r.probeVersion(binary)
-	if err != nil {
-		r.addRun(CodeScannerRunFailed, sc.Name, "was not run: its version could not be checked: "+sanitizeScannerText(err.Error()))
-		return false
-	}
-	v, ok := firstVersion(line)
-	if !ok {
-		r.addRun(CodeScannerUnavailable, sc.Name, fmt.Sprintf("was not run: its --version output %q has no version to check against %q", line, sc.Version))
-		return false
-	}
-	if !c.Check(v, true) {
-		r.addRun(CodeScannerUnavailable, sc.Name, fmt.Sprintf("is version %s, which does not satisfy %q; it was not run", v, sc.Version))
+	check := CheckScannerVersion(scanContext(), ScannerInfo{
+		Path: binary, Isolation: string(policyOf(&r.lc).isolation), Version: sc.Version, VersionCommand: sc.VersionCommand, Dir: root,
+	})
+	if check.Problem != "" {
+		r.addRun(check.Code, sc.Name, check.Problem)
 		return false
 	}
 	return true
+}
+
+// VersionCheck is the outcome of checking a scanner against its version range.
+type VersionCheck struct {
+	// Line is the first usable line the version command printed.
+	Line string
+	// Problem says why the scanner is not run ("" when it satisfies the range or has none).
+	Problem string
+	// Code is the finding code a run reports the problem with.
+	Code string
+}
+
+// CheckScannerVersion applies info's version range the way a run does: it asks
+// the scanner for its version (version_command, else `<command> --version`) and
+// compares the first version number in the answer with the range. validate
+// --external and scanners doctor share it, so doctor never calls a scanner
+// healthy that validate refuses to run.
+func CheckScannerVersion(ctx context.Context, info ScannerInfo) VersionCheck {
+	if info.Version == "" {
+		return VersionCheck{}
+	}
+	c, err := semver.ParseConstraint(normalizeRange(info.Version))
+	if err != nil {
+		return VersionCheck{Code: CodeScannerConfigInvalid, Problem: fmt.Sprintf("version %q is not a version range: %v", info.Version, err)}
+	}
+	line, err := ProbeScannerVersion(ctx, info)
+	if err != nil {
+		return VersionCheck{Line: line, Code: CodeScannerRunFailed, Problem: "was not run: its version could not be checked: " + sanitizeScannerText(err.Error())}
+	}
+	v, ok := firstVersion(line)
+	if !ok {
+		return VersionCheck{Line: line, Code: CodeScannerUnavailable,
+			Problem: fmt.Sprintf("was not run: its version output %q has no version to check against %q", line, info.Version)}
+	}
+	if !c.Check(v, true) {
+		return VersionCheck{Line: line, Code: CodeScannerUnavailable,
+			Problem: fmt.Sprintf("is version %s, which does not satisfy %q; it was not run", v, info.Version)}
+	}
+	return VersionCheck{Line: line}
 }
 
 // normalizeRange lets a range be written with commas (">=1.0.0, <2"), which the
@@ -410,7 +464,7 @@ func (r *runner) banner(sc resolvedScanner) {
 // directory. It reports false when isolation is required and unavailable.
 func (r *runner) isolate(sc resolvedScanner, st *scannerStage, argv []string, binary string) ([]string, bool) {
 	mode := policyOf(&r.lc).isolation
-	on, err := scannerSandbox.Resolve(context.Background(), mode)
+	on, err := scannerSandbox.Resolve(scanContext(), mode)
 	if err != nil {
 		r.addRun(CodeScannerRunFailed, sc.Name, fmt.Sprintf("isolation = \"require\" but %s", sanitizeScannerText(err.Error())))
 		return argv, false
@@ -438,10 +492,13 @@ func (r *runner) isolate(sc resolvedScanner, st *scannerStage, argv []string, bi
 // noteIsolationDegraded reports once per run that isolation = "auto" found no
 // backend, so staged scanners ran with a scrubbed environment only.
 func (r *runner) noteIsolationDegraded() {
-	if r.opts.Scanner.degraded {
+	r.runMu.Lock()
+	already := r.opts.Scanner.degraded
+	r.opts.Scanner.degraded = true
+	r.runMu.Unlock()
+	if already {
 		return
 	}
-	r.opts.Scanner.degraded = true
 	r.addRun(CodeScannerNoIsolation, "isolation", "no process isolation is available on this system, so staged scanners ran with a scrubbed environment but without network or write confinement; set isolation = \"none\" to accept this, or \"require\" to refuse")
 }
 
@@ -509,7 +566,10 @@ type planInfo struct {
 	files   []string
 	note    string
 	cache   string
-	stage   *scannerStage
+	// units are the per-skill lines of a scanner handed {skill_dirs}: the skill
+	// directory and whether its result is cached.
+	units []string
+	stage *scannerStage
 }
 
 func (r *runner) planStaged(sc resolvedScanner, st *scannerStage, argv []string, spec cmdrun.Spec, files []stagedFile, _ bool, cache string) {
@@ -558,6 +618,12 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 	}
 	if p.cache != "" {
 		fmt.Fprintf(&w, "  cache:     %s\n", p.cache)
+	}
+	if len(p.units) > 0 {
+		fmt.Fprintf(&w, "  skills:    %d\n", len(p.units))
+		for _, u := range p.units {
+			fmt.Fprintf(&w, "    %s\n", u)
+		}
 	}
 	fmt.Fprintf(&w, "  files:     %d\n", len(p.files))
 	for _, f := range p.files {
@@ -633,14 +699,13 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 	})
 	var out []scannerFinding
 	occurrence := map[string]int{}
+	limit := sc.messageLimit(policyOf(&r.lc))
+	cutCount := 0
 	for i := range found {
 		f := found[i]
 		f.Line = min(max(f.Line, 0), maxScannerLine)
 		abs, inside := r.locate(&f, scope)
-		msg := sanitizeScannerText(f.Message)
-		if rule := sanitizeScannerText(f.Rule); rule != "" {
-			msg = rule + ": " + msg
-		}
+		note := ""
 		if !inside {
 			if scope.lookup != nil {
 				outOfScope++
@@ -649,27 +714,52 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 				}
 				continue
 			}
-			msg += " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
+			note = " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
 			abs = r.configFilePath()
 		}
 		if u := evidenceURL(f.HelpURI); u != "" {
-			msg += " (" + u + ")"
+			note += " (" + u + ")"
 		}
-		sev := scannerSeverity(sc, f)
+		sev, lead := scannerSeverity(sc, f), ""
 		if f.Suppressed {
-			sev, msg = SeverityInfo, "(suppressed) "+msg
+			sev, lead = SeverityInfo, "(suppressed) "
 		}
+		msg, full := scannerMessage(f, limit, lead, note)
 		built, keep := r.externalFinding(sc.Name, abs, f.Line, sev, msg)
 		if !keep {
 			continue
 		}
+		if full != "" {
+			built.meta().FullMessage = "[" + sc.Name + "] " + full
+			cutCount++
+		}
 		built.meta().Fingerprint = r.scannerFingerprint(sc.Name, f, abs, built.Line, occurrence)
 		out = append(out, scannerFinding{Finding: built, scanner: sc.Name, rule: sanitizeScannerText(f.Rule), abs: abs})
+	}
+	if cutCount > 0 {
+		r.log().Debug("Scanner messages were cut to max_message; the JSON report and SARIF output keep the full text",
+			"scanner", sc.Name, "truncated", cutCount, "max_message", limit)
 	}
 	if outOfScope > 0 {
 		r.addRun(CodeScannerOutOfScope, sc.Name, fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut))
 	}
 	return out
+}
+
+// scannerMessage builds the message of one result: lead, the rule id, the text
+// cut to limit characters (ending in "..."), then note. full is the same message
+// with the whole text when the text was cut, and "" otherwise.
+func scannerMessage(f externalFinding, limit int, lead, note string) (msg, full string) {
+	text, cut := truncateRunes(cleanScannerText(f.Message), limit)
+	prefix := lead
+	if rule := sanitizeScannerText(f.Rule); rule != "" {
+		prefix += rule + ": "
+	}
+	msg = prefix + text + note
+	if cut {
+		full = prefix + cleanScannerText(f.Message) + note
+	}
+	return msg, full
 }
 
 // scannerSeverity is the severity a scanner result gets: its band through the

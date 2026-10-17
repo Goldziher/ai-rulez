@@ -13,7 +13,7 @@ import (
 )
 
 // A hand-written skill is only linted, so a subdirectory generate would not copy is no warning;
-// loading the same skill for generate still names it.
+// an installed skill is bundled whole, and one narrowed by `resources` still names what is left out.
 func TestUnrecognizedSkillSubdirectoryWarning(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -24,10 +24,14 @@ func TestUnrecognizedSkillSubdirectoryWarning(t *testing.T) {
 			_, ok := LoadSkillDir(logger.WithContext(t.Context(), log), root, skillDir)
 			require.True(t, ok)
 		}, false},
-		{"loading a skill for generate", func(t *testing.T, _, skillDir string, log logger.Logger) {
+		{"loading an installed skill bundles hooks/ whole", func(t *testing.T, _, skillDir string, log logger.Logger) {
 			_, err := LoadSkillResourcesContext(logger.WithContext(t.Context(), log), skillDir)
 			require.NoError(t, err)
-		}, true},
+		}, false},
+		{"resources none leaves hooks/ out on purpose", resourcesLoader("none"), false},
+		{"resources that exclude hooks/ by name", resourcesLoader("*", "!hooks"), false},
+		{"resources that bundle hooks/ by name", resourcesLoader("hooks"), false},
+		{"resources that do not name hooks/ still warn", resourcesLoader("rules"), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,5 +49,14 @@ func TestUnrecognizedSkillSubdirectoryWarning(t *testing.T) {
 			// Assert
 			assert.Equal(t, tt.wantWarn, strings.Contains(strings.Join(log.warns, "\n"), "Unrecognized skill subdirectory"), log.warns)
 		})
+	}
+}
+
+// resourcesLoader loads an installed skill with the given `resources` patterns.
+func resourcesLoader(patterns ...string) func(t *testing.T, root, skillDir string, log logger.Logger) {
+	return func(t *testing.T, _, skillDir string, log logger.Logger) {
+		ctx := WithSkillResources(logger.WithContext(t.Context(), log), patterns)
+		_, err := LoadSkillResourcesContext(ctx, skillDir)
+		require.NoError(t, err)
 	}
 }

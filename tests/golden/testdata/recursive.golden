@@ -8,14 +8,15 @@ exit: 0
 .gitignore file 0644 156 5a478ab90c3c140c63afb7a2962a56a039453cbcc30d7cafbc30e47644694c82
 a/ dir 0755
 a/.ai-rulez/ dir 0755
-a/.ai-rulez/.generated-manifest.json file 0644 239 191bba227321042e93a90dac39990177de5ff629a236ae896ccb85c40699cd48
-a/.ai-rulez/.generated-manifest.local.json file 0644 356 10f7e61492aceb0e209a5f3514f3330e30b0fb53cafba09a7ed9cd762a45a2a8
+a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
+a/.ai-rulez/.generated-manifest.local.json file 0644 692 e3dc191e3841d9c634ac47cea597391ec563644e19267430cdf3dd26b1366c2c
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
 a/.claude/ dir 0755
 a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
+a/.claude/settings.json file 0644 1013 1b66076b791611d89dca7b618b35a94690b52eb942deee0c986a94043773da95
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
 b/ dir 0755
@@ -42,14 +43,15 @@ exit: 0
 .gitignore file 0644 156 5a478ab90c3c140c63afb7a2962a56a039453cbcc30d7cafbc30e47644694c82
 a/ dir 0755
 a/.ai-rulez/ dir 0755
-a/.ai-rulez/.generated-manifest.json file 0644 239 191bba227321042e93a90dac39990177de5ff629a236ae896ccb85c40699cd48
-a/.ai-rulez/.generated-manifest.local.json file 0644 356 10f7e61492aceb0e209a5f3514f3330e30b0fb53cafba09a7ed9cd762a45a2a8
+a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
+a/.ai-rulez/.generated-manifest.local.json file 0644 692 e3dc191e3841d9c634ac47cea597391ec563644e19267430cdf3dd26b1366c2c
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
 a/.claude/ dir 0755
 a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
+a/.claude/settings.json file 0644 1013 1b66076b791611d89dca7b618b35a94690b52eb942deee0c986a94043773da95
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
 b/ dir 0755

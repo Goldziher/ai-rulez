@@ -152,6 +152,7 @@ func patchPayload(root string, lines []string) string {
 
 func TestCheck_LargePatches(t *testing.T) {
 	root := newProject(t)
+	budget := largePatchBudget(t, root)
 	many := func(n int, distinct bool) []string {
 		lines := make([]string, 0, n+1)
 		for i := 0; i < n; i++ {
@@ -185,13 +186,31 @@ func TestCheck_LargePatches(t *testing.T) {
 
 			// Assert
 			if !raceEnabled { // the race detector slows the regexp 20-80x, so only a normal build is timed
-				assert.Less(t, time.Since(start), 5*time.Second, "a large patch must not outlast the harness timeout")
+				assert.Less(t, time.Since(start), budget, "a large patch must not outlast the harness timeout")
 			}
 			assert.Equal(t, tt.wantBlock, got.Block)
 			assert.Equal(t, tt.wantPath, got.Path)
 			assert.Contains(t, got.Message(), tt.wantMsg)
 		})
 	}
+}
+
+// largePatchBudget is the time a large patch may take: 5s on a fast file system,
+// scaled up by how much slower this one answers a batch of failing lookups (a
+// Windows runner with antivirus scanning is far slower than Linux). The patch
+// check does its file system work once per directory, not once per line.
+func largePatchBudget(t *testing.T, root string) time.Duration {
+	t.Helper()
+	const probes = 200
+	start := time.Now()
+	for i := 0; i < probes; i++ {
+		_, _ = os.Lstat(filepath.Join(root, "src", fmt.Sprintf("probe%d.go", i)))
+	}
+	factor := time.Since(start).Seconds() / 0.05 // 50ms is generous for 200 lookups on Linux
+	if factor < 1 {
+		factor = 1
+	}
+	return time.Duration(float64(5*time.Second) * factor)
 }
 
 func BenchmarkCheck_LargePatch(b *testing.B) {
@@ -289,4 +308,23 @@ func TestCheck_CaseInsensitiveFileSystemsFoldTheRoot(t *testing.T) {
 	// Assert
 	assert.True(t, got.Block)
 	assert.Equal(t, "AGENTS.md", got.Path)
+}
+
+func TestResolveCached_MatchesResolve(t *testing.T) {
+	// Arrange
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "real"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "real", "f.md"), []byte("x"), 0o644))
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "real"), filepath.Join(root, "dirlink"))
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "real", "f.md"), filepath.Join(root, "real", "filelink.md"))
+	dirs := map[string]string{}
+
+	for _, rel := range []string{"real/f.md", "real/new.md", "dirlink/f.md", "dirlink/new.md", "real/filelink.md", "gone/deep/new.md"} {
+		// Act
+		p := filepath.Join(root, filepath.FromSlash(rel))
+
+		// Assert
+		assert.Equal(t, resolve(p), resolveCached(p, dirs), rel)
+	}
 }

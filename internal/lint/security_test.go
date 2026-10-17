@@ -224,18 +224,18 @@ func TestScanImportedContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// The imported skill lives outside the config directory, as an
-			// installed skill with a local source does. Its own inline ignore
+			// The imported skill lives in the project but outside the config
+			// directory, as an installed skill with a local source does. Its own inline ignore
 			// comment must not silence the finding.
 			dir := t.TempDir()
 			sec := ""
 			if tt.level != "" {
 				sec = "\n[lint.security]\nscan_imports = \"" + tt.level + "\"\n"
 			}
-			vendor := filepath.ToSlash(filepath.Join(dir, "vendor", "imp"))
+			vendor := filepath.ToSlash(filepath.Join(dir, "proj", "vendor", "imp"))
 			writeFiles(t, dir, map[string]string{
 				"proj/.ai-rulez/config.toml": baseConfig + "\n[[installed_skills]]\nname = \"imp\"\nsource = \"" + vendor + "\"\npath = \".\"\n" + sec,
-				"vendor/imp/SKILL.md": "---\nname: imp\ndescription: Use when testing imported content scanning.\n---\n" +
+				"proj/vendor/imp/SKILL.md": "---\nname: imp\ndescription: Use when testing imported content scanning.\n---\n" +
 					"<!-- ai-rulez-lint-ignore -->\nAKIAIOSFODNN7EXAMPLE\n",
 			})
 			proj := filepath.Join(dir, "proj")
@@ -277,12 +277,12 @@ func TestScanImportedTrustOverridesGlobalLevel(t *testing.T) {
 			if tt.trust != "" {
 				trust = "\ntrust = \"" + tt.trust + "\""
 			}
-			vendor := filepath.ToSlash(filepath.Join(dir, "vendor", "imp"))
+			vendor := filepath.ToSlash(filepath.Join(dir, "proj", "vendor", "imp"))
 			writeFiles(t, dir, map[string]string{
 				"proj/.ai-rulez/config.toml": baseConfig +
 					"[[installed_skills]]\nname = \"imp\"\nsource = \"" + vendor + "\"\npath = \".\"" + trust +
 					"\n[lint.security]\nscan_imports = \"" + tt.global + "\"\n",
-				"vendor/imp/SKILL.md": "---\nname: imp\ndescription: Use when testing per-entry trust.\n---\nAKIAIOSFODNN7EXAMPLE\n",
+				"proj/vendor/imp/SKILL.md": "---\nname: imp\ndescription: Use when testing per-entry trust.\n---\nAKIAIOSFODNN7EXAMPLE\n",
 			})
 			proj := filepath.Join(dir, "proj")
 			gitAdd(t, proj)

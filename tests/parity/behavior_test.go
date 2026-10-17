@@ -36,6 +36,11 @@ presets = ["claude"]
 # the self server into .mcp.json, which would perturb them; keep it out here.
 self_server = false
 
+[session_start]
+# The hook pins the version of the binary that renders it, and the tool side runs in
+# this test process (version "dev") while the command runs the built binary.
+generate = false
+
 [governance]
 require_approval = ["kind:rule"]
 `,

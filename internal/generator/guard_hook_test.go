@@ -60,7 +60,11 @@ presets = ["claude"]
 
 	generateProject(t, root)
 
-	assert.NoFileExists(t, filepath.Join(root, ".claude", "settings.json"))
+	// The settings file holds the session-start hook, and nothing of the guard.
+	data, err := os.ReadFile(filepath.Join(root, ".claude", "settings.json"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "ai-rulez guard")
+	assert.NotContains(t, string(data), "PreToolUse")
 }
 
 func TestGenerate_GuardHookKeepsUserHooksAndCleanRemovesIt(t *testing.T) {

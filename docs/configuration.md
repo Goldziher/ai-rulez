@@ -21,11 +21,12 @@ You can either directly edit files with your editor or use CRUD commands for pro
 
 ## Configuration Discovery
 
-When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
+When no explicit path is given, the CLI discovers configuration by walking up from the current directory to the nearest directory holding a configuration, stopping at the repository root (never above the home directory), and trying in each directory, in order:
 
 1. `.agents/ai-rulez.toml` — the configuration of a project whose content is [`.agents` and `AGENTS.md`](agents-source.md)
 2. `.ai-rulez/config.toml` — the tool-specific directory (default)
 3. `.config/ai-rulez/config.toml` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
+4. `ai-rulez.toml` at the project root — a [configuration without a `.ai-rulez/` folder](config-without-folder.md); a config directory at the same level wins, with a warning that the file is ignored
 
 `config.toml` is the only config format read, and its `version` must be `"5.0"`. A project that has only a
 `config.yaml`, `config.yml` or `config.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), a flat `ai-rulez.yaml`
@@ -126,6 +127,18 @@ name = "acme-platform"
 ```
 
 Every project has one name; the value is used verbatim in generated headers.
+
+## Lint-only configuration
+
+`presets` is optional. A configuration with no preset (omitted or `presets = []`) and no `[plugin]` block is a lint-only configuration: `validate`, `scan` and `[[lint.external]]` run against the files already in the repository, while `generate` prints `No presets are configured: nothing to generate`, writes nothing (not `AGENTS.md`, not `.mcp.json`) and exits 0. `generate --check` and `doctor` report no drift. It works in the directory layout and in the [root `ai-rulez.toml` layout](config-without-folder.md#lint-only-configuration).
+
+```toml
+version = "5.0"
+name = "lint"
+
+[lint]
+profile = "strict"
+```
 
 ## Content Layout
 
@@ -643,6 +656,30 @@ Quick reference:
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
 
+### `skip_outputs`
+
+Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them and still let ai-rulez emit
+the rest (installed skills, plugins, MCP servers, hooks, permissions). The default is empty: nothing is skipped.
+
+```toml
+skip_outputs = ["instructions"]
+```
+
+| Value          | Skips |
+| -------------- | ----- |
+| `instructions` | Every root instruction file: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` and the other presets' root files, the `*.local.md` and `AGENTS.override.md` variants, and scope roots. Overrides `agents_md` and `claude_md`. |
+| `agents_md`    | Only the shared `AGENTS.md` (and `AGENTS.override.md`) and the shared `.agents/skills` tree. |
+| `claude_md`    | Only `CLAUDE.md` (root and scopes). |
+| `rules`        | Rule files in every preset (`.claude/rules`, `.cursor/rules`, ...). |
+| `skills`       | Skill directories in every preset, installed skills included. A command a harness runs as a skill (`.claude/skills/<command>`, `.agents/skills/<command>`) is a command, not a skill. |
+| `agents`       | Agent definition files. |
+| `commands`     | Command and prompt files, and the skills that carry a command (including `agents/openai.yaml` for Codex). |
+
+An unknown value fails validation and names the valid ones. `config.local.toml` accepts the key too. Skipped files leave
+the manifest, the managed `.gitignore` block, `generate --check`, the lock output digests and `clean`, so none of them
+reads or removes a hand-written file. A file an earlier run generated and that is now skipped is left in place and
+reported once as no longer managed. See [Managing only remote skills and plugins](managing-remote-skills.md).
+
 ### `claude_md`
 
 Controls whether the `claude` preset writes its `CLAUDE.md` when `agents_md` is on. The default, `"shim"`, keeps the
@@ -710,6 +747,8 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
 # skills_instructions = false                # leave the "Unlisted skills" section out of instruction files
 # skills_instructions_text = "..."           # replace that section; {{server}}, {{skills_dir}}
+# discover_skills = "repo"                   # mcp --serve-skills also serves the skills already in the repository
+# index_cache = "user"                       # "user" (default), "repo" or "off": where the repository index is cached
 ```
 
 | Field                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -720,6 +759,8 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 | `self_server_command`      | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there; a shell launch (`sh -c <script>`) is never appended to, because the flag would become `$0`, so put `--serve-skills` in the script and end the command with a dummy `"sh"` argument (`exec ai-rulez mcp "$@"`). Mutually exclusive with `self_server_version`. Only applies while the self server is on.                                                                                                                                                                                                                                                                                               |
 | `skills_instructions`      | While skills are served, every instruction file gets a short "Unlisted skills" section telling the agent to call `find_skill`, then `load_skill`, on the MCP server that serves them, with the on-disk fallback (`.ai-rulez/skills/<name>/SKILL.md`). Default `true`; `false` leaves it out. Written when a configured preset can call MCP, and only into the root file of a harness that can; the shared `AGENTS.md` carries it once.                                                                                                          |
 | `skills_instructions_text` | Replaces the default section (write your own heading). `{{server}}` is the MCP server that serves the skills, `{{skills_dir}}` the config directory's skills folder (`.ai-rulez/skills`). Unknown variables, blank text, and text beside `skills_instructions = false` are configuration errors.                                                                                                                                                                                                                                                |
+| `discover_skills`          | `off` (the default), `repo` or `all`: whether `mcp --serve-skills` also serves the skills the repository already keeps (`skills/`, `.claude/skills` at any depth, the configured presets' skill directories). `all` adds the installed and included skills whatever their delivery. The `--discover-skills` flag overrides it. See [Discovering skills already in the repository](mcp-server.md#discovering-skills-already-in-the-repository). |
+| `index_cache`              | `user` (the default), `repo` or `off`: where the repository index of the discovery keeps its cache of item summaries and scan verdicts, never file bodies. `user` is the user cache directory, with a gitignored directory in the project (`.ai-rulez/.cache/`, or `.ai-rulez-cache/` in the root layout) as the fallback when it is not writable; `repo` always uses that directory; `off` keeps none. See [The index cache](mcp-server.md#the-index-cache). |
 
 Behavior:
 
@@ -1100,6 +1141,15 @@ hand-authored content survives, comments in JSONC, TOML and YAML included. See
 
 `ai-rulez generate --user` renders a user config into the per-user directories each harness reads; see
 [User-level configuration](user-scope.md).
+
+### `session_start`
+
+`[session_start]` is on by default for a project that generates for Claude Code: `generate` adds a `SessionStart` hook
+to `.claude/settings.json` that runs `ai-rulez session-start`. In a remote (cloud) session, where `CLAUDE_CODE_REMOTE`
+is `true`, it regenerates the outputs of the fresh clone and injects a short briefing; in a local session it does
+nothing. Keys: `generate` (false removes it), `when` (`remote` or `always`), `mode` (`auto`, `locked`, `frozen`,
+`plain`), `timeout`, `version`, `command`, `prompt` and `prompt_text`. See
+[Run generate when a remote session starts](session-start.md).
 
 ### `builtins`
 
@@ -1808,17 +1858,55 @@ Each entry supports:
 | Field            | Required | Description                                                       |
 | ---------------- | -------- | ----------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill identifier                                           |
-| `source`         | Yes      | Git URL or local path                                             |
-| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories (defaults to `skills/<name>`) |
+| `source`         | Yes      | Git URL, `owner/repo` or `github:owner/repo`, `file://` URL, or local directory (`~/path` only from `config.local.toml` or the user config); see [source forms](installed-skills.md#source-forms) |
+| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories (defaults to `skills/<name>`; when omitted and nothing is there, the conventional harness skill directories are searched) |
 | `ref`            | No       | Git ref (branch, tag, commit)                                     |
 | `local_override` | No       | Local path override for development                               |
 | `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs  |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory    |
+| `resources`      | No       | What is bundled besides `references/`, `scripts/` and `assets/`: the whole skill directory by default (not `SKILL.md`, `evals/`, `agents/`, hidden files); setting it replaces that. See [Installed skills](installed-skills.md#what-is-bundled-with-a-skill) |
 | `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
+
+### `installed_marketplaces` and `installed_plugins`
+
+Plugin marketplaces and the plugins imported from them (or straight from a repository). Skills, agents, commands,
+rules, hooks and MCP servers become ordinary content, pinned in `ai-rulez.lock`. See
+[Installed Plugins](installed-plugins.md) for the formats, source forms, hook and MCP policy and the lock flow.
+
+```toml
+[[installed_marketplaces]]
+name = "acme"
+source = "acme/plugins"
+version = "^1.2"
+
+[[installed_plugins]]
+name = "formatter"
+marketplace = "acme"
+exclude = ["hooks"]
+```
+
+| Field (marketplace) | Description |
+| ------------------- | ----------- |
+| `name`, `source` | Required. `source` is a repository URL, GitHub `owner/repo`, a local directory inside the project or an https `marketplace.json` URL |
+| `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | As on `includes` |
+| `trust` | Scan level of the plugins read through it: `error` (default) or `warn` |
+
+| Field (plugin) | Description |
+| -------------- | ----------- |
+| `name` | Required, unique |
+| `marketplace`, `plugin` | Install the marketplace entry `plugin` (default `name`) from an installed marketplace; exclusive with `source` |
+| `source`, `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | A plugin repository or directory, as on `installed_skills` |
+| `format` | Force the layout: `claude`, `codex`, `gemini`, `cursor`, `agent-plugins` |
+| `include`, `exclude` | Component kinds: `skills`, `agents`, `commands`, `hooks`, `mcp`, `rules` |
+| `name_prefix`, `domain`, `profiles`, `trust` | As on `installed_skills` |
+| `enable_hooks` | Import the plugin's hooks (default `false`) |
+| `enable_mcp` | Import the plugin's MCP servers (default `true`) |
+
+Manage via CLI: `ai-rulez marketplace add/remove/list/update`, `ai-rulez plugin install/remove/list/update`.
 
 ### `[skills]`, `[domains.<name>]`, `[[skill_sources]]`, `[lock]`
 
@@ -1845,7 +1933,7 @@ body_file = "stub.md"                                   # relative to .ai-rulez/
 
 | Key | Meaning |
 | --- | ------- |
-| `description` | Replaces the frontmatter description. Must not be blank. |
+| `description` | Replaces the frontmatter description. Must not be whitespace-only; an empty string is the same as leaving the key out. |
 | `body` | Replaces the stub's text. Multi-line TOML (`"""`) works. |
 | `body_file` | Reads the text from a file relative to the config directory (`.ai-rulez/`); the path must stay inside it. A missing file is a load error. Mutually exclusive with `body`. |
 

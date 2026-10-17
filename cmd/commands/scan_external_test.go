@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestScannerOptionsValidatesFlagCombinations(t *testing.T) {
@@ -117,7 +118,7 @@ func TestScanDryRunPrintsThePlanAndRunsNothing(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake scanners are POSIX shell scripts")
 	}
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config"))
 	marker := filepath.Join(t.TempDir(), "ran")
 	script := filepath.Join(t.TempDir(), "fake-scan")

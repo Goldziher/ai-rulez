@@ -21,7 +21,7 @@ const rubricsDir = "rubrics"
 // collectRubrics pins the project's own rubric directories. A symlink, a file that cannot be
 // read or a directory that cannot be walked is a problem a check fails on, never a skipped file.
 func (c *collector) collectRubrics() error {
-	if c.cfg.ConfigDir == "" {
+	if c.cfg.ConfigDir == "" || c.cfg.Contentless() {
 		return nil
 	}
 	root := filepath.Join(c.cfg.ConfigDir, rubricsDir)

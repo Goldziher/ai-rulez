@@ -22,7 +22,7 @@ because they answer different questions.
 | Scope | the project or team | a person (identity decided elsewhere) |
 | Selected by | `--profile`, `[profiles]`, the default profile | `--role` |
 | Extra knobs | — | `skill_mode`, `delivery`, `match`, `pin` |
-| Compared by | `tokens --by-profile` | `tokens --by-role` |
+| Compared by | `tokens --compare-profiles` | `tokens --by-role` |
 
 Reach for a profile when one checkout must emit several *project* variants — a backend service, a frontend app, a
 QA bundle — and that choice belongs in the repository. Reach for a role when the same content must be tailored to

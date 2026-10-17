@@ -17,6 +17,10 @@ agents_md = true    # the default
 `update_context` and `delete_context` then act on that one section, never the whole file), and an `AGENTS.md` in a
 subdirectory is read as context scoped to that directory.
 
+To write `AGENTS.md`, `CLAUDE.md` or the shared skills by hand and keep ai-rulez away from them, list them in
+[`skip_outputs`](configuration.md#skip_outputs): `"agents_md"` skips the shared `AGENTS.md` and `.agents/skills`,
+`"claude_md"` skips `CLAUDE.md`, and `"instructions"` skips every root instruction file and overrides both.
+
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).
@@ -27,8 +31,12 @@ What changes:
   tree keeps them, since that preset has no other way to see them, and still gets the stub.
 - Presets that read these files stop writing their root file (`GEMINI.md`, `.hermes.md`, ...), their copy of
   `AGENTS.md` and their own skills directory.
-- Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
-  MCP files and settings. A rules folder is created only when at least one rule file is written into it.
+- Commands that `codex`, `antigravity`, `devin` and `warp` run as skills are written to the shared tree as
+  user-invocable skills (`disable-model-invocation: true`, plus `agents/openai.yaml` for Codex), unless a skill has
+  the same id. A command with `targets` stays in each targeted preset's own skills directory. With `agents_md = false`
+  Devin writes its own `.devin/skills/<command>/SKILL.md`, which keeps `triggers: [user]`.
+- Everything else the tool cannot read from the shared files stays per-preset: scoped rules folders, agents,
+  other commands, MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
 With `agents_md = false`, `codex`, `opencode`, `xum`, `pi`, `amp` and `baz` already write the same `AGENTS.md`, while `claude`, `gemini`,
 `cursor` and the rest each repeat the same content in their own file.

@@ -315,7 +315,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 20989 7bdf839de0ea014a60b600e5a3f9482c219382935c7166bedc0cf7bd82eb30b2
+.ai-rulez/.generated-manifest.local.json file 0644 21067 1ee316c01bb0de6cbd9450168db8d14b0d87c9e3c0165bee990bb1ce7e31b308
 >>>>
 {
   "version": "1",
@@ -404,8 +404,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "431a33920aa4b87d9be9fc179299e94f5d7dd0ae8619c717601f2f32bd3f04d1",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "8e7bcfedbd92aefa55c778e2648f97e53ac43255aef2635d961ed2eec4324896"
         ]
       },
       {
@@ -414,7 +414,8 @@ policy:
           "SessionStart"
         ],
         "elementSums": [
-          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86",
+          "7d27dd6f414248f8eb315dbf0293f3ca0ce793752c360e49ba8605d987e15a10"
         ]
       },
       {
@@ -482,7 +483,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "82161be0a244f7ba2bcbb436b8c906b5f40f02a71f69fe705145b44339b8ff21"
+          "d2d49aa9325c802dbf0485234aeafa8a3a06f7428aacaefd7f8e61668e9268db"
         ]
       },
       {
@@ -539,8 +540,8 @@ policy:
           "preToolUse"
         ],
         "elementSums": [
-          "75423254de3b80b1bff354ae0d376a189e57530807bd1c4892d711de2e60d0e7",
-          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
+          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
+          "c5dc162cf7ec59b49a20c09a737d64fcbbb37c432338bf83af9093819f22f39b"
         ]
       },
       {
@@ -627,7 +628,7 @@ policy:
         ],
         "elementSums": [
           "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "f8f2d88ff5b40e147b18aa5cfd131696f3ec04ffb9df7d93f491fec1d88a4ecb"
+          "40cc1b736027e491a5ecef62f1ae32a392a353cb998406aaee1a737c99ec6e42"
         ],
         "local": true
       },
@@ -965,23 +966,23 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "a779bea6d9f7f754635e3b2f65a321f97d89e62002bcadb2b3acf88b4552e4f7",
+    ".claude/settings.json": "2bc9a14910cf29125eb9e4aa8a40037867ec5c9c3e06edb2f451a3ac1b870a71",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/helper.toml": "2cd2537d532bb3ce063715d3dd4b80145e251a6a7149411d2ae0dfbc5f500ef2",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "995c2a001216b2b2f5980c225802139d31589b3616b6b5b71313e4bc4d561b2f",
-    ".codex/hooks.json": "daca510a2ee5349ce4800ab6a57caeecf9be6f440628fe254444db22c2ed3acd",
+    ".codex/hooks.json": "4644a3ce11104dd527a3085a3953b8bbf1c4658b65546d79cdf174f1019c2a82",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/quick.md": "6da8934bdbd5f2a1c39f521bf3118d90a929b0e6cb49ae801b21ea21ae9febc1",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "af9c481bc2a57c6be7761f67701f4fce5c52ea40791ebcf733eb8ce9f8bd6bf5",
+    ".cursor/hooks.json": "6ba4f01981732f10a61273bcb07da22b37fa1b3effe46c6f66bea231f317b99d",
     ".cursor/mcp.json": "f8cf3fb157962e923d18894ad9d23d6bbf9e7477674d6d06b59f2a8123612452",
-    ".gemini/settings.json": "5ed3ecf7c81c82c9003c43dd4040e385945c0f66feb0625b565de075393e142f",
-    ".github/hooks/ai-rulez.json": "c124e60a644aa98b901c39dc1918c43b35001ba763b5616bbafc5d77d036c44b",
+    ".gemini/settings.json": "49cb902481a38ae7982c525f0dd41bc6dc1d8a4075aaa372de8f18f6605b5489",
+    ".github/hooks/ai-rulez.json": "18355b93fac4421ba564c81546ef762523e87964d64c95397ccbf713c99eb09e",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
@@ -1417,7 +1418,7 @@ Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d95
 
 Use strict mode.
 <<<<
-.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 >>>>
 {
   "hooks": {
@@ -1450,6 +1451,15 @@ Use strict mode.
             "type": "command",
             "command": "echo started",
             "statusMessage": "Starting"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; export CLAUDE_PROJECT_DIR=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; n() { d=$(mktemp -d \"${TMPDIR:-/tmp}/ai-rulez.XXXXXX\" 2\u003e/dev/null) || d=/; (cd \"$d\" 2\u003e/dev/null || exit 1; \"$@\"); r=$?; if [ \"$d\" != / ]; then rmdir \"$d\" 2\u003e/dev/null; fi; return $r; }; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n npx -y ai-rulez@latest session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n uvx --from ai-rulez@latest ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
           }
         ]
       }

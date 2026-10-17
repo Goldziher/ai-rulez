@@ -116,17 +116,18 @@ func TestLoadLintConfigPrefersARealConfiguration(t *testing.T) {
 	assert.Equal(t, "p", cfg.Name)
 }
 
-func TestLoadLintConfigKeepsTheErrorBelowAConfiguredRoot(t *testing.T) {
+func TestLoadLintConfigUsesTheConfigurationOfAParentDirectory(t *testing.T) {
 	root := implicitProject(t, map[string]string{
 		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"p\"\ngitignore = false\nagents_md = false\npresets = [\"claude\"]\n",
 		"pkg/a.txt":             "x",
 	})
 	t.Chdir(filepath.Join(root, "pkg"))
 
-	_, err := loadLintConfig(t.Context())
+	cfg, err := loadLintConfig(t.Context())
 
-	require.Error(t, err, "a subdirectory of a configured project is not a project without one")
-	assert.ErrorIs(t, err, config.ErrNoConfig)
+	require.NoError(t, err, "a subdirectory of a configured project is that project, never an implicit one")
+	assert.False(t, cfg.Implicit)
+	assert.Equal(t, "p", cfg.Name)
 }
 
 func TestCommandsThatNeedAConfigurationSayToRunInit(t *testing.T) {
@@ -285,9 +286,16 @@ func TestOtherCommandsLintOnlyTheConfiguredContent(t *testing.T) {
 
 	// Act
 	rep, err := strictLint(t.Context(), cfg)
+	control, controlErr := strictLint(withUnmanagedLint(t.Context()), cfg)
 
 	// Assert
 	require.NoError(t, err)
+	require.NoError(t, controlErr)
+	var controlCodes []string
+	for _, f := range control.Findings {
+		controlCodes = append(controlCodes, f.Code)
+	}
+	require.Contains(t, controlCodes, lint.CodeReferenceUnknown, "control: a validate run lints the hand-written file")
 	for _, f := range rep.Findings {
 		assert.NotEqual(t, lint.CodeReferenceUnknown, f.Code, "an unlisted file was linted: %v", f)
 	}

@@ -6,7 +6,7 @@ exit: 0
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
 INFO  Generating with configuration profile=default
-INFO  Generation complete files=11
+INFO  Generation complete files=12
 --- project tree
 .agents/ dir 0755
 .agents/agents/ dir 0755
@@ -20,8 +20,8 @@ INFO  Generation complete files=11
 .agents/skills/review/references/ dir 0755
 .agents/skills/review/references/checklist.md file 0644 36 1e9c21bd7b005d5ef6a3b6fb4a5235adf69f33ae9695e69ad9666e80ac58d218
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 676 7f4189ad57a4af78c377b527493c33c319c85fa81ff9f938a5133a62787d55f9
-.ai-rulez/.generated-manifest.local.json file 0644 580 f9d4e635b4d03ed5a123bfccacbf9309d0ee224d1ea0e03170909226aff94cdb
+.ai-rulez/.generated-manifest.json file 0644 738 b4ea98a7cbc3ff79cd3e3d3bdc0b919f267d7356a4dc1afb337ccd5402654dfc
+.ai-rulez/.generated-manifest.local.json file 0644 916 e22bd0aad214d90637017e0859d6695df31d3bc62d55c5fe4183a9b35652c8cc
 .ai-rulez/config.toml file 0644 106 de7dbd302c2f4e84644ab5781180a36cc6f99574b51c4036d98b0638fb614fc9
 .claude/ dir 0755
 .claude/agents/ dir 0755
@@ -29,6 +29,7 @@ INFO  Generation complete files=11
 .claude/rules/ dir 0755
 .claude/rules/always.md file 0644 212 c79735c688c82c422d1590b56934c8f1240a2cc8dd56c6be3cd3b08769d011ec
 .claude/rules/go-style.md file 0644 248 d87870caf172a90603a7eaadbe1f5d069a33622273e59285d1c532a7c6d62c62
+.claude/settings.json file 0644 1013 1b66076b791611d89dca7b618b35a94690b52eb942deee0c986a94043773da95
 .claude/skills/ dir 0755
 .claude/skills/review/ dir 0755
 .claude/skills/review/SKILL.md file 0644 418 30b4e7b28c8bb9d73b4bf4c72b6a3421fb47f87608c60cdb52faa8a30dbd70e8
@@ -56,7 +57,7 @@ exit: 0
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
 INFO  Generating with configuration profile=default
-INFO  Generation complete files=11
+INFO  Generation complete files=12
 --- project tree
 (no change)
 --- home tree
@@ -80,6 +81,7 @@ Clean plan (profile default)
   remove file: .claude/agents/reviewer.md
   remove file: .claude/rules/always.md
   remove file: .claude/rules/go-style.md
+  remove file: .claude/settings.json
   remove file: .claude/skills/review/SKILL.md
   remove file: .claude/skills/review/references/checklist.md
   remove file: .codex/agents/reviewer.toml
@@ -104,7 +106,7 @@ Clean plan (profile default)
   strip ai-rulez block from .gitignore
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
-Removed generated files: 11 files, 11 directories
+Removed generated files: 12 files, 11 directories
 --- project tree
 .agents/ dir 0755
 .agents/agents/ dir 0755

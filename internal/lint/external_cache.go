@@ -32,7 +32,7 @@ import (
 
 const (
 	// scanCacheVersion is bumped when the entry format or the key changes.
-	scanCacheVersion = 2
+	scanCacheVersion = 3
 	// scanMappingVersion is bumped when the way a report is parsed into findings
 	// (formats, severity mapping, path normalisation) changes, so an entry written
 	// by older mapping code is not served.
@@ -144,7 +144,7 @@ func cacheExpired(sc resolvedScanner, hit cachedScan, at time.Time) bool {
 		return false
 	}
 	name := strings.ToLower(filepath.Base(strings.ReplaceAll(sc.Command[0], "\\", "/")))
-	for _, ext := range []string{".exe", ".cmd", ".bat"} {
+	for _, ext := range []string{extExe, ".cmd", ".bat"} {
 		name = strings.TrimSuffix(name, ext)
 	}
 	if !launchers[name] {
@@ -286,6 +286,8 @@ type scanCacheKeyInput struct {
 	MaxSeverity string   `json:"max_severity,omitempty"`
 	Suppressed  bool     `json:"suppressed,omitempty"`
 	Tree        string   `json:"tree"`
+	// Files are digests of the interpreter script and the cache_files matches, see keyFiles.
+	Files []string `json:"files,omitempty"`
 }
 
 func (k scanCacheKeyInput) hash() string {
@@ -310,7 +312,7 @@ func digestStage(files []stagedFile) string {
 // The scanner's identity is its binary file (path, size, modification time) and
 // its command line; the version string is stored with the entry but is not part
 // of the key, so computing a key never starts a program.
-func scanKeyFor(sc resolvedScanner, bin, tree string, showSuppressed bool, isolation string) (string, bool) {
+func scanKeyFor(sc resolvedScanner, bin, tree string, files []string, showSuppressed bool, isolation string) (string, bool) {
 	info, err := os.Stat(bin)
 	if bin == "" || err != nil {
 		return "", false
@@ -324,7 +326,7 @@ func scanKeyFor(sc resolvedScanner, bin, tree string, showSuppressed bool, isola
 		EnvValues: envValueHashes(sc.EnvPass, cmdrun.HostEnv()), Isolation: isolation, Mapping: scanMappingVersion,
 		V: scanCacheVersion, Scanner: sc.Name, Binary: bin, BinSize: info.Size(), BinTime: info.ModTime().UnixNano(),
 		Command: sc.Command, Format: sc.Format, Layout: sc.Layout, Inputs: sc.Inputs,
-		EnvPass: sc.EnvPass, SeverityMap: smap, MaxSeverity: sc.MaxSeverity, Suppressed: showSuppressed, Tree: tree,
+		EnvPass: sc.EnvPass, SeverityMap: smap, MaxSeverity: sc.MaxSeverity, Suppressed: showSuppressed, Tree: tree, Files: files,
 	}.hash(), true
 }
 

@@ -14,11 +14,11 @@
   "runtimes": [
     {
       "preset": "claude",
-      "files": 9,
+      "files": 10,
       "always": 569,
       "conditional": 0,
       "on_demand": 1120,
-      "unmodeled": 0,
+      "unmodeled": 369,
       "listing": 203,
       "listed_items": 5,
       "always_legacy": 387,
@@ -191,6 +191,12 @@
               "artifacts": 1
             }
           ]
+        },
+        {
+          "label": "sidecar documents",
+          "bucket": "unmodeled",
+          "tokens": 369,
+          "artifacts": 1
         },
         {
           "label": "per-file provenance hashes",

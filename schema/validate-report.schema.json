@@ -43,6 +43,10 @@
           "source": {
             "description": "Where the finding's file comes from when it is not authored content: \"output\" for a generated file linted with --outputs or [lint] lint_outputs. Absent for authored content.",
             "enum": ["output"]
+          },
+          "full_message": {
+            "type": "string",
+            "description": "The whole message of an external scanner finding (AR011) whose message was cut to the scanner's max_message. Absent when message is whole."
           }
         }
       }

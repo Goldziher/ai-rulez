@@ -36,14 +36,16 @@ const (
 // namedListKeys are the top-level list keys merged entry-by-entry. The value
 // reports whether an entry without a name is identified by its path (scopes).
 var namedListKeys = map[string]bool{
-	"mcp_servers":      false,
-	"plugins":          false,
-	"includes":         false,
-	"installed_skills": false,
-	"marketplaces":     false,
-	"scopes":           true,
-	"roles":            false,
-	"verifiers":        false,
+	"mcp_servers":            false,
+	"plugins":                false,
+	"includes":               false,
+	"installed_skills":       false,
+	"installed_marketplaces": false,
+	"installed_plugins":      false,
+	"marketplaces":           false,
+	"scopes":                 true,
+	"roles":                  false,
+	"verifiers":              false,
 	// Producer-side definitions: several plugins and marketplaces from one root.
 	"plugins_authoring":      false,
 	"marketplaces_authoring": false,
@@ -53,7 +55,7 @@ var namedListKeys = map[string]bool{
 var mapValuedKeys = map[string]bool{
 	docKeyProfiles: true, docKeyHeader: true, docKeyDefaults: true, string(PresetMCP): true,
 	"plugin": true, "marketplace": true, "placement": true, "claude": true, rulesDir: true, "lint": true,
-	"permissions": true, "guard": true, "role_manifest": true, "delivery": true, "catalog": true, "lock": true, "llm": true, "verifiers_settings": true,
+	"permissions": true, "guard": true, "session_start": true, "role_manifest": true, "delivery": true, "catalog": true, "lock": true, "llm": true, "verifiers_settings": true,
 }
 
 // knownConfigDocKeys returns the TOML keys of Config (plus "schema").

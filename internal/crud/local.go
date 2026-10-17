@@ -216,13 +216,34 @@ func (op *OperatorImpl) installSkillLocal(ctx context.Context, req *InstallSkill
 				Errorf("skill '%s' is already installed", req.Name)
 		}
 	}
-	sourceType, err := validateSkillSource(req.Source)
+	sourceType, err := validateSkillSource(op.baseDir, req.Source)
 	if err != nil {
+		return err
+	}
+	entry := req.entry()
+	if err := validateInstalledSkillEntry(&entry); err != nil {
 		return err
 	}
 	fields := map[string]any{"source": req.Source}
 	setIfNotEmpty(fields, "path", req.Path)
 	setIfNotEmpty(fields, "ref", req.Ref)
+	setIfNotEmpty(fields, "name_prefix", req.NamePrefix)
+	setIfNotEmpty(fields, "trust", req.Trust)
+	setIfNotEmpty(fields, "version", req.Version)
+	setIfNotEmpty(fields, "domain", req.Domain)
+	setIfNotEmpty(fields, "local_override", req.LocalOverride)
+	setIfNotEmpty(fields, "tag_prefix", req.TagPrefix)
+	setIfNotEmpty(fields, "min_release_age", req.MinReleaseAge)
+	if req.IncludePrerelease {
+		fields["include_prerelease"] = true
+	}
+	for key, list := range map[string][]string{
+		"include": req.Include, "exclude": req.Exclude, "resources": req.Resources, "profiles": req.Profiles,
+	} {
+		if len(list) > 0 {
+			fields[key] = list
+		}
+	}
 	if err := op.upsertLocalNamed(ctx, listInstalledSkills, req.Name, fields); err != nil {
 		return err
 	}

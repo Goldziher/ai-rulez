@@ -86,6 +86,9 @@ func resultProperties(f *Finding) map[string]any {
 	if src := f.Source(); src != "" {
 		props["source"] = src
 	}
+	if full := f.FullMessage(); full != "" {
+		props["fullMessage"] = full
+	}
 	return props
 }
 
@@ -191,7 +194,7 @@ func WriteJUnit(w io.Writer, c Combined, failOn string) error {
 			problem.Message = "accepted by baseline: " + f.Message
 			tc.Skipped = problem
 			suite.Skipped++
-		case f.Severity.AtLeast(threshold):
+		case f.failsAt(threshold):
 			tc.Failure = problem
 			suite.Failures++
 		default:

@@ -109,11 +109,12 @@ func TestStagedInputsAreTheOnlyFilesTheScannerSees(t *testing.T) {
 	script := `MSG="cwd=$(pwd | sed 's:.*/::') files=$(find . -type f | sort | tr '\n' ' ') home=$(echo "$HOME" | sed 's:.*/::') ` +
 		`writable=$([ -w . ] && echo yes || echo no) filewritable=$([ -w .ai-rulez/skills/deploy/SKILL.md ] && echo yes || echo no)"` + "\n" + sarifMessage
 	tests := []struct {
-		name     string
-		inputs   string
-		want     []string
-		notWant  []string
-		wantSkip bool
+		name    string
+		inputs  string
+		want    []string
+		notWant []string
+		// nonRoot marks a case that asserts a read-only stage, which root can still write to.
+		nonRoot bool
 	}{
 		{
 			name: "skills only", inputs: `["skills"]`,
@@ -122,6 +123,7 @@ func TestStagedInputsAreTheOnlyFilesTheScannerSees(t *testing.T) {
 				"./.ai-rulez/skills/deploy/references/note.md", "home=home", "writable=no", "filewritable=no",
 			},
 			notWant: []string{".env", "main.go", "config.toml", "rules/r.md"},
+			nonRoot: true,
 		},
 		{
 			name: "rules and skills", inputs: `["rules", "skills"]`,
@@ -131,6 +133,9 @@ func TestStagedInputsAreTheOnlyFilesTheScannerSees(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.nonRoot && os.Geteuid() == 0 {
+				t.Skip("root can write to a read-only stage, so writable=no cannot hold")
+			}
 			p := newScannerProject(t, script, "egress = false\ninputs = "+tt.inputs+"\n", nil)
 			// Act
 			findings := p.run(Options{})

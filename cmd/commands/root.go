@@ -19,7 +19,7 @@ const envPrefix = "AI_RULEZ"
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "5.4.1"
+	Version  = "5.5.0"
 )
 
 var RootCmd = &cobra.Command{
@@ -138,9 +138,10 @@ func init() {
 	RootCmd.AddCommand(MigrateCmd)
 	RootCmd.AddCommand(DoctorCmd)
 	RootCmd.AddCommand(GuardCmd)
+	RootCmd.AddCommand(SessionStartCmd)
 	RootCmd.AddCommand(VerifiersCmd)
 	RootCmd.AddCommand(ScannersCmd)
-	RootCmd.AddCommand(VersionCmd, newConfigCmd())
+	RootCmd.AddCommand(VersionCmd, newConfigCmd(), newCacheCmd())
 	RootCmd.AddCommand(InitCmd)
 	RootCmd.AddCommand(ConvertCmd)
 	RootCmd.AddCommand(MCPCmd)
@@ -152,6 +153,7 @@ func init() {
 	RootCmd.AddCommand(ProfileCmd)
 	RootCmd.AddCommand(BuiltinsCmd)
 	RootCmd.AddCommand(SkillCmd)
+	RootCmd.AddCommand(newMarketplaceCmd(), newPluginCmd())
 	RootCmd.AddCommand(LockCmd)
 	RootCmd.AddCommand(ApproveCmd)
 	RootCmd.AddCommand(SignCmd, TrustCmd)

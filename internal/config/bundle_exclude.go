@@ -308,12 +308,18 @@ func (b *bundleSnapshots) takeSnapshot(ctx context.Context, git gitutil.Git, log
 	// Exit 0/1: some/none of the entry files are ignored (the whole item is);
 	// 128: not a repo. Neither is an answer by itself, as in the per-item case.
 	if stdin.Len() > 0 {
-		if res := git.ExecStdin(ctx, parent, stdin.Bytes(), 0, "check-ignore", "--no-index", "--stdin", "-z"); res.Status == runner.StatusOK {
+		res := git.ExecStdin(ctx, parent, stdin.Bytes(), 0, "check-ignore", "--no-index", "--stdin", "-z")
+		if res.Status == runner.StatusOK {
 			for _, p := range bytes.Split(res.Stdout, []byte{0}) {
 				if name, _, ok := strings.Cut(filepath.ToSlash(string(p)), "/"); ok {
 					snap.ignored[name] = true
 				}
 			}
+		}
+		if listed == nil && res.ExitCode == gitFatalExit {
+			// Not a repository: ls-files would fail the same way, so skip its process.
+			log.Debug("git ls-files unavailable, bundling without .gitignore", "path", parent, "error", gitutil.ResultErr(res))
+			return snap
 		}
 	}
 	if listed == nil {
@@ -341,15 +347,25 @@ func (b *bundleSnapshots) takeSnapshot(ctx context.Context, git gitutil.Git, log
 	return snap
 }
 
+// gitFatalExit is the exit status git uses for a fatal error, such as a
+// directory that is not a repository.
+const gitFatalExit = 128
+
 // gitVisibleFiles lists the files under root that git would not ignore, or nil
 // when that cannot be determined.
 func gitVisibleFiles(ctx context.Context, git gitutil.Git, log logger.Logger, root, marker string) map[string]bool {
 	// Exit 0: the entry file is ignored, so the whole item is; 128: not a repo;
 	// an unavailable git is not an answer either (the ls-files call below fails).
-	if res := git.Exec(ctx, root, nil, "check-ignore", "-q", "--no-index", "--", marker); res.Status == runner.StatusOK {
+	res := git.Exec(ctx, root, nil, "check-ignore", "-q", "--no-index", "--", marker)
+	if res.Status == runner.StatusOK {
 		return nil
 	}
-	res := git.Exec(ctx, root, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
+	if res.ExitCode == gitFatalExit {
+		// Not a repository: ls-files would fail the same way, so skip its process.
+		log.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", gitutil.ResultErr(res))
+		return nil
+	}
+	res = git.Exec(ctx, root, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
 	if err := gitutil.ResultErr(res); err != nil {
 		if res.Status != runner.StatusUnavailable {
 			log.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", err)

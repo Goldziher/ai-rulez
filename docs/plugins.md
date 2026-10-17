@@ -732,7 +732,7 @@ holds the entry's keys at the top level, and the file name must equal `name`. A 
 overrides or removes (`remove = true`) a marketplace by `name`.
 
 `publish` reads the Claude index closest to the project root, so with several marketplaces it
-publishes only that one; publishing each marketplace separately is not supported yet.
+publishes only that one (see [Not yet implemented](#not-yet-implemented)).
 
 ## Domain content and per-domain plugins
 
@@ -966,6 +966,10 @@ Generates a skill listing each plugin, its default state, the skills it bundles 
 install or enable it (`claude plugin marketplace add`, `claude plugin install`,
 `enabledPlugins`). It is written like a root skill to the preset skill outputs and is never bundled into a plugin. A
 root skill with the same name wins.
+
+## Not yet implemented
+
+- Publishing each marketplace separately: `publish` writes only the Claude index closest to the project root.
 
 ## Field reference
 

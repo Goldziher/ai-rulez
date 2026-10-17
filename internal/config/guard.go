@@ -66,17 +66,11 @@ func (c *Config) GuardCommand(binaryVersion string) string {
 	case c.Guard != nil && len(c.Guard.Command) > 0:
 		argv = append(argv, c.Guard.Command...)
 	default:
-		version := ""
+		configured := ""
 		if c.Guard != nil {
-			version = c.Guard.Version
+			configured = c.Guard.Version
 		}
-		if version == "" {
-			version = binaryVersion
-		}
-		if version == "" || version == "dev" {
-			version = "latest"
-		}
-		argv = []string{"npx", "-y", "ai-rulez@" + version}
+		argv = []string{SelfLauncherNPX, "-y", "ai-rulez@" + resolveLauncherVersion(configured, binaryVersion)}
 	}
 	argv = append(argv, "guard")
 	parts := make([]string, len(argv))

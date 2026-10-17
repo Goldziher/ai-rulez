@@ -234,7 +234,7 @@ func Write(ctx context.Context, req Request, env Env) (*Result, error) {
 	if refused > 0 {
 		return res, prePinRefusal(scans, refused)
 	}
-	PinScans(cfg, current, next, req.full(), env.Tree, env.Cwd)
+	PinScans(cfg, current, next, req.full(), env.Tree, env.Cwd) //nolint:contextcheck // the scan chain lives in internal/lint and takes no context (as with PinContent above)
 	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
 		return res, err //nolint:wrapcheck // already contextual
 	}
@@ -281,6 +281,7 @@ func Next(ctx context.Context, cfg *config.Config, current *lockfile.File, req *
 		}
 	} else if current != nil {
 		next.Include, next.Skill = current.Include, current.Skill
+		next.Marketplace, next.Plugin = current.Marketplace, current.Plugin
 	}
 
 	// Source and served pins: refreshed with the remote pins; a content-only run

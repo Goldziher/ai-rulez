@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // A revision is extracted without the rest of the repository, so its lint used
@@ -29,7 +30,7 @@ func TestCatalogDiffCleanTreeIsIdentical(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			root := rolesCmdProject(t)
-			t.Setenv("HOME", t.TempDir())
+			testutil.IsolateHome(t)
 			writeFile(t, filepath.Join(root, "src", "main.rs"), "fn main() {}\n")
 			writeFile(t, filepath.Join(root, ".ai-rulez", "context", "layout.md"), tt.context)
 			gitIn(t, root, "init", "-q", "-b", "main")

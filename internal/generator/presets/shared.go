@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
@@ -50,7 +51,56 @@ func SkillTargets(content *config.ContentTree) map[string][]string {
 	for idx := range skillList {
 		skill := skillList[idx]
 		if skill.Metadata != nil && len(skill.Metadata.Targets) > 0 {
-			targeted[extractSkillID(skill.Path)] = skill.Metadata.Targets
+			targeted[skillIDOf(skill)] = skill.Metadata.Targets
+		}
+	}
+	return targeted
+}
+
+// SharedCommandSkills renders the commands without targets as skills, for the
+// shared .agents/skills tree: codex, antigravity, devin and warp run a command
+// as a skill (config.SharedOutputConsumer.CommandsAsSkills), and the tree
+// replaces the directory they would write it to. A command with targets stays on
+// each preset's own path (see CommandSkillTargets).
+func SharedCommandSkills(d *diag.Collector, content *config.ContentTree) []config.ContentFile {
+	return commandSkillsWhere(d, content, string(config.SharedAgentSkills), func(command config.ContentFile) bool {
+		return command.Metadata == nil || len(command.Metadata.Targets) == 0
+	})
+}
+
+// SharedCodexCommandPolicy is the agents/openai.yaml of each command skill in
+// the shared tree: Codex has no SKILL.md key for invocation control, so a
+// command that must run only on an explicit $name gets the policy file, as in
+// Codex's own skills directory.
+func SharedCodexCommandPolicy(commands []config.ContentFile, baseDir string) []config.OutputFile {
+	var outputs []config.OutputFile
+	for idx := range commands {
+		agentsDir := filepath.Join(baseDir, ".agents", "skills", skillIDOf(commands[idx]), "agents")
+		outputs = append(outputs,
+			config.OutputFile{Path: agentsDir, IsDir: true},
+			config.OutputFile{Path: filepath.Join(agentsDir, "openai.yaml"), Content: codexImplicitInvocationOff},
+		)
+	}
+	return outputs
+}
+
+// CommandSkillTargets maps the id of every command that restricts itself with
+// frontmatter targets to those targets, the counterpart of SkillTargets for the
+// commands written as skills. A skill of the same id wins, as it does when the
+// command is rendered.
+func CommandSkillTargets(content *config.ContentTree) map[string][]string {
+	targeted := map[string][]string{}
+	skillIDs := map[string]bool{}
+	skillList := allSkills(content)
+	for idx := range skillList {
+		skillIDs[skillIDOf(skillList[idx])] = true
+	}
+	commandList := allCommands(content)
+	for idx := range commandList {
+		command := commandList[idx]
+		id := sanitizeName(command.Name)
+		if !skillIDs[id] && command.Metadata != nil && len(command.Metadata.Targets) > 0 {
+			targeted[id] = command.Metadata.Targets
 		}
 	}
 	return targeted
@@ -61,8 +111,8 @@ func SkillTargets(content *config.ContentTree) map[string][]string {
 // description frontmatter), plus bundled resources. Skills with targets are left
 // to the per-preset path (see SkillTargets). It returns nothing when the content
 // has no such skills.
-func SharedAgentSkills(content *config.ContentTree, baseDir string) []config.OutputFile {
-	var skills []config.ContentFile
+func SharedAgentSkills(content *config.ContentTree, baseDir string, extra ...config.ContentFile) []config.OutputFile {
+	skills := slices.Clone(extra)
 	skillList := allSkills(content)
 	for idx := range skillList {
 		skill := skillList[idx]
@@ -80,7 +130,7 @@ func SharedAgentSkills(content *config.ContentTree, baseDir string) []config.Out
 	}
 	for idx := range skills {
 		skill := skills[idx]
-		skillDir := filepath.Join(root, extractSkillID(skill.Path))
+		skillDir := filepath.Join(root, skillIDOf(skill))
 		outputs = append(outputs,
 			config.OutputFile{Path: skillDir, IsDir: true},
 			config.OutputFile{Path: filepath.Join(skillDir, "SKILL.md"), Content: renderAgentSkillFile(skill)},

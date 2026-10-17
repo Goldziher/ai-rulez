@@ -104,7 +104,7 @@ func init() {
 	specProfile.String(LockCmd.Flags(), &lockProfile, "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	specRecursive.Bool(LockCmd.Flags(), &lockRecursive, "Process every configuration found recursively")
 	LockCmd.Flags().BoolVar(&lockRoles, "roles", false, "Also pin the rendered outputs of every role (roles with pin = true are always pinned)")
-	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
+	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source, marketplace, plugin or served entries")
 }
 
 // checkLockContentOnlyFlags refuses --content-only together with a selection of
@@ -114,7 +114,7 @@ func checkLockContentOnlyFlags(kind string, names []string) error {
 	if !lockContentOnly {
 		return nil
 	}
-	if len(names) > 0 || kind == lockfile.KindInclude || kind == lockfile.KindSkill || kind == keySource {
+	if len(names) > 0 || kind == lockfile.KindInclude || kind == lockfile.KindSkill || kind == keySource || kind == lockfile.KindMarketplace || kind == lockfile.KindPlugin {
 		return oops.Errorf("--content-only keeps every remote pin, so it cannot be combined with --kind %s or names; drop --content-only to refresh them", kindOrNames(kind))
 	}
 	return nil
@@ -137,7 +137,7 @@ func runLock(_ *cobra.Command, args []string) error {
 // validateLockFlags rejects flag combinations `lock` cannot honor.
 func validateLockFlags(args []string) error {
 	if lockKind != "" && !knownLockKind(lockKind) {
-		return oops.Errorf("unknown --kind %q (use include, skill, source or served)", lockKind)
+		return oops.Errorf("unknown --kind %q (use include, skill, source, marketplace, plugin or served)", lockKind)
 	}
 	if err := checkFormatFlag(lockFormat); err != nil {
 		return err

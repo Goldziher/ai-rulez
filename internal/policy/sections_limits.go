@@ -226,6 +226,12 @@ func (a *applier) minReleaseAge() {
 	}
 	text := formatAge(floor)
 	raise := func(key, needle, where, have string) bool { return a.raiseAge(floor, key, needle, where, have) }
+	// raiseOwn raises an entry's own min_release_age (set entries only) to the floor.
+	raiseOwn := func(keyPrefix, name, label string, field *string) {
+		if *field != "" && raise(keyPrefix+name+".min_release_age", name, fmt.Sprintf("%s %q", label, name), strings.TrimSpace(*field)) {
+			*field = text
+		}
+	}
 	if a.cfg.Lock == nil {
 		a.cfg.Lock = &config.LockConfig{}
 	}
@@ -234,20 +240,22 @@ func (a *applier) minReleaseAge() {
 	}
 	for i := range a.cfg.Includes {
 		s := &a.cfg.Includes[i]
-		if s.MinReleaseAge != "" && raise("includes."+s.Name+".min_release_age", s.Name, fmt.Sprintf("include %q", s.Name), strings.TrimSpace(s.MinReleaseAge)) {
-			s.MinReleaseAge = text
-		}
+		raiseOwn("includes.", s.Name, "include", &s.MinReleaseAge)
 	}
 	for i := range a.cfg.InstalledSkills {
 		s := &a.cfg.InstalledSkills[i]
-		if s.MinReleaseAge != "" && raise("installed_skills."+s.Name+".min_release_age", s.Name, fmt.Sprintf("installed skill %q", s.Name), strings.TrimSpace(s.MinReleaseAge)) {
-			s.MinReleaseAge = text
-		}
+		raiseOwn("installed_skills.", s.Name, "installed skill", &s.MinReleaseAge)
+	}
+	for i := range a.cfg.InstalledMarketplaces {
+		s := &a.cfg.InstalledMarketplaces[i]
+		raiseOwn("installed_marketplaces.", s.Name, "installed marketplace", &s.MinReleaseAge)
+	}
+	for i := range a.cfg.InstalledPlugins {
+		s := &a.cfg.InstalledPlugins[i]
+		raiseOwn("installed_plugins.", s.Name, "installed plugin", &s.MinReleaseAge)
 	}
 	for i := range a.cfg.SkillSources {
 		s := &a.cfg.SkillSources[i]
-		if s.MinReleaseAge != "" && raise("skill_sources."+s.Name+".min_release_age", s.Name, fmt.Sprintf("skill source %q", s.Name), strings.TrimSpace(s.MinReleaseAge)) {
-			s.MinReleaseAge = text
-		}
+		raiseOwn("skill_sources.", s.Name, "skill source", &s.MinReleaseAge)
 	}
 }

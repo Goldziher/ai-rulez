@@ -21,7 +21,7 @@ func authoringCapabilities() []Capability {
 			ID: "init", Kind: Paired, CLI: []string{"init"}, Tool: "init_project",
 			Flags: []FlagPair{{Flag: "source"}},
 			CLIFlags: []Exclusion{
-				{Names: []string{"config-dir", "domains", "setup-hooks", "skip-content", "from", "force"},
+				{Names: []string{"config-dir", "domains", "setup-hooks", "skip-content", "from", "force", "minimal"},
 					Reason: "init seeds a project interactively or from a source; init_project writes the minimal config.toml and refuses to overwrite"},
 			},
 			ToolArgs: []Exclusion{
@@ -53,7 +53,10 @@ func authoringCapabilities() []Capability {
 		},
 		{
 			ID: "installed-skill-install", Kind: Paired, CLI: []string{"skill install"}, Tool: "install_skill",
-			Flags: []FlagPair{{Flag: "local"}, {Flag: "path"}, {Flag: "ref"}, {Flag: "source"}},
+			Flags: []FlagPair{{Flag: "local"}, {Flag: "path"}, {Flag: "ref"}, {Flag: "source"},
+				{Flag: "include"}, {Flag: "exclude"}, {Flag: "name-prefix"}, {Flag: "trust"}, {Flag: "resources"}, {Flag: "version"},
+				{Flag: "tag-prefix"}, {Flag: "include-prerelease"}, {Flag: "min-release-age"}, {Flag: "domain"},
+				{Flag: "profile", Arg: "profiles"}, {Flag: "local-override"}},
 		},
 		{
 			ID: "installed-skill-remove", Kind: Paired, CLI: []string{"skill remove"}, Tool: "uninstall_skill",
@@ -121,7 +124,9 @@ func contentCapabilities() []Capability {
 		{name: "context", plural: "context", local: true,
 			add: []FlagPair{{Flag: "priority"}, {Flag: "targets", TypeNote: targetsNote}}},
 		{name: "skill", plural: "skills", local: true,
-			add: []FlagPair{{Flag: "description"}, {Flag: "priority"}, {Flag: "targets", TypeNote: targetsNote}}},
+			add: []FlagPair{{Flag: "description"}, {Flag: "priority"}, {Flag: "targets", TypeNote: targetsNote}},
+			toolArgs: []Exclusion{{Names: []string{"scope", "harness", "allow_write"},
+				Reason: "the scoped write path puts a skill in the harness's own directory of a nested scope, behind the consent flag allow_write; the command line user edits that file directly"}}},
 		{name: "check", plural: "checks",
 			add: []FlagPair{{Flag: "description"}, {Flag: "severity"}, {Flag: "targets", TypeNote: targetsNote},
 				{Flag: "tools", TypeNote: targetsNote}}},
@@ -175,6 +180,7 @@ func buildCapabilities() []Capability {
 				{Flag: "recursive"}, {Flag: "no-local"}, {Flag: "no-self-mcp"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"watch", "if-configured"}, Reason: "process-bound or hook-bound: a tool call returns once"},
+				{Names: []string{"refresh-remote", "accept-findings"}, Reason: "move pins to newer remote versions and accept security findings: network pinning and trust decisions an agent must not make"},
 				{Names: []string{"emit-plan"}, Reason: "writes the plan to a file or stdout; generate_outputs dry_run returns the plan in the result"},
 				{Names: []string{"locked", "frozen", "verify-tags", "allow-local-drift", "force", "strict-config"},
 					Reason: "gates that turn drift into an exit code or overwrite files; an agent runs generate_outputs check for drift and never forces"},
@@ -368,6 +374,7 @@ func servingCapabilities() []Capability {
 			},
 			ToolArgs: []Exclusion{
 				{Names: []string{"task"}, Reason: "the CLI takes the query as positional words"},
+				{Names: []string{"path", "scope", "recursive"}, Reason: "narrow the ranking to what applies to a path or scope of a repository the server indexed with --discover-skills; the CLI search does not index the working tree"},
 			},
 		},
 		{ID: "search-skills", Kind: MCPOnly, Tool: "search_skills", Server: Skills,
@@ -396,6 +403,8 @@ func cliOnlyCapabilities() []Capability {
 		only("sign", "signs with a key, an OIDC identity or a transparency log: credentials and egress", "sign", "trust update"),
 		only("verify", "verifies signatures, attestations and downloaded artifacts with the signing backend; the drift half is generate_outputs check and doctor",
 			"verify"),
+		only("marketplace", "adds, removes and updates installed marketplaces: network fetches that rewrite the configuration and the lock", "marketplace *"),
+		only("plugin", "installs, removes and updates plugins imported from marketplaces: network fetches, hook and MCP imports that run code", "plugin *"),
 		only("update", "moves pinned remote sources to newer tags over the network and rewrites the lock", "update", "skill update"),
 		only("convert-migrate", "one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview",
 			"convert", "migrate *"),
@@ -413,8 +422,10 @@ func cliOnlyCapabilities() []Capability {
 		only("roles-show", "a presentation of one role; resolve_role returns what the role keeps", "roles show"),
 		only("catalog-diff", "compares two catalogs through git subprocesses", "catalog diff"),
 		only("list-placement", "prints where skills and commands land per harness; generate_outputs dry_run returns the same plan", "list"),
+		only("cache", "inspects and deletes the index cache the MCP server keeps in the user cache directory; a tool client has no use for the host's disk layout, and deleting is a human decision", "cache *"),
 		only("mcp", "starts the MCP server itself", "mcp"),
 		only("guard", "a hook entry point the harness calls on tool use", "guard"),
+		only("session-start", "a hook entry point the harness calls when a session starts; it runs generate", "session-start"),
 	}
 }
 

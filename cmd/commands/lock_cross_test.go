@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // crossFixture is one project that uses every lock feature at once: authored
@@ -67,7 +68,7 @@ func crossOKFBody(version string) string {
 
 func newCrossFixture(t *testing.T) *crossFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	t.Cleanup(func() {
 		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false

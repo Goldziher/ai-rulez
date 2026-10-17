@@ -126,16 +126,30 @@ func commentAddressesAgent(body string) bool {
 	return len(credentialMentions(body, false)) > 0 && credReadRe().MatchString(body) && credSinkRe().MatchString(body)
 }
 
+// stemNetrc is the word of the .netrc file in prose and in credPhraseRe.
+const stemNetrc = "netrc"
+
+// mayNameCredential is a cheap necessary condition for credentialTarget to
+// return a store: a path stem, or one of the words a store is named by (those of
+// credPhraseRe, the keychain and the .env file), compared without case.
+func mayNameCredential(line string) bool {
+	return containsAnyStem(line, false, credentialStems) ||
+		containsAnyFold(line, []string{"credential", "token", "private key", "config", "keychain", stemNetrc, "npmrc", ".env"})
+}
+
 func scanCredentialInstruction(r *runner, t *scanText) {
 	for _, l := range t.lines {
 		if l.Front {
 			continue
 		}
-		if t.shellLike(l) && keychainExportRe().MatchString(l.Text) || t.prose(l) && keychainExportRe().MatchString(l.Text) && credSinkRe().MatchString(l.Text) {
+		// keychainExportRe needs "security"; the regular expressions below run
+		// only on the few lines that can name a credential store.
+		if strings.Contains(l.Text, "security") &&
+			(t.shellLike(l) && keychainExportRe().MatchString(l.Text) || t.prose(l) && keychainExportRe().MatchString(l.Text) && credSinkRe().MatchString(l.Text)) {
 			r.add(CodeCredentialInstruction, t.abs, l.No, "exports the keychain, which holds every stored credential")
 			continue
 		}
-		if !t.prose(l) || !credReadRe().MatchString(l.Text) || !credSinkRe().MatchString(l.Text) {
+		if !t.prose(l) || !mayNameCredential(l.Text) || !credReadRe().MatchString(l.Text) || !credSinkRe().MatchString(l.Text) {
 			continue
 		}
 		if what := credentialTarget(l.Text); what != "" {
@@ -301,14 +315,18 @@ func scriptHostsSafe(r *runner, raw string) bool {
 type bypassPattern struct {
 	re     *regexp.Regexp
 	selfNe bool
+	// stems are literals every match holds one of, compared without case; the
+	// pattern runs only on a line that holds one. They are the rarest words of
+	// the pattern ("author" holds "auto", so that is no stem).
+	stems []string
 }
 
 var bypassPatterns = sync.OnceValue(func() []bypassPattern {
 	return []bypassPattern{
-		{regexp.MustCompile(`(?i)\b(?:run|execute)\s+(?:(?:all|any|every|shell|bash|terminal|cli)\s+)*(?:commands?|tools?|anything|everything)\b[^.\n]{0,40}?\bwithout\s+(?:asking|confirm\w*|permission|approval|prompting|checking)\b`), false},
-		{regexp.MustCompile(`(?i)\b(?:automatically|auto-?)\s*(?:install|approve|accept)s?\s+(?:any|all|every|whatever)\b|\b(?:install|approve|accept)\s+(?:any|all|every|whatever)\b[^.\n]{0,30}?\bautomatically\b`), false},
-		{regexp.MustCompile(`(?i)\b(?:never|do\s+not|don'?t)\s+(?:ask|request|prompt|wait)\s+(?:the\s+user\s+)?(?:for\s+)?(?:permission|approval)\b`), true},
-		{regexp.MustCompile(`(?i)\b(?:skip|bypass|disable)\s+(?:all\s+)?(?:permission|approval)\s+(?:prompts?|checks?|dialogs?|steps?)\b`), false},
+		{regexp.MustCompile(`(?i)\b(?:run|execute)\s+(?:(?:all|any|every|shell|bash|terminal|cli)\s+)*(?:commands?|tools?|anything|everything)\b[^.\n]{0,40}?\bwithout\s+(?:asking|confirm\w*|permission|approval|prompting|checking)\b`), false, []string{"without"}},
+		{regexp.MustCompile(`(?i)\b(?:automatically|auto-?)\s*(?:install|approve|accept)s?\s+(?:any|all|every|whatever)\b|\b(?:install|approve|accept)\s+(?:any|all|every|whatever)\b[^.\n]{0,30}?\bautomatically\b`), false, []string{"install", "approve", "accept"}},
+		{regexp.MustCompile(`(?i)\b(?:never|do\s+not|don'?t)\s+(?:ask|request|prompt|wait)\s+(?:the\s+user\s+)?(?:for\s+)?(?:permission|approval)\b`), true, []string{"permission", "approval"}},
+		{regexp.MustCompile(`(?i)\b(?:skip|bypass|disable)\s+(?:all\s+)?(?:permission|approval)\s+(?:prompts?|checks?|dialogs?|steps?)\b`), false, []string{"permission", "approval"}},
 	}
 })
 
@@ -320,6 +338,9 @@ func scanPermissionBypass(r *runner, t *scanText) {
 			continue
 		}
 		for _, b := range bypassPatterns() {
+			if !containsAnyFold(l.Text, b.stems) {
+				continue
+			}
 			loc := b.re.FindStringIndex(l.Text)
 			if len(loc) == 0 || !b.selfNe && governedSpan(l.Text, loc[0], loc[1]) {
 				continue

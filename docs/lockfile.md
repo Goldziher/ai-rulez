@@ -3,7 +3,7 @@
 `ai-rulez.lock` (in the configuration directory, committed) is the record of exactly what your AI configuration
 is made of. It pins three things:
 
-1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before).
+1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before), and every installed marketplace (`[[marketplace]]`) and plugin (`[[plugin]]`, see [Installed Plugins](installed-plugins.md#lock-update-and-refresh)).
 2. **Authored content**: a `sha256` digest of every rule, context file, skill (with its resources), agent,
    command, hook and role, with its `id`, `domain`, `owner` and `version` when the frontmatter has them.
 3. **Generated outputs**: a digest of each generated file, so a change to what agents are actually told shows up
@@ -53,6 +53,8 @@ how to do it with `cosign`.
 | --- | --- | --- |
 | `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them); for an agent, skill or command whose frontmatter declares `hooks`, also each project script those hooks run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
 | `skill` | the skill directory name | `SKILL.md`, every loaded resource (`references/`, `scripts/`, `assets/`) and the project scripts its frontmatter `hooks` run |
+| `local-skill` | the skill name | the directory of a skill that an `installed_skills` entry reads from a local source (`SKILL.md` and bundled files) |
+| `local-marketplace`, `local-plugin` | the entry name | the whole directory tree (hooks, scripts and all) of an `installed_marketplaces` or `installed_plugins` entry whose `source` is a local directory; a plugin of a local marketplace is covered by the marketplace item |
 | `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`, `verifiers`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
@@ -415,8 +417,21 @@ comes from an include or the local overlay) is refused with a hint to edit by ha
 opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true` for both. One `git
 ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
 `AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
-used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline`, `--frozen` and `--offline`;
+used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline` and `--frozen`;
 the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
+
+#### Refreshing on generate
+
+`generate --refresh-remote` (or `[lock] refresh_on_generate = true`) runs a lock refresh before the outputs are
+written: every remote include, installed skill and skill source moves to the newest version its constraint allows (a
+plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
+is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
+error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
+tags. Any refusal ends the run before an output is written and leaves the lock as it was; after reviewing the findings,
+`generate --refresh-remote --accept-findings` pins the trees anyway, as `lock --accept-findings` does. The import gate
+(`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
+key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
+`--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.
 
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
 pins as they are. Use `update --kind skill` to move range pins.
@@ -608,8 +623,9 @@ needed: it compares the lock with the sources; the signature only says who vouch
 
 Limits, stated plainly: a valid signature means "produced by that identity", not "safe". The cosign recipe has no
 freshness or rollback check, so pin the signer and review lock changes. `ai-rulez verify --attestation` adds an identity
-policy, `max_age` and a per-machine rollback check on top of the same bundle (see [Signing](signing.md)). Signing
-plugin bundles and served skills is not implemented.
+policy, `max_age` and a per-machine rollback check on top of the same bundle (see [Signing](signing.md)). Plugin bundles are signed
+with `sign --bundle` and served skills are gated by a publisher signature (see
+[Signing](signing.md#bundles-skills-and-sboms)); the lock signature covers neither.
 
 ## Commands
 
@@ -702,6 +718,7 @@ scope = "all"            # "skills": pin only skills, remote includes and instal
 min_release_age = "7d"   # default minimum age of a tag for sources with a version constraint
 min_release_age_source = "auto"  # auto | forge | first-seen | commit
 verify_tags = false      # true: generate and lock --check ask the remotes whether a pinned tag moved
+refresh_on_generate = false  # true: generate re-resolves remote sources and rewrites the lock first (like generate --refresh-remote)
 ```
 
 `scope = "skills"` is for projects that only care about the skill supply chain; it implies no output pins. The

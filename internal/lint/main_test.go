@@ -14,6 +14,7 @@ import (
 // analyzer it did not declare: such a unit would be skipped wrongly when only
 // that analyzer is selected, so `--analyzer x` would miss findings.
 func TestMain(m *testing.M) {
+	testutil.RunFakeScannerIfAsked()
 	testutil.CeilGit()
 	var mu sync.Mutex
 	seen := map[string]bool{}

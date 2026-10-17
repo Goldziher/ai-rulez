@@ -100,7 +100,7 @@ var localShowCmd = &cobra.Command{
 	Long: `Show every key the local overlay sets and the shared value it replaces.
 
 Values are withheld by default: only keys known to hold no credentials (name, description,
-default, presets, profiles, defaults, rules, header, builtins, transport, enabled, ...) are
+default, presets, profiles, defaults, rules, header, builtins, skip_outputs, transport, enabled, ...) are
 printed; all others show their key path with <redacted>. Pass --reveal to print everything.`,
 	Args: cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
@@ -227,7 +227,7 @@ func init() {
 
 // stringFields are keys whose value is always text, whatever it looks like.
 var stringFields = map[string]bool{
-	"url": true, "command": true, keySource: true, "path": true, "ref": true,
+	"url": true, "command": true, keySource: true, "path": true, keyRef: true,
 	keyDesc: true, "name": true, "transport": true, "default": true, "version": true,
 }
 

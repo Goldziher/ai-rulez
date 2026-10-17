@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // runWithBuffers runs the RunE of cmd with separate stdout and stderr buffers.
@@ -29,7 +30,7 @@ func runWithBuffers(t *testing.T, cmd *cobra.Command) (stdout, stderr string, er
 
 func listFixture(t *testing.T) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", "")
 	resetContentFlags(t)
 	root := t.TempDir()
@@ -111,7 +112,7 @@ func TestEmptyListNoticeIsADiagnostic(t *testing.T) {
 
 func generatedProject(t *testing.T) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", "")
 	dir := t.TempDir()
 	copyTree(t, filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic"), dir)

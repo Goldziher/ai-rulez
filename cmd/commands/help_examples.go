@@ -44,6 +44,36 @@ const helpExampleSpec = `
   ai-rulez validate --fix --dry-run
   ai-rulez validate --path catalog --glob "plugins/**/*.json"
   ai-rulez validate --outputs
+## marketplace
+  ai-rulez marketplace list
+  ai-rulez marketplace add acme --source acme/plugins
+## marketplace add
+  ai-rulez marketplace add acme --source acme/plugins
+  ai-rulez marketplace add acme --source https://github.com/acme/plugins --version "^1.2"
+  ai-rulez marketplace add local --source ./vendor/marketplace
+## marketplace remove
+  ai-rulez marketplace remove acme --yes
+## marketplace list
+  ai-rulez marketplace list
+  ai-rulez marketplace list --format json
+## marketplace update
+  ai-rulez marketplace update
+  ai-rulez marketplace update acme
+## plugin
+  ai-rulez plugin list
+  ai-rulez plugin install formatter --from acme
+## plugin install
+  ai-rulez plugin install formatter --from acme
+  ai-rulez plugin install tools --source acme/tools --exclude hooks
+  ai-rulez plugin install tools --source acme/tools --enable-hooks --name-prefix acme-
+## plugin remove
+  ai-rulez plugin remove formatter --yes
+## plugin list
+  ai-rulez plugin list
+  ai-rulez plugin list --format json
+## plugin update
+  ai-rulez plugin update
+  ai-rulez plugin update formatter
 ## lock
   ai-rulez lock
   ai-rulez lock --check

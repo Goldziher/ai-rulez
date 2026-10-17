@@ -28,6 +28,7 @@ func (c *Config) Validate() error {
 		c.validateCodexSkillsDir,
 		c.validateGitignoreExclude,
 		c.validateClaudeMD,
+		c.validateSkipOutputs,
 		c.validateSelectors,
 		c.validateSkillDescriptions,
 		c.validateFrontmatter,
@@ -36,9 +37,11 @@ func (c *Config) Validate() error {
 		c.validateOKF,
 		c.validateLLMsTxt,
 		c.validateInstalledSkills,
+		c.validateInstalledPlugins,
 		c.validateDefaults,
 		c.validateMCP,
 		c.validateGuard,
+		c.validateSessionStart,
 		c.validateAgentEffort,
 		c.validateAuthoring,
 	}
@@ -511,22 +514,10 @@ func (c *Config) validateName() error {
 	return nil
 }
 
-// validatePresets validates that at least one preset exists and all are valid
+// validatePresets validates every declared preset. A configuration with no
+// preset is valid: it is a lint-only configuration (validate, scan and
+// [[lint.external]]) and generates nothing.
 func (c *Config) validatePresets() error {
-	// A config that only authors a plugin bundle ([plugin] block) or a monorepo
-	// marketplace ([marketplace] with members) need not declare any presets: the
-	// plugin generator renders runtime manifests directly rather than through the
-	// preset pipeline.
-	if len(c.Presets) == 0 {
-		if c.HasPluginAuthoring() {
-			return nil
-		}
-		return oops.
-			With("field", "presets").
-			Hint("Add at least one preset to your config file\nExample: presets: [claude]\nAvailable built-in presets: " + strings.Join(AllPresetNames(), ", ")).
-			Errorf("at least one preset is required")
-	}
-
 	for i := range c.Presets {
 		if err := c.validatePreset(&c.Presets[i], i); err != nil {
 			return err
@@ -901,19 +892,23 @@ func (c *Config) warnMissingResourceDomains() {
 		return c.hasLocalDomain(domain)
 	}
 	for i := range c.MCPServersRaw {
-		if d := c.MCPServersRaw[i].Domain; d != "" && !known(d) {
-			c.Warn("mcp server references non-existent domain", "server", c.MCPServersRaw[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "mcp server", "server", c.MCPServersRaw[i].Name, c.MCPServersRaw[i].Domain)
 	}
 	for i := range c.InstalledSkills {
-		if d := c.InstalledSkills[i].Domain; d != "" && !known(d) {
-			c.Warn("installed skill references non-existent domain", "skill", c.InstalledSkills[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "installed skill", "skill", c.InstalledSkills[i].Name, c.InstalledSkills[i].Domain)
+	}
+	for i := range c.InstalledPlugins {
+		c.warnUnknownDomain(known, "installed plugin", "plugin", c.InstalledPlugins[i].Name, c.InstalledPlugins[i].Domain)
 	}
 	for i := range c.SkillSources {
-		if d := c.SkillSources[i].Domain; d != "" && !known(d) {
-			c.Warn("skill source references non-existent domain", "source", c.SkillSources[i].Name, "domain", d)
-		}
+		c.warnUnknownDomain(known, "skill source", "source", c.SkillSources[i].Name, c.SkillSources[i].Domain)
+	}
+}
+
+// warnUnknownDomain warns when a resource sets a domain that known rejects.
+func (c *Config) warnUnknownDomain(known func(string) bool, what, key, name, domain string) {
+	if domain != "" && !known(domain) {
+		c.Warn(what+" references non-existent domain", key, name, "domain", domain)
 	}
 }
 
@@ -1155,6 +1150,12 @@ func (c *Config) validateMCP() error { //nolint:gocyclo // a flat sequence of in
 		return oops.
 			Hint("Use a bare version or npm dist-tag such as \"4.19.0\" or \"latest\"").
 			Errorf("mcp.self_server_version %q is not a valid version", m.SelfServerVersion)
+	}
+	if _, err := ParseDiscoverSkills(m.DiscoverSkills); err != nil {
+		return err
+	}
+	if _, err := ParseIndexCache(m.IndexCache); err != nil {
+		return err
 	}
 	return m.validateSkillsInstructions()
 }

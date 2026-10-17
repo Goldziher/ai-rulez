@@ -226,7 +226,7 @@ func describeTriggers(triggers []string) string {
 // directory, which would otherwise retrigger every run.
 func watchIgnore(path string) bool {
 	base := filepath.Base(path)
-	return strings.HasPrefix(base, ".generated-manifest") || base == ".gitignore"
+	return strings.HasPrefix(base, ".generated-manifest") || strings.HasPrefix(base, ".ai-rulez-manifest") || base == ".gitignore"
 }
 
 // watchTargets lists what to watch: the configuration directory and the local-path include sources. With no
@@ -234,6 +234,11 @@ func watchIgnore(path string) bool {
 // start still gets watched.
 func watchTargets(cfg *config.Config) []watch.Target {
 	var targets []watch.Target
+	if cfg != nil && cfg.Contentless() {
+		// The project root is the config directory: watch the config files, not the tree.
+		targets = append(targets, rootConfigTargets(cfg.BaseDir)...)
+		return append(targets, includeTargets(cfg)...)
+	}
 	if cfg != nil && cfg.ConfigDir != "" {
 		if cfg.UsesAgentsSource() {
 			// The content is AGENTS.md and .agents; a config in .agents/ai-rulez.toml
@@ -265,29 +270,62 @@ func fallbackTargets() []watch.Target {
 		name = defaultConfigDirName
 	}
 	if found, err := config.FindConfigFileInDirName(".", configDir); err == nil {
+		if filepath.Base(found) == config.RootConfigFilename && config.IsRootConfigDir(filepath.Dir(found)) {
+			return rootConfigTargets(filepath.Dir(found))
+		}
 		return []watch.Target{{Path: filepath.Dir(found)}}
 	}
 	return []watch.Target{{Path: name}}
 }
 
-// includeTargets are the local-path include and installed-skill sources.
+// rootConfigTargets are the files of the single-file layout: ai-rulez.toml and,
+// when it exists, its machine-local overlay.
+func rootConfigTargets(baseDir string) []watch.Target {
+	targets := []watch.Target{{Path: filepath.Join(baseDir, config.RootConfigFilename), File: true}}
+	local := filepath.Join(baseDir, config.RootLocalConfigFilename)
+	if info, err := os.Stat(local); err == nil && !info.IsDir() {
+		targets = append(targets, watch.Target{Path: local, File: true})
+	}
+	return targets
+}
+
+// includeTargets are the local-path sources the configuration reads from: includes, installed skills,
+// skill sources, installed marketplaces and plugins (their source and local override).
 func includeTargets(cfg *config.Config) []watch.Target {
 	var out []watch.Target
-	add := func(p string) {
+	// existing skips a path that is not on disk: an installed source such as owner/repo reads as a
+	// relative path, and watching a directory that does not exist only adds noise.
+	add := func(p string, existing bool) {
+		p = strings.TrimPrefix(p, "file://")
 		if p == "" || !includes.IsLocalPath(p) {
 			return
 		}
 		if !filepath.IsAbs(p) {
 			p = filepath.Join(cfg.BaseDir, p)
 		}
-		out = append(out, watch.Target{Path: p})
+		// A marketplace index or a single SKILL.md can be a file; watch it as one.
+		info, err := os.Stat(p)
+		if existing && err != nil {
+			return
+		}
+		out = append(out, watch.Target{Path: p, File: err == nil && !info.IsDir()})
 	}
 	for i := range cfg.Includes {
-		add(cfg.Includes[i].Source)
-		add(cfg.Includes[i].LocalOverride)
+		add(cfg.Includes[i].Source, false)
+		add(cfg.Includes[i].LocalOverride, false)
 	}
 	for i := range cfg.InstalledSkills {
-		add(cfg.InstalledSkills[i].LocalOverride)
+		add(cfg.InstalledSkills[i].Source, true)
+		add(cfg.InstalledSkills[i].LocalOverride, false)
+	}
+	for i := range cfg.SkillSources {
+		add(cfg.SkillSources[i].URL, true)
+	}
+	for i := range cfg.InstalledMarketplaces {
+		add(cfg.InstalledMarketplaces[i].Source, true)
+	}
+	for i := range cfg.InstalledPlugins {
+		add(cfg.InstalledPlugins[i].Source, true)
 	}
 	return out
 }

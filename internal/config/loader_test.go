@@ -646,16 +646,15 @@ func TestValidate(t *testing.T) {
 		assert.Contains(t, err.Error(), "required field 'name'")
 	})
 
-	t.Run("fails on missing presets", func(t *testing.T) {
-		config := &Config{
-			Version: "5.0",
-			Name:    "test",
-			Presets: []Preset{},
-		}
+	t.Run("accepts a lint-only configuration without presets", func(t *testing.T) {
+		for name, presets := range map[string][]Preset{"empty": {}, "nil": nil} {
+			t.Run(name, func(t *testing.T) {
+				config := &Config{Version: "5.0", Name: "test", Presets: presets}
 
-		err := config.Validate()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "at least one preset is required")
+				require.NoError(t, config.Validate())
+				assert.True(t, config.LintOnly())
+			})
+		}
 	})
 
 	t.Run("fails on invalid built-in preset", func(t *testing.T) {

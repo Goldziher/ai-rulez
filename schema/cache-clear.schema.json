@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/cache-clear.schema.json",
+  "title": "ai-rulez cache clear",
+  "description": "Output of `ai-rulez cache clear --format json`: the cache directories that were removed.",
+  "type": "object",
+  "required": ["schema_version", "removed", "bytes"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "removed": { "type": "array", "items": { "type": "string" } },
+    "bytes": { "type": "integer", "minimum": 0, "description": "The total size of what was removed." }
+  }
+}

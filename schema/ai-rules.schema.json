@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json",
   "title": "AI Rules Configuration",
-  "description": "Schema for ai-rulez directory-based configuration files (V4)",
+  "description": "Schema for ai-rulez configuration files: .ai-rulez/config.toml, .config/ai-rulez/config.toml, .agents/ai-rulez.toml, and ai-rulez.toml at the project root (a configuration without a .ai-rulez folder). Editors that read a `#:schema <url>` first line (taplo, Even Better TOML) resolve it to this file.",
   "type": "object",
   "required": ["version", "name"],
   "properties": {
@@ -35,7 +35,6 @@
     "presets": {
       "type": "array",
       "description": "List of presets to generate (built-in tool names or custom preset objects)",
-      "minItems": 1,
       "items": {
         "oneOf": [
           {
@@ -264,6 +263,15 @@
       "items": { "type": "string" },
       "description": "Ignore patterns left out of the managed .gitignore block, for generated outputs the project commits on purpose (for example AGENTS.md, **/CLAUDE.md, .claude/skills/, .opencode/skills/). Gitignore notation: an entry without '/' matches at any depth, '**' crosses directories, a trailing '/' names a directory and covers what is below it. Machine-local and secret outputs are never excluded. Each root applies its own list to its own outputs. Has no effect unless the block is written"
     },
+    "skip_outputs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["instructions", "agents_md", "claude_md", "rules", "skills", "agents", "commands"]
+      },
+      "uniqueItems": true,
+      "description": "Output kinds ai-rulez never writes, overwrites or deletes, so a project can hand-write them while ai-rulez emits only the rest (skills installed from a remote, plugins, MCP servers, hooks, permissions). 'instructions' skips every root instruction file (CLAUDE.md, AGENTS.md, GEMINI.md and the other presets' root files, their .local.md and AGENTS.override.md variants, scope roots) and overrides agents_md and claude_md; 'agents_md' skips only the shared AGENTS.md and the shared .agents/skills tree; 'claude_md' skips only CLAUDE.md; 'rules', 'skills', 'agents' and 'commands' skip those files in every preset. A file an earlier run generated and that is now skipped stays in place and is reported once as unmanaged. Default empty (nothing skipped). Also accepted in config.local.toml."
+    },
     "gitignore": {
       "type": "boolean",
       "description": "Opt in to a managed block in .gitignore listing the generated output patterns. Off by default in v5 (committed outputs are not ignored); machine-local outputs are always ignored",
@@ -417,6 +425,18 @@
         "skills_instructions_text": {
           "type": "string",
           "description": "Replace the default skills section. {{server}} is the MCP server that serves the skills and {{skills_dir}} the config directory's skills folder, relative to the instruction file. Requires skills_instructions to be on."
+        },
+        "discover_skills": {
+          "type": "string",
+          "enum": ["off", "repo", "all"],
+          "default": "off",
+          "description": "Make `mcp --serve-skills` also serve the skills already in the repository: \"repo\" indexes the skill directories of the working tree (root skills/, .claude/skills at any depth and the skill directories of the configured presets, respecting .gitignore and skipping generated copies); \"all\" adds the installed and included skills whatever their delivery. The --discover-skills flag overrides it."
+        },
+        "index_cache": {
+          "type": "string",
+          "enum": ["user", "repo", "off"],
+          "default": "user",
+          "description": "Where the repository index of `mcp --serve-skills --discover-skills` keeps its cache of item summaries and scan verdicts (never file bodies): \"user\" is the user cache directory, with a gitignored directory in the project (.ai-rulez/.cache/) as the fallback when it is not writable; \"repo\" always uses that project directory; \"off\" keeps no cache. The scan, allow and deny rules run again whenever an item is loaded."
         }
       },
       "additionalProperties": false
@@ -442,6 +462,59 @@
             "type": "string"
           },
           "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "session_start": {
+      "type": "object",
+      "description": "Built-in SessionStart hook. On by default for a project that generates for Claude Code: generation adds a SessionStart hook to .claude/settings.json that runs `ai-rulez session-start`, which in a remote (cloud) session regenerates the outputs of the fresh clone and injects a short context for the agent. It does nothing in a local session unless when = \"always\", and never fails a session. generate = false removes it. A separate table because `[hooks]` cannot coexist with the `[[hooks]]` array.",
+      "properties": {
+        "generate": {
+          "type": "boolean",
+          "description": "Add the hook. Set false to remove it (and the prompt with it).",
+          "default": true
+        },
+        "when": {
+          "type": "string",
+          "description": "remote (default): act only when CLAUDE_CODE_REMOTE is set; always: act in every session.",
+          "enum": ["remote", "always"],
+          "default": "remote"
+        },
+        "mode": {
+          "type": "string",
+          "description": "How generate runs: auto (default) is --locked when ai-rulez.lock exists and plain otherwise; locked, frozen and plain force one.",
+          "enum": ["auto", "locked", "frozen", "plain"],
+          "default": "auto"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Seconds the whole run may take before it is killed. Zero or absent means 120.",
+          "minimum": 0,
+          "maximum": 900
+        },
+        "version": {
+          "type": "string",
+          "description": "Pin the ai-rulez version the hook runs through npx and uvx. Defaults to the latest published release. Mutually exclusive with command.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "command": {
+          "type": "array",
+          "description": "Replace the whole launcher (executable followed by its arguments, without the trailing \"session-start\"), for example [\"ai-rulez\"]. It runs without a shell. Mutually exclusive with version.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "prompt": {
+          "type": "boolean",
+          "description": "Inject the short context that says the generated files are managed by ai-rulez and, when enabled, how to use its MCP server and served skills.",
+          "default": true
+        },
+        "prompt_text": {
+          "type": "string",
+          "description": "Replace the default context. {{server}} is the name of the ai-rulez MCP server. Requires prompt to be on.",
+          "minLength": 1
         }
       },
       "additionalProperties": false
@@ -520,7 +593,7 @@
     },
     "default_layers": {
       "type": "array",
-      "description": "Layer names (config.<name>.toml beside config.toml, or in .agents/.ai-rulez/ for an .agents project) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
+      "description": "Layer names (config.<name>.toml beside config.toml, or in .agents/.ai-rulez/ for an .agents project; not supported in a root ai-rulez.toml) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
       "items": {
         "type": "string",
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
@@ -569,7 +642,7 @@
           },
           "source": {
             "type": "string",
-            "description": "Git repository URL (https://...) or local file path. A URL must not embed a credential (https://user:token@host/...): authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable instead; a committed credential is reported as AR035.",
+            "description": "Git repository URL (https://...), GitHub shorthand (owner/repo or github:owner/repo), file:// URL, or local directory (a relative or absolute path, or ~/path in config.local.toml or the user config only). A local path in the project config must stay inside the project. A URL must not embed a credential (https://user:token@host/...): authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable instead; a committed credential is reported as AR035.",
             "minLength": 1
           },
           "path": {
@@ -622,14 +695,164 @@
             "items": { "type": "string" },
             "description": "Drop skills whose directory name matches one of these globs; wins over include."
           },
+          "resources": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "description": "What is bundled from each skill's directory besides references/, scripts/ and assets/ (always bundled). By default an installed skill is bundled whole: every file except SKILL.md, evals/, agents/ and hidden files. Setting resources replaces that default. A pattern is a name, a path or a glob (a name matches a file or directory at any depth); a leading ! removes what an earlier pattern added, for example [\"*\", \"!docs\"]."
+          },
           "name_prefix": {
             "type": "string",
-            "description": "Prepended to every resolved skill name, so two entries cannot collide."
+            "description": "Prepended to every resolved skill name and to its output directory, so two entries cannot collide."
           },
           "trust": {
             "type": "string",
             "enum": ["error", "warn"],
             "description": "Security-scan level for this entry's imported skills. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "installed_marketplaces": {
+      "type": "array",
+      "description": "Plugin marketplaces the project reads: a Claude Code (.claude-plugin/marketplace.json), Codex (.agents/plugins/marketplace.json) or Cursor (.cursor-plugin/marketplace.json) index in a repository, a local directory or at an https URL. An [[installed_plugins]] entry installs a plugin from one. See docs/installed-plugins.md.",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Marketplace name (unique identifier), referenced by installed_plugins[].marketplace",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "description": "A repository URL (https://, ssh, git@host:path, file://), a GitHub owner/repo shorthand, a local directory (./path, inside the project) or an https URL of a marketplace.json. A URL must not embed a credential.",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory of the repository that holds the marketplace index (defaults to the repository root)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Branch, tag, or commit hash (repository sources only)"
+          },
+          "version": {
+            "type": "string",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md."
+          },
+          "tag_prefix": {
+            "type": "string",
+            "description": "Only tags that start with this prefix are version tags. Needs version."
+          },
+          "include_prerelease": {
+            "type": "boolean",
+            "description": "Allow prerelease tags that the constraint does not itself name. Default false. Needs version."
+          },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; 0 disables). Defaults to [lock] min_release_age. Needs version."
+          },
+          "trust": {
+            "type": "string",
+            "enum": ["error", "warn"],
+            "description": "Security-scan level for the plugins read through this marketplace. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "installed_plugins": {
+      "type": "array",
+      "description": "Plugins whose skills, agents, commands, hooks and MCP servers the project imports, read through an installed marketplace or straight from a plugin repository or directory. Hooks stay off unless enable_hooks is set. See docs/installed-plugins.md.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Plugin name (unique identifier)",
+            "minLength": 1
+          },
+          "marketplace": {
+            "type": "string",
+            "description": "Name of an installed_marketplaces entry. Exclusive with source."
+          },
+          "plugin": {
+            "type": "string",
+            "description": "The marketplace entry to install when it is not called like this entry (needs marketplace)."
+          },
+          "source": {
+            "type": "string",
+            "description": "A plugin repository or directory: repository URL, GitHub owner/repo shorthand or a local directory (./path, inside the project). Exclusive with marketplace."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory of the plugin inside the repository (source only)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Branch, tag, or commit hash (source only)"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["claude", "codex", "gemini", "cursor", "agent-plugins"],
+            "description": "Force the plugin layout instead of detecting it."
+          },
+          "include": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["skills", "agents", "commands", "hooks", "mcp", "rules"] },
+            "description": "Import only these component kinds."
+          },
+          "exclude": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["skills", "agents", "commands", "hooks", "mcp", "rules"] },
+            "description": "Do not import these component kinds; wins over include."
+          },
+          "name_prefix": {
+            "type": "string",
+            "description": "Prepended to every imported skill, agent, command and MCP server name (and to the output directory of a skill)."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Place the imported content in the named domain. MCP servers are scoped to it; hooks are not scoped."
+          },
+          "profiles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Restrict the imported content and MCP servers to the named profiles."
+          },
+          "trust": {
+            "type": "string",
+            "enum": ["error", "warn"],
+            "description": "Security-scan level for the imported content. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity."
+          },
+          "enable_hooks": {
+            "type": "boolean",
+            "description": "Import the plugin's hooks. Off by default: a hook runs a command on every machine that uses the project."
+          },
+          "enable_mcp": {
+            "type": "boolean",
+            "description": "Import the plugin's MCP servers. On by default."
+          },
+          "version": {
+            "type": "string",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md."
+          },
+          "tag_prefix": {
+            "type": "string",
+            "description": "Only tags that start with this prefix are version tags. Needs version."
+          },
+          "include_prerelease": {
+            "type": "boolean",
+            "description": "Allow prerelease tags that the constraint does not itself name. Default false. Needs version."
+          },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; 0 disables). Defaults to [lock] min_release_age. Needs version."
           }
         },
         "additionalProperties": false
@@ -1095,6 +1318,10 @@
         "min_release_age_source": {
           "enum": ["auto", "forge", "first-seen", "commit"],
           "description": "Where a tag's release time comes from: auto (default) tries the forge publish time, then the first time this machine saw the tag, then the commit date; the others use one source only. The commit date can be forged by anyone who can push."
+        },
+        "refresh_on_generate": {
+          "type": "boolean",
+          "description": "Make generate re-resolve remote includes, installed skills and skill sources to their latest allowed version and rewrite ai-rulez.lock before writing outputs, as generate --refresh-remote does. The security scan of the new trees runs first and a refusal aborts before any output is written. Needs the network; skipped with --check, --dry-run, --emit-plan, --locked, --frozen, --offline, --watch, --recursive, --user and --plugin. Default false."
         },
         "verify_tags": {
           "type": "boolean",
@@ -2538,6 +2765,37 @@
                 "type": "string",
                 "description": "Version range the scanner's --version output must satisfy (\">=1.0.0, <2\"). A scanner outside it is not run (AR9E2)."
               },
+              "version_command": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check."
+              },
+              "max_message": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000,
+                "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text."
+              },
+              "stage_globs": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Narrow the files staged from each skill directory to the ones matching a glob (relative to the skill directory; a pattern with no slash matches at any depth, ** crosses directories). SKILL.md is always staged. Unset stages every regular file of the directory."
+              },
+              "stage_exclude": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Leave out the files of a staged skill directory that match a glob (same syntax as stage_globs); it wins over stage_globs. SKILL.md is always staged."
+              },
+              "cache_files": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Globs, relative to the project root, of files the scanner reads besides the staged content (a rules file, a configuration). Their content is part of the result cache key, so editing one runs the scanner again. The script a command runs through a known interpreter (python3 scan.py, node scan.js, sh run.sh, uv run scan.py) is hashed without being listed."
+              },
+              "fail_on": {
+                "enum": ["error", "warning", "info"],
+                "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings."
+              },
               "required": {
                 "type": "boolean",
                 "description": "A missing, outdated or failing scanner is an error instead of a notice."
@@ -2546,7 +2804,21 @@
                 "type": "boolean",
                 "description": "Whether content derived from the scanned files can leave the machine. Unset keeps the legacy full environment and is reported as AR9E1. false scrubs the environment and rejects known egress flags (AR9E4); true runs only when the scanner is named in --allow-egress."
               },
-              "timeout": { "type": "string", "description": "Go duration such as \"90s\". Default 2m, at most 15m." },
+              "timeout": {
+                "type": "string",
+                "description": "Go duration such as \"90s\". Default 2m, at most 15m (or [lint.scanner_policy] max_timeout). Bounds each run of the command: every batch of a batch_size scanner gets the whole timeout."
+              },
+              "batch_size": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Split the {skill_dirs} handed to the command into runs of at most this many skill directories, each with its own timeout and cached on its own. 0 (default) hands the scanner all of them at once. Needs {skill_dirs} in command, without {stage}, {root} or {files}."
+              },
+              "parallel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Run up to this many batches at the same time (default 1). Each batch gets its own {out} file and temp directory. Same command requirement as batch_size."
+              },
               "env_pass": {
                 "type": "array",
                 "items": { "type": "string" },
@@ -2587,7 +2859,17 @@
             },
             "fail_on": {
               "enum": ["error", "warning", "info"],
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning."
+              "description": "Lowest severity of a scanner finding (AR011) that fails the run. Scanner findings only; it replaces the run's own threshold (--strict, --fail-on) for them, and a scanner's own fail_on wins. strict implies warning."
+            },
+            "max_message": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "Default characters of a scanner finding message kept in text output (500 when unset); a scanner's own max_message wins. The JSON report and SARIF output keep the whole text."
+            },
+            "max_timeout": {
+              "type": "string",
+              "description": "Longest timeout one run of a scanner may be given, a Go duration from 1s to 6h (default 15m). A scanner's timeout above it is refused (AR9E0). Only the policy can raise it."
             },
             "baseline": {
               "type": "string",

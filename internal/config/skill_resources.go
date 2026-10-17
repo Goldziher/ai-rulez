@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -58,6 +59,54 @@ func LoadSkillResources(skillDir string) ([]SkillResource, error) {
 	return LoadResources(skillDir, ItemKindSkill)
 }
 
+type skillResourcesKey struct{}
+
+// WithSkillResources carries the `resources` patterns of an installed_skills
+// entry to the scan of its skill directories (LoadSkillResourcesContext), which
+// bundles the matching files besides references/, scripts/ and assets/. They
+// replace DefaultInstalledSkillResources.
+func WithSkillResources(ctx context.Context, patterns []string) context.Context {
+	if len(patterns) == 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, skillResourcesKey{}, append([]string(nil), patterns...))
+}
+
+// DefaultInstalledSkillResources returns what an installed skill bundles when its
+// entry sets no `resources`: every file in the skill directory, so a skill that
+// keeps its documents beside SKILL.md or in a folder of its own (rules/, docs/)
+// arrives whole. Eval cases, tool display metadata (agents/) and hidden files
+// stay out, as they do for a skill's canonical directories.
+func DefaultInstalledSkillResources() []string {
+	return []string{"*", "!" + SkillKindEvals, "!" + skillAgentsDir, "!.*"}
+}
+
+func skillResourcesFrom(ctx context.Context) []string {
+	patterns, ok := ctx.Value(skillResourcesKey{}).([]string)
+	if ok && len(patterns) > 0 {
+		return patterns
+	}
+	return DefaultInstalledSkillResources()
+}
+
+// skillResourcesExplicit reports whether ctx carries the entry's own `resources`.
+func skillResourcesExplicit(ctx context.Context) bool {
+	patterns, ok := ctx.Value(skillResourcesKey{}).([]string)
+	return ok && len(patterns) > 0
+}
+
+// resourcesNameDir reports whether the entry's explicit `resources` decide on the
+// subdirectory dir: a pattern, or a "!" exclusion, matches its name, or "none"
+// leaves out everything beyond the canonical directories.
+func (s *contentScanner) resourcesNameDir(dir string) bool {
+	if !s.explicitResources {
+		return false
+	}
+	return slices.ContainsFunc(s.extraResources, func(pattern string) bool {
+		return pattern == "none" || matchesPattern(strings.TrimPrefix(pattern, "!"), []string{dir})
+	})
+}
+
 // LoadSkillResourcesContext is LoadSkillResources reporting through the logger
 // ctx carries (logger.WithContext) and asking the VCS, to leave out ignored
 // files, through the runner ctx carries.
@@ -65,7 +114,25 @@ func LoadSkillResourcesContext(ctx context.Context, skillDir string) ([]SkillRes
 	s := newIncludeScanner(ctx, osView(skillDir))
 	s.log = logger.FromContext(ctx)
 	s.git = gitutil.New(runner.FromContext(ctx))
+	s.extraResources = skillResourcesFrom(ctx)
+	s.explicitResources = skillResourcesExplicit(ctx)
+	s.budget = skillBundleBudgetFrom(ctx)
 	return s.loadResources(skillDir, ItemKindSkill, nil)
+}
+
+// LoadAllSkillFiles loads every regular file below skillDir besides SKILL.md,
+// whatever directory it sits in (the root, references/, a folder of its own).
+// It applies the limits of an installed skill: files git ignores, the bundle
+// excludes (DefaultBundleExcludes and extraExcludes), symbolic links, credential
+// names, files over 8 MiB and the 2000 file / 16 MiB total are left out or, for
+// the total, refused with a SkillBundleLimitError. The external scanners stage
+// a skill with it.
+func LoadAllSkillFiles(ctx context.Context, skillDir string, extraExcludes []string) ([]SkillResource, error) {
+	s := newIncludeScanner(ctx, osView(skillDir))
+	s.log = logger.FromContext(ctx)
+	s.git = gitutil.New(runner.FromContext(ctx))
+	s.extraResources = []string{"*"}
+	return s.loadResources(skillDir, ItemKindSkill, extraExcludes)
 }
 
 // LoadResources is LoadResourcesWith with only the default bundle excludes.
@@ -110,6 +177,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 		marker = commandMarkerFile
 	}
 	filter := newBundleFilterWith(s.ctx, s.git, s.logger(), root, marker, extraExcludes, s.bundleSnaps())
+	s.bundledFiles, s.bundledBytes = 0, 0
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {
@@ -140,6 +208,15 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 		resources = append(resources, kindResources...)
 	}
 
+	extras, err := s.loadExtraResources(root, itemKind, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(extras) > 0 {
+		resources = append(resources, extras...)
+		sortResources(resources)
+	}
+
 	// Warn about unrecognized subdirectories so authors know their content is
 	// not being included in generated output. Only directories are checked;
 	// regular files in the item root (like SKILL.md, .gitignore) are expected
@@ -148,6 +225,12 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	if err != nil {
 		return nil, err
 	}
+	// A directory that `resources` bundles files from is not dropped.
+	warnings = slices.DeleteFunc(warnings, func(w resourceWarning) bool {
+		return slices.ContainsFunc(extras, func(r SkillResource) bool { return strings.HasPrefix(r.RelPath, w.Subdirectory+"/") })
+	})
+	// So is one the entry's `resources` name, as included or as excluded.
+	warnings = slices.DeleteFunc(warnings, func(w resourceWarning) bool { return s.resourcesNameDir(w.Subdirectory) })
 	if s.quietUnrecognized {
 		warnings = nil
 	}
@@ -313,7 +396,8 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 // keep is false when the file is not admitted by the scanner's policy or is
 // filtered out of the bundle.
 func (s *contentScanner) readSkillResource(skillDir, path, name, kind string, filter *bundleFilter) (resource SkillResource, keep bool, err error) {
-	if info, ok := s.admit(path); !ok || !info.Mode().IsRegular() {
+	info, ok := s.admit(path)
+	if !ok || !info.Mode().IsRegular() {
 		return SkillResource{}, false, nil
 	}
 
@@ -330,17 +414,28 @@ func (s *contentScanner) readSkillResource(skillDir, path, name, kind string, fi
 		return SkillResource{}, false, nil
 	}
 
+	if s.bundleLimited() {
+		if isSecretFileName(name) {
+			s.logger().Warn("Skipping a credential-like file in an installed skill", "path", path)
+			return SkillResource{}, false, nil
+		}
+		if info.Size() > maxContentFileBytes {
+			s.logger().Warn("Skipping a file over the size limit in an installed skill",
+				"path", path, "limit_mib", maxContentFileBytes>>20)
+			return SkillResource{}, false, nil
+		}
+	}
+
 	data, err := readCapped(s.v, path)
 	if err != nil {
 		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "read skill resource")
 	}
-
-	// Capture file mode (of the target, for a followed link) so the
-	// executable bit on bundled scripts survives generation.
-	info, err := s.v.Stat(path)
-	if err != nil {
-		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "stat skill resource")
+	if err := s.countBundled(skillDir, len(data)); err != nil {
+		return SkillResource{}, false, err
 	}
+
+	// info is the file's (the target's, for a followed link): its mode keeps the
+	// executable bit on bundled scripts through generation.
 
 	resource = SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: resourceMode(info.Mode())}
 	if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(name), ".md") {
@@ -421,4 +516,116 @@ func rawResourceDescription(data []byte) string {
 	}
 
 	return ""
+}
+
+// sortResources orders resources by kind (references, scripts, assets) and then
+// by RelPath, so the output is the same on every platform.
+func sortResources(resources []SkillResource) {
+	rank := func(kind string) int {
+		for i, k := range skillResourceKinds {
+			if k == kind {
+				return i
+			}
+		}
+		return len(skillResourceKinds)
+	}
+	sort.SliceStable(resources, func(i, j int) bool {
+		if ri, rj := rank(resources[i].Kind), rank(resources[j].Kind); ri != rj {
+			return ri < rj
+		}
+		return resources[i].RelPath < resources[j].RelPath
+	})
+}
+
+// loadExtraResources bundles the files below a skill's root that the entry's
+// `resources` patterns select, outside the canonical references/, scripts/ and
+// assets/ directories (those are walked separately). SKILL.md is never a
+// resource. Bundle excludes, git ignores and the symlink policy apply as for the
+// canonical directories.
+func (s *contentScanner) loadExtraResources(root, itemKind string, filter *bundleFilter) ([]SkillResource, error) {
+	if itemKind != ItemKindSkill || len(s.extraResources) == 0 {
+		return nil, nil
+	}
+	var resources []SkillResource
+	visited := map[string]bool{}
+	var visit func(dir string) error
+	visit = func(dir string) error {
+		if real, err := s.v.EvalSymlinks(dir); err == nil {
+			if visited[real] {
+				return nil
+			}
+			visited[real] = true
+			defer delete(visited, real)
+		}
+		entries, err := s.v.ReadDir(dir)
+		if err != nil {
+			return oops.With("path", dir).Wrapf(err, "walk skill directory for resources")
+		}
+		for _, d := range entries {
+			path := filepath.Join(dir, d.Name())
+			rel := filter.rel(root, path)
+			isDir, ok := s.entryInfo(path, d)
+			if !ok {
+				continue
+			}
+			if isDir {
+				if slices.Contains(skillResourceKinds, rel) || filter.excluded(rel) {
+					continue
+				}
+				if err := visit(path); err != nil {
+					return err
+				}
+				continue
+			}
+			resource, keep, err := s.extraResourceFile(root, path, rel, filter)
+			if err != nil {
+				return err
+			}
+			if keep {
+				resources = append(resources, resource)
+			}
+		}
+		return nil
+	}
+	if err := visit(root); err != nil {
+		return nil, err
+	}
+	return resources, nil
+}
+
+// extraResourceFile reads the file at root-relative rel when the entry's
+// `resources` patterns select it. SKILL.md is never a resource.
+func (s *contentScanner) extraResourceFile(root, path, rel string, filter *bundleFilter) (resource SkillResource, keep bool, err error) {
+	if rel == skillMarkerFile || !resourcePatternsMatch(s.extraResources, rel) {
+		return SkillResource{}, false, nil
+	}
+	name := filepath.Base(path)
+	return s.readSkillResource(root, path, name, extraResourceKind(name), filter)
+}
+
+// resourcePatternsMatch reports whether the root-relative slash path rel is
+// selected: the last pattern that matches it decides, and a "!" pattern removes.
+func resourcePatternsMatch(patterns []string, rel string) bool {
+	segments := strings.Split(rel, "/")
+	selected := false
+	for _, pattern := range patterns {
+		negate := strings.HasPrefix(pattern, "!")
+		if matchesPattern(strings.TrimPrefix(pattern, "!"), segments) {
+			selected = !negate
+		}
+	}
+	return selected
+}
+
+// extraResourceKind files a resource outside the canonical directories under the
+// kind its content suggests, which decides where the SKILL.md index lists it:
+// documents are references, interpreter scripts are scripts, the rest assets.
+func extraResourceKind(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".md", ".mdx", ".txt", ".rst":
+		return SkillKindReferences
+	case ".sh", ".bash", ".zsh", ".py", ".js", ".mjs", ".cjs", ".ts", ".rb", ".pl":
+		return SkillKindScripts
+	}
+	return SkillKindAssets
 }

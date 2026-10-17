@@ -150,24 +150,44 @@ func policyKeyOf(key string) string {
 	return key
 }
 
+// sources drops the sources the policy does not allow from the configuration.
 func (a *applier) sources() {
-	p := a.res.Policy.Sources
-	if !p.Allowed.Set && len(p.Deny) == 0 {
+	check := a.sourceChecker()
+	if check == nil {
 		return
 	}
-	var allow, deny []pattern
-	for _, s := range p.Allowed.Items {
-		if pt, err := parsePattern(s); err == nil {
-			allow = append(allow, pt)
-		}
+	cfg := a.cfg
+	cfg.Includes = filterSlice(cfg.Includes, func(i config.IncludeConfig) bool { return check("include", i.Name, i.Source) })
+	cfg.InstalledSkills = filterSlice(cfg.InstalledSkills, func(s config.InstalledSkillConfig) bool {
+		return check("installed skill", s.Name, s.Source)
+	})
+	cfg.SkillSources = filterSlice(cfg.SkillSources, func(s config.SkillSourceConfig) bool {
+		return check("skill source", s.Name, s.URL)
+	})
+	cfg.InstalledMarketplaces = filterSlice(cfg.InstalledMarketplaces, func(m config.InstalledMarketplaceConfig) bool {
+		return check("installed marketplace", m.Name, config.PluginGitURL(m.Source))
+	})
+	cfg.InstalledPlugins = filterSlice(cfg.InstalledPlugins, func(pl config.InstalledPluginConfig) bool {
+		return pl.Source == "" || check("installed plugin", pl.Name, config.PluginGitURL(pl.Source))
+	})
+}
+
+// sourceChecker returns the check of sources.allowed_hosts and sources.deny_hosts:
+// it reports whether a source may be loaded and records a violation when not. It
+// is nil when the policy bounds no source.
+func (a *applier) sourceChecker() func(kind, name, source string) bool {
+	p := a.res.Policy.Sources
+	if !p.Allowed.Set && len(p.Deny) == 0 {
+		return nil
 	}
-	for _, s := range p.Deny {
-		if pt, err := parsePattern(s); err == nil {
-			deny = append(deny, pt)
-		}
-	}
+	allow, deny := parsePatterns(p.Allowed.Items), parsePatterns(p.Deny)
 	check := func(kind, name, source string) bool {
-		host, segs, remote := splitLocation(source)
+		host, segs, remote, err := splitLocation(source)
+		if err != nil {
+			a.violate(lint.CodeSourceNotAllowed, "sources", source,
+				"%s %q: the location of %q cannot be read safely (%v); the source is not loaded", kind, name, source, err)
+			return false
+		}
 		if !remote {
 			return true
 		}
@@ -198,14 +218,18 @@ func (a *applier) sources() {
 		}
 		return true
 	}
-	cfg := a.cfg
-	cfg.Includes = filterSlice(cfg.Includes, func(i config.IncludeConfig) bool { return check("include", i.Name, i.Source) })
-	cfg.InstalledSkills = filterSlice(cfg.InstalledSkills, func(s config.InstalledSkillConfig) bool {
-		return check("installed skill", s.Name, s.Source)
-	})
-	cfg.SkillSources = filterSlice(cfg.SkillSources, func(s config.SkillSourceConfig) bool {
-		return check("skill source", s.Name, s.URL)
-	})
+	return check
+}
+
+// parsePatterns parses the host patterns that are valid; an invalid one matches nothing.
+func parsePatterns(raw []string) []pattern {
+	var out []pattern
+	for _, s := range raw {
+		if pt, err := parsePattern(s); err == nil {
+			out = append(out, pt)
+		}
+	}
+	return out
 }
 
 func filterSlice[T any](in []T, keep func(T) bool) []T {

@@ -24,7 +24,7 @@ func TestScanCacheKeyCoversEnvValuesAndIsolation(t *testing.T) {
 	// Arrange
 	sc, bin := keyFixture(t)
 	keyFor := func(isolation string) string {
-		key, ok := scanKeyFor(sc, bin, "sha256:tree", false, isolation)
+		key, ok := scanKeyFor(sc, bin, "sha256:tree", nil, false, isolation)
 		require.True(t, ok)
 		return key
 	}

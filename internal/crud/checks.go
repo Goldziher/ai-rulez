@@ -232,6 +232,9 @@ func BuildCheckContent(body, description, severity string, tools, targets []stri
 // frontmatter; supplying neither content nor a field is an error, since there is
 // nothing to change.
 func (op *OperatorImpl) UpdateCheck(ctx context.Context, domain, name, content string, contentGiven bool, f CheckFields) (*FileResult, error) {
+	if err := op.requireContentTree(); err != nil {
+		return nil, err
+	}
 	if err := ValidateCheckName(name); err != nil {
 		return nil, err
 	}

@@ -33,10 +33,13 @@ in your generated outputs.
 
 Sources can be:
   - Git URLs: https://github.com/user/repo
-  - Local paths: /path/to/local/repo
+  - GitHub shorthand: owner/repo or github:owner/repo
+  - Local paths: ./vendor/skills, file:///path, or ~/skills (config.local.toml only)
 
-By default, the skill is expected at skills/<name>/ within the source.
-Use --path to override.`,
+By default, the skill is expected at skills/<name>/ within the source; without
+--path, the conventional harness directories (.claude/skills, .agents/skills, ...)
+are searched when that is empty. Use --path to override, --include/--exclude to
+install several skills from a directory of skills.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSkillInstall,
 }
@@ -60,7 +63,7 @@ var skillListCmd = &cobra.Command{
 }
 
 var skillUpdateCmd = &cobra.Command{
-	Use:   "update [name...]",
+	Use:   useUpdate,
 	Short: "Re-pin installed skills in ai-rulez.lock to their current remote commit",
 	Long: `Resolve the named installed skills (all of them without names) from their
 remote and record the commit and content digest in .ai-rulez/ai-rulez.lock.
@@ -89,6 +92,18 @@ func init() {
 	skillInstallCmd.Flags().StringVar(&skillSource, "source", "", "Git URL or local path (required)")
 	skillInstallCmd.Flags().StringVar(&skillPath, "path", "", "Path within repo to skill directory (defaults to skills/<name>)")
 	skillInstallCmd.Flags().StringVar(&skillRef, "ref", "", "Git reference: branch, tag, or commit hash")
+	skillInstallCmd.Flags().StringSlice("include", nil, "Glob of skill directory names to install from a directory of skills (repeatable)")
+	skillInstallCmd.Flags().StringSlice("exclude", nil, "Glob of skill directory names to skip; wins over --include (repeatable)")
+	skillInstallCmd.Flags().String("name-prefix", "", "Prefix added to every installed skill name")
+	skillInstallCmd.Flags().String("trust", "", "Scan level for the installed skills: error (default) or warn")
+	skillInstallCmd.Flags().StringSlice("resources", nil, "Extra file patterns to bundle with each skill, \"!\" removes (repeatable)")
+	skillInstallCmd.Flags().String("version", "", "Version range of the source's tags, such as ^1.2 (instead of --ref)")
+	skillInstallCmd.Flags().String("tag-prefix", "", "Only consider tags with this prefix when resolving --version, such as v or skills/")
+	skillInstallCmd.Flags().Bool("include-prerelease", false, "Let --version match pre-release tags")
+	skillInstallCmd.Flags().String("min-release-age", "", "Skip tags younger than this, such as 7d (holds back brand-new releases)")
+	skillInstallCmd.Flags().String("domain", "", "Place the skills in this domain, so a profile or role selects them by domain")
+	skillInstallCmd.Flags().StringSlice("profile", nil, "Restrict the skills to these profiles (repeatable)")
+	skillInstallCmd.Flags().String("local-override", "", "Directory used instead of the source while it exists (local development of a remote skill)")
 	if err := skillInstallCmd.MarkFlagRequired("source"); err != nil {
 		logger.Debug("Failed to mark source flag as required", "error", err)
 	}
@@ -119,6 +134,20 @@ func runSkillInstall(cmd *cobra.Command, args []string) error {
 		Path:   skillPath,
 		Ref:    skillRef,
 	}
+	f := cmd.Flags()
+	// The flags are registered above, so the lookups cannot fail.
+	req.Include, _ = f.GetStringSlice("include")               //nolint:errcheck // registered in init
+	req.Exclude, _ = f.GetStringSlice("exclude")               //nolint:errcheck // registered in init
+	req.Resources, _ = f.GetStringSlice("resources")           //nolint:errcheck // registered in init
+	req.NamePrefix, _ = f.GetString("name-prefix")             //nolint:errcheck // registered in init
+	req.Trust, _ = f.GetString("trust")                        //nolint:errcheck // registered in init
+	req.Version, _ = f.GetString("version")                    //nolint:errcheck // registered in init
+	req.TagPrefix, _ = f.GetString("tag-prefix")               //nolint:errcheck // registered in init
+	req.IncludePrerelease, _ = f.GetBool("include-prerelease") //nolint:errcheck // registered in init
+	req.MinReleaseAge, _ = f.GetString("min-release-age")      //nolint:errcheck // registered in init
+	req.Domain, _ = f.GetString("domain")                      //nolint:errcheck // registered in init
+	req.Profiles, _ = f.GetStringSlice("profile")              //nolint:errcheck // registered in init
+	req.LocalOverride, _ = f.GetString("local-override")       //nolint:errcheck // registered in init
 
 	if err := op.InstallSkill(ctx, req); err != nil {
 		return failMsg("Failed to install skill", err)
@@ -173,7 +202,7 @@ func runSkillList(cmd *cobra.Command, _ []string) error {
 				keyName:   s.Name,
 				keySource: incl.RedactURL(s.Source),
 				keyPath:   s.Path,
-				"ref":     s.Ref,
+				keyRef:    s.Ref,
 				keyType:   s.Type,
 			}
 		}

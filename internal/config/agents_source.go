@@ -101,6 +101,9 @@ type Layout struct {
 	// AgentsMDSplit is true when AGENTS.md is read as one context item per H2
 	// heading (agents_md_split).
 	AgentsMDSplit bool
+	// Contentless is true for the root layout (ai-rulez.toml, no content tree):
+	// ContentDir names a directory that does not exist and content cannot be written.
+	Contentless bool
 }
 
 // LayoutOf resolves the layout of the config directory configDir. It reads the
@@ -113,6 +116,12 @@ func LayoutOf(configDir string) Layout {
 			ConfigDir: agents, ConfigFile: file,
 			ContentDir: agents, StateDir: filepath.Join(agents, agentsStateDirName), Agents: true,
 			AgentsMDSplit: readSourceKeys(file).AgentsMDSplit,
+		}
+	}
+	if IsRootConfigDir(configDir) {
+		return Layout{
+			ConfigDir: configDir, ConfigFile: filepath.Join(configDir, RootConfigFilename),
+			ContentDir: filepath.Join(configDir, aiRulezDirName), StateDir: configDir, Contentless: true,
 		}
 	}
 	l := Layout{

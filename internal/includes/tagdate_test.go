@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRemoteTagDate(t *testing.T) {
 	// Arrange: a lightweight and an annotated tag, made just now.
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	repo := tagtest.New(t)
 	repo.Write("a.txt", "a")
 	repo.Commit("one")

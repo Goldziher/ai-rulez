@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/samber/oops"
@@ -18,6 +19,12 @@ import (
 // UpdateSchemaVersion versions the JSON of `update --format json`.
 const UpdateSchemaVersion = 1
 
+// Literals shared by the update, skill, plugin and marketplace commands.
+const (
+	useUpdate = "update [name...]"
+	keyRef    = "ref"
+)
+
 var (
 	updateDryRun         bool
 	updateAllowDowngrade bool
@@ -32,13 +39,13 @@ var (
 
 // UpdateCmd moves the pins of sources that use a version constraint.
 var UpdateCmd = &cobra.Command{
-	Use:   "update [name...]",
+	Use:   useUpdate,
 	Short: "Move the pins of sources that use a version constraint to the newest allowed tag",
-	Long: `Move the lock entries of remote includes, installed skills and skill sources
-that ask for a version range (version = ^1.2) to the newest tag the range
+	Long: `Move the lock entries of remote includes, installed skills, skill sources,
+installed marketplaces and installed plugins that ask for a version range (version = ^1.2) to the newest tag the range
 allows, then record the tag, its commit and the tree digest in ai-rulez.lock.
-Names limit the update to those sources; --kind limits it to include, skill or
-source. Only the lock changes: config.toml is edited only by --major --write-config.
+Names limit the update to those sources; --kind limits it to include, skill,
+source, marketplace or plugin. Only the lock changes: config.toml is edited only by --major --write-config.
 
 Nothing else moves a range pin: "generate" never resolves a range and
 "lock" keeps a pin that still satisfies its constraint. "update" is the one
@@ -87,7 +94,7 @@ func init() {
 	f.BoolVar(&updateWriteConfig, "write-config", false, "With --major, rewrite the version line of those sources in config.toml and move their pins")
 	f.BoolVar(&updateAcceptFindings, "accept-findings", false, "Write a pin although the security scan of the new tree has error findings (review them first)")
 	f.BoolVar(&updateAcceptMoved, "accept-moved-tag", false, "Re-pin a tag that now points to another commit (AR732) after you reviewed it")
-	f.StringVar(&updateKind, "kind", "", "Limit the update to include, skill or source")
+	f.StringVar(&updateKind, "kind", "", "Limit the update to include, skill, source, marketplace or plugin")
 	addFormatFlag(f, &updateFormat, "", formatText, formatText, formatJSON)
 	f.BoolVar(&updateOffline, "offline", false, "Refuse to run: update reads the remote's tags")
 	RootCmd.AddCommand(UpdateCmd)
@@ -133,8 +140,8 @@ type moveTo struct {
 }
 
 func runUpdate(names []string) error {
-	if updateKind != "" && updateKind != lockfile.KindInclude && updateKind != lockfile.KindSkill && updateKind != lockfile.KindSource {
-		return fail(oops.Errorf("unknown --kind %q (use include, skill or source)", updateKind))
+	if updateKind != "" && !slices.Contains(updatableKinds(), updateKind) {
+		return fail(oops.Errorf("unknown --kind %q (use include, skill, source, marketplace or plugin)", updateKind))
 	}
 	if updateWriteConfig && !updateMajor {
 		return fail(oops.Hint("config.toml is edited only to take a new major version: `ai-rulez update --major --write-config`").
@@ -148,6 +155,11 @@ func runUpdate(names []string) error {
 		return fail(err)
 	}
 	return updateAt("", updateKind, names)
+}
+
+// updatableKinds lists the entry kinds `update` can move.
+func updatableKinds() []string {
+	return []string{lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindMarketplace, lockfile.KindPlugin}
 }
 
 func moveKey(kind, name string) string { return kind + "\x00" + name }

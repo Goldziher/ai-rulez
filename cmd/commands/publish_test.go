@@ -23,6 +23,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const publishProjectConfig = `version = "5.0"
@@ -74,7 +75,7 @@ func publishProject(t *testing.T) string {
 func publishProjectWith(t *testing.T, configTOML string) string {
 	t.Helper()
 	resetPublishFlags(t)
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("SOURCE_DATE_EPOCH", "")
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	root := t.TempDir()

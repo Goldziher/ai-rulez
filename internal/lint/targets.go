@@ -38,6 +38,14 @@ const (
 
 // maxTargetFiles bounds how many files one run takes as targets, so a glob such
 // as "**" on a huge tree cannot make the run unbounded.
+// Literals shared across the lint package.
+const (
+	extExe         = ".exe"
+	dirGit         = ".git"
+	cacheStateHit  = "hit"
+	cacheStateUnrd = "unreadable"
+)
+
 const maxTargetFiles = 20000
 
 // TargetSpec names the files to lint.
@@ -426,10 +434,10 @@ func (c *candidates) walk(top, dir string) {
 			if p != root {
 				// Tool state may contain independent repositories and linked worktrees.
 				// Their instructions belong to that repository, not this project.
-				if _, err := os.Lstat(filepath.Join(p, ".git")); err == nil {
+				if _, err := os.Lstat(filepath.Join(p, dirGit)); err == nil {
 					return filepath.SkipDir
 				}
-				if d.Name() == ".git" {
+				if d.Name() == dirGit {
 					return filepath.SkipDir
 				}
 			}

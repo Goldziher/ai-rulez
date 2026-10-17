@@ -49,7 +49,7 @@ func TestSkillGitSource_FindSkillDir_RefusesSymlinkedComponents(t *testing.T) {
 
 func TestGetSkillCacheDir_KeyedByNameAndURL(t *testing.T) {
 	// Arrange
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 
 	// Act
 	a, errA := getSkillCacheDir(ambient.Host{}, "kreuzberg", "https://github.com/a/skills.git", "", "")

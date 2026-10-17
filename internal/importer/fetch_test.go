@@ -339,7 +339,7 @@ func TestGitFetcher_ReadsALocalRepositoryAtTheTagCommit(t *testing.T) {
 		t.Skip("git is not installed")
 	}
 	// Arrange
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	work := t.TempDir()
 	run := func(args ...string) string {
 		cmd := gitutil.CommandNoContext(work, append([]string{"-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...)

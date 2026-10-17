@@ -39,8 +39,8 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 		return fail(err)
 	}
 	rollback := func() {
-		if rerr := safefs.WriteFileAtomicMode(filepath.Join(cfg.ConfigDir, configFileTOML), original, mode); rerr != nil {
-			renderStderr(oops.Wrapf(rerr, "restore config.toml; it still holds the new version constraints"))
+		if rerr := safefs.WriteFileAtomicMode(cfg.ConfigPath(), original, mode); rerr != nil {
+			renderStderr(oops.Wrapf(rerr, "restore the config file; it still holds the new version constraints"))
 		}
 		for i := range report.Major {
 			report.Major[i].Written = false
@@ -117,13 +117,14 @@ func majorConstraint(tag, prefix string) (string, bool) {
 // value changes) and returns the original bytes and mode for a rollback. The
 // file keeps its permission bits: it is the project's file, not a private one.
 func patchMajor(cfg *config.Config, items []majorItem) (original []byte, mode os.FileMode, err error) {
-	file := filepath.Join(cfg.ConfigDir, configFileTOML)
+	file := cfg.ConfigPath()
 	original, mode, err = safefs.ReadRegularKeepMode(file)
 	if err != nil {
-		return nil, 0, oops.With("path", file).Wrapf(err, "read config.toml")
+		return nil, 0, oops.With("path", file).Wrapf(err, "read %s", filepath.Base(file))
 	}
 	patched := original
-	tables := map[string]string{lockfile.KindInclude: "includes", lockfile.KindSkill: "installed_skills", lockfile.KindSource: "skill_sources"}
+	tables := map[string]string{lockfile.KindInclude: "includes", lockfile.KindSkill: "installed_skills", lockfile.KindSource: "skill_sources",
+		lockfile.KindMarketplace: "installed_marketplaces", lockfile.KindPlugin: "installed_plugins"}
 	for _, it := range items {
 		patched, err = versionpatch.SetConstraint(patched, tables[it.Kind], it.Name, it.To)
 		if err != nil {
@@ -131,7 +132,7 @@ func patchMajor(cfg *config.Config, items []majorItem) (original []byte, mode os
 		}
 	}
 	if err := safefs.WriteFileAtomicMode(file, patched, mode); err != nil {
-		return nil, 0, oops.With("path", file).Wrapf(err, "write config.toml")
+		return nil, 0, oops.With("path", file).Wrapf(err, "write %s", filepath.Base(file))
 	}
 	for i := range items {
 		items[i].Written = true

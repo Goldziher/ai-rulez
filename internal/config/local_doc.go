@@ -33,9 +33,11 @@ type LocalDoc struct {
 	mainFile      string
 	baseDir       string
 	configDirName string
-	release       func()
-	resolvers     Resolvers
-	log           logger.Logger
+	// root is set for the root layout (ai-rulez.toml beside no config directory).
+	root      bool
+	release   func()
+	resolvers Resolvers
+	log       logger.Logger
 }
 
 // WithLog makes Save report to log instead of the CLI's logger.
@@ -163,6 +165,9 @@ func mainConfigFileName(configDir string) string {
 			return name
 		}
 	}
+	if IsRootConfigDir(configDir) {
+		return RootConfigFilename
+	}
 	return ""
 }
 
@@ -248,9 +253,14 @@ func openLocalDoc(configDir, mainConfigFile string, lock bool) (*LocalDoc, error
 	d := &LocalDoc{
 		configDir: configDir, mainFile: mainConfigFile,
 		baseDir: baseDir, configDirName: filepath.ToSlash(relConfigDirName(baseDir, configDir)),
+		root: mainConfigFile == RootConfigFilename && IsRootConfigDir(configDir),
 	}
 	if lock {
-		release, err := lockLocalConfig(filepath.Join(configDir, localLockName))
+		lockName := localLockName
+		if d.root {
+			lockName = rootLocalLockName
+		}
+		release, err := lockLocalConfig(filepath.Join(configDir, lockName))
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +287,7 @@ func (d *LocalDoc) load() error {
 		d.Doc = normalizeConfigDocKeys(doc)
 		return nil
 	}
-	d.Path = filepath.Join(d.configDir, localVariantName(configTOMLFilename))
+	d.Path = filepath.Join(d.configDir, localOverlayName(osView(d.configDir), d.configDir))
 	d.Doc = map[string]any{}
 	return nil
 }
@@ -569,6 +579,9 @@ func (d *LocalDoc) marshal() ([]byte, error) {
 // gitignorePatterns are the entries that keep the overlay (and its lock and
 // temp files) out of version control.
 func (d *LocalDoc) gitignorePatterns() []string {
+	if d.root {
+		return rootOverlayGitignorePatterns()
+	}
 	return overlayGitignorePatterns(d.configDirName)
 }
 
@@ -581,6 +594,9 @@ func overlayGitignorePatterns(configDirName string) []string {
 // lock and temp files, and the local/ content tree. Writers of any of them
 // ensure these before writing.
 func LocalGitignorePatterns(configDir string) []string {
+	if IsRootConfigDir(configDir) {
+		return rootOverlayGitignorePatterns()
+	}
 	name := filepath.ToSlash(relConfigDirName(ProjectBaseDir(configDir), configDir))
 	return append(overlayGitignorePatterns(name), name+"/"+localDir+"/")
 }
@@ -848,7 +864,7 @@ func isNamedListKey(key string) bool {
 
 var showScalarKeys = map[string]bool{
 	"name": true, "description": true, docKeyDefault: true, "presets": true,
-	"gitignore": true, "compact": true, "builtins": true,
+	"gitignore": true, "compact": true, "builtins": true, "skip_outputs": true,
 }
 
 // showAllowed is the default-deny display policy: only keys known to hold no
@@ -925,7 +941,7 @@ func isStringList(v any) bool {
 
 var showScalarKinds = map[string]valueKind{
 	"name": kindString, "description": kindString, docKeyDefault: kindString, "presets": kindStringList,
-	"gitignore": kindBool, "compact": kindBool, "builtins": kindBoolOrStringList,
+	"gitignore": kindBool, "compact": kindBool, "builtins": kindBoolOrStringList, "skip_outputs": kindStringList,
 }
 
 // showKind returns the expected type of an allowlisted key path.

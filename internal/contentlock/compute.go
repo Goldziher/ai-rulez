@@ -29,6 +29,14 @@ const (
 	KindSettings = "settings"
 	// KindLocalInclude pins the content tree of an include that is a local path.
 	KindLocalInclude = "local-include"
+	// KindLocalSkill pins a skill an installed_skills entry reads from a local
+	// directory, the digest of the skill's directory as for an authored skill.
+	KindLocalSkill = "local-skill"
+	// KindLocalMarketplace and KindLocalPlugin pin the tree of an
+	// installed_marketplaces or installed_plugins entry read from a local
+	// directory (hooks, scripts and all).
+	KindLocalMarketplace = "local-marketplace"
+	KindLocalPlugin      = "local-plugin"
 )
 
 // Output is a generated file to pin. Data must be the rendering with the
@@ -151,6 +159,8 @@ type collector struct {
 	// problems are unpinnable declarations, see Snapshot.Problems.
 	problems []string
 	modes    *modeResolver
+	// skillSources caches localSkillSources.
+	skillSources *[]localSkillSource
 }
 
 func (c *collector) wants(kind string) bool {
@@ -178,6 +188,7 @@ func (c *collector) collect() error {
 	if err := c.collectLocalIncludes(); err != nil {
 		return err
 	}
+	c.collectLocalPlugins()
 	return c.collectDeclared()
 }
 
@@ -210,7 +221,8 @@ func (c *collector) collectFiles(domain string, rules, contexts, skills, agents,
 // local reports whether the file is an authored file inside the configuration
 // directory (not built in, not from a remote include, not outside the project).
 func (c *collector) local(cf *config.ContentFile) bool {
-	if cf.Path == "" || strings.Contains(cf.Path, "://") {
+	// A contentless project has no authored content: every file comes from an include or an installed skill.
+	if c.cfg.Contentless() || cf.Path == "" || strings.Contains(cf.Path, "://") {
 		return false
 	}
 	_, ok := c.relToConfig(cf.Path)
@@ -253,10 +265,20 @@ func itemID(kind string, cf *config.ContentFile) string {
 }
 
 func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
-	if !c.local(cf) {
-		return nil
+	if c.local(cf) {
+		rel, _ := c.relToConfig(cf.Path)
+		return c.pinFile(kind, kind, itemID(kind, cf), domain, cf, rel)
 	}
-	id := itemID(kind, cf)
+	if kind == KindSkill {
+		return c.addLocalInstalledSkill(domain, cf)
+	}
+	return nil
+}
+
+// pinFile digests one content file (and, for a skill, its resources) and records
+// it as an item of itemKind. kind is the content kind the digest is taken as; rel
+// is the path recorded for the item (a skill's is its directory).
+func (c *collector) pinFile(kind, itemKind, id, domain string, cf *config.ContentFile, rel string) error {
 	primary, err := os.ReadFile(cf.Path)
 	if err != nil {
 		return oops.With("path", cf.Path).Wrapf(err, "read %s for the lock", kind)
@@ -271,11 +293,10 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	if err != nil {
 		return oops.With("path", cf.Path).Wrap(err)
 	}
-	rel, _ := c.relToConfig(cf.Path)
 	if kind == KindSkill || len(cf.Resources) > 0 {
 		rel = dirOf(rel)
 	}
-	item := lockfile.Item{Kind: kind, ID: id, Domain: domain, Path: rel, Digest: digest}
+	item := lockfile.Item{Kind: itemKind, ID: id, Domain: domain, Path: rel, Digest: digest}
 	if cf.Metadata != nil {
 		item.Owner = strings.TrimSpace(cf.Metadata.Extra["owner"])
 		item.Version = strings.TrimSpace(cf.Metadata.Extra["version"])

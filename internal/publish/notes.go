@@ -57,6 +57,8 @@ func DiffLocks(prev, cur *lockfile.File) []NoteChange {
 	out = append(out, diffEntries("include", prev.Include, cur.Include)...)
 	out = append(out, diffEntries("installed-skill", prev.Skill, cur.Skill)...)
 	out = append(out, diffEntries("skill-source", prev.Source, cur.Source)...)
+	out = append(out, diffEntries("marketplace", prev.Marketplace, cur.Marketplace)...)
+	out = append(out, diffEntries("installed-plugin", prev.Plugin, cur.Plugin)...)
 	order := map[string]int{ChangeAdded: 0, ChangeChanged: 1, ChangeRemoved: 2}
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i], out[j]

@@ -303,6 +303,26 @@ tracks (a root-anchored `!.claude/rules/*.md` of yours does not reach a nested r
 
 ---
 
+## Nested Instructions Over MCP
+
+A repository can keep `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.agents/` or `skills/` in any package, and a harness
+loads them only once it works there. A planner at the root, or an agent changing several packages, can ask the MCP
+server what applies to a path: `ai-rulez mcp --serve-skills --discover-skills` indexes the repository by scope, and
+`find_skill`, `find_context` and `load_context` take a `path` or a `scope`. The nearest scope wins a skill name, and the
+index reads the files that already exist, so it needs no `generate` run. See
+[Monorepos: scopes and nested context](mcp-server.md#monorepos-scopes-and-nested-context).
+
+On a large repository the index is kept between runs: summaries of the indexed files and the scan verdicts of clean
+content live in the user cache (`[mcp] index_cache = "user" | "repo" | "off"`), so a warm start takes about a tenth of a
+cold one, and `ai-rulez cache status` / `ai-rulez cache clear` show and drop it
+([The index cache](mcp-server.md#the-index-cache)). While the server runs, a file watcher refreshes the index when a
+nested `AGENTS.md` or `.claude/skills` directory appears, changes or goes, and the server sends
+`resources/list_changed` ([Live refresh](mcp-server.md#live-refresh-of-the-index)). An agent can also add a skill where
+a harness will load it, with `create_skill` and `scope`, behind `allow_write`
+([Writing a skill into a scope](mcp-server.md#writing-a-skill-into-a-scope)).
+
+---
+
 ## Scoped Rule Files
 
 For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder. Rules-folder nesting is not uniform across presets: Copilot reads its instructions at the repository root only, while Claude Code discovers `.claude/rules/*.md` recursively — a nested `<dir>/.claude/rules/` rule loads, with its `paths` resolved relative to `<dir>` — and Antigravity reads `.agents/rules/` at any directory level. Nesting in the other presets is not verified. Writing every scope's rules to the root folder gives one placement that every preset with a rules folder reads, and the scope path as a qualifier and glob prefix keeps file names unique and each rule limited to the scope's files:

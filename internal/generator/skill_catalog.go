@@ -66,6 +66,8 @@ type ServedSkill struct {
 	Imported bool
 	// Include names the [[includes]] entry that supplied the skill, when known.
 	Include string
+	// Installed marks a skill that an [[installed_skills]] entry supplied.
+	Installed bool
 	// MalformedFrontmatter marks a skill whose SKILL.md carries a frontmatter
 	// block that is not valid YAML. Its keys were dropped on load, so the
 	// served bytes do not say what the author wrote; a server must not serve it.
@@ -156,6 +158,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			skill.Triggers, skill.Delivery = owner.triggers, owner.delivery
 			skill.Imported, skill.Include, skill.Commit = owner.imported, owner.include, owner.commit
 			skill.MalformedFrontmatter = owner.malformed
+			skill.Installed, skill.Trust = owner.installed, owner.trust
 		}
 		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
 			skillResourceFiles(outputs, dir)...)
@@ -196,6 +199,11 @@ type skillOwner struct {
 	commit   string
 	// malformed mirrors ContentFile.MalformedFrontmatter.
 	malformed bool
+	// installed marks a skill that an [[installed_skills]] entry supplied.
+	installed bool
+	// trust is the scan level of the entry that supplied the skill; empty is
+	// the server's default for the origin.
+	trust string
 }
 
 // skillOwners maps a skill ID to the domain and origin that supplied it. Root
@@ -223,8 +231,9 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 				o.keywords, o.category = f.Metadata.Keywords, f.Metadata.Category
 				o.triggers = f.Metadata.ExtraList("triggers")
 			}
-			if inst, ok := installed[f.Name]; ok && installedOrigin(cfg.BaseDir, &inst, f.Path) {
+			if inst, ok := installed[f.Name]; ok && installedOrigin(cfg, &inst, f.Path) {
 				o.source, o.ref, o.pinned = inst.Source, inst.RequestedRef(), isCommitSHA(inst.Ref)
+				o.installed, o.trust = true, inst.Trust
 			} else {
 				applyIncludeOrigin(cfg, lock, f.Path, &o)
 			}
@@ -248,7 +257,8 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 // source directory, or in the entry's clone in the skill cache. A name match alone
 // proves nothing: an include or a local skill can carry the same name, and taking
 // the entry's source and ref would misreport where its bytes came from.
-func installedOrigin(baseDir string, inst *config.InstalledSkillConfig, p string) bool {
+func installedOrigin(cfg *config.Config, inst *config.InstalledSkillConfig, p string) bool {
+	baseDir := cfg.BaseDir
 	if p == "" || !filepath.IsAbs(p) {
 		return false
 	}
@@ -260,6 +270,9 @@ func installedOrigin(baseDir string, inst *config.InstalledSkillConfig, p string
 	}
 	if inst.LocalOverride != "" && under(inst.LocalOverride) {
 		return true
+	}
+	if kind, root, err := includes.SkillSourceRoot(cfg, inst.Source); err == nil && kind == includes.SourceTypeLocal {
+		return under(root)
 	}
 	if !includes.IsGitURL(inst.Source) {
 		return under(inst.Source)

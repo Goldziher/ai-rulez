@@ -7,8 +7,10 @@ in `config.toml` and merged into the files through the same owned-key machinery 
 the entries it writes, and every other key, hook group and rule in those files survives `generate` and
 `clean`.
 
-Everything on this page is opt-in. A config without `[[hooks]]`, `[guard]`, `[permissions]` or
-`[claude.settings.managed]` renders exactly what it did before.
+Everything on this page is opt-in except `[session_start]`. A config without `[[hooks]]`, `[guard]`,
+`[permissions]` or `[claude.settings.managed]` renders exactly what it did before; a project that generates for
+Claude Code also gets the `SessionStart` hook of [`[session_start]`](session-start.md) unless it sets
+`generate = false`.
 
 ## `[[hooks]]`
 
@@ -543,6 +545,12 @@ Consequences:
   original bytes (one-line JSON, a missing final newline, an empty `[mcp_servers]` table, `mcp_servers: {}`).
 - On a fresh clone there is no local manifest. `generate` renders the same outputs, and a stale generated file
   is removed only on its `Content-Hash`; a stale file with no header is reported and left.
+- A hook dropped from the configuration is taken out of `.claude/settings.json` (and the other merged settings
+  documents) only on a machine whose local manifest recorded writing it. A fresh clone has no such record, so a
+  hook group the config no longer renders stays in the committed file, and `generate --check` reports no drift
+  for it: the check compares what `generate` would write, and `generate` never takes back an entry it cannot prove
+  it wrote. The committed manifest is editable by anyone with push access, so it is not accepted as that proof for
+  hooks (a forged entry could strip a hook you wrote yourself). Remove the stale group by hand.
 - `generate` and `clean` never remove a file whose parent directory resolves, through a symlink, outside the
   project.
 - A settings document ai-rulez creates is gitignored with the other generated files (`gitignore = true`), so hooks

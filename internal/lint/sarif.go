@@ -48,8 +48,12 @@ const (
 	// maxScannerResults caps how many results one scanner may report; a scanner
 	// past it is treated as broken instead of partially ingested.
 	maxScannerResults = 10000
-	// maxScannerMessage bounds a message in runes.
+	// maxScannerMessage bounds a message in runes unless max_message says otherwise.
 	maxScannerMessage = 500
+	// maxScannerMessageLimit is the largest max_message accepted.
+	maxScannerMessageLimit = 100000
+	// scannerEllipsis ends a message cut to its limit.
+	scannerEllipsis = "..."
 )
 
 type sarifText struct {
@@ -349,6 +353,21 @@ var (
 // escape sequences, control, bidirectional, zero-width or tag characters, one
 // line, at most maxScannerMessage runes, and secret-shaped substrings masked.
 func sanitizeScannerText(s string) string {
+	out, _ := truncateRunes(cleanScannerText(s), maxScannerMessage)
+	return out
+}
+
+// truncateRunes cuts s to limit runes and ends it with scannerEllipsis; cut is
+// false when s fits. A limit of 0 or less keeps s whole.
+func truncateRunes(s string, limit int) (out string, cut bool) {
+	if limit <= 0 || utf8.RuneCountInString(s) <= limit {
+		return s, false
+	}
+	return string([]rune(s)[:limit]) + scannerEllipsis, true
+}
+
+// cleanScannerText is sanitizeScannerText without the length limit.
+func cleanScannerText(s string) string {
 	s = ansiOSC().ReplaceAllString(ansiCSI().ReplaceAllString(s, ""), "")
 	var sb strings.Builder
 	for _, r := range s {
@@ -360,11 +379,7 @@ func sanitizeScannerText(s string) string {
 			sb.WriteRune(r)
 		}
 	}
-	out := maskSecrets(strings.Join(strings.Fields(sb.String()), " "))
-	if utf8.RuneCountInString(out) > maxScannerMessage {
-		out = string([]rune(out)[:maxScannerMessage]) + "..."
-	}
-	return out
+	return maskSecrets(strings.Join(strings.Fields(sb.String()), " "))
 }
 
 func isInvisibleRune(r rune) bool {

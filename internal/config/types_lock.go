@@ -45,6 +45,10 @@ type LockConfig struct {
 	// tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735). It needs
 	// the network, so it is off by default and the offline checks stay offline.
 	VerifyTags bool `yaml:"verify_tags,omitempty" json:"verify_tags,omitempty" toml:"verify_tags,omitempty"` //nolint:tagliatelle
+	// RefreshOnGenerate makes `generate` re-resolve remote includes, installed
+	// skills and skill sources to their latest allowed version and rewrite
+	// ai-rulez.lock before it writes outputs, as `generate --refresh-remote` does.
+	RefreshOnGenerate bool `yaml:"refresh_on_generate,omitempty" json:"refresh_on_generate,omitempty" toml:"refresh_on_generate,omitempty"` //nolint:tagliatelle
 }
 
 // Sources of a tag's release time (see LockConfig.MinReleaseAgeSource).

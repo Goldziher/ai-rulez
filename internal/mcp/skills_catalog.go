@@ -106,6 +106,10 @@ type Catalog struct {
 	byFile  map[string]*CatalogFile
 	refused map[string]Refusal
 	reports []ScanReport
+	// discovery is what skill discovery found; nil when it did not run.
+	discovery *DiscoveryReport
+	// repo is the repository index discovery built; nil when it did not run.
+	repo *repoView
 }
 
 // BuildCatalog converts rendered skills into a catalog, applying the filter.

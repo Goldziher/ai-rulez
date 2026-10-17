@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func compactJSON(t *testing.T, raw string) string {
@@ -36,7 +37,7 @@ func toolText(t *testing.T, res *sdkmcp.CallToolResult) string {
 // The MCP governance tools print the document the CLI prints with --format json
 // (compacted), for the same project.
 func TestMCPGovernanceToolsMatchCLIJSON(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetLockViewFlags(t)
 	root := rolesCmdProject(t)
 	require.Equal(t, 0, writeLockAt("", "", nil))
@@ -106,7 +107,7 @@ func TestMCPGovernanceToolsMatchCLIJSON(t *testing.T) {
 // lock_status takes the same view selectors as `lock --check`, so both report the
 // same document for the same inputs.
 func TestMCPLockStatusViewArgsMatchCLIJSON(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetLockViewFlags(t)
 	root := rolesCmdProject(t)
 	lockServeRole = "dev" // pins the role's outputs so --role has something to compare

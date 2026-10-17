@@ -51,7 +51,9 @@
               "hooks",
               "lock",
               "includes",
-              "tools"
+              "tools",
+              "session-start",
+              "index-cache"
             ]
           },
           "severity": {

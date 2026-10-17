@@ -135,7 +135,7 @@ func TestGenerateCleanAndLockNeedAConfiguration(t *testing.T) {
 	}
 }
 
-func TestImplicitLintLeavesAConfiguredSubdirectoryAlone(t *testing.T) {
+func TestValidateFromAConfiguredSubdirectoryUsesTheProjectConfig(t *testing.T) {
 	t.Cleanup(testutil.CleanupTestBinary)
 	dir := testutil.CreateTempDir(t)
 	writeLintFile(t, dir, ".ai-rulez/config.toml", e2eV5Config)
@@ -143,8 +143,8 @@ func TestImplicitLintLeavesAConfiguredSubdirectoryAlone(t *testing.T) {
 
 	res := testutil.RunCLI(t, filepath.Join(dir, "pkg"), "validate", "--strict")
 
-	assert.Equal(t, 1, res.ExitCode, "a directory below a configured project is not a project without one: %s%s", res.Stdout, res.Stderr)
-	assert.NotContains(t, res.Stderr, noConfigNotice)
+	assert.Equal(t, 0, res.ExitCode, "a directory below a configured project validates that project, like git finds its repository: %s%s", res.Stdout, res.Stderr)
+	assert.NotContains(t, res.Stderr, noConfigNotice, "the implicit lint of a project without a configuration does not run")
 }
 
 // Scenario (c): a marketplace kept in a directory an include names, outside

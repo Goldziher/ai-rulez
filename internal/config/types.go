@@ -36,11 +36,20 @@ type Config struct {
 	GitignoreExclude []string               `yaml:"gitignore_exclude,omitempty" json:"gitignore_exclude,omitempty" toml:"gitignore_exclude,omitempty"` //nolint:tagliatelle
 	Includes         []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty" toml:"includes,omitempty"`
 	InstalledSkills  []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
-	Header           *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
-	Defaults         *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
-	Builtins         *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
-	Compact          *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
-	AgentsMD         bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
+	// InstalledMarketplaces and InstalledPlugins import the content of Claude
+	// Code, Codex, Cursor and Gemini plugins, read through plugin marketplaces
+	// or straight from a repository (see docs/installed-plugins.md).
+	InstalledMarketplaces []InstalledMarketplaceConfig `yaml:"installed_marketplaces,omitempty" json:"installed_marketplaces,omitempty" toml:"installed_marketplaces,omitempty"` //nolint:tagliatelle
+	InstalledPlugins      []InstalledPluginConfig      `yaml:"installed_plugins,omitempty" json:"installed_plugins,omitempty" toml:"installed_plugins,omitempty"`                //nolint:tagliatelle
+	Header                *HeaderConfig                `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
+	Defaults              *DefaultsConfig              `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
+	Builtins              *BuiltinsConfig              `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
+	// SkipOutputs lists output kinds ai-rulez never writes, overwrites or deletes
+	// ("instructions", "agents_md", "claude_md", "rules", "skills", "agents",
+	// "commands"); see skip_outputs.go.
+	SkipOutputs []string `yaml:"skip_outputs,omitempty" json:"skip_outputs,omitempty" toml:"skip_outputs,omitempty"` //nolint:tagliatelle
+	Compact     *bool    `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
+	AgentsMD    bool     `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
 	// Source selects where the content is read from: "ai-rulez" (default, the
 	// .ai-rulez content tree) or "agents" (AGENTS.md and .agents/, see agents_source.go).
 	Source string `yaml:"source,omitempty" json:"source,omitempty" toml:"source,omitempty"`
@@ -140,6 +149,8 @@ type Config struct {
 	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
 	// Guard configures the built-in hook that blocks edits to generated files.
 	Guard *GuardConfig `yaml:"guard,omitempty" json:"guard,omitempty" toml:"guard,omitempty"`
+	// SessionStart configures the built-in SessionStart hook that regenerates outputs in a remote session.
+	SessionStart *SessionStartConfig `yaml:"session_start,omitempty" json:"session_start,omitempty" toml:"session_start,omitempty"`
 	// Permissions declares allow/ask/deny rules for .claude/settings.json and, translated,
 	// for every harness with a native permission surface (docs/permissions.md).
 	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
@@ -180,8 +191,11 @@ type Config struct {
 	ConfigFilePath string `yaml:"-" json:"-" toml:"-"`
 	// AgentsLayout is set when the configuration was read from .agents/ai-rulez.toml,
 	// which selects the "agents" source (ConfigDir is then .agents/.ai-rulez).
-	AgentsLayout bool         `yaml:"-" json:"-" toml:"-"`
-	Content      *ContentTree `yaml:"-" json:"-" toml:"-"`
+	AgentsLayout bool `yaml:"-" json:"-" toml:"-"`
+	// contentless is set when the configuration was read from ai-rulez.toml at the
+	// project root: there is no content tree (see Contentless).
+	contentless bool
+	Content     *ContentTree `yaml:"-" json:"-" toml:"-"`
 	// LocalContent holds machine-local override content scanned from
 	// .ai-rulez/local/ (rules + context only). It is kept strictly separate
 	// from Content so it never lands in committed output; it is emitted only to
@@ -208,9 +222,16 @@ type Config struct {
 	ActiveLayers []string `yaml:"-" json:"-" toml:"-"`
 	// LayerOrigins maps each active layer to how it was activated: "default"
 	// (default_layers), "env" (AI_RULEZ_LAYERS or AI_RULEZ_PROFILE) or "option" (WithLayers).
-	LayerOrigins  map[string]string     `yaml:"-" json:"-" toml:"-"`
-	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
-	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
+	LayerOrigins map[string]string     `yaml:"-" json:"-" toml:"-"`
+	MCPServers   map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
+	// ImportedScan lists the hook commands, hook scripts and MCP definitions of
+	// installed plugins that the import security scan reads besides the content
+	// files. Runtime-only.
+	ImportedScan []ImportedScanFile `yaml:"-" json:"-" toml:"-"`
+	// PluginMCPServers names the entries of MCPServers installed plugins
+	// delivered, so the organization policy can bound them. Runtime-only.
+	PluginMCPServers []string    `yaml:"-" json:"-" toml:"-"`
+	MCPServersRaw    []MCPServer `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 
 	// SourceHash is a blake3 hash over all sources that contribute to generated
 	// output for the active profile (config metadata, content tree, MCP servers,
@@ -292,6 +313,13 @@ func (c *Config) HasPluginAuthoring() bool {
 	return c.Plugin != nil || c.HasPluginSet()
 }
 
+// LintOnly reports whether the configuration declares no preset and authors no
+// plugin: ai-rulez is used only to validate, scan and run [[lint.external]], and
+// generate has nothing to render.
+func (c *Config) LintOnly() bool {
+	return len(c.Presets) == 0 && !c.HasPluginAuthoring()
+}
+
 // ScopeConfig configures an additional scoped output root for directory-aware
 // assistants such as Codex and Claude Code.
 type ScopeConfig struct {
@@ -336,6 +364,19 @@ type MCPConfig struct {
 	// MCP server that serves the skills and {{skills_dir}} the config directory's
 	// skills folder, relative to the instruction file.
 	SkillsInstructionsText string `yaml:"skills_instructions_text,omitempty" json:"skills_instructions_text,omitempty" toml:"skills_instructions_text,omitempty"`
+
+	// DiscoverSkills makes `mcp --serve-skills` also serve the skills already in
+	// the repository: "off" (the default), "repo" (skill directories of the working
+	// tree) or "all" (repo plus installed and included skills). The
+	// --discover-skills flag overrides it.
+	DiscoverSkills string `yaml:"discover_skills,omitempty" json:"discover_skills,omitempty" toml:"discover_skills,omitempty"`
+
+	// IndexCache says where the repository index of the discovery keeps its
+	// cache: "user" (the default; the user cache directory, with a gitignored
+	// directory in the project as the fallback when it is not writable), "repo"
+	// (that project directory) or "off". The cache holds summaries and scan
+	// verdicts, never file bodies.
+	IndexCache string `yaml:"index_cache,omitempty" json:"index_cache,omitempty" toml:"index_cache,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.
@@ -443,9 +484,7 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	if c.MCP != nil {
 		version = c.MCP.SelfServerVersion
 	}
-	if version == "" || version == "dev" {
-		version = "latest"
-	}
+	version = resolveLauncherVersion(version, "")
 	if c.MCP != nil && c.MCP.SelfServerLauncher == SelfLauncherBinaryThenNPX {
 		args := []string{"-c", fmt.Sprintf(binaryThenNPXScript, version), "sh"}
 		if c.servesSkills() {
@@ -459,7 +498,7 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	}
 	return map[string]any{
 		mcpKeyType:    "stdio",
-		mcpKeyCommand: "npx",
+		mcpKeyCommand: SelfLauncherNPX,
 		"args":        args,
 	}
 }
@@ -1151,8 +1190,18 @@ type InstalledSkillConfig struct {
 	// Exclude drops skills whose directory name matches one of these globs; it
 	// wins over Include.
 	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
-	// NamePrefix is prepended to every resolved skill name, so two entries
-	// cannot collide.
+	// Resources narrows or widens what is bundled from each skill's directory. An
+	// installed skill is bundled whole by default (everything but SKILL.md, evals/,
+	// agents/ and hidden files), so a skill with rules/ or a cli.md beside SKILL.md
+	// arrives complete. references/, scripts/ and assets/ are always bundled;
+	// setting Resources replaces the default for everything else. A pattern is a
+	// name, a path or a glob; a name matches that file or directory at any depth,
+	// and a "!" prefix removes what an earlier pattern added. ["none"] (a name no
+	// file has) keeps the canonical directories only; ["*"] also bundles evals/,
+	// agents/ and hidden files.
+	Resources []string `yaml:"resources,omitempty" json:"resources,omitempty" toml:"resources,omitempty"`
+	// NamePrefix is prepended to every resolved skill name and to its output
+	// directory, so two entries cannot collide.
 	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
 	// Trust is the repository-scoped scan level of the imported skills: "error"
 	// (every finding counts, the default) or "warn" (only error-severity

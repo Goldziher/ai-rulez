@@ -567,8 +567,11 @@ func (g *Generator) localInputsOnDisk() bool {
 	if dir == "" {
 		return false
 	}
-	if matches, err := filepath.Glob(filepath.Join(dir, "config.local.*")); err == nil && len(matches) > 0 {
+	if matches, err := filepath.Glob(filepath.Join(dir, g.localOverlayGlob())); err == nil && len(matches) > 0 {
 		return true
+	}
+	if g.config.Contentless() {
+		return false // no local/ content tree in the root layout
 	}
 	info, err := os.Stat(filepath.Join(dir, localSourceDirName))
 	return err == nil && info.IsDir()

@@ -166,7 +166,7 @@ func judgeProject(t *testing.T, files map[string]string) string {
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
 	}
 	t.Chdir(dir)
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	return dir

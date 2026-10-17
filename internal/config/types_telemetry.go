@@ -207,7 +207,7 @@ func ValidateTelemetryEndpoint(endpoint string) string {
 		return "must not carry a query or fragment"
 	}
 	switch parsed.Scheme {
-	case "https":
+	case schemeHTTPS:
 		return ""
 	case "http":
 		if isLoopbackHost(parsed.Hostname()) {

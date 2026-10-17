@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
@@ -44,11 +45,17 @@ func (op *OperatorImpl) isBundle() bool {
 // ConfigDir is the configuration directory the operator writes to.
 func (op *OperatorImpl) ConfigDir() string { return op.aiRulezDir }
 
+// BaseDir is the project directory the operator works in.
+func (op *OperatorImpl) BaseDir() string { return op.baseDir }
+
 // ConfigFile is the file the profile, include and installed-skill operations
 // write: the shared config.toml, or the machine-local overlay for a Local
 // operator.
 func (op *OperatorImpl) ConfigFile() string {
 	if op.local {
+		if op.layout.Contentless {
+			return filepath.Join(op.layout.StateDir, config.RootLocalConfigFilename)
+		}
 		return filepath.Join(op.layout.StateDir, "config.local.toml")
 	}
 	return op.layout.ConfigFile

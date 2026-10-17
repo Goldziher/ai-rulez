@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
 
@@ -36,6 +37,10 @@ func (g *OKFPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 	if cfg.RoleActive() {
 		return nil, nil
 	}
+	// A project that keeps its own files by hand has no authored content to document.
+	if cfg.SkipsRootFiles() {
+		return nil, nil
+	}
 	kinds, err := okfbridge.ParseKinds(cfg.OKFInclude())
 	if err != nil {
 		return nil, err
@@ -47,20 +52,7 @@ func (g *OKFPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 	rel := cfg.OKFDir()
 	root := filepath.Join(baseDir, filepath.FromSlash(rel))
 
-	dirs := map[string]bool{}
-	for d := rel; d != "." && d != "/" && d != ""; d = path.Dir(d) {
-		dirs[d] = true
-	}
-	for _, f := range res.Files {
-		for d := path.Join(rel, path.Dir(f.Path)); d != "." && d != rel; d = path.Dir(d) {
-			dirs[d] = true
-		}
-	}
-	names := make([]string, 0, len(dirs))
-	for d := range dirs {
-		names = append(names, d)
-	}
-	sort.Strings(names)
+	names := okfDirNames(rel, res.Files)
 	outputs := make([]config.OutputFile, 0, len(names)+len(res.Files))
 	for _, d := range names {
 		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, filepath.FromSlash(d)), IsDir: true})
@@ -78,4 +70,24 @@ func (g *OKFPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 		})
 	}
 	return outputs, nil
+}
+
+// okfDirNames is the sorted set of directories the bundle needs: rel, its
+// parents, and every directory above a bundle file.
+func okfDirNames(rel string, files []okf.File) []string {
+	dirs := map[string]bool{}
+	for d := rel; d != "." && d != "/" && d != ""; d = path.Dir(d) {
+		dirs[d] = true
+	}
+	for _, f := range files {
+		for d := path.Join(rel, path.Dir(f.Path)); d != "." && d != rel; d = path.Dir(d) {
+			dirs[d] = true
+		}
+	}
+	names := make([]string, 0, len(dirs))
+	for d := range dirs {
+		names = append(names, d)
+	}
+	sort.Strings(names)
+	return names
 }

@@ -24,6 +24,10 @@ const (
 	KindOKFInclude     = "okf-include"
 	KindInstalledSkill = "installed-skill"
 	KindSkillSource    = "skill-source"
+	// KindMarketplace and KindInstalledPlugin are the trees of an installed
+	// marketplace and an installed plugin.
+	KindMarketplace     = "marketplace"
+	KindInstalledPlugin = "installed-plugin"
 )
 
 // Cache bookkeeping that ai-rulez keeps at the root of a cached clone (and its

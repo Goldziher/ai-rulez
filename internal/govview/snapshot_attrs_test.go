@@ -9,13 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestExtractRevision_KeepsTheCommittedFilesAsTheyAre(t *testing.T) {
 	// Arrange: a committed .gitattributes tries to hide one file (export-ignore)
 	// and rewrite another (export-subst); one script is committed executable.
 	dir := t.TempDir()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	snapGit(t, dir, "init", "-q", "-b", "main")
 	cfg := filepath.Join(dir, ".ai-rulez")
 	snapWrite(t, filepath.Join(cfg, "rules", "a.md"), "one\n")

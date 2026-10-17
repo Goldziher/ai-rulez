@@ -2,7 +2,10 @@ package policy
 
 import (
 	"fmt"
+	"net/netip"
+	"net/url"
 	"strings"
+	"unicode"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
@@ -29,6 +32,9 @@ func parsePattern(raw string) (pattern, error) {
 	if s == "" {
 		return pattern{}, fmt.Errorf("empty pattern")
 	}
+	if strings.HasPrefix(s, "[") {
+		return parseIPv6Pattern(raw, s)
+	}
 	if strings.Contains(s, "://") || strings.ContainsAny(s, " \t\\@:?#") {
 		return pattern{}, fmt.Errorf("%q is not a host pattern (write host or host/path, without a scheme)", raw)
 	}
@@ -36,6 +42,29 @@ func parsePattern(raw string) (pattern, error) {
 	if err := checkHost(raw, host); err != nil {
 		return pattern{}, err
 	}
+	return finishPattern(raw, host, rest, hasPath)
+}
+
+// parseIPv6Pattern parses "[addr]" or "[addr]/path".
+func parseIPv6Pattern(raw, s string) (pattern, error) {
+	end := strings.Index(s, "]")
+	if end < 0 {
+		return pattern{}, fmt.Errorf("%q: an IPv6 host needs a closing ]", raw)
+	}
+	rest := s[end+1:]
+	if rest != "" && !strings.HasPrefix(rest, "/") {
+		return pattern{}, fmt.Errorf("%q: nothing but a path may follow the IPv6 host", raw)
+	}
+	addr, err := netip.ParseAddr(s[1:end])
+	if err != nil || addr.Zone() != "" || !addr.Is6() {
+		return pattern{}, fmt.Errorf("%q is not a valid IPv6 address", raw)
+	}
+	path, hasPath := strings.CutPrefix(rest, "/")
+	return finishPattern(raw, addr.String(), path, hasPath)
+}
+
+// finishPattern attaches the path segments to a validated host.
+func finishPattern(raw, host, rest string, hasPath bool) (pattern, error) {
 	p := pattern{host: host}
 	if !hasPath {
 		return p, nil
@@ -85,10 +114,14 @@ func validSegmentStars(seg string) bool {
 
 // String is the canonical spelling of the pattern.
 func (p pattern) String() string {
-	if len(p.segs) == 0 {
-		return p.host
+	host := p.host
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
 	}
-	return p.host + "/" + strings.Join(p.segs, "/")
+	if len(p.segs) == 0 {
+		return host
+	}
+	return host + "/" + strings.Join(p.segs, "/")
 }
 
 // normalizePattern returns the canonical spelling of a pattern.
@@ -193,40 +226,92 @@ func Covers(policy, repo string) bool {
 
 // splitLocation parses where a source points: a git URL or scp-like address
 // gives its lowercase host and path segments. ok is false for a local path,
-// which names no host.
-func splitLocation(source string) (host string, segs []string, ok bool) {
+// which names no host. It fails closed: a location that cannot be read the way
+// git reads it (a backslash, whitespace, a malformed authority) is an error,
+// never a guess, because a guessed host defeats the host policy.
+func splitLocation(source string) (host string, segs []string, ok bool, err error) {
 	src := strings.TrimSpace(source)
 	if src == "" || !lockfile.IsGitSource(src) {
-		return "", nil, false
+		return "", nil, false, nil
 	}
-	lower := strings.ToLower(src)
-	lower = strings.TrimPrefix(lower, "git+")
+	if strings.ContainsAny(src, "\\") || strings.IndexFunc(src, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
+		return "", nil, false, fmt.Errorf("the location contains a backslash, whitespace or a control character")
+	}
+	lower := strings.TrimPrefix(strings.ToLower(src), "git+")
 	var path string
-	if _, rest, found := strings.Cut(lower, "://"); found {
-		if strings.HasPrefix(lower, "file://") {
-			return "", nil, false
+	if scheme, _, found := strings.Cut(lower, "://"); found {
+		if scheme == "file" {
+			return "", nil, false, nil
 		}
-		authority, p, _ := strings.Cut(rest, "/")
-		if i := strings.LastIndex(authority, "@"); i >= 0 {
-			authority = authority[i+1:]
+		u, perr := url.Parse(lower)
+		if perr != nil || u.Opaque != "" {
+			return "", nil, false, fmt.Errorf("the location is not a valid URL")
 		}
-		host, path = authority, p
-	} else { // scp-like user@host:path
-		_, afterAt, _ := strings.Cut(lower, "@")
-		h, p, _ := strings.Cut(afterAt, ":")
-		host, path = h, p
+		host, path = u.Hostname(), u.Path
+	} else { // scp-like [user@]host:path
+		host, path, err = splitSCP(lower)
+		if err != nil {
+			return "", nil, false, err
+		}
 	}
-	if i := strings.LastIndex(host, ":"); i >= 0 && !strings.Contains(host, "]") {
-		host = host[:i] // drop the port
+	if host, err = canonicalHost(host); err != nil {
+		return "", nil, false, err
 	}
 	path = strings.TrimSuffix(strings.Trim(path, "/"), ".git")
-	if host == "" {
-		return "", nil, false
-	}
 	for _, seg := range strings.Split(path, "/") {
 		if seg != "" {
 			segs = append(segs, seg)
 		}
 	}
-	return host, segs, true
+	return host, segs, true, nil
+}
+
+// splitSCP splits "[user@]host:path" (host may be a bracketed IPv6 literal).
+// ssh reads the host after the last "@".
+func splitSCP(s string) (host, path string, err error) {
+	limit := strings.Index(s, ":")
+	if i := strings.Index(s, "]:"); i >= 0 && strings.Contains(s[:i], "[") {
+		limit = i
+	}
+	if limit < 0 {
+		return "", "", fmt.Errorf("the scp-like address is malformed")
+	}
+	if at := strings.LastIndex(s[:limit], "@"); at >= 0 {
+		s = s[at+1:]
+	}
+	if strings.HasPrefix(s, "[") {
+		end := strings.Index(s, "]")
+		if end < 0 || end+1 >= len(s) || s[end+1] != ':' {
+			return "", "", fmt.Errorf("the scp-like address is malformed")
+		}
+		return s[:end+1], s[end+2:], nil
+	}
+	h, p, found := strings.Cut(s, ":")
+	if !found || strings.ContainsAny(h, "/@?#%") {
+		return "", "", fmt.Errorf("the scp-like address is malformed")
+	}
+	return h, p, nil
+}
+
+// canonicalHost validates a host name or IP literal and returns its lowercase
+// form without brackets, port or trailing dot.
+func canonicalHost(h string) (string, error) {
+	h = strings.TrimSuffix(strings.TrimPrefix(h, "["), "]")
+	if strings.Contains(h, ":") {
+		addr, err := netip.ParseAddr(h)
+		if err != nil || addr.Zone() != "" {
+			return "", fmt.Errorf("%q is not a valid IPv6 address", h)
+		}
+		return addr.String(), nil
+	}
+	h = strings.TrimRight(h, ".")
+	if h == "" {
+		return "", fmt.Errorf("the location has no host")
+	}
+	for _, r := range h {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '.' && r != '-' && r != '_' {
+			return "", fmt.Errorf("the host %q has a character that is not allowed", h)
+		}
+	}
+	return h, nil
 }

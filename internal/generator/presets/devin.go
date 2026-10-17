@@ -107,7 +107,7 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	allSkills := allSkills(content)
 	for idx := range allSkills {
 		skill := allSkills[idx]
-		skillID := extractSkillID(skill.Path)
+		skillID := skillIDOf(skill)
 
 		skillDir := filepath.Join(baseDir, ".devin", "skills", skillID)
 		outputs = append(outputs,
@@ -127,7 +127,7 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	skillIDs := map[string]bool{}
 	for idx := range allSkills {
 		skill := allSkills[idx]
-		skillIDs[extractSkillID(skill.Path)] = true
+		skillIDs[skillIDOf(skill)] = true
 	}
 	commandList := allCommands(content)
 	for idx := range commandList {

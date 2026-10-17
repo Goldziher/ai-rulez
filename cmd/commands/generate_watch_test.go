@@ -13,7 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/watch"
 )
 
@@ -75,6 +79,35 @@ func TestWatchTargets(t *testing.T) {
 			want: []watch.Target{
 				{Path: filepath.Join(base, ".ai-rulez")},
 				{Path: filepath.Join(base, "..", "shared")},
+				{Path: abs},
+			},
+		},
+		{
+			name: "include and installed skill local overrides are watched even when absent",
+			cfg: &config.Config{
+				BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"), ConfigFile: "config.toml",
+				Includes: []config.IncludeConfig{
+					{Name: "shared", Source: "https://github.com/acme/rules.git", LocalOverride: "../override"},
+				},
+				InstalledSkills: []config.InstalledSkillConfig{
+					{Name: "demo", Source: "https://github.com/acme/skills", LocalOverride: "./local-skills"},
+					{Name: "gone", Source: "owner/repo"},
+				},
+			},
+			want: []watch.Target{
+				{Path: filepath.Join(base, ".ai-rulez")},
+				{Path: filepath.Join(base, "..", "override")},
+				{Path: filepath.Join(base, "local-skills")},
+			},
+		},
+		{
+			name: "a file:// source is watched as the path it names",
+			cfg: &config.Config{
+				BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"), ConfigFile: "config.toml",
+				Includes: []config.IncludeConfig{{Name: "shared", Source: "file://" + abs}},
+			},
+			want: []watch.Target{
+				{Path: filepath.Join(base, ".ai-rulez")},
 				{Path: abs},
 			},
 		},
@@ -366,7 +399,7 @@ func TestGenerateOnce_AnnouncesNewCommandsOnlyWhenTheyChange(t *testing.T) {
 	// Arrange: watch mode regenerates through generateOnce.
 	resetWatchFlags(t)
 	assumeYes = false
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv(envAckCommands, "")
 	root := t.TempDir()
 	body := validRootConfig + "\n[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"./scripts/guard.sh\"\n"
@@ -455,4 +488,35 @@ func TestGeneratedOutputFilter_KnowsConfigDirOutputsBeforeTheFirstRun(t *testing
 			t.Errorf("ignore(%q) = %v, want %v", tt.path, got, tt.want)
 		}
 	}
+}
+
+func TestWatchTargetsIncludeEveryLocalSource(t *testing.T) {
+	// Arrange
+	base := t.TempDir()
+	skills := filepath.Join(base, "skills")
+	index := filepath.Join(base, "market", "marketplace.json")
+	for _, d := range []string{skills, filepath.Dir(index), filepath.Join(base, "plugin"), filepath.Join(base, "served")} {
+		require.NoError(t, os.MkdirAll(d, 0o755))
+	}
+	require.NoError(t, os.WriteFile(index, []byte("{}"), 0o600))
+	cfg := &config.Config{
+		BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez"),
+		InstalledSkills:       []config.InstalledSkillConfig{{Name: "a", Source: "./skills"}, {Name: "b", Source: "owner/repo"}},
+		SkillSources:          []config.SkillSourceConfig{{Name: "s", URL: "./served"}},
+		InstalledMarketplaces: []config.InstalledMarketplaceConfig{{Name: "m", Source: "./market/marketplace.json"}},
+		InstalledPlugins:      []config.InstalledPluginConfig{{Name: "p", Source: "./plugin"}},
+	}
+
+	// Act
+	got := watchTargets(cfg)
+
+	// Assert
+	want := []watch.Target{
+		{Path: filepath.Join(base, ".ai-rulez")},
+		{Path: skills},
+		{Path: filepath.Join(base, "served")},
+		{Path: index, File: true},
+		{Path: filepath.Join(base, "plugin")},
+	}
+	assert.Equal(t, want, got)
 }

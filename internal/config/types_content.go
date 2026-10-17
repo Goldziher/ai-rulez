@@ -52,6 +52,11 @@ type ContentFile struct {
 	Domain string `yaml:"-" json:"-"`
 	Trust  string `yaml:"-" json:"-"`
 
+	// ID is the output id of a skill when it is not the name of the directory
+	// holding SKILL.md: an installed skill entry's name_prefix prefixes the id as
+	// well as the name. Empty means the directory name. Runtime-only.
+	ID string `yaml:"-" json:"-"`
+
 	// Resources holds skill supporting files (references/, scripts/, assets/)
 	// loaded alongside SKILL.md. Always empty for non-skill content.
 	Resources []SkillResource `yaml:"-" json:"-"`
@@ -235,21 +240,26 @@ func (c *Config) selectContent(content *ContentTree, profileDomains []string, ac
 	// profile matches both. Untagged domain content short-circuits inside
 	// FilterContentFilesByProfile, so nothing is copied for ordinary domains.
 	for name, domain := range activeDomains {
-		filtered := FilterContentFilesByProfile(domain.Skills, activeProfile)
-		if len(filtered) == len(domain.Skills) {
+		skills := FilterContentFilesByProfile(domain.Skills, activeProfile)
+		agents := FilterContentFilesByProfile(domain.Agents, activeProfile)
+		commands := FilterContentFilesByProfile(domain.Commands, activeProfile)
+		rules := FilterContentFilesByProfile(domain.Rules, activeProfile)
+		if len(skills) == len(domain.Skills) && len(agents) == len(domain.Agents) &&
+			len(commands) == len(domain.Commands) && len(rules) == len(domain.Rules) {
 			continue
 		}
 		nd := *domain
-		nd.Skills = filtered
+		nd.Skills, nd.Agents, nd.Commands, nd.Rules = skills, agents, commands, rules
 		activeDomains[name] = &nd
 	}
 
+	// Installed plugins may scope agents, commands and rules the same way.
 	return &ContentTree{
-		Rules:    content.Rules,
+		Rules:    FilterContentFilesByProfile(content.Rules, activeProfile),
 		Context:  content.Context,
 		Skills:   rootSkills,
-		Agents:   content.Agents,
-		Commands: content.Commands,
+		Agents:   FilterContentFilesByProfile(content.Agents, activeProfile),
+		Commands: FilterContentFilesByProfile(content.Commands, activeProfile),
 		Checks:   content.Checks,
 		Domains:  activeDomains,
 	}, nil

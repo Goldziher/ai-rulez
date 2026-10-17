@@ -55,7 +55,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`agents_md_split`**: With the agents source, read `AGENTS.md` as one context item per `##` heading (default `false`); see [Splitting AGENTS.md](agents-source.md#splitting-agentsmd)
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `discover_skills`, `index_cache`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle
@@ -69,6 +69,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
 - **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)
 - **`guard`**: `[guard] generated = true` adds a PreToolUse hook that blocks agent edits to generated files (`version`, `command` tune how it launches); see [Settings](settings.md#guard)
+- **`session_start`**: `[session_start]` (on by default for Claude Code) adds a `SessionStart` hook that runs `ai-rulez session-start` in remote sessions (`generate`, `when`, `mode`, `timeout`, `version`, `command`, `prompt`, `prompt_text`); see [Run generate when a remote session starts](session-start.md)
 - **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
 - **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
@@ -105,7 +106,7 @@ Which of these a repository may set, and which only the user config file or the 
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
 - **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
-- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name
+- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name and output directory
 - **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
 - **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
 
@@ -166,6 +167,8 @@ The schema files are available in the repository:
 | `schema/okf-validate.schema.json` | JSON Schema | v1      | `ai-rulez okf validate --format json` |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json` |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
+| `schema/cache-status.schema.json` | JSON Schema | v1     | `ai-rulez cache status --format json`: where the index cache is, its size and entry counts, and warnings |
+| `schema/cache-clear.schema.json` | JSON Schema | v1     | `ai-rulez cache clear --format json`: the cache directories removed |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
 | `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |

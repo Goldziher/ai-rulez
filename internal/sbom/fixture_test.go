@@ -20,6 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/sbom"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // fixture is a project on disk that can be rebuilt after edits.
@@ -31,7 +32,7 @@ type fixture struct {
 
 func newFixture(t *testing.T, cfg string, files map[string]string) *fixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	dir := t.TempDir()

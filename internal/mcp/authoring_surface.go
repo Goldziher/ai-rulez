@@ -2,10 +2,12 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -23,6 +25,7 @@ const (
 	resourceScheme  = "ai-rulez://"
 	uriConfig       = resourceScheme + "config"
 	uriCatalog      = resourceScheme + "catalog"
+	uriCatalogQuery = uriCatalog + "{?path,scope,recursive}"
 	uriItemTemplate = resourceScheme + "{kind}/{name}"
 	uriDomainItem   = resourceScheme + "domains/{domain}/{kind}/{name}"
 
@@ -48,6 +51,14 @@ func (s *Server) registerAuthoringResources() {
 		Description: "Every rule, skill, agent, command and context file with owner, tokens and digest (catalog)",
 		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.6},
 	}, s.readAuthoringResource)
+	if s.cat().repository() != nil {
+		// Only a server that indexed the repository has scopes to narrow to.
+		s.mcpServer.AddResourceTemplate(&sdkmcp.ResourceTemplate{
+			URITemplate: uriCatalogQuery, Name: "catalog-scope", Title: "Content Catalog for a Path or Scope", MIMEType: mimeJSON,
+			Description: "The catalog with its scopes section narrowed: ai-rulez://catalog?path=<path>, ?scope=<scope> or ?scope=<scope>&recursive=true",
+			Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.5},
+		}, s.readAuthoringResource)
+	}
 	s.mcpServer.AddResourceTemplate(&sdkmcp.ResourceTemplate{
 		URITemplate: uriItemTemplate, Name: "item", Title: "Project Item", MIMEType: mimeMarkdown,
 		Description: "One item of the root: ai-rulez://{kind}/{name}, kind being rules, context, skills, checks, agents or commands",
@@ -60,14 +71,26 @@ func (s *Server) registerAuthoringResources() {
 	}, s.readAuthoringResource)
 }
 
+// isCatalogQuery reports whether a URI is the catalog resource with a query string.
+func isCatalogQuery(uri string) bool {
+	base, _, found := strings.Cut(uri, "?")
+	return found && base == uriCatalog
+}
+
 // authoringTarget is what an ai-rulez:// URI names.
 type authoringTarget struct {
 	config, catalog    bool
 	kind, domain, name string
+	// query is the query string of a catalog URI (path, scope, recursive).
+	query string
 }
 
 // parseAuthoringURI reads an ai-rulez:// URI; ok is false when it names nothing this server serves.
 func (s *Server) parseAuthoringURI(uri string) (authoringTarget, bool) {
+	if isCatalogQuery(uri) {
+		_, query, _ := strings.Cut(uri, "?")
+		return authoringTarget{catalog: true, query: query}, true
+	}
 	switch uri {
 	case uriConfig:
 		return authoringTarget{config: true}, true
@@ -147,7 +170,37 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 		content, _ := doc["content"].(string) //nolint:errcheck // an item result always carries its content
 		text = content
 	}
+	if target.catalog {
+		query, err := scopeQueryFromURI(target.query)
+		if err != nil {
+			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.Error()}
+		}
+		if text, err = withScopes(text, s.cat().repository(), query); err != nil {
+			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.Error()}
+		}
+		text = withSkillDiscovery(text, s.cat().Discovery())
+	}
 	return &sdkmcp.ReadResourceResult{Contents: []*sdkmcp.ResourceContents{{URI: req.Params.URI, MIMEType: mime, Text: text}}}, nil
+}
+
+// withSkillDiscovery adds the skill discovery report, when discovery ran, to the
+// JSON document of the catalog resource under "skill_discovery": the repository
+// skills served and the ones a skill with the same name shadows. Text that is
+// not a JSON object is returned unchanged.
+func withSkillDiscovery(text string, report *DiscoveryReport) string {
+	if report == nil {
+		return text
+	}
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(text), &doc); err != nil || doc == nil {
+		return text
+	}
+	doc["skill_discovery"] = report
+	out, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return text
+	}
+	return string(out)
 }
 
 func firstText(res *sdkmcp.CallToolResult) string {

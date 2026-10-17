@@ -169,6 +169,21 @@ type contentCreateIn struct {
 type skillCreateIn struct {
 	Description string `json:"description,omitempty" jsonschema:"Skill description for the SKILL.md frontmatter, used when content is empty"`
 	contentCreateIn
+	scopedWriteArgs
+}
+
+// scopedWriteArgs are the arguments of the scoped write path of create_skill and
+// update_skill: a skill written into the repository for a harness working in a directory.
+type scopedWriteArgs struct {
+	Scope      string `json:"scope,omitempty" jsonschema:"A project-relative directory (an existing scope): write the skill to <scope>/<harness skills dir>/<name>/SKILL.md, where a harness working there loads it, instead of editing ai-rulez content. Needs allow_write. It is the harness's own file: not generated down, and with ai-rulez.lock present reported as drift until ai-rulez lock runs"`
+	Harness    string `json:"harness,omitempty" jsonschema:"With scope: the enabled preset whose skills directory is written (default: the first enabled preset that has one)"`
+	AllowWrite bool   `json:"allow_write,omitempty" jsonschema:"With scope: agree to write a file into the repository outside the ai-rulez content tree. Required; default false"`
+}
+
+// skillUpdateIn is the input of update_skill.
+type skillUpdateIn struct {
+	contentUpdateIn
+	scopedWriteArgs
 }
 
 type contentUpdateIn struct {
@@ -254,6 +269,19 @@ type installSkillIn struct {
 	Source string `json:"source" jsonschema:"Git URL or local filesystem path"`
 	Path   string `json:"path,omitempty" jsonschema:"Path within repo to skill directory (defaults to skills/<name>)"`
 	Ref    string `json:"ref,omitempty" jsonschema:"Git reference: branch, tag, or commit hash"`
+
+	Include           []string `json:"include,omitempty" jsonschema:"Globs of skill directory names to install from a directory of skills"`
+	Exclude           []string `json:"exclude,omitempty" jsonschema:"Globs of skill directory names to skip; wins over include"`
+	NamePrefix        string   `json:"name_prefix,omitempty" jsonschema:"Prefix added to every installed skill name and output directory"`
+	Trust             string   `json:"trust,omitempty" jsonschema:"Scan level of the installed skills: error (default) or warn"`
+	Resources         []string `json:"resources,omitempty" jsonschema:"File patterns to bundle with each skill; a leading ! removes"`
+	Version           string   `json:"version,omitempty" jsonschema:"Version range of the source's tags, such as ^1.2 (instead of ref)"`
+	TagPrefix         string   `json:"tag_prefix,omitempty" jsonschema:"Only consider tags with this prefix when resolving version"`
+	IncludePrerelease bool     `json:"include_prerelease,omitempty" jsonschema:"Let version match pre-release tags"`
+	MinReleaseAge     string   `json:"min_release_age,omitempty" jsonschema:"Skip tags younger than this, such as 7d"`
+	Domain            string   `json:"domain,omitempty" jsonschema:"Place the skills in this domain"`
+	Profiles          []string `json:"profiles,omitempty" jsonschema:"Restrict the skills to these profiles"`
+	LocalOverride     string   `json:"local_override,omitempty" jsonschema:"Directory used instead of the source while it exists"`
 	overlayArg
 	workDirArg
 }
@@ -314,6 +342,10 @@ type findSkillIn struct {
 	Task  string `json:"task" jsonschema:"What you are about to do, in a sentence"`
 	Limit int    `json:"limit,omitempty" jsonschema:"Maximum results (default 5, max 20)"`
 	Role  string `json:"role,omitempty" jsonschema:"Rank the skills of this role first (default: the server's role)"`
+	// Path and Scope narrow the search in a repository served with discovery.
+	Path      string `json:"path,omitempty" jsonschema:"A project-relative path you are working on: only the skills that apply there are ranked, from its scope and the ancestor scopes, the nearest scope winning a name. Needs repository discovery. Not with scope"`
+	Scope     string `json:"scope,omitempty" jsonschema:"One scope (a directory, '.' for the root): only its skills are ranked. Needs repository discovery. Not with path"`
+	Recursive bool   `json:"recursive,omitempty" jsonschema:"With scope: also the skills of the scopes below it"`
 }
 
 type loadSkillIn struct {

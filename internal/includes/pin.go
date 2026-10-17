@@ -55,7 +55,10 @@ func policyContext(ctx context.Context, cfg *config.Config) context.Context {
 
 // refreshing reports whether the source is being re-resolved by `ai-rulez lock`.
 func refreshing(cfg *config.Config, kind, name string) bool {
-	return cfg != nil && cfg.LockPolicy.Refreshing(kind, name)
+	if cfg == nil {
+		return false
+	}
+	return cfg.LockPolicy.Refreshing(kind, name) || (kind == lockfile.KindPlugin && viaRefreshedMarketplace(cfg, name))
 }
 
 // Lockable lists the configured remote sources a lock should cover: git
@@ -71,11 +74,11 @@ func Lockable(cfg *config.Config) []lockfile.Want {
 	}
 	for i := range cfg.InstalledSkills {
 		sk := &cfg.InstalledSkills[i]
-		if DetectSourceType(sk.Source) == SourceTypeGit {
+		if kind, _, err := SkillSourceRoot(cfg, sk.Source); err == nil && kind == SourceTypeGit {
 			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindSkill, Name: sk.Name, Source: lockSource(cfg.BaseDir, sk.Source), Path: sk.GetPath(), Ref: sk.Ref}, sk.VersionSpec()))
 		}
 	}
-	return wants
+	return append(wants, pluginWants(cfg)...)
 }
 
 // lockSource is the source as the lock records it: the source as written in the
@@ -206,7 +209,7 @@ func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File,
 		}
 		st := stateFor(cfg)
 		o, ok := st.observedFor(cfg.BaseDir, w.Kind, w.Name)
-		if !ok || o.commit == "" || o.digest == "" {
+		if !ok || (o.commit == "" && !commitless(*w)) || o.digest == "" {
 			if msg := st.problemFor(cfg.BaseDir, w.Kind, w.Name); msg != "" {
 				problems = append(problems, fmt.Sprintf("%s %q: %s", w.Kind, w.Name, msg))
 			} else {
@@ -214,7 +217,8 @@ func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File,
 			}
 			continue
 		}
-		entry := lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: o.commit, Digest: o.digest}
+		entry := lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: o.commit, Digest: o.digest,
+			Origin: st.originFor(cfg.BaseDir, w.Kind, w.Name)}
 		if w.Constraint != "" {
 			t, _ := st.tagFor(cfg.BaseDir, w.Kind, w.Name)
 			entry.Tag, entry.TagObject, entry.Released, entry.ReleasedFrom = t.tag, t.tagObject, t.released, t.releasedFrom
@@ -285,6 +289,8 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind string) {
 	treeKind = contentlock.KindInstalledSkill
 	switch w.Kind {
+	case lockfile.KindMarketplace, lockfile.KindPlugin:
+		return cachedPluginTree(cfg, w)
 	case lockfile.KindInclude:
 		for i := range cfg.Includes {
 			if cfg.Includes[i].Name != w.Name {
@@ -311,7 +317,9 @@ func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind st
 			if err != nil {
 				return "", "", treeKind
 			}
-			dir, cacheDir = src.cachedRoot(), src.cacheDir
+			src.probe = sk.Path == ""
+			dir, _ = src.cachedRoot()
+			cacheDir = src.cacheDir
 		}
 	}
 	return dir, cacheDir, treeKind
@@ -364,7 +372,7 @@ func FormatProblems(ps []Problem) string {
 // loadLockFor reads the project's lock, but only when it has remote sources. A
 // lock file that cannot be read is a violation: pins must never be skipped silently.
 func loadLockFor(cfg *config.Config) (*lockfile.File, error) {
-	if len(Lockable(cfg)) == 0 || cfg.ConfigDir == "" {
+	if (len(Lockable(cfg)) == 0 && len(cfg.InstalledPlugins) == 0) || cfg.ConfigDir == "" {
 		return nil, nil
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
@@ -400,7 +408,8 @@ func unconfiguredEntries(lock *lockfile.File, configured map[string]bool) []Prob
 	for _, list := range []struct {
 		kind    string
 		entries []lockfile.Entry
-	}{{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill}} {
+	}{{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill},
+		{lockfile.KindMarketplace, lock.Marketplace}, {lockfile.KindPlugin, lock.Plugin}} {
 		for i := range list.entries {
 			name := list.entries[i].Name
 			if !configured[list.kind+"\x00"+name] {
