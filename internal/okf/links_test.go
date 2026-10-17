@@ -1,6 +1,7 @@
 package okf
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,4 +45,22 @@ func TestRewriteLinksReportsLine(t *testing.T) {
 		return "", false
 	})
 	assert.Equal(t, []int{2, 6}, lines)
+}
+
+func TestRewriteLinkDefs(t *testing.T) {
+	upper := func(dest string, _ int) (string, bool) { return strings.ToUpper(dest), true }
+	tests := []struct{ name, in, want string }{
+		{"bare", "[a]: x.md\n", "[a]: X.MD\n"},
+		{"angle brackets", "[a]: <x y.md>\n", "[a]: <X Y.MD>\n"},
+		{"title is kept", "[a]: x.md \"Title\"\n", "[a]: X.MD \"Title\"\n"},
+		{"indented up to three spaces", "   [a]: x.md\n", "   [a]: X.MD\n"},
+		{"four spaces is code", "    [a]: x.md\n", "    [a]: x.md\n"},
+		{"fenced code is kept", "```\n[a]: x.md\n```\n[b]: y.md\n", "```\n[a]: x.md\n```\n[b]: Y.MD\n"},
+		{"inline links are not definitions", "[a](x.md)\n", "[a](x.md)\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, RewriteLinkDefs(tt.in, upper))
+		})
+	}
 }

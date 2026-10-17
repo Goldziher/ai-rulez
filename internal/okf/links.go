@@ -2,6 +2,7 @@ package okf
 
 import (
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -42,6 +43,35 @@ func ResolveLink(dir, dest string) (p string, ok, inside bool) {
 // for byte, so a body without rewritten links comes back unchanged. fn also gets
 // the 1-based line of the link within body.
 func RewriteLinks(body string, fn func(dest string, line int) (string, bool)) string {
+	return rewriteLines(body, func(line string, lineNo int) string { return rewriteLine(line, lineNo, fn) })
+}
+
+// linkDefRe matches a reference definition line, `[label]: dest`, capturing
+// everything up to the destination and then the destination itself, bare or in
+// angle brackets.
+var linkDefRe = regexp.MustCompile(`^( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^>\n]*>|\S+)`)
+
+// RewriteLinkDefs is RewriteLinks for reference definitions (`[label]: dest`):
+// fn gets each destination outside fenced code blocks, and the returned one is
+// spliced in when fn reports true. Everything else is kept byte for byte.
+func RewriteLinkDefs(body string, fn func(dest string, line int) (string, bool)) string {
+	return rewriteLines(body, func(line string, lineNo int) string {
+		m := linkDefRe.FindStringSubmatchIndex(line)
+		if m == nil {
+			return line
+		}
+		dest := line[m[4]:m[5]]
+		repl, ok := fn(dest, lineNo)
+		if !ok || repl == dest {
+			return line
+		}
+		return line[:m[4]] + repl + line[m[5]:]
+	})
+}
+
+// rewriteLines applies fn to every line outside a fenced code block, keeping
+// fences and the lines inside them untouched.
+func rewriteLines(body string, fn func(line string, lineNo int) string) string {
 	var out strings.Builder
 	inFence := false
 	for i, line := range strings.SplitAfter(body, "\n") {
@@ -55,7 +85,7 @@ func RewriteLinks(body string, fn func(dest string, line int) (string, bool)) st
 			out.WriteString(line)
 			continue
 		}
-		out.WriteString(rewriteLine(line, i+1, fn))
+		out.WriteString(fn(line, i+1))
 	}
 	return out.String()
 }

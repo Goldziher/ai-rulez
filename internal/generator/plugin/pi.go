@@ -3,14 +3,13 @@ package plugin
 import (
 	"encoding/json"
 	"os"
-	"path"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/samber/oops"
 )
 
@@ -228,10 +227,6 @@ func piPrompts(m *Manifest, baseDir, skillsDir string) ([]config.OutputFile, err
 	return prompts, nil
 }
 
-// piPromptLink matches the target of a Markdown link that climbs out of its
-// directory. The target ends at a closing parenthesis, whitespace, "#" or "?".
-var piPromptLink = regexp.MustCompile(`(\]\()(\.\./[^)\s#?]*)`)
-
 const (
 	// commandsDir is where a command's relative links are written to resolve: the
 	// bundle's commands/ directory, beside skills/ at the root.
@@ -245,14 +240,24 @@ const (
 // reaches the root skills/ tree. A Pi prompt lives two levels down in
 // .pi/prompts/, and its skills sit in skillsDir, so the link is resolved from
 // commands/ and re-expressed from .pi/prompts/ to wherever the target now is.
-// A link that leaves the bundle root is kept as written.
+// Inline links and reference definitions are rewritten, bare or in angle
+// brackets, outside fenced code and inline code spans; the path is escaped for a
+// link destination and any query or fragment is kept. A link that leaves the
+// bundle root is kept as written.
 func rebasePiPromptLinks(body, skillsDir string) string {
 	skills := filepath.ToSlash(filepath.Clean(skillsDir))
-	return piPromptLink.ReplaceAllStringFunc(body, func(match string) string {
-		target := piPromptLink.FindStringSubmatch(match)[2]
-		resolved := path.Clean(path.Join(commandsDir, target))
-		if resolved == ".." || strings.HasPrefix(resolved, "../") {
-			return match
+	rebase := func(dest string, _ int) (string, bool) {
+		inner, wrapped := dest, false
+		if len(dest) >= 2 && dest[0] == '<' && dest[len(dest)-1] == '>' {
+			inner, wrapped = dest[1:len(dest)-1], true
+		}
+		p, suffix, internal := okf.SplitDest(inner)
+		if !internal || !strings.HasPrefix(p, "../") {
+			return "", false
+		}
+		resolved, ok, inside := okf.ResolveLink(commandsDir, inner)
+		if !ok || !inside {
+			return "", false
 		}
 		switch {
 		case resolved == skillsRoot:
@@ -262,10 +267,15 @@ func rebasePiPromptLinks(body, skillsDir string) string {
 		}
 		rebased, err := filepath.Rel(piPromptsDir, filepath.FromSlash(resolved))
 		if err != nil {
-			return match
+			return "", false
 		}
-		return "](" + filepath.ToSlash(rebased)
-	})
+		out := okf.JoinDest(filepath.ToSlash(rebased), suffix)
+		if wrapped {
+			out = "<" + out + ">"
+		}
+		return out, true
+	}
+	return okf.RewriteLinkDefs(okf.RewriteLinks(body, rebase), rebase)
 }
 
 func piResourcePaths(files []string, skillsDir string) piResources {
