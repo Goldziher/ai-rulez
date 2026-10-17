@@ -112,18 +112,22 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	ctx := gitutil.WithMemo(cmdContext())
 	refreshed := refreshRemoteFlag(cmd)
 	if refreshed {
-		if err := refreshRemoteLockWith(ctx, acceptFindingsFlag(cmd)); err != nil {
+		accepted, err := refreshRemoteLockWith(ctx, acceptFindingsFlag(cmd))
+		if err != nil {
 			return err
 		}
+		ctx = withAcceptedTrees(ctx, accepted)
 	}
 	cfg, err := loadGenerateConfig(ctx)
 	if err != nil {
 		return err
 	}
 	if !refreshed && refreshOnGenerate(cfg) {
-		if err := refreshRemoteLockWith(ctx, acceptFindingsFlag(cmd)); err != nil {
+		accepted, err := refreshRemoteLockWith(ctx, acceptFindingsFlag(cmd))
+		if err != nil {
 			return err
 		}
+		ctx = withAcceptedTrees(ctx, accepted)
 		if cfg, err = loadGenerateConfig(ctx); err != nil {
 			return err
 		}
@@ -524,10 +528,10 @@ func importGate(ctx context.Context, cfg *config.Config) error {
 	if err := skillSignatureGate(cfg); err != nil {
 		return err
 	}
-	if err := authoredSecretGate(ctx, cfg); err != nil {
+	if err := authoredSecretGate(ctx, cfg, acceptedTrees(ctx)); err != nil {
 		return err
 	}
-	return enforceScanImports(cfg)
+	return enforceScanImports(cfg, acceptedTrees(ctx))
 }
 
 // checkRoleFlags rejects --role together with --profile.

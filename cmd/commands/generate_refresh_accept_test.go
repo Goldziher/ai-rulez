@@ -32,7 +32,7 @@ func TestRefreshRemoteLock_AcceptFindings(t *testing.T) {
 
 			// Act
 			var err error
-			_, _ = capture(t, func() { err = refreshRemoteLockWith(cmdContext(), tt.accept) })
+			_, _ = capture(t, func() { _, err = refreshRemoteLockWith(cmdContext(), tt.accept) })
 
 			// Assert
 			if tt.wantErr {
