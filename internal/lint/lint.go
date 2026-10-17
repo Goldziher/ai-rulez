@@ -158,6 +158,7 @@ type runner struct {
 	secOnce      sync.Once
 	secRes       []secretPattern
 	relMemo      sync.Map // absolute path -> tree-relative path, see rel
+	skillFiles   sync.Map // skill directory -> every file below it, see stageSkillFiles
 	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer

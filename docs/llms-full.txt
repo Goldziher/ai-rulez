@@ -13643,6 +13643,8 @@ env_pass = []                      # extra environment variable names for an egr
 # version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
 # version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
 # required = true                  # a missing, outdated or failing scanner is an error
+# stage_globs = ["**/*.md"]        # stage only these skill files (relative to the skill directory; SKILL.md always)
+# stage_exclude = ["evals/**"]     # leave these skill files out (wins over stage_globs)
 # fail_on = "error"                # lowest severity of this scanner's findings that fails the run
 # cache_files = ["tools/**/*.py"]  # files the scanner reads; part of the result cache key (a script run through python3, node, sh... is hashed anyway)
 # max_message = 1000               # characters of a finding message kept in text output (default 500)
@@ -13992,7 +13994,7 @@ project is attributed to `config.toml` with a note.
 
 An entry that sets `inputs` runs on a **staged copy** instead of the project. The copy holds exactly the listed kinds
 of content (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `hooks`, `mcp`, `imports`) in a scratch
-directory outside the project: skills with their `scripts/` and `references/`, files byte for byte as on disk,
+directory outside the project: skills with every regular file of their directory (see Staged skill files), files byte for byte as on disk,
 `imports` only when listed. Content keeps its repository path (`.ai-rulez/rules/x.md`, `.ai-rulez/skills/<name>/SKILL.md`
 with its resource files); imported items go under `<config dir>/imports/<kind>/<name>`. `hooks` is written as
 `<config dir>/hooks.json` (the `[[hooks]]` entries as configured) and `mcp` as `<config dir>/mcp-servers.json`, one
@@ -14002,6 +14004,31 @@ header **values** are never staged, credential-looking arguments (the value afte
 mode 0500 and files 0400; no symlink is ever copied. The scanner runs with the stage as its working directory, a
 scrubbed environment (plus `env_pass`), `HOME` and `TMPDIR` set to scratch directories, and no path appended. The
 scratch directory is removed afterwards. Nothing is run when nothing is staged.
+
+###### Staged skill files
+
+A skill's whole directory is staged, not only `scripts/`, `references/` and `assets/`: a file at the skill root
+(`notes.md`, `LICENSE`), in a folder of its own (`rules/`, `templates/`) or in `evals/` reaches the scanner, so a
+payload cannot hide beside `SKILL.md`. The limits are those of an installed skill: git-ignored files and the
+bundle excludes (`.git`, `.venv*`, `venv`, `__pycache__`, `*.pyc`, `node_modules` and the `bundle_exclude` key) stay
+out, symbolic links are never followed, credential-like names (`.env`, `id_rsa*`, `*.pem`, `*.key`,
+`credentials.json`, `*.tfstate` and the like) and files over 8 MiB are skipped, and a skill over 2000 files or
+16 MiB keeps only its canonical directories (a warning names it). `--dry-run` lists exactly these files.
+
+`stage_globs` and `stage_exclude` on a `[[lint.external]]` entry choose among them. Both are globs relative to the
+skill directory (a pattern without a slash matches at any depth, `**` crosses directories); `SKILL.md` is always
+staged. With `stage_globs`, only matching files are staged; `stage_exclude` removes matches and wins. An absolute
+pattern, one with `..` or a malformed one is `AR9E0`.
+
+```toml
+[[lint.external]]
+name = "docs-only"
+command = ["scanner", "{skill_dirs}"]
+inputs = ["skills"]
+egress = false
+stage_globs = ["**/*.md", "scripts/**"]
+stage_exclude = ["evals/**"]
+```
 
 Placeholders in `command` are expanded as arguments, never through a shell: `{stage}` and `{root}` the stage root,
 `{files}` one argument per staged file, `{skill_dirs}` one per staged skill directory (each on its own, not inside a

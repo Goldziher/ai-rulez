@@ -69,11 +69,7 @@ func (r *runner) scanRecords(root string) []ScanRecord {
 		if len(sc.Inputs) == 0 || sc.Egress == nil || *sc.Egress || len(sc.allProblems()) > 0 {
 			continue
 		}
-		want := map[string]bool{}
-		for _, in := range sc.Inputs {
-			want[in] = true
-		}
-		files := r.stageFiles(want, sc.Layout)
+		files := r.stageFilesFor(sc)
 		if len(files) == 0 {
 			continue
 		}
