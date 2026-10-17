@@ -215,6 +215,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		st.logger().Warn(first.empty)
 	}
 	st.warnShadowed(first.catalog.Discovery())
+	st.warnRenamed(first.catalog.Discovery())
 	st.warnIndexLimit(first.catalog.Discovery())
 	if st.Authoring != nil {
 		srv = NewMergedServer(st.Version, first.catalog, opts, st.Authoring...)

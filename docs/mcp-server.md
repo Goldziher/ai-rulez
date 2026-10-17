@@ -594,7 +594,8 @@ claimant keeps a name in this order:
 2. Repository skills, shallowest directory first, then by path. A later one with a name already taken is served
    under its path from the project root, `/` turned into `.` and the leading dot of each segment dropped:
    `pkg/.claude/skills/bar` becomes `pkg.claude.skills.bar` (its frontmatter `name` is rewritten to match).
-   If that name is taken too, it is shadowed.
+   If that name is taken too, it is shadowed. Each rename is a start-up warning naming both directories and the served
+   name, and is listed under `skill_discovery.renamed` (`name`, `served_as`, `path`, `kept_by`).
 
 Every shadowed skill is a start-up warning and is listed, with its path and what shadows it, under
 `skill_discovery.shadowed` in the `ai-rulez://catalog` resource, next to the served ones (`skill_discovery.served`)

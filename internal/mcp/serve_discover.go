@@ -41,6 +41,9 @@ type DiscoveryReport struct {
 	// Shadowed lists the repository skills that are not served because a skill
 	// with the same name has precedence.
 	Shadowed []ShadowedSkill `json:"shadowed"`
+	// Renamed lists the repository skills served under their path because
+	// another repository skill kept their name.
+	Renamed []RenamedSkill `json:"renamed,omitempty"`
 	// Generated counts the skill directories left out because ai-rulez wrote them.
 	Generated int `json:"generated_skipped"`
 	// Index sizes the repository index the discovery built.
@@ -65,6 +68,18 @@ type ShadowedSkill struct {
 	// ShadowedBy says what has the name: an ai-rulez skill, or another repository
 	// skill (by its path).
 	ShadowedBy string `json:"shadowed_by"`
+}
+
+// RenamedSkill is a repository skill served under another name than its own.
+type RenamedSkill struct {
+	// Name is the name the skill declares.
+	Name string `json:"name"`
+	// ServedAs is the name it is served under.
+	ServedAs string `json:"served_as"`
+	// Path is the skill directory, relative to the project root.
+	Path string `json:"path"`
+	// KeptBy is the directory of the repository skill that kept Name.
+	KeptBy string `json:"kept_by"`
 }
 
 // Discovery reports what skill discovery found; nil when it did not run.
@@ -133,6 +148,18 @@ func (st *ServeSetup) warnShadowed(report *DiscoveryReport) {
 	}
 }
 
+// warnRenamed reports at startup each repository skill served under its path
+// because another repository skill kept its name.
+func (st *ServeSetup) warnRenamed(report *DiscoveryReport) {
+	if report == nil {
+		return
+	}
+	for _, r := range report.Renamed {
+		st.logger().Warn("A repository skill shares its name with another and is served under its path",
+			"skill", r.Name, "served_as", r.ServedAs, "path", r.Path, "kept_by", r.KeptBy)
+	}
+}
+
 // appendDiscovered serves the skills found in the working tree after the
 // project's own skills and the skill sources: those keep every name they take.
 func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *renderedSkills, served []generator.ServedSkill, roleKeeps func(string) bool) []generator.ServedSkill {
@@ -161,6 +188,7 @@ func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *ren
 				continue
 			}
 			skill.ID, skill.Files[0].Content = renamed, skillsource.RewriteName(skill.Files[0].Content, renamed)
+			d.report.Renamed = append(d.report.Renamed, RenamedSkill{Name: name, ServedAs: renamed, Path: item.Path, KeptBy: holder})
 			name = renamed
 		}
 		if roleKeeps != nil && !roleKeeps(name) {
