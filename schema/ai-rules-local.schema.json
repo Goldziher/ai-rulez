@@ -4148,6 +4148,59 @@
       },
       "type": "object"
     },
+    "session_start": {
+      "additionalProperties": false,
+      "description": "Built-in SessionStart hook. On by default for a project that generates for Claude Code: generation adds a SessionStart hook to .claude/settings.json that runs `ai-rulez session-start`, which in a remote (cloud) session regenerates the outputs of the fresh clone and injects a short context for the agent. It does nothing in a local session unless when = \"always\", and never fails a session. generate = false removes it. A separate table because `[hooks]` cannot coexist with the `[[hooks]]` array.",
+      "properties": {
+        "command": {
+          "description": "Replace the whole launcher (executable followed by its arguments, without the trailing \"session-start\"), for example [\"ai-rulez\"]. It runs without a shell. Mutually exclusive with version.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "generate": {
+          "default": true,
+          "description": "Add the hook. Set false to remove it (and the prompt with it).",
+          "type": "boolean"
+        },
+        "mode": {
+          "default": "auto",
+          "description": "How generate runs: auto (default) is --locked when ai-rulez.lock exists and plain otherwise; locked, frozen and plain force one.",
+          "enum": ["auto", "locked", "frozen", "plain"],
+          "type": "string"
+        },
+        "prompt": {
+          "default": true,
+          "description": "Inject the short context that says the generated files are managed by ai-rulez and, when enabled, how to use its MCP server and served skills.",
+          "type": "boolean"
+        },
+        "prompt_text": {
+          "description": "Replace the default context. {{server}} is the name of the ai-rulez MCP server. Requires prompt to be on.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "timeout": {
+          "description": "Seconds the whole run may take before it is killed. Zero or absent means 120.",
+          "maximum": 900,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "version": {
+          "description": "Pin the ai-rulez version the hook runs through npx and uvx. Defaults to the version of the binary that runs generate, or \"latest\" for a dev build. Mutually exclusive with command.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+          "type": "string"
+        },
+        "when": {
+          "default": "remote",
+          "description": "remote (default): act only when CLAUDE_CODE_REMOTE is set; always: act in every session.",
+          "enum": ["remote", "always"],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "signing": {
       "additionalProperties": false,
       "description": "Who may sign ai-rulez.lock and how fresh the signature must be (see docs/signing.md). Nothing is enforced unless require names a subject.",

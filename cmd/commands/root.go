@@ -138,6 +138,7 @@ func init() {
 	RootCmd.AddCommand(MigrateCmd)
 	RootCmd.AddCommand(DoctorCmd)
 	RootCmd.AddCommand(GuardCmd)
+	RootCmd.AddCommand(SessionStartCmd)
 	RootCmd.AddCommand(VerifiersCmd)
 	RootCmd.AddCommand(ScannersCmd)
 	RootCmd.AddCommand(VersionCmd, newConfigCmd())

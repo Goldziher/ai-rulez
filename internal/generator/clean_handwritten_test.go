@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,11 @@ func TestGenerator_Clean_KeepsHandWrittenFilesBeforeFirstGenerate(t *testing.T) 
 	require.NoError(t, err)
 	require.NotEmpty(t, written)
 	for _, path := range written {
-		require.NoError(t, os.WriteFile(path, []byte("my own hand-written notes\n"), 0o644))
+		content := "my own hand-written notes\n"
+		if strings.HasSuffix(path, ".json") {
+			content = "{}\n" // a settings document ai-rulez merges into has to parse
+		}
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 	}
 	require.NoError(t, os.Remove(filepath.Join(tempDir, ".ai-rulez", generatedManifestName)))
 	if local := gen.localManifestPath(); local != "" {
