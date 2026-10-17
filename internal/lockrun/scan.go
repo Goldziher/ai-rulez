@@ -168,6 +168,8 @@ func SafeText(s string) string { return govview.SafeText(s) }
 type PinScan struct {
 	Kind, Name string
 	Summary    *ScanSummary
+	// Dir is the cached tree that was scanned.
+	Dir string
 }
 
 // scanNewPins runs the security scan (AR001-AR009, as `update` does) over the
@@ -214,7 +216,7 @@ func scanNewPins(cfg *config.Config, current, next *lockfile.File, accept bool, 
 				continue
 			}
 			printPinScan(report, g.kind, e.Name, sum)
-			scans = append(scans, PinScan{Kind: g.kind, Name: e.Name, Summary: sum})
+			scans = append(scans, PinScan{Kind: g.kind, Name: e.Name, Summary: sum, Dir: dir})
 			if sum.Refused {
 				refused++
 			}

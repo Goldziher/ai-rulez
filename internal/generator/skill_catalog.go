@@ -158,7 +158,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			skill.Triggers, skill.Delivery = owner.triggers, owner.delivery
 			skill.Imported, skill.Include, skill.Commit = owner.imported, owner.include, owner.commit
 			skill.MalformedFrontmatter = owner.malformed
-			skill.Installed = owner.installed
+			skill.Installed, skill.Trust = owner.installed, owner.trust
 		}
 		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
 			skillResourceFiles(outputs, dir)...)
@@ -201,6 +201,9 @@ type skillOwner struct {
 	malformed bool
 	// installed marks a skill that an [[installed_skills]] entry supplied.
 	installed bool
+	// trust is the scan level of the entry that supplied the skill; empty is
+	// the server's default for the origin.
+	trust string
 }
 
 // skillOwners maps a skill ID to the domain and origin that supplied it. Root
@@ -230,7 +233,7 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 			}
 			if inst, ok := installed[f.Name]; ok && installedOrigin(cfg, &inst, f.Path) {
 				o.source, o.ref, o.pinned = inst.Source, inst.RequestedRef(), isCommitSHA(inst.Ref)
-				o.installed = true
+				o.installed, o.trust = true, inst.Trust
 			} else {
 				applyIncludeOrigin(cfg, lock, f.Path, &o)
 			}

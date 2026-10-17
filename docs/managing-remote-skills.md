@@ -79,5 +79,8 @@ served the entry runs `mcp --serve-skills`. To opt out set `self_server = false`
   written and `ai-rulez.lock` is unchanged. Review the listed findings in the new version first. If you accept
   them, run `ai-rulez generate --refresh-remote --accept-findings` to pin the new version and generate in one step
   (or `ai-rulez update --accept-findings`, then `ai-rulez generate`; `ai-rulez lock --accept-findings` re-pins what is
-  already pinned and does not move it). `generate` scans the imported content again at the entry's `trust` level, so
-  error findings still stop it unless you set `trust = "warn"` on the entry or `[lint.security] scan_imports = "warn"`.
+  already pinned and does not move it). `generate --refresh-remote --accept-findings` also lets the accepted tree
+  through the import scan of that run, so the lock and the outputs agree. The acceptance is not recorded: a later
+  `generate` scans the imported content again at the entry's `trust` level, and error findings still stop it unless you
+  set `trust = "warn"` on the entry or `[lint.security] scan_imports = "warn"`. The served-skill scan uses the same
+  `trust` of the entry.

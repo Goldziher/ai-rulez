@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"github.com/spf13/viper"
 )
@@ -639,8 +640,9 @@ func warnFrontmatter(ctx context.Context, cfg *config.Config) {
 // enforceScanImports runs the security rules over imported content before
 // anything is written, unless [lint.security] scan_imports is "off". An
 // error-level finding (every finding at level "error") stops the run; the rest
-// are logged.
-func enforceScanImports(cfg *config.Config) error {
+// are logged. An error finding inside one of the accepted trees (pinned with
+// generate --accept-findings in this run) is logged as well.
+func enforceScanImports(cfg *config.Config, accepted []string) error {
 	findings, err := lint.ScanImports(cfg, lint.WithCwd(workingDir()))
 	if err != nil {
 		return oops.Wrapf(err, "scan imported content")
@@ -652,7 +654,7 @@ func enforceScanImports(cfg *config.Config) error {
 	blocked := false
 	for _, f := range findings {
 		lines = append(lines, fmt.Sprintf("%s:%d: %s %s: %s", f.File, f.Line, f.Severity, f.Code, f.Message))
-		if f.Severity == lint.SeverityError {
+		if f.Severity == lint.SeverityError && !withinAny(f.File, accepted) {
 			blocked = true
 		}
 	}
@@ -662,16 +664,27 @@ func enforceScanImports(cfg *config.Config) error {
 		}
 		return nil
 	}
-	return oops.Hint("Review the imported source, or set [lint.security] scan_imports to \"warn\" (or \"off\")").
+	return oops.Hint("Review the imported source, then set trust = \"warn\" on its installed_skills entry, or [lint.security] scan_imports to \"warn\" (or \"off\") for all imports").
 		Errorf("imported content failed the security scan; nothing was written:\n  %s", strings.Join(lines, "\n  "))
+}
+
+// withinAny reports whether file lies inside one of dirs.
+func withinAny(file string, dirs []string) bool {
+	for _, d := range dirs {
+		if d != "" && safefs.Within(d, file) {
+			return true
+		}
+	}
+	return false
 }
 
 // authoredSecretGate refuses to write while the project's own content holds a
 // credential the security scan recognizes (AR001): generated outputs are
 // committed or sent to a model, and content can reach them through a symlink or
 // a copy-paste. An inline ignore comment or a [lint] rule setting silences a
-// reviewed false positive, as it does for `validate --strict`.
-func authoredSecretGate(ctx context.Context, cfg *config.Config) error {
+// reviewed false positive, as it does for `validate --strict`. A tree in
+// accepted (pinned with generate --accept-findings in this run) is not refused.
+func authoredSecretGate(ctx context.Context, cfg *config.Config, accepted []string) error {
 	if cfg.BaseDir == "" {
 		return nil
 	}
@@ -686,7 +699,7 @@ func authoredSecretGate(ctx context.Context, cfg *config.Config) error {
 	}
 	var lines []string
 	for _, f := range report.Findings {
-		if f.Code == lint.CodeSecretDetected && f.Severity == lint.SeverityError {
+		if f.Code == lint.CodeSecretDetected && f.Severity == lint.SeverityError && !withinAny(f.File, accepted) {
 			lines = append(lines, fmt.Sprintf("%s:%d: %s %s: %s", f.File, f.Line, f.Severity, f.Code, f.Message))
 		}
 	}
