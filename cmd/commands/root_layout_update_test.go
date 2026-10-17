@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -171,6 +172,12 @@ func TestPatchMajor_RewritesTheRootConfigAndReportsTheOriginal(t *testing.T) {
 			body := rootLayoutConfig + "\n" + tt.body
 			writeFile(t, path, body)
 			require.NoError(t, os.Chmod(path, 0o640))
+			wantMode := os.FileMode(0o640)
+			if runtime.GOOS == "windows" { // Windows has no group bits: the file keeps whatever mode it reports
+				info, statErr := os.Stat(path)
+				require.NoError(t, statErr)
+				wantMode = info.Mode().Perm()
+			}
 			cfg, err := config.LoadConfig(context.Background(), root, config.WithoutRemote(), config.WithoutLocal())
 			require.NoError(t, err)
 
@@ -184,7 +191,7 @@ func TestPatchMajor_RewritesTheRootConfigAndReportsTheOriginal(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, body, string(original))
-				assert.Equal(t, os.FileMode(0o640), mode, "the permission bits are kept")
+				assert.Equal(t, wantMode, mode, "the permission bits are kept")
 				for i := range tt.items {
 					assert.True(t, tt.items[i].Written)
 				}
