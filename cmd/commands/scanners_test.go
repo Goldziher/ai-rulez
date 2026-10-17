@@ -186,3 +186,45 @@ func TestScannersListSeesThePresetAndProfiles(t *testing.T) {
 	assert.Equal(t, []string{"skill content (secrets redacted by the vendor)", "MCP server configuration and tool descriptions", "agent application details"}, byName["snyk"].DataSent)
 	assert.Equal(t, "snyk-agent-scan", byName["snyk"].Profile)
 }
+
+func TestWriteDoctor_AppliesTheVersionRangeLikeARun(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script scanner")
+	}
+	// Arrange: command[0] is a launcher that prints its own version; the scanner's version is what version_command prints.
+	dir := t.TempDir()
+	launcher := filepath.Join(dir, "launcher")
+	require.NoError(t, os.WriteFile(launcher, []byte("#!/bin/sh\necho 'launcher 9.9.9'\n"), 0o755)) //nolint:gosec // test script
+	versioner := filepath.Join(dir, "versioner")
+	require.NoError(t, os.WriteFile(versioner, []byte("#!/bin/sh\necho 'scanner 1.2.0'\n"), 0o755)) //nolint:gosec // test script
+	tests := []struct {
+		name        string
+		rng         string
+		versionCmd  []string
+		probe       bool
+		wantHealthy bool
+		wantText    string
+	}{
+		{"launcher version satisfies the range", ">=2", nil, true, true, "launcher 9.9.9"},
+		{"version_command outside the range", ">=2", []string{versioner}, true, false, "does not satisfy"},
+		{"version_command inside the range", ">=1", []string{versioner}, true, true, "scanner 1.2.0"},
+		{"range unchecked without --external", ">=2", []string{versioner}, false, true, "unverified"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := lint.ScannerInfo{Name: "s", Command: "launcher", Path: launcher, Egress: "false", Format: "sarif", Timeout: time.Second,
+				Isolation: "none", Version: tt.rng, VersionCommand: tt.versionCmd, Dir: dir}
+			var buf bytes.Buffer
+
+			// Act
+			healthy := writeDoctor(t.Context(), &buf, info, tt.probe)
+
+			// Assert
+			assert.Equal(t, tt.wantHealthy, healthy, buf.String())
+			assert.Contains(t, buf.String(), tt.wantText)
+			if !tt.wantHealthy {
+				assert.Contains(t, buf.String(), "not healthy")
+			}
+		})
+	}
+}

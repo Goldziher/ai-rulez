@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **A scanner `version` pin is checked against the scanner, not its launcher, and `scanners doctor` applies the same check.** The range was matched against `command[0] --version`, which is `python3` or `node` for a script scanner. The new `version_command` on `[[lint.external]]` names the argv that prints the scanner's version, and `scanners doctor --external` now reports `not healthy` for a scanner outside its range instead of `ok`, exactly where `validate --external` refuses to run it ([#431](https://github.com/Goldziher/ai-rulez/issues/431)). See [Strict validation](https://goldziher.github.io/ai-rulez/strict-validation/).
 - **A local `installed_skills` source must stay inside the project.** A committed entry could name any path, unlike includes and `[[skill_sources]]`; it now fails with the same error, with the same exceptions (`config.local.toml`, the user config).
 - **A local installed skill is pinned in `ai-rulez.lock`** as a `local-skill` item, so `generate --locked` fails when its files change. Run `ai-rulez lock` once to record the pins.
 - **`generate --user` loads the user config in user scope**, so its includes and installed skills may point outside the home project.

@@ -53,8 +53,22 @@ func externalProblems(ex config.LintExternal) []string {
 			problems = append(problems, fmt.Sprintf("version %q is not a version range such as \">=1.0.0, <2\": %v", ex.Version, err))
 		}
 	}
+	problems = append(problems, versionCommandProblems(ex)...)
 	problems = append(problems, inputProblems(ex)...)
 	return append(problems, severityMapProblems(ex.SeverityMap, ex.MaxSeverity)...)
+}
+
+// versionCommandProblems lists what is wrong with version_command.
+func versionCommandProblems(ex config.LintExternal) []string {
+	switch {
+	case len(ex.VersionCommand) == 0:
+		return nil
+	case ex.Version == "":
+		return []string{"version_command needs version (the range its output is checked against)"}
+	case strings.TrimSpace(ex.VersionCommand[0]) == "":
+		return []string{"version_command starts with an empty program name"}
+	}
+	return nil
 }
 
 // egressFlagViolation returns the first argument that turns on network egress,
