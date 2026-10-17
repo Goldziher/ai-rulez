@@ -87,6 +87,13 @@ func runHook(t *testing.T, dir, command, stubDir, stdin string, env ...string) h
 	if _, err := os.Lstat(filepath.Join(stubDir, "sh")); err != nil {
 		itestutil.SymlinkOrSkip(t, sh, filepath.Join(stubDir, "sh")) // the emitted command starts with sh
 	}
+	for _, tool := range []string{"mktemp", "rmdir"} { // the neutral directory is made and removed with these
+		if p, err := exec.LookPath(tool); err == nil {
+			if _, err := os.Lstat(filepath.Join(stubDir, tool)); err != nil {
+				itestutil.SymlinkOrSkip(t, p, filepath.Join(stubDir, tool))
+			}
+		}
+	}
 	cmd := exec.Command(sh, "-c", command)
 	cmd.Dir = dir
 	cmd.Env = append([]string{"PATH=" + stubDir, "HOME=" + t.TempDir(), "TMPDIR=" + t.TempDir()}, env...)
@@ -104,10 +111,12 @@ func runHook(t *testing.T, dir, command, stubDir, stdin string, env ...string) h
 	return hookRun{stdout: stdout.String(), stderr: stderr.String(), code: code}
 }
 
-// stub writes an executable shell script named name into dir that appends "name args" to log and exits with code.
+// stub writes an executable shell script named name into dir that appends "name args" to log, its
+// working directory to log+".cwd", and exits with code.
 func stub(t *testing.T, dir, log, name string, code int) {
 	t.Helper()
-	script := "#!/bin/sh\necho \"" + name + " $*\" >> \"" + log + "\"\nexit " + string(rune('0'+code)) + "\n"
+	script := "#!/bin/sh\necho \"" + name + " $*\" >> \"" + log + "\"\necho \"" + name + " $(pwd -P)\" >> \"" + log + ".cwd\"\nexit " +
+		string(rune('0'+code)) + "\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755))
 }
 
@@ -129,8 +138,8 @@ func TestSessionStartE2E_GeneratedSettingsAndLifecycle(t *testing.T) {
 
 		require.Len(t, commands, 1)
 		assert.Contains(t, commands[0], "ai-rulez session-start")
-		assert.Contains(t, commands[0], "npx -y ai-rulez@")
-		assert.Contains(t, commands[0], "uvx --from ai-rulez==")
+		assert.Contains(t, commands[0], "npx -y ai-rulez@latest")
+		assert.Contains(t, commands[0], "uvx --from ai-rulez@latest")
 		assert.Contains(t, commands[0], "CLAUDE_CODE_REMOTE")
 	})
 	t.Run("generate --check is clean", func(t *testing.T) {
@@ -222,22 +231,22 @@ func TestSessionStartE2E_LauncherOrder(t *testing.T) {
 		{name: "installed ai-rulez wins, neither npx nor uvx runs", stubs: map[string]int{"ai-rulez": 0, "npx": 0, "uvx": 0}, env: []string{remote},
 			wantLog: []string{"ai-rulez session-start"}},
 		{name: "npx and uvx present: npx only", stubs: map[string]int{"npx": 0, "uvx": 0}, env: []string{remote},
-			wantLog: []string{"npx -y ai-rulez@VERSION session-start"}},
+			wantLog: []string{"npx -y ai-rulez@latest session-start"}},
 		{name: "no npx: uvx", stubs: map[string]int{"uvx": 0}, env: []string{remote},
-			wantLog: []string{"uvx --from ai-rulez==VERSION ai-rulez session-start"}},
+			wantLog: []string{"uvx --from ai-rulez@latest ai-rulez session-start"}},
 		{name: "failing npx falls through to uvx", stubs: map[string]int{"npx": 1, "uvx": 0}, env: []string{remote},
-			wantLog: []string{"npx -y ai-rulez@VERSION session-start", "uvx --from ai-rulez==VERSION ai-rulez session-start"}},
+			wantLog: []string{"npx -y ai-rulez@latest session-start", "uvx --from ai-rulez@latest ai-rulez session-start"}},
 		{name: "both failing: one stderr line, exit 0", stubs: map[string]int{"npx": 1, "uvx": 1}, env: []string{remote},
-			wantLog:    []string{"npx -y ai-rulez@VERSION session-start", "uvx --from ai-rulez==VERSION ai-rulez session-start"},
+			wantLog:    []string{"npx -y ai-rulez@latest session-start", "uvx --from ai-rulez@latest ai-rulez session-start"},
 			wantStderr: "ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\n"},
 		{name: "old ai-rulez without the command falls through to npx", stubs: map[string]int{"ai-rulez": 1, "npx": 0}, env: []string{remote},
-			wantLog: []string{"ai-rulez session-start", "npx -y ai-rulez@VERSION session-start"}},
+			wantLog: []string{"ai-rulez session-start", "npx -y ai-rulez@latest session-start"}},
 		{name: "none present: one stderr line, exit 0", env: []string{remote},
 			wantStderr: "ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\n"},
 		{name: "not remote: nothing runs", stubs: map[string]int{"ai-rulez": 0, "npx": 0, "uvx": 0}},
 		{name: "CLAUDE_CODE_REMOTE=false: nothing runs", stubs: map[string]int{"npx": 0}, env: []string{"CLAUDE_CODE_REMOTE=false"}},
 		{name: "CLAUDE_CODE_REMOTE=1 counts", stubs: map[string]int{"npx": 0}, env: []string{"CLAUDE_CODE_REMOTE=1"},
-			wantLog: []string{"npx -y ai-rulez@VERSION session-start"}},
+			wantLog: []string{"npx -y ai-rulez@latest session-start"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -252,20 +261,101 @@ func TestSessionStartE2E_LauncherOrder(t *testing.T) {
 			assert.Empty(t, got.stdout)
 			assert.Equal(t, tt.wantStderr, got.stderr)
 			lines := readStubLog(t, log)
-			var want []string
-			for _, l := range tt.wantLog {
-				want = append(want, strings.ReplaceAll(l, "VERSION", versionOf(command)))
-			}
-			assert.Equal(t, want, lines)
+			assert.Equal(t, tt.wantLog, lines)
 		})
 	}
 }
 
-// versionOf extracts the version the hook pins from its command.
-func versionOf(command string) string {
-	_, after, _ := strings.Cut(command, "npx -y ai-rulez@")
-	version, _, _ := strings.Cut(after, " ")
-	return version
+// TestSessionStartE2E_NpxAndUvxRunFromANeutralDirectory proves the supply-chain hardening: the latest release is
+// requested, npx and uvx start in an empty directory outside the project (so its .npmrc, node_modules/.bin and uv
+// configuration cannot substitute the package), the installed binary stays in the project, and the order holds.
+func TestSessionStartE2E_NpxAndUvxRunFromANeutralDirectory(t *testing.T) {
+	dir := sessionStartProject(t, sessionStartProjectConfig)
+	command := hookCommands(t, dir)[0]
+	project, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+	remote := "CLAUDE_CODE_REMOTE=true"
+	cwdOf := func(t *testing.T, log, name string) string {
+		t.Helper()
+		for _, line := range readStubLog(t, log+".cwd") {
+			if after, ok := strings.CutPrefix(line, name+" "); ok {
+				return after
+			}
+		}
+		return ""
+	}
+	assertNeutral := func(t *testing.T, cwd, tmp string) {
+		t.Helper()
+		resolved, err := filepath.EvalSymlinks(tmp)
+		require.NoError(t, err)
+		assert.NotEmpty(t, cwd)
+		assert.NotEqual(t, project, cwd)
+		assert.False(t, strings.HasPrefix(cwd, project), "%s is inside the project", cwd)
+		assert.True(t, strings.HasPrefix(cwd, resolved), "%s is not under the temp directory %s", cwd, resolved)
+	}
+
+	t.Run("npx runs on latest from a directory outside the project", func(t *testing.T) {
+		stubDir, log, tmp := t.TempDir(), filepath.Join(t.TempDir(), "calls.log"), t.TempDir()
+		stub(t, stubDir, log, "npx", 0)
+
+		got := runHook(t, dir, command, stubDir, `{"source":"startup"}`, remote, "TMPDIR="+tmp)
+
+		assert.Equal(t, 0, got.code)
+		assert.Equal(t, []string{"npx -y ai-rulez@latest session-start"}, readStubLog(t, log))
+		assertNeutral(t, cwdOf(t, log, "npx"), tmp)
+	})
+	t.Run("uvx runs on latest from a directory outside the project, after a failing npx", func(t *testing.T) {
+		stubDir, log, tmp := t.TempDir(), filepath.Join(t.TempDir(), "calls.log"), t.TempDir()
+		stub(t, stubDir, log, "npx", 1)
+		stub(t, stubDir, log, "uvx", 0)
+
+		got := runHook(t, dir, command, stubDir, `{"source":"startup"}`, remote, "TMPDIR="+tmp)
+
+		assert.Equal(t, 0, got.code)
+		assert.Equal(t, []string{"npx -y ai-rulez@latest session-start", "uvx --from ai-rulez@latest ai-rulez session-start"}, readStubLog(t, log))
+		assertNeutral(t, cwdOf(t, log, "npx"), tmp)
+		assertNeutral(t, cwdOf(t, log, "uvx"), tmp)
+	})
+	t.Run("the installed ai-rulez stays in the project directory", func(t *testing.T) {
+		stubDir, log := t.TempDir(), filepath.Join(t.TempDir(), "calls.log")
+		stub(t, stubDir, log, "ai-rulez", 0)
+
+		got := runHook(t, dir, command, stubDir, `{"source":"startup"}`, remote)
+
+		assert.Equal(t, 0, got.code)
+		assert.Equal(t, project, cwdOf(t, log, "ai-rulez"))
+	})
+	t.Run("an unusable temp directory still never fails the session", func(t *testing.T) {
+		stubDir, log := t.TempDir(), filepath.Join(t.TempDir(), "calls.log")
+		stub(t, stubDir, log, "npx", 1)
+
+		got := runHook(t, dir, command, stubDir, `{"source":"startup"}`, remote, "TMPDIR="+filepath.Join(t.TempDir(), "missing"))
+
+		assert.Equal(t, 0, got.code)
+	})
+}
+
+// TestSessionStartE2E_ProjectFoundFromNeutralDirectory runs the real binary through an npx stub that execs it: the
+// launcher starts outside the project and no CLAUDE_PROJECT_DIR is set by the harness, yet the project is found.
+func TestSessionStartE2E_ProjectFoundFromNeutralDirectory(t *testing.T) {
+	dir := sessionStartProject(t, sessionStartProjectConfig)
+	command := hookCommands(t, dir)[0]
+	binDir, stubDir := t.TempDir(), t.TempDir()
+	real := filepath.Join(binDir, "ai-rulez")
+	itestutil.SymlinkOrSkip(t, testutil.SetupTestBinary(t), real)
+	vcs, err := exec.LookPath("g" + "it")
+	require.NoError(t, err)
+	itestutil.SymlinkOrSkip(t, vcs, filepath.Join(stubDir, "g"+"it"))
+	// The npx stub drops its "-y ai-rulez@latest" and runs the real binary with the rest.
+	require.NoError(t, os.WriteFile(filepath.Join(stubDir, "npx"), []byte("#!/bin/sh\nshift 2\nexec \""+real+"\" \"$@\"\n"), 0o755))
+	claudeMD := filepath.Join(dir, "CLAUDE.md")
+	require.NoError(t, os.Remove(claudeMD))
+
+	got := runHook(t, dir, command, stubDir, `{"source":"startup"}`, "CLAUDE_CODE_REMOTE=true")
+
+	assert.Equal(t, 0, got.code, got.stderr)
+	assert.FileExists(t, claudeMD, "the project was found and regenerated")
+	assert.Contains(t, got.stdout, "additionalContext")
 }
 
 func TestSessionStartE2E_RealBinary(t *testing.T) {
