@@ -202,6 +202,11 @@ type LintExternal struct {
 	// Version is a semantic version range the scanner's --version output must
 	// satisfy (">=1.0.0, <2"); a scanner outside it is not run (AR9E2).
 	Version string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	// VersionCommand is the argv that prints the scanner's version for the
+	// Version check. Default: command[0] --version, which names the launcher
+	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
+	// from the project root, in the scanner's isolation mode; needs Version.
+	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
 	// Required makes a missing, outdated or failing scanner an error instead of a notice.
 	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 }

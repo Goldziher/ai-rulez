@@ -13641,6 +13641,7 @@ env_pass = []                      # extra environment variable names for an egr
 # inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
 # profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
 # version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
+# version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
 # required = true                  # a missing, outdated or failing scanner is an error
 
 [lint.scanner_policy]
@@ -14078,6 +14079,18 @@ A preset member is replaced by an entry with the same name or the same `profile`
 `profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
 less egress than the profile: `AR9E0`), severity map and flag deny-list; keys set on the entry win.
 `ai-rulez scanners list` shows the preset of each scanner.
+
+##### Version pins
+
+`version = ">=1.0.0, <2"` is checked before every run against the first version number in the output of
+`<command[0]> --version`. When `command[0]` is a launcher or interpreter (`python3 scan.py`, `node scan.js`,
+`uvx scanner`), that is the launcher's version, not the scanner's: set `version_command` to the argv that prints
+the scanner's own version (`["python3", "scan.py", "--version"]`). It runs from the project root, through the same
+isolation as the probe, with a 10 second timeout; it needs `version` (`AR9E0` otherwise). A scanner outside the range,
+or one whose version output holds no version number, is not run (`AR9E2`).
+`ai-rulez scanners doctor --external` applies the same check and reports `not healthy` for a scanner that
+`validate --external` would refuse to run; without `--external` doctor starts nothing and prints `unverified` for an
+entry that has a `version` range.
 
 ##### Isolation
 

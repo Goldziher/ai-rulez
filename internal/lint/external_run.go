@@ -193,7 +193,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 		return nil, false
 	}
 	if key != "" {
-		version, _ := r.probeVersion(binary) //nolint:errcheck // a refused probe only leaves the recorded version empty
+		version, _ := r.probeVersion(sc, binary, root) //nolint:errcheck // a refused probe only leaves the recorded version empty
 		cache.put(key, cachedScan{Findings: toCached(norm), OutOfScope: outOfScope, FirstOut: firstOut, Version: version, Stored: r.clock().Unix()})
 	}
 	return r.convertFindings(sc, stagedScope(files), norm, outOfScope, firstOut), true
@@ -304,11 +304,13 @@ func hasSkillDir(files []stagedFile) bool {
 // probeVersion asks a scanner for its version through the hardened runner,
 // confined as the policy's isolation mode asks. The error is set when the
 // probe was refused (isolation = "require" with no working backend).
-func (r *runner) probeVersion(binary string) (string, error) {
+func (r *runner) probeVersion(sc resolvedScanner, binary, root string) (string, error) {
 	if binary == "" {
 		return "", nil
 	}
-	return ProbeScannerVersion(context.Background(), ScannerInfo{Path: binary, Isolation: string(policyOf(&r.lc).isolation)})
+	return ProbeScannerVersion(context.Background(), ScannerInfo{
+		Path: binary, Isolation: string(policyOf(&r.lc).isolation), VersionCommand: sc.VersionCommand, Dir: root,
+	})
 }
 
 // versionSatisfied checks the entry's version range against `<binary> --version`.
@@ -322,26 +324,53 @@ func (r *runner) versionSatisfied(sc resolvedScanner, root string) bool {
 	if binary == "" {
 		return true
 	}
-	c, err := semver.ParseConstraint(normalizeRange(sc.Version))
-	if err != nil {
-		r.addRun(CodeScannerConfigInvalid, sc.Name, fmt.Sprintf("version %q is not a version range: %v", sc.Version, err))
-		return false
-	}
-	line, err := r.probeVersion(binary)
-	if err != nil {
-		r.addRun(CodeScannerRunFailed, sc.Name, "was not run: its version could not be checked: "+sanitizeScannerText(err.Error()))
-		return false
-	}
-	v, ok := firstVersion(line)
-	if !ok {
-		r.addRun(CodeScannerUnavailable, sc.Name, fmt.Sprintf("was not run: its --version output %q has no version to check against %q", line, sc.Version))
-		return false
-	}
-	if !c.Check(v, true) {
-		r.addRun(CodeScannerUnavailable, sc.Name, fmt.Sprintf("is version %s, which does not satisfy %q; it was not run", v, sc.Version))
+	check := CheckScannerVersion(context.Background(), ScannerInfo{
+		Path: binary, Isolation: string(policyOf(&r.lc).isolation), Version: sc.Version, VersionCommand: sc.VersionCommand, Dir: root,
+	})
+	if check.Problem != "" {
+		r.addRun(check.Code, sc.Name, check.Problem)
 		return false
 	}
 	return true
+}
+
+// VersionCheck is the outcome of checking a scanner against its version range.
+type VersionCheck struct {
+	// Line is the first usable line the version command printed.
+	Line string
+	// Problem says why the scanner is not run ("" when it satisfies the range or has none).
+	Problem string
+	// Code is the finding code a run reports the problem with.
+	Code string
+}
+
+// CheckScannerVersion applies info's version range the way a run does: it asks
+// the scanner for its version (version_command, else `<command> --version`) and
+// compares the first version number in the answer with the range. validate
+// --external and scanners doctor share it, so doctor never calls a scanner
+// healthy that validate refuses to run.
+func CheckScannerVersion(ctx context.Context, info ScannerInfo) VersionCheck {
+	if info.Version == "" {
+		return VersionCheck{}
+	}
+	c, err := semver.ParseConstraint(normalizeRange(info.Version))
+	if err != nil {
+		return VersionCheck{Code: CodeScannerConfigInvalid, Problem: fmt.Sprintf("version %q is not a version range: %v", info.Version, err)}
+	}
+	line, err := ProbeScannerVersion(ctx, info)
+	if err != nil {
+		return VersionCheck{Line: line, Code: CodeScannerRunFailed, Problem: "was not run: its version could not be checked: " + sanitizeScannerText(err.Error())}
+	}
+	v, ok := firstVersion(line)
+	if !ok {
+		return VersionCheck{Line: line, Code: CodeScannerUnavailable,
+			Problem: fmt.Sprintf("was not run: its version output %q has no version to check against %q", line, info.Version)}
+	}
+	if !c.Check(v, true) {
+		return VersionCheck{Line: line, Code: CodeScannerUnavailable,
+			Problem: fmt.Sprintf("is version %s, which does not satisfy %q; it was not run", v, info.Version)}
+	}
+	return VersionCheck{Line: line}
 }
 
 // normalizeRange lets a range be written with commas (">=1.0.0, <2"), which the
