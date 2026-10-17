@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	proj "github.com/Goldziher/ai-rulez/v5/internal/project"
+	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
@@ -360,17 +361,10 @@ func TestDiscoverSkills_ReloadWatchesTheSkillRoots(t *testing.T) {
 	}
 }
 
-func TestNamespacedName(t *testing.T) {
-	tests := []struct{ rel, want string }{
-		{"pkg/.claude/skills/bar", "pkg.claude.skills.bar"},
-		{"pkg/deep/.claude/skills/bar", "pkg.deep.claude.skills.bar"},
-		{".claude/skills/bar", "claude.skills.bar"},
-		{"skills/group/deep", "skills.group.deep"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.rel, func(t *testing.T) {
-			assert.Equal(t, tt.want, namespacedName(tt.rel))
-			assert.True(t, validSkillSegment(tt.want))
+func TestNamespacedName_IsAValidSkillName(t *testing.T) {
+	for _, rel := range []string{"pkg/.claude/skills/bar", "pkg/deep/.claude/skills/bar", ".claude/skills/bar", "skills/group/deep"} {
+		t.Run(rel, func(t *testing.T) {
+			assert.True(t, validSkillSegment(repoindex.NamespacedName(rel)))
 		})
 	}
 }
@@ -400,4 +394,28 @@ func TestServeSetup_WithoutConfigurationAndWithoutDiscoveryStillFails(t *testing
 	// Assert
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "directory not found")
+}
+
+func TestDiscoverSkills_ReportNamesTheScopeOfEachSkill(t *testing.T) {
+	root := discoverProject(t, discoverConfig)
+
+	srv := newServerFor(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo"})
+
+	scopes := map[string]string{}
+	for _, s := range srv.Catalog().Discovery().Served {
+		scopes[s.Name] = s.Scope
+	}
+	assert.Equal(t, map[string]string{"bar": ".", "baz": "pkg", "foo": ".", "qux": "."}, scopes,
+		"a discovered skill carries the scope that holds its convention directory")
+}
+
+func TestDiscoverSkills_HarnessDirectoriesOfNestedScopesAreIndexed(t *testing.T) {
+	root := discoverProject(t, discoverConfig)
+	writeFile(t, root, "pkg/api/.agents/skills/handler/SKILL.md", repoSkill("handler"))
+	writeFile(t, root, "pkg/web/skills/ui/SKILL.md", repoSkill("ui"))
+
+	got := discoverNames(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo"})
+
+	assert.Contains(t, got, "handler", "a codex skills directory is a skill root at any depth")
+	assert.Contains(t, got, "ui", "a skills directory is a skill root at any depth")
 }

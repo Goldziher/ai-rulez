@@ -477,7 +477,7 @@ func (s *Server) registerGovernanceTools() {
 		name: "lock_status", title: "Lock Status",
 		description: "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only. A project with no lock file is an error, as in the CLI.",
 		annotations: readOnlyAnnotations(), output: lockStatusOut{},
-		enums: map[string][]string{"kind": govview.LockKinds},
+		enums: map[string][]string{keyKind: govview.LockKinds},
 	}, handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
 		extras := make([]ServeSetup, 0, len(views))
 		for _, v := range views {
