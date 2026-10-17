@@ -180,17 +180,7 @@ func (a *applier) sourceChecker() func(kind, name, source string) bool {
 	if !p.Allowed.Set && len(p.Deny) == 0 {
 		return nil
 	}
-	var allow, deny []pattern
-	for _, s := range p.Allowed.Items {
-		if pt, err := parsePattern(s); err == nil {
-			allow = append(allow, pt)
-		}
-	}
-	for _, s := range p.Deny {
-		if pt, err := parsePattern(s); err == nil {
-			deny = append(deny, pt)
-		}
-	}
+	allow, deny := parsePatterns(p.Allowed.Items), parsePatterns(p.Deny)
 	check := func(kind, name, source string) bool {
 		host, segs, remote, err := splitLocation(source)
 		if err != nil {
@@ -229,6 +219,17 @@ func (a *applier) sourceChecker() func(kind, name, source string) bool {
 		return true
 	}
 	return check
+}
+
+// parsePatterns parses the host patterns that are valid; an invalid one matches nothing.
+func parsePatterns(raw []string) []pattern {
+	var out []pattern
+	for _, s := range raw {
+		if pt, err := parsePattern(s); err == nil {
+			out = append(out, pt)
+		}
+	}
+	return out
 }
 
 func filterSlice[T any](in []T, keep func(T) bool) []T {
