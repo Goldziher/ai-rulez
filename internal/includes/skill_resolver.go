@@ -106,7 +106,10 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		return nil, errSkillSkipped
 	}
 
-	sourceType := DetectSourceType(skillConf.Source)
+	sourceType, localSource, err := SkillSourceRoot(cfg, skillConf.Source)
+	if err != nil {
+		return nil, oops.Wrapf(err, "installed skill %q", skillConf.Name)
+	}
 	skillPath := skillConf.GetPath()
 
 	switch sourceType {
@@ -138,13 +141,20 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		return source.DiscoverSkills(ctx, skillConf.Include, skillConf.Exclude, skillConf.NamePrefix)
 
 	case SourceTypeLocal:
-		localPath := skillConf.Source
+		localPath := localSource
 		if !filepath.IsAbs(localPath) {
 			localPath = filepath.Join(baseDir, localPath)
 		}
 		localPath = filepath.Clean(localPath)
-		if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, localPath); err != nil {
-			return nil, err
+		// A file:// directory follows the file:// rule (AI_RULEZ_ALLOW_FILE_URLS), the rest the include rule.
+		_, viaFileURL := lockfile.FileURLPath(skillConf.Source)
+		if !viaFileURL || !lockfile.AllowFileURLsOutside(cfg.Host.Env) {
+			if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, localPath); err != nil {
+				if _, home := homeRelative(skillConf.Source); home {
+					err = oops.Hint("A '~' path is honored only from config.local.toml (machine-local) or the user config; a committed config must stay inside the project").Wrap(err)
+				}
+				return nil, err
+			}
 		}
 
 		// The entry root is the skill path within the local source.

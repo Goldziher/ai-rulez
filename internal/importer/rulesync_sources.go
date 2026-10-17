@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // rulesync `sources` (declarative sources, `rulesync install`): git repositories
@@ -49,10 +50,10 @@ func parseRulesyncSource(e map[string]any) (s rulesyncSource, reason string) {
 		spec, atRef, _ := strings.Cut(spec, "@")
 		s.ref = firstNonEmpty(s.ref, atRef)
 		s.path = firstNonEmpty(s.path, atPath)
-		if !githubShorthand.MatchString(spec) {
+		if !lockfile.IsGitHubShorthand(spec) {
 			return s, fmt.Sprintf("source %q is not an owner/repo", source)
 		}
-		s.url = "https://github.com/" + spec
+		s.url = lockfile.GitHubURL(spec)
 	default:
 		return s, fmt.Sprintf("transport %q is not a documented rulesync source transport", transport)
 	}
