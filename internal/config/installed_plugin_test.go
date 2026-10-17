@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 func TestClassifyPluginSource(t *testing.T) {
@@ -317,4 +319,31 @@ func names(files []ContentFile) []string {
 		out = append(out, f.Name)
 	}
 	return out
+}
+
+func TestResolveInstalledPlugins_ConflictWarningsAreSaidOncePerRun(t *testing.T) {
+	// Arrange: the same project loaded twice, as a command does (lock, then generate)
+	dir := t.TempDir()
+	log := &recordingLogger{}
+	ctx := logger.WithContext(context.Background(), log)
+	res := &PluginResolution{
+		Skills: []ContentFile{{Name: "dup"}},
+		MCP:    []MCPServer{{Name: "existing"}},
+	}
+	load := func() {
+		cfg := &Config{
+			BaseDir:          dir,
+			InstalledPlugins: []InstalledPluginConfig{{Name: "p", Source: "./p"}},
+			Content:          &ContentTree{Skills: []ContentFile{{Name: "dup"}}},
+			MCPServers:       map[string]*MCPServer{"existing": {Name: "existing", Command: "x"}},
+		}
+		require.NoError(t, resolveInstalledPluginsIfNeeded(ctx, cfg, func(context.Context, *Config) (*PluginResolution, error) { return res, nil }))
+	}
+
+	// Act
+	load()
+	load()
+
+	// Assert
+	assert.Len(t, log.warns, 2, "one warning per conflict, not one per load: %v", log.warns)
 }
