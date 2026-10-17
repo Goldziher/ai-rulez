@@ -50,7 +50,7 @@ func scannerProjectDir(t *testing.T, extraConfig string, skills ...string) strin
 // with the given --fail-on and returns the exit code it earns and the report.
 func runExternalStrict(t *testing.T, root, failOn string) (int, *lint.Report) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config"))
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(t.TempDir(), "cache"))
 	oldExt, oldStrict, oldFail := validateExtern, validateStrict, validateFailOn

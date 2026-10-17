@@ -11,13 +11,14 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // enforceProject is a locked project that then gains a remote include the lock
 // does not cover.
 func enforceProject(t *testing.T, lockTable string) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy = config.LockPolicy{}
 	t.Cleanup(func() { cliLockPolicy = config.LockPolicy{} })
 	root := lockProject(t, lockTable)

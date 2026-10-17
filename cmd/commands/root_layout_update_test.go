@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // rootUpdateFixture is a remote with v1.0.0, v1.1.0 and v1.2.0 and a root-layout
@@ -24,7 +25,7 @@ type rootUpdateFixture struct {
 
 func newRootUpdateFixture(t *testing.T, versionLine string) *rootUpdateFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	resetUpdateFlags(t)
 	resetLockViewFlags(t)
 	resetAgeFlags(t)

@@ -13,11 +13,12 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/pluginimport/plugintest"
 	"github.com/Goldziher/ai-rulez/v5/internal/pluginresolve"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func loadWithPolicy(t *testing.T, project, policyBody string) (*config.Config, error) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv(lockfile.EnvAllowFileURLs, "1")
 	policyFile := filepath.Join(t.TempDir(), "policy.toml")
 	writePolicy(t, filepath.Dir(policyFile), "policy.toml", policyBody)

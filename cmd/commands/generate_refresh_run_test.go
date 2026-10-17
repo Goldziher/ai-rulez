@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/samber/oops"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const (
@@ -33,7 +35,7 @@ type refreshProject struct {
 // or an installed_skills entry), extra config appended, and locks it.
 func newRefreshProject(t *testing.T, kind, extra string) *refreshProject {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("AI_RULEZ_ALLOW_FILE_URLS", "1")
 	cliLockPolicy = config.LockPolicy{}
 	t.Cleanup(func() { cliLockPolicy = config.LockPolicy{} })
@@ -185,8 +187,8 @@ func TestRunGenerate_RefreshRemoteWithoutALockCreatesOne(t *testing.T) {
 }
 
 func TestRunGenerate_RefreshRemoteUnwritableLockFailsBeforeOutputs(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("a read-only directory does not stop root")
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("a read-only directory does not stop root or a windows user")
 	}
 	// Arrange
 	p := newRefreshProject(t, refreshKindInst, "")

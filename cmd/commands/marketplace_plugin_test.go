@@ -15,6 +15,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/pluginimport/plugintest"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // runSub runs a fresh command built by build with args inside the current
@@ -494,7 +495,7 @@ func TestPluginRemove(t *testing.T) {
 
 func TestMarketplaceAndPluginUpdateRepinToTheNewUpstreamCommit(t *testing.T) {
 	// Arrange: a marketplace repository listing one plugin repository, both locked
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	plug := plugintest.NewRepo(t, plugintest.ClaudePlugin("tools"))
 	market := plugintest.NewRepo(t, plugintest.ClaudeMarketplace("acme", `{"name":"tools","source":{"source":"url","url":"`+plug.URL()+`"}}`))
 	root := lockProject(t, "")

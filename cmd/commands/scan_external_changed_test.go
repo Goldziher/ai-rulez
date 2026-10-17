@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestChangedHandsOnlyTheChangedSkillsToTheScanner(t *testing.T) {
 	// Arrange: two skills and a scanner that logs the directories it is handed.
 	resetStrictFlags(t)
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config"))
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(t.TempDir(), "cache"))
 	logFile := filepath.Join(t.TempDir(), "runs.log")

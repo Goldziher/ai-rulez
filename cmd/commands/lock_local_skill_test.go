@@ -6,13 +6,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const localSkillConfig = "\n[[installed_skills]]\nname = \"demo\"\nsource = \"vendor\"\n"
 
 func localSkillProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	root := lockProject(t, localSkillConfig)
 	writeFile(t, filepath.Join(root, "vendor", "skills", "demo", "SKILL.md"),
 		"---\nname: demo\ndescription: Demo skill. Use when demoing.\n---\n# Demo\n")

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func TestVerifySelfDefaultsToTheReleaseWorkflowIdentity(t *testing.T) {
 	signer := newTestSigner(t, "", "")
 	exe, _ := releaseBinary(t, signer, "released-binary")
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 
 	// Act: the pin is a certificate identity, so a log proof is required and a key signature has none.
 	_, err := VerifySelf(SelfOptions{Exe: exe, Now: testNow.Add(time.Hour)})

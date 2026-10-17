@@ -64,7 +64,7 @@ func quiet(b *testing.B, fn func()) {
 
 func benchCommandProject(b *testing.B, files int, extra string, generate bool) string {
 	b.Helper()
-	b.Setenv("HOME", b.TempDir())
+	testutil.IsolateHome(b)
 	b.Setenv("SOURCE_DATE_EPOCH", "1790000000")
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	root := testutil.BuildBenchTree(b, files, testutil.BenchTreeOptions{Git: true, ExtraConfig: extra, Presets: []string{"claude"}})

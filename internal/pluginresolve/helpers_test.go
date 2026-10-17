@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 // isolate keeps the fetch cache out of the real home.
 func isolate(t *testing.T) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	testutil.GitIdentity(t)
 }
 

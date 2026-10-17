@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const preflightBase = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
@@ -20,7 +21,7 @@ const preflightBase = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n
 // temp directory so the machine-local command record never touches the real one.
 func preflightProject(t *testing.T, main, local string) *config.Config {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	t.Setenv(envAckCommands, "")
 	t.Setenv(envStrict, "")
 	assumeYes = false

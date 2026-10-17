@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // TestLock_ConvergesInOneRunWithAGitInclude pins the include before the served
@@ -19,7 +20,7 @@ import (
 // changed.
 func TestLock_ConvergesInOneRunWithAGitInclude(t *testing.T) {
 	// Arrange
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateHome(t)
 	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	t.Cleanup(func() {
 		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false

@@ -116,7 +116,7 @@ func TestResolveInstalledSkills_FileURLSources(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			t.Setenv("HOME", t.TempDir())
+			testutil.IsolateHome(t)
 			project, source := tt.setup(t)
 			cfg := &config.Config{BaseDir: project, InstalledSkills: []config.InstalledSkillConfig{{Name: "alpha", Source: source}}}
 			cfg.Host.Env = fileURLEnv(t, tt.allow)

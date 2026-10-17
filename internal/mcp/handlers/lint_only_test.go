@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestGenerateOutputsHandler_LintOnlyWritesNothing(t *testing.T) {
@@ -21,7 +23,7 @@ func TestGenerateOutputsHandler_LintOnlyWritesNothing(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			t.Setenv("HOME", t.TempDir())
+			testutil.IsolateHome(t)
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))

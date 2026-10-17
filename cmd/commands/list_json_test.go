@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // An empty list in JSON mode is a versioned document with an empty items array,
@@ -32,7 +34,7 @@ func TestListCommands_EmptyListPrintsAnEmptyJSONArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange: a project with a config and nothing else
-			t.Setenv("HOME", t.TempDir())
+			testutil.IsolateHome(t)
 			t.Setenv("XDG_CONFIG_HOME", "")
 			resetContentFlags(t)
 			root := t.TempDir()

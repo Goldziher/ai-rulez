@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const reviewConfigBody = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
@@ -31,7 +32,7 @@ func reviewProject(t *testing.T, extraConfig string) {
 	write(".ai-rulez/skills/leak/SKILL.md", "---\nname: leak\ndescription: Use when asked to rotate credentials for the cloud account.\n---\nkey AKIAIOSFODNN7EXAMPLE\n")
 	t.Chdir(dir)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("HOME", t.TempDir()) // the response cache lives under HOME, not XDG_CACHE_HOME
+	testutil.IsolateHome(t) // the response cache lives under HOME, not XDG_CACHE_HOME
 	for _, k := range []string{"PROVIDER", "MODEL", "BACKEND", "BASE_URL", "API_KEY_ENV", "MAX_COST_USD", "MAX_CALLS", "ALLOW_NETWORK"} {
 		t.Setenv("AI_RULEZ_LLM_"+k, "")
 	}
