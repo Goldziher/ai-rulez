@@ -370,6 +370,13 @@ type MCPConfig struct {
 	// tree) or "all" (repo plus installed and included skills). The
 	// --discover-skills flag overrides it.
 	DiscoverSkills string `yaml:"discover_skills,omitempty" json:"discover_skills,omitempty" toml:"discover_skills,omitempty"`
+
+	// IndexCache says where the repository index of the discovery keeps its
+	// cache: "user" (the default; the user cache directory, with a gitignored
+	// directory in the project as the fallback when it is not writable), "repo"
+	// (that project directory) or "off". The cache holds summaries and scan
+	// verdicts, never file bodies.
+	IndexCache string `yaml:"index_cache,omitempty" json:"index_cache,omitempty" toml:"index_cache,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.
