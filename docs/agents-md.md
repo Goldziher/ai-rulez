@@ -33,7 +33,8 @@ What changes:
   `AGENTS.md` and their own skills directory.
 - Commands that `codex`, `antigravity`, `devin` and `warp` run as skills are written to the shared tree as
   user-invocable skills (`disable-model-invocation: true`, plus `agents/openai.yaml` for Codex), unless a skill has
-  the same id. A command with `targets` stays in each targeted preset's own skills directory.
+  the same id. A command with `targets` stays in each targeted preset's own skills directory. With `agents_md = false`
+  Devin writes its own `.devin/skills/<command>/SKILL.md`, which keeps `triggers: [user]`.
 - Everything else the tool cannot read from the shared files stays per-preset: scoped rules folders, agents,
   other commands, MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
