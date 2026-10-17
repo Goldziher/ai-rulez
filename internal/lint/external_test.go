@@ -119,7 +119,7 @@ func TestExternalScrubbedEnvironment(t *testing.T) {
 	t.Setenv("AR_PLANTED_API_KEY", "planted-value")
 	t.Setenv("HTTPS_PROXY", "http://proxy.invalid")
 	// The scanner prints its environment as a SARIF message.
-	script := `printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"ENV","level":"note","message":{"text":"planted=%s proxy=%s"}}]}]}' "$(env | grep -c AR_PLANTED)" "$(env | grep -c HTTPS_PROXY)"` + "\n"
+	script := `printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"ENV","level":"note","message":{"text":"planted=%s proxy=%s"}}]}]}' "$(env | grep -c '^AR_PLANTED_API_KEY=')" "$(env | grep -c '^HTTPS_PROXY=')"` + "\n"
 	for _, tt := range []struct {
 		name, keys string
 		leaks      bool
