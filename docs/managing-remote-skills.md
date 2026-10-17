@@ -42,6 +42,11 @@ ai-rulez generate --locked    # fail if ai-rulez.lock does not match
 ai-rulez generate --check     # report drift; hand-written files are never reported
 ```
 
+To pick up new releases of the remote skills on every run, add `refresh_on_generate = true` to `[lock]`, or run
+`ai-rulez generate --refresh-remote` once. The refresh re-resolves each source to the newest version its constraint
+allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
+[Refreshing on generate](lockfile.md#refreshing-on-generate).
+
 ## What happens to existing files
 
 - A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
