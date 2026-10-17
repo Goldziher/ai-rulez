@@ -21,7 +21,8 @@ const implicitNotice = "no ai-rulez config found; linting detected files\n"
 // doctor): its configuration when it has one, else an implicit configuration
 // that lints what the project holds by convention (see config.LoadImplicit).
 // An explicit -C/--config or --config-dir never falls back, and neither does a
-// directory below a configured project: run from the project root, or name it.
+// directory below a configured project: that project's configuration is found
+// by walking up.
 func loadLintConfig(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
 	return lintLoader()(ctx, opts...)
 }

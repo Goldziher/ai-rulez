@@ -426,7 +426,8 @@ written: every remote include, installed skill and skill source moves to the new
 plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
 is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
 error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
-tags. Any refusal ends the run before an output is written and leaves the lock as it was. The import gate
+tags. Any refusal ends the run before an output is written and leaves the lock as it was; after reviewing the findings,
+`generate --refresh-remote --accept-findings` pins the trees anyway, as `lock --accept-findings` does. The import gate
 (`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
 key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
 `--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.

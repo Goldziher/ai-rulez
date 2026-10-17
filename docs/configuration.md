@@ -21,7 +21,7 @@ You can either directly edit files with your editor or use CRUD commands for pro
 
 ## Configuration Discovery
 
-When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
+When no explicit path is given, the CLI discovers configuration by walking up from the current directory to the nearest directory holding a configuration, stopping at the repository root (never above the home directory), and trying in each directory, in order:
 
 1. `.agents/ai-rulez.toml` — the configuration of a project whose content is [`.agents` and `AGENTS.md`](agents-source.md)
 2. `.ai-rulez/config.toml` — the tool-specific directory (default)
@@ -1849,7 +1849,7 @@ Each entry supports:
 | `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs  |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory    |
 | `resources`      | No       | What is bundled besides `references/`, `scripts/` and `assets/`: the whole skill directory by default (not `SKILL.md`, `evals/`, `agents/`, hidden files); setting it replaces that. See [Installed skills](installed-skills.md#what-is-bundled-with-a-skill) |
 | `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 
@@ -1917,7 +1917,7 @@ body_file = "stub.md"                                   # relative to .ai-rulez/
 
 | Key | Meaning |
 | --- | ------- |
-| `description` | Replaces the frontmatter description. Must not be blank. |
+| `description` | Replaces the frontmatter description. Must not be whitespace-only; an empty string is the same as leaving the key out. |
 | `body` | Replaces the stub's text. Multi-line TOML (`"""`) works. |
 | `body_file` | Reads the text from a file relative to the config directory (`.ai-rulez/`); the path must stay inside it. A missing file is a load error. Mutually exclusive with `body`. |
 

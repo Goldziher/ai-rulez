@@ -52,6 +52,11 @@ type ContentFile struct {
 	Domain string `yaml:"-" json:"-"`
 	Trust  string `yaml:"-" json:"-"`
 
+	// ID is the output id of a skill when it is not the name of the directory
+	// holding SKILL.md: an installed skill entry's name_prefix prefixes the id as
+	// well as the name. Empty means the directory name. Runtime-only.
+	ID string `yaml:"-" json:"-"`
+
 	// Resources holds skill supporting files (references/, scripts/, assets/)
 	// loaded alongside SKILL.md. Always empty for non-skill content.
 	Resources []SkillResource `yaml:"-" json:"-"`

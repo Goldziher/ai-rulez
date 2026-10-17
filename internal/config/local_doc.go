@@ -864,7 +864,7 @@ func isNamedListKey(key string) bool {
 
 var showScalarKeys = map[string]bool{
 	"name": true, "description": true, docKeyDefault: true, "presets": true,
-	"gitignore": true, "compact": true, "builtins": true,
+	"gitignore": true, "compact": true, "builtins": true, "skip_outputs": true,
 }
 
 // showAllowed is the default-deny display policy: only keys known to hold no
@@ -941,7 +941,7 @@ func isStringList(v any) bool {
 
 var showScalarKinds = map[string]valueKind{
 	"name": kindString, "description": kindString, docKeyDefault: kindString, "presets": kindStringList,
-	"gitignore": kindBool, "compact": kindBool, "builtins": kindBoolOrStringList,
+	"gitignore": kindBool, "compact": kindBool, "builtins": kindBoolOrStringList, "skip_outputs": kindStringList,
 }
 
 // showKind returns the expected type of an allowlisted key path.

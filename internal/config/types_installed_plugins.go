@@ -75,7 +75,8 @@ type InstalledPluginConfig struct {
 	// mcp, rules); Exclude drops them and wins.
 	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
 	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
-	// NamePrefix is prepended to every imported skill, agent, command and MCP server name.
+	// NamePrefix is prepended to every imported skill, agent, command and MCP server
+	// name, and to the output directory of a skill.
 	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
 	// Domain and Profiles scope the imported content as on installed_skills.
 	Domain   string   `yaml:"domain,omitempty" json:"domain,omitempty" toml:"domain,omitempty"`

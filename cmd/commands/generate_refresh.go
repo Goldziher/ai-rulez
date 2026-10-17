@@ -11,7 +11,13 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
-const flagRefreshRemote = "refresh-remote"
+const (
+	flagRefreshRemote  = "refresh-remote"
+	flagAcceptFindings = "accept-findings"
+)
+
+// acceptFindingsUsage is the help text of generate's --accept-findings.
+const acceptFindingsUsage = "With --refresh-remote or [lock] refresh_on_generate: pin a remote tree although its security scan has error findings (review them first), as 'ai-rulez lock --accept-findings'"
 
 // refreshRemoteUsage is the help text of --refresh-remote.
 const refreshRemoteUsage = "Before generating, re-resolve remote installed skills, includes and skill sources to their latest allowed version " +
@@ -21,6 +27,12 @@ const refreshRemoteUsage = "Before generating, re-resolve remote installed skill
 // refreshRemoteFlag reports whether --refresh-remote was given.
 func refreshRemoteFlag(cmd *cobra.Command) bool {
 	on, err := cmd.Flags().GetBool(flagRefreshRemote)
+	return err == nil && on
+}
+
+// acceptFindingsFlag reports whether generate's --accept-findings was given.
+func acceptFindingsFlag(cmd *cobra.Command) bool {
+	on, err := cmd.Flags().GetBool(flagAcceptFindings)
 	return err == nil && on
 }
 
@@ -78,10 +90,16 @@ func refreshOnGenerate(cfg *config.Config) bool {
 // refused as in `update`; the import gate generate runs next scans the result
 // again. A failure ends the run before any output is written.
 func refreshRemoteLock(ctx context.Context) error {
+	return refreshRemoteLockWith(ctx, false)
+}
+
+// refreshRemoteLockWith is refreshRemoteLock that pins a tree whose scan has
+// error findings when acceptFindings is set, as `lock --accept-findings`.
+func refreshRemoteLockWith(ctx context.Context, acceptFindings bool) error {
 	defer applyLockFlags() // lockrun and the loads below change the command's lock policy
 	env := lockEnv("")
 	env.Policy.Advance = func(string, string) bool { return true }
-	res, err := lockrun.Write(ctx, lockrun.Request{}, env)
+	res, err := lockrun.Write(ctx, lockrun.Request{AcceptFindings: acceptFindings}, env)
 	if err != nil {
 		return failWithCode(lockrun.ExitCode(res, err), oops.Wrapf(err, "refresh the remote sources"))
 	}
