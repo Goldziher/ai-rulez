@@ -13,14 +13,14 @@ import (
 func importingConfig(t *testing.T, level string) *config.Config {
 	t.Helper()
 	dir := t.TempDir()
-	vendor := filepath.ToSlash(filepath.Join(dir, "vendor", "imp"))
+	vendor := filepath.ToSlash(filepath.Join(dir, "proj", "vendor", "imp"))
 	security := ""
 	if level != "" {
 		security = "\n[lint.security]\nscan_imports = \"" + level + "\"\n"
 	}
 	writeFile(t, filepath.Join(dir, "proj", ".ai-rulez", "config.toml"),
 		validRootConfig+"\n[[installed_skills]]\nname = \"imp\"\nsource = \""+vendor+"\"\npath = \".\"\n"+security)
-	writeFile(t, filepath.Join(dir, "vendor", "imp", "SKILL.md"),
+	writeFile(t, filepath.Join(dir, "proj", "vendor", "imp", "SKILL.md"),
 		"---\nname: imp\ndescription: Use when testing the imported content scan.\n---\nkey AKIAIOSFODNN7EXAMPLE\n")
 	cfg, err := loadWithResolvers(context.Background(), filepath.Join(dir, "proj"))
 	if err != nil {
