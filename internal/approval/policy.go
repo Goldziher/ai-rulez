@@ -23,6 +23,10 @@ const (
 	KindInstalledSkill = "installed-skill"
 	KindSource         = lockfile.KindSource
 	KindServed         = lockfile.KindServed
+	// KindMarketplace and KindInstalledPlugin are the pinned [[installed_marketplaces]]
+	// and [[installed_plugins]] entries.
+	KindMarketplace     = lockfile.KindMarketplace
+	KindInstalledPlugin = "installed-plugin"
 )
 
 // Classes group subjects for the require_approval selectors.
@@ -75,7 +79,8 @@ func SubjectsOf(lock *lockfile.File, items []lockfile.Item) []Subject {
 		for _, group := range []struct {
 			kind    string
 			entries []lockfile.Entry
-		}{{KindInclude, lock.Include}, {KindInstalledSkill, lock.Skill}, {KindSource, lock.Source}} {
+		}{{KindInclude, lock.Include}, {KindInstalledSkill, lock.Skill}, {KindSource, lock.Source},
+			{KindMarketplace, lock.Marketplace}, {KindInstalledPlugin, lock.Plugin}} {
 			for i := range group.entries {
 				e := &group.entries[i]
 				out = append(out, Subject{Kind: group.kind, ID: e.Name, Digest: e.Digest, Class: ClassRemote})
