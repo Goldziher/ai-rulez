@@ -364,6 +364,12 @@ type MCPConfig struct {
 	// MCP server that serves the skills and {{skills_dir}} the config directory's
 	// skills folder, relative to the instruction file.
 	SkillsInstructionsText string `yaml:"skills_instructions_text,omitempty" json:"skills_instructions_text,omitempty" toml:"skills_instructions_text,omitempty"`
+
+	// DiscoverSkills makes `mcp --serve-skills` also serve the skills already in
+	// the repository: "off" (the default), "repo" (skill directories of the working
+	// tree) or "all" (repo plus installed and included skills). The
+	// --discover-skills flag overrides it.
+	DiscoverSkills string `yaml:"discover_skills,omitempty" json:"discover_skills,omitempty" toml:"discover_skills,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.
