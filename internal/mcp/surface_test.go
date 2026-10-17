@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"regexp"
 	"testing"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -123,24 +122,20 @@ func TestPromptsAreRegisteredOnlyWhenTheirToolsAre(t *testing.T) {
 	}
 }
 
-// A prompt must declare every underscore-named tool its text names, or the registration rule
-// above would offer it without the tools it calls.
-func TestPromptNeedsListEveryToolTheTextNames(t *testing.T) {
+// The tools a prompt needs are read from its text, so the text and the rule that
+// hides the prompt cannot drift apart.
+func TestPromptNeedsAreTheToolsItsTextNames(t *testing.T) {
 	t.Parallel()
-	toolName := regexp.MustCompile(`\b([a-z]+_[a-z_]+)\b`)
+	srv := NewServer("t", WithAnyDirectory())
+	want := map[string][]string{
+		"author-skill":  {"cost_report", "create_skill", "list_rules", "list_skills", "scan_content", "update_skill", "validate_config"},
+		"add-rule":      {"create_rule", "list_rules", "read_rule", "update_rule", "validate_config"},
+		"review-config": {"approvals_status", "cost_report", "doctor", "lock_status", "policy_show", "scan_content", "token_report", "validate_config"},
+		"trim-context":  {"cost_report", "read_context", "read_rule", "read_skill", "token_report", "update_context", "update_rule", "update_skill"},
+	}
+
 	for _, spec := range authoringPrompts() {
-		args := map[string]string{"name": "n", "purpose": "p", "guideline": "g", "focus": "f", "budget": "100"}
-		named := map[string]bool{}
-		for _, m := range toolName.FindAllStringSubmatch(spec.text(args), -1) {
-			named[m[1]] = true
-		}
-		needs := map[string]bool{}
-		for _, n := range spec.needs {
-			needs[n] = true
-		}
-		for tool := range named {
-			assert.True(t, needs[tool], "prompt %s names %s but does not need it", spec.name, tool)
-		}
+		assert.Equal(t, want[spec.name], srv.promptNeeds(spec), "prompt %s", spec.name)
 	}
 }
 

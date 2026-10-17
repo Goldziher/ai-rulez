@@ -212,17 +212,17 @@ func (s *Server) resourceKnown(uri string) bool {
 
 func (s *Server) registerSkillTools() {
 	addTool[searchSkillsIn](s, toolSpec{
-		name: "search_skills", title: "Search Skills",
+		name: toolSearchSkills, title: "Search Skills",
 		description: "Search the served skills by name, keywords and description (lexical ranking). An empty query lists every skill.",
 		annotations: readOnlyAnnotations(), output: skillSearchOut{},
 	}, s.searchSkillsHandler)
 	addTool[getSkillIn](s, toolSpec{
-		name: "get_skill", title: "Get Skill",
+		name: toolGetSkill, title: "Get Skill",
 		description: "Load one skill: its SKILL.md text, provenance, and the digest of every file",
 		annotations: readOnlyAnnotations(), output: skillOut{},
 	}, s.getSkillHandler)
 	addTool[readSkillFileIn](s, toolSpec{
-		name: "read_skill_file", title: "Read Skill File",
+		name: toolReadSkillFile, title: "Read Skill File",
 		description: fmt.Sprintf("Read a supporting file of a served skill by its skill:// URI. Text files come back as text, binary files as base64 (or pass encoding: base64). A read returns at most %d bytes: continue at next_offset with offset. The result carries the file mode, executable and an interpreter hint.", maxReadChunkBytes),
 		annotations: readOnlyAnnotations(), output: skillOut{},
 	}, s.readSkillFileHandler)

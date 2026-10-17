@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -59,7 +60,7 @@ func WithoutProject() Option {
 func projectlessTool(name string) bool {
 	switch name {
 	case toolFindSkill, toolLoadSkill, toolListSkillResources, toolFindContext, toolLoadContext,
-		"search_skills", "get_skill", "read_skill_file",
+		toolSearchSkills, toolGetSkill, toolReadSkillFile,
 		"get_version", "list_builtins", "show_builtin", "policy_show", "okf_validate", "init_project":
 		return true
 	}
@@ -110,6 +111,25 @@ func (s *Server) hasAll(names ...string) bool {
 		}
 	}
 	return true
+}
+
+// promptNeeds are the tools a prompt tells the model to call: the tool names its
+// text mentions. The prompt is registered only on a server that registered all
+// of them, so it cannot send the model to a tool the server lacks.
+func (s *Server) promptNeeds(spec promptSpec) []string {
+	args := make(map[string]string, len(spec.args))
+	for _, a := range spec.args {
+		args[a.Name] = "x"
+	}
+	text := spec.text(args)
+	var needs []string
+	for name := range s.surface.known {
+		if regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`).MatchString(text) {
+			needs = append(needs, name)
+		}
+	}
+	sort.Strings(needs)
+	return needs
 }
 
 // KnownToolNames lists every tool name the merged server can register, sorted.
@@ -217,7 +237,7 @@ func (s *Server) authoringInstructions() string {
 // hasAnyReader reports whether an authoring read tool is registered.
 func (s *Server) hasAnyReader() bool {
 	for name := range s.surface.registered {
-		if strings.HasPrefix(name, "list_") && name != "list_skill_resources" || strings.HasPrefix(name, "read_") && name != "read_skill_file" {
+		if strings.HasPrefix(name, "list_") && name != toolListSkillResources || strings.HasPrefix(name, "read_") && name != toolReadSkillFile {
 			return true
 		}
 	}
@@ -270,7 +290,7 @@ func (s *Server) skillToolSentence() string {
 // lexicalToolSentence names the lexical skill tools that are registered.
 func (s *Server) lexicalToolSentence() string {
 	var names []string
-	for _, n := range []string{"search_skills", "get_skill", "read_skill_file"} {
+	for _, n := range []string{toolSearchSkills, toolGetSkill, toolReadSkillFile} {
 		if s.has(n) {
 			names = append(names, n)
 		}
