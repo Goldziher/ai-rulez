@@ -707,8 +707,91 @@ start-up; `skill_discovery.index.truncated` says so. Only files git lists (track
 plain walk without git) are indexed, and an instruction file, rule or agent file over 1 MiB is skipped. `path`, `scope`
 and `uri` are untrusted input: they must be relative to the project, free of backslashes and control characters, and
 must not climb out with `..`; they select entries of the index and are never opened as paths. The index is built when the
-server starts and rebuilt when the catalog reloads; a new scope or instruction file is picked up when the server restarts or the catalog next reloads,
-and `load_context` always shows the current text of a file the index already knows.
+server starts and rebuilt when the catalog reloads; the [file watcher](#live-refresh-of-the-index) picks a new
+scope or instruction file up while the server runs, and `load_context` always shows the current text of a file the
+index already knows.
+
+#### The index cache
+
+A cold build of the index is dominated by the security scan of every item. The index cache keeps what a start
+computed so the next one does not: the summary of each indexed file (name, description and content hash, keyed by
+path, size and modification time) and the scan verdict of content the scan found **nothing** in (keyed by a hash of
+the scan level and of the names and content hashes of the scanned files). It never stores a file body.
+
+- **Location.** `<user cache>/ai-rulez/monorepo-index/<repo-id>/index.json`, where `<repo-id>` is a hash of the
+  canonical project root, so nothing is written into the repository. If the user cache is not writable the cache
+  falls back to `.ai-rulez/.cache/monorepo-index/` (`.ai-rulez-cache/monorepo-index/` in the root layout), which is
+  listed in `.git/info/exclude` so the working tree stays clean. `[mcp] index_cache = "user" | "repo" | "off"`
+  chooses; `user` is the default and keeps the fallback, `repo` always uses the project directory, `off` keeps
+  nothing. `ai-rulez cache status` and `ai-rulez doctor` report which location is in use, its size and its problems;
+  `ai-rulez cache clear` drops it.
+- **Freshness.** A file summary is used while its size and modification time are unchanged, the git tree state
+  (`HEAD^{tree}`) is the one it was recorded in, and the file was not modified in the two seconds before the save
+  (a file written in the same timestamp tick may have changed again). A new tree drops the summaries and keeps the
+  verdicts, which are keyed by content. A verdict is dropped when the build of ai-rulez or the `[lint]` settings
+  change.
+- **Safety.** The index file is written with mode `0600` through write-and-rename, under a lock file so several
+  servers on one repository share it and merge their entries. It carries an HMAC-SHA256 with a per-user secret kept
+  outside the cache (`~/.config/ai-rulez/index-cache.key`, like the catalog cache's): a file that was edited,
+  truncated, planted or written by another version fails its check and is discarded and rebuilt. A cache entry is
+  a hint, never a decision: `--allow` and `--deny` run on every build, a verdict is only used for the exact bytes and
+  trust level it was recorded for (a skill with any finding, even a warning, is scanned every time), and
+  `load_context` scans the body it reads again on every call.
+- **Cost.** `docs/performance.md` has the measured numbers; on the benchmark monorepo (1500 items over 500 scopes) a
+  warm start takes about a tenth of a cold one.
+
+#### Live refresh of the index
+
+While `--serve-skills --discover-skills` runs, a debounced file watcher (fsnotify, 300 ms) follows the project tree.
+When an instruction file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `copilot-instructions.md`), a `SKILL.md`, anything
+under `.claude`, `.agents`, `.codex`, `.cursor`, `.github` or `skills`, or a directory appears, changes or goes, the
+server rebuilds its catalog. The rebuild re-reads only the files whose size or modification time changed and scans
+only content without a clean verdict, so it is incremental in cost. When the index changed the server re-registers
+the `ai-rulez://index` resource with a new generation, which makes the SDK send one `resources/list_changed`; a client
+then calls `find_context` or `find_skill` again. Reading `ai-rulez://index` returns the generation, the item and
+scope counts and the cache report. `.git`, `node_modules`, `vendor`, `target`, `dist`, `build` and the configuration
+directory (which the poll below covers) are not watched, a skipped change costs nothing, and `--no-watch` turns the
+watcher off with the rest of live reload. If the operating system's limit on watched directories is reached the
+server warns and the index refreshes on the poll interval only. The server instructions, written at start-up, are not
+rewritten.
+
+#### Writing a skill into a scope
+
+`create_skill` and `update_skill` take `scope` (a project-relative directory), `allow_write` and, optionally,
+`harness`. With `scope` the skill is written to `<scope>/<harness skills dir>/<name>/SKILL.md`, for example
+`pkg/api/.claude/skills/lint/SKILL.md`, where a harness working in `pkg/api` loads it:
+
+```json
+{"scope": "pkg/api", "name": "lint", "description": "Lint the api package", "allow_write": true}
+```
+
+```json
+{"success": true, "operation": "create_skill", "path": "pkg/api/.claude/skills/lint/SKILL.md", "name": "lint",
+ "scope": "pkg/api", "harness": "claude", "message": "Skill written to ...", "lock": "ai-rulez.lock exists: ..."}
+```
+
+Rules, all checked before anything is created:
+
+- `allow_write: true` is required on the call (default false), like `allow_llm` for `judge`.
+- The scope must be an existing directory of the project (every scope the index knows is one). Neither it, nor any
+  directory on the way to the skill, nor the skill directory or file may be a symlink; a path that leaves the
+  project (`..`, an absolute path, a backslash) is refused; the write itself goes through an `os.Root` of the
+  project, so a link planted after the checks cannot lead out.
+- Only the skills directory of a preset the configuration enables is written: `harness` names it, else the first
+  enabled preset that keeps skills in a directory (`claude` is `.claude/skills`, `codex` is `.agents/skills`).
+- A generated copy is refused: a file listed in the generated manifest (for a skill, any file of its directory) or
+  carrying a `Content-Hash` header that verifies. Edit the source under `.ai-rulez/` instead.
+- The content is scanned as `install_skill` scans a skill, at the strictest trust level, and any finding refuses the
+  call. With no `content`, `create_skill` builds a SKILL.md from `description`.
+- `create_skill` refuses an existing skill; `update_skill` refuses a missing one. The file is written with mode
+  `0644` through a temporary file and a rename, and calls on one server are serialized.
+- A scoped write edits the harness file directly: it is not ai-rulez content and is not generated down. With an
+  `ai-rulez.lock` present the result carries `lock`, because the new file is reported as drift until
+  `ai-rulez lock` records it.
+
+`scope` cannot be combined with `domain`, `priority`, `targets` or `local`. Instruction files and rules stay read-only
+over MCP. The tools are annotated as writing and non-idempotent (`update_skill` replaces a file), so a read-only
+server (`--read-only`) does not register them.
 
 ### Start-up cost and the catalog cache
 
@@ -1546,14 +1629,18 @@ Create a new skill file (AI prompt/expert definition).
 - `priority` (optional, string): Priority level
 - `targets` (optional, array): Target providers
 - `local` (optional, boolean): Create in `.ai-rulez/local/` (gitignored)
+- `description` (optional, string): Frontmatter description, used when `content` is empty
+- `scope` (optional, string): Write the skill into the repository at `<scope>/<harness skills dir>/<name>/SKILL.md` instead of editing ai-rulez content; needs `allow_write`
+- `harness` (optional, string): With `scope`, the enabled preset whose skills directory is written
+- `allow_write` (optional, boolean, default false): With `scope`, agree to write a harness file into the repository
 
-**Response:** Similar to create_rule
+**Response:** Similar to create_rule. With `scope` it carries `path` (project-relative), `scope`, `harness` and, when `ai-rulez.lock` exists, `lock`. See [Writing a skill into a scope](#writing-a-skill-into-a-scope).
 
 #### `update_skill`
 
 Update an existing skill file.
 
-**Parameters:** Same as create_skill, with content as required
+**Parameters:** Same as create_skill, with content as required (`scope`, `harness` and `allow_write` replace the harness's skill file)
 
 **Response:** Similar to create_rule
 

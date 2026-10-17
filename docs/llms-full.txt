@@ -8450,6 +8450,15 @@ server what applies to a path: `ai-rulez mcp --serve-skills --discover-skills` i
 index reads the files that already exist, so it needs no `generate` run. See
 [Monorepos: scopes and nested context](mcp-server.md#monorepos-scopes-and-nested-context).
 
+On a large repository the index is kept between runs: summaries of the indexed files and the scan verdicts of clean
+content live in the user cache (`[mcp] index_cache = "user" | "repo" | "off"`), so a warm start takes about a tenth of a
+cold one, and `ai-rulez cache status` / `ai-rulez cache clear` show and drop it
+([The index cache](mcp-server.md#the-index-cache)). While the server runs, a file watcher refreshes the index when a
+nested `AGENTS.md` or `.claude/skills` directory appears, changes or goes, and the server sends
+`resources/list_changed` ([Live refresh](mcp-server.md#live-refresh-of-the-index)). An agent can also add a skill where
+a harness will load it, with `create_skill` and `scope`, behind `allow_write`
+([Writing a skill into a scope](mcp-server.md#writing-a-skill-into-a-scope)).
+
 ---
 
 #### Scoped Rule Files
@@ -20818,6 +20827,7 @@ rewrites them), and the test fails when they are stale.
 | ------- | -------------------- |
 | `edit agent` | partial field edits and stdin input; update_agent is the whole-item replacement for a tool client |
 | `approve` | approving, revoking, denying and signing are identity-bound human attestations; an agent must not make them |
+| `cache *` | inspects and deletes the index cache the MCP server keeps in the user cache directory; a tool client has no use for the host's disk layout, and deleting is a human decision |
 | `catalog diff` | compares two catalogs through git subprocesses |
 | `edit check` | partial field edits and stdin input; update_check is the whole-item replacement for a tool client |
 | `edit command` | partial field edits and stdin input; update_command is the whole-item replacement for a tool client |
@@ -21271,8 +21281,91 @@ start-up; `skill_discovery.index.truncated` says so. Only files git lists (track
 plain walk without git) are indexed, and an instruction file, rule or agent file over 1 MiB is skipped. `path`, `scope`
 and `uri` are untrusted input: they must be relative to the project, free of backslashes and control characters, and
 must not climb out with `..`; they select entries of the index and are never opened as paths. The index is built when the
-server starts and rebuilt when the catalog reloads; a new scope or instruction file is picked up when the server restarts or the catalog next reloads,
-and `load_context` always shows the current text of a file the index already knows.
+server starts and rebuilt when the catalog reloads; the [file watcher](#live-refresh-of-the-index) picks a new
+scope or instruction file up while the server runs, and `load_context` always shows the current text of a file the
+index already knows.
+
+###### The index cache
+
+A cold build of the index is dominated by the security scan of every item. The index cache keeps what a start
+computed so the next one does not: the summary of each indexed file (name, description and content hash, keyed by
+path, size and modification time) and the scan verdict of content the scan found **nothing** in (keyed by a hash of
+the scan level and of the names and content hashes of the scanned files). It never stores a file body.
+
+- **Location.** `<user cache>/ai-rulez/monorepo-index/<repo-id>/index.json`, where `<repo-id>` is a hash of the
+  canonical project root, so nothing is written into the repository. If the user cache is not writable the cache
+  falls back to `.ai-rulez/.cache/monorepo-index/` (`.ai-rulez-cache/monorepo-index/` in the root layout), which is
+  listed in `.git/info/exclude` so the working tree stays clean. `[mcp] index_cache = "user" | "repo" | "off"`
+  chooses; `user` is the default and keeps the fallback, `repo` always uses the project directory, `off` keeps
+  nothing. `ai-rulez cache status` and `ai-rulez doctor` report which location is in use, its size and its problems;
+  `ai-rulez cache clear` drops it.
+- **Freshness.** A file summary is used while its size and modification time are unchanged, the git tree state
+  (`HEAD^{tree}`) is the one it was recorded in, and the file was not modified in the two seconds before the save
+  (a file written in the same timestamp tick may have changed again). A new tree drops the summaries and keeps the
+  verdicts, which are keyed by content. A verdict is dropped when the build of ai-rulez or the `[lint]` settings
+  change.
+- **Safety.** The index file is written with mode `0600` through write-and-rename, under a lock file so several
+  servers on one repository share it and merge their entries. It carries an HMAC-SHA256 with a per-user secret kept
+  outside the cache (`~/.config/ai-rulez/index-cache.key`, like the catalog cache's): a file that was edited,
+  truncated, planted or written by another version fails its check and is discarded and rebuilt. A cache entry is
+  a hint, never a decision: `--allow` and `--deny` run on every build, a verdict is only used for the exact bytes and
+  trust level it was recorded for (a skill with any finding, even a warning, is scanned every time), and
+  `load_context` scans the body it reads again on every call.
+- **Cost.** `docs/performance.md` has the measured numbers; on the benchmark monorepo (1500 items over 500 scopes) a
+  warm start takes about a tenth of a cold one.
+
+###### Live refresh of the index
+
+While `--serve-skills --discover-skills` runs, a debounced file watcher (fsnotify, 300 ms) follows the project tree.
+When an instruction file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `copilot-instructions.md`), a `SKILL.md`, anything
+under `.claude`, `.agents`, `.codex`, `.cursor`, `.github` or `skills`, or a directory appears, changes or goes, the
+server rebuilds its catalog. The rebuild re-reads only the files whose size or modification time changed and scans
+only content without a clean verdict, so it is incremental in cost. When the index changed the server re-registers
+the `ai-rulez://index` resource with a new generation, which makes the SDK send one `resources/list_changed`; a client
+then calls `find_context` or `find_skill` again. Reading `ai-rulez://index` returns the generation, the item and
+scope counts and the cache report. `.git`, `node_modules`, `vendor`, `target`, `dist`, `build` and the configuration
+directory (which the poll below covers) are not watched, a skipped change costs nothing, and `--no-watch` turns the
+watcher off with the rest of live reload. If the operating system's limit on watched directories is reached the
+server warns and the index refreshes on the poll interval only. The server instructions, written at start-up, are not
+rewritten.
+
+###### Writing a skill into a scope
+
+`create_skill` and `update_skill` take `scope` (a project-relative directory), `allow_write` and, optionally,
+`harness`. With `scope` the skill is written to `<scope>/<harness skills dir>/<name>/SKILL.md`, for example
+`pkg/api/.claude/skills/lint/SKILL.md`, where a harness working in `pkg/api` loads it:
+
+```json
+{"scope": "pkg/api", "name": "lint", "description": "Lint the api package", "allow_write": true}
+```
+
+```json
+{"success": true, "operation": "create_skill", "path": "pkg/api/.claude/skills/lint/SKILL.md", "name": "lint",
+ "scope": "pkg/api", "harness": "claude", "message": "Skill written to ...", "lock": "ai-rulez.lock exists: ..."}
+```
+
+Rules, all checked before anything is created:
+
+- `allow_write: true` is required on the call (default false), like `allow_llm` for `judge`.
+- The scope must be an existing directory of the project (every scope the index knows is one). Neither it, nor any
+  directory on the way to the skill, nor the skill directory or file may be a symlink; a path that leaves the
+  project (`..`, an absolute path, a backslash) is refused; the write itself goes through an `os.Root` of the
+  project, so a link planted after the checks cannot lead out.
+- Only the skills directory of a preset the configuration enables is written: `harness` names it, else the first
+  enabled preset that keeps skills in a directory (`claude` is `.claude/skills`, `codex` is `.agents/skills`).
+- A generated copy is refused: a file listed in the generated manifest (for a skill, any file of its directory) or
+  carrying a `Content-Hash` header that verifies. Edit the source under `.ai-rulez/` instead.
+- The content is scanned as `install_skill` scans a skill, at the strictest trust level, and any finding refuses the
+  call. With no `content`, `create_skill` builds a SKILL.md from `description`.
+- `create_skill` refuses an existing skill; `update_skill` refuses a missing one. The file is written with mode
+  `0644` through a temporary file and a rename, and calls on one server are serialized.
+- A scoped write edits the harness file directly: it is not ai-rulez content and is not generated down. With an
+  `ai-rulez.lock` present the result carries `lock`, because the new file is reported as drift until
+  `ai-rulez lock` records it.
+
+`scope` cannot be combined with `domain`, `priority`, `targets` or `local`. Instruction files and rules stay read-only
+over MCP. The tools are annotated as writing and non-idempotent (`update_skill` replaces a file), so a read-only
+server (`--read-only`) does not register them.
 
 ##### Start-up cost and the catalog cache
 
@@ -22110,14 +22203,18 @@ Create a new skill file (AI prompt/expert definition).
 - `priority` (optional, string): Priority level
 - `targets` (optional, array): Target providers
 - `local` (optional, boolean): Create in `.ai-rulez/local/` (gitignored)
+- `description` (optional, string): Frontmatter description, used when `content` is empty
+- `scope` (optional, string): Write the skill into the repository at `<scope>/<harness skills dir>/<name>/SKILL.md` instead of editing ai-rulez content; needs `allow_write`
+- `harness` (optional, string): With `scope`, the enabled preset whose skills directory is written
+- `allow_write` (optional, boolean, default false): With `scope`, agree to write a harness file into the repository
 
-**Response:** Similar to create_rule
+**Response:** Similar to create_rule. With `scope` it carries `path` (project-relative), `scope`, `harness` and, when `ai-rulez.lock` exists, `lock`. See [Writing a skill into a scope](#writing-a-skill-into-a-scope).
 
 ###### `update_skill`
 
 Update an existing skill file.
 
-**Parameters:** Same as create_skill, with content as required
+**Parameters:** Same as create_skill, with content as required (`scope`, `harness` and `allow_write` replace the harness's skill file)
 
 **Response:** Similar to create_rule
 
@@ -26137,20 +26234,39 @@ files per scope); `AI_RULEZ_BENCH_LARGE=1` adds 20000 files, which take seconds 
 
 #### Regression tracking
 
-`scripts/bench.sh` runs a curated subset (benchmarks that start no process and do not fsync, so they measure the code
-and not the machine) with `-count=6` and compares the median time/op of each benchmark with
-`scripts/bench-baseline.txt`. It exits 1 when any benchmark is more than 25% slower. When `benchstat` is installed
-(or the machine is online, through `go run golang.org/x/perf/cmd/benchstat@latest`) its report is printed too.
+CI does not compare against a number recorded on another machine. The `Benchmarks` job checks out the full history
+and runs `scripts/bench.sh --compare`, which measures the base revision and `HEAD` on the same runner, in the same job:
+
+1. It picks the base: the merge base with the default branch, or the parent commit when `HEAD` is on it (`--compare REF`
+   or `BENCH_BASE` overrides it).
+2. It builds the test binary of each package of a curated subset at both revisions (benchmarks that start no process
+   and do not fsync, so they measure the code and not the machine; a package that does not build at the base is skipped
+   with a notice).
+3. It takes `BENCH_COUNT` samples (6) of each benchmark per revision, interleaved base, head, head, base, ..., so a
+   machine that warms up or is throttled favors neither.
+4. It compares the medians and runs a two-sided Mann-Whitney U test on the samples, the test `benchstat` uses.
+
+A benchmark fails the job only when it is both more than `BENCH_THRESHOLD` percent slower (20) and different at
+`BENCH_ALPHA` (0.05). A slowdown that is not significant is printed as `slower, not significant`, and a run with
+fewer than 5 samples is refused, because it cannot reach the significance level. The large synthetic sizes stay out of
+the subset; they run only with `AI_RULEZ_BENCH_LARGE=1`. The rest of the benchmarks run once in the job
+(`task test:benchmark:smoke`, `-benchtime=1x`) to prove they still run.
 
 ```bash
-scripts/bench.sh            # run, compare, fail on a >25% regression
-scripts/bench.sh --update   # re-record the baseline on this machine
+task test:benchmark:regression                    # HEAD against the merge base, on this machine
+scripts/bench.sh --compare origin/main            # the same, with an explicit base
+BENCH_THRESHOLD=10 BENCH_COUNT=10 scripts/bench.sh --compare HEAD~3
 ```
 
-Time per operation depends on the CPU, so the gate only applies when the baseline was recorded on the same CPU model
-as the run (the `cpu:` line of the output). Otherwise, or when there is no baseline, it prints a warning and exits 0.
-The CI `Benchmarks` job runs the script after the full benchmark run and uploads `bench-subset.txt`; to make the gate
-bite on the CI runners, commit that artifact as `scripts/bench-baseline.txt`.
+When a run flags a benchmark you believe is noise, run it again locally with more samples
+(`BENCH_COUNT=12`); a real regression stays significant. The job runs with `shell: bash` (so `pipefail` holds), and
+uploads `bench-subset.txt`, the head samples. A change that intentionally makes a benchmark slower is not overridden by
+a file: say so in the pull request and rerun the job; a maintainer can merge over a failure that the table explains.
+
+`scripts/bench-baseline.txt` and `scripts/bench.sh` without an argument remain as a fallback for a developer machine:
+the script compares `HEAD` with the committed file, but only when it was recorded on the same CPU model (the `cpu:` line
+of the output), and otherwise warns and exits 0. Refresh it with `scripts/bench.sh --update` (`task
+test:benchmark:baseline`). CI does not read it.
 
 #### Monorepo index
 
@@ -26200,6 +26316,23 @@ skills, the index `Screen` for instruction files, rules and agents):
 | 10 | 30 | 65 ms | 22.1 MB | 130k |
 | 100 | 300 | 291 ms | 58.8 MB | 363k |
 | 500 | 1500 | 1220 ms | 220.8 MB | 1.30M |
+
+The index cache (`[mcp] index_cache`, `docs/mcp-server.md#the-index-cache`) removes most of that on a later start.
+`BenchmarkDiscoveryCatalogCache` starts the same server three ways on the 20000-file monorepo: `off` keeps no cache,
+`cold` starts with an empty cache and writes it, `warm` starts with the cache of an earlier start, over files whose
+modification time is an hour old (a file modified in the two seconds before a save is read again). Mean of 5 starts,
+same machine as above:
+
+| Scopes | Items | off | cold (fills the cache) | warm | warm B/op | warm vs off |
+| ------ | ----- | --- | ---------------------- | ---- | --------- | ----------- |
+| 10 | 30 | 48.9 ms | 58.1 ms | 22.7 ms | 5.5 MB | -54% |
+| 100 | 300 | 316.8 ms | 292.4 ms | 53.5 ms | 11.3 MB | -83% |
+| 500 | 1500 | 1251 ms | 1450 ms | 106 ms | 37.3 MB | -92% |
+
+A cold start with the cache on costs what a start without it does, plus the write of the index file (the 10 and 500 scope
+rows differ from `off` by run-to-run noise as much as by that write). A warm start no longer reads, hashes or scans an
+unchanged item: what remains is the file listing, one `stat` per candidate, the configuration load and reading the
+served skill directories. The live refresh of the index pays the warm cost per change, not the cold one.
 
 Most of that is the security scan, not the index (before the fifth pass about 90% of a build; `Build` alone is 129 ms at 500 scopes). Queries over the
 in-memory transport (`BenchmarkRepositoryQueries`, one sample each; every call also pays about 0.5 MB and 0.3 ms of
@@ -26699,6 +26832,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `releasetime` | Finds when a git tag was released, for minimum-age gates |
 | `render` | Separates what a command produces from what it says about it |
 | `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there |
+| `indexcache` | Keeps the repository index summaries and scan verdicts between runs of the MCP server: location (user cache or project), authenticated index file, lock, status and clear |
 | `review` | Scores skills, agents, commands and rules against a rubric |
 | `roles` | Builds the roles manifest |
 | `runner` | Runs an external command with the limits a tool needs |
@@ -26812,6 +26946,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez sbom`                 | CycloneDX 1.6 or SPDX 2.3 bill of materials of the AI configuration ([SBOM](sbom.md)) |
 | `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle, optionally signed; `--to github-release\|npm\|oci --execute --yes` uploads ([Publish](publish.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
+| `ai-rulez cache status` / `cache clear` | Show or drop the repository index cache of the MCP server ([details](#ai-rulez-cache-statusclear)) |
 | `ai-rulez guard`                | PreToolUse hook that blocks agent edits to generated files; run by the harness ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez verifiers run/list/explain/test/calibrate/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
@@ -26857,6 +26992,9 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez builtins` | Manage built-in domains |
 | `ai-rulez builtins list` | List all available built-in domains |
 | `ai-rulez builtins show` | Show the full content of a built-in domain |
+| `ai-rulez cache` | Show or clear the repository index cache |
+| `ai-rulez cache clear` | Remove the index cache of this project |
+| `ai-rulez cache status` | Show where the index cache is, its size and its entry count |
 | `ai-rulez catalog` | List every item with owner, version, tokens, roles and lock status, or a static site |
 | `ai-rulez catalog diff` | Compare two catalogs: JSON files or git revisions |
 | `ai-rulez clean` | Remove files produced by generate |
@@ -28512,6 +28650,7 @@ ai-rulez doctor [--strict] [--format json] [--profile <name>] [--no-local]
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
 | `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
 | `session-start` | The `SessionStart` hook: `info` listing the launchers it tries in order (`ai-rulez`, `npx -y ai-rulez@latest`, `uvx --from ai-rulez@latest`); a warning when the generated `.claude/settings.json` lacks the hook or is ignored by version control, and, inside a remote session, when none of `ai-rulez`, `npx` and `uvx` is on `PATH` or the npm registry is denied or unreachable (asked with one GET) | info, warning |
+| `index-cache` | The repository index cache of `mcp --serve-skills --discover-skills` ([`cache`](#ai-rulez-cache-statusclear)): `info` naming the location in use (user cache, or the project fallback), its size and entry counts; a warning when the location is not writable or the index file is corrupt, of another version or not authentic. Silent when discovery is off and no cache exists | info, warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
 
 With `--debug`, `doctor` logs one `Doctor check finished` line per check with its name and duration, to find the slow one.
@@ -29554,6 +29693,19 @@ ai-rulez version
 ai-rulez version --format json   # {"schema_version": 1, "version": "5.0.0"}
 ```
 
+##### `ai-rulez cache status|clear`
+
+Manage the index cache of `mcp --serve-skills --discover-skills`: the summaries of the instruction files, rules, agents and skills a repository keeps at any depth, and the scan verdicts of content found clean. It never holds a file body. The cache lives in `<user cache>/ai-rulez/monorepo-index/<repo-id>/`, or in `.ai-rulez/.cache/` (`.ai-rulez-cache/` in the root layout) when the user cache is not writable; `[mcp] index_cache = "user" | "repo" | "off"` chooses. See [The index cache](mcp-server.md#the-index-cache).
+
+```bash
+ai-rulez cache status                 # location, size, entry and verdict counts, warnings
+ai-rulez cache status --format json   # schema/cache-status.schema.json
+ai-rulez cache clear                  # remove this project's cache
+ai-rulez cache clear --all            # remove the index caches of every project in the user cache
+```
+
+`clear` needs no confirmation: a cache is rebuilt on the next start. `--format json` follows `schema/cache-clear.schema.json`. Both commands work in a directory with no configuration.
+
 #### MCP Server
 
 ##### `ai-rulez mcp`
@@ -29846,6 +29998,8 @@ entry in this table (`schema.JSONContracts`).
 | `ai-rulez update --format json` | [`schema/update.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/update.schema.json) |
 | `ai-rulez sbom --format json` | [`schema/sbom-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/sbom-report.schema.json) |
 | `ai-rulez sign --format json` | [`schema/sign-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/sign-report.schema.json) |
+| `ai-rulez cache status --format json` | [`schema/cache-status.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/cache-status.schema.json) |
+| `ai-rulez cache clear --format json` | [`schema/cache-clear.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/cache-clear.schema.json) |
 | `ai-rulez scanners list --format json` | [`schema/scanners-list.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/scanners-list.schema.json) |
 | `ai-rulez scanners doctor --format json` | [`schema/scanners-doctor.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/scanners-doctor.schema.json) |
 | `ai-rulez roles list --format json` | [`schema/roles-manifest.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-manifest.schema.json) |
@@ -30446,6 +30600,66 @@ ai-rulez builtins show security --format json
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez cache`
+
+Show or clear the repository index cache
+
+```text
+ai-rulez cache [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cache status
+ai-rulez cache clear
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+#### `ai-rulez cache clear`
+
+Remove the index cache of this project
+
+```text
+ai-rulez cache clear [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cache clear
+ai-rulez cache clear --all
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--all` | bool |  | Remove the index caches of every project in the user cache |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+#### `ai-rulez cache status`
+
+Show where the index cache is, its size and its entry count
+
+```text
+ai-rulez cache status [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cache status
+ai-rulez cache status --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
 
 #### `ai-rulez catalog`
 
@@ -34485,6 +34699,8 @@ The schema files are available in the repository:
 | `schema/okf-validate.schema.json` | JSON Schema | v1      | `ai-rulez okf validate --format json` |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json` |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
+| `schema/cache-status.schema.json` | JSON Schema | v1     | `ai-rulez cache status --format json`: where the index cache is, its size and entry counts, and warnings |
+| `schema/cache-clear.schema.json` | JSON Schema | v1     | `ai-rulez cache clear --format json`: the cache directories removed |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
 | `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
