@@ -3,6 +3,7 @@ package lockfile
 import (
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
@@ -30,6 +31,15 @@ func IsGitSource(source string) bool {
 	at := strings.Index(source, "@")
 	return colon > 0 && at > 0 && at < colon && !strings.ContainsAny(source[:colon], `/\`)
 }
+
+// githubShorthand is the GitHub "owner/repo" form.
+var githubShorthand = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9._-]+$`)
+
+// IsGitHubShorthand reports whether s is a GitHub "owner/repo" shorthand.
+func IsGitHubShorthand(s string) bool { return githubShorthand.MatchString(s) }
+
+// GitHubURL is the https clone URL of an "owner/repo" shorthand.
+func GitHubURL(shorthand string) string { return "https://github.com/" + shorthand }
 
 // FileURLPath returns the filesystem path a file:// (or git+file://) source
 // names, and false for every other source.

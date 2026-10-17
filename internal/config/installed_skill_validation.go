@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // DecodeTOMLConfig parses the bytes of a config.toml. path is used for error
@@ -159,6 +161,10 @@ func skillSourceProblem(source string) string {
 		return "must not contain control characters"
 	case strings.HasPrefix(strings.ToLower(src), "http://"):
 		return "uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh, git@host:path, file://)"
+	case strings.HasPrefix(src, githubSourcePrefix) && !lockfile.IsGitHubShorthand(strings.TrimPrefix(src, githubSourcePrefix)):
+		return "must be github:owner/repo"
+	case strings.HasPrefix(src, "~") && src != "~" && !strings.HasPrefix(src, "~/") && !strings.HasPrefix(src, "~\\"):
+		return "uses ~user, which is not supported: write ~ or ~/path for your own home directory"
 	}
 	return ""
 }
