@@ -63,7 +63,23 @@ func watchedServer(t *testing.T, root string, mutate ...func(*ServeSetup)) (*Ser
 	session, err := client.Connect(ctx, clientT, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = session.Close() })
+	if !setup.NoWatch {
+		awaitIndexWatch(t, root, session)
+		time.Sleep(3 * setup.IndexWatchDebounce) // let the announcements of the probe settle
+		changed.Store(0)
+	}
 	return srv, session, &changed
+}
+
+// awaitIndexWatch returns once the file watcher is armed: Watch starts in its own goroutine, so a change
+// made at once after the server is up could be missed. A probe instruction file appears, then goes.
+func awaitIndexWatch(t *testing.T, root string, session *sdkmcp.ClientSession) {
+	t.Helper()
+	const probe = "zz-watch-probe"
+	writeFile(t, root, probe+"/AGENTS.md", "# probe\n")
+	eventually(t, "the watcher sees the probe file", func() bool { return contextCount(t, session, probe) == 1 })
+	require.NoError(t, os.RemoveAll(filepath.Join(root, probe)))
+	eventually(t, "the watcher sees the probe go", func() bool { return contextCount(t, session, probe) == 0 })
 }
 
 func eventually(t *testing.T, what string, cond func() bool) {
