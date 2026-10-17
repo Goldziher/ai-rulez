@@ -75,6 +75,7 @@ func TestProjectless_CatalogIsBuiltFromDiscoveredContent(t *testing.T) {
 	assert.Equal(t, "demo", doc.Items[0].ID)
 	assert.Equal(t, "repo", doc.SkillDiscovery.Mode)
 	assert.NotEmpty(t, doc.Scopes, "the instruction file of the repository is in a scope")
+	assert.Contains(t, res.Contents[0].Text, `"shadowed": []`, "no shadowed skill is an empty list, not null")
 }
 
 func TestProjectless_OnlyToolsThatWorkWithoutAConfigurationAreListed(t *testing.T) {

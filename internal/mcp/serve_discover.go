@@ -367,7 +367,7 @@ func (d *discovery) rootCandidates() []string {
 // newDiscovery prepares a discovery run for a build. gen is nil when the build
 // has no project (a server of --source skills only): there is then no manifest.
 func (st *ServeSetup) newDiscovery(cfg *config.Config, gen *generator.Generator, mode string) *discovery {
-	d := &discovery{st: st, cfg: cfg, report: &DiscoveryReport{Mode: mode}, generated: map[string]bool{}}
+	d := &discovery{st: st, cfg: cfg, report: &DiscoveryReport{Mode: mode, Served: []DiscoveredSkill{}, Shadowed: []ShadowedSkill{}}, generated: map[string]bool{}}
 	if gen != nil {
 		for _, p := range gen.GeneratedPaths() {
 			d.generated[filepath.Clean(p)] = true
