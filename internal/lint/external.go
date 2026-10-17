@@ -187,13 +187,13 @@ func argvSize(argv []string) int {
 
 // readOut reads the {out} file the scanner wrote, through the scratch root so a
 // link the scanner planted cannot point it at another file.
-func (st *scannerStage) readOut() ([]byte, error) {
+func (st *scannerStage) readOut(idx int) ([]byte, error) {
 	root, err := os.OpenRoot(st.scratch)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
 	}
 	defer root.Close() //nolint:errcheck // read only
-	f, err := root.Open("out.sarif")
+	f, err := root.Open(outName(idx))
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
 	}
@@ -322,6 +322,8 @@ func (r *runner) externalFinding(scanner, abs string, line int, sev Severity, ms
 // addRun records a finding about a scanner itself (not one of its results),
 // attributed to the config file.
 func (r *runner) addRun(code, scanner, msg string) {
+	r.runMu.Lock()
+	defer r.runMu.Unlock()
 	sev := r.sev[code]
 	if code == CodeScannerUnavailable && r.opts.Scanner.required[scanner] {
 		sev = SeverityError // a required scanner that did not run is a failure, whatever the rule's severity

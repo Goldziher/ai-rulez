@@ -43,6 +43,12 @@ type ScannerOptions struct {
 	// off. NoCache bypasses it for this run (--no-scan-cache).
 	Cache   *ScanCache
 	NoCache bool
+	// ChangedFiles narrows a scanner handed {skill_dirs} to the skill directories
+	// that hold one of these files (repository-relative slash paths): the files
+	// `validate --changed` or `--since` found changed. nil means no narrowing; an
+	// empty slice means nothing changed. Ignored by --write-baseline, which must
+	// see every finding.
+	ChangedFiles []string
 	// DryRun prints every scanner's plan (command, staged files, environment
 	// names, isolation, cache state) to Out and starts nothing.
 	DryRun bool
