@@ -216,7 +216,7 @@ func TestListInstalledSkills(t *testing.T) {
 
 		err = op.InstallSkill(ctx, &InstallSkillRequest{
 			Name:   "skill-b",
-			Source: "/local/path/b",
+			Source: "./local/path/b",
 		})
 		require.NoError(t, err)
 

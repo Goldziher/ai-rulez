@@ -220,9 +220,21 @@ func (op *OperatorImpl) installSkillLocal(ctx context.Context, req *InstallSkill
 	if err != nil {
 		return err
 	}
+	entry := req.entry()
+	if err := validateInstalledSkillEntry(&entry); err != nil {
+		return err
+	}
 	fields := map[string]any{"source": req.Source}
 	setIfNotEmpty(fields, "path", req.Path)
 	setIfNotEmpty(fields, "ref", req.Ref)
+	setIfNotEmpty(fields, "name_prefix", req.NamePrefix)
+	setIfNotEmpty(fields, "trust", req.Trust)
+	setIfNotEmpty(fields, "version", req.Version)
+	for key, list := range map[string][]string{"include": req.Include, "exclude": req.Exclude, "resources": req.Resources} {
+		if len(list) > 0 {
+			fields[key] = list
+		}
+	}
 	if err := op.upsertLocalNamed(ctx, listInstalledSkills, req.Name, fields); err != nil {
 		return err
 	}
