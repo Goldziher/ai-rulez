@@ -48,6 +48,16 @@ type judgeDeps struct {
 	getenv       func(string) string
 	policyLocked func(projectDir string) bool
 	clock        ambient.Clock
+	// maxUnits overrides the per-run unit limit; zero keeps judgeMaxUnits (a test lowers it).
+	maxUnits int
+}
+
+// unitLimit is how many units one real run may judge.
+func (d judgeDeps) unitLimit() int {
+	if d.maxUnits > 0 {
+		return d.maxUnits
+	}
+	return judgeMaxUnits
 }
 
 func (d judgeDeps) now() time.Time { return d.clock.Now() }
@@ -484,11 +494,12 @@ func (d judgeDeps) selectUnits(ctx context.Context, w *judgeWorkspace, args []st
 		return nil, nil, oops.Hint("Name the files or directories to judge, for example: ai-rulez judge .claude/skills/deploy").
 			Errorf("nothing to judge: found no skill, agent, command, rule, CLAUDE.md, AGENTS.md, MCP or settings file below %s", w.cwd)
 	}
-	if len(refs) > judgeMaxUnits && (f.estimate || f.dryRun) {
-		set.notices = append(set.notices, fmt.Sprintf("%d units match; a real run is limited to %d units and would be refused: name paths or use --changed (this estimate covers all of them)", len(refs), judgeMaxUnits))
-	} else if len(refs) > judgeMaxUnits {
+	limit := d.unitLimit()
+	if len(refs) > limit && (f.estimate || f.dryRun) {
+		set.notices = append(set.notices, fmt.Sprintf("%d units match; a real run is limited to %d units and would be refused: name paths or use --changed (this estimate covers all of them)", len(refs), limit))
+	} else if len(refs) > limit {
 		return nil, nil, oops.Hint("Name fewer paths, or use --changed; every unit is up to four paid model calls").
-			Errorf("%d units match; the limit is %d per run", len(refs), judgeMaxUnits)
+			Errorf("%d units match; the limit is %d per run", len(refs), limit)
 	}
 	return refs, info, nil
 }
