@@ -395,7 +395,11 @@ func loadConfigOrNoConfig(ctx context.Context, opts ...config.LoadOption) (*conf
 	if configDir != "" {
 		return loadProjectDir(ctx, ".", configDir, opts...)
 	}
-	return loadProject(ctx, ".", opts...)
+	root, err := discoverProjectRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return loadProject(ctx, root, opts...)
 }
 
 // pluginLoadOptions returns the load options for plugin bundle work. Plugin

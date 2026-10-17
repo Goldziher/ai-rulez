@@ -21,7 +21,7 @@ You can either directly edit files with your editor or use CRUD commands for pro
 
 ## Configuration Discovery
 
-When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
+When no explicit path is given, the CLI discovers configuration by walking up from the current directory to the nearest directory holding a configuration, stopping at the repository root (never above the home directory), and trying in each directory, in order:
 
 1. `.agents/ai-rulez.toml` — the configuration of a project whose content is [`.agents` and `AGENTS.md`](agents-source.md)
 2. `.ai-rulez/config.toml` — the tool-specific directory (default)
