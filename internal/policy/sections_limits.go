@@ -244,6 +244,18 @@ func (a *applier) minReleaseAge() {
 			s.MinReleaseAge = text
 		}
 	}
+	for i := range a.cfg.InstalledMarketplaces {
+		s := &a.cfg.InstalledMarketplaces[i]
+		if s.MinReleaseAge != "" && raise("installed_marketplaces."+s.Name+".min_release_age", s.Name, fmt.Sprintf("installed marketplace %q", s.Name), strings.TrimSpace(s.MinReleaseAge)) {
+			s.MinReleaseAge = text
+		}
+	}
+	for i := range a.cfg.InstalledPlugins {
+		s := &a.cfg.InstalledPlugins[i]
+		if s.MinReleaseAge != "" && raise("installed_plugins."+s.Name+".min_release_age", s.Name, fmt.Sprintf("installed plugin %q", s.Name), strings.TrimSpace(s.MinReleaseAge)) {
+			s.MinReleaseAge = text
+		}
+	}
 	for i := range a.cfg.SkillSources {
 		s := &a.cfg.SkillSources[i]
 		if s.MinReleaseAge != "" && raise("skill_sources."+s.Name+".min_release_age", s.Name, fmt.Sprintf("skill source %q", s.Name), strings.TrimSpace(s.MinReleaseAge)) {

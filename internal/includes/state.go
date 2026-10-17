@@ -16,6 +16,11 @@ type resolutionState struct {
 	observed map[string]observed
 	tags     map[string]tagInfo
 	problems map[string]string
+	// extra holds the marketplace and plugin wants only a resolution knows (a
+	// plugin a local marketplace points at a remote repository), and dirs the
+	// directory each marketplace or plugin tree was read from; see plugin_state.go.
+	extra map[string]extraWant
+	dirs  map[string]string
 }
 
 // stateCreateMu guards attaching a state to a config.
@@ -42,6 +47,8 @@ func newResolutionState() *resolutionState {
 		observed: map[string]observed{},
 		tags:     map[string]tagInfo{},
 		problems: map[string]string{},
+		extra:    map[string]extraWant{},
+		dirs:     map[string]string{},
 	}
 }
 

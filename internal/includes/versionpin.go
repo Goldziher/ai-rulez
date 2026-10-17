@@ -250,6 +250,14 @@ func VersionSources(cfg *config.Config) []VersionSource {
 	for i := range cfg.InstalledSkills {
 		urls[lockfile.KindSkill+"\x00"+cfg.InstalledSkills[i].Name] = stripGitPlus(cfg.InstalledSkills[i].Source)
 	}
+	for i := range cfg.InstalledMarketplaces {
+		urls[lockfile.KindMarketplace+"\x00"+cfg.InstalledMarketplaces[i].Name] = config.PluginGitURL(cfg.InstalledMarketplaces[i].Source)
+	}
+	for i := range cfg.InstalledPlugins {
+		if cfg.InstalledPlugins[i].Source != "" {
+			urls[lockfile.KindPlugin+"\x00"+cfg.InstalledPlugins[i].Name] = config.PluginGitURL(cfg.InstalledPlugins[i].Source)
+		}
+	}
 	wants := Lockable(cfg)
 	for i := range wants {
 		w := &wants[i]
