@@ -662,14 +662,13 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 	})
 	var out []scannerFinding
 	occurrence := map[string]int{}
+	limit := sc.messageLimit(policyOf(&r.lc))
+	cutCount := 0
 	for i := range found {
 		f := found[i]
 		f.Line = min(max(f.Line, 0), maxScannerLine)
 		abs, inside := r.locate(&f, scope)
-		msg := sanitizeScannerText(f.Message)
-		if rule := sanitizeScannerText(f.Rule); rule != "" {
-			msg = rule + ": " + msg
-		}
+		note := ""
 		if !inside {
 			if scope.lookup != nil {
 				outOfScope++
@@ -678,27 +677,52 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 				}
 				continue
 			}
-			msg += " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
+			note = " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
 			abs = r.configFilePath()
 		}
 		if u := evidenceURL(f.HelpURI); u != "" {
-			msg += " (" + u + ")"
+			note += " (" + u + ")"
 		}
-		sev := scannerSeverity(sc, f)
+		sev, lead := scannerSeverity(sc, f), ""
 		if f.Suppressed {
-			sev, msg = SeverityInfo, "(suppressed) "+msg
+			sev, lead = SeverityInfo, "(suppressed) "
 		}
+		msg, full := scannerMessage(f, limit, lead, note)
 		built, keep := r.externalFinding(sc.Name, abs, f.Line, sev, msg)
 		if !keep {
 			continue
 		}
+		if full != "" {
+			built.meta().FullMessage = "[" + sc.Name + "] " + full
+			cutCount++
+		}
 		built.meta().Fingerprint = r.scannerFingerprint(sc.Name, f, abs, built.Line, occurrence)
 		out = append(out, scannerFinding{Finding: built, scanner: sc.Name, rule: sanitizeScannerText(f.Rule), abs: abs})
+	}
+	if cutCount > 0 {
+		r.log().Debug("Scanner messages were cut to max_message; the JSON report and SARIF output keep the full text",
+			"scanner", sc.Name, "truncated", cutCount, "max_message", limit)
 	}
 	if outOfScope > 0 {
 		r.addRun(CodeScannerOutOfScope, sc.Name, fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut))
 	}
 	return out
+}
+
+// scannerMessage builds the message of one result: lead, the rule id, the text
+// cut to limit characters (ending in "..."), then note. full is the same message
+// with the whole text when the text was cut, and "" otherwise.
+func scannerMessage(f externalFinding, limit int, lead, note string) (msg, full string) {
+	text, cut := truncateRunes(cleanScannerText(f.Message), limit)
+	prefix := lead
+	if rule := sanitizeScannerText(f.Rule); rule != "" {
+		prefix += rule + ": "
+	}
+	msg = prefix + text + note
+	if cut {
+		full = prefix + cleanScannerText(f.Message) + note
+	}
+	return msg, full
 }
 
 // scannerSeverity is the severity a scanner result gets: its band through the

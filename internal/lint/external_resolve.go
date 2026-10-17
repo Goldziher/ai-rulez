@@ -41,6 +41,7 @@ type scannerPolicy struct {
 	preset      string
 	required    map[string]bool
 	failOn      string
+	maxMessage  int
 	baseline    string
 	isolation   sandbox.Mode
 	allowEgress []string
@@ -65,6 +66,7 @@ func policyOf(lc *config.LintConfig) scannerPolicy {
 	if preset, ok := scanners.LookupPreset(p.preset); ok && p.failOn == "" {
 		p.failOn = preset.FailOn
 	}
+	p.maxMessage = sp.MaxMessage
 	p.baseline = strings.TrimSpace(sp.Baseline)
 	if m, err := sandbox.ParseMode(sp.Isolation); err == nil {
 		p.isolation = m
@@ -88,6 +90,9 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 	if !validScannerFailOn(sp.FailOn) {
 		problems = append(problems, fmt.Sprintf("lint.scanner_policy.fail_on %q is not error, warning or info", sp.FailOn))
 	}
+	if !validMaxMessage(sp.MaxMessage) {
+		problems = append(problems, fmt.Sprintf("lint.scanner_policy.max_message %d is not between 1 and %d", sp.MaxMessage, maxScannerMessageLimit))
+	}
 	if _, err := sandbox.ParseMode(sp.Isolation); err != nil {
 		problems = append(problems, "lint.scanner_policy."+err.Error())
 	}
@@ -97,6 +102,21 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 		}
 	}
 	return problems
+}
+
+// validMaxMessage reports whether n is unset (0) or a usable max_message.
+func validMaxMessage(n int) bool { return n == 0 || (n >= 1 && n <= maxScannerMessageLimit) }
+
+// messageLimit is the number of characters of a finding message kept in text
+// output: the scanner's max_message, else the policy's, else the default.
+func (s resolvedScanner) messageLimit(pol scannerPolicy) int {
+	switch {
+	case s.MaxMessage > 0:
+		return s.MaxMessage
+	case pol.maxMessage > 0:
+		return pol.maxMessage
+	}
+	return maxScannerMessage
 }
 
 // validScannerFailOn reports whether v is empty or a fail_on threshold.

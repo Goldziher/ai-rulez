@@ -2707,6 +2707,12 @@
                 "minItems": 1,
                 "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check."
               },
+              "max_message": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000,
+                "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text."
+              },
               "fail_on": {
                 "enum": ["error", "warning", "info"],
                 "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings."
@@ -2761,6 +2767,12 @@
             "fail_on": {
               "enum": ["error", "warning", "info"],
               "description": "Lowest severity of a scanner finding (AR011) that fails the run. Scanner findings only; it replaces the run's own threshold (--strict, --fail-on) for them, and a scanner's own fail_on wins. strict implies warning."
+            },
+            "max_message": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "Default characters of a scanner finding message kept in text output (500 when unset); a scanner's own max_message wins. The JSON report and SARIF output keep the whole text."
             },
             "baseline": {
               "type": "string",
