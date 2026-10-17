@@ -106,7 +106,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	sort.Strings(unverified)
 	g.warnStaleKept(unknown, unverified)
 	sort.Strings(stale)
-	return stale
+	return g.keepSkipped(stale)
 }
 
 // currentManifestSet is the set of relative paths this run generates, plus the

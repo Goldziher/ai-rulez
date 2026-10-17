@@ -151,6 +151,9 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	// The "agents" source reads AGENTS.md and .agents; nothing may be written there.
 	g.dropAgentsSourceOutputs(allOutputs, &tempCfg)
 
+	// skip_outputs: kinds the project writes by hand are never rendered.
+	g.dropSkippedKinds(allOutputs, &tempCfg)
+
 	return &presetRender{byPreset: allOutputs, profile: activeProfile, content: contentTree, run: run}, nil
 }
 
@@ -279,6 +282,9 @@ func readsAgentsOverride(cfg *config.Config, preset string) bool {
 func (g *Generator) appendAgentsOverride(allOutputs map[string][]config.OutputFile, local *config.ContentTree,
 	rules []config.ContentFile, cfg *config.Config,
 ) {
+	if g.config.SkipsAgentsMD() {
+		return // skip_outputs leaves AGENTS.md and AGENTS.override.md to the project
+	}
 	var readers []string
 	for _, preset := range g.config.Presets {
 		if preset.IsBuiltIn() && readsAgentsOverride(g.config, preset.BuiltIn) && !slices.Contains(readers, preset.BuiltIn) {
