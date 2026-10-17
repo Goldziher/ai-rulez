@@ -1721,6 +1721,13 @@
             "additionalProperties": false,
             "anyOf": [{}, {}],
             "properties": {
+              "cache_files": {
+                "description": "Globs, relative to the project root, of files the scanner reads besides the staged content (a rules file, a configuration). Their content is part of the result cache key, so editing one runs the scanner again. The script a command runs through a known interpreter (python3 scan.py, node scan.js, sh run.sh, uv run scan.py) is hashed without being listed.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "command": {
                 "items": {
                   "type": "string"
