@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
@@ -39,4 +42,58 @@ func normalizeSkillSource(baseDir, source string) string {
 		return source
 	}
 	return lockfile.GitHubURL(src)
+}
+
+// IsHomeSource reports whether source is "~" or "~/path".
+func IsHomeSource(source string) bool {
+	_, ok := homeRelative(source)
+	return ok
+}
+
+// homeRelative reports whether source is "~" or "~/path" and returns the part
+// after the "~/".
+func homeRelative(source string) (rest string, ok bool) {
+	switch {
+	case source == "~":
+		return "", true
+	case strings.HasPrefix(source, "~/"), strings.HasPrefix(source, `~\`):
+		return source[2:], true
+	}
+	return "", false
+}
+
+// LocalSkillSource reports whether an installed_skills source is a local
+// directory and returns it, not yet joined to the project: a "~" or "~/path"
+// source (the home directory comes from env), and a file:// URL naming a
+// directory that is not a git repository. Any other source is returned as
+// written with local false; GitHub shorthand has already been expanded.
+func LocalSkillSource(env ambient.Env, source string) (dir string, local bool, err error) {
+	if rest, ok := homeRelative(source); ok {
+		home, homeErr := ambient.OrOS(env).UserHomeDir()
+		if homeErr != nil || home == "" {
+			return "", false, oops.Hint("Set HOME, or write the path without '~'").
+				Errorf("cannot expand %q: no home directory", source)
+		}
+		return filepath.Join(home, rest), true, nil
+	}
+	if strings.HasPrefix(strings.ToLower(source), "file://") {
+		if path, ok := lockfile.FileURLPath(source); ok && !isGitCheckout(path) {
+			return path, true, nil
+		}
+	}
+	return source, false, nil
+}
+
+// isGitCheckout reports whether dir is a git working tree or a bare repository,
+// i.e. something git can clone. A file:// URL to anything else is read as a
+// plain directory of skills.
+func isGitCheckout(dir string) bool {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+		return true
+	}
+	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err == nil {
+		_, objErr := os.Stat(filepath.Join(dir, "objects"))
+		return objErr == nil
+	}
+	return false
 }
