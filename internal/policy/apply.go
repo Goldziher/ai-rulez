@@ -150,10 +150,35 @@ func policyKeyOf(key string) string {
 	return key
 }
 
+// sources drops the sources the policy does not allow from the configuration.
 func (a *applier) sources() {
+	check := a.sourceChecker()
+	if check == nil {
+		return
+	}
+	cfg := a.cfg
+	cfg.Includes = filterSlice(cfg.Includes, func(i config.IncludeConfig) bool { return check("include", i.Name, i.Source) })
+	cfg.InstalledSkills = filterSlice(cfg.InstalledSkills, func(s config.InstalledSkillConfig) bool {
+		return check("installed skill", s.Name, s.Source)
+	})
+	cfg.SkillSources = filterSlice(cfg.SkillSources, func(s config.SkillSourceConfig) bool {
+		return check("skill source", s.Name, s.URL)
+	})
+	cfg.InstalledMarketplaces = filterSlice(cfg.InstalledMarketplaces, func(m config.InstalledMarketplaceConfig) bool {
+		return check("installed marketplace", m.Name, config.PluginGitURL(m.Source))
+	})
+	cfg.InstalledPlugins = filterSlice(cfg.InstalledPlugins, func(pl config.InstalledPluginConfig) bool {
+		return pl.Source == "" || check("installed plugin", pl.Name, config.PluginGitURL(pl.Source))
+	})
+}
+
+// sourceChecker returns the check of sources.allowed_hosts and sources.deny_hosts:
+// it reports whether a source may be loaded and records a violation when not. It
+// is nil when the policy bounds no source.
+func (a *applier) sourceChecker() func(kind, name, source string) bool {
 	p := a.res.Policy.Sources
 	if !p.Allowed.Set && len(p.Deny) == 0 {
-		return
+		return nil
 	}
 	var allow, deny []pattern
 	for _, s := range p.Allowed.Items {
@@ -198,14 +223,7 @@ func (a *applier) sources() {
 		}
 		return true
 	}
-	cfg := a.cfg
-	cfg.Includes = filterSlice(cfg.Includes, func(i config.IncludeConfig) bool { return check("include", i.Name, i.Source) })
-	cfg.InstalledSkills = filterSlice(cfg.InstalledSkills, func(s config.InstalledSkillConfig) bool {
-		return check("installed skill", s.Name, s.Source)
-	})
-	cfg.SkillSources = filterSlice(cfg.SkillSources, func(s config.SkillSourceConfig) bool {
-		return check("skill source", s.Name, s.URL)
-	})
+	return check
 }
 
 func filterSlice[T any](in []T, keep func(T) bool) []T {

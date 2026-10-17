@@ -3068,6 +3068,43 @@ Each entry supports:
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
+##### `installed_marketplaces` and `installed_plugins`
+
+Plugin marketplaces and the plugins imported from them (or straight from a repository). Skills, agents, commands,
+rules, hooks and MCP servers become ordinary content, pinned in `ai-rulez.lock`. See
+[Installed Plugins](installed-plugins.md) for the formats, source forms, hook and MCP policy and the lock flow.
+
+```toml
+[[installed_marketplaces]]
+name = "acme"
+source = "acme/plugins"
+version = "^1.2"
+
+[[installed_plugins]]
+name = "formatter"
+marketplace = "acme"
+exclude = ["hooks"]
+```
+
+| Field (marketplace) | Description |
+| ------------------- | ----------- |
+| `name`, `source` | Required. `source` is a repository URL, GitHub `owner/repo`, a local directory inside the project or an https `marketplace.json` URL |
+| `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | As on `includes` |
+| `trust` | Scan level of the plugins read through it: `error` (default) or `warn` |
+
+| Field (plugin) | Description |
+| -------------- | ----------- |
+| `name` | Required, unique |
+| `marketplace`, `plugin` | Install the marketplace entry `plugin` (default `name`) from an installed marketplace; exclusive with `source` |
+| `source`, `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | A plugin repository or directory, as on `installed_skills` |
+| `format` | Force the layout: `claude`, `codex`, `gemini`, `cursor`, `agent-plugins` |
+| `include`, `exclude` | Component kinds: `skills`, `agents`, `commands`, `hooks`, `mcp`, `rules` |
+| `name_prefix`, `domain`, `profiles`, `trust` | As on `installed_skills` |
+| `enable_hooks` | Import the plugin's hooks (default `false`) |
+| `enable_mcp` | Import the plugin's MCP servers (default `true`) |
+
+Manage via CLI: `ai-rulez marketplace add/remove/list/update`, `ai-rulez plugin install/remove/list/update`.
+
 ##### `[skills]`, `[domains.<name>]`, `[[skill_sources]]`, `[lock]`
 
 Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)). All optional.
@@ -6921,6 +6958,169 @@ To make your project's skill installable by others:
 | Merge strategy   | Configurable (local-override, include-override, error) | Local skills always win                   |
 | Domain support   | Can install to specific domains                        | Root-level only                           |
 | Use case         | Share full governance configs                          | Add library/tool-specific AI instructions |
+
+## Installed Plugins
+
+Source: https://goldziher.github.io/ai-rulez/installed-plugins/
+
+If a harness can install a plugin or a marketplace, ai-rulez can import it, use it and lock it. An
+`[[installed_marketplaces]]` entry names a plugin marketplace; an `[[installed_plugins]]` entry imports one
+plugin, from a marketplace or straight from a repository. The skills, agents, commands, rules, hooks and MCP servers
+the plugin ships become ordinary ai-rulez content, rendered into every preset you generate, pinned in
+`ai-rulez.lock` and covered by the same security scan as [installed skills](installed-skills.md).
+
+This is the consumer side. To build a plugin from your own content, see [Plugins](plugins.md)
+(`ai-rulez generate --plugin`).
+
+#### Quick start
+
+```toml
+[[installed_marketplaces]]
+name = "acme"
+source = "acme/plugins"          # GitHub owner/repo; or a git URL, ./local/dir, https://.../marketplace.json
+version = "^1.2"                 # optional: a tag range, moved only by `ai-rulez update`
+
+[[installed_plugins]]
+name = "formatter"
+marketplace = "acme"
+exclude = ["hooks"]              # skills, agents, commands, hooks, mcp, rules
+
+[[installed_plugins]]
+name = "review-tools"
+source = "https://github.com/acme/review-tools"   # a plugin repository, no marketplace
+ref = "v2.0.1"
+enable_hooks = true              # hooks are off unless you opt in
+```
+
+```bash
+ai-rulez marketplace add acme --source acme/plugins
+ai-rulez plugin install formatter --from acme
+ai-rulez lock          # pins the marketplace and the plugin (commit + tree digest), scans both
+ai-rulez generate
+```
+
+#### Formats
+
+| Harness | Marketplace index | Plugin manifest | What is imported |
+| ------- | ----------------- | --------------- | ---------------- |
+| Claude Code | `.claude-plugin/marketplace.json` | `.claude-plugin/plugin.json` (optional) | `skills/`, `agents/`, `commands/`, `hooks/hooks.json`, `.mcp.json`, plus the `skills`, `agents`, `commands`, `hooks` and `mcpServers` paths or inline objects the manifest names |
+| Codex | `.agents/plugins/marketplace.json` | `.codex-plugin/plugin.json` | `skills/`, `.mcp.json`, `hooks.json` and the manifest's `skills`, `mcpServers` and `hooks` fields |
+| Cursor | `.cursor-plugin/marketplace.json` | `.cursor-plugin/plugin.json` | `rules/` (as rules), `agents/`, `skills/`, `commands/`, `hooks/hooks.json`, `.mcp.json` or `mcp.json` |
+| Gemini CLI extension | none | `gemini-extension.json` | `mcpServers`, the `contextFileName` file(s) (as a rule), `commands/*.toml` (as commands), `skills/`, `agents/` |
+| Agent Plugins | none | root `plugin.json` with an `agent-plugins.org` `$schema` | `skills/`, `mcp.json` and the `com.anthropic.claude-code` (agents, commands, hooks) and `io.github.goldziher.ai-rulez` (rules) extension namespaces |
+
+The layout is detected from the manifest; `format` forces it. A directory with Claude's default directories and no
+manifest is a Claude plugin, as Claude Code treats it. A marketplace entry with `strict = false` that declares its
+own components needs no manifest in the plugin directory.
+
+Skills are bundled whole, exactly like an [installed skill](installed-skills.md#what-is-bundled-with-a-skill).
+Agent, command and rule files keep their frontmatter. A nested command `git/commit.md` is named `git-commit`. A
+Gemini TOML command becomes a prompt: its `{{args}}` and `!{...}` placeholders are kept as written.
+
+#### Source forms
+
+`source` of a marketplace or plugin accepts:
+
+| Form | Example |
+| ---- | ------- |
+| GitHub shorthand | `acme/plugins`, `github:acme/plugins` |
+| Git URL | `https://github.com/acme/plugins`, `git@github.com:acme/plugins.git`, `file:///srv/plugins` |
+| Local directory | `./vendor/marketplace` (must start with `./`, `../` or `/`; inside the project) |
+| Index URL (marketplace only) | `https://example.com/marketplace.json` |
+
+A bare `owner/repo` is GitHub, as in Claude Code. The same safety rules as installed skills apply: https only (no
+`http://`), no credentials in a URL, no git option or transport helper such as `ext::`, no `..` in a `path`, and a
+local path from the committed config must stay inside the project (the machine-local overlay and the user config may
+leave it). `file://` repositories outside the project need `AI_RULEZ_ALLOW_FILE_URLS=1`.
+
+A marketplace entry names its plugin as:
+
+- a relative path inside the marketplace repository (`"./plugins/x"`; `metadata.pluginRoot` is prepended to a bare
+  name),
+- `{"source": "github", "repo": "owner/repo", "ref": "...", "sha": "..."}`,
+- `{"source": "url" | "git", "url": "...", "ref": "...", "sha": "..."}`,
+- `{"source": "git-subdir", "url": "...", "path": "sub/dir"}`, or Codex's `{"source": "local", "path": "./x"}`.
+
+A relative path that is absolute, contains `..` or goes through a symlink is refused, so an index cannot make
+ai-rulez read outside the marketplace repository. An entry with a source type ai-rulez does not support (npm, pip) is
+listed as not installable.
+
+#### Entry fields
+
+`[[installed_marketplaces]]`: `name`, `source`, `path` (directory holding the index), `ref`, `version`, `tag_prefix`,
+`include_prerelease`, `min_release_age`, `trust`.
+
+`[[installed_plugins]]`: `name`, then either `marketplace` (and `plugin` when the entry is called otherwise) or
+`source`, `path`, `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age`; and `format`, `include` /
+`exclude` (component kinds), `name_prefix`, `domain`, `profiles`, `trust`, `enable_hooks` (default `false`),
+`enable_mcp` (default `true`).
+
+A plugin installed from a marketplace follows the marketplace's `ref`/`version`; setting them on the plugin is an
+error. `domain` and `profiles` scope skills, agents, commands, rules and MCP servers like
+[installed skills](installed-skills.md); hooks are global. A name that already exists (local content first, then
+earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both.
+
+#### Hooks, MCP servers and permissions
+
+- **Hooks are off by default.** A hook runs a command on every machine that uses the project, so, as with
+  `convert --enable-hooks`, they are imported only with `enable_hooks = true`. A plugin with hooks that are not
+  enabled is reported once. Imported hooks are restricted to the harness they were written for.
+- **MCP servers** are imported unless `enable_mcp = false`. Literal credentials in `env`, `args`, `url` or `headers` are
+  replaced by `${VAR}` references and reported; the servers go through the same MCP checks and `[mcp]` policy as your
+  own.
+- **`${CLAUDE_PLUGIN_ROOT}`.** The plugin directory does not exist in the generated tree, so a hook or MCP server that
+  refers to it (`${CLAUDE_PLUGIN_ROOT}`, `${CODEX_PLUGIN_ROOT}`, `${PLUGIN_ROOT}`, Gemini's `${extensionPath}`) is
+  rewritten to the project-relative path of the plugin only when the plugin is a local directory inside the project
+  (`source = "./vendor/tools"`). For a fetched plugin the hook or server is refused and reported
+  (`AR9F3`), never written pointing at nothing. `${CLAUDE_PLUGIN_DATA}` is always refused.
+- **Permissions** are never imported: a plugin cannot add an allow rule.
+
+#### Security model
+
+- Fetches use the include machinery: the same git cache, credential handling (a token goes only to allowlisted hosts) and
+  `sources.allowed_hosts` / `sources.deny_hosts` policy, which also applies to a repository a marketplace names.
+- Before `ai-rulez lock` pins a new tree it runs the security scan (AR001-AR009) over every file of the
+  marketplace or plugin, hook scripts and MCP definitions included; error findings refuse the pin (exit 2) unless
+  `--accept-findings`. The entry's `trust` sets the level (`error` makes every finding an error; a plugin inherits its
+  marketplace's).
+- `generate` scans the imported content again, plus the hook documents, MCP documents and the scripts they run, at the
+  same level (`[lint.security] scan_imports`).
+- Symlinks are never followed, files and manifests are size-bounded, names are validated, and a malformed manifest
+  fails the load with an error naming the file.
+- The organization policy's hooks and `[mcp]` limits bound plugin hooks and servers (AR748); `sources.deny_digests` and
+  [approvals](approvals.md) apply to `marketplace` and `installed-plugin` entries.
+
+#### Lock, update and refresh
+
+`ai-rulez lock` pins every marketplace (`[[marketplace]]`) and plugin (`[[plugin]]`) in `ai-rulez.lock`: the commit,
+the requested ref or constraint, the resolved tag and a tree digest. A plugin installed from a marketplace is keyed
+`marketplace:<name>` and records the repository the index named for it as `origin`; a plugin inside the marketplace
+repository shares its commit and has its own digest. An https `marketplace.json` has a digest and no commit.
+
+- `generate --locked` / `--frozen` and an enforced lock fail on a missing, stale or mismatching pin (a moved branch, a
+  retagged release, changed bytes); `--offline` reads the cache only.
+- `ai-rulez lock --check` compares the lock offline; `ai-rulez lock [name]` / `--kind marketplace|plugin` refreshes.
+  Refreshing a marketplace refreshes the plugins installed from it.
+- `ai-rulez update [--kind marketplace|plugin] [name]` moves entries that use a `version` range to the newest allowed tag
+  (see [Lock file](lockfile.md)); `marketplace update` and `plugin update` re-pin plain refs.
+- `ai-rulez sbom` and `approve` list these entries.
+
+#### CLI
+
+```bash
+ai-rulez marketplace add|remove|list|update
+ai-rulez plugin install|remove|list|update
+```
+
+See the [CLI reference](cli.md). To change an entry for one machine only, edit `config.local.toml`.
+
+#### Migrating from `[[plugins]]` / `[[marketplaces]]`
+
+In v4 the `[[plugins]]` and `[[marketplaces]]` tables described plugins to *enable* in a harness and were never read
+by v5 beyond a warning. They do not import anything. Replace a `[[marketplaces]]` entry by
+`[[installed_marketplaces]]` (`name`, `source`) and a `[[plugins]]` entry `name@marketplace` by
+`[[installed_plugins]]` with `marketplace` set. Enabling a plugin in the harness itself is separate: keep that in the
+harness settings.
 
 ## .agents as a Source
 
@@ -17316,7 +17516,7 @@ Source: https://goldziher.github.io/ai-rulez/lockfile/
 `ai-rulez.lock` (in the configuration directory, committed) is the record of exactly what your AI configuration
 is made of. It pins three things:
 
-1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before).
+1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before), and every installed marketplace (`[[marketplace]]`) and plugin (`[[plugin]]`, see [Installed Plugins](installed-plugins.md#lock-update-and-refresh)).
 2. **Authored content**: a `sha256` digest of every rule, context file, skill (with its resources), agent,
    command, hook and role, with its `id`, `domain`, `owner` and `version` when the frontmatter has them.
 3. **Generated outputs**: a digest of each generated file, so a change to what agents are actually told shows up
@@ -25871,12 +26071,22 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez local show` | Show what the local overlay overrides |
 | `ai-rulez local unset` | Remove a key from the local overlay |
 | `ai-rulez lock` | Pin remote includes, installed skills and authored content in ai-rulez.lock |
+| `ai-rulez marketplace` | Manage installed plugin marketplaces |
+| `ai-rulez marketplace add` | Add a plugin marketplace from a repository, a local directory or an https URL |
+| `ai-rulez marketplace list` | List installed marketplaces |
+| `ai-rulez marketplace remove` | Remove an installed marketplace |
+| `ai-rulez marketplace update` | Re-pin installed marketplaces (and their plugins) in ai-rulez.lock to the current remote commit |
 | `ai-rulez mcp` | Start Model Context Protocol (MCP) server |
 | `ai-rulez migrate` | Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF |
 | `ai-rulez migrate okf` | Convert the .ai-rulez/ content tree to an OKF bundle, in place |
 | `ai-rulez migrate v5` | Migrate a 4.x configuration to the 5.0 format |
 | `ai-rulez okf` | Work with OKF (Open Knowledge Format) bundles |
 | `ai-rulez okf validate` | Lint an OKF bundle (works on third-party bundles) |
+| `ai-rulez plugin` | Manage installed plugins imported from marketplaces or repositories |
+| `ai-rulez plugin install` | Install a plugin from a marketplace, a repository or a local directory |
+| `ai-rulez plugin list` | List installed plugins |
+| `ai-rulez plugin remove` | Remove an installed plugin |
+| `ai-rulez plugin update` | Re-pin installed plugins in ai-rulez.lock to their current remote commit |
 | `ai-rulez profile` | Manage profiles |
 | `ai-rulez profile add` | Add a new profile |
 | `ai-rulez profile list` | List all profiles |
@@ -30938,7 +31148,7 @@ ai-rulez lock --content-only
 | `--fail-on-outdated` | bool |  | With --outdated: exit 2 when any source has an allowed update |
 | `--format` | string | `text` | Output format: text, json |
 | `--include-static` | bool |  | Also pin the view that serves static skills too (see mcp --serve-skills --include-static) |
-| `--kind` | string |  | Limit the refresh to include, skill, source or served entries |
+| `--kind` | string |  | Limit the refresh to include, skill, source, marketplace, plugin or served entries |
 | `--offline` | bool |  | With --outdated: refuse to run (it needs the network); use --check to verify the lock offline |
 | `--outdated` | bool |  | Report sources whose version constraint allows a newer tag than the pinned one (uses the network, writes nothing) |
 | `--output` / `-o` | string |  | With --subject: write the JSON statement to this file |
@@ -30962,6 +31172,102 @@ ai-rulez lock --content-only
 | `--subject` | bool |  | Print the lock-subject digest and statement (the thing to sign); reads the lock only |
 | `--targets` | string |  | Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets) |
 | `--verify-tags` | bool |  | With --check: ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true) |
+
+#### `ai-rulez marketplace`
+
+Manage installed plugin marketplaces
+
+```text
+ai-rulez marketplace [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace list
+ai-rulez marketplace add acme --source acme/plugins
+```
+
+#### `ai-rulez marketplace add`
+
+Add a plugin marketplace from a repository, a local directory or an https URL
+
+```text
+ai-rulez marketplace add <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace add acme --source acme/plugins
+ai-rulez marketplace add acme --source https://github.com/acme/plugins --version "^1.2"
+ai-rulez marketplace add local --source ./vendor/marketplace
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--include-prerelease` | bool |  | Allow prerelease tags (needs --version) |
+| `--min-release-age` | string |  | Hold back tags younger than this (7d, 12h; needs --version) |
+| `--path` | string |  | Directory of the repository that holds the index (default: the root) |
+| `--ref` | string |  | Branch, tag or commit |
+| `--source` | string |  | Git URL, GitHub owner/repo, local directory or https URL of a marketplace.json (required) |
+| `--tag-prefix` | string |  | Only tags with this prefix are version tags (needs --version) |
+| `--trust` | string |  | Scan level of the plugins read through it: error (default) or warn |
+| `--version` | string |  | Version constraint resolved against the repository's tags (^1.2, ~2.1.0) |
+
+#### `ai-rulez marketplace list`
+
+List installed marketplaces
+
+```text
+ai-rulez marketplace list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace list
+ai-rulez marketplace list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez marketplace remove`
+
+Remove an installed marketplace
+
+```text
+ai-rulez marketplace remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace remove acme --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez marketplace update`
+
+Re-pin installed marketplaces (and their plugins) in ai-rulez.lock to the current remote commit
+
+```text
+ai-rulez marketplace update [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez marketplace update
+ai-rulez marketplace update acme
+```
 
 #### `ai-rulez mcp`
 
@@ -31119,6 +31425,112 @@ ai-rulez okf validate https://github.com/acme/kb@v1.2.0#docs --format json
 | ---- | ---- | ------- | ----------- |
 | `--fail-on` | string | `error` | Lowest severity that fails the run: error, warning, info or none |
 | `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez plugin`
+
+Manage installed plugins imported from marketplaces or repositories
+
+```text
+ai-rulez plugin [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin list
+ai-rulez plugin install formatter --from acme
+```
+
+#### `ai-rulez plugin install`
+
+Install a plugin from a marketplace, a repository or a local directory
+
+```text
+ai-rulez plugin install <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin install formatter --from acme
+ai-rulez plugin install tools --source acme/tools --exclude hooks
+ai-rulez plugin install tools --source acme/tools --enable-hooks --name-prefix acme-
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Place the imported content in this domain |
+| `--enable-hooks` | bool |  | Import the plugin's hooks (they run commands on every machine) |
+| `--enable-mcp` | bool | `true` | Import the plugin's MCP servers |
+| `--entry` | string |  | Marketplace entry to install when it is not called like the plugin |
+| `--exclude` | string list |  | Do not import these kinds |
+| `--format` | string | `text` | Output format: text, json |
+| `--from` | string |  | Name of an installed marketplace to install from |
+| `--include` | string list |  | Import only these kinds: skills, agents, commands, hooks, mcp, rules |
+| `--include-prerelease` | bool |  | Allow prerelease tags (needs --version) |
+| `--layout` | string |  | Force the plugin layout: claude, codex, gemini, cursor or agent-plugins |
+| `--min-release-age` | string |  | Hold back tags younger than this (needs --version) |
+| `--name-prefix` | string |  | Prefix for every imported name |
+| `--path` | string |  | Directory of the plugin inside the repository |
+| `--profile` | string list |  | Restrict the imported content to these profiles |
+| `--ref` | string |  | Branch, tag or commit |
+| `--source` | string |  | Git URL, GitHub owner/repo or local directory of the plugin |
+| `--tag-prefix` | string |  | Only tags with this prefix are version tags (needs --version) |
+| `--trust` | string |  | Scan level: error (default) or warn |
+| `--version` | string |  | Version constraint for a plugin installed from --source |
+
+#### `ai-rulez plugin list`
+
+List installed plugins
+
+```text
+ai-rulez plugin list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin list
+ai-rulez plugin list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez plugin remove`
+
+Remove an installed plugin
+
+```text
+ai-rulez plugin remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin remove formatter --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez plugin update`
+
+Re-pin installed plugins in ai-rulez.lock to their current remote commit
+
+```text
+ai-rulez plugin update [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez plugin update
+ai-rulez plugin update formatter
+```
 
 #### `ai-rulez profile`
 
@@ -32671,7 +33083,7 @@ ai-rulez update --kind include --write-config
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | Show what would change and write nothing |
 | `--format` | string | `text` | Output format: text, json |
-| `--kind` | string |  | Limit the update to include, skill or source |
+| `--kind` | string |  | Limit the update to include, skill, source, marketplace or plugin |
 | `--major` | bool |  | Handle only sources that have a newer major version: print the constraint that would take it |
 | `--offline` | bool |  | Refuse to run: update reads the remote's tags |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
