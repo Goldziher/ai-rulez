@@ -622,6 +622,11 @@
             "items": { "type": "string" },
             "description": "Drop skills whose directory name matches one of these globs; wins over include."
           },
+          "resources": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "description": "What is bundled from each skill's directory besides references/, scripts/ and assets/ (always bundled). By default an installed skill is bundled whole: every file except SKILL.md, evals/, agents/ and hidden files. Setting resources replaces that default. A pattern is a name, a path or a glob (a name matches a file or directory at any depth); a leading ! removes what an earlier pattern added, for example [\"*\", \"!docs\"]."
+          },
           "name_prefix": {
             "type": "string",
             "description": "Prepended to every resolved skill name, so two entries cannot collide."

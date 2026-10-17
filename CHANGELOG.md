@@ -6,6 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **An installed skill is bundled whole, not only `references/`, `scripts/` and `assets/`.** Skills that keep documents beside `SKILL.md` (`cli.md`) or in a folder of their own (`rules/`, `templates/`) arrived without those files, so the links in `SKILL.md` were broken and generate warned that the folder was dropped. Every file in the skill directory is now bundled and listed in the generated `Resources` section, except `SKILL.md`, `evals/`, `agents/` and hidden files; a project's own skills keep the canonical layout ([#419](https://github.com/Goldziher/ai-rulez/issues/419)).
+
+### Added
+
+- **`resources` on an `installed_skills` entry sets what is bundled.** It replaces the default with name, path or glob patterns, a leading `!` removing what an earlier pattern added, for example `["*", "!docs"]` or `["rules"]` ([#419](https://github.com/Goldziher/ai-rulez/issues/419)).
+
 ## [5.4.1] - 2026-10-16
 
 ### Added

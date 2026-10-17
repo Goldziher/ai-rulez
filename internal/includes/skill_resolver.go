@@ -84,6 +84,7 @@ var errSkillSkipped = errors.New("installed skill skipped")
 // with name_prefix.
 func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) ([]config.ContentFile, error) {
 	baseDir := cfg.BaseDir
+	ctx = config.WithSkillResources(ctx, skillConf.Resources)
 	// Check for local override first
 	if skillConf.LocalOverride != "" && !refreshing(cfg, lockfile.KindSkill, skillConf.Name) {
 		if err := checkLocalOverride(cfg, "installed_skills", skillConf.Name); err != nil {
