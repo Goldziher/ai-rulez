@@ -29,7 +29,7 @@ func TestCollect_AnnouncesTheSessionStartHookForClaudeOnly(t *testing.T) {
 			for _, name := range config.MCPHarnessNames() { // every harness with settings, so skipped ones would show
 				cfg.Presets = append(cfg.Presets, config.Preset{Name: name})
 			}
-			cfg.EnableSessionStartHooks("5.4.1")
+			cfg.EnableSessionStartHooks()
 
 			items := Collect(cfg)
 
@@ -57,7 +57,7 @@ func TestNewCommands_ASessionStartHookIsAnnouncedOnceAndAgainWhenItChanges(t *te
 	build := func(version string) *config.Config {
 		cfg := &config.Config{BaseDir: baseDir, ConfigDir: configDir, Presets: []config.Preset{{Name: config.HarnessClaude}},
 			SessionStart: &config.SessionStartConfig{Version: version}}
-		cfg.EnableSessionStartHooks("5.4.1")
+		cfg.EnableSessionStartHooks()
 		return cfg
 	}
 
