@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
@@ -81,6 +82,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 	projectName := getProjectName(args)
 	configDir := initConfigDir()
+	if err := prepareRootConfigFile(cmd, "."); err != nil {
+		return failMsg("Refusing to shadow the existing ai-rulez.toml", err)
+	}
 
 	// --from is convert: check the sources first, so a failure leaves an existing
 	// configuration directory alone
@@ -191,6 +195,17 @@ func prepareExistingConfigDir(cmd *cobra.Command, configDir string) (string, err
 	}
 	logger.Info("Existing " + configDir + "/ directory moved to " + backup)
 	return backup, nil
+}
+
+// prepareRootConfigFile guards a project configured by ai-rulez.toml in dir: the
+// directory layout init scaffolds would win over that file and silently shadow
+// it. Like an existing configuration directory, the file is replaced only after
+// --force, which keeps it as ai-rulez.toml.bak-<timestamp>.
+func prepareRootConfigFile(cmd *cobra.Command, dir string) error {
+	if !config.IsRootConfigDir(dir) {
+		return nil
+	}
+	return prepareAgentsConfig(cmd, filepath.Join(dir, config.RootConfigFilename))
 }
 
 // initForceFlag reports whether init was given --force.
