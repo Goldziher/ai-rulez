@@ -2759,6 +2759,37 @@
                 "type": "string",
                 "description": "Version range the scanner's --version output must satisfy (\">=1.0.0, <2\"). A scanner outside it is not run (AR9E2)."
               },
+              "version_command": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check."
+              },
+              "max_message": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000,
+                "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text."
+              },
+              "stage_globs": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Narrow the files staged from each skill directory to the ones matching a glob (relative to the skill directory; a pattern with no slash matches at any depth, ** crosses directories). SKILL.md is always staged. Unset stages every regular file of the directory."
+              },
+              "stage_exclude": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Leave out the files of a staged skill directory that match a glob (same syntax as stage_globs); it wins over stage_globs. SKILL.md is always staged."
+              },
+              "cache_files": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Globs, relative to the project root, of files the scanner reads besides the staged content (a rules file, a configuration). Their content is part of the result cache key, so editing one runs the scanner again. The script a command runs through a known interpreter (python3 scan.py, node scan.js, sh run.sh, uv run scan.py) is hashed without being listed."
+              },
+              "fail_on": {
+                "enum": ["error", "warning", "info"],
+                "description": "Lowest severity of this scanner's findings (AR011) that fails the run. Replaces [lint.scanner_policy] fail_on for this scanner and the run's own threshold (--strict, --fail-on) for its findings."
+              },
               "required": {
                 "type": "boolean",
                 "description": "A missing, outdated or failing scanner is an error instead of a notice."
@@ -2767,7 +2798,21 @@
                 "type": "boolean",
                 "description": "Whether content derived from the scanned files can leave the machine. Unset keeps the legacy full environment and is reported as AR9E1. false scrubs the environment and rejects known egress flags (AR9E4); true runs only when the scanner is named in --allow-egress."
               },
-              "timeout": { "type": "string", "description": "Go duration such as \"90s\". Default 2m, at most 15m." },
+              "timeout": {
+                "type": "string",
+                "description": "Go duration such as \"90s\". Default 2m, at most 15m (or [lint.scanner_policy] max_timeout). Bounds each run of the command: every batch of a batch_size scanner gets the whole timeout."
+              },
+              "batch_size": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Split the {skill_dirs} handed to the command into runs of at most this many skill directories, each with its own timeout and cached on its own. 0 (default) hands the scanner all of them at once. Needs {skill_dirs} in command, without {stage}, {root} or {files}."
+              },
+              "parallel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Run up to this many batches at the same time (default 1). Each batch gets its own {out} file and temp directory. Same command requirement as batch_size."
+              },
               "env_pass": {
                 "type": "array",
                 "items": { "type": "string" },
@@ -2808,7 +2853,17 @@
             },
             "fail_on": {
               "enum": ["error", "warning", "info"],
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning."
+              "description": "Lowest severity of a scanner finding (AR011) that fails the run. Scanner findings only; it replaces the run's own threshold (--strict, --fail-on) for them, and a scanner's own fail_on wins. strict implies warning."
+            },
+            "max_message": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "Default characters of a scanner finding message kept in text output (500 when unset); a scanner's own max_message wins. The JSON report and SARIF output keep the whole text."
+            },
+            "max_timeout": {
+              "type": "string",
+              "description": "Longest timeout one run of a scanner may be given, a Go duration from 1s to 6h (default 15m). A scanner's timeout above it is refused (AR9E0). Only the policy can raise it."
             },
             "baseline": {
               "type": "string",

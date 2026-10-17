@@ -29,17 +29,9 @@ var knownEgressFlags = map[string]bool{
 
 // externalProblems lists what is wrong with one [[lint.external]] entry's
 // hardening keys. Entries with a problem are reported (AR9E0) and not run.
-func externalProblems(ex config.LintExternal) []string {
-	var problems []string
-	if ex.Timeout != "" {
-		d, err := time.ParseDuration(ex.Timeout)
-		switch {
-		case err != nil || d <= 0:
-			problems = append(problems, fmt.Sprintf("timeout %q is not a positive duration such as \"90s\"", ex.Timeout))
-		case d > cmdrun.MaxTimeout:
-			problems = append(problems, fmt.Sprintf("timeout %s exceeds the maximum of %s", d, cmdrun.MaxTimeout))
-		}
-	}
+func externalProblems(ex config.LintExternal, ceiling time.Duration) []string {
+	problems := timeoutProblems(ex.Timeout, ceiling)
+	problems = append(problems, batchProblems(ex)...)
 	for _, name := range ex.EnvPass {
 		switch {
 		case !cmdrun.ValidEnvName(name):
@@ -53,8 +45,67 @@ func externalProblems(ex config.LintExternal) []string {
 			problems = append(problems, fmt.Sprintf("version %q is not a version range such as \">=1.0.0, <2\": %v", ex.Version, err))
 		}
 	}
+	if !validMaxMessage(ex.MaxMessage) {
+		problems = append(problems, fmt.Sprintf("max_message %d is not between 1 and %d", ex.MaxMessage, maxScannerMessageLimit))
+	}
+	problems = append(problems, cacheFilesProblems(ex.CacheFiles)...)
+	problems = append(problems, stageGlobProblems(ex)...)
+	problems = append(problems, versionCommandProblems(ex)...)
+	if !validScannerFailOn(ex.FailOn) {
+		problems = append(problems, fmt.Sprintf("fail_on %q is not error, warning or info", ex.FailOn))
+	}
 	problems = append(problems, inputProblems(ex)...)
 	return append(problems, severityMapProblems(ex.SeverityMap, ex.MaxSeverity)...)
+}
+
+// timeoutProblems lists what is wrong with a timeout against the longest one
+// the policy allows (the runner's default maximum when ceiling is 0).
+func timeoutProblems(timeout string, ceiling time.Duration) []string {
+	if timeout == "" {
+		return nil
+	}
+	if ceiling <= 0 {
+		ceiling = cmdrun.MaxTimeout
+	}
+	d, err := time.ParseDuration(timeout)
+	switch {
+	case err != nil || d <= 0:
+		return []string{fmt.Sprintf("timeout %q is not a positive duration such as \"90s\"", timeout)}
+	case d > ceiling:
+		return []string{fmt.Sprintf("timeout %s exceeds the maximum of %s (raise it with [lint.scanner_policy] max_timeout, at most %s)", d, ceiling, cmdrun.HardMaxTimeout)}
+	}
+	return nil
+}
+
+// maxScannerParallel bounds parallel.
+const maxScannerParallel = 16
+
+// batchProblems lists what is wrong with batch_size and parallel.
+func batchProblems(ex config.LintExternal) []string {
+	var problems []string
+	if ex.BatchSize < 0 {
+		problems = append(problems, fmt.Sprintf("batch_size %d is negative", ex.BatchSize))
+	}
+	if ex.Parallel < 0 || ex.Parallel > maxScannerParallel {
+		problems = append(problems, fmt.Sprintf("parallel %d is not between 1 and %d", ex.Parallel, maxScannerParallel))
+	}
+	if (ex.BatchSize > 0 || ex.Parallel > 0) && !perSkillCommand(ex.Command) {
+		problems = append(problems, "batch_size and parallel need {skill_dirs} in command, without {stage}, {root} or {files}")
+	}
+	return problems
+}
+
+// versionCommandProblems lists what is wrong with version_command.
+func versionCommandProblems(ex config.LintExternal) []string {
+	switch {
+	case len(ex.VersionCommand) == 0:
+		return nil
+	case ex.Version == "":
+		return []string{"version_command needs version (the range its output is checked against)"}
+	case strings.TrimSpace(ex.VersionCommand[0]) == "":
+		return []string{"version_command starts with an empty program name"}
+	}
+	return nil
 }
 
 // egressFlagViolation returns the first argument that turns on network egress,
@@ -165,13 +216,13 @@ func argvSize(argv []string) int {
 
 // readOut reads the {out} file the scanner wrote, through the scratch root so a
 // link the scanner planted cannot point it at another file.
-func (st *scannerStage) readOut() ([]byte, error) {
+func (st *scannerStage) readOut(idx int) ([]byte, error) {
 	root, err := os.OpenRoot(st.scratch)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
 	}
 	defer root.Close() //nolint:errcheck // read only
-	f, err := root.Open("out.sarif")
+	f, err := root.Open(outName(idx))
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
 	}
@@ -300,6 +351,8 @@ func (r *runner) externalFinding(scanner, abs string, line int, sev Severity, ms
 // addRun records a finding about a scanner itself (not one of its results),
 // attributed to the config file.
 func (r *runner) addRun(code, scanner, msg string) {
+	r.runMu.Lock()
+	defer r.runMu.Unlock()
 	sev := r.sev[code]
 	if code == CodeScannerUnavailable && r.opts.Scanner.required[scanner] {
 		sev = SeverityError // a required scanner that did not run is a failure, whatever the rule's severity
