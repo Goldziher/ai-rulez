@@ -219,6 +219,7 @@ func splitLocation(source string) (host string, segs []string, ok bool) {
 	if i := strings.LastIndex(host, ":"); i >= 0 && !strings.Contains(host, "]") {
 		host = host[:i] // drop the port
 	}
+	host = strings.TrimRight(host, ".") // "github.com." is github.com
 	path = strings.TrimSuffix(strings.Trim(path, "/"), ".git")
 	if host == "" {
 		return "", nil, false
