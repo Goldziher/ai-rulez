@@ -316,10 +316,8 @@ func TestResolveCached_MatchesResolve(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "real"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "real", "f.md"), []byte("x"), 0o644))
-	if err := os.Symlink(filepath.Join(root, "real"), filepath.Join(root, "dirlink")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
-	require.NoError(t, os.Symlink(filepath.Join(root, "real", "f.md"), filepath.Join(root, "real", "filelink.md")))
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "real"), filepath.Join(root, "dirlink"))
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "real", "f.md"), filepath.Join(root, "real", "filelink.md"))
 	dirs := map[string]string{}
 
 	for _, rel := range []string{"real/f.md", "real/new.md", "dirlink/f.md", "dirlink/new.md", "real/filelink.md", "gone/deep/new.md"} {
