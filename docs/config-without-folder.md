@@ -49,7 +49,7 @@ The managed `.gitignore` block covers the local manifest, the overlay and its lo
 
 ## Discovery order
 
-Per directory, while walking up: `.agents/ai-rulez.toml`, `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml`, then `ai-rulez.toml`. A config directory always wins; when one exists beside an `ai-rulez.toml`, `generate` and `doctor` warn that the file is ignored. `--config ai-rulez.toml` (or `--config .`) selects the file explicitly. `generate --recursive` finds an `ai-rulez.toml` that has no config directory beside it. A flat `ai-rulez.yaml` is still refused with the `ai-rulez migrate v5` message.
+Per directory, while walking up from the working directory to the repository root (never above the home directory): `.agents/ai-rulez.toml`, `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml`, then `ai-rulez.toml`. A config directory always wins; when one exists beside an `ai-rulez.toml`, `generate` and `doctor` warn that the file is ignored. `--config ai-rulez.toml` (or `--config .`) selects the file explicitly. `generate --recursive` finds an `ai-rulez.toml` that has no config directory beside it. A flat `ai-rulez.yaml` is still refused with the `ai-rulez migrate v5` message.
 
 ## How it differs from the `.agents` layout
 
