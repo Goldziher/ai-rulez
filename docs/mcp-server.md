@@ -527,7 +527,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
-| `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository). |
+| `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. Either mode also indexes nested instruction files, rules and agents by scope. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository) and [Monorepos](#monorepos-scopes-and-nested-context). |
 | `--max-clone-bytes` | Clone size limit in bytes for git skill sources that set no `max_clone_bytes`. Overrides `AI_RULEZ_MAX_CLONE_BYTES`; 0 (default) defers to it, then to 256 MiB. |
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
