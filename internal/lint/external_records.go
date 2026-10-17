@@ -58,13 +58,14 @@ func ScanRecords(cfg *config.Config, tree *Tree, so Options, opts ...Option) ([]
 func (r *runner) scanRecords(root string) []ScanRecord {
 	var out []ScanRecord
 	cache := r.opts.Scanner.Cache
-	threshold := SeverityError
-	if t, ok := ParseSeverity(policyOf(&r.lc).failOn); ok && t != SeverityOff {
-		threshold = t
-	}
+	pol := policyOf(&r.lc)
 	scanners := r.scanners()
 	for i := range scanners {
 		sc := scanners[i]
+		threshold := SeverityError
+		if t, ok := ParseSeverity(sc.failOnOf(pol)); ok && t != SeverityOff {
+			threshold = t
+		}
 		if len(sc.Inputs) == 0 || sc.Egress == nil || *sc.Egress || len(sc.allProblems()) > 0 {
 			continue
 		}
