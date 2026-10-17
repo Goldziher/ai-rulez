@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint/scanners"
+	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 )
 
@@ -34,14 +36,18 @@ type resolvedScanner struct {
 	RequiresEnv []string
 	// Problems are profile-level configuration errors (AR9E0).
 	Problems []string
+	// timeoutCeiling is the longest timeout the policy allows (0: the default maximum).
+	timeoutCeiling time.Duration
 }
 
 // scannerPolicy is [lint.scanner_policy] with the preset's defaults applied.
 type scannerPolicy struct {
-	preset      string
-	required    map[string]bool
-	failOn      string
-	maxMessage  int
+	preset     string
+	required   map[string]bool
+	failOn     string
+	maxMessage int
+	// maxTimeout is the ceiling on a scanner's timeout (0: the runner's default).
+	maxTimeout  time.Duration
 	baseline    string
 	isolation   sandbox.Mode
 	allowEgress []string
@@ -67,6 +73,9 @@ func policyOf(lc *config.LintConfig) scannerPolicy {
 		p.failOn = preset.FailOn
 	}
 	p.maxMessage = sp.MaxMessage
+	if d, ok := parseMaxTimeout(sp.MaxTimeout); ok {
+		p.maxTimeout = d
+	}
 	p.baseline = strings.TrimSpace(sp.Baseline)
 	if m, err := sandbox.ParseMode(sp.Isolation); err == nil {
 		p.isolation = m
@@ -92,6 +101,9 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 	}
 	if !validMaxMessage(sp.MaxMessage) {
 		problems = append(problems, fmt.Sprintf("lint.scanner_policy.max_message %d is not between 1 and %d", sp.MaxMessage, maxScannerMessageLimit))
+	}
+	if _, ok := parseMaxTimeout(sp.MaxTimeout); !ok && strings.TrimSpace(sp.MaxTimeout) != "" {
+		problems = append(problems, fmt.Sprintf("lint.scanner_policy.max_timeout %q is not a duration between 1s and %s", sp.MaxTimeout, cmdrun.HardMaxTimeout))
 	}
 	if _, err := sandbox.ParseMode(sp.Isolation); err != nil {
 		problems = append(problems, "lint.scanner_policy."+err.Error())
@@ -171,6 +183,7 @@ func resolveScanners(lc *config.LintConfig, hasPlugin bool) []resolvedScanner {
 		out = append(out, rs)
 	}
 	for i := range out {
+		out[i].timeoutCeiling = pol.maxTimeout
 		if p := out[i].Profile; p != "" {
 			out[i].Presets = scanners.PresetsOf(p)
 		}
@@ -257,7 +270,7 @@ func mergeSeverityMaps(profile, entry map[string]string) map[string]string {
 
 // allProblems lists every configuration problem of the entry (AR9E0).
 func (s resolvedScanner) allProblems() []string {
-	return append(append([]string(nil), s.Problems...), externalProblems(s.LintExternal)...)
+	return append(append([]string(nil), s.Problems...), externalProblems(s.LintExternal, s.timeoutCeiling)...)
 }
 
 // egressFlag returns the argument that turns on egress in a scanner declared
@@ -267,4 +280,14 @@ func (s resolvedScanner) egressFlag() string {
 		return ""
 	}
 	return egressFlagViolationWith(s.Command, s.EgressFlags)
+}
+
+// parseMaxTimeout reads [lint.scanner_policy] max_timeout; ok is false for an
+// empty, malformed or out-of-range value (1s to the runner's hard maximum).
+func parseMaxTimeout(v string) (time.Duration, bool) {
+	d, err := time.ParseDuration(strings.TrimSpace(v))
+	if err != nil || d < time.Second || d > cmdrun.HardMaxTimeout {
+		return 0, false
+	}
+	return d, true
 }

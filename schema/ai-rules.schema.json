@@ -2740,7 +2740,21 @@
                 "type": "boolean",
                 "description": "Whether content derived from the scanned files can leave the machine. Unset keeps the legacy full environment and is reported as AR9E1. false scrubs the environment and rejects known egress flags (AR9E4); true runs only when the scanner is named in --allow-egress."
               },
-              "timeout": { "type": "string", "description": "Go duration such as \"90s\". Default 2m, at most 15m." },
+              "timeout": {
+                "type": "string",
+                "description": "Go duration such as \"90s\". Default 2m, at most 15m (or [lint.scanner_policy] max_timeout). Bounds each run of the command: every batch of a batch_size scanner gets the whole timeout."
+              },
+              "batch_size": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Split the {skill_dirs} handed to the command into runs of at most this many skill directories, each with its own timeout and cached on its own. 0 (default) hands the scanner all of them at once. Needs {skill_dirs} in command, without {stage}, {root} or {files}."
+              },
+              "parallel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Run up to this many batches at the same time (default 1). Each batch gets its own {out} file and temp directory. Same command requirement as batch_size."
+              },
               "env_pass": {
                 "type": "array",
                 "items": { "type": "string" },
@@ -2788,6 +2802,10 @@
               "minimum": 1,
               "maximum": 100000,
               "description": "Default characters of a scanner finding message kept in text output (500 when unset); a scanner's own max_message wins. The JSON report and SARIF output keep the whole text."
+            },
+            "max_timeout": {
+              "type": "string",
+              "description": "Longest timeout one run of a scanner may be given, a Go duration from 1s to 6h (default 15m). A scanner's timeout above it is refused (AR9E0). Only the policy can raise it."
             },
             "baseline": {
               "type": "string",

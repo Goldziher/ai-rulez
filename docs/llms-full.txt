@@ -13636,13 +13636,15 @@ name = "my-scanner"
 command = ["my-scanner", "--sarif"]
 format = "sarif"                   # sarif (default) | json | adapter:snyk-json | adapter:claude-validate-json
 egress = false                     # required for hardening; see External scanners
-timeout = "120s"                   # default 2m, max 15m
+timeout = "120s"                   # default 2m, max 15m (or [lint.scanner_policy] max_timeout); bounds each run
 env_pass = []                      # extra environment variable names for an egress = false scanner
 # inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
 # profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
 # version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
 # version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
 # required = true                  # a missing, outdated or failing scanner is an error
+# batch_size = 10                  # hand {skill_dirs} to the scanner at most 10 skills per run, each run with its own timeout
+# parallel = 4                     # run up to 4 batches at once (default 1, at most 16)
 # stage_globs = ["**/*.md"]        # stage only these skill files (relative to the skill directory; SKILL.md always)
 # stage_exclude = ["evals/**"]     # leave these skill files out (wins over stage_globs)
 # fail_on = "error"                # lowest severity of this scanner's findings that fails the run
@@ -14094,6 +14096,7 @@ later features that execute commands.
 | `max_message` | Characters of a scanner finding message kept in text output (default 500, at most 100000); an entry's own `max_message` wins. The JSON report and SARIF output keep the whole text |
 | `baseline` | The scanner baseline file, relative to the project root; an absolute path or one that leaves the project is `AR9E0`. `--scanner-baseline` wins |
 | `isolation` | `auto` (default), `none` or `require`, see Isolation |
+| `max_timeout` | The longest `timeout` one run of a scanner may be given: a Go duration from `1s` to `6h` (default `15m`). A scanner's `timeout` above it is `AR9E0`. See Batches and timeouts |
 | `allow_egress` | Unset: `--allow-egress=<name>` alone allows an egress scanner. Set (even `[]`): the name must also be listed, so a committed list narrows what a CI flag can enable. Presets never read it |
 
 The profiles live in the binary (`internal/lint/scanners/profiles.toml`), each with `source`, `verified_on` and
@@ -14128,6 +14131,39 @@ max_message = 2000
 name = "verbose-scanner"
 max_message = 200
 ```
+
+##### Batches and timeouts
+
+`timeout` bounds one run of the scanner (default 2 minutes, at most 15). A scanner that takes minutes per skill
+cannot scan fifty skills in one run, so a command that passes `{skill_dirs}` (and none of `{stage}`, `{root}`,
+`{files}`) can be split:
+
+```toml
+[lint.scanner_policy]
+max_timeout = "1h"        # optional: the longest timeout any run may be given (default 15m, at most 6h)
+
+[[lint.external]]
+name = "deep-scan"
+command = ["deep-scan", "{skill_dirs}"]
+inputs = ["skills"]
+egress = false
+timeout = "20m"           # for each batch
+batch_size = 5            # at most 5 skill directories per run
+parallel = 4              # up to 4 runs at the same time
+```
+
+`batch_size` divides the skills that still need a scan into runs of at most that many directories. Every run gets
+the whole `timeout`, and its skills are cached as soon as it succeeds, so a later run does not repeat a finished
+batch after another one timed out. Without `batch_size` the scanner gets all of them in one run, split anyway when
+the arguments would pass the operating system limit (128 KiB on Unix, 24 KiB on Windows). `parallel` runs up to
+that many batches at once (1 to 16, default 1); each gets its own `{out}` file and temp directory, `HOME` stays
+shared, and results are merged in batch order, so the report does not depend on which batch finished first. A failed
+batch stops the batches that have not started; those that finished keep their results.
+
+The `timeout` of a run stays bounded: the runner never lets one command run longer than 6 hours. Only
+`[lint.scanner_policy] max_timeout` raises the 15 minute default ceiling, so a `timeout` written in an entry (or a
+pull request that edits one) cannot lift its own limit past what the policy allows. `scanners doctor` shows the effective
+timeout.
 
 ##### Failing on scanner findings
 

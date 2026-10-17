@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -92,13 +91,13 @@ func (r *runner) requireConfigured(list []resolvedScanner) {
 }
 
 // specFor builds the run spec shared by both modes.
-func specFor(ex config.LintExternal, dir string) cmdrun.Spec {
-	spec := cmdrun.Spec{Dir: dir, InheritEnv: ex.Egress == nil}
-	if ex.Egress != nil {
-		spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), ex.EnvPass, nil)
+func specFor(sc resolvedScanner, dir string) cmdrun.Spec {
+	spec := cmdrun.Spec{Dir: dir, InheritEnv: sc.Egress == nil, MaxTimeout: sc.timeoutCeiling}
+	if sc.Egress != nil {
+		spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), sc.EnvPass, nil)
 	}
-	if ex.Timeout != "" {
-		spec.Timeout, _ = time.ParseDuration(ex.Timeout) //nolint:errcheck // validated by externalProblems
+	if sc.Timeout != "" {
+		spec.Timeout, _ = time.ParseDuration(sc.Timeout) //nolint:errcheck // validated by externalProblems
 	}
 	return spec
 }
@@ -113,7 +112,7 @@ func (r *runner) runInRoot(sc resolvedScanner, root string, files []string) (all
 		r.addRun(CodeScannerRunFailed, sc.Name, "isolation = \"require\" cannot confine a scanner that runs in the project root; set inputs so it runs on a staged copy, or set isolation = \"none\"")
 		return nil, false
 	}
-	spec := specFor(sc.LintExternal, root)
+	spec := specFor(sc, root)
 	batches := batchArgs(sc.Command, files, argvBudget)
 	if r.opts.Scanner.DryRun {
 		r.plan(sc, planInfo{binary: lookExecutable(sc.Command[0], root), argv: batches[0], dir: root, env: spec.Env, inherit: spec.InheritEnv,
@@ -180,7 +179,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	if strings.ContainsAny(argv[0], `/\`) && !filepath.IsAbs(argv[0]) {
 		argv[0] = filepath.Join(root, argv[0]) // a relative command is relative to the project, not the stage
 	}
-	spec := specFor(sc.LintExternal, st.root)
+	spec := specFor(sc, st.root)
 	spec.InheritEnv = false
 	spec.Env = st.env(sc.EnvPass, cmdrun.HostEnv())
 	if r.opts.Scanner.DryRun {

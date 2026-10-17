@@ -32,7 +32,7 @@ func (Exec) RunLines(ctx context.Context, spec Spec, onLine LineFunc) Result { /
 		res.Status, res.Err = StatusError, errors.New("empty command")
 		return res
 	}
-	res.Timeout = EffectiveTimeout(spec.Timeout)
+	res.Timeout = EffectiveTimeoutUpTo(spec.Timeout, spec.MaxTimeout)
 	path, err := resolve(spec.Argv[0], spec.Dir)
 	if err != nil {
 		res.Status, res.Err = StatusUnavailable, err

@@ -25,6 +25,8 @@ const (
 	DefaultTimeout = 2 * time.Minute
 	// MaxTimeout is the longest timeout a Spec may request.
 	MaxTimeout = 15 * time.Minute
+	// HardMaxTimeout is the longest timeout any caller may grant through Spec.MaxTimeout.
+	HardMaxTimeout = 6 * time.Hour
 	// DefaultMaxOutput is the per-stream capture cap in bytes.
 	DefaultMaxOutput int64 = 32 << 20
 )
@@ -75,6 +77,9 @@ type Spec struct {
 	Stdin []byte
 	// Timeout bounds the run; zero means DefaultTimeout and values above MaxTimeout are lowered to it.
 	Timeout time.Duration
+	// MaxTimeout raises the ceiling on Timeout above MaxTimeout, up to
+	// HardMaxTimeout; zero keeps MaxTimeout. The caller owns the policy that grants it.
+	MaxTimeout time.Duration
 	// MaxOutput caps each of stdout and stderr in bytes; zero means DefaultMaxOutput. Output past the
 	// cap is discarded (the child is not blocked) and reported through Result.*Truncated.
 	MaxOutput int64
@@ -112,7 +117,7 @@ func Run(ctx context.Context, spec Spec) Result {
 		res.Status, res.Err = StatusError, errors.New("empty command")
 		return res
 	}
-	res.Timeout = EffectiveTimeout(spec.Timeout)
+	res.Timeout = EffectiveTimeoutUpTo(spec.Timeout, spec.MaxTimeout)
 	path, err := resolve(spec.Argv[0], spec.Dir)
 	if err != nil {
 		res.Status, res.Err = StatusUnavailable, err
@@ -202,11 +207,24 @@ func classify(tctx, ctx context.Context, res *Result, runErr error, cmd *exec.Cm
 
 // EffectiveTimeout applies the default and the maximum to a requested timeout.
 func EffectiveTimeout(d time.Duration) time.Duration {
+	return EffectiveTimeoutUpTo(d, MaxTimeout)
+}
+
+// EffectiveTimeoutUpTo is EffectiveTimeout under a ceiling the caller granted:
+// ceiling is clamped to [1s, HardMaxTimeout], and zero means MaxTimeout. A
+// ceiling below the default lowers the default with it.
+func EffectiveTimeoutUpTo(d, ceiling time.Duration) time.Duration {
+	switch {
+	case ceiling <= 0:
+		ceiling = MaxTimeout
+	case ceiling > HardMaxTimeout:
+		ceiling = HardMaxTimeout
+	}
 	switch {
 	case d <= 0:
-		return DefaultTimeout
-	case d > MaxTimeout:
-		return MaxTimeout
+		return min(DefaultTimeout, ceiling)
+	case d > ceiling:
+		return ceiling
 	}
 	return d
 }
