@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -151,7 +152,7 @@ func TestSkillGitSourceLocate_RepairsADamagedCacheOnce(t *testing.T) {
 	assert.Contains(t, skills[0].Content, "Original content.")
 	restored, readErr := os.ReadFile(cached)
 	require.NoError(t, readErr)
-	assert.Equal(t, locateSkillBody, string(restored))
+	assert.Equal(t, locateSkillBody, strings.ReplaceAll(string(restored), "\r\n", "\n"), "git may check the file out with CRLF (core.autocrlf)")
 }
 
 func TestSkillGitSourceLocate_DamagedCacheIsNotRepairedOffline(t *testing.T) {
