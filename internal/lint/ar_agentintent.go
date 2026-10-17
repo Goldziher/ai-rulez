@@ -126,16 +126,30 @@ func commentAddressesAgent(body string) bool {
 	return len(credentialMentions(body, false)) > 0 && credReadRe().MatchString(body) && credSinkRe().MatchString(body)
 }
 
+// credentialLineStems are literals every line credentialTarget can name a store
+// on holds one of, besides the credentialStems paths: the words of credPhraseRe
+// and of the keychain and secrecy forms.
+var credentialLineStems = []string{"credential", "token", "private key", "config", "keychain", "netrc", "npmrc", ".env"}
+
+// mayNameCredential is a cheap necessary condition for credentialTarget to
+// return a store: a path stem, or one of the words a store is named by.
+func mayNameCredential(line string) bool {
+	return containsAnyStem(line, false, credentialStems) || containsAnyFold(line, credentialLineStems)
+}
+
 func scanCredentialInstruction(r *runner, t *scanText) {
 	for _, l := range t.lines {
 		if l.Front {
 			continue
 		}
-		if t.shellLike(l) && keychainExportRe().MatchString(l.Text) || t.prose(l) && keychainExportRe().MatchString(l.Text) && credSinkRe().MatchString(l.Text) {
+		// keychainExportRe needs "security"; the regular expressions below run
+		// only on the few lines that can name a credential store.
+		if strings.Contains(l.Text, "security") &&
+			(t.shellLike(l) && keychainExportRe().MatchString(l.Text) || t.prose(l) && keychainExportRe().MatchString(l.Text) && credSinkRe().MatchString(l.Text)) {
 			r.add(CodeCredentialInstruction, t.abs, l.No, "exports the keychain, which holds every stored credential")
 			continue
 		}
-		if !t.prose(l) || !credReadRe().MatchString(l.Text) || !credSinkRe().MatchString(l.Text) {
+		if !t.prose(l) || !mayNameCredential(l.Text) || !credReadRe().MatchString(l.Text) || !credSinkRe().MatchString(l.Text) {
 			continue
 		}
 		if what := credentialTarget(l.Text); what != "" {
