@@ -32,7 +32,7 @@ const (
 	// maxLogBytes bounds the child output kept to explain a failure.
 	maxLogBytes = 64 << 10
 	// failureLimit bounds the failure reason printed and injected.
-	failureLimit = 200
+	failureLimit = 120
 	prefix       = "ai-rulez session-start: "
 )
 
@@ -53,7 +53,9 @@ type Deps struct {
 	// timeout kills its whole process tree and its output cannot reach stdout).
 	Exe     string
 	TempDir string
-	Now     func() time.Time
+	// UID names the per-user lock directory inside TempDir and must be its owner (os.Getuid).
+	UID int
+	Now func() time.Time
 	// LoadConfig loads the project rooted at dir without fetching remote includes.
 	LoadConfig func(ctx context.Context, dir string) (*config.Config, error)
 }
@@ -278,7 +280,7 @@ func explain(res runner.Result) string {
 		return "the ai-rulez binary could not be started"
 	}
 	if host := deniedHost(res); host != "" {
-		return "the network policy denied " + host
+		return "the network policy denied " + conservative(host)
 	}
 	if denied(res) {
 		return "the network policy denied the request"
@@ -287,8 +289,8 @@ func explain(res runner.Result) string {
 	if strings.TrimSpace(text) == "" {
 		text = string(res.Stdout)
 	}
-	if line := lastLine(text); line != "" {
-		return truncate(line)
+	if line := truncate(conservative(lastLine(text))); line != "" {
+		return line
 	}
 	return fmt.Sprintf("exit code %d", res.ExitCode)
 }
@@ -337,6 +339,21 @@ func truncate(s string) string {
 		return s
 	}
 	return strings.ToValidUTF8(s[:failureLimit], "") + "..."
+}
+
+// conservative keeps the child's output line to ASCII letters, digits, spaces and
+// ".,:;_/@=+()-", replacing every other character with a space and collapsing runs, so
+// text a launcher or the network chose cannot inject markup, quotes or instructions in
+// code form into the agent's context.
+func conservative(s string) string {
+	s = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', strings.ContainsRune(".,:;_/@=+()-", r):
+			return r
+		}
+		return ' '
+	}, s)
+	return strings.Join(strings.Fields(s), " ")
 }
 
 func sanitizeLine(s string) string {
