@@ -312,6 +312,15 @@ server what applies to a path: `ai-rulez mcp --serve-skills --discover-skills` i
 index reads the files that already exist, so it needs no `generate` run. See
 [Monorepos: scopes and nested context](mcp-server.md#monorepos-scopes-and-nested-context).
 
+On a large repository the index is kept between runs: summaries of the indexed files and the scan verdicts of clean
+content live in the user cache (`[mcp] index_cache = "user" | "repo" | "off"`), so a warm start takes about a tenth of a
+cold one, and `ai-rulez cache status` / `ai-rulez cache clear` show and drop it
+([The index cache](mcp-server.md#the-index-cache)). While the server runs, a file watcher refreshes the index when a
+nested `AGENTS.md` or `.claude/skills` directory appears, changes or goes, and the server sends
+`resources/list_changed` ([Live refresh](mcp-server.md#live-refresh-of-the-index)). An agent can also add a skill where
+a harness will load it, with `create_skill` and `scope`, behind `allow_write`
+([Writing a skill into a scope](mcp-server.md#writing-a-skill-into-a-scope)).
+
 ---
 
 ## Scoped Rule Files
