@@ -19,7 +19,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return op.installSkillLocal(ctx, req)
 	}
 
-	sourceType, err := validateSkillSource(req.Source)
+	sourceType, err := validateSkillSource(op.baseDir, req.Source)
 	if err != nil {
 		return err
 	}
@@ -107,10 +107,7 @@ func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSki
 	var infos []InstalledSkillInfo
 	for i := range cfg.InstalledSkills {
 		skill := &cfg.InstalledSkills[i]
-		sourceType := sourceTypeLocal
-		if isGitURL(skill.Source) {
-			sourceType = sourceTypeGit
-		}
+		sourceType := skillSourceType(baseDir, skill.Source)
 
 		infos = append(infos, InstalledSkillInfo{
 			Name:   skill.Name,
@@ -146,11 +143,23 @@ func validateInstallSkillRequest(req *InstallSkillRequest) error {
 }
 
 // validateSkillSource validates that the skill source is accessible
-func validateSkillSource(source string) (string, error) {
+func validateSkillSource(baseDir, source string) (string, error) {
 	if isGitURL(source) {
 		return sourceTypeGit, validateGitURL(source)
 	}
-	return sourceTypeLocal, nil
+	return skillSourceType(baseDir, source), nil
+}
+
+// skillSourceType is "git" for a source the resolver clones (an https or ssh URL,
+// git@host:path, owner/repo or github:owner/repo, unless owner/repo names a
+// directory below baseDir) and "local" otherwise.
+func skillSourceType(baseDir, source string) string {
+	entries := []config.InstalledSkillConfig{{Source: source}}
+	config.NormalizeInstalledSkillSources(baseDir, entries)
+	if incl.IsGitURL(entries[0].Source) {
+		return sourceTypeGit
+	}
+	return sourceTypeLocal
 }
 
 // entry is the installed_skills entry the request describes.
