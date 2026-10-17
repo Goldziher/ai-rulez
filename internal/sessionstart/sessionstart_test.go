@@ -56,6 +56,7 @@ func newHarness(t *testing.T, session *config.SessionStartConfig) *harness {
 		Runner:  h.runner,
 		Exe:     fakeExe,
 		TempDir: t.TempDir(),
+		UID:     os.Getuid(),
 		Now:     time.Now,
 		LoadConfig: func(context.Context, string) (*config.Config, error) {
 			return h.cfg, nil
