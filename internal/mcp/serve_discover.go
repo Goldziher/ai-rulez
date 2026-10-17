@@ -207,7 +207,7 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 		presets = append(presets, d.cfg.Presets[i].GetName())
 	}
 	ix, err := repoindex.Build(ctx, repoindex.Options{
-		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Generated: d.isGenerated,
+		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Generated: d.isGenerated, Screen: d.screen,
 	})
 	if err != nil {
 		d.st.logger().Warn("Could not index the repository for skills", "error", err.Error())
@@ -219,6 +219,10 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 		if path.Base(p.Path) == skillMarkdown {
 			d.st.logger().Warn("Skipping a repository skill that cannot be read", "path", path.Dir(p.Path), "error", p.Err)
 		}
+	}
+	refusals := ix.Refusals()
+	for i := range refusals {
+		d.st.logger().Warn("Refusing to serve repository context", "kind", string(refusals[i].Item.Kind), "path", refusals[i].Item.Path, "reason", refusals[i].Reason)
 	}
 	d.report.Generated += ix.GeneratedSkipped(repoindex.KindSkill)
 	skills := ix.Skills()

@@ -51,10 +51,11 @@ func listFiles(ctx context.Context, root string) []string {
 	return files
 }
 
-// readRegular reads a regular file below root of at most limit bytes. ok is
+// ReadRegular reads a regular file below root of at most limit bytes. ok is
 // false, without an error, for a path that is gone, a symlink or another
-// non-regular file: the index never follows a link.
-func readRegular(root, rel string, limit int64) (data []byte, ok bool, err error) {
+// non-regular file: the index never follows a link. rel must come from the
+// index, never from a caller's argument.
+func ReadRegular(root, rel string, limit int64) (data []byte, ok bool, err error) {
 	abs := filepath.Join(root, filepath.FromSlash(rel))
 	info, err := os.Lstat(abs)
 	if err != nil {
@@ -67,7 +68,7 @@ func readRegular(root, rel string, limit int64) (data []byte, ok bool, err error
 		return nil, false, nil
 	}
 	if info.Size() > limit {
-		return nil, false, errTooLarge
+		return nil, false, ErrTooLarge
 	}
 	data, err = os.ReadFile(abs) //nolint:gosec // abs is below the project root and was just checked to be a regular file
 	if err != nil {

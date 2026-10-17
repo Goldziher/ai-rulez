@@ -63,14 +63,15 @@ type Problem struct {
 	Err  string
 }
 
-// maxFileBytes bounds a file the index reads: a larger one is reported as a
+// MaxFileBytes bounds a file the index reads: a larger one is reported as a
 // Problem and left out.
-const maxFileBytes = 1 << 20
+const MaxFileBytes = 1 << 20
 
 // maxDescriptionBytes bounds the description an item carries.
 const maxDescriptionBytes = 500
 
-var errTooLarge = errors.New("the file is larger than the index reads")
+// ErrTooLarge is the error of a file over the size the index reads.
+var ErrTooLarge = errors.New("the file is larger than the index reads")
 
 // Options configure Build.
 type Options struct {
@@ -225,7 +226,7 @@ func (b *builder) read() {
 	b.generated = map[Kind]int{}
 	for i := range b.cands {
 		c := &b.cands[i]
-		content, ok, err := readRegular(b.opts.Root, c.file, maxFileBytes)
+		content, ok, err := ReadRegular(b.opts.Root, c.file, MaxFileBytes)
 		if err != nil {
 			b.problems = append(b.problems, Problem{Path: c.file, Err: err.Error()})
 			continue
