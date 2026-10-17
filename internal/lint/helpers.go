@@ -207,17 +207,39 @@ func containsAnyFold(s string, stems []string) bool {
 }
 
 // indexFoldASCII is the index of the first occurrence of stem (lower-case
-// ASCII) in s, ignoring ASCII case; -1 when there is none.
+// ASCII) in s, ignoring ASCII case; -1 when there is none. It jumps between the
+// occurrences of the stem's first letter (either case) with IndexByte instead of
+// comparing every byte.
 func indexFoldASCII(s, stem string) int {
+	lo := stem[0]
+	up := lo
+	if lo >= 'a' && lo <= 'z' {
+		up = lo - 'a' + 'A'
+	}
 	lower := func(c byte) byte {
 		if c >= 'A' && c <= 'Z' {
 			return c + 'a' - 'A'
 		}
 		return c
 	}
-	for i := 0; i+len(stem) <= len(s); i++ {
-		if lower(s[i]) != stem[0] {
-			continue
+	// the next lower- and upper-case occurrence at or after from, -1 when there is none
+	nl, nu := indexFrom(s, lo, 0), -1
+	if up != lo {
+		nu = indexFrom(s, up, 0)
+	}
+	for from := 0; from+len(stem) <= len(s); {
+		if nl >= 0 && nl < from {
+			nl = indexFrom(s, lo, from)
+		}
+		if nu >= 0 && nu < from {
+			nu = indexFrom(s, up, from)
+		}
+		i := nl
+		if i < 0 || nu >= 0 && nu < i {
+			i = nu
+		}
+		if i < 0 || i+len(stem) > len(s) {
+			return -1
 		}
 		j := 1
 		for j < len(stem) && lower(s[i+j]) == stem[j] {
@@ -226,8 +248,18 @@ func indexFoldASCII(s, stem string) int {
 		if j == len(stem) {
 			return i
 		}
+		from = i + 1
 	}
 	return -1
+}
+
+// indexFrom is the index of byte c in s at or after from, or -1.
+func indexFrom(s string, c byte, from int) int {
+	i := strings.IndexByte(s[from:], c)
+	if i < 0 {
+		return -1
+	}
+	return from + i
 }
 
 func (g gatedRe) MatchString(s string) bool { return g.mayMatch(s) && g.re.MatchString(s) }
