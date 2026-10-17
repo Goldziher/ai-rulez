@@ -531,6 +531,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
 | `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. Either mode also indexes nested instruction files, rules and agents by scope. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository) and [Monorepos](#monorepos-scopes-and-nested-context). |
+| `--exclude <glob>` | Leave the paths a glob matches out of repository discovery: skill directories and the context index alike. Repeatable; added to `[mcp] exclude`. Needs discovery (`--discover-skills` or `[mcp] discover_skills`). See [Excluding paths](#excluding-paths). |
 | `--max-clone-bytes` | Clone size limit in bytes for git skill sources that set no `max_clone_bytes`. Overrides `AI_RULEZ_MAX_CLONE_BYTES`; 0 (default) defers to it, then to 256 MiB. |
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
@@ -745,6 +746,32 @@ the scan level and of the names and content hashes of the scanned files). It nev
   `load_context` scans the body it reads again on every call.
 - **Cost.** `docs/performance.md` has the measured numbers; on the benchmark monorepo (1500 items over 500 scopes) a
   warm start takes about a tenth of a cold one.
+
+#### Excluding paths
+
+`--exclude <glob>` (repeatable) and `exclude = [...]` under `[mcp]` in `.ai-rulez/config.toml` (or the root
+`ai-rulez.toml`) leave paths out of discovery:
+
+```toml
+[mcp]
+discover_skills = "repo"
+exclude = ["third_party/**", "**/fixtures/"]
+```
+
+```bash
+ai-rulez mcp --serve-skills --discover-skills --exclude 'examples/**' --exclude '**/testdata/'
+```
+
+Globs are relative to the project root with slashes: `**` crosses directories, `*` and `?` stay within one, `{a,b}`
+alternates, a pattern without a slash (`AGENTS.md`, `legacy`) matches at any depth, and a pattern naming a directory
+(`third_party`, `third_party/`, `third_party/**`) excludes everything below it. A glob that leaves the project
+(`../x`) or is empty is rejected. The flag's globs are added to the configuration's; neither replaces the other.
+
+An excluded file is dropped from the file listing before anything is read, so it costs no parsing, scan or cache
+entry. The globs apply to the skill directories and to the whole context index: `CLAUDE.md`, `AGENTS.md`,
+`GEMINI.md`, Copilot instructions, rules, agents and commands. An excluded directory marks no scope. The file watcher
+does not follow excluded paths either, so a change below one does not refresh the index. `--exclude` without
+discovery is an error, as it would silently do nothing; the configuration key is ignored while discovery is off.
 
 #### Live refresh of the index
 

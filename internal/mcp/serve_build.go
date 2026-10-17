@@ -104,6 +104,10 @@ type ServeSetup struct {
 	// included skills whatever their delivery, "off" neither. Empty takes [mcp]
 	// discover_skills from the configuration (off when unset). See serve_discover.go.
 	DiscoverSkills string
+	// Exclude lists globs, relative to the project root, of the paths repository
+	// discovery never reads (skill directories and the context index); they add
+	// to [mcp] exclude. It needs discovery to be on.
+	Exclude []string
 	// Daemon opts `mcp --serve-skills` into the shared per-repo daemon: the
 	// process either runs the daemon or proxies its stdin/stdout to one, and it
 	// falls back to serving in-process when no daemon can be reached. Off is
@@ -203,7 +207,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			return b.catalog, nil
 		}
 		if first.catalog.repository() != nil {
-			opts.IndexWatch = &IndexWatch{Root: first.cfg.BaseDir, Skip: configDirSkip(first.cfg), Debounce: st.IndexWatchDebounce}
+			opts.IndexWatch = &IndexWatch{Root: first.cfg.BaseDir, Skip: configDirSkip(first.cfg), Exclude: st.excludeGlobs(first.cfg), Debounce: st.IndexWatchDebounce}
 		}
 		logs := st.usageFiles(first.cfg)
 		opts.Fingerprint = func() (string, error) { return fingerprint(roots, logs...) }
@@ -316,6 +320,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	}
 	mode, err := st.discoverMode(b.cfg)
 	if err != nil {
+		return nil, err
+	}
+	if err := st.checkExclude(mode); err != nil {
 		return nil, err
 	}
 	// The rendered catalog is a function of the files this build fingerprints and

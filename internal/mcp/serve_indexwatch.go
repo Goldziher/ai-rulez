@@ -11,6 +11,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
 	"github.com/Goldziher/ai-rulez/v5/internal/watch"
 )
 
@@ -38,6 +39,9 @@ type IndexWatch struct {
 	// Skip lists project-relative directories whose changes are not index
 	// changes (the configuration directory, which the poll covers).
 	Skip []string
+	// Exclude lists the globs of the paths discovery leaves out; the watcher
+	// does not follow them.
+	Exclude []string
 	// Debounce is the quiet period after the last change before a refresh
 	// (0 selects 300 ms).
 	Debounce time.Duration
@@ -92,7 +96,7 @@ func relevantIndexChange(rel string, isDir bool) bool {
 }
 
 // indexWatchIgnore filters the paths the watcher follows.
-func indexWatchIgnore(root string, skip []string) func(string) bool {
+func indexWatchIgnore(root string, skip []string, exclude *repoindex.Excluder) func(string) bool {
 	return func(p string) bool {
 		rel, err := filepath.Rel(root, p)
 		if err != nil || rel == "." {
@@ -109,7 +113,7 @@ func indexWatchIgnore(root string, skip []string) func(string) bool {
 				return true
 			}
 		}
-		return false
+		return exclude.Excluded(rel) || exclude.ExcludedDir(rel)
 	}
 }
 
@@ -120,11 +124,15 @@ func runIndexWatch(ctx context.Context, iw *IndexWatch, log logger.Logger, refre
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
 		root = resolved
 	}
+	exclude, err := repoindex.NewExcluder(iw.Exclude)
+	if err != nil {
+		log.Warn("Ignoring the exclude globs of the repository watcher", "error", err.Error())
+	}
 	debug := func(msg string, kv ...any) { log.Debug(msg, kv...) }
 	warn := func(msg string, kv ...any) { log.Warn(msg, kv...) }
-	err := watch.Watch(ctx, watch.Options{
+	err = watch.Watch(ctx, watch.Options{
 		Targets:  func() []watch.Target { return []watch.Target{{Path: root}} },
-		Ignore:   indexWatchIgnore(root, iw.Skip),
+		Ignore:   indexWatchIgnore(root, iw.Skip, exclude),
 		Debounce: iw.Debounce,
 		Log:      debug,
 		Warn:     warn,

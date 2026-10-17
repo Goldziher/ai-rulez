@@ -88,6 +88,11 @@ type Options struct {
 	MaxItems int
 	// Skip lists project-relative directories the index never enters.
 	Skip []string
+	// Exclude lists globs, relative to Root and slash separated, of the paths the
+	// index never enters: a file a glob matches, or one below a directory it
+	// matches, is not read and marks no scope. A pattern without a slash matches
+	// at any depth and a trailing slash names a directory.
+	Exclude []string
 	// Files, when set, is the file listing to index instead of listing the
 	// project (slash separated, relative to Root).
 	Files []string
@@ -152,19 +157,24 @@ func Build(ctx context.Context, opts Options) (*Index, error) {
 	if limit <= 0 {
 		limit = DefaultMaxItems
 	}
+	exclude, err := NewExcluder(opts.Exclude)
+	if err != nil {
+		return nil, err
+	}
 	files := opts.Files
 	if files == nil {
 		files = listFiles(ctx, opts.Root)
 	}
-	b := &builder{opts: opts, limit: limit, markers: map[string]map[string]bool{}}
+	b := &builder{opts: opts, limit: limit, exclude: exclude, markers: map[string]map[string]bool{}}
 	b.collect(files)
 	b.read()
 	return b.finish(), nil
 }
 
 type builder struct {
-	opts  Options
-	limit int
+	opts    Options
+	limit   int
+	exclude *Excluder
 	// cands are the units to read, in index order, after the cap.
 	cands []candidate
 	found int
@@ -180,7 +190,7 @@ type builder struct {
 
 // collect classifies the listed files and applies the cap.
 func (b *builder) collect(files []string) {
-	m := newMatcher(b.opts.Presets, b.opts.Skip)
+	m := newMatcher(b.opts.Presets, b.opts.Skip, b.exclude)
 	var skills, others []candidate
 	for _, file := range files {
 		segs := strings.Split(file, "/")

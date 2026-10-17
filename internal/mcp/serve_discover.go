@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
@@ -99,6 +101,39 @@ func (st *ServeSetup) discoverMode(cfg *config.Config) (string, error) {
 	}
 	mode, err := config.ParseDiscoverSkills(value)
 	return mode, err //nolint:wrapcheck // names the field and the values
+}
+
+// checkExclude validates the --exclude globs and refuses them without discovery,
+// where they would silently do nothing.
+func (st *ServeSetup) checkExclude(mode string) error {
+	if len(st.Exclude) == 0 {
+		return nil
+	}
+	if mode == config.DiscoverOff {
+		return oops.
+			Hint("Add --discover-skills (or set [mcp] discover_skills), or drop --exclude").
+			Errorf("--exclude applies to repository discovery, which is off")
+	}
+	return config.ValidateExcludeGlobs(st.Exclude) //nolint:wrapcheck // names the field and the glob
+}
+
+// excludeGlobs are the globs discovery leaves out: [mcp] exclude, then the
+// --exclude flag's, without repeats.
+func (st *ServeSetup) excludeGlobs(cfg *config.Config) []string {
+	var globs []string
+	if cfg != nil && cfg.MCP != nil {
+		globs = append(globs, cfg.MCP.Exclude...)
+	}
+	globs = append(globs, st.Exclude...)
+	seen := make(map[string]bool, len(globs))
+	out := globs[:0:0]
+	for _, g := range globs {
+		if !seen[g] {
+			seen[g] = true
+			out = append(out, g)
+		}
+	}
+	return out
 }
 
 // discovery is one run of skill discovery.
@@ -254,7 +289,7 @@ func (d *discovery) find(ctx context.Context) []repoindex.Item {
 		d.st.logger().Warn("The index cache is not where it was asked to be", "reason", d.cacheWarning)
 	}
 	opts := repoindex.Options{
-		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Generated: d.isGenerated, Screen: d.screen,
+		Root: d.cfg.BaseDir, Presets: presets, Skip: d.skippedPrefixes(), Exclude: d.st.excludeGlobs(d.cfg), Generated: d.isGenerated, Screen: d.screen,
 		MaxItems: d.st.indexLimit,
 	}
 	if d.store.Enabled() {

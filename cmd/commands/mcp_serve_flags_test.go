@@ -3,6 +3,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,4 +99,40 @@ func TestServeSetupFromFlags_MergesTheAuthoringSurface(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Len(t, setup.Authoring, plain+1, "--read-only adds WithReadOnly")
+}
+
+func TestServeSetupFromFlags_ExcludeIsRepeatable(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{"unset", nil, nil},
+		{"one glob", []string{"--exclude", "vendor/**"}, []string{"vendor/**"}},
+		{"repeated", []string{"--exclude", "vendor/**", "--exclude=**/fixtures/"}, []string{"vendor/**", "**/fixtures/"}},
+		{"a glob keeps its commas", []string{"--exclude", "a/{b,c}/**"}, []string{"a/{b,c}/**"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			require.NoError(t, MCPCmd.Flags().Parse(tt.args))
+			t.Cleanup(func() {
+				f := MCPCmd.Flags().Lookup(flagServeExclude)
+				require.NoError(t, f.Value.(pflag.SliceValue).Replace(nil))
+				f.Changed = false
+			})
+
+			// Act
+			setup, err := serveSetupFromFlags(MCPCmd)
+
+			// Assert
+			require.NoError(t, err)
+			assert.ElementsMatch(t, tt.want, setup.Exclude)
+		})
+	}
+}
+
+func TestMCPCmd_ExcludeOnlyMakesSenseWhenServing(t *testing.T) {
+	assert.Contains(t, dynamicServeFlagNames, flagServeExclude)
+	assert.NotNil(t, MCPCmd.Flags().Lookup(flagServeExclude))
 }

@@ -1157,6 +1157,9 @@ func (c *Config) validateMCP() error { //nolint:gocyclo // a flat sequence of in
 	if _, err := ParseIndexCache(m.IndexCache); err != nil {
 		return err
 	}
+	if err := ValidateExcludeGlobs(m.Exclude); err != nil {
+		return err
+	}
 	return m.validateSkillsInstructions()
 }
 

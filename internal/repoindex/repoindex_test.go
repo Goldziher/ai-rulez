@@ -177,6 +177,104 @@ func TestBuild_InfersScopesAndItems(t *testing.T) {
 	}
 }
 
+func TestBuild_ExcludeGlobs(t *testing.T) {
+	tests := []struct {
+		name       string
+		exclude    []string
+		wantScopes []string
+		wantItems  []string
+	}{
+		{
+			name:       "a directory glob drops everything below it and its scope",
+			exclude:    []string{"pkg/api/**"},
+			wantScopes: []string{".", "pkg/web"},
+			wantItems:  []string{"instruction:.:AGENTS.md", "instruction:.:CLAUDE.md", "rule:.:style", "rule:pkg/web:ui", "skill:.:lint", "skill:pkg/web:ui"},
+		},
+		{
+			name:       "a directory named without a wildcard drops what is below it",
+			exclude:    []string{"pkg"},
+			wantScopes: []string{"."},
+			wantItems:  []string{"instruction:.:AGENTS.md", "instruction:.:CLAUDE.md", "rule:.:style", "skill:.:lint"},
+		},
+		{
+			name:       "a pattern without a slash matches at any depth",
+			exclude:    []string{"AGENTS.md"},
+			wantScopes: []string{".", "pkg/api", "pkg/web"},
+			wantItems: []string{
+				"agent:pkg/api:reviewer", "instruction:.:CLAUDE.md", "rule:.:style", "rule:pkg/web:ui",
+				"skill:.:lint", "skill:pkg/api:lint", "skill:pkg/web:ui",
+			},
+		},
+		{
+			name:       "an extension glob",
+			exclude:    []string{"**/*.mdc", "**/SKILL.md"},
+			wantScopes: []string{".", "pkg/api"},
+			wantItems: []string{
+				"agent:pkg/api:reviewer", "instruction:.:AGENTS.md", "instruction:.:CLAUDE.md",
+				"instruction:pkg/api:AGENTS.md", "rule:.:style",
+			},
+		},
+		{
+			name:       "braces and a trailing slash",
+			exclude:    []string{"pkg/{api,web}/"},
+			wantScopes: []string{"."},
+			wantItems:  []string{"instruction:.:AGENTS.md", "instruction:.:CLAUDE.md", "rule:.:style", "skill:.:lint"},
+		},
+		{
+			name:       "a pattern that matches nothing changes nothing",
+			exclude:    []string{"elsewhere/**"},
+			wantScopes: []string{".", "pkg/api", "pkg/web"},
+			wantItems: []string{
+				"agent:pkg/api:reviewer", "instruction:.:AGENTS.md", "instruction:.:CLAUDE.md", "instruction:pkg/api:AGENTS.md",
+				"rule:.:style", "rule:pkg/web:ui", "skill:.:lint", "skill:pkg/api:lint", "skill:pkg/web:ui",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := layout(t, monorepo())
+
+			// Act
+			ix, err := Build(context.Background(), Options{Root: root, Presets: []string{"claude", "cursor"}, Exclude: tt.exclude})
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantScopes, scopePaths(ix))
+			assert.Equal(t, tt.wantItems, nilIfEmpty(keys(ix.Items())))
+		})
+	}
+}
+
+func TestBuild_ExcludedFilesAreNeverRead(t *testing.T) {
+	// Arrange: an excluded file that is over the size the index reads would be a problem if it were read.
+	root := layout(t, map[string]string{
+		"AGENTS.md":                 "# Root\n",
+		"vendor/AGENTS.md":          strings.Repeat("x", MaxFileBytes+1),
+		"vendor/.claude/rules/r.md": ruleMD("R"),
+		"app/.claude/rules/keep.md": ruleMD("Keep"),
+	})
+	var read []string
+	screen := func(it Item, _ []byte) (bool, string) { read = append(read, it.Path); return true, "" }
+
+	// Act
+	ix, err := Build(context.Background(), Options{Root: root, Exclude: []string{"vendor/**"}, Screen: screen})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, ix.Problems(), "the oversized excluded file was not read")
+	assert.ElementsMatch(t, []string{"AGENTS.md", "app/.claude/rules/keep.md"}, read)
+}
+
+func TestBuild_RejectsAnInvalidExcludeGlob(t *testing.T) {
+	root := layout(t, monorepo())
+
+	_, err := Build(context.Background(), Options{Root: root, Exclude: []string{"{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}"}})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exclude")
+}
+
 func nilIfEmpty(s []string) []string {
 	if len(s) == 0 {
 		return nil

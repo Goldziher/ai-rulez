@@ -48,10 +48,11 @@ type dirDef struct {
 type matcher struct {
 	byFirst map[string][]dirDef
 	skip    []string
+	exclude *Excluder
 }
 
-func newMatcher(presets, skip []string) *matcher {
-	m := &matcher{byFirst: map[string][]dirDef{}, skip: skip}
+func newMatcher(presets, skip []string, exclude *Excluder) *matcher {
+	m := &matcher{byFirst: map[string][]dirDef{}, skip: skip, exclude: exclude}
 	seen := map[string]bool{}
 	add := func(dir string, kind Kind, source string) {
 		key := string(kind) + "|" + dir
@@ -121,8 +122,11 @@ func (m *matcher) skipped(segs []string, file string) bool {
 			return true
 		}
 	}
-	return false
+	return m.excluded(file)
 }
+
+// excluded reports whether an Exclude glob matches the file or a directory above it.
+func (m *matcher) excluded(file string) bool { return m.exclude.Excluded(file) }
 
 // candidate is a file that marks an item, before it is read.
 type candidate struct {

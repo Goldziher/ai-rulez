@@ -377,6 +377,11 @@ type MCPConfig struct {
 	// (that project directory) or "off". The cache holds summaries and scan
 	// verdicts, never file bodies.
 	IndexCache string `yaml:"index_cache,omitempty" json:"index_cache,omitempty" toml:"index_cache,omitempty"`
+
+	// Exclude lists globs, relative to the project root, of the paths repository
+	// discovery (`mcp --serve-skills --discover-skills`) never reads: skill
+	// directories and the context index alike. The --exclude flag adds to it.
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.

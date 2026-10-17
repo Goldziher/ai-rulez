@@ -165,3 +165,27 @@ func TestServeSkills_ContextToolsAreAbsentWithoutDiscovery(t *testing.T) {
 	result, _ := resp["result"].(map[string]any)
 	assert.True(t, resp["error"] != nil || result["isError"] == true, "find_context is not a tool without discovery: %v", resp)
 }
+
+func TestServeSkills_ExcludeFlagAndConfigurationOverStdio(t *testing.T) {
+	// Arrange: the flag excludes the api package, the configuration the web package.
+	files := map[string]string{
+		"skills/own/SKILL.md":                   serveSkill("own", "The own skill of ai-rulez", "Own body.", ""),
+		"@pkg/api/.claude/skills/lint/SKILL.md": serveSkill("lint", "Lint the api package", "Api lint.", ""),
+		"@pkg/web/skills/ui/SKILL.md":           serveSkill("ui", "Build a web ui component", "Ui body.", ""),
+		"@pkg/web/AGENTS.md":                    "# Web conventions\n",
+		"@pkg/api/AGENTS.md":                    "# API conventions\n",
+		"@AGENTS.md":                            "# Root conventions\n",
+	}
+	root := serveProject(t, discoverServeConfig+"\n[mcp]\nexclude = [\"pkg/web/**\"]\n", files)
+	p := startServe(t, root, "--discover-skills", "--no-watch", "--exclude", "pkg/api/**")
+	p.initialize()
+
+	// Act
+	all := p.toolResult("find_context", map[string]any{"scope": ".", "recursive": true})
+
+	// Assert
+	assert.Equal(t, []string{"AGENTS.md"}, resultField(all, "name"))
+	assert.Empty(t, p.load("lint"), "excluded by the flag")
+	assert.Empty(t, p.load("ui"), "excluded by the configuration")
+	assert.Contains(t, p.load("own"), "Own body.")
+}

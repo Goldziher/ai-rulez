@@ -2576,6 +2576,14 @@
           "default": "user",
           "description": "Where the repository index of `mcp --serve-skills --discover-skills` keeps its cache of item summaries and scan verdicts (never file bodies): \"user\" is the user cache directory, with a gitignored directory in the project (.ai-rulez/.cache/) as the fallback when it is not writable; \"repo\" always uses that project directory; \"off\" keeps no cache. The scan, allow and deny rules run again whenever an item is loaded."
         },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Globs, relative to the project root, of the paths repository discovery (`mcp --serve-skills --discover-skills`) never reads: skill directories and the context index (CLAUDE.md, AGENTS.md, rules, agents) alike. `**` crosses directories, `*` and `?` do not, `{a,b}` alternates, a pattern without a slash matches at any depth and a trailing slash matches a directory and everything below it. The --exclude flag adds to this list."
+        },
         "self_server": {
           "default": true,
           "description": "Add ai-rulez's own MCP server (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. Defaults to true in v5, so a project gets the server out of the box; set it to false (or pass generate --no-self-mcp) to opt out. The entry is merged into the file, so hand-authored servers survive, and .claude/settings.json is not touched.",
