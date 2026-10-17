@@ -1,13 +1,18 @@
 package config
 
 import (
+	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -243,4 +248,53 @@ func TestOKFDirRejectsControlDirs(t *testing.T) {
 		require.Error(t, err, dir)
 		assert.Contains(t, err.Error(), "okf.dir", dir)
 	}
+}
+
+func TestGitVisibleFilesSpawnsOneProcessOutsideARepository(t *testing.T) {
+	t.Parallel()
+	var calls [][]string
+	git := gitutil.New(runner.Func(func(_ context.Context, spec runner.Spec) runner.Result {
+		calls = append(calls, spec.Argv)
+		return runner.Result{Status: runner.StatusExit, ExitCode: 128, Err: errors.New("fatal: not a git repository")}
+	}))
+
+	got := gitVisibleFiles(t.Context(), git, logger.Or(nil), t.TempDir(), "SKILL.md")
+
+	assert.Nil(t, got)
+	require.Len(t, calls, 1, "a failed check-ignore with status 128 already says there is no repository")
+	assert.Contains(t, calls[0], "check-ignore")
+}
+
+func TestGitVisibleFilesListsAfterANotIgnoredAnswer(t *testing.T) {
+	t.Parallel()
+	var verbs []string
+	git := gitutil.New(runner.Func(func(_ context.Context, spec runner.Spec) runner.Result {
+		verbs = append(verbs, spec.Argv[len(spec.Argv)-1])
+		if slices.Contains(spec.Argv, "check-ignore") {
+			return runner.Result{Status: runner.StatusExit, ExitCode: 1}
+		}
+		return runner.Result{Status: runner.StatusOK, Stdout: []byte("SKILL.md\x00references/a.md\x00")}
+	}))
+
+	got := gitVisibleFiles(t.Context(), git, logger.Or(nil), t.TempDir(), "SKILL.md")
+
+	assert.Equal(t, map[string]bool{"SKILL.md": true, "references/a.md": true}, got)
+	assert.Len(t, verbs, 2)
+}
+
+func TestTakeSnapshotSpawnsOneProcessOutsideARepository(t *testing.T) {
+	t.Parallel()
+	parent := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(parent, "skill-a"), 0o755))
+	var calls [][]string
+	git := gitutil.New(runner.Func(func(_ context.Context, spec runner.Spec) runner.Result {
+		calls = append(calls, spec.Argv)
+		return runner.Result{Status: runner.StatusExit, ExitCode: 128, Err: errors.New("fatal: not a git repository")}
+	}))
+
+	snap := (&bundleSnapshots{}).takeSnapshot(t.Context(), git, logger.Or(nil), parent, "SKILL.md", nil)
+
+	assert.True(t, snap.probed["skill-a"])
+	assert.Empty(t, snap.files)
+	require.Len(t, calls, 1, "a failed check-ignore with status 128 already says there is no repository")
 }
