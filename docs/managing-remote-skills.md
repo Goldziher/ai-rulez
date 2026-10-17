@@ -76,9 +76,8 @@ served the entry runs `mcp --serve-skills`. To opt out set `self_server = false`
   local skill wins and `generate` warns `Installed skill name conflicts with local skill, skipping`. Rename or remove
   one of them (`ai-rulez skill remove <name>` drops the installed entry).
 - **`generate --refresh-remote` refuses with "the security scan of the new tree has error findings".** Nothing was
-  written and `ai-rulez.lock` is unchanged. The error text suggests `--accept-findings`, but `generate` has no such
-  flag. Review the listed findings in the new version first. If you accept them, run
-  `ai-rulez update --accept-findings` to move the pin to the new version (`ai-rulez lock --accept-findings` re-pins
-  what is already pinned and does not move it), then `ai-rulez generate`. `generate` scans the imported content
-  again at the entry's `trust` level, so error findings still stop it unless you set `trust = "warn"` on the entry
-  or `[lint.security] scan_imports = "warn"`.
+  written and `ai-rulez.lock` is unchanged. Review the listed findings in the new version first. If you accept
+  them, run `ai-rulez generate --refresh-remote --accept-findings` to pin the new version and generate in one step
+  (or `ai-rulez update --accept-findings`, then `ai-rulez generate`; `ai-rulez lock --accept-findings` re-pins what is
+  already pinned and does not move it). `generate` scans the imported content again at the entry's `trust` level, so
+  error findings still stop it unless you set `trust = "warn"` on the entry or `[lint.security] scan_imports = "warn"`.
