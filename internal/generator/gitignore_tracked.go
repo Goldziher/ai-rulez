@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
@@ -44,7 +45,7 @@ func trackedBlockWarnings(ctx context.Context, git gitutil.Git, dir string, cont
 		if filepath.Clean(m.Source) != gitignoreFileName || m.Line < first || m.Line > last || m.Negated() {
 			continue
 		}
-		if strings.Contains(p, ".local.") || strings.HasSuffix(p, generatedLocalManifestName) {
+		if strings.Contains(p, ".local.") || strings.HasSuffix(p, generatedLocalManifestName) || strings.HasSuffix(p, config.RootManifestNames()[1]) {
 			continue
 		}
 		out = append(out, trackedByBlock{Path: p, Rule: m.Pattern})

@@ -36,6 +36,10 @@ func (g *OKFPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 	if cfg.RoleActive() {
 		return nil, nil
 	}
+	// A project that keeps its own files by hand has no authored content to document.
+	if cfg.SkipsRootFiles() {
+		return nil, nil
+	}
 	kinds, err := okfbridge.ParseKinds(cfg.OKFInclude())
 	if err != nil {
 		return nil, err

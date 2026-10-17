@@ -118,6 +118,7 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *discoveredConfigs
 		return nil
 	}
 	if !d.IsDir() {
+		recordRootConfig(path, d.Name(), out, spinner)
 		return nil
 	}
 
@@ -181,6 +182,22 @@ func recordedConfigLocation(path, name string, out *discoveredConfigs, spinner *
 		return false
 	}
 	return true
+}
+
+// recordRootConfig records an ai-rulez.toml (the single-file layout) when no
+// config directory sits beside it: a directory-based configuration wins, and an
+// explicit --config-dir is honored exactly, so neither looks for the file.
+func recordRootConfig(path, name string, out *discoveredConfigs, spinner *progress.Bar) {
+	if configDir != "" || name != config.RootConfigFilename {
+		return
+	}
+	if config.ResolveConfigDirName(filepath.Dir(path)) != config.RootConfigDirName {
+		return
+	}
+	out.configs = append(out.configs, path)
+	if err := spinner.Add(1); err != nil {
+		logger.Debug("Failed to update spinner", "error", err)
+	}
 }
 
 func targetConfigDirName() string {

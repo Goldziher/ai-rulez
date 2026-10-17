@@ -42,7 +42,7 @@ func (c *Config) HasLocalInputs() bool {
 }
 
 func localConfigNames() []string {
-	return []string{localVariantName(configTOMLFilename)}
+	return []string{localVariantName(configTOMLFilename), RootLocalConfigFilename}
 }
 
 // isLocalConfigFilename reports whether base is a config.local.* overlay name.
@@ -59,10 +59,12 @@ func isLocalConfigFilename(base string) bool {
 // there is none, and an error for a V3 config.local.yaml, .yml or .json, which
 // v5 no longer reads (ignoring it would silently drop the overrides).
 func findLocalConfigFile(v workspace.View, configDir string) (path string, err error) {
-	if legacy := firstExistingFile(v, configDir, legacyLocalNames); legacy != "" {
-		return "", newLegacyConfigError(legacy)
+	name := localOverlayName(v, configDir)
+	if name != RootLocalConfigFilename {
+		if legacy := firstExistingFile(v, configDir, legacyLocalNames); legacy != "" {
+			return "", newLegacyConfigError(legacy)
+		}
 	}
-	name := localVariantName(configTOMLFilename)
 	info, statErr := v.Stat(filepath.Join(configDir, name))
 	if statErr != nil {
 		if os.IsNotExist(statErr) {
@@ -99,14 +101,20 @@ func readConfigDoc(v workspace.View, path string) (map[string]any, error) {
 // withLocalOverlay applies a config.local.* overlay found beside the main
 // config, unless disabled. Without an overlay cfg is returned untouched.
 func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, error) {
-	if err := withDefinitionFiles(v, cfg, configDir); err != nil {
-		return nil, err
+	var (
+		mainDoc map[string]any
+		layers  []string
+	)
+	// The root layout has no directory to hold definition or layer files.
+	if !isRootLayoutMain(mainPath, configDir) {
+		if err := withDefinitionFiles(v, cfg, configDir); err != nil {
+			return nil, err
+		}
+		var err error
+		if cfg, mainDoc, layers, err = withLayers(v, cfg, mainPath, configDir, lo); err != nil {
+			return nil, err
+		}
 	}
-	layered, mainDoc, layers, err := withLayers(v, cfg, mainPath, configDir, lo)
-	if err != nil {
-		return nil, err
-	}
-	cfg = layered
 	if lo.withoutLocal {
 		return cfg, nil
 	}

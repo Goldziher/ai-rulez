@@ -42,7 +42,7 @@ func DeriveLocalSchema(main []byte) ([]byte, error) {
 		doc["$id"] = strings.Replace(id, ConfigSchemaFile, LocalSchemaFile, 1)
 	}
 	doc["title"] = "AI Rules Local Overlay Configuration"
-	doc["description"] = "Schema for config.local.toml machine-local overlay files merged onto the shared ai-rulez config"
+	doc["description"] = "Schema for config.local.toml (ai-rulez.local.toml beside a root ai-rulez.toml) machine-local overlay files merged onto the shared ai-rulez config"
 
 	props, ok := doc[propertiesField].(map[string]any)
 	if !ok {
