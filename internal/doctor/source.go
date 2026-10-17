@@ -40,7 +40,7 @@ func checkSource(_ context.Context, s *state) []Finding {
 // shadowedConfig reports a config.toml that .agents/ai-rulez.toml takes precedence over.
 func shadowedConfig(cfg *config.Config) []Finding {
 	if !cfg.AgentsLayout {
-		return nil
+		return shadowedRootConfig(cfg)
 	}
 	var out []Finding
 	for _, dir := range []string{".ai-rulez", ".config/ai-rulez"} {
@@ -54,6 +54,20 @@ func shadowedConfig(cfg *config.Config) []Finding {
 		}
 	}
 	return out
+}
+
+// shadowedRootConfig reports an ai-rulez.toml that the config directory in use
+// takes precedence over.
+func shadowedRootConfig(cfg *config.Config) []Finding {
+	if cfg.Contentless() || cfg.BaseDir == "" || !isFile(filepath.Join(cfg.BaseDir, config.RootConfigFilename)) {
+		return nil
+	}
+	dir := cfg.ConfigDirName
+	return []Finding{{
+		Check: CheckSource, Severity: SeverityWarning, Path: config.RootConfigFilename,
+		Message: config.RootConfigFilename + " is ignored: " + dir + "/ takes precedence",
+		Hint:    "keep one configuration; move settings you still need into " + dir + "/config.toml, or remove the directory to use " + config.RootConfigFilename,
+	}}
 }
 
 // ignoredTree reports content of the .ai-rulez tree that source = "agents" does not read.

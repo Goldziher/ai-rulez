@@ -166,6 +166,11 @@ func LoadSpecs(cfg *config.Config) (specs []Spec, problems []Problem) {
 		specs = append(specs, sp)
 	}
 	dir := filepath.Join(cfg.ConfigDir, VerifiersDirName)
+	if cfg.Contentless() {
+		// The project root has no verifiers directory: only [[verifiers]] and imports count.
+		imported, importProblems := loadImported(cfg, seen)
+		return append(specs, imported...), append(problems, importProblems...)
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if !isMissing(err) {

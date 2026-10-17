@@ -234,6 +234,9 @@ func bootstrapBase(absPath string) string {
 		return filepath.Dir(absPath)
 	}
 	if !info.IsDir() {
+		if filepath.Base(absPath) == RootConfigFilename && IsRootConfigDir(filepath.Dir(absPath)) {
+			return filepath.Dir(absPath)
+		}
 		return ProjectBaseDir(filepath.Dir(absPath))
 	}
 	if st, err := os.Stat(filepath.Join(absPath, configTOMLFilename)); err == nil && !st.IsDir() {

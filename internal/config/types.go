@@ -184,8 +184,11 @@ type Config struct {
 	ConfigFilePath string `yaml:"-" json:"-" toml:"-"`
 	// AgentsLayout is set when the configuration was read from .agents/ai-rulez.toml,
 	// which selects the "agents" source (ConfigDir is then .agents/.ai-rulez).
-	AgentsLayout bool         `yaml:"-" json:"-" toml:"-"`
-	Content      *ContentTree `yaml:"-" json:"-" toml:"-"`
+	AgentsLayout bool `yaml:"-" json:"-" toml:"-"`
+	// contentless is set when the configuration was read from ai-rulez.toml at the
+	// project root: there is no content tree (see Contentless).
+	contentless bool
+	Content     *ContentTree `yaml:"-" json:"-" toml:"-"`
 	// LocalContent holds machine-local override content scanned from
 	// .ai-rulez/local/ (rules + context only). It is kept strictly separate
 	// from Content so it never lands in committed output; it is emitted only to
