@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -76,8 +77,14 @@ func watchedServer(t *testing.T, root string, mutate ...func(*ServeSetup)) (*Ser
 func awaitIndexWatch(t *testing.T, root string, session *sdkmcp.ClientSession) {
 	t.Helper()
 	const probe = "zz-watch-probe"
-	writeFile(t, root, probe+"/AGENTS.md", "# probe\n")
-	eventually(t, "the watcher sees the probe file", func() bool { return contextCount(t, session, probe) == 1 })
+	// A change made before the watcher is armed is lost for good, so the probe file is written again on
+	// every poll until the index shows it.
+	tick := 0
+	eventually(t, "the watcher sees the probe file", func() bool {
+		tick++
+		writeFile(t, root, probe+"/AGENTS.md", fmt.Sprintf("# probe %d\n", tick))
+		return contextCount(t, session, probe) == 1
+	})
 	require.NoError(t, os.RemoveAll(filepath.Join(root, probe)))
 	eventually(t, "the watcher sees the probe go", func() bool { return contextCount(t, session, probe) == 0 })
 }
