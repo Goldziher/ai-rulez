@@ -272,6 +272,7 @@ rewrites them), and the test fails when they are stale.
 | `roles show` | a presentation of one role; resolve_role returns what the role keeps |
 | `edit rule` | partial field edits and stdin input; update_rule is the whole-item replacement for a tool client |
 | `scanners *` | run external scanner programs, possibly with egress |
+| `session-start` | a hook entry point the harness calls when a session starts; it runs generate |
 | `sign`, `trust update` | signs with a key, an OIDC identity or a transparency log: credentials and egress |
 | `edit skill` | partial field edits and stdin input; update_skill is the whole-item replacement for a tool client |
 | `telemetry *` | consent and network egress of usage data |

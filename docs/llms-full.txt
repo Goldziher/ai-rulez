@@ -2352,6 +2352,15 @@ hand-authored content survives, comments in JSONC, TOML and YAML included. See
 `ai-rulez generate --user` renders a user config into the per-user directories each harness reads; see
 [User-level configuration](user-scope.md).
 
+##### `session_start`
+
+`[session_start]` is on by default for a project that generates for Claude Code: `generate` adds a `SessionStart` hook
+to `.claude/settings.json` that runs `ai-rulez session-start`. In a remote (cloud) session, where `CLAUDE_CODE_REMOTE`
+is `true`, it regenerates the outputs of the fresh clone and injects a short briefing; in a local session it does
+nothing. Keys: `generate` (false removes it), `when` (`remote` or `always`), `mode` (`auto`, `locked`, `frozen`,
+`plain`), `timeout`, `version`, `command`, `prompt` and `prompt_text`. See
+[Run generate when a remote session starts](session-start.md).
+
 ##### `builtins`
 
 Enables built-in domains that ship embedded in the `ai-rulez` binary. These provide opinionated rules,
@@ -9487,8 +9496,10 @@ in `config.toml` and merged into the files through the same owned-key machinery 
 the entries it writes, and every other key, hook group and rule in those files survives `generate` and
 `clean`.
 
-Everything on this page is opt-in. A config without `[[hooks]]`, `[guard]`, `[permissions]` or
-`[claude.settings.managed]` renders exactly what it did before.
+Everything on this page is opt-in except `[session_start]`. A config without `[[hooks]]`, `[guard]`,
+`[permissions]` or `[claude.settings.managed]` renders exactly what it did before; a project that generates for
+Claude Code also gets the `SessionStart` hook of [`[session_start]`](session-start.md) unless it sets
+`generate = false`.
 
 #### `[[hooks]]`
 
@@ -10098,6 +10109,193 @@ and Continue its source, where no page describes the file format):
 
 The event mapping for Gemini's `BeforeAgent`/`AfterAgent` is an inference from the event descriptions;
 no vendor page maps Claude Code events to Gemini's.
+
+## Run Generate in Remote Sessions
+
+Source: https://goldziher.github.io/ai-rulez/session-start/
+
+A remote (cloud) agent session starts from a fresh clone. The generated files are only there when they are
+committed, and they are only current when nobody changed a source since the last `generate`. `[session_start]`
+closes that gap without a hand-written hook: `ai-rulez generate` adds a `SessionStart` hook to
+`.claude/settings.json` that runs `ai-rulez session-start`, which regenerates the outputs and gives the agent a
+short briefing.
+
+It is on by default for a project that generates for Claude Code, and it does nothing in a local session.
+
+```toml
+[session_start]
+# generate = true        # false removes the hook (and the prompt with it)
+# when = "remote"        # "remote": act only when CLAUDE_CODE_REMOTE is set; "always": every session
+# mode = "auto"          # auto | locked | frozen | plain
+# timeout = 120          # seconds the whole run may take before it is killed
+# version = "5.4.1"      # pin for npx and uvx; default is the generating binary's version
+# command = ["ai-rulez"] # replaces the launcher; runs without a shell; excludes version
+# prompt = true          # inject the short briefing
+# prompt_text = "..."    # replaces the briefing; {{server}} is the ai-rulez MCP server's name
+```
+
+The table is separate from `[[hooks]]` for the same reason `[guard]` is: TOML does not allow `[hooks]` beside
+the `[[hooks]]` array. The hook is synthesized at generation time and is never written back to `config.toml`.
+
+#### What is written
+
+`generate` merges one entry into the `SessionStart` array of `.claude/settings.json` and leaves the rest of the file
+alone (other hooks, other keys, comments). Turning the feature off, or `ai-rulez clean`, removes only that entry.
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; if command -v ai-rulez ... exit 0'",
+            "timeout": 150
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The `timeout` is the run timeout plus 30 seconds, so the command's own bound always fires first.
+
+A project that already declares a `SessionStart` hook running `ai-rulez session-start` keeps its own entry and gets
+no second one. Another `SessionStart` hook is unrelated and stays next to the managed one.
+
+Only Claude Code gets the hook. `CLAUDE_CODE_REMOTE` is a Claude Code variable, and Claude Code is the harness
+that documents `SessionStart` output as session context; a project that generates for no Claude preset gets nothing,
+and no warning.
+
+#### It has to be committed
+
+A remote session sees only committed files. The hook exists in the clone only when the generated
+`.claude/settings.json` is committed. If you ignore `.claude/` (for example with `gitignore = true`), the clone has
+no hook and nothing runs. `ai-rulez doctor` warns about both cases: settings that lack the hook, and settings that
+git ignores.
+
+#### Fresh clones
+
+A remote session starts from a clone that has the committed outputs and none of the machine-local files, among them
+`.ai-rulez/.generated-manifest.local.json`, which records which hook entries ai-rulez wrote. `generate` in such a clone
+leaves a committed `.claude/settings.json` as it is: the hook already in it is rendered again, not taken back. The same
+holds for `lock --check`, `validate` and `generate --check`. `ai-rulez.lock` does not pin a settings document that holds
+hook groups ai-rulez owns, because a clone cannot tell the file is wholly ai-rulez's.
+
+#### How the hook finds ai-rulez
+
+The hook is a short `sh` script that tries, in order, and stops at the first that runs:
+
+1. `ai-rulez` on `PATH`: `ai-rulez session-start`
+2. `npx -y ai-rulez@<version> session-start`
+3. `uvx --from ai-rulez==<version> ai-rulez session-start`
+
+`<version>` is the version of the binary that ran `generate` (`latest` for a dev build), or `version` from the table.
+It is never a range. An attempt that cannot start, or exits non-zero, falls through to the next. When none runs the
+script prints one line on stderr and exits 0, so the session starts. `ai-rulez doctor` prints this order with the
+version each step pins.
+
+`when = "remote"` puts the environment check at the top of the script, before any launcher: on a developer's machine
+the hook returns immediately and never makes `npx` download anything. `CLAUDE_CODE_REMOTE` is `true` in a remote
+session; `1` and `true` (any case) count.
+
+`command = ["ai-rulez"]` replaces the script with `ai-rulez session-start` run directly, with no shell. Use it when
+the environment installs the binary, and on Windows hosts, where the default `sh` launcher needs a POSIX shell (Claude
+Code on Windows uses Git Bash when it is installed). The command checks `CLAUDE_CODE_REMOTE` itself, so `when` is
+honoured either way.
+
+#### What the command does
+
+`ai-rulez session-start` reads the hook payload from stdin (empty or invalid input is fine) and decides:
+
+| Step | Behaviour |
+| ---- | --------- |
+| Project | `CLAUDE_PROJECT_DIR`, else the payload's absolute `cwd`, else the working directory; the configuration is found by walking up to the git work tree. No configuration: silent no-op. Outside a work tree: one line on stderr. |
+| Gate | `when = "remote"` (default) needs `CLAUDE_CODE_REMOTE`; otherwise exit 0 and print nothing. |
+| Generate | On `source` `startup`, `resume` or none. `clear` and `compact` keep the working tree of a running session, so they only get the briefing. |
+| Briefing | JSON on stdout, on every source, unless `prompt = false`. |
+| Exit | Always 0. |
+
+`generate` runs as a child process (`generate --yes --quiet`), so the timeout kills its whole process tree and its
+output cannot reach stdout, which carries only the hook's JSON document. The child gets a scrubbed environment: the
+base variables, proxy and certificate settings, and `AI_RULEZ_*` settings. Tokens and other credentials of the session
+are not passed on. A lock file in the temp directory (never in the repository, so a read-only checkout works) keeps two
+hooks that start together, a start and a resume, from running two generates at once; a lock older than the timeout plus
+30 seconds is taken over.
+
+A failure is one line on stderr (`ai-rulez session-start: generate failed: <reason>; generated files may be out of
+date`), existing files are left as they were (generate writes atomically), and the briefing says so.
+
+##### Modes
+
+| `mode` | generate runs |
+| ------ | ------------- |
+| `auto` (default) | `--locked` when `ai-rulez.lock` exists, otherwise plain |
+| `locked` | `--locked` |
+| `frozen` | `--frozen`: only the local cache, verified against the lock |
+| `plain` | no lock flag |
+
+A locked run tries `--locked --offline` first. With a warm cache the lock covers everything and no network is used;
+otherwise it goes online once. The hook never writes `ai-rulez.lock`: that stays with `ai-rulez lock`. A lock that
+disagrees with the sources is a failure of the generate step, reported like any other.
+
+`generate` does not use the lock to change what it writes; `--locked` makes it refuse remote includes and installed
+skills that moved from the pinned commits. See the [lock file](lockfile.md).
+
+##### Network policy
+
+Remote environments usually reach the network through a policy proxy that allows named hosts. The hook needs
+`registry.npmjs.org` for `npx` (or `pypi.org` for `uvx`) when `ai-rulez` is not installed, and the hosts of any remote
+`includes`. A request the policy refuses (HTTP 403 or 407) is not retried; the line names the host:
+`generate failed: the network policy denied github.com`. Either allow the host, or install `ai-rulez` in the
+environment's setup script and use `command = ["ai-rulez"]`. `ai-rulez doctor`, run inside a remote session, probes
+the npm registry and reports a denied or unreachable one.
+
+#### The briefing
+
+With `prompt = true` (default) the hook returns
+
+```json
+{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}
+```
+
+and Claude Code adds `additionalContext` to the start of the conversation. It is built from the configuration, is at
+most 2 KiB, has control characters removed, and has no timestamp. It states:
+
+1. The generated rules, skills, agents and commands (harness folders, `AGENTS.md`, `CLAUDE.md`) come from the sources in
+   the configuration directory; a change goes there and `ai-rulez generate` renders it.
+2. When the ai-rulez MCP server is enabled (`[mcp] self_server`), that it offers tools to create, update, validate and
+   generate the configuration.
+3. When skills are served (`delivery = "served"` or a skill source), the "Unlisted skills" section that `[mcp]
+   skills_instructions` writes into the instruction files: call `find_skill`, then `load_skill`, on the named server. It
+   follows `skills_instructions = false` and `skills_instructions_text`.
+4. When the generate step failed, one line saying so.
+
+`prompt_text` replaces 1 to 3 (the failure line stays). `{{server}}` expands to the server's name. `prompt = false`
+leaves the briefing out and keeps the regeneration.
+
+Claude Code treats imperative, system-style wording as a possible injection, so the default text states facts.
+
+#### Opting out
+
+```toml
+[session_start]
+generate = false
+```
+
+removes the hook on the next `generate`, and with it the briefing. Settings written by hand stay. `when = "always"`
+makes the hook act in local sessions as well; that regenerates your working tree at every session start, so use it
+with care.
+
+`generate --user` never adds the hook: it belongs to a project's clone.
+
+#### Trust
+
+The hook is a command that runs at session start, so it appears in the "new hook commands" notice `generate` prints
+the first time it is written and whenever it changes. `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences the notice. It
+also shows up in `generate --check` as drift when the committed settings differ, and in the output claims `clean` uses.
 
 ## Permissions
 
@@ -20406,6 +20604,7 @@ rewrites them), and the test fails when they are stale.
 | `roles show` | a presentation of one role; resolve_role returns what the role keeps |
 | `edit rule` | partial field edits and stdin input; update_rule is the whole-item replacement for a tool client |
 | `scanners *` | run external scanner programs, possibly with egress |
+| `session-start` | a hook entry point the harness calls when a session starts; it runs generate |
 | `sign`, `trust update` | signs with a key, an OIDC identity or a transparency log: credentials and egress |
 | `edit skill` | partial field edits and stdin input; update_skill is the whole-item replacement for a tool client |
 | `telemetry *` | consent and network egress of usage data |
@@ -26197,6 +26396,7 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez scanners doctor` | Check named scanners: binary, version, egress, environment and configuration |
 | `ai-rulez scanners list` | List the configured scanners with their egress declaration and whether they are installed |
 | `ai-rulez search` | Rank the served skills against a query, build the embedding index, or evaluate the ranking |
+| `ai-rulez session-start` | Regenerate outputs and brief the agent when a remote session starts (SessionStart hook) |
 | `ai-rulez show` | Show the content of a rule, context, skill, agent, command or check |
 | `ai-rulez show agent` | Show an agent |
 | `ai-rulez show check` | Show a code-review check |
@@ -27395,7 +27595,7 @@ ai-rulez generate [flags]
 
 `--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
 
-Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on each regeneration (what is new since the previous run), so a hook or MCP command that arrives with a pulled change is shown by the run that writes it.
+Before writing, `generate` also prints a summary of hook commands (the `SessionStart` hook of `[session_start]` included), command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on each regeneration (what is new since the previous run), so a hook or MCP command that arrives with a pulled change is shown by the run that writes it.
 
 Exit codes: `0` written, `1` a configuration failed to load, validate or generate (every root of a `--recursive` run is still processed), `2` `--check` found drift or `--locked`/`--frozen` found an authored source that differs from the lock (also a recursive run where every failure is lock drift). See [Exit Codes](#exit-codes).
 
@@ -27699,6 +27899,23 @@ Exit codes: `2` the call edits a generated file (the reason, with the source to 
 echo '{"tool_name":"Edit","tool_input":{"file_path":"AGENTS.md"}}' | ai-rulez guard; echo $?
 ```
 
+#### Session-start Command
+
+##### `ai-rulez session-start`
+
+The harness runs this command, not people. `generate` adds it as a `SessionStart` hook to `.claude/settings.json` by default for a project that generates for Claude Code ([Run generate when a remote session starts](session-start.md)). In a remote session (`CLAUDE_CODE_REMOTE=true`) it runs `generate`, then prints the hook's `additionalContext` JSON on stdout; elsewhere it does nothing unless `[session_start] when = "always"`. It always exits `0`; a problem is one line on stderr.
+
+```bash
+echo '{"source":"startup"}' | CLAUDE_CODE_REMOTE=true ai-rulez session-start
+ai-rulez session-start --when always --generate-mode plain
+```
+
+| Flag | Description |
+| --- | --- |
+| `--when remote\|always` | Override `[session_start] when` |
+| `--generate-mode auto\|locked\|frozen\|plain` | Override `[session_start] mode` |
+| `--timeout <seconds>` | Override `[session_start] timeout` (default 120) |
+
 #### Doctor Command
 
 ##### `ai-rulez doctor`
@@ -27720,6 +27937,7 @@ ai-rulez doctor [--strict] [--format json] [--profile <name>] [--no-local]
 | `documents` | A shared settings document ai-rulez merges into (`.claude/settings.json`, `.mcp.json`, `.codex/config.toml`, ...) that no longer parses as JSON, JSONC, TOML or YAML | error |
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
 | `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
+| `session-start` | The `SessionStart` hook: `info` listing the launchers it tries in order (`ai-rulez`, `npx -y ai-rulez@<version>`, `uvx --from ai-rulez==<version>`); a warning when the generated `.claude/settings.json` lacks the hook or is ignored by version control, and, inside a remote session, when none of `ai-rulez`, `npx` and `uvx` is on `PATH` or the npm registry is denied or unreachable (asked with one GET) | info, warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
 
 With `--debug`, `doctor` logs one `Doctor check finished` line per check with its name and duration, to find the slow one.
@@ -32477,6 +32695,27 @@ ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0
 | `--source` | string list |  | Also search the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory |
 | `--targets` | string |  | Preset whose rendering of the skills to search |
 
+#### `ai-rulez session-start`
+
+Regenerate outputs and brief the agent when a remote session starts (SessionStart hook)
+
+```text
+ai-rulez session-start [flags]
+```
+
+Examples:
+
+```bash
+echo '{"source":"startup"}' | CLAUDE_CODE_REMOTE=true ai-rulez session-start
+ai-rulez session-start --when always --generate-mode plain
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--generate-mode` | string |  | Override [session_start] mode: "auto", "locked", "frozen" or "plain" |
+| `--timeout` | int | `0` | Override [session_start] timeout, in seconds |
+| `--when` | string |  | Override [session_start] when: "remote" or "always" |
+
 #### `ai-rulez show`
 
 Show the content of a rule, context, skill, agent, command or check
@@ -33566,6 +33805,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
 - **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)
 - **`guard`**: `[guard] generated = true` adds a PreToolUse hook that blocks agent edits to generated files (`version`, `command` tune how it launches); see [Settings](settings.md#guard)
+- **`session_start`**: `[session_start]` (on by default for Claude Code) adds a `SessionStart` hook that runs `ai-rulez session-start` in remote sessions (`generate`, `when`, `mode`, `timeout`, `version`, `command`, `prompt`, `prompt_text`); see [Run generate when a remote session starts](session-start.md)
 - **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
 - **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)

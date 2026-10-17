@@ -7,8 +7,10 @@ in `config.toml` and merged into the files through the same owned-key machinery 
 the entries it writes, and every other key, hook group and rule in those files survives `generate` and
 `clean`.
 
-Everything on this page is opt-in. A config without `[[hooks]]`, `[guard]`, `[permissions]` or
-`[claude.settings.managed]` renders exactly what it did before.
+Everything on this page is opt-in except `[session_start]`. A config without `[[hooks]]`, `[guard]`,
+`[permissions]` or `[claude.settings.managed]` renders exactly what it did before; a project that generates for
+Claude Code also gets the `SessionStart` hook of [`[session_start]`](session-start.md) unless it sets
+`generate = false`.
 
 ## `[[hooks]]`
 

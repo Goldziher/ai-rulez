@@ -3108,6 +3108,27 @@ ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0
 | `--source` | string list |  | Also search the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory |
 | `--targets` | string |  | Preset whose rendering of the skills to search |
 
+## `ai-rulez session-start`
+
+Regenerate outputs and brief the agent when a remote session starts (SessionStart hook)
+
+```text
+ai-rulez session-start [flags]
+```
+
+Examples:
+
+```bash
+echo '{"source":"startup"}' | CLAUDE_CODE_REMOTE=true ai-rulez session-start
+ai-rulez session-start --when always --generate-mode plain
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--generate-mode` | string |  | Override [session_start] mode: "auto", "locked", "frozen" or "plain" |
+| `--timeout` | int | `0` | Override [session_start] timeout, in seconds |
+| `--when` | string |  | Override [session_start] when: "remote" or "always" |
+
 ## `ai-rulez show`
 
 Show the content of a rule, context, skill, agent, command or check

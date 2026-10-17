@@ -41,6 +41,13 @@ func TestNativePlan_Hooks(t *testing.T) {
 			}},
 		},
 		{
+			name: "the session-start hook generate writes is dropped, other SessionStart hooks stay",
+			files: map[string]string{".claude/settings.json": `{"hooks":{"SessionStart":[{"hooks":[
+				{"type":"command","command":"sh -c 'if command -v ai-rulez >/dev/null 2>&1 && ai-rulez session-start; then exit 0; fi'"},
+				{"type":"command","command":"./scripts/setup.sh"}]}]}}`},
+			want: []config.HookGroup{hookOf("SessionStart", "", []string{"claude"}, "./scripts/setup.sh")},
+		},
+		{
 			name:  "codex hooks.json is claude-shaped",
 			files: map[string]string{".codex/hooks.json": `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo done"}]}]}}`},
 			want:  []config.HookGroup{hookOf("Stop", "", []string{"codex"}, "echo done")},

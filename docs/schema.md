@@ -69,6 +69,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
 - **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)
 - **`guard`**: `[guard] generated = true` adds a PreToolUse hook that blocks agent edits to generated files (`version`, `command` tune how it launches); see [Settings](settings.md#guard)
+- **`session_start`**: `[session_start]` (on by default for Claude Code) adds a `SessionStart` hook that runs `ai-rulez session-start` in remote sessions (`generate`, `when`, `mode`, `timeout`, `version`, `command`, `prompt`, `prompt_text`); see [Run generate when a remote session starts](session-start.md)
 - **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
 - **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)

@@ -1,11 +1,29 @@
 package generator
 
 import (
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
+
+// claudeSettingsPath is the settings document of Claude Code, relative to a project or a scope.
+const claudeSettingsPath = ".claude/settings.json"
+
+// unprovablyOwned reports whether the output is Claude's settings document with hook groups ai-rulez owns.
+// Whether such a document is wholly ai-rulez's depends on a record of the earlier run that a fresh clone
+// does not have, so the pins leave it out like any other merged document: pinned where it was created, it
+// would be missing from the lock check of a clone. Every Claude Code project gets such a document from the
+// session-start hook.
+func unprovablyOwned(output config.OutputFile) bool {
+	if filepath.ToSlash(output.Path) != claudeSettingsPath && !strings.HasSuffix(filepath.ToSlash(output.Path), "/"+claudeSettingsPath) {
+		return false
+	}
+	return slices.ContainsFunc(output.MergeClaims, func(c jsonmerge.Claim) bool { return c.HasElements() })
+}
 
 // LockOutputs renders every output in memory and returns the ones ai-rulez.lock
 // pins. Nothing is written or deleted.
@@ -57,7 +75,7 @@ func (g *Generator) lockOutputs(profile string, withPartial bool) ([]contentlock
 	g.markSensitiveOutputs(outputs)
 	var pins []contentlock.Output
 	for _, output := range outputs {
-		if output.IsDir || (output.PartiallyOwned && !withPartial) || output.Sensitive || output.LocalOnly {
+		if output.IsDir || ((output.PartiallyOwned || unprovablyOwned(output)) && !withPartial) || output.Sensitive || output.LocalOnly {
 			continue
 		}
 		data := output.RawContent

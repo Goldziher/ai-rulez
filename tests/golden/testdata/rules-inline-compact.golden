@@ -190,7 +190,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7787 4fdee730567a156541680c75bb1f5c0913ae7b6c2c02dc776b4edaf4291d9e06
+.ai-rulez/.generated-manifest.local.json file 0644 7865 464f7a1ca79bef0b291714bb6bf6bc622c51691304f7a823028b2d1963f6d99e
 >>>>
 {
   "version": "1",
@@ -213,7 +213,8 @@ echo review
           "SessionStart"
         ],
         "elementSums": [
-          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86",
+          "890a231f3885f72e1f05bd0dd3dc08f5293e2c7af7b32ae073c3fd14b759c74d"
         ]
       },
       {
@@ -421,7 +422,7 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "a779bea6d9f7f754635e3b2f65a321f97d89e62002bcadb2b3acf88b4552e4f7",
+    ".claude/settings.json": "1af6312f6d58fdaa5e52dfb1278398cff2a534f4147dfa32f0c59c843b04274c",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
@@ -702,7 +703,7 @@ Content-Hash: blake3:0c9f6369b5dec84ee88bd821a1a786e890c4821336d42a04c0039cb99a0
 
 Use strict mode.
 <<<<
-.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/settings.json file 0644 1650 8734691692dd1fb35a6cd64bc86043f4027100129968d6b01df30b9cc3fc5cdc
 >>>>
 {
   "hooks": {
@@ -735,6 +736,15 @@ Use strict mode.
             "type": "command",
             "command": "echo started",
             "statusMessage": "Starting"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 npx -y ai-rulez@$VERSION session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 uvx --from ai-rulez==$VERSION ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
           }
         ]
       }

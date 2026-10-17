@@ -731,6 +731,7 @@ type tomlConfig struct {
 	Codex                 *CodexConfig                 `toml:"codex"`
 	Hooks                 []HookGroup                  `toml:"hooks"`
 	Guard                 *GuardConfig                 `toml:"guard"`
+	SessionStart          *SessionStartConfig          `toml:"session_start"`
 	Permissions           *Permissions                 `toml:"permissions"`
 	OKF                   *OKFConfig                   `toml:"okf"`
 	LLMsTxt               *LLMsTxtConfig               `toml:"llms_txt"`
@@ -846,6 +847,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Codex:                 raw.Codex,
 		Hooks:                 raw.Hooks,
 		Guard:                 raw.Guard,
+		SessionStart:          raw.SessionStart,
 		Permissions:           raw.Permissions,
 	}
 	cfg.VerifiersSettings = raw.VerifiersSet

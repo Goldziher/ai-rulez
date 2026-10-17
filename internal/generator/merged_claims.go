@@ -229,6 +229,7 @@ func carryClaim(claim, prev *jsonmerge.Claim) {
 // What an earlier run claimed (a claim in prev for the same path) stays ours.
 func (g *Generator) dropUserHeldClaims(outputs []config.OutputFile) {
 	previous := g.previousMergedClaims()
+	g.heldClaims = map[string][]jsonmerge.Claim{}
 	for i := range outputs {
 		output := &outputs[i]
 		if output.IsDir || len(output.MergeClaims) == 0 {
@@ -244,14 +245,17 @@ func (g *Generator) dropUserHeldClaims(outputs []config.OutputFile) {
 		if err != nil || len(before) == 0 {
 			continue
 		}
-		output.MergeClaims = withoutUserHeld(output.MergeClaims, previous[rel], before)
+		var held []jsonmerge.Claim
+		output.MergeClaims, held = withoutUserHeld(output.MergeClaims, previous[rel], before)
+		g.heldClaims[rel] = append(g.heldClaims[rel], held...)
 	}
 }
 
 // withoutUserHeld is dropUserHeldClaims for one document: before is the document
-// as it stood on disk and prev what the previous run recorded for it.
-func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) []jsonmerge.Claim {
-	kept := make([]jsonmerge.Claim, 0, len(claims))
+// as it stood on disk and prev what the previous run recorded for it. It returns
+// the claims that stay and, apart, what it dropped.
+func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) (kept, dropped []jsonmerge.Claim) {
+	kept = make([]jsonmerge.Claim, 0, len(claims))
 	for i := range claims {
 		claim := claims[i]
 		index := slices.IndexFunc(prev, func(c jsonmerge.Claim) bool { return slices.Equal(c.Path, claim.Path) })
@@ -278,7 +282,11 @@ func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) []js
 					return true
 				})
 			}
+			original := claim
 			claim = claim.WithoutElements(jsonmerge.Claim{Elements: held})
+			if heldPart := original.WithoutElements(claim); len(heldPart.ElementDigests()) > 0 {
+				dropped = append(dropped, heldPart)
+			}
 			// An empty claim on an array an earlier run created stays: the array is
 			// ai-rulez's (Cursor requires it) and leaves with the document.
 			createdEmpty := len(array) == 0 && index >= 0 && !prev[index].IsPreexisting(claim.Path)
@@ -288,11 +296,12 @@ func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) []js
 			continue
 		}
 		if index < 0 && claim.Sum != "" && jsonmerge.Digest(value) == claim.Sum {
+			dropped = append(dropped, claim)
 			continue // the user's own value, identical to the rendering
 		}
 		kept = append(kept, claim)
 	}
-	return kept
+	return kept, dropped
 }
 
 // reclaimStaleMembers clears PartiallyOwned on a merged document whose only
@@ -500,8 +509,13 @@ func (g *Generator) claimsToTakeBack(outputs []config.OutputFile, clean bool) ma
 		if !clean {
 			// An upgrade takes back what an older version wrote and this one no
 			// longer does (Claude's servers in .claude/settings.json), and only
-			// entries that are exactly that rendering.
-			legacy = subtractClaims(legacy, current[rel])
+			// entries that are exactly that rendering. What this run still renders
+			// is not taken back: the hook claims of the fallback are the current
+			// configuration's own rendering, and a value the render found in the
+			// document already (heldClaims) is no different. In a fresh clone,
+			// with no record of an earlier run, what ai-rulez wrote last time is
+			// indistinguishable from the user's and is not among this run's claims.
+			legacy = subtractClaims(withoutHookClaims(legacy), append(slices.Clone(current[rel]), g.heldClaims[rel]...))
 		}
 		if len(legacy) > 0 {
 			claims[rel] = append(claims[rel], legacy...)
@@ -634,6 +648,15 @@ func withoutPermissionClaims(claims []jsonmerge.Claim) []jsonmerge.Claim {
 			seg = strings.ToLower(seg)
 			return strings.Contains(seg, "permission") || seg == "deny" || seg == "ask" || seg == "denied"
 		})
+	})
+}
+
+// withoutHookClaims drops the claims on hooks: the fallback derives them from the
+// current configuration, so a generate run, which renders that configuration,
+// never has one to take back.
+func withoutHookClaims(claims []jsonmerge.Claim) []jsonmerge.Claim {
+	return slices.DeleteFunc(slices.Clone(claims), func(c jsonmerge.Claim) bool {
+		return slices.ContainsFunc(c.Path, func(seg string) bool { return strings.EqualFold(seg, "hooks") })
 	})
 }
 

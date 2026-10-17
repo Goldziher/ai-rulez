@@ -92,6 +92,7 @@ type tomlOutput struct {
 	Codex                 *CodexConfig                 `toml:"codex,omitempty"`
 	Hooks                 []HookGroup                  `toml:"hooks,omitempty"`
 	Guard                 *GuardConfig                 `toml:"guard,omitempty"`
+	SessionStart          *SessionStartConfig          `toml:"session_start,omitempty"`
 	Permissions           *Permissions                 `toml:"permissions,omitempty"`
 }
 
@@ -206,6 +207,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Codex:                 cfg.Codex,
 		Hooks:                 cfg.UserHooks(),
 		Guard:                 cfg.Guard,
+		SessionStart:          cfg.SessionStart,
 		Permissions:           cfg.Permissions,
 	}
 }
