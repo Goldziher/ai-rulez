@@ -36,6 +36,7 @@ func (s *Server) registerServeTools() {
 		description: fmt.Sprintf("List the files of a skill (references, scripts, assets) with size, digest, mode, executable and an interpreter hint, without loading them; at most %d files are listed per call, see next_offset", maxListedResources),
 		annotations: readOnlyAnnotations(), output: skillOut{},
 	}, s.listSkillResourcesHandler)
+	s.registerContextTools()
 }
 
 func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
@@ -58,9 +59,18 @@ func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		}
 	}
 
+	query, view, picked, err := s.skillQuery(req)
+	if err != nil {
+		return handlers.ToolError(err)
+	}
+
 	rk := s.serve.opts.Search.rank(ctx, s.cat(), task)
+	if query.active() {
+		rk.hits = filterHits(rk.hits, picked.keep)
+	}
 	results := rankForRole(rk.hits, role, scope, limit)
-	out := map[string]any{"task": task, "count": len(results), "results": results}
+	out := map[string]any{"task": task, keyCount: len(results), keyResults: results}
+	addScopeFields(out, results, view, query, picked)
 	if rk.ranking != skillsearch.ModeLexical || rk.degraded != "" {
 		out["ranking"] = rk.ranking
 	}
@@ -83,6 +93,44 @@ func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		out["hint"] = "no served skill matches; try different words, or proceed without a skill"
 	}
 	return handlers.ToolSuccess(out)
+}
+
+// skillQuery reads the path or scope a find_skill call narrows to and selects the
+// skills it keeps; the zero query keeps them all.
+func (s *Server) skillQuery(req *handlers.ToolRequest) (scopeQuery, *repoView, skillSelection, error) {
+	query, err := scopeQueryOf(req)
+	if err != nil {
+		return query, nil, skillSelection{}, err
+	}
+	view := s.cat().repository()
+	if !query.active() {
+		return query, view, skillSelection{}, nil
+	}
+	if view == nil {
+		return query, nil, skillSelection{}, errNeedsDiscovery
+	}
+	picked, err := view.selectSkills(query)
+	return query, view, picked, err
+}
+
+// addScopeFields tells a find_skill caller where each discovered result lives
+// and what a path or scope query resolved to.
+func addScopeFields(out map[string]any, results []map[string]any, view *repoView, query scopeQuery, picked skillSelection) {
+	for _, r := range results {
+		name, _ := r[keyName].(string) //nolint:errcheck // every result carries its name
+		if scope := view.scopeOf(name); scope != "" {
+			r[argScope] = scope
+		}
+	}
+	switch {
+	case query.Path != "":
+		out[argPath], out["scopes"] = query.Path, picked.scopes
+	case query.Scope != "":
+		out[argScope] = query.Scope
+		if query.Recursive {
+			out[argRecursive] = true
+		}
+	}
 }
 
 func (s *Server) lookupServed(name string) (*CatalogSkill, error) {
@@ -288,11 +336,11 @@ func rankForRole(ranked []FindHit, role string, scope RoleScope, limit int) []ma
 	results := make([]map[string]any, 0, limit)
 	add := func(hit FindHit, inRole bool) {
 		entry := map[string]any{
-			keyName:       hit.Skill.Name,
-			"description": hit.Skill.Description,
-			"score":       hit.Score,
-			"domain":      domainLabel(hit.Skill.Domain),
-			keyDigest:     hit.Skill.Digest,
+			keyName:        hit.Skill.Name,
+			keyDescription: hit.Skill.Description,
+			"score":        hit.Score,
+			"domain":       domainLabel(hit.Skill.Domain),
+			keyDigest:      hit.Skill.Digest,
 		}
 		if role != "" {
 			entry["in_role"] = inRole

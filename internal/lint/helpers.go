@@ -207,27 +207,80 @@ func containsAnyFold(s string, stems []string) bool {
 }
 
 // indexFoldASCII is the index of the first occurrence of stem (lower-case
-// ASCII) in s, ignoring ASCII case; -1 when there is none.
+// ASCII) in s, ignoring ASCII case; -1 when there is none. It jumps between the
+// occurrences of the stem's first letter (either case) with IndexByte instead of
+// comparing every byte.
 func indexFoldASCII(s, stem string) int {
-	lower := func(c byte) byte {
-		if c >= 'A' && c <= 'Z' {
-			return c + 'a' - 'A'
-		}
-		return c
-	}
-	for i := 0; i+len(stem) <= len(s); i++ {
-		if lower(s[i]) != stem[0] {
-			continue
-		}
-		j := 1
-		for j < len(stem) && lower(s[i+j]) == stem[j] {
-			j++
-		}
-		if j == len(stem) {
+	f := newFoldFinder(s, stem[0])
+	for i := f.next(0); i >= 0 && i+len(stem) <= len(s); i = f.next(i + 1) {
+		if hasFoldPrefix(s[i+1:], stem[1:]) {
 			return i
 		}
 	}
 	return -1
+}
+
+// foldFinder finds the positions of one letter in either case, searching each
+// case only as far as the previous hit.
+type foldFinder struct {
+	s      string
+	lo, up byte
+	nl, nu int
+}
+
+func newFoldFinder(s string, lo byte) foldFinder {
+	up := lo
+	if lo >= 'a' && lo <= 'z' {
+		up = lo - 'a' + 'A'
+	}
+	f := foldFinder{s: s, lo: lo, up: up, nl: -1, nu: -1}
+	f.nl = f.index(lo, 0)
+	if up != lo {
+		f.nu = f.index(up, 0)
+	}
+	return f
+}
+
+// next is the position of the first occurrence of the letter at or after from, or -1.
+func (f *foldFinder) next(from int) int {
+	if f.nl >= 0 && f.nl < from {
+		f.nl = f.index(f.lo, from)
+	}
+	if f.nu >= 0 && f.nu < from {
+		f.nu = f.index(f.up, from)
+	}
+	if f.nl < 0 || f.nu >= 0 && f.nu < f.nl {
+		return f.nu
+	}
+	return f.nl
+}
+
+func (f *foldFinder) index(c byte, from int) int {
+	if from > len(f.s) {
+		return -1
+	}
+	i := strings.IndexByte(f.s[from:], c)
+	if i < 0 {
+		return -1
+	}
+	return from + i
+}
+
+// hasFoldPrefix reports whether s starts with stem (lower-case ASCII), ignoring ASCII case.
+func hasFoldPrefix(s, stem string) bool {
+	if len(s) < len(stem) {
+		return false
+	}
+	for j := range len(stem) {
+		c := s[j]
+		if c >= 'A' && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		if c != stem[j] {
+			return false
+		}
+	}
+	return true
 }
 
 func (g gatedRe) MatchString(s string) bool { return g.mayMatch(s) && g.re.MatchString(s) }

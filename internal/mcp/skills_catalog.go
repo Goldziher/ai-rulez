@@ -108,6 +108,8 @@ type Catalog struct {
 	reports []ScanReport
 	// discovery is what skill discovery found; nil when it did not run.
 	discovery *DiscoveryReport
+	// repo is the repository index discovery built; nil when it did not run.
+	repo *repoView
 }
 
 // BuildCatalog converts rendered skills into a catalog, applying the filter.

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -155,6 +156,53 @@ func BenchmarkGenerateLLMsTxt(b *testing.B) {
 			}
 			b.ReportAllocs()
 			b.ResetTimer()
+			for range b.N {
+				if err := gen.Generate(""); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGeneratePresets times a full generate and the idempotent no-op run
+// on the medium project with 2, 10 and every built-in preset enabled.
+func BenchmarkGeneratePresets(b *testing.B) {
+	all := config.AllPresetNames()
+	individual := config.IndividualPresetNames()
+	for _, tc := range []struct {
+		name    string
+		presets []string
+	}{
+		{"presets=2", []string{"claude", "cursor"}},
+		{"presets=10", individual[:10]},
+		{fmt.Sprintf("presets=%d", len(all)), all},
+	} {
+		root := testutil.BuildBenchTree(b, 200, testutil.BenchTreeOptions{Git: true, Presets: tc.presets})
+		cfg, err := config.LoadConfig(context.Background(), root, config.WithoutLocal(), config.WithoutRemote())
+		if err != nil {
+			b.Fatal(err)
+		}
+		gen := NewGenerator(cfg)
+		b.Run("full/"+tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				b.StopTimer()
+				if _, err := gen.Clean("", CleanOptions{RemoveEdited: true}); err != nil {
+					b.Fatal(err)
+				}
+				b.StartTimer()
+				if err := gen.Generate(""); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+		b.Run("noop/"+tc.name, func(b *testing.B) {
+			if err := gen.Generate(""); err != nil {
+				b.Fatal(err)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
 			for range b.N {
 				if err := gen.Generate(""); err != nil {
 					b.Fatal(err)

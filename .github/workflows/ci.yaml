@@ -356,7 +356,9 @@ jobs:
       - name: Build binary for benchmarks
         run: task build
 
+      # shell: bash runs with pipefail, so a failing benchmark is not hidden by tee.
       - name: Run benchmarks
+        shell: bash
         run: task test:benchmark | tee benchmark-results.txt
 
       - name: Upload benchmark results
