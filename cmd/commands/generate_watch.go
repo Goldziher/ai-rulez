@@ -289,24 +289,43 @@ func rootConfigTargets(baseDir string) []watch.Target {
 	return targets
 }
 
-// includeTargets are the local-path include and installed-skill sources.
+// includeTargets are the local-path sources the configuration reads from: includes, installed skills,
+// skill sources, installed marketplaces and plugins (their source and local override).
 func includeTargets(cfg *config.Config) []watch.Target {
 	var out []watch.Target
-	add := func(p string) {
+	// existing skips a path that is not on disk: an installed source such as owner/repo reads as a
+	// relative path, and watching a directory that does not exist only adds noise.
+	add := func(p string, existing bool) {
+		p = strings.TrimPrefix(p, "file://")
 		if p == "" || !includes.IsLocalPath(p) {
 			return
 		}
 		if !filepath.IsAbs(p) {
 			p = filepath.Join(cfg.BaseDir, p)
 		}
-		out = append(out, watch.Target{Path: p})
+		// A marketplace index or a single SKILL.md can be a file; watch it as one.
+		info, err := os.Stat(p)
+		if existing && err != nil {
+			return
+		}
+		out = append(out, watch.Target{Path: p, File: err == nil && !info.IsDir()})
 	}
 	for i := range cfg.Includes {
-		add(cfg.Includes[i].Source)
-		add(cfg.Includes[i].LocalOverride)
+		add(cfg.Includes[i].Source, false)
+		add(cfg.Includes[i].LocalOverride, false)
 	}
 	for i := range cfg.InstalledSkills {
-		add(cfg.InstalledSkills[i].LocalOverride)
+		add(cfg.InstalledSkills[i].Source, true)
+		add(cfg.InstalledSkills[i].LocalOverride, false)
+	}
+	for i := range cfg.SkillSources {
+		add(cfg.SkillSources[i].URL, true)
+	}
+	for i := range cfg.InstalledMarketplaces {
+		add(cfg.InstalledMarketplaces[i].Source, true)
+	}
+	for i := range cfg.InstalledPlugins {
+		add(cfg.InstalledPlugins[i].Source, true)
 	}
 	return out
 }
