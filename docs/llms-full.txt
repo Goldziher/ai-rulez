@@ -8439,6 +8439,17 @@ tracks (a root-anchored `!.claude/rules/*.md` of yours does not reach a nested r
 
 ---
 
+#### Nested Instructions Over MCP
+
+A repository can keep `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.agents/` or `skills/` in any package, and a harness
+loads them only once it works there. A planner at the root, or an agent changing several packages, can ask the MCP
+server what applies to a path: `ai-rulez mcp --serve-skills --discover-skills` indexes the repository by scope, and
+`find_skill`, `find_context` and `load_context` take a `path` or a `scope`. The nearest scope wins a skill name, and the
+index reads the files that already exist, so it needs no `generate` run. See
+[Monorepos: scopes and nested context](mcp-server.md#monorepos-scopes-and-nested-context).
+
+---
+
 #### Scoped Rule Files
 
 For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder. Rules-folder nesting is not uniform across presets: Copilot reads its instructions at the repository root only, while Claude Code discovers `.claude/rules/*.md` recursively — a nested `<dir>/.claude/rules/` rule loads, with its `paths` resolved relative to `<dir>` — and Antigravity reads `.agents/rules/` at any directory level. Nesting in the other presets is not verified. Writing every scope's rules to the root folder gives one placement that every preset with a rules folder reads, and the scope path as a qualifier and glob prefix keeps file names unique and each rule limited to the scope's files:
@@ -21073,7 +21084,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
-| `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository). |
+| `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. Either mode also indexes nested instruction files, rules and agents by scope. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository) and [Monorepos](#monorepos-scopes-and-nested-context). |
 | `--max-clone-bytes` | Clone size limit in bytes for git skill sources that set no `max_clone_bytes`. Overrides `AI_RULEZ_MAX_CLONE_BYTES`; 0 (default) defers to it, then to 256 MiB. |
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
@@ -21111,12 +21122,13 @@ The flag wins over the configuration; a bare `--discover-skills` means `repo`. A
 (or a [lint-only configuration](config-without-folder.md#lint-only-configuration)) can use it; without one it behaves
 as if the `claude` and `codex` presets were configured, so `.claude/skills` and `.agents/skills` are searched.
 
-**Where `repo` looks.** A directory with a `SKILL.md` below one of these roots, at most six levels down:
+**Where `repo` looks.** A directory with a `SKILL.md` below one of these roots, at any depth of the project and at
+most six levels below the root:
 
-- `skills/` at the project root;
-- `.claude/skills` at any depth (`packages/api/.claude/skills`);
-- the skill directory of each configured preset at the project root (`.agents/skills`, `.cursor/skills`,
-  `.github/skills`, ...), the same list `convert` reads.
+- `skills/` (not inside a hidden directory such as `.agents/`, which belongs to its own convention);
+- `.claude/skills`;
+- the skill directory of each configured preset (`.agents/skills`, `.cursor/skills`, `.github/skills`, ...), the same
+  list `convert` reads.
 
 A `SKILL.md` inside another skill belongs to that skill and is not a skill of its own. The configuration directory
 (`.ai-rulez/`), `.git/` and `node_modules/` are never searched, symlinks are not followed, and a skill is read with
@@ -21148,6 +21160,109 @@ findings, warns on the rest). With `[lock] enforce`, it must be pinned like any 
 cached while discovery is on, and live reload watches the skill roots found at start (and `skills/`, `.claude/skills`
 and the preset directories at the project root when they exist): a new skill folder in an existing root is picked
 up, a new `.claude/skills` elsewhere needs a restart.
+
+##### Monorepos: scopes and nested context
+
+A harness loads a nested `AGENTS.md`, `CLAUDE.md`, `.claude/` or `.agents/` tree only once it works inside that
+directory. A planner at the repository root never sees it. With discovery on (`--discover-skills` or
+`[mcp] discover_skills = "repo" | "all"`), the server indexes the repository by **scope** and answers "what applies to
+this path?" the way a harness would. With discovery off none of this exists: no extra tool, resource or instruction.
+
+**Scopes.** A scope is a directory that holds `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/`, `.agents/`,
+`.codex/`, `.cursor/rules`, `.github/copilot-instructions.md` or a `skills/` directory with a skill in it. The project
+root is the scope `.`. Scopes are inferred from the tree; nothing is configured. Each item in a scope has a `kind`
+(`skill`, `instruction`, `rule`, `agent`, `command`), a `source` (`claude`, `agents`, `codex`, `cursor`, `copilot`,
+`gemini`, `skills-dir`), a `name`, a `description` (the frontmatter `description`, else the first heading) and a content
+`hash`. The index keeps summaries only, never a file body.
+
+**What applies to a path.** The scopes that are the path or one of its ancestors, nearest first. A skill, agent or
+command is shadowed by one of the same name in a nearer scope, as harnesses shadow by name; instruction files and rules
+add up, so none of them is shadowed. A skill name that two scopes share is served under its path from the project root
+(`pkg/api/.claude/skills/lint` becomes `pkg.api.claude.skills.lint`), as in
+[Discovering skills](#discovering-skills-already-in-the-repository).
+
+**`find_skill` with `path` or `scope`.**
+
+```json
+{"task": "lint the code", "path": "pkg/api/handler.go"}
+```
+
+```json
+{"task": "lint the code", "path": "pkg/api/handler.go",
+ "scopes": ["pkg/api", "."],
+ "results": [{"name": "pkg.api.claude.skills.lint", "scope": "pkg/api", "score": 1.4, "description": "Lint the api package"}]}
+```
+
+The root's own `lint` is shadowed for that path; for `pkg/web/index.ts` it is the one returned. `scope` lists one exact
+scope, `"."` being the root; `recursive: true` adds the scopes below it. `path` and `scope` are mutually exclusive, and
+`recursive` needs `scope`. A skill that ai-rulez defines or fetches belongs to no scope and applies everywhere. Each
+result of a discovered skill names its `scope`. Without `path` and `scope` the call behaves as before.
+
+**`find_context` and `load_context`.** Nested instruction files, rules and agents are served beside the skills.
+`find_context` takes the same `path`, `scope` and `recursive`, plus an optional `task` to rank by name, scope, kind and
+description (an item with no matching word is left out), `kind` (`instruction`, `rule` or `agent`) and `limit` (default
+10, max 50). It returns summaries:
+
+```json
+{"path": "pkg/api/handler.go"}
+```
+
+```json
+{"count": 4, "total": 4, "scopes": ["pkg/api", "."],
+ "results": [
+  {"name": "reviewer", "kind": "agent", "scope": "pkg/api", "source": "claude",
+   "description": "Reviews changes to the api", "uri": "context://pkg/api/reviewer", "hash": "sha256:..."},
+  {"name": "AGENTS.md", "kind": "instruction", "scope": "pkg/api", "source": "agents",
+   "description": "API conventions", "uri": "context://pkg/api/AGENTS.md", "hash": "sha256:..."},
+  {"name": "AGENTS.md", "kind": "instruction", "scope": ".", "source": "agents",
+   "description": "Root conventions", "uri": "context://./AGENTS.md", "hash": "sha256:..."},
+  {"name": "style", "kind": "rule", "scope": ".", "source": "claude",
+   "description": "Code style for the whole repository", "uri": "context://./style", "hash": "sha256:..."}]}
+```
+
+`load_context` reads one, by `scope` and `name` or by `uri`, with an optional `budget_bytes`:
+
+```json
+{"scope": "pkg/api", "name": "AGENTS.md"}
+```
+
+It returns the text read **from the repository when you call**, never from the index, with the `hash` of what it read
+(and `changed_since_index: true` when the file changed since start-up). The same text is the resource
+`context://<scope>/<name>` (`context://./AGENTS.md` for the root), a resource template that `resources/list` does not
+enumerate: find items with `find_context`. Commands are indexed and counted but not served as context.
+
+The context tools apply what skills do: the `--allow` and `--deny` patterns match an item's name or `scope/name`
+(`--deny AGENTS.md` hides every `AGENTS.md`; a non-empty `--allow` is an allowlist for context too); the security
+scan runs when the index is built, so a refused file is a start-up warning and is not listed, and again on the content
+read at load time; reads count against the session budget (`--budget-bytes`), which `load_context`, `load_skill`,
+`get_skill`, `read_skill_file` and `resources/read` share. A symlink is never followed and a generated copy is skipped.
+Domains, roles, the lock and approvals apply to skills only.
+
+**The `scopes` section of the catalog.** `ai-rulez://catalog` gains a `scopes` array: each scope with its per-kind
+counts and sources, so a planner sees the shape of the repository in one read. The same query parameters narrow it:
+`ai-rulez://catalog?path=pkg/api/handler.go`, `ai-rulez://catalog?scope=pkg/api` or
+`ai-rulez://catalog?scope=.&recursive=true`.
+
+```json
+"scopes": [
+  {"scope": ".", "sources": ["agents", "claude"], "counts": {"skill": 1, "instruction": 1, "rule": 1}},
+  {"scope": "pkg/api", "sources": ["agents", "claude"], "counts": {"skill": 2, "instruction": 1, "agent": 1}}
+]
+```
+
+The `skill_discovery.index` object of the same document reports `items`, `limit`, `found` and `truncated`.
+
+**Server instructions.** The first eight scopes by depth are named in the server instructions with their counts
+(`pkg/api (2 skills, 1 instruction, 1 agent)`), then "and M more", so a planner knows the nested content exists
+without a call.
+
+**Limits.** The index holds at most 20000 items. Past that it keeps the shallowest scopes and the server warns at
+start-up; `skill_discovery.index.truncated` says so. Only files git lists (tracked, or untracked and not ignored; a
+plain walk without git) are indexed, and an instruction file, rule or agent file over 1 MiB is skipped. `path`, `scope`
+and `uri` are untrusted input: they must be relative to the project, free of backslashes and control characters, and
+must not climb out with `..`; they select entries of the index and are never opened as paths. The index is built when the
+server starts and rebuilt when the catalog reloads; a new scope or instruction file is picked up when the server restarts or the catalog next reloads,
+and `load_context` always shows the current text of a file the index already knows.
 
 ##### Start-up cost and the catalog cache
 
@@ -21250,9 +21365,11 @@ ai-rulez mcp --serve-skills --daemon             # the sessions that share one c
 
 | Tool | Arguments | Result |
 | ---- | --------- | ------ |
-| `find_skill` | `task` (required), `limit` (default 5, max 20), `role` | Ranked matches: name, description, score, domain, digest. With a role, `in_role` and the role's skills first. |
+| `find_skill` | `task` (required), `limit` (default 5, max 20), `role`, `path`, `scope`, `recursive` | Ranked matches: name, description, score, domain, digest. With a role, `in_role` and the role's skills first. With discovery, `path` or `scope` keeps the skills that apply there (see [Monorepos](#monorepos-scopes-and-nested-context)). |
 | `load_skill` | `name` (required), `path`, `budget_bytes` | The file (`SKILL.md` by default), `provenance`, `digest`, an index of the skill's other files with their `mode`, and `files_access` (where the files live and how to use them) when the skill has any. |
 | `list_skill_resources` | `name` (required), `offset` | Every file of the skill with path, URI, size, MIME type, digest, `mode`, `executable` and an `interpreter` hint, without loading them. |
+| `find_context` | `task`, `path`, `scope`, `recursive`, `kind`, `limit` | With discovery only. Summaries of the nested instruction files, rules and agents that apply to a path or scope: name, kind, scope, source, description, `context://` URI, hash. |
+| `load_context` | `scope` and `name`, or `uri`; `budget_bytes` | With discovery only. The text of one of them, read from the repository now, with its hash. |
 
 `search_skills`, `get_skill` and `read_skill_file`, the `skill://` resources, `skills/list` and `skills/get` keep
 working as described above. All tools are annotated read-only.
@@ -22377,7 +22494,8 @@ document in `structuredContent`.
 | URI | Content |
 | --- | ------- |
 | `ai-rulez://config` | The parsed settings (`read_config`) |
-| `ai-rulez://catalog` | The content catalog (`catalog`) |
+| `ai-rulez://catalog` | The content catalog (`catalog`); with `--serve-skills --discover-skills` also `skill_discovery` and a `scopes` section, narrowed by `?path=`, `?scope=` and `&recursive=true` (see [Monorepos](#monorepos-scopes-and-nested-context)) |
+| `context://{scope}/{name}` | With discovery: one nested instruction file, rule or agent, read from the repository on each read |
 | `ai-rulez://{kind}/{name}` | The markdown of one root item; `kind` is `rules`, `context`, `skills`, `checks`, `agents` or `commands` |
 | `ai-rulez://domains/{domain}/{kind}/{name}` | The same for an item of a domain |
 
@@ -25985,18 +26103,25 @@ go test ./internal/lint -run '^$' -bench RunFull -benchmem -cpuprofile cpu.out
 go tool pprof -top -cum cpu.out
 ```
 
+The repository-index benchmarks build a synthetic monorepo instead (`internal/testutil.BuildMonorepo`): every scope
+holds an `AGENTS.md`, a `.claude/skills/<name>/SKILL.md` and a `.claude/rules/<name>.md`, and the rest of the files
+are small sources. The default run covers 100, 1000 and 5000 files over 10, 100 and 500 scopes (a shape needs four
+files per scope); `AI_RULEZ_BENCH_LARGE=1` adds 20000 files, which take seconds to write, and moves the
+`Resolve`, `Within` and `mcp` query benchmarks to that size.
+
 | Package | Benchmarks |
 | ------- | ---------- |
 | `internal/parser` | `ParseFrontmatter` (no/small/rich/CRLF/long body), `ParseFrontmatterBatch` |
 | `internal/tokens` | `Estimate`, `Count` (cl100k and byte ratio, prose and long-line input) |
-| `internal/config` | `LoadConfig` |
+| `internal/config` | `LoadConfig`, `LoadSkillResourcesContext` (one installed skill of 1, 100 and 2000 files), `LoadSkillResourcesCatalog` (200 skills) |
+| `internal/repoindex` | `Build` (git listing and directory walk), `BuildPreListed`, `ListFiles`, `Resolve`, `Within` on synthetic monorepos |
 | `internal/includes` | `LoadWithLocalInclude` |
-| `internal/lint` | `LoadTree`, `RunFull`, `Analyzers` (each analyzer alone), `SecretScan` (`DetectSecret`, `RedactSecrets`, `ScanText`), `SecretScanLongLine`, `SecretScanCustomPatterns`, `RunSkillTree`, `AnalyzerSelection`, `NumberedPrefixExists` |
+| `internal/lint` | `LoadTree`, `RunFull`, `Analyzers` (each analyzer alone), `SecretScan` (`DetectSecret`, `RedactSecrets`, `ScanText`), `SecretScanLongLine`, `SecretScanCustomPatterns`, `RunSkillTree`, `AnalyzerSelection`, `NumberedPrefixExists`, `ScannerStage` (stage listing, digest and cache key of an external scanner over 50 and 500 skills) |
 | `internal/contentlock` | `Compute`, `BuildAndCompare` (lock digest, then verify) |
 | `internal/lockfile` | `SaveLoad` |
-| `internal/generator` | `Generate` (full and idempotent no-op), `GenerateLLMsTxt`, `Clean` (remove and dry run), `CheckDrift`, `SecretGate` (plain and `-memo`, the context `generate` runs under) |
+| `internal/generator` | `Generate` (full and idempotent no-op), `GeneratePresets` (2, 10 and every preset), `GenerateLLMsTxt`, `Clean` (remove and dry run), `CheckDrift`, `SecretGate` (plain and `-memo`, the context `generate` runs under) |
 | `internal/review` | `Score` (collect and score), `Calibrate` |
-| `internal/mcp` | `ProjectTools` (tool dispatch), `SkillServer` (catalog build, `search_skills`, `load_skill`) |
+| `internal/mcp` | `ProjectTools` (tool dispatch), `SkillServer` (catalog build, `search_skills`, `load_skill`), `DiscoveryCatalog` (catalog build with repository discovery on a monorepo), `RepositoryQueries` (`find_skill` and `find_context` with a path or scope) |
 | `internal/verifiers` | `RegexFiles` |
 | `cmd/commands` | `Lock` (write and check), `PublishDryRun` (bundle, agent-plugins, ard), `OKF` (export, validate) |
 
@@ -26016,6 +26141,118 @@ Time per operation depends on the CPU, so the gate only applies when the baselin
 as the run (the `cpu:` line of the output). Otherwise, or when there is no baseline, it prints a warning and exits 0.
 The CI `Benchmarks` job runs the script after the full benchmark run and uploads `bench-subset.txt`; to make the gate
 bite on the CI runners, commit that artifact as `scripts/bench-baseline.txt`.
+
+#### Monorepo index
+
+`internal/repoindex` indexes the skills, instruction files, rules, agents and commands a repository keeps at any
+depth (`mcp --serve-skills --discover-skills`). The numbers below are a cold build: the file listing, the
+classification of every path, one read per item for its description and hash, and the grouping into scopes. They
+come from `go test -bench` on the synthetic monorepo described above, 5 iterations per row, on a 4-vCPU Intel Xeon
+2.1 GHz virtual machine with a slow file system for creating files. Compare rows with each other, not with
+your machine or with the CI runners.
+
+Cold `Build`, in ms (B/op in MB), by files and scopes. `git` lists files with `git ls-files`; `walk` is the fallback
+in a directory that is not a repository.
+
+| Files | Scopes | Items | git | git B/op | walk | walk B/op |
+| ----- | ------ | ----- | --- | -------- | ---- | --------- |
+| 100 | 10 | 30 | 11.1 | 1.3 | 5.9 | 0.9 |
+| 1000 | 10 | 30 | 14.7 | 1.8 | 9.8 | 1.4 |
+| 1000 | 100 | 300 | 25.0 | 5.3 | 22.8 | 5.3 |
+| 5000 | 10 | 30 | 19.1 | 3.7 | 15.2 | 3.0 |
+| 5000 | 100 | 300 | 47.4 | 7.2 | 51.3 | 8.5 |
+| 5000 | 500 | 1500 | 78.2 | 23.3 | 89.7 | 25.0 |
+| 20000 | 10 | 30 | 34.1 | 17.4 | 41.7 | 9.0 |
+| 20000 | 100 | 300 | 51.4 | 23.7 | 88.5 | 14.8 |
+| 20000 | 500 | 1500 | 129.1 | 49.8 | 202.2 | 37.9 |
+
+The cost has two parts. The listing grows with the files: 36 ms for `git ls-files` on 20000 files and 67 ms for the
+walk (`ListFiles`). Reading the items grows with their number, about 20-35 us each (a stat, a read, a YAML parse of
+the frontmatter, a SHA-256): with the listing supplied (`BuildPreListed`) 20000 files take 4.1 ms for 30 items, 13.3 ms
+for 300 and 35.7 ms for 1500. Classification costs about 0.2 us per file and is not a factor.
+
+Queries on the built index are microseconds:
+
+| Operation (20000 files) | ns/op | B/op | allocs/op |
+| ----------------------- | ----- | ---- | --------- |
+| `Resolve` of a path six directories deep, 10 / 100 / 500 scopes | 2400 / 2300 / 2300 | 2128 | 8 |
+| `Within` a leaf scope | 9600 | 968 | 6 |
+| `Within` the root, recursive (1500 items) | 371000 | 614344 | 16 |
+
+`Resolve` walks the ancestors of the path and looks each up in a map, so it does not depend on the number of scopes.
+
+Through the MCP server, the catalog build with discovery on (`BenchmarkDiscoveryCatalog`, 20000 files) is the sum of
+the index build, reading every served skill directory, and the security scan of every item (`lint.ScanServed` for
+skills, the index `Screen` for instruction files, rules and agents):
+
+| Scopes | Items | Catalog build, median of 5 | B/op | allocs/op |
+| ------ | ----- | -------------------------- | ---- | --------- |
+| 10 | 30 | 65 ms | 22.1 MB | 130k |
+| 100 | 300 | 291 ms | 58.8 MB | 363k |
+| 500 | 1500 | 1220 ms | 220.8 MB | 1.30M |
+
+Most of that is the security scan, not the index (before the fifth pass about 90% of a build; `Build` alone is 129 ms at 500 scopes). Queries over the
+in-memory transport (`BenchmarkRepositoryQueries`, one sample each; every call also pays about 0.5 MB and 0.3 ms of
+protocol overhead, the same as `search_skills`):
+
+| Query | 10 scopes | 100 scopes | 500 scopes |
+| ----- | --------- | ---------- | ---------- |
+| `find_skill` with a task | 0.59 ms | 0.76 ms | 1.71 ms |
+| `find_skill` with a task and a path | 0.51 ms | 0.71 ms | 1.73 ms |
+| `find_skill` with a scope, recursive | 0.38 ms | 0.67 ms | 1.52 ms |
+| `find_context` with a path | 0.51 ms | 0.54 ms | 0.46 ms |
+| `find_context` with a task and a path | 0.33 ms | 0.34 ms | 0.32 ms |
+| `find_context` with a scope, recursive | 0.76 ms | 0.82 ms | 1.09 ms |
+
+`find_skill` ranks the whole served catalog, so it grows with the skills (500 at most, the discovery cap);
+`find_context` only ranks the scopes that apply to the path.
+
+`TestBuildOfAMonorepoStaysFast` fails when a cold build of 5000 files over 100 scopes takes more than 2 seconds (it
+measures 50-70 ms); it is skipped under `-short` and the race detector.
+
+What a cache would save: the index build itself is 5-130 ms even at 20000 files, so caching only the listing and
+the item summaries (the proposal's phase 3) removes at most that. The larger cost in the server is the per-item
+security scan, which a cache keyed by content hash would also skip.
+
+#### Installed skill bundles
+
+Installing or serving a skill reads its whole directory (`config.LoadSkillResourcesContext`): every file besides
+`SKILL.md` that the bundle excludes and the `.gitignore` of the work tree allow, with a description taken from the
+frontmatter of each Markdown file. Same machine and method as above.
+
+| Bundle | ms/op | B/op | allocs/op |
+| ------ | ----- | ---- | --------- |
+| One skill, 1 file | 2.9 | 428 KB | 1466 |
+| One skill, 100 files | 5.7 | 1.7 MB | 9303 |
+| One skill, 2000 files | 52.3 | 26.1 MB | 157556 |
+| 200 skills of 10 files each | 839 | 119 MB | 538587 |
+
+A bundle has a fixed cost of about 3 ms (the two git processes that ask which files .gitignore leaves out, one since
+the fifth pass) and then 25 us per file. The 2000-file bundle is
+at the file limit of an installed skill.
+
+The external scanner stage (`ScannerStage`) is what a `[[lint.external]]` scanner needs before it starts anything:
+listing the staged files, digesting them and computing the cache key. The key itself is 4-5 us whatever the size.
+
+| Skills (4 files each) | Stage listing | Digest | Cache key |
+| --------------------- | ------------- | ------ | --------- |
+| 50 | 1.45 ms, 612 KB, 3821 allocs | 0.25 ms, 17 KB | 5.0 us |
+| 500 | 14.4 ms, 6.2 MB, 38043 allocs | 2.69 ms, 164 KB | 4.1 us |
+
+Both grow linearly. A scanner run on a warm cache therefore costs the stage listing plus the digest, 1.7 ms for 50
+skills and 17 ms for 500.
+
+`generate` end to end on the 200-file benchmark project (`GeneratePresets`, median of 3), with 2, 10 and all 55
+built-in presets:
+
+| Presets | Full generate | B/op | No-op generate | B/op |
+| ------- | ------------- | ---- | -------------- | ---- |
+| 2 | 243 ms | 19.9 MB | 142 ms | 26.6 MB |
+| 10 | 500 ms | 61.6 MB | 213 ms | 73.0 MB |
+| 55 | 1882 ms | 269 MB | 670 ms | 309 MB |
+
+The time is spent writing the outputs (a temporary file and a rename per output) and rendering, about 30 ms per
+preset; nothing in it was changed.
 
 #### Optimization passes
 
@@ -26159,6 +26396,37 @@ security family; 33 ms, 2.9 MB, 20.4k allocs with `Options.SecretsOnly` (3 to 5x
 
 `tokens` is dominated by cl100k counting and file reads, and was not changed (the token memo is the separate branch
 named below). What remains of `generate` is file I/O (loading, output safety checks, writes).
+
+##### Fifth pass: the security scan and the git questions
+
+Test binaries built from the commit before the pass and from its last commit, run alternately three times on the
+machine described under Monorepo index; medians. The `Benchmarks` job of CI failed on main because
+`SecretScan/ScanText` was 72-93% over `scripts/bench-baseline.txt` (the 25% gate): the rules
+`credential-store-instruction` and `permission-bypass-instruction` had been added since the baseline and ran their
+regular expressions on every prose line. They now run behind literal checks, like the other text scans.
+
+| Path (benchmark) | Change | Before | After |
+| ---------------- | ------ | ------ | ----- |
+| Security scan of one text, 37 KB (`lint SecretScan/ScanText/clean/large`) | credential-store scan runs its regular expressions only on a line holding a store path or a word a store is named by; each permission-bypass pattern runs only on a line holding its rarest word (not "auto", which "author" holds); the case-folded stem search jumps between candidate letters | 20.1 ms | 10.9 ms (-46%) |
+| Same, 3 KB (`ScanText/clean/small`) | same | 1.20 ms | 0.66 ms (-45%) |
+| Same, text with secrets (`ScanText/dirty/large`) | same | 20.1 ms | 10.7 ms (-47%) |
+| Security analyzer of a 200-file project (`lint Analyzers/security`) | same | 74.3 ms | 42.7 ms (-43%) |
+| Lint of 200 content files (`RunFull/medium`) | same | 146 ms | 112 ms (-24%) |
+| Catalog build with discovery, 20000 files, 10 / 100 / 500 scopes (`mcp DiscoveryCatalog`) | same (the scan of every served item) | 82 / 441 / 2246 ms | 62 / 306 / 1239 ms (-24% / -31% / -45%) |
+| One installed skill of 1 file (`config LoadSkillResourcesContext/files=1`) | the bundle filter skips `git ls-files` when `git check-ignore` already says the directory is no work tree (two processes became one) | 5.9 ms, 828 KB, 2690 allocs | 2.9 ms, 428 KB, 1466 allocs (-51%) |
+| 200 installed skills of 10 files (`LoadSkillResourcesCatalog`) | same | 1386 ms, 199 MB | 839 ms, 119 MB (-39%) |
+
+Output is unchanged: `TestMayNameCredentialKeepsEveryStore`, `TestBypassStemsKeepEveryPattern` and
+`TestIndexFoldASCIIAgreesWithTheReference` compare each gate with the pattern it guards, and the existing lint
+tests pass. Two benchmarks also failed outright and were fixed: `BenchmarkProjectTools` called tools with a
+`working_directory` outside the server's confinement, and `BenchmarkSkillServer/load_skill` hit the 256 KiB session
+budget once `N` passed about 2700. CI did not report it, because `task test:benchmark | tee` returned tee's exit status;
+the step now runs with `pipefail`. `scripts/bench-baseline.txt` still holds numbers from before the new rules and
+should be re-recorded from the CI artifact (`bench-subset.txt`).
+
+Measured and left alone: the 10.9 ms that remains in `ScanText/clean/large` is spread over about thirty rules, none
+above 10%; the index build proper (listing, classification, reads) is under 10% of a catalog build, so its per-item cost (20-35 us, mostly the YAML parse and
+the read) was not worth changing.
 
 #### What dominates elsewhere
 
@@ -26420,6 +26688,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `publish` | Turns a verified plugin bundle into release artifacts and emitter output |
 | `releasetime` | Finds when a git tag was released, for minimum-age gates |
 | `render` | Separates what a command produces from what it says about it |
+| `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there |
 | `review` | Scores skills, agents, commands and rules against a rubric |
 | `roles` | Builds the roles manifest |
 | `runner` | Runs an external command with the limits a tool needs |
@@ -31885,7 +32154,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--daemon` | bool |  | Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills) |
 | `--deny` | string list |  | Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
-| `--discover-skills` | string |  | Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honoring .gitignore) or all (repo plus installed and included skills); a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills) |
+| `--discover-skills` | string |  | Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honoring .gitignore) or all (repo plus installed and included skills); either also indexes nested AGENTS.md, CLAUDE.md, GEMINI.md, rules and agents by scope for find_context, load_context and the path and scope arguments of find_skill; a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills) |
 | `--domain` | string list |  | Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills) |
 | `--frozen` | bool |  | Never use the network and require ai-rulez.lock to cover every remote include, installed skill and skill source (requires --serve-skills) |
 | `--include-static` | bool |  | Also serve skills whose delivery is static (requires --serve-skills) |

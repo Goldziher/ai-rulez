@@ -73,7 +73,7 @@ func (c *Catalog) Admit(a Admission) *Catalog {
 		Profile: c.Profile, Preset: c.Preset,
 		byName: map[string]*CatalogSkill{}, byURI: map[string]*CatalogSkill{}, byFile: map[string]*CatalogFile{},
 		refused: map[string]Refusal{}, reports: append([]ScanReport(nil), c.reports...),
-		discovery: c.discovery,
+		discovery: c.discovery, repo: c.repo,
 	}
 	for name, r := range c.refused {
 		out.refused[name] = r
