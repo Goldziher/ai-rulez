@@ -131,6 +131,10 @@ files. Each skipped credential file is named in a warning. A single file over 8 
 A skill that bundles more than 2000 files or 16 MiB in total fails with an error naming the limit; narrow it with
 `resources`, for example `["*", "!docs", "!evals", "!agents", "!.*"]`.
 
+All the skills one `installed_skills` entry resolves together may bundle at most 20000 files and 64 MiB; past that the
+entry fails with an error naming the limit. Select fewer skills with `include` / `exclude`, or narrow what each bundles
+with `resources`.
+
 A project's own skills under `.ai-rulez/skills/` keep the canonical layout; only installed skills are bundled whole.
 
 ## Source forms
