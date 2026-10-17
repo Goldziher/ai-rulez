@@ -3,6 +3,7 @@ package pluginimport_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -439,4 +440,42 @@ func replaceWithLinkSlot(t *testing.T, dir, link string) {
 	full := filepath.Join(dir, filepath.FromSlash(link))
 	require.NoError(t, os.RemoveAll(full))
 	require.NoError(t, os.MkdirAll(filepath.Dir(full), 0o755))
+}
+
+func TestLoad_PluginRootVariableForms(t *testing.T) {
+	forms := []string{"${%s}", "$%s", "${%s:-d}", "${%s:=d}", "${%s#p}", "${%s/a/b}"}
+	tests := []struct {
+		name     string
+		variable string
+		rewrite  string
+		wantMCP  int
+	}{
+		{"root of a fetched plugin is refused", "CLAUDE_PLUGIN_ROOT", "", 0},
+		{"root of a local plugin is rewritten", "CLAUDE_PLUGIN_ROOT", "./p", 1},
+		{"data directory is refused", "CLAUDE_PLUGIN_DATA", "./p", 0},
+		{"data directory of a fetched plugin is refused", "CLAUDE_PLUGIN_DATA", "", 0},
+	}
+	for _, tt := range tests {
+		for _, form := range forms {
+			t.Run(tt.name+" "+form, func(t *testing.T) {
+				// Arrange
+				ref := fmt.Sprintf(form, tt.variable)
+				files := map[string]string{
+					".claude-plugin/plugin.json": `{"name":"p"}`,
+					".mcp.json":                  `{"mcpServers":{"s":{"command":"` + ref + `/run.sh"}}}`,
+				}
+
+				// Act
+				res, _ := loadDir(t, files, pluginimport.Options{EnableMCP: true, Rewrite: tt.rewrite})
+
+				// Assert
+				assert.Len(t, res.MCP, tt.wantMCP)
+				if tt.wantMCP == 0 {
+					assert.NotEmpty(t, res.Findings)
+					return
+				}
+				assert.Equal(t, "./p/run.sh", res.MCP[0].Command)
+			})
+		}
+	}
 }
