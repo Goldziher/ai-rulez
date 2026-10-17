@@ -82,104 +82,125 @@ var errSkillSkipped = errors.New("installed skill skipped")
 
 // resolveInstalledSkill resolves one installed_skills entry into the skills it
 // names. An entry whose root holds a SKILL.md is one skill named after the entry
-// (with its name_prefix); otherwise the immediate subdirectories of the root
-// that hold a SKILL.md are the skills, selected by include/exclude and named
-// with name_prefix.
+// (with its name_prefix); otherwise the skill directories below the root are the
+// skills, selected by include/exclude and named with name_prefix.
 func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) ([]config.ContentFile, error) {
-	baseDir := cfg.BaseDir
 	ctx = config.WithSkillResources(ctx, skillConf.Resources)
 	// Check for local override first
 	if skillConf.LocalOverride != "" && !refreshing(cfg, lockfile.KindSkill, skillConf.Name) {
-		if err := checkLocalOverride(cfg, "installed_skills", skillConf.Name); err != nil {
-			return nil, err
-		}
-		localDir := resolveSkillLocalOverride(baseDir, skillConf)
-		if localDir != "" {
-			cfg.Log().Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
-			cf, err := ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.NamePrefix+skillConf.Name)
-			if err != nil {
-				return nil, err
-			}
-			return []config.ContentFile{cf}, nil
-		}
-		cfg.Log().Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
-		return nil, errSkillSkipped
+		return resolveSkillOverride(ctx, cfg, skillConf)
 	}
 
 	sourceType, localSource, err := SkillSourceRoot(cfg, skillConf.Source)
 	if err != nil {
 		return nil, oops.Wrapf(err, "installed skill %q", skillConf.Name)
 	}
-	skillPath := skillConf.GetPath()
-
 	switch sourceType {
 	case SourceTypeGit:
-		// A file:// URL is a local path in git clothing: it stays inside the project too.
-		if path, ok := lockfile.FileURLPath(skillConf.Source); ok && !lockfile.AllowFileURLsOutside(cfg.Host.Env) {
-			if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, path); err != nil {
-				return nil, err
-			}
-		}
-		w := withVersion(lockfile.Want{
-			Kind: lockfile.KindSkill, Name: skillConf.Name, Source: lockSource(baseDir, skillConf.Source),
-			Path: skillPath, Ref: skillConf.Ref,
-		}, skillConf.VersionSpec())
-		p, err := pinFor(cfg, lock, w)
-		if err != nil {
-			return nil, err
-		}
-		ref, err := versionRef(ctx, cfg, lock, w, p, stripGitPlus(skillConf.Source), accessToken, baseDir)
-		if err != nil {
-			return nil, err
-		}
-		source, err := NewSkillGitSourceIn(cfg.Host, skillConf.Name, skillConf.Source, skillPath, w.Ref, accessToken)
-		if err != nil {
-			return nil, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
-		}
-		source.ref, source.probe = ref, skillConf.Path == ""
-		source.pin, source.baseDir, source.state = p, baseDir, stateFor(cfg)
-		return source.DiscoverSkills(ctx, skillConf.Include, skillConf.Exclude, skillConf.NamePrefix)
-
+		return resolveSkillGit(ctx, cfg, lock, skillConf, accessToken)
 	case SourceTypeLocal:
-		localPath := localSource
-		if !filepath.IsAbs(localPath) {
-			localPath = filepath.Join(baseDir, localPath)
-		}
-		localPath = filepath.Clean(localPath)
-		// A file:// directory follows the file:// rule (AI_RULEZ_ALLOW_FILE_URLS), the rest the include rule.
-		_, viaFileURL := lockfile.FileURLPath(skillConf.Source)
-		if !viaFileURL || !lockfile.AllowFileURLsOutside(cfg.Host.Env) {
-			if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, localPath); err != nil {
-				if config.IsHomeSource(skillConf.Source) {
-					err = oops.Hint("A '~' path is honored only from config.local.toml (machine-local) or the user config; a committed config must stay inside the project").Wrap(err)
-				}
-				return nil, err
-			}
-		}
-
-		// The entry root is the skill path within the local source.
-		root := filepath.Join(localPath, skillPath)
-		if link := symlinkedMarker(root); link != "" {
-			return nil, oops.
-				With("path", link).
-				Errorf("skill '%s': %s is a symlink, and symlinks are not followed", skillConf.Name, link)
-		}
-		// Without a path, a source that has nothing at the default location is
-		// searched for skills where harnesses keep them.
-		probed := false
-		if skillConf.Path == "" && !holdsSkills(root) && len(probeRoots(localPath)) > 0 {
-			root, probed = localPath, true
-		}
-		if !probed && !holdsSkills(root) {
-			return nil, oops.
-				With("path", root).
-				Errorf("no SKILL.md found at local path for skill '%s'", skillConf.Name)
-		}
-		return scanEntrySkills(logger.WithContext(ctx, cfg.Host.Log), root, probed, skillConf.NamePrefix, skillConf.Name, skillConf.Include, skillConf.Exclude)
-
+		return resolveSkillLocal(ctx, cfg, skillConf, localSource)
 	default:
 		return nil, oops.Errorf("unknown source type for skill '%s': %s", skillConf.Name, sourceType)
 	}
+}
+
+// resolveSkillOverride resolves an entry through its local_override.
+func resolveSkillOverride(ctx context.Context, cfg *config.Config, skillConf *config.InstalledSkillConfig) ([]config.ContentFile, error) {
+	if err := checkLocalOverride(cfg, "installed_skills", skillConf.Name); err != nil {
+		return nil, err
+	}
+	localDir := resolveSkillLocalOverride(cfg.BaseDir, skillConf)
+	if localDir == "" {
+		cfg.Log().Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
+		return nil, errSkillSkipped
+	}
+	cfg.Log().Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
+	cf, err := ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.NamePrefix+skillConf.Name)
+	if err != nil {
+		return nil, err
+	}
+	return []config.ContentFile{cf}, nil
+}
+
+// resolveSkillGit resolves an entry whose source is a git repository.
+func resolveSkillGit(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) ([]config.ContentFile, error) {
+	baseDir := cfg.BaseDir
+	skillPath := skillConf.GetPath()
+	// A file:// URL is a local path in git clothing: it stays inside the project too.
+	if path, ok := lockfile.FileURLPath(skillConf.Source); ok && !lockfile.AllowFileURLsOutside(cfg.Host.Env) {
+		if err := checkSkillInsideProject(cfg, baseDir, "source", skillConf.Name, path); err != nil {
+			return nil, err
+		}
+	}
+	w := withVersion(lockfile.Want{
+		Kind: lockfile.KindSkill, Name: skillConf.Name, Source: lockSource(baseDir, skillConf.Source),
+		Path: skillPath, Ref: skillConf.Ref,
+	}, skillConf.VersionSpec())
+	p, err := pinFor(cfg, lock, w)
+	if err != nil {
+		return nil, err
+	}
+	ref, err := versionRef(ctx, cfg, lock, w, p, stripGitPlus(skillConf.Source), accessToken, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	source, err := NewSkillGitSourceIn(cfg.Host, skillConf.Name, skillConf.Source, skillPath, w.Ref, accessToken)
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
+	}
+	source.ref, source.probe = ref, skillConf.Path == ""
+	source.pin, source.baseDir, source.state = p, baseDir, stateFor(cfg)
+	return source.DiscoverSkills(ctx, skillConf.Include, skillConf.Exclude, skillConf.NamePrefix)
+}
+
+// resolveSkillLocal resolves an entry whose source is a local directory.
+func resolveSkillLocal(ctx context.Context, cfg *config.Config, skillConf *config.InstalledSkillConfig, localSource string) ([]config.ContentFile, error) {
+	localPath, err := checkedLocalSkillPath(cfg, skillConf, localSource)
+	if err != nil {
+		return nil, err
+	}
+	// The entry root is the skill path within the local source.
+	root := filepath.Join(localPath, skillConf.GetPath())
+	if link := symlinkedMarker(root); link != "" {
+		return nil, oops.
+			With("path", link).
+			Errorf("skill '%s': %s is a symlink, and symlinks are not followed", skillConf.Name, link)
+	}
+	// Without a path, a source that has nothing at the default location is
+	// searched for skills where harnesses keep them.
+	probed := false
+	if skillConf.Path == "" && !holdsSkills(root) && len(probeRoots(localPath)) > 0 {
+		root, probed = localPath, true
+	}
+	if !probed && !holdsSkills(root) {
+		return nil, oops.
+			With("path", root).
+			Errorf("no SKILL.md found at local path for skill '%s'", skillConf.Name)
+	}
+	return scanEntrySkills(logger.WithContext(ctx, cfg.Host.Log), root, probed, skillConf.NamePrefix, skillConf.Name, skillConf.Include, skillConf.Exclude)
+}
+
+// checkedLocalSkillPath returns the absolute local source directory after the
+// inside-project check.
+func checkedLocalSkillPath(cfg *config.Config, skillConf *config.InstalledSkillConfig, localSource string) (string, error) {
+	localPath := localSource
+	if !filepath.IsAbs(localPath) {
+		localPath = filepath.Join(cfg.BaseDir, localPath)
+	}
+	localPath = filepath.Clean(localPath)
+	// A file:// directory follows the file:// rule (AI_RULEZ_ALLOW_FILE_URLS), the rest the include rule.
+	_, viaFileURL := lockfile.FileURLPath(skillConf.Source)
+	if viaFileURL && lockfile.AllowFileURLsOutside(cfg.Host.Env) {
+		return localPath, nil
+	}
+	if err := checkSkillInsideProject(cfg, cfg.BaseDir, "source", skillConf.Name, localPath); err != nil {
+		if config.IsHomeSource(skillConf.Source) {
+			err = oops.Hint("A '~' path is honored only from config.local.toml (machine-local) or the user config; a committed config must stay inside the project").Wrap(err)
+		}
+		return "", err
+	}
+	return localPath, nil
 }
 
 // checkSkillInsideProject refuses a local installed-skill path that resolves
