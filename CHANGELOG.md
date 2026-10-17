@@ -10,7 +10,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - `ai-rulez generate --refresh-remote` (and `[lock] refresh_on_generate = true`) re-resolves remote includes, installed skills and skill sources to their newest allowed version and rewrites `ai-rulez.lock` before outputs are written. The pre-pin security scan runs first; a refused tree aborts the run with nothing written. Without the flag nothing changes.
 
-- `skip_outputs` (also accepted in `config.local.toml`) lists output kinds ai-rulez never writes, overwrites or deletes: `instructions`, `agents_md`, `claude_md`, `rules`, `skills`, `agents` and `commands`. A project can hand-write `CLAUDE.md`, `AGENTS.md` or skills and let ai-rulez emit only installed skills, plugins, MCP servers and hooks. A file an earlier run generated and that is now skipped stays in place with a one-time warning. See [Managing only remote skills and plugins](docs/managing-remote-skills.md).
+- `skip_outputs` (also accepted in `config.local.toml`) lists output kinds ai-rulez never writes, overwrites or deletes: `instructions`, `agents_md`, `claude_md`, `rules`, `skills`, `agents` and `commands`. A project can hand-write `CLAUDE.md`, `AGENTS.md` or skills and let ai-rulez emit only installed skills, plugins, MCP servers and hooks. A file an earlier run generated and that is now skipped stays in place with a one-time warning. See [Managing only remote skills and plugins](https://goldziher.github.io/ai-rulez/managing-remote-skills/).
 
 ## [5.4.1] - 2026-10-16
 
