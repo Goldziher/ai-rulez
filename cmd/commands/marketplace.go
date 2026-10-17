@@ -107,6 +107,9 @@ func (f *marketplaceFlags) add(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to add marketplace", err)
 	}
 	out := outFor(cmd)
+	if !out.JSON() {
+		out.Info("Added marketplace %s (%s) to %s\n", args[0], incl.RedactURL(f.source), displayPath(op.ConfigFile()))
+	}
 	return reportChange(out, out.JSON(), changeResult{
 		Status: statusCreated, Type: "installed_marketplace", Name: args[0], Source: incl.RedactURL(f.source), Path: op.ConfigFile(),
 	}, false)
