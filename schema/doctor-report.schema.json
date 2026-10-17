@@ -52,7 +52,8 @@
               "lock",
               "includes",
               "tools",
-              "session-start"
+              "session-start",
+              "index-cache"
             ]
           },
           "severity": {

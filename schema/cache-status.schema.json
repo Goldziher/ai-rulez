@@ -10,9 +10,15 @@
     "schema_version": { "const": 1 },
     "mode": { "enum": ["user", "repo", "off"], "description": "The configured [mcp] index_cache mode." },
     "kind": { "enum": ["user", "repo", "off"], "description": "Where the cache is." },
-    "dir": { "type": "string", "description": "The cache directory, or where it would be; absent when the cache is off." },
+    "dir": {
+      "type": "string",
+      "description": "The cache directory, or where it would be; absent when the cache is off."
+    },
     "exists": { "type": "boolean" },
-    "fallback": { "type": "boolean", "description": "The project directory holds the cache of a project that asked for the user cache." },
+    "fallback": {
+      "type": "boolean",
+      "description": "The project directory holds the cache of a project that asked for the user cache."
+    },
     "bytes": { "type": "integer", "minimum": 0 },
     "entries": { "type": "integer", "minimum": 0 },
     "verdicts": { "type": "integer", "minimum": 0 },
