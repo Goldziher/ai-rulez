@@ -1180,8 +1180,8 @@ type InstalledSkillConfig struct {
 	// file has) keeps the canonical directories only; ["*"] also bundles evals/,
 	// agents/ and hidden files.
 	Resources []string `yaml:"resources,omitempty" json:"resources,omitempty" toml:"resources,omitempty"`
-	// NamePrefix is prepended to every resolved skill name, so two entries
-	// cannot collide.
+	// NamePrefix is prepended to every resolved skill name and to its output
+	// directory, so two entries cannot collide.
 	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
 	// Trust is the repository-scoped scan level of the imported skills: "error"
 	// (every finding counts, the default) or "warn" (only error-severity

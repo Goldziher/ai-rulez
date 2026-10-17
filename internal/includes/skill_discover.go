@@ -196,7 +196,7 @@ func scanSelectedSkills(ctx context.Context, root, namePrefix, entryName string,
 func scanEntrySkills(ctx context.Context, base string, probed bool, namePrefix, entryName string, include, exclude []string) ([]config.ContentFile, error) {
 	log := logger.FromContext(ctx)
 	if hasSkillMarker(base) {
-		cf, err := ScanInstalledSkillDir(ctx, base, namePrefix+entryName)
+		cf, err := scanPrefixedSkillDir(ctx, base, namePrefix, entryName)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +223,7 @@ func scanEntrySkills(ctx context.Context, base string, probed bool, namePrefix, 
 	}
 	var out []config.ContentFile
 	for _, dir := range dirs {
-		cf, err := ScanInstalledSkillDir(ctx, dir, namePrefix+filepath.Base(dir))
+		cf, err := scanPrefixedSkillDir(ctx, dir, namePrefix, filepath.Base(dir))
 		var limit *config.SkillBundleLimitError
 		if errors.As(err, &limit) {
 			return nil, err //nolint:wrapcheck // names the limit and how to narrow it
@@ -235,6 +235,18 @@ func scanEntrySkills(ctx context.Context, base string, probed bool, namePrefix, 
 		out = append(out, cf)
 	}
 	return out, nil
+}
+
+// scanPrefixedSkillDir is ScanInstalledSkillDir for a skill named namePrefix +
+// name. The prefix applies to the output id (the skill's directory in the
+// generated trees) as well as to the name, so two entries with different
+// prefixes never write to the same path.
+func scanPrefixedSkillDir(ctx context.Context, skillDir, namePrefix, name string) (config.ContentFile, error) {
+	cf, err := ScanInstalledSkillDir(ctx, skillDir, namePrefix+name)
+	if err == nil && namePrefix != "" {
+		cf.ID = namePrefix + filepath.Base(skillDir)
+	}
+	return cf, err
 }
 
 // skillNamed picks the skill directory called name among the ones a probe found.

@@ -93,7 +93,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	// Generate skill files to the skills root (.agents/skills by default)
 	for idx := range allSkills {
 		skill := allSkills[idx]
-		skillID := extractSkillID(skill.Path)
+		skillID := skillIDOf(skill)
 
 		// Create skill directory
 		skillDir := filepath.Join(skillsRoot, skillID)

@@ -35,6 +35,9 @@ func SkillDescriptionOrFallback(description, skillID string) string {
 
 // SkillID returns the canonical skill identifier from the path when available, otherwise the content name.
 func SkillID(skill ContentFile) string {
+	if skill.ID != "" {
+		return skill.ID
+	}
 	if skill.Path != "" {
 		if id := strings.TrimSpace(extractSkillID(skill.Path)); id != "" && id != "." {
 			return id

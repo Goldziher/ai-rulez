@@ -6,29 +6,33 @@ exit: 0
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Generating with configuration profile=default
-INFO  Generation complete files=17
+INFO  Generation complete files=19
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755
-.agents/skills/explain/ dir 0755
-.agents/skills/explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
+.agents/skills/cx-explain/ dir 0755
+.agents/skills/cx-explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
 .agents/skills/review/ dir 0755
 .agents/skills/review/SKILL.md file 0644 381 9fdeea076c06901b561acf90cb3b0f9bce39c0045ca3b8d4dd0a58c0d0e027da
 .agents/skills/review/references/ dir 0755
 .agents/skills/review/references/checklist.md file 0644 21 a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 179 7d31171c1ef470e59905537c613e719d72989d6fbac927a4ec650f687000b22b
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1504 5827a35c32d5a31f2c71d68b0fe60294e84f70b0f036935c5faeb247055e4420
-.ai-rulez/.generated-manifest.local.json file 0644 2427 c6ffa44e3273dcb5832254e21c55f118b287a141940b933653eecd7e0514e9b1
+.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
+.ai-rulez/.generated-manifest.local.json file 0644 2743 b0ac610a9bc6f2fd71ad19fea8cc4f821a53232ac63b735e711f5df35ff7da90
 .ai-rulez/config.toml file 0644 342 aef42a2395bbff68aa6289ccb5736750ba0c26ccaf5086797aa5fef46eb29f88
 .ai-rulez/rules/ dir 0755
 .ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
 .claude/ dir 0755
 .claude/agents/ dir 0755
 .claude/agents/planner.md file 0644 181 39c7f79b9e3af5da5eb4d6d18c2d8531e7f07442d5f19d68b659833bf108e945
-.claude/settings.json file 0644 281 7c6146044153c0ea2b0bee217aca5eae7016ddd67aa37dc5a6a1575f20450db6
+.claude/settings.json file 0644 1006 58563feb105b689221856e143d231c93e88c67a03fc3e59ee6a91ea4ed55db86
 .claude/skills/ dir 0755
-.claude/skills/explain/ dir 0755
-.claude/skills/explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
+.claude/skills/cx-explain/ dir 0755
+.claude/skills/cx-explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
 .claude/skills/review/ dir 0755
 .claude/skills/review/SKILL.md file 0644 379 bd570ce5f1b359b603739e272b8aa8090aff2216ab803069a6808ca6dfdc355c
 .claude/skills/review/references/ dir 0755
@@ -98,11 +102,11 @@ exit: 0
 locked cx-explain  sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359
 locked review  sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d
 locked ship  sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b
-pinned 2 item(s) and 17 output(s), tree sha256:913a868f6f52a060cf874e2c08b565f3459c0e03c6d6b831d03b95f1c8727d12
+pinned 2 item(s) and 18 output(s), tree sha256:c19614dd861803e0201bec9adeb71eb87362bd820f6cdc7077f376374b952459
 --- stderr
 INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 --- project tree
-+ .ai-rulez/ai-rulez.lock file 0600 3322 34dfca98525b7b4e50cbed8e4b1600fe767679f6be947abd41eed019a955cac8
++ .ai-rulez/ai-rulez.lock file 0600 3478 a3c0066f9d42f543892cf5ec3907aa59fe476f6b4e9d002dfcd7fe04f2db4190
 --- home tree
 (no change)
 
@@ -112,7 +116,7 @@ exit: 0
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Generating with configuration profile=default
-INFO  Generation complete files=17
+INFO  Generation complete files=19
 --- project tree
 (no change)
 --- home tree
@@ -143,8 +147,8 @@ Installed marketplaces:
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755
-.agents/skills/explain/ dir 0755
-.agents/skills/explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
+.agents/skills/cx-explain/ dir 0755
+.agents/skills/cx-explain/SKILL.md file 0644 169 2c66d49fcd82d74652c1cc7cb9273f289d980d4cc1f48b536f1969fb9b6d0705
 >>>>
 ---
 name: cx-explain
@@ -185,18 +189,38 @@ This skill bundles supporting files. Read them on demand when the task calls for
 
 - tests
 <<<<
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 179 7d31171c1ef470e59905537c613e719d72989d6fbac927a4ec650f687000b22b
+>>>>
+---
+name: ship
+description: "Ship it"
+disable-model-invocation: true
+# Content-Hash: blake3:a96524c0d2dc06cc018a7cde5d1c67b0cd904dc10f916312b35449be283b077b
+---
+
+Ship $ARGUMENTS.
+<<<<
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+>>>>
+policy:
+  allow_implicit_invocation: false
+<<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1504 5827a35c32d5a31f2c71d68b0fe60294e84f70b0f036935c5faeb247055e4420
+.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
 >>>>
 {
   "version": "1",
   "files": [
-    ".agents/skills/explain/SKILL.md",
+    ".agents/skills/cx-explain/SKILL.md",
     ".agents/skills/review/SKILL.md",
     ".agents/skills/review/references/checklist.md",
+    ".agents/skills/ship/SKILL.md",
+    ".agents/skills/ship/agents/openai.yaml",
     ".claude/agents/planner.md",
     ".claude/settings.json",
-    ".claude/skills/explain/SKILL.md",
+    ".claude/skills/cx-explain/SKILL.md",
     ".claude/skills/review/SKILL.md",
     ".claude/skills/review/references/checklist.md",
     ".claude/skills/ship/SKILL.md",
@@ -257,7 +281,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2427 c6ffa44e3273dcb5832254e21c55f118b287a141940b933653eecd7e0514e9b1
+.ai-rulez/.generated-manifest.local.json file 0644 2743 b0ac610a9bc6f2fd71ad19fea8cc4f821a53232ac63b735e711f5df35ff7da90
 >>>>
 {
   "version": "1",
@@ -271,6 +295,15 @@ This skill bundles supporting files. Read them on demand when the task calls for
         ],
         "elementSums": [
           "5313dfb4fd93cd2a709a2d21e777883c544c5faf6b51eff3717a748bd02e8c2d"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "890a231f3885f72e1f05bd0dd3dc08f5293e2c7af7b32ae073c3fd14b759c74d"
         ]
       }
     ],
@@ -332,7 +365,8 @@ This skill bundles supporting files. Read them on demand when the task calls for
   },
   "digests": {
     ".agents/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
-    ".claude/settings.json": "7c6146044153c0ea2b0bee217aca5eae7016ddd67aa37dc5a6a1575f20450db6",
+    ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+    ".claude/settings.json": "c9e060918e53f7362c6ab9225a46d2e5208390f084cd682ecbdcf7fd64fd62b2",
     ".claude/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
     ".codex/agents/planner.toml": "bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d",
     ".codex/config.toml": "8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011",
@@ -342,7 +376,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
   }
 }
 <<<<
-.ai-rulez/ai-rulez.lock file 0600 3322 34dfca98525b7b4e50cbed8e4b1600fe767679f6be947abd41eed019a955cac8
+.ai-rulez/ai-rulez.lock file 0600 3478 a3c0066f9d42f543892cf5ec3907aa59fe476f6b4e9d002dfcd7fe04f2db4190
 >>>>
 # ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
@@ -351,7 +385,7 @@ version = 1
 ai_rulez_version = '$VERSION'
 scope = 'all'
 outputs_pinned = true
-tree = 'sha256:913a868f6f52a060cf874e2c08b565f3459c0e03c6d6b831d03b95f1c8727d12'
+tree = 'sha256:c19614dd861803e0201bec9adeb71eb87362bd820f6cdc7077f376374b952459'
 
 [[served]]
 name = 'cx-explain'
@@ -383,8 +417,8 @@ id = 'mcp-servers'
 digest = 'sha256:00b6432df1f00369dc6e4ab4e59bfe1bfefae81125a6a35986f92bd21f243bb3'
 
 [[output]]
-path = '.agents/skills/explain/SKILL.md'
-digest = 'sha256:e216d3e721e651c833dedea1511d73757f7ef6801b203134644b446c7be4eaf1'
+path = '.agents/skills/cx-explain/SKILL.md'
+digest = 'sha256:61501b58c363e06d421546b4692a517c4a9f0c17baedcf0bc941e7a88639cd6a'
 
 [[output]]
 path = '.agents/skills/review/SKILL.md'
@@ -395,16 +429,20 @@ path = '.agents/skills/review/references/checklist.md'
 digest = 'sha256:3b2d74cad6829c220af4387ea3b37a019415932d16233c2108760dcade5547fa'
 
 [[output]]
+path = '.agents/skills/ship/SKILL.md'
+digest = 'sha256:be303685c9b26d9f180227179a644882a3ae89e4b43e4dcf0bdd0ecb12c53840'
+
+[[output]]
+path = '.agents/skills/ship/agents/openai.yaml'
+digest = 'sha256:90d53ab67ff438ea94cdeeaa181c9f86995a168de3c32d296ed3a4f2eadeaf17'
+
+[[output]]
 path = '.claude/agents/planner.md'
 digest = 'sha256:b83a1e2d57c633092c207b4a190887c859d40e46498560a97a4851e33f1694b2'
 
 [[output]]
-path = '.claude/settings.json'
-digest = 'sha256:3830d5b0ee450f5aff74205d41e5ffa31fddb3d1679dd1c9b868175bd814d44d'
-
-[[output]]
-path = '.claude/skills/explain/SKILL.md'
-digest = 'sha256:da7defb84ceb8c0e17d39e20e70945ee82df65920b5da9a9d64e4183c402bbb0'
+path = '.claude/skills/cx-explain/SKILL.md'
+digest = 'sha256:d175cbb369fd99a56671dc7fa6eaf8ef3c01fad6b2f2be9ecc2710b49f4ba391'
 
 [[output]]
 path = '.claude/skills/review/SKILL.md'
@@ -495,7 +533,7 @@ tools:
 
 Plan before you code.
 <<<<
-.claude/settings.json file 0644 281 7c6146044153c0ea2b0bee217aca5eae7016ddd67aa37dc5a6a1575f20450db6
+.claude/settings.json file 0644 1006 58563feb105b689221856e143d231c93e88c67a03fc3e59ee6a91ea4ed55db86
 >>>>
 {
   "hooks": {
@@ -510,13 +548,24 @@ Plan before you code.
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 npx -y ai-rulez@$VERSION session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 uvx --from ai-rulez==$VERSION ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
+          }
+        ]
+      }
     ]
   }
 }
 <<<<
 .claude/skills/ dir 0755
-.claude/skills/explain/ dir 0755
-.claude/skills/explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
+.claude/skills/cx-explain/ dir 0755
+.claude/skills/cx-explain/SKILL.md file 0644 167 2238ac9db40b83f1819693c4423356e5817ef6b0eb75b61c578e55971da58611
 >>>>
 ---
 description: Explain code
