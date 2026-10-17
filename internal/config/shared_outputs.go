@@ -46,6 +46,9 @@ type SharedOutputConsumer struct {
 	// Such a preset still needs the shared AGENTS.md rendered, and owns it for
 	// frontmatter targets.
 	ImportsAgentsMD bool
+	// CommandsAsSkills marks a preset that has no command folder and runs a
+	// command as a skill: the shared .agents/skills tree carries the commands.
+	CommandsAsSkills bool
 	// Folder says what the preset's own rules folder holds once the shared
 	// AGENTS.md carries the always-on items; see RulesFolderKind.
 	Folder RulesFolderKind
@@ -103,7 +106,9 @@ var sharedAll = []SharedOutput{SharedAgentsMD, SharedAgentSkills}
 // provider with no Go type to implement one, and the participation of a preset
 // is a fact about the tool, not about how its generator renders.
 var sharedOutputConsumers = map[string]SharedOutputConsumer{
-	string(PresetCodex):    {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".codex/skills"},
+	string(PresetCodex): {
+		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".codex/skills", CommandsAsSkills: true,
+	},
 	string(PresetOpenCode): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".opencode/skills"},
 	string(PresetXum):      {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".xum/skills"},
 	// pi reads the shared AGENTS.md natively and prefers .agents/skills over its
@@ -127,7 +132,7 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	// .agents/rules folder for scoped rules.
 	string(PresetAntigravity): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: "GEMINI.md",
-		Folder: RulesFolderScopedInInline,
+		Folder: RulesFolderScopedInInline, CommandsAsSkills: true,
 	},
 	// Cursor reads AGENTS.md and .agents/skills natively; .cursor/rules keeps the
 	// rules that are not always-on.
@@ -148,6 +153,7 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	},
 	string(PresetDevin): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".devin/skills", Folder: RulesFolderAlways,
+		CommandsAsSkills: true,
 	},
 	string(PresetCline): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".cline/skills", Folder: RulesFolderAlways,
@@ -170,7 +176,7 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	"vibe":       {Outputs: sharedAll, OwnSkillsDir: ".vibe/skills"},
 	"cortex":     {Outputs: sharedAll, OwnSkillsDir: ".cortex/skills"},
 	"poolside":   {Outputs: sharedAll, OwnSkillsDir: ".poolside/skills"},
-	"warp":       {Outputs: sharedAll, OwnSkillsDir: ".warp/skills"},
+	"warp":       {Outputs: sharedAll, OwnSkillsDir: ".warp/skills", CommandsAsSkills: true},
 	"kiro":       {Outputs: sharedAll, OwnSkillsDir: ".kiro/skills", Folder: RulesFolderSplitOnly},
 	"augment":    {Outputs: sharedAll, OwnSkillsDir: ".augment/skills", Folder: RulesFolderSplitOnly},
 	"zoocode":    {Outputs: sharedAll, OwnSkillsDir: ".roo/skills"},

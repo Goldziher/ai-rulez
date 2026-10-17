@@ -1513,7 +1513,17 @@ Install a named skill from a git repository or local path.
 - `source` (required, string): Git URL or local filesystem path
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
+- `include`, `exclude` (optional, string arrays): Globs of skill directory names to install, or skip, from a directory of skills; `exclude` wins
+- `name_prefix` (optional, string): Prefix added to every installed skill name and output directory
+- `trust` (optional, string): Scan level of the installed skills, `error` (default) or `warn`
+- `resources` (optional, string array): File patterns to bundle with each skill; a leading `!` removes
+- `version` (optional, string): Version range of the source's tags, such as `^1.2`, instead of `ref`
+- `tag_prefix` (optional, string), `include_prerelease` (optional, boolean), `min_release_age` (optional, string): tag filter and release age gate for `version`
+- `domain` (optional, string), `profiles` (optional, string array): Scope the skills to a domain or to profiles
+- `local_override` (optional, string): Directory used instead of the source while it exists
 - `local` (optional, boolean): Record the skill in the `config.local.*` overlay instead of the shared config
+
+The arguments are the `installed_skills` fields of the same names, and `skill install` has a flag for each.
 
 A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
 would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment

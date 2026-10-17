@@ -1226,7 +1226,7 @@
             "type": "string"
           },
           "name_prefix": {
-            "description": "Prepended to every imported skill, agent, command and MCP server name.",
+            "description": "Prepended to every imported skill, agent, command and MCP server name (and to the output directory of a skill).",
             "type": "string"
           },
           "path": {
@@ -1317,7 +1317,7 @@
             "type": "string"
           },
           "name_prefix": {
-            "description": "Prepended to every resolved skill name, so two entries cannot collide.",
+            "description": "Prepended to every resolved skill name and to its output directory, so two entries cannot collide.",
             "type": "string"
           },
           "path": {
@@ -2179,7 +2179,7 @@
           "enum": ["auto", "forge", "first-seen", "commit"]
         },
         "refresh_on_generate": {
-          "description": "Make generate re-resolve remote includes, installed skills and skill sources to their latest allowed version and rewrite ai-rulez.lock before writing outputs, as generate --refresh-remote does. The security scan of the new trees runs first and a refusal aborts before any output is written. Needs the network; skipped with --check, --dry-run, --emit-plan, --locked, --frozen and --offline. Default false.",
+          "description": "Make generate re-resolve remote includes, installed skills and skill sources to their latest allowed version and rewrite ai-rulez.lock before writing outputs, as generate --refresh-remote does. The security scan of the new trees runs first and a refusal aborts before any output is written. Needs the network; skipped with --check, --dry-run, --emit-plan, --locked, --frozen, --offline, --watch, --recursive, --user and --plugin. Default false.",
           "type": "boolean"
         },
         "scope": {

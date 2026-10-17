@@ -254,6 +254,19 @@ type installSkillIn struct {
 	Source string `json:"source" jsonschema:"Git URL or local filesystem path"`
 	Path   string `json:"path,omitempty" jsonschema:"Path within repo to skill directory (defaults to skills/<name>)"`
 	Ref    string `json:"ref,omitempty" jsonschema:"Git reference: branch, tag, or commit hash"`
+
+	Include           []string `json:"include,omitempty" jsonschema:"Globs of skill directory names to install from a directory of skills"`
+	Exclude           []string `json:"exclude,omitempty" jsonschema:"Globs of skill directory names to skip; wins over include"`
+	NamePrefix        string   `json:"name_prefix,omitempty" jsonschema:"Prefix added to every installed skill name and output directory"`
+	Trust             string   `json:"trust,omitempty" jsonschema:"Scan level of the installed skills: error (default) or warn"`
+	Resources         []string `json:"resources,omitempty" jsonschema:"File patterns to bundle with each skill; a leading ! removes"`
+	Version           string   `json:"version,omitempty" jsonschema:"Version range of the source's tags, such as ^1.2 (instead of ref)"`
+	TagPrefix         string   `json:"tag_prefix,omitempty" jsonschema:"Only consider tags with this prefix when resolving version"`
+	IncludePrerelease bool     `json:"include_prerelease,omitempty" jsonschema:"Let version match pre-release tags"`
+	MinReleaseAge     string   `json:"min_release_age,omitempty" jsonschema:"Skip tags younger than this, such as 7d"`
+	Domain            string   `json:"domain,omitempty" jsonschema:"Place the skills in this domain"`
+	Profiles          []string `json:"profiles,omitempty" jsonschema:"Restrict the skills to these profiles"`
+	LocalOverride     string   `json:"local_override,omitempty" jsonschema:"Directory used instead of the source while it exists"`
 	overlayArg
 	workDirArg
 }

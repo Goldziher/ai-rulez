@@ -286,6 +286,9 @@ source = "`+repo.URL()+`"
 
 	// Assert
 	assert.ElementsMatch(t, []string{"a-review-p", "s-review-p", "n-review-p", "review-p"}, skillNames(cfg))
+	for _, s := range cfg.Content.Skills {
+		assert.Equal(t, s.Name, config.SkillID(s), "the output id carries the prefix like the name")
+	}
 	assert.ElementsMatch(t, []string{"helper", "a-helper"}, fileNames(cfg.Content.Agents), "the local agent is kept; the unprefixed plugin copy loses to it")
 	for _, s := range cfg.Content.Skills {
 		if s.Name == "s-review-p" {

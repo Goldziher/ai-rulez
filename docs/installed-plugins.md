@@ -95,7 +95,8 @@ listed as not installable.
 A plugin installed from a marketplace follows the marketplace's `ref`/`version`; setting them on the plugin is an
 error. `domain` and `profiles` scope skills, agents, commands, rules and MCP servers like
 [installed skills](installed-skills.md); hooks are global. A name that already exists (local content first, then
-earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both.
+earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both. The prefix is part of the name and of the skill's output directory
+(`.claude/skills/<prefix><dir>/`).
 
 ## Hooks, MCP servers and permissions
 

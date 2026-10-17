@@ -1247,7 +1247,7 @@ You can either directly edit files with your editor or use CRUD commands for pro
 
 #### Configuration Discovery
 
-When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
+When no explicit path is given, the CLI discovers configuration by walking up from the current directory to the nearest directory holding a configuration, stopping at the repository root (never above the home directory), and trying in each directory, in order:
 
 1. `.agents/ai-rulez.toml` — the configuration of a project whose content is [`.agents` and `AGENTS.md`](agents-source.md)
 2. `.ai-rulez/config.toml` — the tool-specific directory (default)
@@ -3075,7 +3075,7 @@ Each entry supports:
 | `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs  |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory    |
 | `resources`      | No       | What is bundled besides `references/`, `scripts/` and `assets/`: the whole skill directory by default (not `SKILL.md`, `evals/`, `agents/`, hidden files); setting it replaces that. See [Installed skills](installed-skills.md#what-is-bundled-with-a-skill) |
 | `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 
@@ -3143,7 +3143,7 @@ body_file = "stub.md"                                   # relative to .ai-rulez/
 
 | Key | Meaning |
 | --- | ------- |
-| `description` | Replaces the frontmatter description. Must not be blank. |
+| `description` | Replaces the frontmatter description. Must not be whitespace-only; an empty string is the same as leaving the key out. |
 | `body` | Replaces the stub's text. Multi-line TOML (`"""`) works. |
 | `body_file` | Reads the text from a file relative to the config directory (`.ai-rulez/`); the path must stay inside it. A missing file is a load error. Mutually exclusive with `body`. |
 
@@ -6738,7 +6738,7 @@ source = "https://github.com/org/skills"
 path = "skills"               # a directory of skill directories
 include = ["db-*", "api"]     # keep only these directory names
 exclude = ["*-wip"]           # drop these; exclude wins over include
-name_prefix = "vendor-"       # every resolved skill is named vendor-<dir>
+name_prefix = "vendor-"       # every resolved skill is named, and written to, vendor-<dir>
 trust = "warn"                # only error-severity scan findings block generate
 ```
 
@@ -6751,12 +6751,15 @@ trust = "warn"                # only error-severity scan findings block generate
 | `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `version`        | No       | Version range of the source's tags (`^1.2`), instead of `ref` |
+| `tag_prefix`     | No       | With `version`, only consider tags that start with this prefix (`v`, `skills/`) |
+| `include_prerelease` | No   | With `version`, let pre-release tags match. Default `false`      |
+| `min_release_age` | No      | With `version`, skip tags younger than this (`7d`), so a brand-new release is not picked up at once |
 | `local_override` | No       | Local path override for development                              |
 | `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
 | `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
 | `include`        | No       | Keep only skills whose directory name matches one of these globs. Empty keeps every skill below `path` |
 | `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name, so two entries cannot collide |
+| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory (`.claude/skills/vendor-<dir>/`), so two entries cannot collide |
 | `resources`      | No       | What is bundled from each skill directory besides `references/`, `scripts/` and `assets/`. The default is the whole directory (see below); setting it replaces that default |
 | `trust`          | No       | Scan level of the imported skills: `error` (every finding counts, the default) or `warn` (only error-severity findings block) |
 
@@ -6840,6 +6843,10 @@ Install a named skill.
 - `--trust error|warn` (optional): Scan level of the imported skills
 - `--resources <pattern>` (optional, repeatable): What is bundled besides the canonical folders
 - `--version <range>` (optional): Version range of the source's tags, instead of `--ref`
+- `--tag-prefix <prefix>`, `--include-prerelease`, `--min-release-age <age>` (optional): Tag filter and release age gate for `--version`
+- `--domain <name>` (optional): Place the skills in a domain, so a profile or role selects them by domain
+- `--profile <name>` (optional, repeatable): Restrict the skills to these profiles
+- `--local-override <dir>` (optional): Directory used instead of the source while it exists
 - `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
 
 `skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
@@ -7079,7 +7086,8 @@ listed as not installable.
 A plugin installed from a marketplace follows the marketplace's `ref`/`version`; setting them on the plugin is an
 error. `domain` and `profiles` scope skills, agents, commands, rules and MCP servers like
 [installed skills](installed-skills.md); hooks are global. A name that already exists (local content first, then
-earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both.
+earlier plugins) wins and the later one is skipped with a warning; use `name_prefix` to keep both. The prefix is part of the name and of the skill's output directory
+(`.claude/skills/<prefix><dir>/`).
 
 #### Hooks, MCP servers and permissions
 
@@ -7435,7 +7443,7 @@ The managed `.gitignore` block covers the local manifest, the overlay and its lo
 
 #### Discovery order
 
-Per directory, while walking up: `.agents/ai-rulez.toml`, `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml`, then `ai-rulez.toml`. A config directory always wins; when one exists beside an `ai-rulez.toml`, `generate` and `doctor` warn that the file is ignored. `--config ai-rulez.toml` (or `--config .`) selects the file explicitly. `generate --recursive` finds an `ai-rulez.toml` that has no config directory beside it. A flat `ai-rulez.yaml` is still refused with the `ai-rulez migrate v5` message.
+Per directory, while walking up from the working directory to the repository root (never above the home directory): `.agents/ai-rulez.toml`, `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml`, then `ai-rulez.toml`. A config directory always wins; when one exists beside an `ai-rulez.toml`, `generate` and `doctor` warn that the file is ignored. `--config ai-rulez.toml` (or `--config .`) selects the file explicitly. `generate --recursive` finds an `ai-rulez.toml` that has no config directory beside it. A flat `ai-rulez.yaml` is still refused with the `ai-rulez migrate v5` message.
 
 #### How it differs from the `.agents` layout
 
@@ -9049,8 +9057,11 @@ What changes:
   tree keeps them, since that preset has no other way to see them, and still gets the stub.
 - Presets that read these files stop writing their root file (`GEMINI.md`, `.hermes.md`, ...), their copy of
   `AGENTS.md` and their own skills directory.
-- Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
-  MCP files and settings. A rules folder is created only when at least one rule file is written into it.
+- Commands that `codex`, `antigravity`, `devin` and `warp` run as skills are written to the shared tree as
+  user-invocable skills (`disable-model-invocation: true`, plus `agents/openai.yaml` for Codex), unless a skill has
+  the same id. A command with `targets` stays in each targeted preset's own skills directory.
+- Everything else the tool cannot read from the shared files stays per-preset: scoped rules folders, agents,
+  other commands, MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
 With `agents_md = false`, `codex`, `opencode`, `xum`, `pi`, `amp` and `baz` already write the same `AGENTS.md`, while `claude`, `gemini`,
 `cursor` and the rest each repeat the same content in their own file.
@@ -9349,7 +9360,7 @@ ai-rulez generate --check     # report drift; hand-written files are never repor
 
 To pick up new releases of the remote skills on every run, add `refresh_on_generate = true` to `[lock]`, or run
 `ai-rulez generate --refresh-remote` once. The refresh re-resolves each source to the newest version its constraint
-allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
+allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written (review it, then add `--accept-findings`). See
 [Refreshing on generate](lockfile.md#refreshing-on-generate).
 
 #### The ai-rulez MCP server
@@ -9363,8 +9374,10 @@ served the entry runs `mcp --serve-skills`. To opt out set `self_server = false`
 
 - A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
   `generate` or `clean`.
-- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns that it is no
-  longer managed and drops it from the manifest; the warning repeats on each run until you edit or delete the file.
+- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns once that it is no
+  longer managed and drops it from the manifest, so you can edit or delete it yourself. The notice is recorded in the
+  machine-local manifest, so later runs of `generate`, `generate --check` and `clean` do not repeat it; deleting the
+  file clears the record.
 - `generate` stays quiet about a missing `AGENTS.md` when the skip is intentional.
 
 #### Troubleshooting
@@ -18214,7 +18227,8 @@ written: every remote include, installed skill and skill source moves to the new
 plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
 is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
 error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
-tags. Any refusal ends the run before an output is written and leaves the lock as it was. The import gate
+tags. Any refusal ends the run before an output is written and leaves the lock as it was; after reviewing the findings,
+`generate --refresh-remote --accept-findings` pins the trees anyway, as `lock --accept-findings` does. The import gate
 (`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
 key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
 `--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.
@@ -21845,7 +21859,17 @@ Install a named skill from a git repository or local path.
 - `source` (required, string): Git URL or local filesystem path
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
+- `include`, `exclude` (optional, string arrays): Globs of skill directory names to install, or skip, from a directory of skills; `exclude` wins
+- `name_prefix` (optional, string): Prefix added to every installed skill name and output directory
+- `trust` (optional, string): Scan level of the installed skills, `error` (default) or `warn`
+- `resources` (optional, string array): File patterns to bundle with each skill; a leading `!` removes
+- `version` (optional, string): Version range of the source's tags, such as `^1.2`, instead of `ref`
+- `tag_prefix` (optional, string), `include_prerelease` (optional, boolean), `min_release_age` (optional, string): tag filter and release age gate for `version`
+- `domain` (optional, string), `profiles` (optional, string array): Scope the skills to a domain or to profiles
+- `local_override` (optional, string): Directory used instead of the source while it exists
 - `local` (optional, boolean): Record the skill in the `config.local.*` overlay instead of the shared config
+
+The arguments are the `installed_skills` fields of the same names, and `skill install` has a flag for each.
 
 A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
 would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment
@@ -29182,7 +29206,7 @@ Commands that load a project directory use the following config order:
 3. **Project convention**: `.config/ai-rulez/config.toml`, used only when discovering the default layout (an explicit `--config-dir` is honoured exactly and never falls back)
 4. **Error**: No configuration found
 
-The search walks up from the current directory. `config.toml` is the only config format read. A project that has only a YAML or JSON config (`.ai-rulez/config.yaml`, `.yml` or `.json`, or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; run `ai-rulez migrate v5` to convert it (a 2.x or 3.x project goes through ai-rulez 4.x first). A `config.toml` whose `version` is `4.0` stops the same way. `doctor` reports the same file.
+The search walks up from the current directory to the nearest directory that holds a configuration in any layout, stopping at the repository root (else the file system root, and never above the home directory). Outputs are written relative to that directory, and the error for a missing configuration names where it looked. `--recursive` and `--watch` keep their own discovery. `config.toml` is the only config format read. A project that has only a YAML or JSON config (`.ai-rulez/config.yaml`, `.yml` or `.json`, or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; run `ai-rulez migrate v5` to convert it (a 2.x or 3.x project goes through ai-rulez 4.x first). A `config.toml` whose `version` is `4.0` stops the same way. `doctor` reports the same file.
 
 Example detection flow:
 
@@ -30650,6 +30674,7 @@ ai-rulez generate --locked
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
+| `--accept-findings` | bool |  | With --refresh-remote or [lock] refresh_on_generate: pin a remote tree although its security scan has error findings (review them first), as 'ai-rulez lock --accept-findings' |
 | `--allow-local-drift` | bool |  | Write output even when machine-local config would change files shared with the team |
 | `--check` | bool |  | Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
@@ -32932,15 +32957,21 @@ ai-rulez skill install my-skill --source ./local-repo --path custom/path
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Place the skills in this domain, so a profile or role selects them by domain |
 | `--exclude` | string list |  | Glob of skill directory names to skip; wins over --include (repeatable) |
 | `--format` | string | `text` | Output format: text, json |
 | `--include` | string list |  | Glob of skill directory names to install from a directory of skills (repeatable) |
+| `--include-prerelease` | bool |  | Let --version match pre-release tags |
 | `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--local-override` | string |  | Directory used instead of the source while it exists (local development of a remote skill) |
+| `--min-release-age` | string |  | Skip tags younger than this, such as 7d (holds back brand-new releases) |
 | `--name-prefix` | string |  | Prefix added to every installed skill name |
 | `--path` | string |  | Path within repo to skill directory (defaults to skills/<name>) |
+| `--profile` | string list |  | Restrict the skills to these profiles (repeatable) |
 | `--ref` | string |  | Git reference: branch, tag, or commit hash |
 | `--resources` | string list |  | Extra file patterns to bundle with each skill, "!" removes (repeatable) |
 | `--source` | string |  | Git URL or local path (required) |
+| `--tag-prefix` | string |  | Only consider tags with this prefix when resolving --version, such as v or skills/ |
 | `--trust` | string |  | Scan level for the installed skills: error (default) or warn |
 | `--version` | string |  | Version range of the source's tags, such as ^1.2 (instead of --ref) |
 
@@ -33842,7 +33873,7 @@ Which of these a repository may set, and which only the user config file or the 
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
 - **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
-- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name
+- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name and output directory
 - **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
 - **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
 

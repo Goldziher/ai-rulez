@@ -93,7 +93,7 @@ func bazSkillOutputs(content *config.ContentTree, baseDir string) []config.Outpu
 	skillList := allSkills(content)
 	for idx := range skillList {
 		skill := skillList[idx]
-		id := extractSkillID(skill.Path)
+		id := skillIDOf(skill)
 		if skill.Metadata != nil && !targetmatch.Allow(skill.Metadata.Targets, []string{bazPresetName}, ".agents/skills/"+id+"/SKILL.md", "SKILL.md") {
 			continue
 		}

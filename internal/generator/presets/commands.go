@@ -112,23 +112,32 @@ func renderCommandMarkdown(command config.ContentFile, spec commandFilesSpec) (s
 // bytes; it is marked disable-model-invocation because a command runs only when
 // the user asks. A command whose name is already a skill's keeps the skill.
 func commandAsSkills(d *diag.Collector, content *config.ContentTree, preset string) []config.ContentFile {
+	return commandSkillsWhere(d, content, preset, func(command config.ContentFile) bool {
+		return commandTargets(command, preset)
+	})
+}
+
+// commandSkillsWhere is commandAsSkills for the commands keep selects; label
+// names the writer in the warning about a name taken by a skill.
+func commandSkillsWhere(d *diag.Collector, content *config.ContentTree, label string, keep func(config.ContentFile) bool,
+) []config.ContentFile {
 	taken := map[string]bool{}
 	skillList := allSkills(content)
 	for idx := range skillList {
 		skill := skillList[idx]
-		taken[extractSkillID(skill.Path)] = true
+		taken[skillIDOf(skill)] = true
 	}
 	var skills []config.ContentFile
 	commandList := allCommands(content)
 	for idx := range commandList {
 		command := commandList[idx]
 		id := sanitizeName(command.Name)
-		if !commandTargets(command, preset) {
+		if !keep(command) {
 			continue
 		}
 		if taken[id] {
 			d.Warn(fmt.Sprintf("command %q is not written as a %s skill: a skill or another command already has the id %q",
-				command.Name, preset, id), "hint", "rename the command or the skill so both are available")
+				command.Name, label, id), "hint", "rename the command or the skill so both are available")
 			continue
 		}
 		taken[id] = true

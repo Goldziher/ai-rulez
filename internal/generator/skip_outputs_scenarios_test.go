@@ -195,7 +195,7 @@ func TestSkipOutputs_UserScopeLeavesHandWrittenHomeFilesAlone(t *testing.T) {
 	}
 }
 
-func TestSkipOutputs_PreviouslyGeneratedFileWarnsExactlyOnceAndLeavesTheManifest(t *testing.T) {
+func TestSkipOutputs_PreviouslyGeneratedFileWarnsOnceEverAndLeavesTheManifest(t *testing.T) {
 	// Arrange: a run that generated CLAUDE.md and AGENTS.md
 	warned := quietWarnings(t)
 	root := skipScenarioProject(t, "")
@@ -205,14 +205,14 @@ func TestSkipOutputs_PreviouslyGeneratedFileWarnsExactlyOnceAndLeavesTheManifest
 	*warned = nil
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude", "codex"}, skipClaudeCodexConfig+"skip_outputs = [\"claude_md\"]\n", skipMCPTable))
 
-	// Act: the run that skips it, then another one (a new generator warns once per run)
+	// Act: the run that skips it, then another one (the notice is recorded, so it is not repeated)
 	runAgentsMDGenerate(t, root)
 	firstWarnings := countContaining(*warned, "CLAUDE.md")
 	runAgentsMDGenerate(t, root)
 
 	// Assert
 	assert.Equal(t, 1, firstWarnings, "warned once: %v", *warned)
-	assert.Equal(t, 2, countContaining(*warned, "CLAUDE.md"), "each run reports the file once, never twice: %v", *warned)
+	assert.Equal(t, 1, countContaining(*warned, "CLAUDE.md"), "the notice is recorded, so a later run stays quiet: %v", *warned)
 	assert.Equal(t, generated, readAgentsMDFile(t, root, "CLAUDE.md"), "the earlier file stays")
 	files := sharedManifestFiles(t, root)
 	assert.NotContains(t, files, "CLAUDE.md")

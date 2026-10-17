@@ -116,7 +116,7 @@ func resolveSkillOverride(ctx context.Context, cfg *config.Config, skillConf *co
 		return nil, errSkillSkipped
 	}
 	cfg.Log().Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
-	cf, err := ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.NamePrefix+skillConf.Name)
+	cf, err := scanPrefixedSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.NamePrefix, skillConf.Name)
 	if err != nil {
 		return nil, err
 	}

@@ -44,7 +44,7 @@ ai-rulez generate --check     # report drift; hand-written files are never repor
 
 To pick up new releases of the remote skills on every run, add `refresh_on_generate = true` to `[lock]`, or run
 `ai-rulez generate --refresh-remote` once. The refresh re-resolves each source to the newest version its constraint
-allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
+allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written (review it, then add `--accept-findings`). See
 [Refreshing on generate](lockfile.md#refreshing-on-generate).
 
 ## The ai-rulez MCP server
@@ -58,8 +58,10 @@ served the entry runs `mcp --serve-skills`. To opt out set `self_server = false`
 
 - A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
   `generate` or `clean`.
-- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns that it is no
-  longer managed and drops it from the manifest; the warning repeats on each run until you edit or delete the file.
+- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns once that it is no
+  longer managed and drops it from the manifest, so you can edit or delete it yourself. The notice is recorded in the
+  machine-local manifest, so later runs of `generate`, `generate --check` and `clean` do not repeat it; deleting the
+  file clears the record.
 - `generate` stays quiet about a missing `AGENTS.md` when the skip is intentional.
 
 ## Troubleshooting

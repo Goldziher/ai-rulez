@@ -567,6 +567,15 @@ func sanitizeAgentID(name string) string {
 	return id
 }
 
+// skillIDOf is the output id of a skill: the one its entry set (a name_prefix
+// applies to the id as well as the name), else the directory holding SKILL.md.
+func skillIDOf(skill config.ContentFile) string {
+	if skill.ID != "" {
+		return skill.ID
+	}
+	return extractSkillID(skill.Path)
+}
+
 // extractSkillID extracts the canonical skill ID from a skill's source path.
 // Source paths take the form `.../skills/{skill-id}/SKILL.md`; the parent
 // directory name is the ID. Used by every preset that emits per-skill files.

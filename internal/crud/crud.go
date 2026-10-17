@@ -289,6 +289,14 @@ type InstallSkillRequest struct {
 	Trust      string
 	Resources  []string
 	Version    string
+
+	// Scope and version-resolution fields of the entry.
+	Domain            string
+	Profiles          []string
+	LocalOverride     string
+	TagPrefix         string
+	IncludePrerelease bool
+	MinReleaseAge     string
 }
 
 // InstalledSkillInfo represents information about an installed skill

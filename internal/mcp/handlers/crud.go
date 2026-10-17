@@ -863,6 +863,19 @@ func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 		Source: source,
 		Path:   path,
 		Ref:    ref,
+
+		Include:           request.GetStringSlice("include", nil),
+		Exclude:           request.GetStringSlice("exclude", nil),
+		NamePrefix:        request.GetString("name_prefix", ""),
+		Trust:             request.GetString("trust", ""),
+		Resources:         request.GetStringSlice("resources", nil),
+		Version:           request.GetString("version", ""),
+		TagPrefix:         request.GetString("tag_prefix", ""),
+		IncludePrerelease: request.GetBool("include_prerelease", false),
+		MinReleaseAge:     request.GetString("min_release_age", ""),
+		Domain:            request.GetString("domain", ""),
+		Profiles:          request.GetStringSlice("profiles", nil),
+		LocalOverride:     request.GetString("local_override", ""),
 	}
 
 	err = op.InstallSkill(ctx, req)
