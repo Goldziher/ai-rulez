@@ -613,10 +613,10 @@ func (st *ServeSetup) lockPolicy() config.LockPolicy {
 
 func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 	wd := st.workDir()
-	if config.ResolveConfigDirName(wd) == "" && len(st.Sources) > 0 {
-		// Serving only --source skills needs no project.
-		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
-		return &config.Config{BaseDir: abs}, nil
+	if config.ResolveConfigDirName(wd) == "" {
+		if cfg := st.projectlessConfig(wd); cfg != nil {
+			return cfg, nil
+		}
 	}
 	// --frozen and --offline are the lock policy of the load, exactly as
 	// `generate --frozen` and `generate --no-fetch` make them.
@@ -630,6 +630,27 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 		return nil, oops.Wrapf(err, "load configuration")
 	}
 	return cfg, nil
+}
+
+// projectlessConfig is the in-memory configuration for a directory with none,
+// or nil when serving needs one. Serving only --source skills needs no project;
+// skill discovery works from a minimal one whose presets (claude and codex, which read .claude/skills and .agents/skills)
+// name the skill directories to search.
+func (st *ServeSetup) projectlessConfig(wd string) *config.Config {
+	discovering := false
+	if mode, err := config.ParseDiscoverSkills(st.DiscoverSkills); err != nil || mode != config.DiscoverOff {
+		// An invalid mode is reported by the build, as it is with a project.
+		discovering = true
+	}
+	if len(st.Sources) == 0 && !discovering {
+		return nil
+	}
+	abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
+	cfg := &config.Config{BaseDir: abs}
+	if discovering {
+		cfg.Presets = []config.Preset{{BuiltIn: "claude"}, {BuiltIn: "codex"}}
+	}
+	return cfg
 }
 
 func (st *ServeSetup) sourceSpecs(cfg *config.Config) ([]skillsource.Spec, error) {
