@@ -6738,6 +6738,9 @@ trust = "warn"                # only error-severity scan findings block generate
 | `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `version`        | No       | Version range of the source's tags (`^1.2`), instead of `ref` |
+| `tag_prefix`     | No       | With `version`, only consider tags that start with this prefix (`v`, `skills/`) |
+| `include_prerelease` | No   | With `version`, let pre-release tags match. Default `false`      |
+| `min_release_age` | No      | With `version`, skip tags younger than this (`7d`), so a brand-new release is not picked up at once |
 | `local_override` | No       | Local path override for development                              |
 | `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
 | `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
@@ -6819,6 +6822,10 @@ Install a named skill.
 - `--trust error|warn` (optional): Scan level of the imported skills
 - `--resources <pattern>` (optional, repeatable): What is bundled besides the canonical folders
 - `--version <range>` (optional): Version range of the source's tags, instead of `--ref`
+- `--tag-prefix <prefix>`, `--include-prerelease`, `--min-release-age <age>` (optional): Tag filter and release age gate for `--version`
+- `--domain <name>` (optional): Place the skills in a domain, so a profile or role selects them by domain
+- `--profile <name>` (optional, repeatable): Restrict the skills to these profiles
+- `--local-override <dir>` (optional): Directory used instead of the source while it exists
 - `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
 
 `skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
@@ -21575,7 +21582,17 @@ Install a named skill from a git repository or local path.
 - `source` (required, string): Git URL or local filesystem path
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
+- `include`, `exclude` (optional, string arrays): Globs of skill directory names to install, or skip, from a directory of skills; `exclude` wins
+- `name_prefix` (optional, string): Prefix added to every installed skill name and output directory
+- `trust` (optional, string): Scan level of the installed skills, `error` (default) or `warn`
+- `resources` (optional, string array): File patterns to bundle with each skill; a leading `!` removes
+- `version` (optional, string): Version range of the source's tags, such as `^1.2`, instead of `ref`
+- `tag_prefix` (optional, string), `include_prerelease` (optional, boolean), `min_release_age` (optional, string): tag filter and release age gate for `version`
+- `domain` (optional, string), `profiles` (optional, string array): Scope the skills to a domain or to profiles
+- `local_override` (optional, string): Directory used instead of the source while it exists
 - `local` (optional, boolean): Record the skill in the `config.local.*` overlay instead of the shared config
+
+The arguments are the `installed_skills` fields of the same names, and `skill install` has a flag for each.
 
 A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
 would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment
@@ -32624,15 +32641,21 @@ ai-rulez skill install my-skill --source ./local-repo --path custom/path
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Place the skills in this domain, so a profile or role selects them by domain |
 | `--exclude` | string list |  | Glob of skill directory names to skip; wins over --include (repeatable) |
 | `--format` | string | `text` | Output format: text, json |
 | `--include` | string list |  | Glob of skill directory names to install from a directory of skills (repeatable) |
+| `--include-prerelease` | bool |  | Let --version match pre-release tags |
 | `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--local-override` | string |  | Directory used instead of the source while it exists (local development of a remote skill) |
+| `--min-release-age` | string |  | Skip tags younger than this, such as 7d (holds back brand-new releases) |
 | `--name-prefix` | string |  | Prefix added to every installed skill name |
 | `--path` | string |  | Path within repo to skill directory (defaults to skills/<name>) |
+| `--profile` | string list |  | Restrict the skills to these profiles (repeatable) |
 | `--ref` | string |  | Git reference: branch, tag, or commit hash |
 | `--resources` | string list |  | Extra file patterns to bundle with each skill, "!" removes (repeatable) |
 | `--source` | string |  | Git URL or local path (required) |
+| `--tag-prefix` | string |  | Only consider tags with this prefix when resolving --version, such as v or skills/ |
 | `--trust` | string |  | Scan level for the installed skills: error (default) or warn |
 | `--version` | string |  | Version range of the source's tags, such as ^1.2 (instead of --ref) |
 
