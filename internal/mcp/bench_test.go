@@ -58,6 +58,13 @@ func BenchmarkProjectTools(b *testing.B) {
 	}
 }
 
+// benchSkillServer is a served-skills server whose load_skill session budget
+// is unlimited: the benchmark loads one skill more often than the default 256 KiB
+// budget allows, after which every call is refused.
+func benchSkillServer(cat *Catalog) *Server {
+	return NewSkillServerWith("bench", cat, ServeOptions{BudgetBytes: -1})
+}
+
 // BenchmarkSkillServer dispatches the served-skills tools over a catalog of each size.
 func BenchmarkSkillServer(b *testing.B) {
 	for _, s := range testutil.BenchSizes() {
@@ -70,7 +77,7 @@ func BenchmarkSkillServer(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		session := benchSession(b, NewSkillServer("bench", cat))
+		session := benchSession(b, benchSkillServer(cat))
 		b.Run("BuildCatalog/"+s.Name, func(b *testing.B) {
 			b.ReportAllocs()
 			for range b.N {
