@@ -60,8 +60,10 @@ func WithSkillBundleBudget(ctx context.Context) context.Context {
 }
 
 func skillBundleBudgetFrom(ctx context.Context) *skillBundleBudget {
-	b, _ := ctx.Value(skillBundleBudgetKey{}).(*skillBundleBudget)
-	return b
+	if b, ok := ctx.Value(skillBundleBudgetKey{}).(*skillBundleBudget); ok {
+		return b
+	}
+	return nil
 }
 
 // charge adds one file and fails once the entry passes a cap.
