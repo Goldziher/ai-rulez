@@ -115,6 +115,10 @@ type ServeSetup struct {
 	// fields, for library callers and tests.
 	DaemonIdentity string
 
+	// IndexWatchDebounce is the quiet period of the repository file watcher
+	// before it refreshes the index (0 selects 300 ms).
+	IndexWatchDebounce time.Duration
+
 	// afterLoad, when set, runs after a build loaded the configuration (tests
 	// edit files at that point).
 	afterLoad func()
@@ -197,6 +201,9 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			holder.set(b.cfg)
 			current.Store(b)
 			return b.catalog, nil
+		}
+		if first.catalog.repository() != nil {
+			opts.IndexWatch = &IndexWatch{Root: first.cfg.BaseDir, Skip: configDirSkip(first.cfg), Debounce: st.IndexWatchDebounce}
 		}
 		logs := st.usageFiles(first.cfg)
 		opts.Fingerprint = func() (string, error) { return fingerprint(roots, logs...) }

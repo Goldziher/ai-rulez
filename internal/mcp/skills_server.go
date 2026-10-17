@@ -127,6 +127,7 @@ func newServingServer(version string, catalog *Catalog, opts ServeOptions, autho
 	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
 	srv.registerSkillsExtension()
 	srv.registerSkillResources()
+	srv.registerIndexResource()
 	srv.registerSkillTools()
 	srv.registerServeTools()
 	if merged {
@@ -207,6 +208,9 @@ func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 // served skill file, or, on the authoring and merged servers, a config, catalog
 // or item URI (ai-rulez://...).
 func (s *Server) resourceKnown(uri string) bool {
+	if uri == uriIndex {
+		return s.cat().repository() != nil
+	}
 	if cat := s.cat(); cat != nil {
 		if _, served := cat.File(uri); served {
 			return true
