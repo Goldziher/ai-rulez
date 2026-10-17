@@ -51,7 +51,7 @@ func SkillTargets(content *config.ContentTree) map[string][]string {
 	for idx := range skillList {
 		skill := skillList[idx]
 		if skill.Metadata != nil && len(skill.Metadata.Targets) > 0 {
-			targeted[extractSkillID(skill.Path)] = skill.Metadata.Targets
+			targeted[skillIDOf(skill)] = skill.Metadata.Targets
 		}
 	}
 	return targeted
@@ -75,7 +75,7 @@ func SharedCommandSkills(d *diag.Collector, content *config.ContentTree) []confi
 func SharedCodexCommandPolicy(commands []config.ContentFile, baseDir string) []config.OutputFile {
 	var outputs []config.OutputFile
 	for idx := range commands {
-		agentsDir := filepath.Join(baseDir, ".agents", "skills", extractSkillID(commands[idx].Path), "agents")
+		agentsDir := filepath.Join(baseDir, ".agents", "skills", skillIDOf(commands[idx]), "agents")
 		outputs = append(outputs,
 			config.OutputFile{Path: agentsDir, IsDir: true},
 			config.OutputFile{Path: filepath.Join(agentsDir, "openai.yaml"), Content: codexImplicitInvocationOff},
@@ -93,7 +93,7 @@ func CommandSkillTargets(content *config.ContentTree) map[string][]string {
 	skillIDs := map[string]bool{}
 	skillList := allSkills(content)
 	for idx := range skillList {
-		skillIDs[extractSkillID(skillList[idx].Path)] = true
+		skillIDs[skillIDOf(skillList[idx])] = true
 	}
 	commandList := allCommands(content)
 	for idx := range commandList {
@@ -130,7 +130,7 @@ func SharedAgentSkills(content *config.ContentTree, baseDir string, extra ...con
 	}
 	for idx := range skills {
 		skill := skills[idx]
-		skillDir := filepath.Join(root, extractSkillID(skill.Path))
+		skillDir := filepath.Join(root, skillIDOf(skill))
 		outputs = append(outputs,
 			config.OutputFile{Path: skillDir, IsDir: true},
 			config.OutputFile{Path: filepath.Join(skillDir, "SKILL.md"), Content: renderAgentSkillFile(skill)},

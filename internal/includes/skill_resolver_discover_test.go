@@ -90,6 +90,7 @@ func TestResolveInstalledSkills_MultiSkillEntry(t *testing.T) {
 			names := make([]string, len(skills))
 			for i := range skills {
 				names[i] = skills[i].Name
+				assert.Equal(t, tt.wantNames[i], config.SkillID(skills[i]), "the output id carries the prefix too")
 				assert.Contains(t, skills[i].Content, "# "+tt.wantNames[i][len(tt.entry.NamePrefix):],
 					"the body of %s is scanned from its own directory", tt.wantNames[i])
 			}

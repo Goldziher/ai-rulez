@@ -127,7 +127,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			continue
 		}
 
-		skillID := extractSkillID(skill.Path)
+		skillID := skillIDOf(skill)
 
 		// Create skill directory
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
