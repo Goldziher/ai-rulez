@@ -102,11 +102,11 @@ exit: 0
 locked cx-explain  sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359
 locked review  sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d
 locked ship  sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b
-pinned 2 item(s) and 18 output(s), tree sha256:c19614dd861803e0201bec9adeb71eb87362bd820f6cdc7077f376374b952459
+pinned 4 item(s) and 18 output(s), tree sha256:a4c53571a003dac988babb6d449c2a157e617be8edebc96713a376808be6cee4
 --- stderr
 INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 --- project tree
-+ .ai-rulez/ai-rulez.lock file 0600 3478 a3c0066f9d42f543892cf5ec3907aa59fe476f6b4e9d002dfcd7fe04f2db4190
++ .ai-rulez/ai-rulez.lock file 0600 3799 ce0727dfa889ff35fe6b5ab4632b9ea152a8cc30b1d4ea9a54bf66f38f9f9634
 --- home tree
 (no change)
 
@@ -376,7 +376,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/ai-rulez.lock file 0600 3478 a3c0066f9d42f543892cf5ec3907aa59fe476f6b4e9d002dfcd7fe04f2db4190
+.ai-rulez/ai-rulez.lock file 0600 3799 ce0727dfa889ff35fe6b5ab4632b9ea152a8cc30b1d4ea9a54bf66f38f9f9634
 >>>>
 # ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
@@ -385,7 +385,7 @@ version = 1
 ai_rulez_version = '$VERSION'
 scope = 'all'
 outputs_pinned = true
-tree = 'sha256:c19614dd861803e0201bec9adeb71eb87362bd820f6cdc7077f376374b952459'
+tree = 'sha256:a4c53571a003dac988babb6d449c2a157e617be8edebc96713a376808be6cee4'
 
 [[served]]
 name = 'cx-explain'
@@ -404,6 +404,18 @@ name = 'ship'
 source = ''
 commit = ''
 digest = 'sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b'
+
+[[item]]
+kind = 'local-marketplace'
+id = 'acme'
+path = './vendor/market'
+digest = 'sha256:0cabe73b3673151138263beefe2b533de7c51ec156d87d93104c9734781b4dfb'
+
+[[item]]
+kind = 'local-plugin'
+id = 'codex-tools'
+path = './vendor/codex-tools'
+digest = 'sha256:f5cc51b0d25b0b861be873bce58e77d39d95ffe09dfcf2301e27bd15b8e2838c'
 
 [[item]]
 kind = 'rule'
