@@ -58,7 +58,7 @@ func TestScanner_WithoutAHostWritesNothingToStderr(t *testing.T) {
 	}
 }
 
-func TestIncludeScanner_RefusalsAreReportedAtErrorLevel(t *testing.T) {
+func TestIncludeScanner_RefusalsAreReportedAsWarnings(t *testing.T) {
 	// Arrange: an include whose rules directory is a symlink
 	root := t.TempDir()
 	target := filepath.Join(t.TempDir(), "rules")
@@ -73,7 +73,7 @@ func TestIncludeScanner_RefusalsAreReportedAtErrorLevel(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	assert.Len(t, rec.Level("ERROR"), 1, "%v", rec.String())
-	assert.Contains(t, rec.Level("ERROR")[0], "included content")
-	assert.Empty(t, rec.Level("WARN"), "--quiet hides warnings, so the refusal is not one")
+	require.Len(t, rec.Level("WARN"), 1, "%v", rec.String())
+	assert.Contains(t, rec.Level("WARN")[0], "included content")
+	assert.Empty(t, rec.Level("ERROR"), "the run goes on, so the refusal is a warning")
 }

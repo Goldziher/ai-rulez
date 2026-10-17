@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"github.com/spf13/pflag"
 
 	"path/filepath"
@@ -99,7 +98,7 @@ func openOperator() (*crud.OperatorImpl, error) {
 	if dir := explicitConfigDir(); dir != "" {
 		return crud.NewOperatorAt(dir)
 	}
-	root, err := discoverProjectRoot(context.Background())
+	root, err := discoverProjectRoot(cmdContext())
 	if err != nil {
 		// No configuration anywhere above: the working directory reports it.
 		root = "."
