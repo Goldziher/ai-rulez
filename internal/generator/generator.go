@@ -94,6 +94,9 @@ type Generator struct {
 	userLayouts map[string]*userscope.Layout
 	userHomes   []string
 	warned      map[string]bool // merged-document warnings already issued by this Generator
+	// heldClaims are, by manifest path, the claims of the last render that found their content already in the
+	// document and left them to the user (dropUserHeldClaims): still rendered, so never taken back.
+	heldClaims map[string][]jsonmerge.Claim
 	// userDirs are the directories below the home directory that ai-rulez created
 	// (absolute); userDirsRecorded is false for a manifest that predates them.
 	userDirs         map[string]bool
@@ -188,6 +191,7 @@ func NewGenerator(cfg *config.Config) *Generator {
 		// [guard] generated = true adds the built-in PreToolUse hook to Hooks, so
 		// every hook renderer treats it as any other group.
 		cfg.EnableGuardHooks(schema.Version)
+		cfg.EnableSessionStartHooks(schema.Version)
 	}
 	if cfg != nil && cfg.RulesDirs == nil {
 		// Created here, before any copy of the config is made or any goroutine adds

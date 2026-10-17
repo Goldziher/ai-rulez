@@ -39,11 +39,15 @@ func agentsMDConfig(presets []string, flag string, extra string) string {
 }
 
 // pinLegacyDefaults pins the pre-v5 defaults. v5 defaults agents_md to true and
-// header hashes to "content"; these fixtures were written against the old
+// header hashes to "content" and runs the session-start hook for Claude Code; these fixtures were written against the old
 // defaults, so they are pinned unless the config states its own value.
 func pinLegacyDefaults(cfgTOML string) string {
 	if !strings.Contains(cfgTOML, "agents_md") {
 		cfgTOML = "agents_md = false\n" + cfgTOML
+	}
+	if !strings.Contains(cfgTOML, "session_start") {
+		// The session-start hook (on by default for Claude Code) is not part of what these fixtures pin.
+		cfgTOML = "session_start = { generate = false }\n" + cfgTOML
 	}
 	if !strings.Contains(cfgTOML, "[header]") {
 		cfgTOML += "\n[header]\nhashes = \"full\"\n"

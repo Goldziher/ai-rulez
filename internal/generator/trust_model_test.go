@@ -24,6 +24,7 @@ const trustConfig = `version = "5.0"
 agents_md = false
 name = "trust"
 presets = ["claude"]
+session_start = { generate = false }
 `
 
 func trustClean(t *testing.T, root string, opts CleanOptions) *CleanPlan {

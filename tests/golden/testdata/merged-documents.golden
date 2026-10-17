@@ -41,7 +41,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3017 7cc102bf497e27cf210552314e23987daf85d65b6221a48de27698d93ea8aa04
-.ai-rulez/.generated-manifest.local.json file 0644 7558 7ad902fae78baf98e3d24b9fc2bf3394e84d17a4126a5022cb4ac6ed78dd00e0
+.ai-rulez/.generated-manifest.local.json file 0644 7636 244ee5a19cf8b0cfd93ae593afa4583dc02205a22dace8926b70e2f388a58895
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -82,7 +82,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
 .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
-.claude/settings.json file 0644 955 5b012aa98d93a01ab9e35e2e371d285248093d9e07f92caebc91a96231d0f1da
+.claude/settings.json file 0644 1652 73a72ce4e5fb012f07cbbdba5b124c4766d2cbe3b46ef75128f530ea777eab3c
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
@@ -158,7 +158,7 @@ INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1794 48e52fb31e94c9f482f9942ef3462529d234bf31eb57356b48ab48e26ac46a2d
-~ .ai-rulez/.generated-manifest.local.json file 0644 4283 61bb4b9fa025db4340e7356437bec873ffbd72e8fd2d6016279cfa04ad7c856a
+~ .ai-rulez/.generated-manifest.local.json file 0644 4361 69868fec393dce16d657fe8367e8f4989ca26ff6ab343dd317b59b310226b2e3
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
 ~ .gitignore file 0644 438 ef528ffd692e72b91fc17e7504861120fe1aceedc4d1397d75ae2731546cb49f
@@ -296,7 +296,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4283 61bb4b9fa025db4340e7356437bec873ffbd72e8fd2d6016279cfa04ad7c856a
+.ai-rulez/.generated-manifest.local.json file 0644 4361 69868fec393dce16d657fe8367e8f4989ca26ff6ab343dd317b59b310226b2e3
 >>>>
 {
   "version": "1",
@@ -319,7 +319,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "SessionStart"
         ],
         "elementSums": [
-          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86",
+          "890a231f3885f72e1f05bd0dd3dc08f5293e2c7af7b32ae073c3fd14b759c74d"
         ]
       },
       {
@@ -768,7 +769,7 @@ Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d95
 
 Use strict mode.
 <<<<
-.claude/settings.json file 0644 955 5b012aa98d93a01ab9e35e2e371d285248093d9e07f92caebc91a96231d0f1da
+.claude/settings.json file 0644 1652 73a72ce4e5fb012f07cbbdba5b124c4766d2cbe3b46ef75128f530ea777eab3c
 >>>>
 // my settings
 {
@@ -805,6 +806,15 @@ Use strict mode.
             "type": "command",
             "command": "echo started",
             "statusMessage": "Starting"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 npx -y ai-rulez@$VERSION session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 uvx --from ai-rulez==$VERSION ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
           }
         ]
       }
