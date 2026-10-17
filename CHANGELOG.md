@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- MCP `init_project` now refuses in a directory whose configuration is `ai-rulez.toml`, instead of scaffolding a `.ai-rulez/` that would shadow it.
 - `generate --watch` now also watches local installed-skill sources, `skill_sources`, and installed marketplaces and plugins, not only includes and `local_override`.
 
 - **A local `installed_skills` source must stay inside the project.** A committed entry could name any path, unlike includes and `[[skill_sources]]`; it now fails with the same error, with the same exceptions (`config.local.toml`, the user config).
