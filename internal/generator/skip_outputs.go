@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 const (
@@ -24,6 +25,9 @@ type skipMatcher struct {
 	// dir (".rules", ".github/copilot-instructions.md", GEMINI.md, ...). A scope
 	// root is one of these directly inside a configured scope path.
 	roots map[string]bool
+	// commandSkills are the directory names under a skills folder that hold a
+	// command a harness runs as a skill, not a skill: a path alone cannot tell.
+	commandSkills map[string]bool
 }
 
 // skipOutputsMatcher returns the matcher for cfg, or nil when skip_outputs is empty.
@@ -36,12 +40,36 @@ func skipOutputsMatcher(cfg *config.Config) *skipMatcher {
 		claudeMDFile: true, string(config.SharedAgentsMD): true, "GEMINI.md": true,
 		"CLAUDE.local.md": true, "AGENTS.local.md": true, "GEMINI.local.md": true,
 	}}
+	m.commandSkills = commandSkillIDs(cfg.Content)
 	if cfg.Registry != nil {
 		cfg.Registry.Each(func(_ string, gen config.PresetGenerator) {
 			m.addPresetRoots(gen)
 		})
 	}
 	return m
+}
+
+// commandSkillIDs lists the ids under which commands are written as skills: the
+// sanitized command names, less the ones a skill already has (the skill wins and
+// the command is not written).
+func commandSkillIDs(content *config.ContentTree) map[string]bool {
+	if content == nil {
+		return nil
+	}
+	skills, commands := content.Skills, content.Commands
+	for _, d := range content.Domains {
+		if d != nil {
+			skills, commands = append(skills, d.Skills...), append(commands, d.Commands...)
+		}
+	}
+	ids := make(map[string]bool, len(commands))
+	for i := range commands {
+		ids[rulefiles.ID(commands[i].Name)] = true
+	}
+	for i := range skills {
+		delete(ids, config.SkillID(skills[i]))
+	}
+	return ids
 }
 
 // addPresetRoots records the root instruction files of one preset: the spec's
@@ -105,7 +133,26 @@ func (m *skipMatcher) skips(rel string, isDir bool) bool {
 	if m.skipsSharedSkills(probe) {
 		return true
 	}
-	return m.skipsKind(config.InferOutputKind(probe, ""))
+	return m.skipsKind(m.outputKind(probe))
+}
+
+// outputKind is config.InferOutputKind, except that a skill output holding a
+// command rendered as a skill is a command.
+func (m *skipMatcher) outputKind(probe string) config.OutputKind {
+	kind := config.InferOutputKind(probe, "")
+	if kind != config.OutputKindSkill && kind != config.OutputKindResource {
+		return kind
+	}
+	segments := strings.Split(probe, "/")
+	for i, segment := range segments[:len(segments)-1] {
+		if segment == "skills" {
+			if m.commandSkills[segments[i+1]] {
+				return config.OutputKindCommand
+			}
+			break
+		}
+	}
+	return kind
 }
 
 // skipsRoot reports whether skip_outputs excludes the root instruction file whose

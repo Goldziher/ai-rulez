@@ -83,8 +83,12 @@ func skipClassesOf(rel string) []string {
 		return []string{"instructions", "claude_md"}
 	case rel == "GEMINI.md" || rel == "DOC.md" || rel == ".github/copilot-instructions.md":
 		return []string{"instructions"}
+	case strings.HasPrefix(rel, ".agents/skills/deploy/"):
+		return []string{"agents_md", "commands"} // the fixture's command, written as a skill
 	case strings.HasPrefix(rel, ".agents/skills/"):
 		return []string{"agents_md", "skills"}
+	case strings.Contains(rel, "/skills/deploy/"):
+		return []string{"commands"}
 	case strings.Contains(rel, "/skills/"):
 		return []string{"skills"}
 	case strings.Contains(rel, "/rules/") || strings.HasPrefix(rel, ".github/instructions/"):

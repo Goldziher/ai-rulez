@@ -269,3 +269,48 @@ func TestSkipOutputs_DoesNotMisclassifyNestedFilesNamedLikeARoot(t *testing.T) {
 		})
 	}
 }
+
+func TestSkipOutputs_CommandRenderedAsSkillCountsAsCommand(t *testing.T) {
+	tests := []struct {
+		name        string
+		agentsMD    string
+		skip        string
+		wantCommand bool
+		wantSkill   bool
+	}{
+		{name: "nothing skipped", agentsMD: "true", skip: "", wantCommand: true, wantSkill: true},
+		{name: "commands skipped", agentsMD: "true", skip: "commands", wantSkill: true},
+		{name: "skills skipped", agentsMD: "true", skip: "skills", wantCommand: true},
+		{name: "commands skipped without agents_md", agentsMD: "false", skip: "commands", wantSkill: true},
+		{name: "skills skipped without agents_md", agentsMD: "false", skip: "skills", wantCommand: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			quietWarnings(t)
+			root := t.TempDir()
+			skip := ""
+			if tt.skip != "" {
+				skip = "skip_outputs = [\"" + tt.skip + "\"]\n"
+			}
+			writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude", "codex", "devin"}, "agents_md = "+tt.agentsMD+"\n"+skip, skipMCPTable))
+			writeAgentsMDFile(t, root, ".ai-rulez/commands/deploy.md", "---\ndescription: Deploy\n---\nDEPLOY_BODY\n")
+			writeAgentsMDFile(t, root, ".ai-rulez/skills/s1/SKILL.md", "---\nname: s1\ndescription: Skill one\n---\nS1_BODY\n")
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			paths := agentsMDPaths(t, root)
+			for _, rel := range []string{".claude/skills/deploy/SKILL.md"} {
+				assert.Equal(t, tt.wantCommand, contains(paths, rel), "%s in %v", rel, paths)
+			}
+			assert.Equal(t, tt.wantSkill, contains(paths, ".claude/skills/s1/SKILL.md"), "skill in %v", paths)
+			if tt.agentsMD == "true" {
+				assert.Equal(t, tt.wantCommand, contains(paths, ".agents/skills/deploy/SKILL.md"), "shared command skill in %v", paths)
+				assert.Equal(t, tt.wantCommand, contains(paths, ".agents/skills/deploy/agents/openai.yaml"), "codex policy in %v", paths)
+				assert.Equal(t, tt.wantSkill, contains(paths, ".agents/skills/s1/SKILL.md"), "shared skill in %v", paths)
+			}
+		})
+	}
+}
