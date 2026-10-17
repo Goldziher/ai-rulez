@@ -52,6 +52,9 @@ func FindConfigFileUntil(startDir, configDirName, stopDir string) (string, error
 			stop = ""
 		}
 	}
+	// The stop directory usually comes from git, which reports the resolved path (macOS: /private/var
+	// for /var), so compare resolved paths.
+	stopResolved := resolveForCompare(stop)
 	visited := make(map[string]bool)
 
 	for !visited[dir] {
@@ -69,7 +72,7 @@ func FindConfigFileUntil(startDir, configDirName, stopDir string) (string, error
 		}
 
 		parent := filepath.Dir(dir)
-		if parent == dir || (stop != "" && dir == stop) {
+		if parent == dir || (stop != "" && (dir == stop || resolveForCompare(dir) == stopResolved)) {
 			break
 		}
 		dir = parent
@@ -81,6 +84,17 @@ func FindConfigFileUntil(startDir, configDirName, stopDir string) (string, error
 		With("supported_names", configNames).
 		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate %s/config.toml (or %s/config.toml, or %s at the project root)\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName, RootConfigFilename)).
 		Errorf("no configuration file found (searched %s up to %s)", startDir, dir)}
+}
+
+// resolveForCompare resolves symlinks in p, falling back to p itself; empty stays empty.
+func resolveForCompare(p string) string {
+	if p == "" {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(p); err == nil {
+		return resolved
+	}
+	return p
 }
 
 // FindProjectRoot returns the nearest directory at or above startDir that holds

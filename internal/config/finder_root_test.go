@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestFindProjectRoot(t *testing.T) {
@@ -47,4 +49,24 @@ func TestFindProjectRoot(t *testing.T) {
 			assert.Equal(t, root, got)
 		})
 	}
+}
+
+// A stop directory named through a symlink (git reports the resolved path, macOS /var vs /private/var)
+// still stops the walk at that directory.
+func TestFindConfigFileUntil_StopDirThroughASymlink(t *testing.T) {
+	// Arrange
+	outer := t.TempDir()
+	writeConfigFile(t, filepath.Join(outer, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"outer\"\n")
+	repo := filepath.Join(outer, "repo")
+	sub := filepath.Join(repo, "sub")
+	require.NoError(t, os.MkdirAll(sub, 0o755))
+	link := filepath.Join(t.TempDir(), "repo-link")
+	testutil.SymlinkOrSkip(t, repo, link)
+
+	// Act
+	_, err := FindConfigFileUntil(sub, "", link)
+
+	// Assert
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNoConfig)
 }
