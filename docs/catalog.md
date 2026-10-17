@@ -222,7 +222,7 @@ fake browser on every machine.
   `(required)`, the reviewers, their assurance level and the expiry, escaped like every other value.
 - **Pagination is presentational.** All rows are in `index.html` in groups of `max_items_per_page`; the script pages them. Real per-page files would break filtering across pages and find-in-page.
 
-## Not yet built
+## Not yet implemented
 
-`--no-lint-messages`, `--link-sources`, `--single-file`, a `catalog diff` page and approval or signature attestations
-in the diff remain from the design.
+These are not available: the flags `--no-lint-messages`, `--link-sources` and `--single-file`, an HTML page for
+`catalog diff` (the command prints text or JSON only), and approval or signature attestations in the diff.

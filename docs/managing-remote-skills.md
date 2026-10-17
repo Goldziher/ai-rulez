@@ -1,8 +1,8 @@
 # Managing only remote skills and plugins
 
-Use this when you write `CLAUDE.md`, `AGENTS.md` and your own skills by hand and want ai-rulez to manage only the
-configured components: skills installed from a remote repository, plugins, MCP servers, hooks and permissions, all
-pinned in `ai-rulez.lock`. ai-rulez never writes, overwrites or deletes the hand-written files.
+Use this when you write `CLAUDE.md`, `AGENTS.md` and your own skills by hand and want ai-rulez to manage the
+configured components: skills installed from a remote repository, plugins, MCP servers, hooks and permissions, pinned
+in `ai-rulez.lock` (plus its own MCP server entry, see [below](#the-ai-rulez-mcp-server)). ai-rulez never writes, overwrites or deletes the hand-written files.
 
 ## Configure
 
@@ -47,10 +47,36 @@ To pick up new releases of the remote skills on every run, add `refresh_on_gener
 allows, scans the new trees and rewrites `ai-rulez.lock`; a scan finding aborts before any file is written. See
 [Refreshing on generate](lockfile.md#refreshing-on-generate).
 
+## The ai-rulez MCP server
+
+`[mcp] self_server` defaults to `true`, so `generate` also adds an `ai-rulez` entry (`npx -y ai-rulez@latest mcp`) to
+`.mcp.json`, and `ai-rulez.lock` gains `[[served]]` pins for the skills and an `.mcp.json` output pin. When skills are
+served the entry runs `mcp --serve-skills`. To opt out set `self_server = false` under `[mcp]` or pass
+`generate --no-self-mcp`; see [`[mcp]`](configuration.md#mcp).
+
 ## What happens to existing files
 
 - A hand-written file at a skipped path is never read as drift, never reported as an orphan and never removed by
   `generate` or `clean`.
-- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns once that it is no
-  longer managed and drops it from the manifest, so you can edit or delete it yourself.
+- A file ai-rulez generated earlier and that is now skipped is left in place. `generate` warns that it is no
+  longer managed and drops it from the manifest; the warning repeats on each run until you edit or delete the file.
 - `generate` stays quiet about a missing `AGENTS.md` when the skip is intentional.
+
+## Troubleshooting
+
+- **`refusing to overwrite 1 existing file(s) ai-rulez cannot prove it wrote`.** `generate` wants to write a path
+  where a file exists that carries no ai-rulez `Content-Hash` header and is not in the manifest, so it may be
+  hand-written. Nothing is written. Either import the file (`ai-rulez convert --write`), move or delete it, or pass
+  `generate --force` to overwrite it. To keep a hand-written file at a path ai-rulez would otherwise render, list that
+  output in `skip_outputs`.
+- **An installed skill has the same name as a hand-written skill.** In `.claude/skills/<name>/` or
+  `.agents/skills/<name>/` this is the refusal above. Against a skill in `.ai-rulez/skills/` (directory layout) the
+  local skill wins and `generate` warns `Installed skill name conflicts with local skill, skipping`. Rename or remove
+  one of them (`ai-rulez skill remove <name>` drops the installed entry).
+- **`generate --refresh-remote` refuses with "the security scan of the new tree has error findings".** Nothing was
+  written and `ai-rulez.lock` is unchanged. The error text suggests `--accept-findings`, but `generate` has no such
+  flag. Review the listed findings in the new version first. If you accept them, run
+  `ai-rulez update --accept-findings` to move the pin to the new version (`ai-rulez lock --accept-findings` re-pins
+  what is already pinned and does not move it), then `ai-rulez generate`. `generate` scans the imported content
+  again at the entry's `trust` level, so error findings still stop it unless you set `trust = "warn"` on the entry
+  or `[lint.security] scan_imports = "warn"`.

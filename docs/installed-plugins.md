@@ -129,11 +129,18 @@ earlier plugins) wins and the later one is skipped with a warning; use `name_pre
 
 ## Lock, update and refresh
 
-`ai-rulez lock` pins every marketplace (`[[marketplace]]`) and plugin (`[[plugin]]`) in `ai-rulez.lock`: the commit,
-the requested ref or constraint, the resolved tag and a tree digest. A plugin installed from a marketplace is keyed
+`ai-rulez lock` pins marketplaces and plugins fetched from a remote repository or an https URL in `ai-rulez.lock`, as
+`[[marketplace]]` and `[[plugin]]` entries: the commit, the requested ref or constraint, the resolved tag and a tree
+digest. A plugin installed from a marketplace is keyed
 `marketplace:<name>` and records the repository the index named for it as `origin`; a plugin inside the marketplace
 repository shares its commit and has its own digest. An https `marketplace.json` has a digest and no commit.
 
+- **What is pinned, by source kind.** A remote repository: `[[marketplace]]` / `[[plugin]]` entries with commit and
+  tree digest. An https `marketplace.json`: a digest, no commit. A local directory inside the project
+  (`source = "./vendor/market"`): no `[[marketplace]]` or `[[plugin]]` entry at all. Its content is covered only by
+  the `[[served]]` pins of its skills and the `[[output]]` pins of what `generate` wrote, so `lock --check` and
+  `generate --locked` notice an edit through those. An installed skill read from a local directory is pinned as a
+  `local-skill` item.
 - `generate --locked` / `--frozen` and an enforced lock fail on a missing, stale or mismatching pin (a moved branch, a
   retagged release, changed bytes); `--offline` reads the cache only.
 - `ai-rulez lock --check` compares the lock offline; `ai-rulez lock [name]` / `--kind marketplace|plugin` refreshes.

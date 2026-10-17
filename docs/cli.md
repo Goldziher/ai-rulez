@@ -2886,7 +2886,7 @@ in these tables.
 | `AI_RULEZ_QUIET` | `--quiet` | Hide progress and information lines (results, warnings, errors stay) |
 | `AI_RULEZ_LAYERS` | none | Comma-separated `config.<name>.toml` layers merged over `config.toml`, in order, falling back to `AI_RULEZ_PROFILE`; see `ai-rulez config layers` |
 | `AI_RULEZ_PROFILE` | `--profile` | Active profile (or comma-separated composition) when the flag is not given |
-| `AI_RULEZ_ROLE` | `--role`, `mcp --serve-skills --serve-role` | Active role (or comma-separated composition) when the flag is not given |
+| `AI_RULEZ_ROLE` | `--role` (also `mcp --serve-skills --role`) | Active role (or comma-separated composition) when the flag is not given |
 | `AI_RULEZ_GIT_TOKEN` | `--token` / `-T` | Git access token for private includes and skill sources |
 | `AI_RULEZ_GIT_TOKEN_HOSTS` | | Comma-separated hosts the git token may be sent to (default `github.com`) |
 | `AI_RULEZ_FORGE_HOSTS` | | Comma-separated hosts the forge API client may contact (default `github.com`); `GITHUB_TOKEN` / `GH_TOKEN` supply its token |
@@ -2897,7 +2897,7 @@ in these tables.
 | `AI_RULEZ_ALLOW_FILE_URLS` | | `1` lets a `file://` git source outside the project resolve from the project config |
 | `AI_RULEZ_MAX_CLONE_BYTES`, `AI_RULEZ_MAX_CLONE_FILES` | `mcp --serve-skills` clone limits | Largest git skill source clone (default 256 MiB, 20000 files) for sources that set no `max_clone_bytes` / `max_clone_files` |
 | `AI_RULEZ_HOME` | | Extra directory `improve pr` allows its worktree commands to write and forwards to them |
-| `AI_RULEZ_TODAY` | `--today` | Pin "today" (`YYYY-MM-DD`) for baseline expiry, for reproducible runs |
+| `AI_RULEZ_TODAY` | `validate --today` (hidden) | Pin "today" (`YYYY-MM-DD`) for baseline expiry, for reproducible runs |
 | `AI_RULEZ_EVAL_DATE` | `eval run --date` | Date recorded in eval results |
 
 **Organization policy** (see [Organization policy](policy.md))

@@ -11,6 +11,8 @@ Use it when the repository already has hand-written `CLAUDE.md`, `AGENTS.md` and
 - `[lint]` settings for `ai-rulez validate`
 - `ai-rulez.lock`, which pins the remote sources and the generated outputs
 
+It also adds ai-rulez's own MCP server to `.mcp.json` unless you [turn that off](#the-ai-rulez-mcp-server).
+
 If you want ai-rulez to own the rules, context, skills and agents, use the [directory layout](configuration.md) instead.
 
 ## Create it
@@ -59,7 +61,14 @@ Both keep the configuration in a file named `ai-rulez.toml`. In the [`.agents` s
 
 - `skill install|remove`, `include add|remove`, `lock`, `update --write-config` and the `local` commands edit `ai-rulez.toml` and `ai-rulez.local.toml`. Rewriting through a command drops comments, as it does for `config.toml`.
 - `add|remove rule|context|skill|agent|command|check` and `domain add` fail: there is no content tree.
-- `validate`, `scan` and `doctor` lint the configuration, the lock, the installed and included content, and any hand-written instruction files they detect. An empty content tree is not an error.
+- `validate` and `scan` lint the configuration, the lock, the installed and included content, and any hand-written instruction files they detect. `doctor` does not lint instruction files; it reports drift, a missing generated file and the other environment checks. An empty content tree is not an error.
+
+## The ai-rulez MCP server
+
+`[mcp] self_server` defaults to `true`, so `generate` also writes `.mcp.json` with an `ai-rulez` server entry
+(`mcp --serve-skills` when skills are served), and `ai-rulez.lock` gains `[[served]]` pins and an `.mcp.json` output
+pin. Set `self_server = false` under `[mcp]`, or pass `generate --no-self-mcp`, to keep `.mcp.json` limited to your
+`[[mcp_servers]]`.
 
 ## Limits
 
@@ -68,3 +77,22 @@ Both keep the configuration in a file named `ai-rulez.toml`. In the [`.agents` s
 - `default_layers` and `config.<name>.toml` layers are not supported.
 - Opt-in state (skills index, role manifest, scanner baseline, eval results) is written to the project root, and usage logs to `.ai-rulez-local.d/`. Telemetry commands and `improve` still look for `.ai-rulez/`.
 - `ai-rulez mcp` `init_project` creates the directory layout only.
+
+## Troubleshooting
+
+- **`refusing to overwrite 1 existing file(s) ai-rulez cannot prove it wrote`.** `generate` wants to write a path
+  where a file exists that carries no ai-rulez `Content-Hash` header and is not in the manifest, so it may be
+  hand-written. Nothing is written. Either import the file (`ai-rulez convert --write`), move or delete it, or pass
+  `generate --force` to overwrite it. To keep a hand-written file at a path ai-rulez would otherwise render, list that
+  output in `skip_outputs`.
+- **An installed skill has the same name as a hand-written skill.** In `.claude/skills/<name>/` or
+  `.agents/skills/<name>/` this is the refusal above. Against a skill in `.ai-rulez/skills/` (directory layout) the
+  local skill wins and `generate` warns `Installed skill name conflicts with local skill, skipping`. Rename or remove
+  one of them (`ai-rulez skill remove <name>` drops the installed entry).
+- **`generate --refresh-remote` refuses with "the security scan of the new tree has error findings".** Nothing was
+  written and `ai-rulez.lock` is unchanged. The error text suggests `--accept-findings`, but `generate` has no such
+  flag. Review the listed findings in the new version first. If you accept them, run
+  `ai-rulez update --accept-findings` to move the pin to the new version (`ai-rulez lock --accept-findings` re-pins
+  what is already pinned and does not move it), then `ai-rulez generate`. `generate` scans the imported content
+  again at the entry's `trust` level, so error findings still stop it unless you set `trust = "warn"` on the entry
+  or `[lint.security] scan_imports = "warn"`.

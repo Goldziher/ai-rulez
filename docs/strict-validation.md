@@ -631,7 +631,7 @@ one entry per accepted finding:
 - **Stale entries.** An entry whose finding is gone is reported (`baseline: N accepted, M stale`). By default that is
   only information; `--strict-baseline` exits 2 so the baseline can only shrink.
 - **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
-  and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `--today` or
+  and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `validate --today` (a hidden flag) or
   `AI_RULEZ_TODAY` for reproducible runs.
 - **Tolerated findings.** `[lint.ratchet]` maps a code or name to a number: up to that many unaccepted findings of the
   rule are tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the
