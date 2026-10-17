@@ -25,6 +25,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez sbom`                 | CycloneDX 1.6 or SPDX 2.3 bill of materials of the AI configuration ([SBOM](sbom.md)) |
 | `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle, optionally signed; `--to github-release\|npm\|oci --execute --yes` uploads ([Publish](publish.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
+| `ai-rulez cache status` / `cache clear` | Show or drop the repository index cache of the MCP server ([details](#ai-rulez-cache-statusclear)) |
 | `ai-rulez guard`                | PreToolUse hook that blocks agent edits to generated files; run by the harness ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez verifiers run/list/explain/test/calibrate/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
@@ -1728,6 +1729,7 @@ ai-rulez doctor [--strict] [--format json] [--profile <name>] [--no-local]
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
 | `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
 | `session-start` | The `SessionStart` hook: `info` listing the launchers it tries in order (`ai-rulez`, `npx -y ai-rulez@latest`, `uvx --from ai-rulez@latest`); a warning when the generated `.claude/settings.json` lacks the hook or is ignored by version control, and, inside a remote session, when none of `ai-rulez`, `npx` and `uvx` is on `PATH` or the npm registry is denied or unreachable (asked with one GET) | info, warning |
+| `index-cache` | The repository index cache of `mcp --serve-skills --discover-skills` ([`cache`](#ai-rulez-cache-statusclear)): `info` naming the location in use (user cache, or the project fallback), its size and entry counts; a warning when the location is not writable or the index file is corrupt, of another version or not authentic. Silent when discovery is off and no cache exists | info, warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
 
 With `--debug`, `doctor` logs one `Doctor check finished` line per check with its name and duration, to find the slow one.
