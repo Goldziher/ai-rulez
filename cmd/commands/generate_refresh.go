@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -90,22 +91,58 @@ func refreshOnGenerate(cfg *config.Config) bool {
 // refused as in `update`; the import gate generate runs next scans the result
 // again. A failure ends the run before any output is written.
 func refreshRemoteLock(ctx context.Context) error {
-	return refreshRemoteLockWith(ctx, false)
+	_, err := refreshRemoteLockWith(ctx, false)
+	return err
 }
 
 // refreshRemoteLockWith is refreshRemoteLock that pins a tree whose scan has
-// error findings when acceptFindings is set, as `lock --accept-findings`.
-func refreshRemoteLockWith(ctx context.Context, acceptFindings bool) error {
+// error findings when acceptFindings is set, as `lock --accept-findings`. It
+// returns the cached trees whose findings were accepted, which the import gate
+// of the same run then lets through (see withAcceptedTrees).
+func refreshRemoteLockWith(ctx context.Context, acceptFindings bool) ([]string, error) {
 	defer applyLockFlags() // lockrun and the loads below change the command's lock policy
 	env := lockEnv("")
 	env.Policy.Advance = func(string, string) bool { return true }
 	res, err := lockrun.Write(ctx, lockrun.Request{AcceptFindings: acceptFindings}, env)
 	if err != nil {
-		return failWithCode(lockrun.ExitCode(res, err), oops.Wrapf(err, "refresh the remote sources"))
+		builder := oops.In("generate")
+		var refused *lockrun.FindingsError
+		if !acceptFindings && errors.As(err, &refused) && refused.Sources > 0 {
+			builder = builder.Hint("review the findings, then rerun `ai-rulez generate --refresh-remote --accept-findings`")
+		}
+		return nil, failWithCode(lockrun.ExitCode(res, err), builder.Wrapf(err, "refresh the remote sources"))
 	}
 	if len(res.Unpinned) > 0 {
 		logger.Warn("Some served skills were left unpinned because the security scan refuses them", "count", len(res.Unpinned))
 	}
 	logger.Info("Refreshed the remote sources", "lock", res.Path, "pinned", len(lockrun.Entries(res.Lock)))
-	return nil
+	var accepted []string
+	for i := range res.Scans {
+		if res.Scans[i].Summary.Accepted {
+			accepted = append(accepted, res.Scans[i].Dir)
+		}
+	}
+	return accepted, nil
+}
+
+// acceptedTreesKey carries the trees whose scan findings --accept-findings
+// accepted in this run.
+type acceptedTreesKey struct{}
+
+// withAcceptedTrees returns ctx carrying the cached trees whose error findings
+// the user accepted with generate --accept-findings. The import gate of the same
+// run reports their findings as warnings, so a run that pinned such a tree also
+// generates from it instead of failing after the lock was written. The
+// acceptance is not recorded: a later run needs trust = "warn" on the entry.
+func withAcceptedTrees(ctx context.Context, dirs []string) context.Context {
+	if len(dirs) == 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, acceptedTreesKey{}, dirs)
+}
+
+// acceptedTrees returns the trees withAcceptedTrees stored in ctx.
+func acceptedTrees(ctx context.Context) []string {
+	dirs, _ := ctx.Value(acceptedTreesKey{}).([]string) //nolint:errcheck // absent means none accepted
+	return dirs
 }
