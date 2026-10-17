@@ -169,6 +169,21 @@ type contentCreateIn struct {
 type skillCreateIn struct {
 	Description string `json:"description,omitempty" jsonschema:"Skill description for the SKILL.md frontmatter, used when content is empty"`
 	contentCreateIn
+	scopedWriteArgs
+}
+
+// scopedWriteArgs are the arguments of the scoped write path of create_skill and
+// update_skill: a skill written into the repository for a harness working in a directory.
+type scopedWriteArgs struct {
+	Scope      string `json:"scope,omitempty" jsonschema:"A project-relative directory (an existing scope): write the skill to <scope>/<harness skills dir>/<name>/SKILL.md, where a harness working there loads it, instead of editing ai-rulez content. Needs allow_write. It is the harness's own file: not generated down, and with ai-rulez.lock present reported as drift until ai-rulez lock runs"`
+	Harness    string `json:"harness,omitempty" jsonschema:"With scope: the enabled preset whose skills directory is written (default: the first enabled preset that has one)"`
+	AllowWrite bool   `json:"allow_write,omitempty" jsonschema:"With scope: agree to write a file into the repository outside the ai-rulez content tree. Required; default false"`
+}
+
+// skillUpdateIn is the input of update_skill.
+type skillUpdateIn struct {
+	contentUpdateIn
+	scopedWriteArgs
 }
 
 type contentUpdateIn struct {
