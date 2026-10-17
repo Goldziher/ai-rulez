@@ -23,7 +23,7 @@ func TestRun_TimeoutKillsTheWholeProcessTree(t *testing.T) {
 	h := newHarness(t, nil)
 	pidFile := filepath.Join(t.TempDir(), "grandchild.pid")
 	script := filepath.Join(t.TempDir(), "ai-rulez")
-	body := "#!/bin/sh\nsleep 60 &\necho $! > " + pidFile + "\nsleep 60\n"
+	body := "#!/bin/sh\n/bin/sleep 60 &\necho $! > " + pidFile + "\n/bin/sleep 60\n"
 	require.NoError(t, os.WriteFile(script, []byte(body), 0o755))
 	h.deps.Exe = script
 	h.deps.Runner = runner.Exec{}
