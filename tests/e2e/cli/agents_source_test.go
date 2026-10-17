@@ -33,7 +33,7 @@ func gitInitAgents(t *testing.T, dir string) {
 
 const (
 	e2eAgentsMD = "# Demo\n\nUse tabs.\n"
-	e2eSkill    = "---\nname: review\ndescription: Review a change before it merges into the main branch\n---\n\nRead the diff first.\n"
+	e2eSkill    = "---\nname: pr-checklist\ndescription: Review a change before it merges into the main branch\n---\n\nRead the diff first.\n"
 )
 
 func TestAgentsSourceLifecycle(t *testing.T) {
@@ -45,7 +45,7 @@ func TestAgentsSourceLifecycle(t *testing.T) {
 	assert.FileExists(t, filepath.Join(dir, ".agents", "ai-rulez.toml"))
 	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"), "init --source agents creates no .ai-rulez tree")
 	writeAgentsFile(t, dir, "AGENTS.md", e2eAgentsMD)
-	writeAgentsFile(t, dir, ".agents/skills/review/SKILL.md", e2eSkill)
+	writeAgentsFile(t, dir, ".agents/skills/pr-checklist/SKILL.md", e2eSkill)
 	writeAgentsFile(t, dir, ".agents/rules/always.md", "---\ndescription: Always on\n---\n\nALWAYS_ON_BODY keep functions small.\n")
 	writeAgentsFile(t, dir, ".agents/ai-rulez.toml",
 		"version = \"5.0\"\nname = \"demo\"\ngitignore = false\npresets = [\"claude\", \"cursor\", \"codex\"]\n")
@@ -54,10 +54,10 @@ func TestAgentsSourceLifecycle(t *testing.T) {
 	first := testutil.RunCLI(t, dir, "generate", "--yes")
 	require.Equal(t, 0, first.ExitCode, first.Stderr)
 	assert.Equal(t, e2eAgentsMD, readAgentsFile(t, dir, "AGENTS.md"))
-	assert.Equal(t, e2eSkill, readAgentsFile(t, dir, ".agents/skills/review/SKILL.md"))
+	assert.Equal(t, e2eSkill, readAgentsFile(t, dir, ".agents/skills/pr-checklist/SKILL.md"))
 	assert.Contains(t, readAgentsFile(t, dir, "CLAUDE.md"), "Use tabs.", "CLAUDE.md is the full file with the text of AGENTS.md")
 	assert.NotContains(t, readAgentsFile(t, dir, "CLAUDE.md"), "@AGENTS.md")
-	assert.FileExists(t, filepath.Join(dir, ".claude", "skills", "review", "SKILL.md"))
+	assert.FileExists(t, filepath.Join(dir, ".claude", "skills", "pr-checklist", "SKILL.md"))
 	assert.Contains(t, readAgentsFile(t, dir, ".claude/rules/always.md"), "ALWAYS_ON_BODY", "an always-on .agents rule reaches Claude")
 	assert.Contains(t, first.Stderr+first.Stdout, "AGENTS.md and .agents/ are the source")
 
@@ -68,11 +68,11 @@ func TestAgentsSourceLifecycle(t *testing.T) {
 	assert.Equal(t, 0, check.ExitCode, "generate --check is clean: %s%s", check.Stdout, check.Stderr)
 
 	// editing a skill is drift until the next generate
-	writeAgentsFile(t, dir, ".agents/skills/review/SKILL.md", e2eSkill+"\nThen the tests.\n")
+	writeAgentsFile(t, dir, ".agents/skills/pr-checklist/SKILL.md", e2eSkill+"\nThen the tests.\n")
 	drift := testutil.RunCLI(t, dir, "generate", "--check")
 	assert.Equal(t, 2, drift.ExitCode, "an edited source is drift (exit 2): %s%s", drift.Stdout, drift.Stderr)
 	testutil.RunCLIExpectSuccess(t, dir, "generate", "--yes")
-	assert.Contains(t, readAgentsFile(t, dir, ".claude/skills/review/SKILL.md"), "Then the tests.")
+	assert.Contains(t, readAgentsFile(t, dir, ".claude/skills/pr-checklist/SKILL.md"), "Then the tests.")
 	assert.Equal(t, 0, testutil.RunCLI(t, dir, "generate", "--check").ExitCode)
 
 	// validate and doctor accept the project
@@ -91,7 +91,7 @@ func TestAgentsSourceLifecycle(t *testing.T) {
 	testutil.RunCLIExpectSuccess(t, dir, "clean", "--yes")
 	assert.NoFileExists(t, filepath.Join(dir, "CLAUDE.md"))
 	assert.Equal(t, e2eAgentsMD, readAgentsFile(t, dir, "AGENTS.md"))
-	assert.Contains(t, readAgentsFile(t, dir, ".agents/skills/review/SKILL.md"), "Then the tests.")
+	assert.Contains(t, readAgentsFile(t, dir, ".agents/skills/pr-checklist/SKILL.md"), "Then the tests.")
 	assert.FileExists(t, filepath.Join(dir, ".agents", "ai-rulez.toml"))
 }
 
@@ -116,7 +116,7 @@ func TestConvertIntoAgentsKeepsTheStandardsInPlace(t *testing.T) {
 	// Arrange: a project with an AGENTS.md, skills in the standard place and a Cursor rule
 	dir := testutil.CreateTempDir(t)
 	writeAgentsFile(t, dir, "AGENTS.md", e2eAgentsMD)
-	writeAgentsFile(t, dir, ".agents/skills/review/SKILL.md", e2eSkill)
+	writeAgentsFile(t, dir, ".agents/skills/pr-checklist/SKILL.md", e2eSkill)
 	writeAgentsFile(t, dir, "main.go", "package main\n")
 	writeAgentsFile(t, dir, ".cursor/rules/style.mdc", "---\nglobs: \"**/*.go\"\ndescription: Go style\n---\nWrap errors.\n")
 
@@ -127,7 +127,7 @@ func TestConvertIntoAgentsKeepsTheStandardsInPlace(t *testing.T) {
 	assert.FileExists(t, filepath.Join(dir, ".agents", "ai-rulez.toml"))
 	assert.FileExists(t, filepath.Join(dir, ".agents", "rules", "style.md"))
 	assert.Equal(t, e2eAgentsMD, readAgentsFile(t, dir, "AGENTS.md"))
-	assert.Equal(t, e2eSkill, readAgentsFile(t, dir, ".agents/skills/review/SKILL.md"))
+	assert.Equal(t, e2eSkill, readAgentsFile(t, dir, ".agents/skills/pr-checklist/SKILL.md"))
 	assert.NoFileExists(t, filepath.Join(dir, ".agents", "context", "agents.md"))
 	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
 	assert.Equal(t, 0, testutil.RunCLI(t, dir, "validate").ExitCode)

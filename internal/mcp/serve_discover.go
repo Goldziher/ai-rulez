@@ -210,6 +210,15 @@ func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *ren
 			st.logger().Warn("Not serving a repository skill whose name is not a valid skill name", "skill", name, "path", item.Path)
 			continue
 		}
+		if source, isBuiltin := r.builtin[name]; isBuiltin {
+			// A repository skill is the project's own: it replaces a builtin of
+			// the same name, as a skill under .ai-rulez/skills does.
+			served = withoutSkill(served, name, source)
+			delete(r.builtin, name)
+			delete(r.taken, name)
+			st.logger().Info("A repository skill replaces a builtin skill with the same name",
+				"skill", name, "path", item.Path, "replaced", source)
+		}
 		if r.taken[name] {
 			holder, byRepo := owners[name]
 			if !byRepo {
@@ -235,6 +244,18 @@ func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *ren
 		served = append(served, skill)
 	}
 	return served
+}
+
+// withoutSkill returns served without the skill with the catalog name and source.
+func withoutSkill(served []generator.ServedSkill, name, source string) []generator.ServedSkill {
+	out := make([]generator.ServedSkill, 0, len(served))
+	for i := range served {
+		if catalogName(&served[i]) == name && served[i].Source == source {
+			continue
+		}
+		out = append(out, served[i])
+	}
+	return out
 }
 
 func (d *discovery) shadow(name string, item repoindex.Item, by string) {

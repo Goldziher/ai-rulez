@@ -2674,7 +2674,7 @@
         "allow_overrides": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them."
+          "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them. `name` or `preset:name` (for example `claude:init`) also acknowledges a skill or command that overrides a built-in (AR808)."
         },
         "allowed_keys": {
           "type": "array",
