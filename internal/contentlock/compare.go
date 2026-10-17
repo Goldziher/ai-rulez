@@ -119,6 +119,12 @@ func TreeOf(f *lockfile.File) string {
 	for i := range f.Source {
 		entries = append(entries, entryOf("skill-source", f.Source[i]))
 	}
+	for i := range f.Marketplace {
+		entries = append(entries, entryOf(KindMarketplace, f.Marketplace[i]))
+	}
+	for i := range f.Plugin {
+		entries = append(entries, entryOf(KindInstalledPlugin, f.Plugin[i]))
+	}
 	for i := range f.Served {
 		entries = append(entries, entryOf("served-skill", f.Served[i]))
 	}
@@ -136,6 +142,10 @@ func entryOf(kind string, e lockfile.Entry) Entry {
 		key += "\x00" + e.View
 	}
 	parts := []string{e.Commit, e.Digest, e.Source, e.Ref, e.Path}
+	if e.Origin != "" {
+		// Where a marketplace plugin came from is part of what it pins.
+		parts = append(parts, "origin", e.Origin)
+	}
 	if e.Tag != "" {
 		// A resolved tag is part of what the entry pins; entries without one
 		// (every lock written before version constraints) hash as they always did.
