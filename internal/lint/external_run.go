@@ -19,6 +19,10 @@ import (
 // scannerSandbox confines staged scanners. Tests replace it.
 var scannerSandbox = sandbox.Default()
 
+// scanContext is the context scanner runs and their probes use. A lint run has
+// no cancellation of its own; the runner's timeout bounds each process.
+func scanContext() context.Context { return context.Background() }
+
 // scanScope says how a scanner's reported paths map to project files.
 type scanScope struct {
 	// root is the project root of an in-root run.
@@ -121,7 +125,7 @@ func (r *runner) runInRoot(sc resolvedScanner, root string, files []string) (all
 	}
 	for _, argv := range batches {
 		spec.Argv = argv
-		res := cmdrun.Run(context.Background(), spec)
+		res := cmdrun.Run(scanContext(), spec)
 		found, good := r.parseRun(sc, res)
 		if !good {
 			return all, false
@@ -205,7 +209,7 @@ func (r *runner) execStaged(sc resolvedScanner, st *scannerStage, spec cmdrun.Sp
 		return nil, 0, "", false
 	}
 	r.banner(sc)
-	return r.finishBatch(sc, st, usesOut, 0, cmdrun.Run(context.Background(), spec))
+	return r.finishBatch(sc, st, usesOut, 0, cmdrun.Run(scanContext(), spec))
 }
 
 // prepareBatch readies run idx of a stage: it creates the {out} file the
@@ -329,7 +333,7 @@ func (r *runner) probeVersion(sc resolvedScanner, binary, root string) (string, 
 	if binary == "" {
 		return "", nil
 	}
-	return ProbeScannerVersion(context.Background(), ScannerInfo{
+	return ProbeScannerVersion(scanContext(), ScannerInfo{
 		Path: binary, Isolation: string(policyOf(&r.lc).isolation), VersionCommand: sc.VersionCommand, Dir: root,
 	})
 }
@@ -345,7 +349,7 @@ func (r *runner) versionSatisfied(sc resolvedScanner, root string) bool {
 	if binary == "" {
 		return true
 	}
-	check := CheckScannerVersion(context.Background(), ScannerInfo{
+	check := CheckScannerVersion(scanContext(), ScannerInfo{
 		Path: binary, Isolation: string(policyOf(&r.lc).isolation), Version: sc.Version, VersionCommand: sc.VersionCommand, Dir: root,
 	})
 	if check.Problem != "" {
@@ -460,7 +464,7 @@ func (r *runner) banner(sc resolvedScanner) {
 // directory. It reports false when isolation is required and unavailable.
 func (r *runner) isolate(sc resolvedScanner, st *scannerStage, argv []string, binary string) ([]string, bool) {
 	mode := policyOf(&r.lc).isolation
-	on, err := scannerSandbox.Resolve(context.Background(), mode)
+	on, err := scannerSandbox.Resolve(scanContext(), mode)
 	if err != nil {
 		r.addRun(CodeScannerRunFailed, sc.Name, fmt.Sprintf("isolation = \"require\" but %s", sanitizeScannerText(err.Error())))
 		return argv, false
