@@ -131,15 +131,14 @@ func Locate(ctx context.Context, o Options) (Location, error) {
 	if o.Root == "" {
 		return Location{}, oops.Errorf("locate the index cache: no project root")
 	}
-	switch o.mode() {
-	case config.IndexCacheOff:
+	mode := o.mode()
+	if mode == config.IndexCacheOff {
 		return Location{Kind: KindOff}, nil
 	}
 	if len(o.Key) == 0 {
 		return Location{Kind: KindOff, Warning: "there is no secret to authenticate the index cache; the index cache is off"}, nil
 	}
-	switch o.mode() {
-	case config.IndexCacheRepo:
+	if mode == config.IndexCacheRepo {
 		return o.locateRepo(ctx, false, "")
 	}
 	dir, err := o.userDir()
