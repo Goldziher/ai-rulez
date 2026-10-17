@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -24,7 +25,7 @@ const (
 	maxSkillFiles = 2000
 	// DefaultMaxSkills and DefaultMaxBytes bound what one skill source loads into
 	// memory ([[skill_sources]] max_skills and max_bytes override them).
-	DefaultMaxSkills = 200
+	DefaultMaxSkills = includes.DefaultMaxSkills
 	DefaultMaxBytes  = 64 << 20
 )
 
