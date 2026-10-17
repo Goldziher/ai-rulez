@@ -14,14 +14,16 @@ import (
 
 // rootRef matches the variables a plugin uses for the directory it is
 // installed in (${CLAUDE_PLUGIN_ROOT}, ${CODEX_PLUGIN_ROOT}, ${PLUGIN_ROOT},
-// ${extensionPath}) and for its persistent data directory.
+// ${extensionPath}) and for its persistent data directory. The braced form may
+// carry a shell modifier (${CLAUDE_PLUGIN_ROOT:-x}, ${...#p}, ${.../a/b}), which
+// is treated exactly like the plain variable.
 var rootRef = sync.OnceValue(func() *regexp.Regexp {
-	return regexp.MustCompile(`\$\{[A-Za-z0-9_]*PLUGIN_(?:ROOT|DATA)\}|\$[A-Za-z0-9_]*PLUGIN_(?:ROOT|DATA)\b|\$\{extensionPath\}`)
+	return regexp.MustCompile(`\$\{[A-Za-z0-9_]*PLUGIN_(?:ROOT|DATA)(?:[^A-Za-z0-9_}][^}]*)?\}|\$[A-Za-z0-9_]*PLUGIN_(?:ROOT|DATA)\b|\$\{extensionPath(?:[^A-Za-z0-9_}][^}]*)?\}`)
 })
 
 // scriptRef matches a root variable followed by a path: the file the command runs.
 var scriptRef = sync.OnceValue(func() *regexp.Regexp {
-	return regexp.MustCompile(`(?:\$\{[A-Za-z0-9_]*PLUGIN_ROOT\}|\$[A-Za-z0-9_]*PLUGIN_ROOT\b|\$\{extensionPath\})(?:\$\{/\}|/)([^\s"'|;&<>]+)`)
+	return regexp.MustCompile(`(?:\$\{[A-Za-z0-9_]*PLUGIN_ROOT(?:[^A-Za-z0-9_}][^}]*)?\}|\$[A-Za-z0-9_]*PLUGIN_ROOT\b|\$\{extensionPath(?:[^A-Za-z0-9_}][^}]*)?\})(?:\$\{/\}|/)([^\s"'|;&<>]+)`)
 })
 
 // resolveRoot rewrites the plugin-root variables in s. A plugin installed from
