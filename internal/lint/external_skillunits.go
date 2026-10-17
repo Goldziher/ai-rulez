@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
@@ -172,24 +174,95 @@ func (r *runner) scanSkillUnits(sc resolvedScanner, root, binary string, units [
 		return nil, 0, "", false
 	}
 	defer st.cleanup()
+	batches := splitBatches(units, misses, sc.BatchSize, argvSize(st.expandFor(sc.Command, nil, 0)), argvBudget, len(st.root))
+	r.banner(sc)
+	outcomes := r.runBatches(sc, root, binary, st, units, batches)
 	version, versionKnown := "", false
 	ok = true
-	batches := splitBatches(units, misses, 0, argvSize(st.expandFor(sc.Command, nil, 0)), argvBudget, len(st.root))
-	for _, b := range batches {
-		bn, bOut, bFirst, good := r.runBatch(sc, root, binary, st, units, b)
-		if !good {
-			ok = false
-			break
+	for i, out := range outcomes {
+		if !out.ran {
+			continue
 		}
-		norm = append(norm, bn...)
-		outOfScope, firstOut = outOfScope+bOut, firstNonEmpty(firstOut, bFirst)
+		if !out.ok {
+			ok = false
+			continue
+		}
+		norm = append(norm, out.norm...)
+		outOfScope, firstOut = outOfScope+out.outOfScope, firstNonEmpty(firstOut, out.firstOut)
 		if !versionKnown {
 			version, _ = r.probeVersion(sc, binary, root) //nolint:errcheck // a refused probe only leaves the recorded version empty
 			versionKnown = true
 		}
-		r.cacheBatch(sc, units, b, bn, bOut, bFirst, version)
+		r.cacheBatch(sc, units, batches[i], out.norm, out.outOfScope, out.firstOut, version)
 	}
 	return norm, outOfScope, firstOut, ok
+}
+
+// batchOutcome is what one batch produced. ran is false for a batch that was
+// never started because an earlier one failed.
+type batchOutcome struct {
+	norm       []externalFinding
+	outOfScope int
+	firstOut   string
+	ok, ran    bool
+}
+
+// preparedBatch is a batch ready to start.
+type preparedBatch struct {
+	spec    cmdrun.Spec
+	usesOut bool
+}
+
+// runBatches runs the batches one after the other, or up to the scanner's
+// parallel at a time. A failed batch stops the ones not yet started; the
+// outcomes are in batch order whatever order the runs finished in.
+func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scannerStage, units []skillUnit, batches []unitBatch) []batchOutcome {
+	outcomes := make([]batchOutcome, len(batches))
+	workers := min(max(sc.Parallel, 1), maxScannerParallel)
+	if workers == 1 || len(batches) == 1 {
+		for i, b := range batches {
+			outcomes[i] = batchOutcome{ran: true}
+			prep, ok := r.prepareUnitBatch(sc, root, binary, st, units, b)
+			if !ok {
+				break
+			}
+			outcomes[i] = r.runPrepared(sc, st, prep, b.idx)
+			if !outcomes[i].ok {
+				break
+			}
+		}
+		return outcomes
+	}
+	// Everything that touches shared state is prepared first, one batch at a time.
+	prepared := make([]preparedBatch, len(batches))
+	for i, b := range batches {
+		prep, ok := r.prepareUnitBatch(sc, root, binary, st, units, b)
+		if !ok {
+			outcomes[i] = batchOutcome{ran: true}
+			return outcomes
+		}
+		prepared[i] = prep
+	}
+	var wg sync.WaitGroup
+	var failed atomic.Bool
+	slots := make(chan struct{}, workers)
+	for i := range batches {
+		if failed.Load() {
+			break
+		}
+		slots <- struct{}{}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			defer func() { <-slots }()
+			outcomes[i] = r.runPrepared(sc, st, prepared[i], batches[i].idx)
+			if !outcomes[i].ok {
+				failed.Store(true)
+			}
+		}(i)
+	}
+	wg.Wait()
+	return outcomes
 }
 
 // batchArgv is the argv of one batch: the command with the batch's skill
@@ -206,22 +279,25 @@ func (r *runner) batchArgv(sc resolvedScanner, root string, st *scannerStage, un
 	return argv
 }
 
-// runBatch runs one batch and returns its findings.
-func (r *runner) runBatch(sc resolvedScanner, root, binary string, st *scannerStage, units []skillUnit, b unitBatch) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
+// prepareUnitBatch builds the argv, environment and sandbox wrapping of a batch.
+func (r *runner) prepareUnitBatch(sc resolvedScanner, root, binary string, st *scannerStage, units []skillUnit, b unitBatch) (preparedBatch, bool) {
 	argv := r.batchArgv(sc, root, st, units, b)
 	if size := argvSize(argv); size > argvBudget {
 		r.addRun(CodeScannerRunFailed, sc.Name, fmt.Sprintf("{skill_dirs} expands to %d bytes of arguments, over the %d byte limit", size, argvBudget))
-		return nil, 0, "", false
+		return preparedBatch{}, false
 	}
-	spec := specFor(sc.LintExternal, st.root)
+	spec := specFor(sc, st.root)
 	spec.InheritEnv = false
 	spec.Env = st.envFor(sc.EnvPass, cmdrun.HostEnv(), b.idx)
 	spec, usesOut, ok := r.prepareBatch(sc, st, spec, argv, binary, b.idx)
-	if !ok {
-		return nil, 0, "", false
-	}
-	r.banner(sc)
-	return r.finishBatch(sc, st, usesOut, b.idx, cmdrun.Run(context.Background(), spec))
+	return preparedBatch{spec: spec, usesOut: usesOut}, ok
+}
+
+// runPrepared starts a prepared batch and reads its report. It is safe to call
+// from several goroutines for different batches of one stage.
+func (r *runner) runPrepared(sc resolvedScanner, st *scannerStage, p preparedBatch, idx int) batchOutcome {
+	norm, outOfScope, firstOut, ok := r.finishBatch(sc, st, p.usesOut, idx, cmdrun.Run(context.Background(), p.spec))
+	return batchOutcome{norm: norm, outOfScope: outOfScope, firstOut: firstOut, ok: ok, ran: true}
 }
 
 // ownerDir returns the skill directory of dirs that holds the stage-relative
@@ -308,14 +384,14 @@ func (r *runner) planSkillUnits(sc resolvedScanner, root, binary string, units [
 		return
 	}
 	defer st.cleanup()
-	batches := splitBatches(units, misses, 0, argvSize(st.expandFor(sc.Command, nil, 0)), argvBudget, len(st.root))
+	batches := splitBatches(units, misses, sc.BatchSize, argvSize(st.expandFor(sc.Command, nil, 0)), argvBudget, len(st.root))
 	var argv []string
 	if len(batches) > 0 {
 		argv = r.batchArgv(sc, root, st, units, batches[0])
 	} else {
 		argv = r.batchArgv(sc, root, st, units, unitBatch{})
 	}
-	spec := specFor(sc.LintExternal, st.root)
+	spec := specFor(sc, st.root)
 	spec.Env = st.envFor(sc.EnvPass, cmdrun.HostEnv(), 0)
 	rels := make([]string, len(files))
 	for i, f := range files {
