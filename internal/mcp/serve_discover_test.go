@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	proj "github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
@@ -372,4 +373,31 @@ func TestNamespacedName(t *testing.T) {
 			assert.True(t, validSkillSegment(tt.want))
 		})
 	}
+}
+
+func TestDiscoverSkills_WorksWithoutAnyConfiguration(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	require.NoError(t, gitutil.CommandNoContext("", "init", "-q", root).Run())
+	for _, rel := range []string{".claude/skills/bar", ".agents/skills/qux"} {
+		writeFile(t, root, rel+"/SKILL.md", repoSkill(filepath.Base(rel)))
+	}
+
+	// Act
+	got := discoverNames(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo"})
+
+	// Assert
+	assert.Equal(t, []string{"bar", "qux"}, got)
+}
+
+func TestServeSetup_WithoutConfigurationAndWithoutDiscoveryStillFails(t *testing.T) {
+	// Arrange
+	setup := &ServeSetup{WorkDir: t.TempDir(), NoWatch: true, CacheDir: t.TempDir()}
+
+	// Act
+	_, err := setup.NewServer(context.Background())
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "directory not found")
 }

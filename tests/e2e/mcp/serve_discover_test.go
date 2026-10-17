@@ -4,9 +4,14 @@ package mcp
 // the skills a repository already keeps are served beside the ai-rulez ones.
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 const discoverServeConfig = "version = \"5.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\", \"codex\"]\n"
@@ -57,4 +62,19 @@ func TestServeSkills_DiscoverSkillsFromConfiguration(t *testing.T) {
 
 	// Act / Assert
 	assert.Contains(t, p.load("qux"), "qux body.")
+}
+
+func TestServeSkills_DiscoverSkillsWorksWithoutAnyConfiguration(t *testing.T) {
+	// Arrange
+	root := filepath.Join(t.TempDir(), "proj")
+	require.NoError(t, os.MkdirAll(root, 0o755))
+	require.NoError(t, gitutil.CommandNoContext("", "init", "-q", root).Run())
+	skill := filepath.Join(root, ".claude", "skills", "bar", "SKILL.md")
+	require.NoError(t, os.MkdirAll(filepath.Dir(skill), 0o755))
+	require.NoError(t, os.WriteFile(skill, []byte(serveSkill("bar", "The bar skill of the repository", "bar body.", "")), 0o644))
+	p := startServe(t, root, "--discover-skills=repo", "--no-watch")
+	p.initialize()
+
+	// Act / Assert
+	assert.Contains(t, p.load("bar"), "bar body.")
 }
