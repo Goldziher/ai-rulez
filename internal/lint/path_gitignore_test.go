@@ -4,10 +4,15 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	rn "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // AR401 skips a documented path that the repository's own gitignore or
@@ -42,7 +47,7 @@ func TestPathMissingSkipsGitIgnoredPaths(t *testing.T) {
 	}
 }
 
-// The ignore probe runs under the caller's context: a cancelled run cannot ask
+// The ignore probe runs under the caller's context: a canceled run cannot ask
 // git, so a missing path stays reported instead of being assumed ignored.
 func TestPathMissingIgnoreProbeHonoursContext(t *testing.T) {
 	root := t.TempDir()
@@ -62,4 +67,35 @@ func TestPathMissingIgnoreProbeHonoursContext(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, countCode(rep.Findings, CodePathMissing), "%s", dump(rep.Findings))
+}
+
+// git is asked once for all the missing paths of a run, not once per path.
+func TestPathMissingAsksGitOnce(t *testing.T) {
+	root := t.TempDir()
+	body := "Local overrides live in `.claude/settings.local.json`. Also `.claude/m1.md`, `.claude/m2.md`, `.claude/m3.md` and `.claude/m4.md`."
+	writeFiles(t, root, precisionTree(body, "", map[string]string{
+		".gitignore":            ".claude/settings.local.json\n",
+		".claude/settings.json": "{}\n",
+	}))
+	gitAdd(t, root)
+	cfg, err := loadWithResolvers(context.Background(), root)
+	require.NoError(t, err)
+	tree, err := LoadTree(root)
+	require.NoError(t, err)
+	var mu sync.Mutex
+	asked := 0
+	counting := rn.Func(func(ctx context.Context, spec rn.Spec) rn.Result {
+		if slices.Contains(spec.Argv, "check-ignore") {
+			mu.Lock()
+			asked++
+			mu.Unlock()
+		}
+		return rn.Exec{}.Run(ctx, spec)
+	})
+
+	rep, err := Run(cfg, tree, WithHost(ambient.Host{Runner: counting}))
+
+	require.NoError(t, err)
+	assert.Equal(t, 4, countCode(rep.Findings, CodePathMissing), "%s", dump(rep.Findings))
+	assert.Equal(t, 1, asked, "check-ignore runs once for the whole run")
 }
