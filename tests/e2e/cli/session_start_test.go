@@ -359,6 +359,10 @@ func TestSessionStartE2E_ProjectFoundFromNeutralDirectory(t *testing.T) {
 }
 
 func TestSessionStartE2E_RealBinary(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// runHook skips there, and the subtests edit the project before they call it.
+		t.Skip("the hook command and its stubs are POSIX sh scripts")
+	}
 	dir := sessionStartProject(t, sessionStartProjectConfig)
 	command := hookCommands(t, dir)[0]
 	stubDir := t.TempDir()

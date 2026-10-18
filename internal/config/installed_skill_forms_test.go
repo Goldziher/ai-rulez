@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/samber/oops"
@@ -187,7 +188,7 @@ func TestLocalSkillSourceForms(t *testing.T) {
 		{"worktree with a .git file is a git source", "file://" + slash(worktree), env, "file://" + slash(worktree), false, ""},
 		{"file url of a missing directory is local", "file://" + slash(filepath.Join(root, "missing")), env, filepath.Join(root, "missing"), true, ""},
 		{"uppercase scheme", "FILE://" + slash(headOnly), env, headOnly, true, ""},
-		{"localhost authority", "file://localhost" + slash(headOnly), env, headOnly, true, ""},
+		{"localhost authority", "file://localhost/" + strings.TrimPrefix(slash(headOnly), "/"), env, headOnly, true, ""},
 		{"tilde backslash", `~\skills`, env, filepath.Join(env.Home, "skills"), true, ""},
 		{"tilde without a home names the fix", "~", ambient.MapEnv{}, "", false, "no home directory"},
 		{"tilde path without a home", "~/x", ambient.MapEnv{}, "", false, "no home directory"},
