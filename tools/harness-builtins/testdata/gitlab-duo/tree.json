@@ -1,0 +1,31 @@
+[
+  {
+    "id": "x",
+    "name": "compact_command_handler.test.ts",
+    "type": "blob",
+    "path": "packages/cli/app/src/slash_commands/handlers/compact_command_handler.test.ts"
+  },
+  {
+    "id": "x",
+    "name": "doctor_command_handler.ts",
+    "type": "blob",
+    "path": "packages/cli/app/src/slash_commands/handlers/doctor_command_handler.ts"
+  },
+  {
+    "id": "x",
+    "name": "exit_command_handler.ts",
+    "type": "blob",
+    "path": "packages/cli/app/src/slash_commands/handlers/exit_command_handler.ts"
+  },
+  {
+    "id": "x",
+    "name": "create_session_helpers.ts",
+    "type": "blob",
+    "path": "packages/cli/app/src/slash_commands/handlers/create_session_helpers.ts"
+  },
+  {
+    "name": "sub",
+    "type": "tree",
+    "path": "packages/cli/app/src/slash_commands/handlers/sub"
+  }
+]

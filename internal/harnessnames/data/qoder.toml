@@ -1,7 +1,7 @@
 schema = 1
 preset = "qoder"
 harness_version = "docs-only (docs.qoder.com, 2026-10)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,12 +10,18 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.qoder.com/cli/slash-reference.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
 url = "https://docs.qoder.com/cli/builtins-reference.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s3"
+url = "https://docs.qoder.com/cli/subagent.md"
+quote = "Higher-priority sources override lower-priority sources. The order is Built-in \\< User \\< Project \\< Plugin \\< Flag."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -23,87 +29,87 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "new",
-  "clear",
-  "continue",
-  "resume",
-  "rename",
-  "branch",
-  "export",
-  "copy",
-  "compact",
-  "btw",
-  "subtask",
-  "rewind",
-  "quit",
-  "model",
-  "effort",
-  "fast",
-  "context-window",
-  "plan",
-  "goal",
-  "loop",
-  "crontab",
-  "quest",
-  "tasks",
-  "workflows",
-  "kanban",
-  "diff",
-  "review",
-  "init",
-  "setup-github",
-  "settings",
-  "security-settings",
-  "theme",
-  "output-style",
-  "statusline",
-  "editor",
-  "vim",
-  "voice",
-  "shortcuts",
-  "mcp",
-  "tools",
-  "skills",
+  "about",
+  "add-dir",
   "agents",
-  "hooks",
+  "branch",
+  "btw",
+  "clear",
   "commands",
-  "plugins",
-  "marketplace",
-  "memory",
+  "compact",
+  "context",
+  "context-window",
+  "continue",
+  "copy",
+  "crontab",
+  "diff",
+  "docs",
+  "editor",
+  "effort",
+  "export",
+  "fast",
+  "feedback",
+  "goal",
+  "help",
+  "hooks",
+  "init",
+  "insights",
+  "kanban",
   "login",
   "logout",
-  "status",
-  "profile",
-  "usage",
-  "upgrade",
-  "insights",
-  "privacy",
+  "loop",
+  "marketplace",
+  "mcp",
+  "memory",
+  "model",
+  "new",
+  "output-style",
   "permissions",
+  "plan",
+  "plugins",
+  "privacy",
+  "profile",
+  "quest",
+  "quit",
+  "release-notes",
   "remote-control",
   "remote-env",
-  "add-dir",
-  "context",
-  "docs",
-  "help",
-  "about",
-  "feedback",
-  "release-notes",
+  "rename",
+  "resume",
+  "review",
+  "rewind",
+  "security-settings",
+  "settings",
+  "setup-github",
+  "shortcuts",
+  "skills",
+  "status",
+  "statusline",
+  "subtask",
+  "tasks",
+  "theme",
+  "tools",
+  "upgrade",
+  "usage",
+  "vim",
+  "voice",
+  "workflows",
 ]
-aliases = { "tasks" = [
-  "bg",
-  "background",
-], "workflows" = [
-  "workflow-tasks",
-], "settings" = [
-  "config",
-], "plugins" = [
-  "plugin",
-], "marketplace" = [
-  "market",
-], "login" = [
+aliases = { "login" = [
   "signin",
 ], "logout" = [
   "signout",
+], "marketplace" = [
+  "market",
+], "plugins" = [
+  "plugin",
+], "settings" = [
+  "config",
+], "tasks" = [
+  "background",
+  "bg",
+], "workflows" = [
+  "workflow-tasks",
 ] }
 
 [[group]]
@@ -112,23 +118,24 @@ source = "s2"
 user_collision = "unknown"
 match = "exact"
 names = [
+  "batch",
+  "debug",
   "loop",
+  "mcp-config",
+  "quest",
   "remember",
   "run",
   "run-skill-generator",
-  "batch",
-  "debug",
-  "quest",
-  "verify",
   "security-scan",
   "simplify",
-  "mcp-config",
+  "verify",
   "workflow-authoring",
 ]
 
 [[group]]
 kind = "agent"
 source = "s2"
+evidence = "s3"
 user_collision = "user_wins"
 match = "exact"
-names = ["general-purpose", "Explore", "Plan", "statusline-setup", "qoder-guide"]
+names = ["Explore", "Plan", "general-purpose", "qoder-guide", "statusline-setup"]

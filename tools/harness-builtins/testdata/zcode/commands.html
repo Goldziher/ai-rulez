@@ -1,0 +1,63 @@
+<!-- Excerpt of https://zcode.z.ai/en/docs/commands, fetched 2026-10-18 -->
+<html>
+  <body>
+    <h2>Built-in commands</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left">Command</th>
+          <th style="text-align:left">Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:left"><code>/goal</code></td>
+          <td style="text-align:left">
+            Show, set, replace, pause, resume, or clear the current session goal, useful for long-running tasks
+          </td>
+        </tr>
+        <tr>
+          <td style="text-align:left"><code>/compact</code></td>
+          <td style="text-align:left">
+            Compact the current conversation context while preserving key information, useful for continuing long
+            conversations
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <h2>Custom commands</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left">Field</th>
+          <th style="text-align:left">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:left"><strong>Scope</strong></td>
+          <td style="text-align:left">
+            Choose <strong>User</strong> (available in all workspaces) or <strong>Workspace</strong> (current project
+            only)
+          </td>
+        </tr>
+        <tr>
+          <td style="text-align:left"><strong>Name</strong></td>
+          <td style="text-align:left">Command name, invoked as <code>/command-name</code> after saving</td>
+        </tr>
+        <tr>
+          <td style="text-align:left"><strong>Description</strong></td>
+          <td style="text-align:left">Optional short text shown in the command picker</td>
+        </tr>
+        <tr>
+          <td style="text-align:left"><strong>Argument hint</strong></td>
+          <td style="text-align:left">Optional parameter hint, such as <code>&lt;file-path&gt;</code></td>
+        </tr>
+        <tr>
+          <td style="text-align:left"><strong>Prompt</strong></td>
+          <td style="text-align:left">The prompt content sent to the agent when the command runs</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

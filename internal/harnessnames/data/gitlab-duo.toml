@@ -1,7 +1,7 @@
 schema = 1
 preset = "gitlab-duo"
 harness_version = "@gitlab/duo-cli app 9.30.0 @ gitlab-lsp 7af2780a003c"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,11 +10,18 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://gitlab.com/gitlab-org/editor-extensions/gitlab-lsp/-/tree/7af2780a003c/packages/cli/app/src/slash_commands/handlers"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s2"
+url = "https://gitlab.com/gitlab-org/editor-extensions/gitlab-lsp/-/raw/7af2780a003c/packages/cli/app/src/slash_commands/slash_command_service.ts"
+quote = "Skipped command \"${command.name}\": conflicts with a built-in command"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s2"
 user_collision = "builtin_wins"
 match = "exact"
 names = [
