@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.5.3] - 2026-10-18
+
 ### Added
 
 - **`[[lint.ignore_rules]]`: drop chosen rules in chosen files** (`rules = ["AR901", "AR9*"]`, `paths = ["playground/**"]`, optional `reason`). Codes, names and wildcard patterns over codes are accepted and validated when the configuration loads; the route is refused for policy-protected codes like `ignore_paths`, and ignored findings never reach the baseline or the ratchet. The table is `ignore_rules` because `[lint] ignore` is already the list of codes dropped everywhere ([#460](https://github.com/Goldziher/ai-rulez/issues/460)).
