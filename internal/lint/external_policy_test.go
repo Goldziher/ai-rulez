@@ -52,6 +52,18 @@ func fakeBin(t *testing.T, name, body string) string {
 	return path
 }
 
+// isolatedBin installs an executable shell script called name as the only entry
+// of PATH for the test, so a scanner installed on the machine cannot leak in.
+func isolatedBin(t *testing.T, name, body string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("fake scanners are POSIX shell scripts")
+	}
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\n"+body), 0o755)) //nolint:gosec // a test script
+	t.Setenv("PATH", dir)
+}
+
 func sarifFor(rule, level, msg string) string {
 	return fmt.Sprintf(`{"version":"2.1.0","runs":[{"results":[{"ruleId":%q,"level":%q,"message":{"text":%q}}]}]}`, rule, level, msg)
 }
@@ -60,8 +72,8 @@ func scannerFindings(fs []Finding) []Finding { return ofCode(fs, CodeExternalFin
 
 func TestPresetRunsItsMembersAndNotesTheMissingOnes(t *testing.T) {
 	// Arrange: only agnix is installed; the strict preset also names the Cisco scanner.
-	fakeBin(t, "agnix", "echo '"+sarifFor("AGX1", "warning", "structure problem")+"'\n")
 	p := policyProject(t, "\n[lint.scanner_policy]\npreset = \"strict\"\n")
+	isolatedBin(t, "agnix", "echo '"+sarifFor("AGX1", "warning", "structure problem")+"'\n")
 	// Act
 	findings := p.run(Options{})
 	// Assert
