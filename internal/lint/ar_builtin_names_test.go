@@ -238,20 +238,24 @@ func TestHarnessBuiltinNamesFollowTheReachOfTheOutput(t *testing.T) {
 		name    string
 		presets string
 		reach   HarnessReach
-		want    []string // presets that carry an AR9U0 error
-		note    string   // in every error message
+		want    []string // presets that carry an AR9U0 error: harnesses the project writes for
+		warn    []string // presets that carry an AR9U0 warning: harnesses that only read the directory
+		note    string   // in every finding message
 		notNote string   // in no error message
 	}{
-		{"a reader of the shared directory is checked although its preset is not enabled", `"cursor"`,
+		{"a reader of the shared directory is checked, as a warning, although its preset is not enabled", `"cursor"`,
 			fakeReach{{Preset: "cursor", Role: "skill", Dir: ".agents/skills", Writer: true}, {Preset: "gemini", Role: "skill", Dir: ".agents/skills"}},
-			[]string{"gemini"}, "The harness reads .agents/skills.", ""},
+			nil, []string{"gemini"}, "The harness reads .agents/skills.", ""},
 		{"several readers each get their own finding", `"cursor"`,
 			fakeReach{{Preset: "gemini", Role: "skill", Dir: ".agents/skills"}, {Preset: "qwen", Role: "skill", Dir: ".agents/skills"}},
-			[]string{"gemini", "qwen"}, "The harness reads .agents/skills.", ""},
-		{"an output the plan does not write reaches no harness (plugin-only)", `"gemini"`, fakeReach{}, nil, "", ""},
+			nil, []string{"gemini", "qwen"}, "The harness reads .agents/skills.", ""},
+		{"a harness the project writes for stays an error", `"gemini"`,
+			fakeReach{{Preset: "gemini", Role: "skill", Writer: true}, {Preset: "qwen", Role: "skill", Dir: ".agents/skills"}},
+			[]string{"gemini"}, []string{"qwen"}, "", ""},
+		{"an output the plan does not write reaches no harness (plugin-only)", `"gemini"`, fakeReach{}, nil, nil, "", ""},
 		{"the same harness twice is reported once", `"gemini"`,
 			fakeReach{{Preset: "gemini", Role: "skill", Writer: true}, {Preset: "gemini", Role: "skill", Dir: ".agents/skills"}},
-			[]string{"gemini"}, "", "The harness reads"},
+			[]string{"gemini"}, nil, "", "The harness reads"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -266,22 +270,28 @@ func TestHarnessBuiltinNamesFollowTheReachOfTheOutput(t *testing.T) {
 			// Act
 			got := findingsOf(lintOutputs(t, root, WithHarnessReach(tt.reach)), CodeBuiltinNameCollision)
 			// Assert
-			var presets []string
+			var presets, warned []string
 			for _, f := range got {
-				if f.Severity != SeverityError {
-					continue
-				}
 				for _, p := range []string{"gemini", "qwen", "cursor"} {
-					if strings.Contains(f.Message, "the "+p+" built-in") {
+					if !strings.Contains(f.Message, "the "+p+" built-in") {
+						continue
+					}
+					switch f.Severity {
+					case SeverityError:
 						presets = append(presets, p)
+					case SeverityWarning:
+						warned = append(warned, p)
 					}
 				}
 			}
 			if strings.Join(presets, ",") != strings.Join(tt.want, ",") {
 				t.Fatalf("error presets = %v, want %v:\n%s", presets, tt.want, dump(got))
 			}
+			if strings.Join(warned, ",") != strings.Join(tt.warn, ",") {
+				t.Fatalf("warning presets = %v, want %v:\n%s", warned, tt.warn, dump(got))
+			}
 			for _, f := range got {
-				if f.Severity != SeverityError {
+				if f.Severity == SeverityInfo {
 					continue
 				}
 				if tt.note != "" && !strings.Contains(f.Message, tt.note) {
