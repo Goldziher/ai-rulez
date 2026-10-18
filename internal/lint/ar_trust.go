@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -208,6 +209,81 @@ var opaqueExt = map[string]bool{
 
 var skipDirs = map[string]bool{dirGit: true, "node_modules": true, "__pycache__": true, ".venv": true}
 
+// walkSkillFiles calls fn for each regular file under dir, at most
+// maxWalkedFiles of them, leaving out the directories named in skip. An
+// unreadable entry is simply not visited.
+func walkSkillFiles(dir string, skip map[string]bool, fn func(path string, size int)) {
+	walked := 0
+	//nolint:errcheck // best effort
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil //nolint:nilerr // best effort
+		}
+		if d.IsDir() {
+			if p != dir && skip[d.Name()] {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		walked++
+		if walked > maxWalkedFiles {
+			return filepath.SkipAll
+		}
+		info, ierr := d.Info()
+		if ierr != nil || !info.Mode().IsRegular() {
+			return nil //nolint:nilerr // an unreadable entry is simply not counted
+		}
+		fn(p, int(info.Size()))
+		return nil
+	})
+}
+
+// dirFile is one file of a skill directory. Its leading bytes are read once and shared by
+// the checks that classify content (AR034 and AR051).
+type dirFile struct {
+	path string
+	size int
+	once sync.Once
+	head []byte
+	ok   bool
+}
+
+const leadingBytes = 8192
+
+// leading returns up to the first 8 KiB of the file; ok is false when it cannot be opened.
+func (f *dirFile) leading() (head []byte, ok bool) {
+	f.once.Do(func() {
+		fh, err := os.Open(f.path)
+		if err != nil {
+			return
+		}
+		defer fh.Close() //nolint:errcheck // read-only
+		buf := make([]byte, leadingBytes)
+		n, _ := fh.Read(buf) //nolint:errcheck // a short or empty read is fine
+		f.head, f.ok = buf[:n], true
+	})
+	return f.head, f.ok
+}
+
+// skillTree lists the files of a skill directory once per run, in the walk order of
+// walkSkillFiles, with __pycache__ included (AR034 leaves those out itself).
+func (r *runner) skillTree(dir string) []*dirFile {
+	if cached, ok := r.skillTrees.Load(dir); ok {
+		return cached.([]*dirFile) //nolint:forcetypeassert // only skillTree stores here
+	}
+	var files []*dirFile
+	walkSkillFiles(dir, bytecodeSkipDirs, func(p string, size int) {
+		files = append(files, &dirFile{path: p, size: size})
+	})
+	r.skillTrees.Store(dir, files)
+	return files
+}
+
+// inPycache reports whether path lies below a __pycache__ directory.
+func inPycache(path string) bool {
+	return strings.Contains(filepath.ToSlash(path), "/"+pycacheDir+"/")
+}
+
 func checkAnalyzability(r *runner) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	for i := range r.items {
 		it := &r.items[i]
@@ -220,36 +296,18 @@ func checkAnalyzability(r *runner) { //nolint:gocyclo // linear checks over a do
 			size int
 		}
 		var opaques []opaque
-		walked := 0
-		//nolint:errcheck // an unreadable entry is simply not counted
-		_ = filepath.WalkDir(it.itemDir, func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return nil //nolint:nilerr // best effort
+		for _, f := range r.skillTree(it.itemDir) {
+			if inPycache(f.path) {
+				continue
 			}
-			if d.IsDir() {
-				if p != it.itemDir && skipDirs[d.Name()] {
-					return filepath.SkipDir
-				}
-				return nil
+			total += f.size
+			if f.size <= maxAuditableBytes && !opaqueExt[strings.ToLower(filepath.Ext(f.path))] && f.looksLikeText() {
+				auditable += f.size
+				continue
 			}
-			walked++
-			if walked > maxWalkedFiles {
-				return filepath.SkipAll
-			}
-			info, ierr := d.Info()
-			if ierr != nil || !info.Mode().IsRegular() {
-				return nil //nolint:nilerr // an unreadable entry is simply not counted
-			}
-			size := int(info.Size())
-			total += size
-			if size <= maxAuditableBytes && !opaqueExt[strings.ToLower(filepath.Ext(p))] && looksLikeText(p) {
-				auditable += size
-				return nil
-			}
-			rel, _ := filepath.Rel(it.itemDir, p) //nolint:errcheck // display only
-			opaques = append(opaques, opaque{filepath.ToSlash(rel), size})
-			return nil
-		})
+			rel, _ := filepath.Rel(it.itemDir, f.path) //nolint:errcheck // display only
+			opaques = append(opaques, opaque{filepath.ToSlash(rel), f.size})
+		}
 		if total == 0 || float64(auditable)/float64(total) >= minAuditableRatio {
 			continue
 		}
@@ -273,19 +331,16 @@ func checkAnalyzability(r *runner) { //nolint:gocyclo // linear checks over a do
 }
 
 // looksLikeText reports whether a file starts like UTF-8 text (no NUL byte).
-func looksLikeText(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
+func (f *dirFile) looksLikeText() bool {
+	buf, ok := f.leading()
+	if !ok {
 		return false
 	}
-	defer f.Close() //nolint:errcheck // read-only
-	buf := make([]byte, 8192)
-	n, _ := f.Read(buf) //nolint:errcheck // a short or empty read is fine
-	buf = buf[:n]
-	if strings.IndexByte(string(buf), 0) >= 0 {
+	if bytes.IndexByte(buf, 0) >= 0 {
 		return false
 	}
 	// a read can cut a multi-byte rune at the end
+	n := len(buf)
 	for len(buf) > 0 && !utf8.Valid(buf) && len(buf) > n-4 {
 		buf = buf[:len(buf)-1]
 	}
