@@ -1,7 +1,7 @@
 schema = 1
 preset = "kilo"
-harness_version = "main@1552877e82ce (release v7.8.14)"
-verified_on = "2026-10-17"
+harness_version = "v7.8.14"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "error"
 invocation_spaces = [["command"], ["skill"], ["agent"]]
@@ -9,35 +9,43 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
-verified_on = "2026-10-17"
+url = "https://github.com/Kilo-Org/kilocode/blob/v7.8.14/packages/opencode/src/command/index.ts"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/tui/src/app.tsx"
-verified_on = "2026-10-17"
+url = "https://github.com/Kilo-Org/kilocode/tree/v7.8.14/packages"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/kilocode/skills/builtin.ts"
-verified_on = "2026-10-17"
+url = "https://github.com/Kilo-Org/kilocode/blob/v7.8.14/packages/opencode/src/kilocode/skills/builtin.ts"
+quote = "Registered before all discovery phases so user skills with the same name override."
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/agent/agent.ts"
-verified_on = "2026-10-17"
+url = "https://github.com/Kilo-Org/kilocode/blob/v7.8.14/packages/opencode/src/agent/agent.ts"
+quote = "item.prompt = value.prompt ?? item.prompt"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s5"
-url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+url = "https://github.com/Kilo-Org/kilocode/blob/v7.8.14/packages/opencode/src/command/index.ts"
 quote = "defer partial overrides until all command sources are registered"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s6"
-url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+url = "https://github.com/Kilo-Org/kilocode/blob/v7.8.14/packages/opencode/src/command/index.ts"
 quote = "if (Reserved.reserved(name)) {"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s7"
+url = "https://github.com/Kilo-Org/kilocode/blob/v7.8.14/packages/tui/src/component/prompt/autocomplete.tsx"
+quote = "const results: AutocompleteOption[] = [...slashes()] for (const serverCommand of sync.data.command) {"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -45,7 +53,7 @@ source = "s1"
 evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
-names = ["init", "review", "resume-claude", "resume-codex"]
+names = ["init", "resume-claude", "resume-codex", "review"]
 
 [[group]]
 kind = "command"
@@ -58,66 +66,105 @@ names = ["goal"]
 [[group]]
 kind = "command"
 source = "s2"
-user_collision = "unknown"
+evidence = "s7"
+user_collision = "both_listed"
 match = "exact"
 names = [
-  "sessions",
-  "new",
-  "workspaces",
-  "models",
+  "about",
   "agents",
-  "mcps",
-  "variants",
-  "connect",
-  "org",
-  "status",
-  "debug",
-  "themes",
-  "help",
-  "exit",
-  "cost-alert",
-  "editor",
-  "skills",
-  "warp",
-  "move",
-  "share",
-  "rename",
-  "timeline",
-  "fork",
+  "auto-approve",
+  "caffeinate",
   "compact",
-  "unshare",
-  "undo",
-  "redo",
-  "timestamps",
-  "thinking",
+  "connect",
   "copy",
   "copy-session",
+  "cost-alert",
+  "debug",
+  "diff",
+  "editor",
+  "exit",
   "export",
+  "fork",
+  "help",
+  "indexing",
+  "mcps",
+  "memory",
+  "models",
+  "move",
+  "new",
+  "org",
+  "privacy",
+  "process",
+  "profile",
+  "redo",
+  "reload",
+  "remote",
+  "rename",
+  "sandbox",
+  "sessions",
+  "share",
+  "skills",
+  "status",
+  "teams",
+  "themes",
+  "thinking",
+  "timeline",
+  "timestamps",
+  "undo",
+  "unshare",
+  "usage",
+  "variants",
+  "vim",
+  "warp",
+  "workspaces",
 ]
-aliases = { "sessions" = [
-  "resume",
-  "continue",
-], "new" = [
-  "clear",
-], "workspaces" = [
-  "worktree",
-  "worktrees",
+aliases = { "auto-approve" = [
+  "approve-all",
+  "approveall",
+  "autoapprove",
+], "caffeinate" = [
+  "caffenate",
+], "compact" = [
+  "summarize",
+], "cost-alert" = [
+  "cost",
+], "exit" = [
+  "q",
+  "quit",
+], "indexing" = [
+  "embedding",
+  "index",
+], "memory" = [
+  "mem",
 ], "models" = [
   "mo",
+], "new" = [
+  "clear",
 ], "org" = [
   "orgs",
   "switch-org",
-], "exit" = [
-  "quit",
-  "q",
-], "cost-alert" = [
-  "cost",
-], "compact" = [
-  "summarize",
-], "timestamps" = [
-  "toggle-timestamps",
+], "process" = [
+  "processes",
+], "profile" = [
+  "me",
+  "whoami",
+], "sessions" = [
+  "continue",
+  "resume",
+], "teams" = [
+  "org",
+  "orgs",
+  "team",
 ], "thinking" = [
   "toggle-thinking",
+], "timestamps" = [
+  "toggle-timestamps",
+], "usage" = [
+  "plans",
+  "quota",
+], "workspaces" = [
+  "worktree",
+  "worktrees",
 ] }
 
 [[group]]
@@ -133,15 +180,15 @@ source = "s4"
 user_collision = "user_wins"
 match = "exact"
 names = [
-  "code",
-  "plan",
-  "general",
-  "explore",
-  "scout",
-  "orchestrator",
-  "debug",
   "ask",
+  "code",
   "compaction",
-  "title",
+  "debug",
+  "explore",
+  "general",
+  "orchestrator",
+  "plan",
+  "scout",
   "summary",
+  "title",
 ]
