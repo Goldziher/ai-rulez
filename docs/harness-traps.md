@@ -101,10 +101,10 @@ renaming or moving a file, or choosing `resources`, is a decision.
 
 ## Keeping the table fresh
 
-`task harness:verify` lists every trap and limit row with its source URL and `verified_on`, and fails when a row is
+`task harness:verify` lists every trap and limit row, and the built-in name table of every harness (`internal/harnessnames`, rule AR9U0), with its source URL and `verified_on`, and fails when a row is
 older than `[lint.traps] max_table_age_days` from the repository config (90 when unset; `HARNESS_MAX_AGE_DAYS`
 overrides). It does not use the network. `HARNESS_VERIFY_FETCH=1 task harness:verify` also fetches each source and
-fails when a quote is no longer on its page.
+fails when a quote, of a trap or of a name table, is no longer on its page. `[lint.traps] max_table_age_days` (AR9C0) also covers the name tables of the harnesses a project writes for.
 
 ## The traps
 
