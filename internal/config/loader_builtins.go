@@ -165,46 +165,7 @@ func loadBuiltinDomains(config *Config, names []string, only map[string]map[stri
 			continue
 		}
 
-		domain := &Domain{
-			Name:          name,
-			Builtin:       true,
-			BuiltinScoped: scoped,
-		}
-
-		for _, entry := range entries {
-			// Skip individual builtin content files excluded via "!domain/name".
-			if !itemSelected(name, entry.Name, only, ruleExclusions) {
-				config.Log().Debug("Skipping builtin content", "domain", name, "name", entry.Name)
-				continue
-			}
-
-			// Parse frontmatter from embedded content
-			metadata, body, malformed := parseFrontmatter(entry.Content)
-			if malformed {
-				warnMalformedFrontmatter(config.Log(), entry.Path)
-			}
-			cf := ContentFile{
-				Name:                 entry.Name,
-				Path:                 "builtin://" + entry.Path,
-				Content:              body,
-				Metadata:             metadata,
-				MalformedFrontmatter: malformed,
-			}
-
-			switch entry.Type {
-			case "rules":
-				domain.Rules = append(domain.Rules, cf)
-			case "context":
-				domain.Context = append(domain.Context, cf)
-			case skillsDir:
-				domain.Skills = append(domain.Skills, cf)
-			case "agents":
-				domain.Agents = append(domain.Agents, cf)
-			case "commands":
-				domain.Commands = append(domain.Commands, cf)
-			}
-		}
-
+		domain := buildBuiltinDomain(config, name, entries, only, ruleExclusions, scoped)
 		if only[name] != nil && domain.itemCount() == 0 {
 			continue
 		}
@@ -219,6 +180,50 @@ func loadBuiltinDomains(config *Config, names []string, only map[string]map[stri
 			"commands", len(domain.Commands),
 		)
 	}
+}
+
+// buildBuiltinDomain assembles the domain of one builtin pack from its embedded
+// entries, leaving out the items the selection or an exclusion removes.
+func buildBuiltinDomain(config *Config, name string, entries []builtins.ContentEntry, only map[string]map[string]bool, ruleExclusions map[string]bool, scoped bool) *Domain {
+	domain := &Domain{
+		Name:          name,
+		Builtin:       true,
+		BuiltinScoped: scoped,
+	}
+	for _, entry := range entries {
+		// Skip individual builtin content files excluded via "!domain/name".
+		if !itemSelected(name, entry.Name, only, ruleExclusions) {
+			config.Log().Debug("Skipping builtin content", "domain", name, "name", entry.Name)
+			continue
+		}
+
+		// Parse frontmatter from embedded content
+		metadata, body, malformed := parseFrontmatter(entry.Content)
+		if malformed {
+			warnMalformedFrontmatter(config.Log(), entry.Path)
+		}
+		cf := ContentFile{
+			Name:                 entry.Name,
+			Path:                 "builtin://" + entry.Path,
+			Content:              body,
+			Metadata:             metadata,
+			MalformedFrontmatter: malformed,
+		}
+
+		switch entry.Type {
+		case "rules":
+			domain.Rules = append(domain.Rules, cf)
+		case "context":
+			domain.Context = append(domain.Context, cf)
+		case skillsDir:
+			domain.Skills = append(domain.Skills, cf)
+		case "agents":
+			domain.Agents = append(domain.Agents, cf)
+		case "commands":
+			domain.Commands = append(domain.Commands, cf)
+		}
+	}
+	return domain
 }
 
 // warnBuiltinPackSkipped reports, once per pack, that a local or included domain

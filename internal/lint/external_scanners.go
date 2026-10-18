@@ -218,15 +218,21 @@ func ProbeScannerVersion(ctx context.Context, info ScannerInfo) (string, error) 
 	if res.Status != cmdrun.StatusOK && res.Status != cmdrun.StatusExit {
 		return "", nil
 	}
-	for _, text := range []string{string(res.Stdout), string(res.Stderr)} {
+	return firstVersionLine(string(res.Stdout), string(res.Stderr)), nil
+}
+
+// firstVersionLine is the first non-empty sanitized line of the probe output,
+// stdout first, cut to 80 bytes; "" when there is none.
+func firstVersionLine(texts ...string) string {
+	for _, text := range texts {
 		for _, line := range strings.Split(text, "\n") {
 			if line = sanitizeScannerText(line); line != "" {
 				if len(line) > 80 {
 					line = line[:80]
 				}
-				return line, nil
+				return line
 			}
 		}
 	}
-	return "", nil
+	return ""
 }

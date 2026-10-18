@@ -216,19 +216,9 @@ func takenScannerNames(entries []config.LintExternal) map[string]bool {
 	return taken
 }
 
-// fromProfile fills ex from its profile: command, format, inputs and egress
-// when unset, the severity map merged (the entry wins), the flag deny-list.
-// Declaring less egress than the profile does is a problem, not a fill-in.
-func fromProfile(ex config.LintExternal) resolvedScanner {
-	rs := resolvedScanner{LintExternal: ex}
-	if ex.Profile == "" {
-		return rs
-	}
-	p, ok := scanners.Lookup(ex.Profile)
-	if !ok {
-		rs.Problems = append(rs.Problems, fmt.Sprintf("profile %q is not one of %s", ex.Profile, strings.Join(scanners.Names(), ", ")))
-		return rs
-	}
+// fillProfileDefaults copies the profile's command, format, inputs, severity cap,
+// batch size and version into the fields the entry left unset.
+func fillProfileDefaults(rs *resolvedScanner, p scanners.Profile) {
 	if len(rs.Command) == 0 {
 		rs.Command = append([]string(nil), p.Command...)
 	}
@@ -247,6 +237,22 @@ func fromProfile(ex config.LintExternal) resolvedScanner {
 	if rs.Version == "" {
 		rs.Version = p.Version
 	}
+}
+
+// fromProfile fills ex from its profile: command, format, inputs and egress
+// when unset, the severity map merged (the entry wins), the flag deny-list.
+// Declaring less egress than the profile does is a problem, not a fill-in.
+func fromProfile(ex config.LintExternal) resolvedScanner {
+	rs := resolvedScanner{LintExternal: ex}
+	if ex.Profile == "" {
+		return rs
+	}
+	p, ok := scanners.Lookup(ex.Profile)
+	if !ok {
+		rs.Problems = append(rs.Problems, fmt.Sprintf("profile %q is not one of %s", ex.Profile, strings.Join(scanners.Names(), ", ")))
+		return rs
+	}
+	fillProfileDefaults(&rs, p)
 	switch {
 	case ex.Egress == nil:
 		egress := p.Egress
