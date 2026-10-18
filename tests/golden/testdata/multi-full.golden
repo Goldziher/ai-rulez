@@ -280,7 +280,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 12676 25473515b092a8a8d461bf565168141cef33122c5b7556e982e81d67de216966
+.ai-rulez/.generated-manifest.local.json file 0644 12676 93056ac0c4e932eb385aa9ae0cabdeaec99e7678452d5fee0d6bd2dd15fb1846
 >>>>
 {
   "version": "1",
@@ -294,7 +294,7 @@ policy:
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "c1ad8553e7576c03b9ffb53ba01969fe936df9bed14a0944ed75302422b406ba"
+          "c41dbcb68aa9fdb2b5c507dcfe83d148ac6cbc582ae995ff6e8a821dde80fe1e"
         ]
       },
       {
@@ -363,7 +363,7 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "484c2bdc7badb3976b1f65f9c0c0d510e8844a5a6ee6f1deef8b29cb6b9bdcf7",
+          "354b2d78e305c508e8040b1fd5c1a5b17b8241d99f705cff6174fb9cb7ddfd1b",
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa"
         ]
       },
@@ -422,7 +422,7 @@ policy:
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "da9dac14f4aea7f4f0927d8886ac65c901ba2df699bc9105e33cdc04184d88aa"
+          "c5f371af02d298e6145792c0911b5039ba7f2210fea3ccdbb94bcf8a93edae48"
         ]
       },
       {
@@ -487,7 +487,7 @@ policy:
         ],
         "elementSums": [
           "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "9da0b858f518034aeb83a25520e50223d1a361f63b6cd20acd32c25a1fde056c"
+          "fad132b15270c3536e4b01f4f58e965fc5e60e59afbd6f6db4984405fec5cee6"
         ]
       },
       {
@@ -680,21 +680,21 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "2a6b6c6e683dc696c7088cbb55c018ea9c1381e922d5c2e110da7c5e45b67504",
+    ".claude/settings.json": "e8b393ed4d73a2f438bd882093c508e696791434cd1f7e91efead98f6b3f705e",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc",
-    ".codex/hooks.json": "318eede6854613ebd2baef646aa73f6f84b45d15cece946b9d676a22d271cb27",
+    ".codex/hooks.json": "69203c693d1c86bf608cee07168a3d6d1fd023ea3ea2a8e25476c573839f435b",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "fb8caddad8bc55c36d84a1ca5e8a8401a7169b6efe64aed00a8834ec81c598c7",
+    ".cursor/hooks.json": "3d7d483943ef4ffb28d2780d9d0419f8ef73884ccd92fa61a0ddebc78c8b9bf8",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".gemini/settings.json": "a8894ee1381dd16ba45dc5c411cfe3a47c064d2d538b4e39308b427876cbf80c",
-    ".github/hooks/ai-rulez.json": "f50a71a264db4805407870f75d8a288aa226081972eba0ea33a28278aafddeba",
+    ".gemini/settings.json": "8103e89fd0d15183f8649aeb779cd413fe71d43e65e6012687d4be0c5c7a9b6d",
+    ".github/hooks/ai-rulez.json": "548233e8fba6d7313b6623b9dbcd79025acab9b946fbd099e529d27cf57e7216",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
