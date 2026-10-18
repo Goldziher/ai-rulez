@@ -113,7 +113,11 @@ func (r *runner) scanBody(it *item, d doc) {
 		for _, target := range linkTargets(l.Plain) {
 			r.checkLink(it, l.No, target)
 		}
+		labels := linkLabelSpans(l.Text)
 		for _, m := range backtickMatches(l.Text) {
+			if inSpans(labels, m[0]) {
+				continue // the label of a link is display text; the link target is checked instead
+			}
 			tok := l.Text[m[2]:m[3]]
 			if tickSlashRe().MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
 				continue // `/api-docs` in prose is a route, not a command
@@ -548,6 +552,33 @@ func slashInvocation(before string) bool {
 	words := strings.Fields(before)
 	last := strings.ToLower(strings.Trim(words[len(words)-1], "*_:,.;()\"'"))
 	return invokeWords[last]
+}
+
+// linkLabelSpans lists the [start, end) byte ranges of the text of the inline links
+// on a line ("[label](target)"); a code span inside one is the label, not a reference (#456).
+func linkLabelSpans(text string) [][2]int {
+	if !strings.Contains(text, "](") {
+		return nil
+	}
+	var out [][2]int
+	for _, m := range inlineLinkRe().FindAllStringIndex(text, -1) {
+		open := strings.IndexByte(text[m[0]:m[1]], '[')
+		closing := strings.Index(text[m[0]:m[1]], "](")
+		if open >= 0 && closing > open {
+			out = append(out, [2]int{m[0] + open, m[0] + closing})
+		}
+	}
+	return out
+}
+
+// inSpans reports whether pos lies inside one of the spans.
+func inSpans(spans [][2]int, pos int) bool {
+	for _, sp := range spans {
+		if pos >= sp[0] && pos < sp[1] {
+			return true
+		}
+	}
+	return false
 }
 
 // backtickMatches is backtickRe's FindAllStringSubmatchIndex, which needs a

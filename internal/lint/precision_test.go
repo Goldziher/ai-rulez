@@ -222,3 +222,39 @@ func TestDescriptionStyleAppliesToSkillsAndAgentsOnly(t *testing.T) {
 		})
 	}
 }
+
+// A code span inside link text is the label of the link, not a reference (#456):
+// the target is what is checked.
+func TestSkillResourceMissing_LinkTextCodeSpan(t *testing.T) {
+	tests := []struct {
+		name         string
+		body         string
+		wantAR402    int
+		wantUnlinked int
+	}{
+		{"label span with a resolving target", "See [`b` `references/s.md`](references/own.md).", 0, 0},
+		{"label span with an unresolved target reports the target only", "See [`references/own.md`](references/gone.md).", 0, 1},
+		{"span outside the link text still reports", "See [the guide](references/own.md) and `references/absent.md`.", 1, 0},
+		{"span before the link text still reports", "Read `references/absent.md` then [guide](references/own.md).", 1, 0},
+		{"unlinked label span still reports", "See [`references/absent.md`] for the shapes.", 1, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":                    baseConfig,
+				".ai-rulez/skills/alpha/SKILL.md":          "---\nname: alpha\ndescription: Deploy the billing service. Use when releasing billing changes to staging.\n---\n" + tt.body + "\n",
+				".ai-rulez/skills/alpha/references/own.md": "# own\n",
+				"README.md": "# r\n",
+			})
+			gitAdd(t, root)
+			fs := lintDir(t, root)
+			if got := countCode(fs, CodeSkillResourceMissing); got != tt.wantAR402 {
+				t.Errorf("AR402 count = %d, want %d:\n%s", got, tt.wantAR402, dump(fs))
+			}
+			if got := countCode(fs, CodeLinkUnresolved); got != tt.wantUnlinked {
+				t.Errorf("link-unresolved count = %d, want %d:\n%s", got, tt.wantUnlinked, dump(fs))
+			}
+		})
+	}
+}
