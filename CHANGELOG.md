@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.5.2] - 2026-10-18
+
 ### Added
 
 - **`[mcp] serve_skills` makes a bare `ai-rulez mcp` serve skills.** The key (default `false`) behaves as `--serve-skills`, so a client entry can be `ai-rulez mcp` alone; the flag wins, and `--serve-skills=false` turns the key off. It is in the schema and accepted by `validate` ([#454](https://github.com/Goldziher/ai-rulez/issues/454)).
