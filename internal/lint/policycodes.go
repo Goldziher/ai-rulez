@@ -219,6 +219,7 @@ func resolveOrKeep(key string) string {
 // Suppression routes named in the AR740 finding of an attempt.
 const (
 	routeIgnorePaths = "[lint] ignore_paths"
+	routeIgnoreRules = "[[lint.ignore_rules]]"
 	routeInline      = "ai-rulez-lint-ignore comment"
 	routeBaseline    = "baseline"
 	routeRatchet     = "[lint.ratchet]"
@@ -232,6 +233,11 @@ func (r *runner) suppressed(code, abs string, line int) bool {
 			return true
 		}
 	}
+	if r.ruleIgnored(code, abs) {
+		if !r.refuseSuppression(code, routeIgnoreRules) {
+			return true
+		}
+	}
 	if r.inlineIgnored(abs, line, code) {
 		if !r.refuseSuppression(code, routeInline) {
 			return true
@@ -242,7 +248,10 @@ func (r *runner) suppressed(code, abs string, line int) bool {
 
 // pathSuppresses is suppressed for the path route alone.
 func (r *runner) pathSuppresses(code, abs string) bool {
-	return r.pathIgnored(abs) && !r.refuseSuppression(code, routeIgnorePaths)
+	if r.pathIgnored(abs) && !r.refuseSuppression(code, routeIgnorePaths) {
+		return true
+	}
+	return r.ruleIgnored(code, abs) && !r.refuseSuppression(code, routeIgnoreRules)
 }
 
 // refuseSuppression records an attempted suppression of a protected code and

@@ -2609,6 +2609,30 @@
           "items": { "type": "string" },
           "description": "Globs, relative to the config directory, of source files whose findings are dropped."
         },
+        "ignore_rules": {
+          "type": "array",
+          "description": "Rule-scoped ignores: findings of the listed rules in the listed files are dropped, every other finding in those files is kept.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rules", "paths"],
+            "properties": {
+              "rules": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string" },
+                "description": "Finding codes (AR901) or names (claude-md-shadow); a pattern with a wildcard (AR9*) matches codes."
+              },
+              "paths": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string" },
+                "description": "Globs, relative to the config directory or the repository root, of the source files the ignore covers."
+              },
+              "reason": { "type": "string", "description": "Why the findings are acceptable; for the reader." }
+            }
+          }
+        },
         "skill_roots": {
           "type": "array",
           "items": { "type": "string" },

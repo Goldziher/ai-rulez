@@ -273,6 +273,7 @@ func suppressSyntax(r RuleInfo) []string {
 		fmt.Sprintf("config.toml: [lint] ignore = [%q]", r.Code),
 		fmt.Sprintf("config.toml: [lint.severity] %s = \"off\" (or \"info\" to keep it visible without failing)", r.Code),
 		"config.toml: [lint] ignore_paths = [\"<glob>\"] for one source file",
+		fmt.Sprintf("config.toml: [[lint.ignore_rules]] rules = [%q] paths = [\"<glob>\"] for this rule in those files only", r.Code),
 		"baseline: validate --update-baseline accepts the current findings with a reason",
 	)
 }

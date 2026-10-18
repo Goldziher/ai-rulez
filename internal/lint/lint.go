@@ -180,6 +180,7 @@ type runner struct {
 	sev          map[string]Severity
 	ignore       map[string]bool
 	ignorePaths  []globMatcher
+	ignoreRules  []ruleIgnore
 	allow        []globMatcher
 	skills       map[string]bool
 	commands     map[string]bool
@@ -498,6 +499,7 @@ func (r *runner) resolveSettings() {
 	}
 	r.applyPolicy()
 	r.ignorePaths = compileGlobs(r.lc.IgnorePaths)
+	r.ignoreRules = compileRuleIgnores(r.lc.IgnoreRules)
 	r.exampleGlobs = compileGlobs(r.lc.ExamplePaths)
 	r.allow = compileGlobs(r.lc.AllowPaths)
 }
@@ -536,6 +538,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 			problems = append(problems, fmt.Sprintf("lint.severity.%s: unknown severity %q", key, val))
 		}
 	}
+	problems = append(problems, validateIgnoreRules(lc.IgnoreRules)...)
 	for kind := range lc.Budgets {
 		if _, ok := defaultBudgets[kind]; !ok {
 			problems = append(problems, fmt.Sprintf("lint.budgets: unknown content kind %q", kind))
@@ -634,7 +637,13 @@ func (r *runner) configRel(abs string) string {
 }
 
 func (r *runner) pathIgnored(abs string) bool {
-	if len(r.ignorePaths) == 0 {
+	return r.pathMatches(abs, r.ignorePaths)
+}
+
+// pathMatches reports whether abs matches one of globs, taken relative to the
+// repository root or to the configuration directory.
+func (r *runner) pathMatches(abs string, globs []globMatcher) bool {
+	if len(globs) == 0 {
 		return false
 	}
 	cands := []string{r.rel(abs)}
@@ -642,7 +651,7 @@ func (r *runner) pathIgnored(abs string) bool {
 		cands = append(cands, rel)
 	}
 	for _, c := range cands {
-		for _, g := range r.ignorePaths {
+		for _, g := range globs {
 			if c != "" && g.match(c) {
 				return true
 			}

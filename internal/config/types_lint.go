@@ -1,5 +1,18 @@
 package config
 
+// LintIgnoreRule is one rule-scoped ignore: findings of Rules in files matching
+// Paths are dropped, every other finding in those files is kept.
+type LintIgnoreRule struct {
+	// Rules lists finding codes (AR901) or names (claude-md-shadow); a pattern
+	// with a wildcard ("AR9*") matches codes.
+	Rules []string `yaml:"rules" json:"rules" toml:"rules"`
+	// Paths lists globs, relative to the config directory or the repository
+	// root, of the source files the ignore applies to.
+	Paths []string `yaml:"paths" json:"paths" toml:"paths"`
+	// Reason says why the findings are acceptable; it is for the reader.
+	Reason string `yaml:"reason,omitempty" json:"reason,omitempty" toml:"reason,omitempty"`
+}
+
 // LintConfig configures `ai-rulez validate`. Every field is optional;
 // the lint package applies defaults for anything left unset.
 type LintConfig struct {
@@ -19,6 +32,9 @@ type LintConfig struct {
 	// IgnorePaths lists globs, relative to the config directory, of source
 	// files whose findings are dropped.
 	IgnorePaths []string `yaml:"ignore_paths,omitempty" json:"ignore_paths,omitempty" toml:"ignore_paths,omitempty"` //nolint:tagliatelle
+	// IgnoreRules drops findings of the listed rules in the listed files only:
+	// `[[lint.ignore_rules]] rules = ["AR901", "AR9*"] paths = ["playground/**"]`.
+	IgnoreRules []LintIgnoreRule `yaml:"ignore_rules,omitempty" json:"ignore_rules,omitempty" toml:"ignore_rules,omitempty"` //nolint:tagliatelle
 	// SkillRoots lists globs, relative to the project root, of the directories
 	// that hold skill directories (".claude/skills", "plugins/*/skills") a
 	// harness loads from. AR808 checks a hand-written skill or command only in
