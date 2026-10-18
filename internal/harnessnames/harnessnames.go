@@ -119,32 +119,27 @@ type entry struct {
 	aliasOf string
 }
 
-var (
-	once    sync.Once
-	loaded  map[string]*Table
-	loadErr error
-)
+// embedded reads the embedded tables once; a Table is immutable after that.
+var embedded = sync.OnceValues(loadEmbedded)
 
-func load() {
-	loaded = map[string]*Table{}
+func loadEmbedded() (map[string]*Table, error) {
+	tables := map[string]*Table{}
 	entries, err := fs.ReadDir(dataFS, "data")
 	if err != nil {
-		loadErr = fmt.Errorf("read harness name tables: %w", err)
-		return
+		return nil, fmt.Errorf("read harness name tables: %w", err)
 	}
 	for _, e := range entries {
 		data, err := dataFS.ReadFile("data/" + e.Name())
 		if err != nil {
-			loadErr = fmt.Errorf("read %s: %w", e.Name(), err)
-			return
+			return nil, fmt.Errorf("read %s: %w", e.Name(), err)
 		}
 		t, err := Parse(data)
 		if err != nil {
-			loadErr = fmt.Errorf("%s: %w", e.Name(), err)
-			return
+			return nil, fmt.Errorf("%s: %w", e.Name(), err)
 		}
-		loaded[t.Preset] = t
+		tables[t.Preset] = t
 	}
+	return tables, nil
 }
 
 // Parse decodes one table file and builds its lookup index. Unknown keys are an error.
@@ -161,34 +156,33 @@ func Parse(data []byte) (*Table, error) {
 
 // Load returns the error, if any, of reading the embedded tables.
 func Load() error {
-	once.Do(load)
-	return loadErr
+	_, err := embedded()
+	return err
 }
 
 // For returns the table of a preset.
 func For(preset string) (*Table, bool) {
-	once.Do(load)
-	t, ok := loaded[strings.ToLower(preset)]
+	tables, _ := embedded() //nolint:errcheck // an unreadable table set has no tables; Load reports it
+	t, ok := tables[strings.ToLower(preset)]
 	return t, ok
 }
 
 // Presets lists the presets that have a table, sorted.
 func Presets() []string {
-	once.Do(load)
-	out := make([]string, 0, len(loaded))
-	for p := range loaded {
+	tables, _ := embedded() //nolint:errcheck // an unreadable table set has no tables; Load reports it
+	out := make([]string, 0, len(tables))
+	for p := range tables {
 		out = append(out, p)
 	}
 	sort.Strings(out)
 	return out
 }
 
-var fold = cases.Fold()
-
 // Normalize returns a name the way a harness compares it: surrounding space trimmed,
-// NFKC-normalized and case-folded.
+// NFKC-normalized and case-folded. A cases.Caser is not safe for concurrent use, so each
+// call makes its own.
 func Normalize(name string) string {
-	return fold.String(norm.NFKC.String(strings.TrimSpace(name)))
+	return cases.Fold().String(norm.NFKC.String(strings.TrimSpace(name)))
 }
 
 func (t *Table) reindex() {
