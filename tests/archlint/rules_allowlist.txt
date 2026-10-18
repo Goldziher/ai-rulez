@@ -87,7 +87,7 @@ global cmd/commands/review_semantic.go 2
 global cmd/commands/roles.go 5
 global cmd/commands/root.go 4
 global cmd/commands/sbom.go 3
-global cmd/commands/scan_external.go 5
+global cmd/commands/scan_external.go 8
 global cmd/commands/scanners.go 6
 global cmd/commands/search.go 3
 global cmd/commands/search_index.go 2

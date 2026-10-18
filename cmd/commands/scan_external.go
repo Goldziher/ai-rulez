@@ -60,13 +60,9 @@ func scannerOptions() (lint.ScannerOptions, error) {
 	if !validateExtern {
 		return lint.ScannerOptions{}, nil
 	}
-	filter, err := lint.ParseBaselineFilter(scanMinSeverity, scanRules)
+	filter, reasonFor, err := baselineSelection()
 	if err != nil {
-		return lint.ScannerOptions{}, oops.Wrap(err)
-	}
-	reasonFor, err := lint.ParseReasonFor(scanReasonFor)
-	if err != nil {
-		return lint.ScannerOptions{}, oops.Wrap(err)
+		return lint.ScannerOptions{}, err
 	}
 	today, err := baselineToday()
 	if err != nil {
@@ -84,6 +80,19 @@ func scannerOptions() (lint.ScannerOptions, error) {
 		}
 	}
 	return opts, nil
+}
+
+// baselineSelection parses --min-severity, --rule and --reason-for.
+func baselineSelection() (lint.BaselineFilter, map[string]string, error) {
+	filter, err := lint.ParseBaselineFilter(scanMinSeverity, scanRules)
+	if err != nil {
+		return filter, nil, oops.Wrap(err)
+	}
+	reasonFor, err := lint.ParseReasonFor(scanReasonFor)
+	if err != nil {
+		return filter, nil, oops.Wrap(err)
+	}
+	return filter, reasonFor, nil
 }
 
 // scannerOptionsFor is scannerOptions for one root: it attaches the project's
