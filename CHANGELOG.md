@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **A `[[skill_sources]]` directory written with backslashes is a skill root for `AR808`.** `url = '.\vendor'` (a Windows spelling) never matched, so a reserved name in it went unreported; a drive path such as `C:\vendor` is no longer read as a project directory.
+
 ## [5.5.3] - 2026-10-18
 
 ### Added

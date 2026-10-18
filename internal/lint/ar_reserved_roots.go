@@ -67,15 +67,21 @@ func (r *runner) inLocalSkillSource(it *item, dir string) bool {
 	}
 	for i := range r.cfg.SkillSources {
 		s := &r.cfg.SkillSources[i]
-		if strings.Contains(s.URL, "://") || strings.HasPrefix(s.URL, "git@") || path.IsAbs(s.URL) {
+		url := strings.ReplaceAll(s.URL, `\`, "/")
+		if strings.Contains(url, "://") || strings.HasPrefix(url, "git@") || path.IsAbs(url) || hasDriveLetter(url) {
 			continue
 		}
-		root := path.Clean(path.Join(strings.TrimPrefix(s.URL, "./"), strings.TrimPrefix(s.GetPath(), "./")))
+		root := path.Clean(path.Join(strings.TrimPrefix(url, "./"), strings.TrimPrefix(strings.ReplaceAll(s.GetPath(), `\`, "/"), "./")))
 		if root == "." || dir == root || strings.HasPrefix(dir, root+"/") {
 			return true
 		}
 	}
 	return false
+}
+
+// hasDriveLetter reports whether p starts with a Windows drive such as C:.
+func hasDriveLetter(p string) bool {
+	return len(p) >= 2 && p[1] == ':' && (p[0]|0x20) >= 'a' && (p[0]|0x20) <= 'z'
 }
 
 // globsMatch reports whether rel matches any of the globs.

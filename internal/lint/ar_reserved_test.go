@@ -197,6 +197,17 @@ func TestReservedNameSkillRoots(t *testing.T) {
 			want:   []string{"vendor/skills/code-review/SKILL.md"},
 		},
 		{
+			name:   "local skill source with backslashes is a root",
+			files:  map[string]string{"vendor/skills/code-review/SKILL.md": reservedSkill("code-review")},
+			config: "\n[[skill_sources]]\nname = \"vendored\"\nurl = '.\\vendor'\npath = 'skills'\n",
+			want:   []string{"vendor/skills/code-review/SKILL.md"},
+		},
+		{
+			name:   "windows drive path skill source is not a project root",
+			files:  map[string]string{"vendor/skills/code-review/SKILL.md": reservedSkill("code-review")},
+			config: "\n[[skill_sources]]\nname = \"abs\"\nurl = 'C:\\vendor'\npath = 'skills'\n",
+		},
+		{
 			name:   "skill_roots widens the roots",
 			files:  map[string]string{"x/src/public/skills/code-review/SKILL.md": reservedSkill("code-review")},
 			config: "\n[lint]\nskill_roots = [\"x/**/skills\"]\n",
