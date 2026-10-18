@@ -13753,7 +13753,7 @@ ai-rulez validate --strict --outputs
 | AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
 | AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
 | AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
-| AR9U0 | `harness-builtin-name-collision` | error | A skill, command or agent output has the name or alias of a built-in command, bundled skill or built-in agent of a harness that loads it (every preset that writes the output and every harness that reads the directory it lands in, such as `.agents/skills`). The message names the harness, its version, the evidence page and what the harness does (`user_wins`, `builtin_wins`, `both_listed`). Error only where the table records a quoted outcome; a built-in with an undocumented outcome is information, listed once per item. Claude Code commands and bundled skills are AR808. Allow with `[lint.builtin_names] allow` or `allow_overrides` (`name` or `preset:name`) |
+| AR9U0 | `harness-builtin-name-collision` | error | A skill, command or agent output has the name or alias of a built-in command, bundled skill or built-in agent of a harness that loads it (every preset that writes the output and every harness that reads the directory it lands in, such as `.agents/skills`). The message names the harness, its version, the evidence page and what the harness does (`user_wins`, `builtin_wins`, `both_listed`). Error only where the table records a quoted outcome and the project writes for the harness (a harness that only reads a shared directory is a warning); a built-in with an undocumented outcome is information, listed once per item. Claude Code commands and bundled skills are AR808. Allow with `[lint.builtin_names] allow` or `allow_overrides` (`name` or `preset:name`) |
 | AR9U1 | `harness-reserved-name` | error | A skill, command or agent output has a name the harness refuses to load (Claude Code `synced`, `anthropic-skills`, `anthropic-skills:*`). Not silenced by `allow` or `allow_overrides`: rename the item |
 | AR9Q0 | `claude-md-shadows-agents-md` | off | `[lint] agents_md_only = true` asserts AGENTS.md is canonical for Claude Code, but a tracked `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is not the generated `@AGENTS.md` shim and shadows the nearest AGENTS.md. Paths matching `agents_md_only_allow` are exempt, and a `--recursive` run lets each nested root report its own files |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
@@ -14585,6 +14585,11 @@ profile = "skillspector"
   `max_severity` to lower a noisy rule, and `fail_on` to choose what fails the run.
 - **Overlap.** The built-in checks (`AR004`, `AR005`, `AR036`) and SkillSpector can report the same line; both are
   kept, each with its own code, and the scanner's carry `[skillspector]` and its rule id (`AR011`).
+- **Cost.** `batch_size = 1` starts one SkillSpector process per skill, and each start costs about 2 to 4 s of its own
+  CPU before it analyses a file, so a 400-skill repository takes many minutes on a cold run. Keep CI fast with the
+  [scan cache](#result-cache-and-dry-runs) (an unchanged skill is not scanned again) and `--changed` or `--since`
+  (only skills with a changed file run). Runs go one at a time by default; set `parallel = 4` on the entry (at most 16)
+  to run several skills at once. `--no-scan-cache` scans every selected skill again.
 - **Not in a preset.** The profile is opt-in. `strict` fails on warnings, and SkillSpector's regex and YARA
   heuristics are noisier than the structural checks in `baseline` and `strict`, need a separate tool install, and
   run once per skill; a project chooses that cost by adding the entry.
@@ -14928,7 +14933,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
-| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content (not an item the plan writes only to a plugin) and hand-written files such as `.claude/skills/*`, also without a config; a hand-written skill or command is checked only where the harness loads it from (see [Skill roots](#skill-roots)). Only `claude` is reported here; its names, and their aliases (`/new` is an alias of `/clear`, and a skill replaces a built-in but not its aliases), come from `internal/harnessnames/data/claude.toml`, the same table AR9U0 reads for every other harness. A project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
+| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content (not an item the plan writes only to a plugin) and hand-written files such as `.claude/skills/*`, also without a config; a hand-written skill or command is checked only where the harness loads it from (see [Skill roots](#skill-roots)). Only `claude` is reported here; its names, and their aliases (`/new` is an alias of `/clear`, and a skill replaces a built-in but not its aliases, so an alias is reported as a warning), come from `internal/harnessnames/data/claude.toml`, the same table AR9U0 reads for every other harness. A project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
 <!-- lint-rules:end -->
 
 ##### Built-in names of harnesses
@@ -14944,9 +14949,9 @@ presets that write it and every harness that reads the directory it lands in, wh
 derives them: trimmed, NFKC-normalized and case-folded; the directory or file name and the `name:` frontmatter are both
 checked. Plugin-only content is exempt: a harness invokes it under a prefix.
 
-The severity follows the evidence: an `error` only for a preset whose table is set to `error` (Claude Code, Codex,
-Gemini CLI, OpenCode, Cline, Qwen Code, Goose, Kilo, Zoo Code) and whose group has a quoted outcome; a `warning` for an
-outcome without a quote, for `both_listed`, and for names you declare; information, once per item, for a documented
+The severity follows the evidence: an `error` only for a preset the project writes for whose table is set to `error` (Claude Code, Codex,
+Gemini CLI, OpenCode, Cline, Qwen Code, Goose, Kilo, Zoo Code) and whose group has a quoted outcome; a `warning` for a
+harness that only reads a shared directory such as `.agents/skills`, for an outcome without a quote, for `both_listed`, and for names you declare; information, once per item, for a documented
 built-in whose collision outcome the vendor does not state. A table can be incomplete (`completeness` is `partial` or
 `docs-only` for most harnesses): a name that is missing from it is not reported. Acknowledge an intended collision with
 `[lint.builtin_names] allow` (or `allow_overrides`), declare names the table cannot know with
@@ -16132,7 +16137,7 @@ a skill or command is named like a built-in command or bundled skill of a target
 
 - Default severity: `error`
 - Analyzer: `descriptions` (scope `item`)
-- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The names are data in `internal/harnessnames/data/claude.toml` (AR808 reports the Claude Code commands and bundled skills, AR9U0 every other harness, so no name is reported twice). A name is compared NFKC-normalized and case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. An alias of a built-in (`/new` for `/clear`) is reserved too: a skill replaces the built-in command but not its aliases, so the alias keeps running the built-in. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`. A hand-written SKILL.md is checked only where the harness loads it from: `.claude/skills` (`.claude/commands` for a command), a plugin's `skills/` or `commands/` directory next to its manifest, or a local `[[skill_sources]]` directory; content under `.ai-rulez/` is always checked, except an item `validate` can see the plan does not write where the harness reads (plugin-only content, invoked under a plugin prefix). A SKILL.md elsewhere (an application's own `src/public/skills/`) is still linted for format. `[lint] skill_roots = [globs]` replaces those roots (globs match the directory that holds the skill directories, relative to the project root), `[lint] ignore_paths` drops every finding for a source file, and `validate --exclude <glob>` leaves files out of a config-free run.
+- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The names are data in `internal/harnessnames/data/claude.toml` (AR808 reports the Claude Code commands and bundled skills, AR9U0 every other harness, so no name is reported twice). A name is compared NFKC-normalized and case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. An alias of a built-in (`/new` for `/clear`) is reserved too: a skill replaces the built-in command but not its aliases, so the alias keeps running the built-in; the skill itself loads, so an alias is a warning and a shadowed built-in is an error. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`. A hand-written SKILL.md is checked only where the harness loads it from: `.claude/skills` (`.claude/commands` for a command), a plugin's `skills/` or `commands/` directory next to its manifest, or a local `[[skill_sources]]` directory; content under `.ai-rulez/` is always checked, except an item `validate` can see the plan does not write where the harness reads (plugin-only content, invoked under a plugin prefix). A SKILL.md elsewhere (an application's own `src/public/skills/`) is still linted for format. `[lint] skill_roots = [globs]` replaces those roots (globs match the directory that holds the skill directories, relative to the project root), `[lint] ignore_paths` drops every finding for a source file, and `validate --exclude <glob>` leaves files out of a config-free run.
 - Bad: `.claude/skills/init/SKILL.md` with the claude preset
 - Good: Rename the skill (`project-init`), or list `claude:init` in lint.allow_overrides
 
@@ -17472,7 +17477,7 @@ a skill, command or agent is named like a built-in command, bundled skill or bui
 
 - Default severity: `error`
 - Analyzer: `traps` (scope `item`)
-- Why: A harness has built-in commands, bundled skills and agents, and what happens to a user item of the same name differs: the user item replaces the built-in (Claude Code, OpenCode, Qwen Code), the built-in stays and the user item is renamed or unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). The tables are data in `internal/harnessnames/data/<preset>.toml`, one file per preset, each group with the page it was taken from and, where the harness documents the outcome, a verbatim quote. The rule checks every output against every preset that writes it and every harness that reads the directory it lands in (`.agents/skills` is read by many harnesses whether or not their preset is enabled). Names are compared as the harness derives them: surrounding space trimmed, NFKC and case-folded; the directory or file name and the `name:` frontmatter are both checked; aliases count. Outputs a harness always invokes under a prefix (plugin-only content) are exempt. The severity follows the table: error for a preset whose table records a quoted outcome and is set to error, warning for an unquoted outcome, a `both_listed` outcome and names you declare yourself, and information for a built-in whose collision outcome the vendor does not document (listed once per item, not an error). A table can be incomplete: `completeness` is `partial` or `docs-only` for most harnesses, because vendor docs list a floor, not a ceiling. Claude Code skills and commands are reported by AR808, not here. Acknowledge an intended collision with `lint.builtin_names.allow = ["name", "preset:name"]` (`lint.allow_overrides` is honored the same way), add names the table cannot know with `[lint.builtin_names.extra]`, or add a table in `.ai-rulez/harness-names/<preset>.toml`. `[lint.severity] AR9U0 = "warning"` downgrades the rule everywhere, `[lint.builtin_names] enabled = false` turns it off.
+- Why: A harness has built-in commands, bundled skills and agents, and what happens to a user item of the same name differs: the user item replaces the built-in (Claude Code, OpenCode, Qwen Code), the built-in stays and the user item is renamed or unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). The tables are data in `internal/harnessnames/data/<preset>.toml`, one file per preset, each group with the page it was taken from and, where the harness documents the outcome, a verbatim quote. The rule checks every output against every preset that writes it and every harness that reads the directory it lands in (`.agents/skills` is read by many harnesses whether or not their preset is enabled). Names are compared as the harness derives them: surrounding space trimmed, NFKC and case-folded; the directory or file name and the `name:` frontmatter are both checked; aliases count. Outputs a harness always invokes under a prefix (plugin-only content) are exempt. The severity follows the table: error for a preset the project writes for whose table records a quoted outcome and is set to error, warning for a harness that only reads a shared directory such as `.agents/skills` without its preset being enabled, for an unquoted outcome, a `both_listed` outcome and names you declare yourself, and information for a built-in whose collision outcome the vendor does not document (listed once per item, not an error). A table can be incomplete: `completeness` is `partial` or `docs-only` for most harnesses, because vendor docs list a floor, not a ceiling. Claude Code skills and commands are reported by AR808, not here. Acknowledge an intended collision with `lint.builtin_names.allow = ["name", "preset:name"]` (`lint.allow_overrides` is honored the same way), add names the table cannot know with `[lint.builtin_names.extra]`, or add a table in `.ai-rulez/harness-names/<preset>.toml`. `[lint.severity] AR9U0 = "warning"` downgrades the rule everywhere, `[lint.builtin_names] enabled = false` turns it off.
 - Bad: A skill `help` while the gemini preset is configured (Gemini CLI keeps its `/help`; the skill becomes `help1`)
 - Good: Rename the skill (`project-help`), or list `gemini:help` in lint.builtin_names.allow
 
@@ -29871,6 +29876,8 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 | --- | --- |
 | `--allow-egress <name>` | Allow a scanner declared `egress = true` to run (repeatable) |
 | `--write-baseline --reason <text>` | Accept every current scanner finding in `.ai-rulez/scanner-baseline.json` and exit as if clean; `--reason` is required |
+| `--min-severity <level>`, `--rule <glob>` | With `--write-baseline`, record only findings of at least that severity, or of those scanner rule ids (`rule`, `scanner:rule` or an `AR` code; `*` globs; `--rule` repeats). Findings left out stay reported and keep any entry they already have |
+| `--reason-for <rule>=<text>` | With `--write-baseline`, the reason of new entries of that rule (a glob; repeatable; the most specific pattern wins); `--reason` covers the rest. `{rule}`, `{severity}` and `{scanner}` in either are replaced per entry |
 | `--scanner-baseline <file>` | Use another scanner baseline file |
 | `--show-suppressed` | Also show results the scanner marked suppressed, as `info` |
 | `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-runs) |
@@ -29906,8 +29913,6 @@ exits 2 when the bundle on disk differs. `--index-style` (default `okf.index_sty
 
 ##### `ai-rulez import okf`
 
-| `--min-severity <level>`, `--rule <glob>` | With `--write-baseline`, record only findings of at least that severity, or of those scanner rule ids (`rule`, `scanner:rule` or an `AR` code; `*` globs; `--rule` repeats). Findings left out stay reported and keep any entry they already have |
-| `--reason-for <rule>=<text>` | With `--write-baseline`, the reason of new entries of that rule (a glob; repeatable; the most specific pattern wins); `--reason` covers the rest. `{rule}`, `{severity}` and `{scanner}` in either are replaced per entry |
 ```bash
 ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json]
 ```
@@ -33661,6 +33666,7 @@ ai-rulez scan --path vendor/skills
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
 | `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json"). A matched file that is not linted is named on stderr as "<file>: not linted (<reason>)" and in the JSON report's notices, and a glob that matches nothing warns |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile) |
+| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
@@ -33681,6 +33687,7 @@ ai-rulez scan --path vendor/skills
 | `--reason-for` | string list |  | With --write-baseline, RULE=text: the reason of new entries of that rule (a glob; repeatable); --reason covers the rest |
 | `--recursive` | bool |  | Scan every configuration file found recursively |
 | `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
+| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 | `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
 | `--show-suppressed` | bool |  | With --external, also show scanner results the tool marked suppressed, as info |
 | `--since` | string |  | Report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree |
@@ -33697,7 +33704,6 @@ Inspect the external scanners configured in [[lint.external]]
 ```text
 ai-rulez scanners [flags]
 ```
-| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 
 Examples:
 
@@ -33717,7 +33723,6 @@ ai-rulez scanners doctor <name>... | --all [flags]
 Examples:
 
 ```bash
-| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 ai-rulez scanners doctor --all
 ai-rulez scanners doctor semgrep
 ```
@@ -34572,6 +34577,7 @@ ai-rulez validate --outputs
 | `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json"). A matched file that is not linted is named on stderr as "<file>: not linted (<reason>)" and in the JSON report's notices, and a glob that matches nothing warns |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile) |
 | `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); needs --strict |
+| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
@@ -34593,6 +34599,7 @@ ai-rulez validate --outputs
 | `--reason-for` | string list |  | With --write-baseline, RULE=text: the reason of new entries of that rule (a glob; repeatable); --reason covers the rest |
 | `--recursive` | bool |  | Validate every configuration file found recursively |
 | `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
+| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 | `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
 | `--show-policy` | bool |  | Print the effective organization policy with the origin of every value and what the repository tried to loosen (text, or JSON with --format json), then exit |
 | `--show-suppressed` | bool |  | With --external, also show scanner results the tool marked suppressed, as info |
@@ -34609,7 +34616,6 @@ ai-rulez validate --outputs
 
 Run the deterministic repo checks declared as [[verifiers]]
 
-| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 ```text
 ai-rulez verifiers [flags]
 ```
@@ -34629,7 +34635,6 @@ Measure how reliable an llm verifier's failures are, so it may gate
 
 ```text
 ai-rulez verifiers calibrate [name...] [flags]
-| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 ```
 
 Examples:

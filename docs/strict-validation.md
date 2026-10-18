@@ -1127,6 +1127,11 @@ profile = "skillspector"
   `max_severity` to lower a noisy rule, and `fail_on` to choose what fails the run.
 - **Overlap.** The built-in checks (`AR004`, `AR005`, `AR036`) and SkillSpector can report the same line; both are
   kept, each with its own code, and the scanner's carry `[skillspector]` and its rule id (`AR011`).
+- **Cost.** `batch_size = 1` starts one SkillSpector process per skill, and each start costs about 2 to 4 s of its own
+  CPU before it analyses a file, so a 400-skill repository takes many minutes on a cold run. Keep CI fast with the
+  [scan cache](#result-cache-and-dry-runs) (an unchanged skill is not scanned again) and `--changed` or `--since`
+  (only skills with a changed file run). Runs go one at a time by default; set `parallel = 4` on the entry (at most 16)
+  to run several skills at once. `--no-scan-cache` scans every selected skill again.
 - **Not in a preset.** The profile is opt-in. `strict` fails on warnings, and SkillSpector's regex and YARA
   heuristics are noisier than the structural checks in `baseline` and `strict`, need a separate tool install, and
   run once per skill; a project chooses that cost by adding the entry.
