@@ -1,0 +1,416 @@
+schema = 1
+preset = "mimocode"
+harness_version = "main @ b53297d8e6f1 (latest release v0.1.15)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/command/index.ts"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/cli/cmd/tui/app.tsx"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/arxiv/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/claude-code/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s5"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/codex/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s6"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/compose-next/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s7"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/data-analytics/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s8"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/deep-research/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s9"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/docx-official/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s10"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/grok-build/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s11"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/html-to-video-pipeline/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s12"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/learn-everything/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s13"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/loop/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s14"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/mate/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s15"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/memory-search/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s16"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/mimocode-docs/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s17"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/modern-python-toolchain/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s18"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/pdf-official/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s19"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/playwright/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s20"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/pptx-official/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s21"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/product-design/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s22"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/research-paper-writing/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s23"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/sales/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s24"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/skill-creator/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s25"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/super-research/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s26"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/skill/builtin/.bundle/xlsx-official/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s27"
+url = "https://github.com/XiaomiMiMo/MiMo-Code/blob/b53297d8e6f01d3cfeecb75eac59b542869901e7/packages/cli/src/agent/agent.ts"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "user_wins"
+match = "exact"
+names = ["init", "review", "dream", "distill", "goal", "rebuild", "deep-research", "loops"]
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "sessions",
+  "workflows",
+  "new",
+  "models",
+  "agents",
+  "force-agent",
+  "modalities",
+  "context-limit",
+  "never-ask",
+  "skip-permissions",
+  "permission-timeout",
+  "mcps",
+  "variants",
+  "login",
+  "connect",
+  "logout",
+  "org",
+  "status",
+  "worktree",
+  "themes",
+  "background",
+  "logo",
+  "vivid",
+  "dark",
+  "light",
+  "help",
+  "doc",
+  "exit",
+  "language",
+  "editor",
+  "skills",
+  "voice",
+  "voice-send",
+  "voice-control",
+  "recover",
+  "share",
+  "rename",
+  "timeline",
+  "fork",
+  "compact",
+  "btw",
+  "unshare",
+  "undo",
+  "redo",
+  "timestamps",
+  "thinking",
+  "copy",
+  "export",
+]
+aliases = { "sessions" = [
+  "resume",
+  "continue",
+], "new" = [
+  "clear",
+], "org" = [
+  "orgs",
+  "switch-org",
+], "worktree" = [
+  "wt",
+], "doc" = [
+  "docs",
+], "exit" = [
+  "quit",
+  "q",
+], "language" = [
+  "lang",
+], "compact" = [
+  "summarize",
+], "timestamps" = [
+  "toggle-timestamps",
+], "thinking" = [
+  "toggle-thinking",
+] }
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "user_wins"
+match = "exact"
+names = ["arxiv"]
+
+[[group]]
+kind = "skill"
+source = "s4"
+user_collision = "user_wins"
+match = "exact"
+names = ["claude-code"]
+
+[[group]]
+kind = "skill"
+source = "s5"
+user_collision = "user_wins"
+match = "exact"
+names = ["codex"]
+
+[[group]]
+kind = "skill"
+source = "s6"
+user_collision = "user_wins"
+match = "exact"
+names = ["compose-next"]
+
+[[group]]
+kind = "skill"
+source = "s7"
+user_collision = "user_wins"
+match = "exact"
+names = ["data-analytics"]
+
+[[group]]
+kind = "skill"
+source = "s8"
+user_collision = "user_wins"
+match = "exact"
+names = ["deep-research"]
+
+[[group]]
+kind = "skill"
+source = "s9"
+user_collision = "user_wins"
+match = "exact"
+names = ["docx-official"]
+
+[[group]]
+kind = "skill"
+source = "s10"
+user_collision = "user_wins"
+match = "exact"
+names = ["grok-build"]
+
+[[group]]
+kind = "skill"
+source = "s11"
+user_collision = "user_wins"
+match = "exact"
+names = ["html-to-video-pipeline"]
+
+[[group]]
+kind = "skill"
+source = "s12"
+user_collision = "user_wins"
+match = "exact"
+names = ["learn-everything"]
+
+[[group]]
+kind = "skill"
+source = "s13"
+user_collision = "user_wins"
+match = "exact"
+names = ["loop"]
+
+[[group]]
+kind = "skill"
+source = "s14"
+user_collision = "user_wins"
+match = "exact"
+names = ["mate"]
+
+[[group]]
+kind = "skill"
+source = "s15"
+user_collision = "user_wins"
+match = "exact"
+names = ["memory-search"]
+
+[[group]]
+kind = "skill"
+source = "s16"
+user_collision = "user_wins"
+match = "exact"
+names = ["mimocode-docs"]
+
+[[group]]
+kind = "skill"
+source = "s17"
+user_collision = "user_wins"
+match = "exact"
+names = ["modern-python-toolchain"]
+
+[[group]]
+kind = "skill"
+source = "s18"
+user_collision = "user_wins"
+match = "exact"
+names = ["pdf-official"]
+
+[[group]]
+kind = "skill"
+source = "s19"
+user_collision = "user_wins"
+match = "exact"
+names = ["playwright"]
+
+[[group]]
+kind = "skill"
+source = "s20"
+user_collision = "user_wins"
+match = "exact"
+names = ["pptx-official"]
+
+[[group]]
+kind = "skill"
+source = "s21"
+user_collision = "user_wins"
+match = "exact"
+names = ["product-design"]
+
+[[group]]
+kind = "skill"
+source = "s22"
+user_collision = "user_wins"
+match = "exact"
+names = ["research-paper-writing"]
+
+[[group]]
+kind = "skill"
+source = "s23"
+user_collision = "user_wins"
+match = "exact"
+names = ["sales"]
+
+[[group]]
+kind = "skill"
+source = "s24"
+user_collision = "user_wins"
+match = "exact"
+names = ["skill-creator"]
+
+[[group]]
+kind = "skill"
+source = "s25"
+user_collision = "user_wins"
+match = "exact"
+names = ["super-research"]
+
+[[group]]
+kind = "skill"
+source = "s26"
+user_collision = "user_wins"
+match = "exact"
+names = ["xlsx-official"]
+
+[[group]]
+kind = "agent"
+source = "s27"
+user_collision = "user_wins"
+match = "exact"
+names = [
+  "build",
+  "plan",
+  "general",
+  "explore",
+  "title",
+  "summary",
+  "compaction",
+  "checkpoint-writer",
+  "dream",
+  "distill",
+]

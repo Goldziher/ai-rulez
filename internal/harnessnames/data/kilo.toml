@@ -1,0 +1,147 @@
+schema = 1
+preset = "kilo"
+harness_version = "main@1552877e82ce (release v7.8.14)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "error"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/tui/src/app.tsx"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/kilocode/skills/builtin.ts"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/agent/agent.ts"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s5"
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+quote = "defer partial overrides until all command sources are registered"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s6"
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+quote = "if (Reserved.reserved(name)) {"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+evidence = "s5"
+user_collision = "user_wins"
+match = "exact"
+names = ["init", "review", "resume-claude", "resume-codex"]
+
+[[group]]
+kind = "command"
+source = "s1"
+evidence = "s6"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["goal"]
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "sessions",
+  "new",
+  "workspaces",
+  "models",
+  "agents",
+  "mcps",
+  "variants",
+  "connect",
+  "org",
+  "status",
+  "debug",
+  "themes",
+  "help",
+  "exit",
+  "cost-alert",
+  "editor",
+  "skills",
+  "warp",
+  "move",
+  "share",
+  "rename",
+  "timeline",
+  "fork",
+  "compact",
+  "unshare",
+  "undo",
+  "redo",
+  "timestamps",
+  "thinking",
+  "copy",
+  "copy-session",
+  "export",
+]
+aliases = { "sessions" = [
+  "resume",
+  "continue",
+], "new" = [
+  "clear",
+], "workspaces" = [
+  "worktree",
+  "worktrees",
+], "models" = [
+  "mo",
+], "org" = [
+  "orgs",
+  "switch-org",
+], "exit" = [
+  "quit",
+  "q",
+], "cost-alert" = [
+  "cost",
+], "compact" = [
+  "summarize",
+], "timestamps" = [
+  "toggle-timestamps",
+], "thinking" = [
+  "toggle-thinking",
+] }
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "user_wins"
+match = "exact"
+names = ["kilo-config"]
+
+[[group]]
+kind = "agent"
+source = "s4"
+user_collision = "user_wins"
+match = "exact"
+names = [
+  "code",
+  "plan",
+  "general",
+  "explore",
+  "scout",
+  "orchestrator",
+  "debug",
+  "ask",
+  "compaction",
+  "title",
+  "summary",
+]

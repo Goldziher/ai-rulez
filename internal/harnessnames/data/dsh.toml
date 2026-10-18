@@ -1,0 +1,140 @@
+schema = 1
+preset = "dsh"
+harness_version = "0.2.1-rc.2 @ 687f282e8625"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/compaction/command-compact/src/index.ts#L103"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/feedback/command-feedback/src/index.ts#L121"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/session-query/session-log-export/src/index.ts#L81"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/goal/command-goal/src/index.ts#L193"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s5"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s6"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office-docx/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s7"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office-pptx/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s8"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office-xlsx/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s9"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office-render/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s10"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office-recalculate/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s11"
+url = "https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625/packages/skill/skill-office/assets/office-export-pdf/SKILL.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = ["compact"]
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["feedback"]
+
+[[group]]
+kind = "command"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = ["export"]
+
+[[group]]
+kind = "command"
+source = "s4"
+user_collision = "unknown"
+match = "exact"
+names = ["goal"]
+
+[[group]]
+kind = "skill"
+source = "s5"
+user_collision = "user_wins"
+match = "exact"
+names = ["office"]
+
+[[group]]
+kind = "skill"
+source = "s6"
+user_collision = "user_wins"
+match = "exact"
+names = ["office-docx"]
+
+[[group]]
+kind = "skill"
+source = "s7"
+user_collision = "user_wins"
+match = "exact"
+names = ["office-pptx"]
+
+[[group]]
+kind = "skill"
+source = "s8"
+user_collision = "user_wins"
+match = "exact"
+names = ["office-xlsx"]
+
+[[group]]
+kind = "skill"
+source = "s9"
+user_collision = "user_wins"
+match = "exact"
+names = ["office-render"]
+
+[[group]]
+kind = "skill"
+source = "s10"
+user_collision = "user_wins"
+match = "exact"
+names = ["office-recalculate"]
+
+[[group]]
+kind = "skill"
+source = "s11"
+user_collision = "user_wins"
+match = "exact"
+names = ["office-export-pdf"]

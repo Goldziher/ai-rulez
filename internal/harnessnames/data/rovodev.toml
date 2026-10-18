@@ -1,0 +1,69 @@
+schema = 1
+preset = "rovodev"
+harness_version = "docs-only (support.atlassian.com, 2026-10)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://support.atlassian.com/rovo/docs/rovo-dev-cli-commands/"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://support.atlassian.com/rovo/docs/extend-rovo-dev-cli-with-agent-skills/"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "new",
+  "sessions",
+  "clear",
+  "prune",
+  "prompts",
+  "memory",
+  "jira",
+  "ask",
+  "copy",
+  "plan",
+  "full-context",
+  "research",
+  "yolo",
+  "status",
+  "config",
+  "mode",
+  "models",
+  "feedback",
+  "usage",
+  "mcp",
+  "directories",
+  "subagents",
+  "ide",
+  "changelog",
+  "hooks",
+  "efficiency",
+  "exit",
+  "help",
+]
+aliases = { "exit" = ["quit", "q"] }
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["skills"]
+
+[[group]]
+kind = "skill"
+source = "s1"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["full-context-mode"]

@@ -1,0 +1,122 @@
+schema = 1
+preset = "cursor"
+harness_version = "docs-only (CLI changelog latest v2026.10.08; IDE version not stated)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://cursor.com/docs/cli/reference/slash-commands.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://cursor.com/docs/subagents.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://cursor.com/docs/skills.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "model",
+  "run-everything",
+  "plan",
+  "ask",
+  "debug",
+  "goal",
+  "logs",
+  "update",
+  "max-mode",
+  "rename",
+  "clear",
+  "resume",
+  "fork",
+  "summarize",
+  "rewind",
+  "vim",
+  "line-numbers",
+  "show-thinking",
+  "status-indicators",
+  "shell",
+  "about",
+  "setup-terminal",
+  "help",
+  "feedback",
+  "open",
+  "copy-request-id",
+  "copy-conversation-id",
+  "logout",
+  "quit",
+  "exit",
+  "mcp",
+  "plugin",
+  "config",
+  "copy",
+  "sandbox",
+  "bedrock",
+]
+aliases = { "run-everything" = [
+  "auto-run",
+], "clear" = [
+  "new",
+  "new-chat",
+  "newchat",
+], "summarize" = [
+  "compress",
+], "shell" = [
+  "sh",
+  "run",
+], "open" = [
+  "cursor",
+] }
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["in-cloud"]
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "automate",
+  "autopilot",
+  "canvas",
+  "create-hook",
+  "create-rule",
+  "create-skill",
+  "create-subagent",
+  "cursor-blame",
+  "loop",
+  "migrate-to-skills",
+  "review",
+  "review-bugbot",
+  "review-security",
+  "sdk",
+  "shell",
+  "split-to-prs",
+  "statusline",
+  "update-cli-config",
+  "update-cursor-settings",
+]
+
+[[group]]
+kind = "agent"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["explore", "browser"]

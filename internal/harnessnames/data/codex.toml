@@ -1,0 +1,193 @@
+schema = 1
+preset = "codex"
+harness_version = "rust-v0.163.0"
+verified_on = "2026-10-17"
+completeness = "complete"
+severity = "error"
+invocation_spaces = [["skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/tui/src/slash_command.rs"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/skills/src/assets/samples/imagegen/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/skills/src/assets/samples/openai-docs/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/skills/src/assets/samples/review-agent/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s5"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/skills/src/assets/samples/skill-creator/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s6"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/skills/src/assets/samples/skill-installer/SKILL.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s7"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/agent/role.rs#L352"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s8"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/agent/role.rs#L358"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s9"
+url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/agent/role.rs#L372"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s10"
+url = "https://developers.openai.com/codex/skills.md"
+quote = "If two skills share the same `name`, Codex doesn't merge them; both can appear in skill selectors."
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "model",
+  "daybreak",
+  "ide",
+  "permissions",
+  "keymap",
+  "vim",
+  "setup-default-sandbox",
+  "experimental",
+  "approve",
+  "memories",
+  "skills",
+  "import",
+  "hooks",
+  "review",
+  "rename",
+  "new",
+  "archive",
+  "delete",
+  "resume",
+  "fork",
+  "worktree",
+  "app",
+  "init",
+  "compact",
+  "config",
+  "recap",
+  "plan",
+  "voice",
+  "goal",
+  "agents",
+  "side",
+  "btw",
+  "copy",
+  "export",
+  "raw",
+  "tui",
+  "diff",
+  "mention",
+  "status",
+  "daemon",
+  "warnings",
+  "cd",
+  "pwd",
+  "usage",
+  "debug-config",
+  "title",
+  "statusline",
+  "theme",
+  "pets",
+  "mcp",
+  "apps",
+  "plugins",
+  "logout",
+  "quit",
+  "exit",
+  "feedback",
+  "ps",
+  "stop",
+  "clear",
+  "subagents",
+  "debug-m-drop",
+  "debug-m-update",
+  "rollout",
+  "test-approval",
+]
+aliases = { "pwd" = ["cwd"], "pets" = ["pet"], "stop" = ["clean"] }
+
+[[group]]
+kind = "skill"
+source = "s2"
+evidence = "s10"
+user_collision = "both_listed"
+match = "exact"
+names = ["imagegen"]
+
+[[group]]
+kind = "skill"
+source = "s3"
+evidence = "s10"
+user_collision = "both_listed"
+match = "exact"
+names = ["openai-docs"]
+
+[[group]]
+kind = "skill"
+source = "s4"
+evidence = "s10"
+user_collision = "both_listed"
+match = "exact"
+names = ["review-agent"]
+
+[[group]]
+kind = "skill"
+source = "s5"
+evidence = "s10"
+user_collision = "both_listed"
+match = "exact"
+names = ["skill-creator"]
+
+[[group]]
+kind = "skill"
+source = "s6"
+evidence = "s10"
+user_collision = "both_listed"
+match = "exact"
+names = ["skill-installer"]
+
+[[group]]
+kind = "agent"
+source = "s7"
+user_collision = "user_wins"
+match = "exact"
+names = ["default"]
+
+[[group]]
+kind = "agent"
+source = "s8"
+user_collision = "user_wins"
+match = "exact"
+names = ["explorer"]
+
+[[group]]
+kind = "agent"
+source = "s9"
+user_collision = "user_wins"
+match = "exact"
+names = ["worker"]

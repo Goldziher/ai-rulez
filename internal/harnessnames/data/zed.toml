@@ -1,0 +1,32 @@
+schema = 1
+preset = "zed"
+harness_version = "main@56934ec0560b (release v1.24.2); docs zed.dev/docs/ai fetched 2026-10-17"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/zed-industries/zed/blob/56934ec0560b/crates/agent/src/agent.rs"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/zed-industries/zed/blob/56934ec0560b/crates/agent_skills/builtin/create-skill/SKILL.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["compact"]
+
+[[group]]
+kind = "skill"
+source = "s2"
+user_collision = "user_wins"
+match = "exact"
+names = ["create-skill"]

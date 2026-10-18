@@ -1,0 +1,8 @@
+schema = 1
+preset = "aiassistant"
+harness_version = "docs-only (AI Assistant 2026.2 help)"
+verified_on = "2026-10-17"
+completeness = "none"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false

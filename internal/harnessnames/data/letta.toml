@@ -1,0 +1,417 @@
+schema = 1
+preset = "letta"
+harness_version = "v0.34.16"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.letta.com/platform/cli/slash-commands/index.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/acquiring-skills"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/browser-use"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/context-doctor"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s5"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/creating-mods"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s6"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/creating-skills"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s7"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/curating-memory-palace"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s8"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/customizing-commands"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s9"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/customizing-statusline"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s10"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/editing-letta-code-desktop-preferences"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s11"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/finding-agents"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s12"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/generating-mod-envs"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s13"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/image-generation"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s14"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/initializing-memory"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s15"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/letta-guide"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s16"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/managing-agent-webhooks"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s17"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/managing-shared-memory"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s18"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/messaging-agents"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s19"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/migrating-memory"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s20"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/scheduling-tasks"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s21"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/self-configuration"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s22"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/speech-generation"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s23"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/submitting-feedback"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s24"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/syncing-memory-filesystem"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s25"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/using-mcp-tools"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s26"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/workflow-authoring"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s27"
+url = "https://github.com/letta-ai/letta-code/tree/v0.34.16/src/skills/builtin/working-across-computers"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s28"
+url = "https://docs.letta.com/configuration/subagents/index.md#built-in-subagents"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "agents",
+  "model",
+  "init",
+  "doctor",
+  "dream",
+  "remember",
+  "memory",
+  "palace",
+  "search",
+  "connect",
+  "clear",
+  "chdir",
+  "new",
+  "resume",
+  "fork",
+  "btw",
+  "pin",
+  "unpin",
+  "rename",
+  "description",
+  "export",
+  "reflect",
+  "reflect-arena",
+  "sleeptime",
+  "compaction",
+  "compact",
+  "memfs",
+  "toolset",
+  "experiments",
+  "reload",
+  "mods",
+  "system",
+  "personality",
+  "subagents",
+  "mcp",
+  "secret",
+  "skills",
+  "skill-creator",
+  "memory-repository",
+  "usage",
+  "context",
+  "context-limit",
+  "recompile",
+  "feedback",
+  "hooks",
+  "statusline",
+  "title",
+  "reasoning-tab",
+  "system-reminders",
+  "terminal",
+  "ade",
+  "install-github-app",
+  "login",
+  "logout",
+  "bg",
+  "workflows",
+  "exit",
+  "help",
+  "clear-messages",
+  "stream",
+  "link",
+  "unlink",
+]
+aliases = { "chdir" = [
+  "cd",
+], "resume" = [
+  "pinned",
+  "profiles",
+], "reflect" = [
+  "reflection",
+], "context-limit" = [
+  "set-max-context",
+] }
+
+[[group]]
+kind = "skill"
+source = "s2"
+user_collision = "user_wins"
+match = "exact"
+names = ["acquiring-skills"]
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "user_wins"
+match = "exact"
+names = ["browser-use"]
+
+[[group]]
+kind = "skill"
+source = "s4"
+user_collision = "user_wins"
+match = "exact"
+names = ["context-doctor"]
+
+[[group]]
+kind = "skill"
+source = "s5"
+user_collision = "user_wins"
+match = "exact"
+names = ["creating-mods"]
+
+[[group]]
+kind = "skill"
+source = "s6"
+user_collision = "user_wins"
+match = "exact"
+names = ["creating-skills"]
+
+[[group]]
+kind = "skill"
+source = "s7"
+user_collision = "user_wins"
+match = "exact"
+names = ["curating-memory-palace"]
+
+[[group]]
+kind = "skill"
+source = "s8"
+user_collision = "user_wins"
+match = "exact"
+names = ["customizing-commands"]
+
+[[group]]
+kind = "skill"
+source = "s9"
+user_collision = "user_wins"
+match = "exact"
+names = ["customizing-statusline"]
+
+[[group]]
+kind = "skill"
+source = "s10"
+user_collision = "user_wins"
+match = "exact"
+names = ["editing-letta-code-desktop-preferences"]
+
+[[group]]
+kind = "skill"
+source = "s11"
+user_collision = "user_wins"
+match = "exact"
+names = ["finding-agents"]
+
+[[group]]
+kind = "skill"
+source = "s12"
+user_collision = "user_wins"
+match = "exact"
+names = ["generating-mod-envs"]
+
+[[group]]
+kind = "skill"
+source = "s13"
+user_collision = "user_wins"
+match = "exact"
+names = ["image-generation"]
+
+[[group]]
+kind = "skill"
+source = "s14"
+user_collision = "user_wins"
+match = "exact"
+names = ["initializing-memory"]
+
+[[group]]
+kind = "skill"
+source = "s15"
+user_collision = "user_wins"
+match = "exact"
+names = ["letta-guide"]
+
+[[group]]
+kind = "skill"
+source = "s16"
+user_collision = "user_wins"
+match = "exact"
+names = ["managing-agent-webhooks"]
+
+[[group]]
+kind = "skill"
+source = "s17"
+user_collision = "user_wins"
+match = "exact"
+names = ["managing-shared-memory"]
+
+[[group]]
+kind = "skill"
+source = "s18"
+user_collision = "user_wins"
+match = "exact"
+names = ["messaging-agents"]
+
+[[group]]
+kind = "skill"
+source = "s19"
+user_collision = "user_wins"
+match = "exact"
+names = ["migrating-memory"]
+
+[[group]]
+kind = "skill"
+source = "s20"
+user_collision = "user_wins"
+match = "exact"
+names = ["scheduling-tasks"]
+
+[[group]]
+kind = "skill"
+source = "s21"
+user_collision = "user_wins"
+match = "exact"
+names = ["self-configuration"]
+
+[[group]]
+kind = "skill"
+source = "s22"
+user_collision = "user_wins"
+match = "exact"
+names = ["speech-generation"]
+
+[[group]]
+kind = "skill"
+source = "s23"
+user_collision = "user_wins"
+match = "exact"
+names = ["submitting-feedback"]
+
+[[group]]
+kind = "skill"
+source = "s24"
+user_collision = "user_wins"
+match = "exact"
+names = ["syncing-memory-filesystem"]
+
+[[group]]
+kind = "skill"
+source = "s25"
+user_collision = "user_wins"
+match = "exact"
+names = ["using-mcp-tools"]
+
+[[group]]
+kind = "skill"
+source = "s26"
+user_collision = "user_wins"
+match = "exact"
+names = ["workflow-authoring"]
+
+[[group]]
+kind = "skill"
+source = "s27"
+user_collision = "user_wins"
+match = "exact"
+names = ["working-across-computers"]
+
+[[group]]
+kind = "agent"
+source = "s28"
+user_collision = "user_wins"
+match = "exact"
+names = ["fork", "general-purpose", "history-analyzer", "init", "memory", "recall", "reflection"]

@@ -1,0 +1,60 @@
+schema = 1
+preset = "poolside"
+harness_version = "docs-only"
+verified_on = "2026-10-17"
+completeness = "complete"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.poolside.ai/cli/cli-reference.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://docs.poolside.ai/subagents.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "model",
+  "mode",
+  "agent-mode",
+  "thought-level",
+  "new",
+  "copy",
+  "delete",
+  "rewind",
+  "resume",
+  "rename",
+  "move",
+  "set-option",
+  "system",
+  "feedback",
+  "logs",
+  "logout",
+  "quit",
+  "debug:dump",
+  "plan",
+  "compact",
+  "share",
+  "mcp",
+  "sandbox",
+  "sandbox-apply-to-host",
+  "skills",
+  "usage",
+]
+aliases = { "agent-mode" = ["collaboration-mode"], "thought-level" = ["effort"], "new" = ["clear"], "quit" = ["exit"] }
+
+[[group]]
+kind = "agent"
+source = "s2"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["general"]
