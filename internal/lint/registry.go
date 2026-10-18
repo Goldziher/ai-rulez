@@ -60,6 +60,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerArHooks,
 		registerArImports,
 		registerArInvocation,
+		registerArMalware,
 		registerArMarkdown,
 		registerArMcp,
 		registerArPlugin,

