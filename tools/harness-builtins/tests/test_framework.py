@@ -58,6 +58,13 @@ class TomlOutTest(unittest.TestCase):
                 self.assertEqual(tomlout.dump(tomllib.loads(text)), text)
 
 
+class QuoteStringTest(unittest.TestCase):
+    def test_control_characters_and_quotes_survive_a_round_trip(self) -> None:
+        for text in ("a\nb", 'say "x"', "back\\slash", "tab\there", "bell\x07", "plain"):
+            with self.subTest(text):
+                self.assertEqual(tomllib.loads("v = " + tomlout.q(text))["v"], text)
+
+
 class MergeTest(unittest.TestCase):
     def results(self):
         return {
@@ -216,6 +223,10 @@ class GenerateTest(unittest.TestCase):
     def test_set_pin_ref_changes_only_the_named_table(self):
         text = '[a]\nref = "v1"\n[b]\nref = "v1"\n'
         self.assertEqual(generate.set_pin_ref(text, "b", "v1", "v2"), '[a]\nref = "v1"\n[b]\nref = "v2"\n')
+
+    def test_the_committed_pins_cover_every_data_file(self) -> None:
+        pins = generate.load_pins(helpers.HERE / "pins.toml")
+        self.assertEqual(generate.check_coverage(pins, DATA), [])
 
 
 if __name__ == "__main__":

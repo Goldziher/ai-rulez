@@ -294,6 +294,23 @@ tasks:
     cmds:
       - HARNESS_VERIFY=1 go test ./internal/lint -run TestHarnessVerify -count=1 -v
 
+  harness:builtins:test:
+    desc: "Run the offline unit tests of tools/harness-builtins (extractor parsers against saved fixtures; needs python3)"
+    dir: tools/harness-builtins
+    cmds:
+      - python3 -I -m unittest discover -s tests -t .
+
+  harness:builtins:check:
+    desc: "Network: fail when a data file differs from what its pinned registry yields (generate.py --check) or a quote is missing from its page (check_sources.py)"
+    cmds:
+      - python3 -I tools/harness-builtins/generate.py --check
+      - python3 -I tools/harness-builtins/check_sources.py
+
+  harness:builtins:refresh:
+    desc: "Network, writes nothing: show the names that would change if each pin moved to its latest tag or head (generate.py --bump). Apply one with: python3 -I tools/harness-builtins/generate.py --bump --apply <preset>"
+    cmds:
+      - python3 -I tools/harness-builtins/generate.py --bump
+
   demo:record:
     desc: "Re-record the README terminal demos with vhs (all, or name them: task demo:record -- validate); uses the ai-rulez on PATH"
     cmds:
