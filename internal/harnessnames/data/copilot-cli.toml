@@ -1,0 +1,133 @@
+schema = 1
+preset = "copilot-cli"
+harness_version = "docs-only (docs.github.com CLI command reference, fetched 2026-10-17; no CLI version string on page)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://docs.github.com/en/copilot/reference/github-copilot-app-reference/built-in-skills"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "add-dir",
+  "after",
+  "agent",
+  "app",
+  "ask",
+  "allow-all",
+  "autopilot",
+  "changelog",
+  "chronicle",
+  "clear",
+  "clikit",
+  "compact",
+  "context",
+  "copy",
+  "cwd",
+  "delegate",
+  "diagnose",
+  "diff",
+  "downgrade",
+  "env",
+  "every",
+  "exit",
+  "extensions",
+  "experimental",
+  "feedback",
+  "fleet",
+  "help",
+  "ide",
+  "init",
+  "instructions",
+  "keep-alive",
+  "limits",
+  "list-dirs",
+  "login",
+  "logout",
+  "lsp",
+  "mcp",
+  "model",
+  "permissions",
+  "plan",
+  "plugin",
+  "pr",
+  "refine",
+  "remote",
+  "rename",
+  "research",
+  "restart",
+  "resume",
+  "review",
+  "rubber-duck",
+  "sandbox",
+  "search",
+  "security-review",
+  "session",
+  "settings",
+  "share",
+  "skills",
+  "statusline",
+  "subagents",
+  "tasks",
+  "terminal-setup",
+  "theme",
+  "tuikit",
+  "undo",
+  "update",
+  "usage",
+  "user",
+  "version",
+  "vim",
+  "voice",
+  "workflows",
+  "fork",
+  "worktree",
+  "move",
+  "collect-debug-logs",
+]
+aliases = { "ask" = [
+  "btw",
+], "allow-all" = [
+  "yolo",
+], "clear" = [
+  "new",
+  "reset",
+], "exit" = [
+  "quit",
+], "settings" = [
+  "config",
+], "subagents" = [
+  "agents",
+], "undo" = [
+  "rewind",
+], "update" = [
+  "upgrade",
+] }
+
+[[group]]
+kind = "agent"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = ["code-review", "explore", "general-purpose", "research", "rubber-duck", "security-review", "task"]
+
+[[group]]
+kind = "skill"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["af", "agent-merge", "create-canvas", "orchestrate", "pr-stack", "customize-cloud-agent"]

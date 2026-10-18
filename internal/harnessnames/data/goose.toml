@@ -1,0 +1,57 @@
+schema = 1
+preset = "goose"
+harness_version = "main@bfcc6ee6f1ee (latest release v1.55.0)"
+verified_on = "2026-10-17"
+completeness = "complete"
+severity = "error"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose/src/agents/execute_commands.rs"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose-cli/src/session/input.rs"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose/src/skills/builtins/goose_doc_guide.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose/src/skills/builtins/web_search.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["prompts", "prompt", "compact", "clear", "skills", "doctor", "goal", "grind", "status", "summarize"]
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["exit", "help", "t", "r", "extension", "builtin", "mode", "model", "edit", "new"]
+aliases = { "exit" = ["quit"], "help" = ["?"] }
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "user_wins"
+match = "exact"
+names = ["goose-doc-guide"]
+
+[[group]]
+kind = "skill"
+source = "s4"
+user_collision = "user_wins"
+match = "exact"
+names = ["web-search"]

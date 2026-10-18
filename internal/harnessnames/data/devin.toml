@@ -1,0 +1,120 @@
+schema = 1
+preset = "devin"
+harness_version = "Devin CLI stable v3000.11.92 (changelog dated 2026-10-14)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.devin.ai/cli/reference/commands.md#slash-commands"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://docs.devin.ai/cli/changelog/stable.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://docs.devin.ai/cli/subagents.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "mode",
+  "normal",
+  "accept-edits",
+  "smart",
+  "plan",
+  "ask",
+  "bypass",
+  "autonomous",
+  "model",
+  "fast",
+  "theme",
+  "clear",
+  "continue",
+  "fork",
+  "steps",
+  "revert",
+  "resume",
+  "ls",
+  "title",
+  "rename-session",
+  "rm-session",
+  "export",
+  "exit",
+  "workspace",
+  "add-dir",
+  "undo-add-dir",
+  "remove-dir",
+  "loop",
+  "btw",
+  "hooks",
+  "mcp",
+  "help",
+  "shortcuts",
+  "config",
+  "bug",
+  "update",
+  "upgrade",
+  "login",
+  "logout",
+  "login-status",
+  "org",
+  "copy",
+  "feedback",
+  "mouse",
+  "context",
+  "usage",
+  "session-stats",
+  "compact",
+  "cloud",
+  "handoff",
+  "repo",
+  "platform",
+  "open",
+  "ssh",
+  "pickup",
+  "rename",
+  "archive",
+]
+aliases = { "bypass" = [
+  "yolo",
+  "dangerous",
+], "clear" = [
+  "new",
+], "ls" = [
+  "list-sessions",
+], "exit" = [
+  "quit",
+], "workspace" = [
+  "workspaces",
+], "undo-add-dir" = [
+  "remove-dir",
+], "login-status" = [
+  "status",
+], "session-stats" = [
+  "stats",
+] }
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["goal", "recap", "cloud-attach", "cloud-sessions"]
+
+[[group]]
+kind = "agent"
+source = "s3"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["subagent_explore", "subagent_general"]

@@ -1,0 +1,8 @@
+schema = 1
+preset = "baz"
+harness_version = "docs-only"
+verified_on = "2026-10-17"
+completeness = "none"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false

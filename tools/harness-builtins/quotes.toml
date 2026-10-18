@@ -1,0 +1,97 @@
+# Verbatim quotes that were checked against the live page (check_sources.py), and
+# groups the issue's tables could not hold. A quote documents how a user item that
+# has the same name as a built-in is treated; a group whose preset has no matching
+# [[evidence]] has no quote and the rules report it at warning severity at most.
+#
+# [[evidence]]  url + quote; kinds / collisions narrow the groups it covers (default: every
+#               group of the preset whose collision is not unknown and has no evidence yet)
+# [[group]]     an extra group: kind, collision, match, names, url, quote
+# replace       group kinds of the preset the issue's table holds that are dropped in favour of [[group]]
+# collision_override  the row's kind cell in the issue's table -> the collision outcome to record instead
+
+[claude]
+replace = ["reserved"]
+
+# Skills synced from a claude.ai account exist only for signed-in accounts and run under their
+# full name when a project skill has the same short name, so a project skill named pdf or xlsx
+# collides with nothing a project controls.
+[claude.collision_override]
+"skill (synced-anthropic-skill)" = "n/a"
+
+[[claude.evidence]]
+url = "https://code.claude.com/docs/en/skills.md"
+quote = "In a local terminal session, your skill replaces the built-in command, but not its aliases."
+kinds = ["command", "skill"]
+collisions = ["user_wins"]
+
+[[claude.evidence]]
+url = "https://code.claude.com/docs/en/sub-agents.md"
+quote = "named `Explore` overrides the built-in and keeps its own `model` field"
+kinds = ["agent"]
+collisions = ["user_wins"]
+
+[[claude.group]]
+kind = "reserved"
+collision = "error"
+match = "exact"
+names = ["synced"]
+url = "https://code.claude.com/docs/en/skills.md"
+quote = "skips a skill you author at that name in the enterprise, personal, and project locations"
+
+[[claude.group]]
+kind = "reserved"
+collision = "error"
+match = "exact"
+names = ["anthropic-skills"]
+url = "https://code.claude.com/docs/en/skills.md"
+quote = "a skill folder or command file whose name is `anthropic-skills` or starts with `anthropic-skills:` doesn't load"
+
+[[claude.group]]
+kind = "reserved"
+collision = "error"
+match = "prefix"
+names = ["anthropic-skills:"]
+url = "https://code.claude.com/docs/en/skills.md"
+quote = "a skill folder or command file whose name is `anthropic-skills` or starts with `anthropic-skills:` doesn't load"
+
+[[codex.evidence]]
+url = "https://developers.openai.com/codex/skills.md"
+quote = "If two skills share the same `name`, Codex doesn't merge them; both can appear in skill selectors."
+kinds = ["skill"]
+
+[[gemini.evidence]]
+url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/cli/src/services/SlashCommandResolver.ts"
+quote = "Built-in commands always keep the original name."
+kinds = ["command"]
+
+[[augment.evidence]]
+url = "https://docs.augmentcode.com/cli/interactive.md"
+quote = "Built-in slash commands take precedence over custom commands or skills with the same name"
+
+[[kimi.evidence]]
+url = "https://moonshotai.github.io/kimi-code/en/reference/slash-commands.md"
+quote = "as long as the name is not taken by a system slash command or a plugin command"
+kinds = ["command"]
+
+[[qwen.evidence]]
+url = "https://github.com/QwenLM/qwen-code/blob/39c237af3b9d/packages/cli/src/services/CommandService.ts"
+quote = "Non-extension commands (built-in, user, project) override earlier commands"
+kinds = ["command"]
+
+[[opencode.evidence]]
+url = "https://github.com/anomalyco/opencode/blob/v1.19.3/packages/opencode/src/command/index.ts"
+quote = "for (const [name, command] of Object.entries(cfg.command ?? {})) { commands[name] = {"
+kinds = ["command"]
+collisions = ["user_wins"]
+
+[[kilo.evidence]]
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+quote = "defer partial overrides until all command sources are registered"
+kinds = ["command"]
+collisions = ["user_wins"]
+
+[[kilo.evidence]]
+url = "https://github.com/Kilo-Org/kilocode/blob/1552877e82ce/packages/opencode/src/command/index.ts"
+quote = "if (Reserved.reserved(name)) {"
+kinds = ["command"]
+collisions = ["builtin_wins"]

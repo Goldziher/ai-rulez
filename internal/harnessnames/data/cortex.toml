@@ -1,0 +1,183 @@
+schema = 1
+preset = "cortex"
+harness_version = "docs-only"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.snowflake.com/en/user-guide/cortex-code/cli-reference.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://docs.snowflake.com/en/user-guide/cortex-code/bundled-skills"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://docs.snowflake.com/en/user-guide/cortex-code/extensibility"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "help",
+  "clear",
+  "new",
+  "rename",
+  "quit",
+  "resume",
+  "rewind",
+  "fork",
+  "model",
+  "plan",
+  "plan-off",
+  "bypass",
+  "bypass-off",
+  "status",
+  "sql",
+  "table",
+  "connections",
+  "guardrails",
+  "sh",
+  "diff",
+  "worktree",
+  "fdbt",
+  "lineage",
+  "settings",
+  "theme",
+  "sandbox",
+  "workspace",
+  "add-dir",
+  "skill",
+  "mcp",
+  "hooks",
+  "commands",
+  "agents",
+  "bashes",
+  "feedback",
+  "update",
+]
+aliases = { "clear" = [
+  "cls",
+], "quit" = [
+  "exit",
+], "resume" = [
+  "r",
+  "sessions",
+], "table" = [
+  "csv",
+], "connections" = [
+  "conn",
+], "diff" = [
+  "changes",
+  "review",
+], "skill" = [
+  "skills",
+], "commands" = [
+  "cmds",
+], "bashes" = [
+  "shells",
+  "tasks",
+] }
+
+[[group]]
+kind = "skill"
+source = "s2"
+user_collision = "user_wins"
+match = "exact"
+names = [
+  "cortex-code-guide",
+  "developing-with-streamlit",
+  "snowflake-notebooks",
+  "snowflake-apps",
+  "warehouse",
+  "snowflake-interactive",
+  "interactive-benchmark",
+  "workload-performance-analysis",
+  "deploy-to-spcs",
+  "openflow",
+  "openflow-observability",
+  "dynamic-tables",
+  "dbt-projects-on-snowflake",
+  "dcm",
+  "iceberg",
+  "delta-sharing",
+  "snowflake-postgres",
+  "snowflake-tasks",
+  "snowpipe-streaming",
+  "integrations",
+  "manage-zerocopy-sapbdc",
+  "dashboard",
+  "search-optimization",
+  "ai-readiness-score",
+  "snowpark-python",
+  "snowpark-connect",
+  "agent-studio",
+  "document-intelligence",
+  "ai-functions-pipeline-builder",
+  "cortex-ai-function-studio",
+  "machine-learning",
+  "data-quality",
+  "lineage",
+  "error-tables-ops",
+  "alert",
+  "notification",
+  "event-table",
+  "recommend-object",
+  "certify-object",
+  "certified-data-product-discovery",
+  "access-troubleshooter",
+  "data-governance",
+  "network-security",
+  "trust-center",
+  "key-and-secret-management",
+  "manage-authentication-policy",
+  "sharing",
+  "data-sharing",
+  "listing-observability",
+  "ai-data-share",
+  "attach-ai-products-to-share",
+  "data-cleanrooms",
+  "declarative-sharing",
+  "native-app-consumer",
+  "native-app-provider",
+  "marketplace-provider",
+  "marketplace-search",
+  "get-marketplace-listing-details",
+  "cost-intelligence",
+  "organization-management",
+  "snowconvert-assessment",
+  "skill-development",
+  "setting-up-astro-project",
+  "managing-astro-local-env",
+  "init",
+  "airflow",
+  "authoring-dags",
+  "testing-dags",
+  "debugging-dags",
+  "migrating-airflow-2-to-3",
+  "cosmos-dbt-core",
+  "cosmos-dbt-fusion",
+  "checking-freshness",
+  "analyzing-data",
+  "profiling-tables",
+  "annotating-task-lineage",
+  "creating-openlineage-extractors",
+  "tracing-upstream-lineage",
+  "tracing-downstream-lineage",
+]
+
+[[group]]
+kind = "agent"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = ["general-purpose", "explore", "plan", "feedback"]

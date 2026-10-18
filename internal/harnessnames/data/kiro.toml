@@ -1,0 +1,102 @@
+schema = 1
+preset = "kiro"
+harness_version = "docs-only (kiro.dev docs fetched 2026-10-17; CLI V3, IDE 1.3+ referenced)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://kiro.dev/docs/reference/slash-commands.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://kiro.dev/docs/ide/chat/slash-commands.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://kiro.dev/docs/custom-agents/built-in.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "help",
+  "quit",
+  "clear",
+  "context",
+  "model",
+  "agent",
+  "upgrade-agent",
+  "spawn",
+  "chat",
+  "fullscreen",
+  "sessions",
+  "session-id",
+  "save",
+  "load",
+  "editor",
+  "reply",
+  "checkpoint",
+  "plan",
+  "spec",
+  "guide",
+  "knowledge",
+  "compact",
+  "paste",
+  "tools",
+  "prompts",
+  "hooks",
+  "usage",
+  "stats",
+  "mcp",
+  "config",
+  "powers",
+  "theme",
+  "title",
+  "copy",
+  "transcript",
+  "code",
+  "experiment",
+  "tangent",
+  "todos",
+  "issue",
+  "logdump",
+  "settings",
+  "autonomous",
+  "sandbox",
+  "effort",
+  "workflow",
+  "goal",
+  "rewind",
+  "changelog",
+]
+aliases = { "quit" = ["exit", "q"] }
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["architecture-selection", "quick-spec", "bug-fix", "workflow-run"]
+
+[[group]]
+kind = "agent"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["context-gatherer", "general-task-execution"]
+
+[[group]]
+kind = "agent"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = ["default", "spec", "quick-spec", "bug-fix", "plan", "guide", "help"]

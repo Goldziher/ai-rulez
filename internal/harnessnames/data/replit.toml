@@ -1,0 +1,67 @@
+schema = 1
+preset = "replit"
+harness_version = "docs-only"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.replit.com/features/agent/skills-directory.md"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "skill"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "Ad Creative",
+  "AI SDR",
+  "SEO Auditor",
+  "Programmatic SEO",
+  "GEO",
+  "Content Machine",
+  "Storyboard",
+  "AI Recruiter",
+  "Resume Maker",
+  "Interview Prep",
+  "Competitive Analysis",
+  "Deep Research",
+  "GitHub Solution Finder",
+  "Supplier Research",
+  "Stock Analyzer",
+  "Excel Generator",
+  "Invoice Generator",
+  "Tax Reviewer",
+  "Website Cloner",
+  "File Converter",
+  "Flashcard Generator",
+  "Legal Contract",
+  "Infographic Builder",
+  "Recreate Screenshot",
+  "Photo Editor",
+  "Podcast Generator",
+  "Podcast Marketing",
+  "Branding Generator",
+  "Video Editing",
+  "AI Secretary",
+  "Product Manager",
+  "Design Thinker",
+  "Skill Finder",
+  "Skill Creator",
+  "Travel Assistant",
+  "Secrets",
+  "Sensitive Data",
+  "Input Validation",
+  "AI Security",
+  "Dependency Vetting",
+  "License Check",
+  "Accessibility",
+  "Responsive UI",
+  "Observability",
+  "Resilience",
+  "Ship Review",
+]

@@ -1,0 +1,91 @@
+schema = 1
+preset = "vibe"
+harness_version = "v2.26.1"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/mistralai/mistral-vibe/blob/v2.26.1/vibe/cli/commands.py"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://github.com/mistralai/mistral-vibe/blob/v2.26.1/vibe/core/skills/builtins/"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://github.com/mistralai/mistral-vibe/blob/v2.26.1/vibe/core/agents/models.py"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "builtin_wins"
+match = "exact"
+names = [
+  "help",
+  "config",
+  "model",
+  "skills",
+  "thinking",
+  "reload",
+  "clear",
+  "copy",
+  "paste-image",
+  "log",
+  "log-level",
+  "debug",
+  "compact",
+  "exit",
+  "status",
+  "whoami",
+  "teleport",
+  "remote-project",
+  "proxy-setup",
+  "resume",
+  "rename",
+  "mcp",
+  "plugins",
+  "reload-plugins",
+  "todo",
+  "voice",
+  "leanstall",
+  "unleanstall",
+  "rewind",
+  "branch",
+  "retry",
+  "loop",
+  "data-retention",
+  "theme",
+]
+aliases = { "clear" = [
+  "new",
+], "exit" = [
+  "quit",
+  ":q",
+  ":quit",
+  "exit",
+], "resume" = [
+  "continue",
+], "mcp" = [
+  "connectors",
+] }
+
+[[group]]
+kind = "skill"
+source = "s2"
+user_collision = "builtin_wins"
+match = "exact"
+names = ["vibe", "skill-creator"]
+
+[[group]]
+kind = "agent"
+source = "s3"
+user_collision = "user_wins"
+match = "exact"
+names = ["ask", "plan", "accept-edits", "smart-approve", "auto-approve", "explore", "lean"]

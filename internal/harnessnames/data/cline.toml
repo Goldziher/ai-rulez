@@ -1,0 +1,45 @@
+schema = 1
+preset = "cline"
+harness_version = "vscode extension 4.1.25 / cli 3.0.73 (main @ a42df8c8d5fd, 2026-10-17)"
+verified_on = "2026-10-17"
+completeness = "complete"
+severity = "error"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://github.com/cline/cline"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "builtin_wins"
+match = "exact"
+names = [
+  "newtask",
+  "compact",
+  "smol",
+  "settings",
+  "config",
+  "model",
+  "theme",
+  "account",
+  "mcp",
+  "plugins",
+  "skills",
+  "fork",
+  "undo",
+  "clear",
+  "history",
+  "help",
+  "quit",
+]
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "user_wins"
+match = "exact"
+names = ["deep-planning"]

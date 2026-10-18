@@ -1,0 +1,139 @@
+schema = 1
+preset = "warp"
+harness_version = "docs-only (docs.warp.dev llms-full.txt, fetched 2026-10-17)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.warp.dev/agents/capabilities/slash-commands/"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://docs.warp.dev/agents/cli/reference/"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://docs.warp.dev/factories/api-and-sdk/#skill-actions-in-conversation-data"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://docs.warp.dev/agents/capabilities/mcp/"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "add-mcp",
+  "add-prompt",
+  "add-rule",
+  "agent",
+  "changelog",
+  "cloud-agent",
+  "compact",
+  "compact-and",
+  "continue-locally",
+  "conversations",
+  "copy-debugging-id",
+  "cost",
+  "create-environment",
+  "create-new-project",
+  "environment",
+  "export-to-clipboard",
+  "export-to-file",
+  "feedback",
+  "fork",
+  "fork-and-compact",
+  "fork-from",
+  "handoff",
+  "harness",
+  "host",
+  "index",
+  "init",
+  "model",
+  "new",
+  "open-code-review",
+  "open-file",
+  "open-mcp-servers",
+  "open-project-rules",
+  "open-repo",
+  "open-rules",
+  "open-settings-file",
+  "open-skill",
+  "orchestrate",
+  "plan",
+  "profile",
+  "prompts",
+  "queue",
+  "remote-control",
+  "rename-conversation",
+  "rename-tab",
+  "rewind",
+  "set-tab-color",
+  "skills",
+  "usage",
+]
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "api-keys",
+  "auto-approve",
+  "clear",
+  "connect-grok",
+  "exit",
+  "logout",
+  "manage-billing",
+  "mcp",
+  "natural-language-detection",
+  "reset-statusline",
+  "status",
+  "statusline",
+  "team",
+  "theme",
+  "upgrade",
+  "view-logs",
+  "vim-mode",
+  "voice",
+]
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "add-mcp-server",
+  "change-keybinding",
+  "claude-api",
+  "create-skill",
+  "create-tab-config",
+  "factory-files",
+  "factory-mcp",
+  "modify-settings",
+  "oz-platform",
+  "pr-comments",
+  "tab-configs",
+  "tui-migrate-setup",
+  "update-tab-config",
+  "warpctrl",
+]
+
+[[group]]
+kind = "skill"
+source = "s4"
+user_collision = "unknown"
+match = "exact"
+names = ["agent-add-mcp"]

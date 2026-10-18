@@ -1,0 +1,39 @@
+schema = 1
+preset = "gitlab-duo"
+harness_version = "@gitlab/duo-cli app 9.30.0 @ gitlab-lsp 7af2780a003c"
+verified_on = "2026-10-17"
+completeness = "complete"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://gitlab.com/gitlab-org/editor-extensions/gitlab-lsp/-/tree/7af2780a003c/packages/cli/app/src/slash_commands/handlers"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "builtin_wins"
+match = "exact"
+names = [
+  "compact",
+  "copy",
+  "doctor",
+  "exit",
+  "export",
+  "feedback",
+  "goal",
+  "help",
+  "install-gitlab-plugins",
+  "mcp",
+  "model",
+  "new",
+  "review",
+  "sessions",
+  "settings",
+  "skills",
+  "whatsnew",
+]
+aliases = { "exit" = ["quit"], "new" = ["clear"] }

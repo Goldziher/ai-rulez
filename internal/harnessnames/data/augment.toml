@@ -1,0 +1,72 @@
+schema = 1
+preset = "augment"
+harness_version = "docs-only (docs.augmentcode.com, fetched 2026-10-17)"
+verified_on = "2026-10-17"
+completeness = "docs-only"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://docs.augmentcode.com/cli/interactive.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://docs.augmentcode.com/cli/interactive.md"
+quote = "Built-in slash commands take precedence over custom commands or skills with the same name"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+evidence = "s2"
+user_collision = "builtin_wins"
+match = "exact"
+names = [
+  "about",
+  "account",
+  "ask",
+  "btw",
+  "clear",
+  "config",
+  "copy",
+  "editor",
+  "exit",
+  "feedback",
+  "fork",
+  "github-workflow",
+  "help",
+  "image",
+  "logout",
+  "mcp",
+  "new",
+  "permissions",
+  "rename",
+  "request-id",
+  "rules",
+  "sessions",
+  "share",
+  "stats",
+  "status",
+  "task",
+  "verbose",
+  "vim",
+  "add-workspace",
+  "agents",
+  "bash",
+  "canvas",
+  "context",
+  "diffs",
+  "hooks",
+  "model",
+  "persona",
+  "plan",
+  "plugins",
+  "queue",
+  "pause",
+  "resume",
+  "restart-mcp",
+  "skills",
+]

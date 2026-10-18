@@ -1,0 +1,113 @@
+schema = 1
+preset = "muse"
+harness_version = "docs-only (changelog 1.4.10)"
+verified_on = "2026-10-17"
+completeness = "partial"
+severity = "warning"
+invocation_spaces = [["command", "skill"], ["agent"]]
+namespaced = false
+
+[[source]]
+id = "s1"
+url = "https://dev.meta.ai/docs/muse-code/interactive.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s2"
+url = "https://dev.meta.ai/docs/muse-code/configuration.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s3"
+url = "https://dev.meta.ai/docs/muse-code/extending.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s4"
+url = "https://dev.meta.ai/docs/muse-code/changelog.md"
+verified_on = "2026-10-17"
+
+[[source]]
+id = "s5"
+url = "https://dev.meta.ai/docs/cookbook/bundled-skills"
+verified_on = "2026-10-17"
+
+[[group]]
+kind = "command"
+source = "s1"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "help",
+  "keymap",
+  "settings",
+  "clear",
+  "new",
+  "resume",
+  "fork",
+  "name",
+  "compact",
+  "copy",
+  "export",
+  "rewind",
+  "side",
+  "recap",
+  "goal",
+  "loop",
+  "tasks",
+  "stop",
+  "subagents",
+  "workflows",
+  "voice",
+]
+
+[[group]]
+kind = "command"
+source = "s2"
+user_collision = "unknown"
+match = "exact"
+names = ["effort", "models", "theme"]
+
+[[group]]
+kind = "command"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = ["mcp"]
+
+[[group]]
+kind = "command"
+source = "s4"
+user_collision = "unknown"
+match = "exact"
+names = [
+  "skills",
+  "status",
+  "usage",
+  "permissions",
+  "plugins",
+  "login",
+  "delete",
+  "btw",
+  "rename",
+  "hud",
+  "vim",
+  "upgrade",
+  "feedback",
+  "exit",
+  "blender",
+]
+
+[[group]]
+kind = "skill"
+source = "s3"
+user_collision = "unknown"
+match = "exact"
+names = ["plan", "grill", "taste", "threejs", "migrate"]
+
+[[group]]
+kind = "skill"
+source = "s5"
+user_collision = "unknown"
+match = "exact"
+names = ["grilling", "grill-with-docs"]
