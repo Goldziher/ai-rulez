@@ -1,7 +1,7 @@
 schema = 1
 preset = "codewhale"
 harness_version = "v0.10.1"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,272 +9,35 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/src/commands"
-verified_on = "2026-10-17"
+url = "https://github.com/codewhale-hq/Codewhale/tree/v0.10.1/crates/tui/src/commands/groups"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/batch/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills-catalog-matrix.json"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/best-of-n/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/docs/SUBAGENTS.md"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/contributor-onboarding/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/src/commands/user_registry.rs"
+quote = "Workspace command '/{}' would replace a protected built-in command and was not loaded; rename it"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s5"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/dataviz/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s6"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/debug/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s7"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/delegate/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s8"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/dependency-update/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s9"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/document/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s10"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/documents/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s11"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/docx/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s12"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/feedback/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s13"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/feishu/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s14"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/fleet-manager/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s15"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/flights/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s16"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/forget/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s17"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/frontend-design/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s18"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/github/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s19"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/gmail/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s20"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/goals/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s21"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/google-calendar/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s22"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/handoff/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s23"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/help/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s24"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/image-search/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s25"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/implement/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s26"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/interview/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s27"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/mcp-builder/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s28"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/mcp-discovery/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s29"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/money/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s30"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/pdf/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s31"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/photos/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s32"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/plan/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s33"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/plugin-creator/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s34"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/podcast/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s35"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/pptx/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s36"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/presentations/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s37"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/release/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s38"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/research/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s39"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/review/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s40"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/security-review/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s41"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/shopping/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s42"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/simplify/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s43"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/skill-creator/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s44"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/skill-installer/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s45"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/spotify/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s46"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/spreadsheets/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s47"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/test/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s48"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/tts/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s49"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/v4-best-practices/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s50"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/verify/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s51"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/webapp-testing/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s52"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills/xlsx/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s53"
-url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/docs/SUBAGENTS.md"
-verified_on = "2026-10-17"
+url = "https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/src/commands/user_registry.rs"
+quote = "fn dispatch_prefers_user_command_over_builtin_with_same_name() {"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
 names = [
@@ -298,7 +61,6 @@ names = [
   "effort",
   "exit",
   "export",
-  "feat015ctx",
   "feedback",
   "fleet",
   "fork",
@@ -360,16 +122,16 @@ names = [
   "workflows",
 ]
 aliases = { "advisor" = [
-  "watchers",
   "watch",
+  "watchers",
 ], "agent" = [
   "daili",
 ], "anchor" = [
   "maodian",
 ], "attach" = [
+  "fujian",
   "image",
   "media",
-  "fujian",
 ], "automation" = [
   "automations",
   "scheduled",
@@ -377,16 +139,18 @@ aliases = { "advisor" = [
   "qingping",
 ], "compact" = [
   "yasuo",
+], "context" = [
+  "ctx",
 ], "dispatch" = [
   "cloud-agent",
   "cloud-dispatch",
 ], "effort" = [
-  "thinking",
-  "reasoning",
   "reason",
+  "reasoning",
+  "thinking",
 ], "exit" = [
-  "quit",
   "q",
+  "quit",
   "tuichu",
 ], "export" = [
   "daochu",
@@ -399,8 +163,8 @@ aliases = { "advisor" = [
 ], "hf" = [
   "huggingface",
 ], "home" = [
-  "zhuye",
   "shouye",
+  "zhuye",
 ], "hotbar" = [
   "hotkeys",
 ], "import-claude" = [
@@ -411,8 +175,8 @@ aliases = { "advisor" = [
 ], "lane" = [
   "lanes",
 ], "links" = [
-  "dashboard",
   "api",
+  "dashboard",
   "lianjie",
 ], "load" = [
   "jiazai",
@@ -429,13 +193,16 @@ aliases = { "advisor" = [
 ], "pin" = [
   "mini",
   "window-pin",
+], "preview-request" = [
+  "dryrun",
+  "preview_request",
 ], "queue" = [
   "queued",
 ], "receipts" = [
   "receipt",
 ], "rename" = [
-  "gaiming",
   "chongmingming",
+  "gaiming",
 ], "resume" = [
   "r",
 ], "retry" = [
@@ -443,8 +210,8 @@ aliases = { "advisor" = [
 ], "review" = [
   "shencha",
 ], "rlm" = [
-  "recursive",
   "digui",
+  "recursive",
 ], "skill" = [
   "jineng",
 ], "skills" = [
@@ -459,7 +226,10 @@ aliases = { "advisor" = [
 ], "title" = [
   "tabtitle",
   "window-title",
+], "tools" = [
+  "tool-studio",
 ], "translate" = [
+  "transale",
   "translation",
 ], "turn" = [
   "turns",
@@ -468,8 +238,15 @@ aliases = { "advisor" = [
   "语音",
 ], "voicecontrol" = [
   "voice-control",
+  "yuyincontrol",
+  "语音控制",
 ], "voicesend" = [
   "voice-send",
+  "yuyinsend",
+  "语音发送",
+], "workbar" = [
+  "rail",
+  "sidebar",
 ], "workflow" = [
   "wf",
 ] }
@@ -477,6 +254,7 @@ aliases = { "advisor" = [
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
 names = [
@@ -512,8 +290,8 @@ names = [
 aliases = { "constitution" = [
   "law",
 ], "hooks" = [
-  "hook",
   "gouzi",
+  "hook",
 ], "mcp" = [
   "mcps",
 ], "mode" = [
@@ -523,8 +301,8 @@ aliases = { "constitution" = [
   "permission-rules",
   "permission_rules",
 ], "plugin" = [
-  "plugins",
   "extensions",
+  "plugins",
 ], "profile" = [
   "dangan",
 ], "purge" = [
@@ -533,6 +311,9 @@ aliases = { "constitution" = [
   "remote-control",
 ], "relay" = [
   "batonpass",
+  "接力",
+], "system" = [
+  "xitong",
 ], "trust" = [
   "xinren",
 ], "update" = [
@@ -546,361 +327,90 @@ kind = "skill"
 source = "s2"
 user_collision = "unknown"
 match = "exact"
-names = ["batch"]
-
-[[group]]
-kind = "skill"
-source = "s3"
-user_collision = "unknown"
-match = "exact"
-names = ["best-of-n"]
-
-[[group]]
-kind = "skill"
-source = "s4"
-user_collision = "unknown"
-match = "exact"
-names = ["contributor-onboarding"]
-
-[[group]]
-kind = "skill"
-source = "s5"
-user_collision = "unknown"
-match = "exact"
-names = ["dataviz"]
-
-[[group]]
-kind = "skill"
-source = "s6"
-user_collision = "unknown"
-match = "exact"
-names = ["debug"]
-
-[[group]]
-kind = "skill"
-source = "s7"
-user_collision = "unknown"
-match = "exact"
-names = ["delegate"]
-
-[[group]]
-kind = "skill"
-source = "s8"
-user_collision = "unknown"
-match = "exact"
-names = ["dependency-update"]
-
-[[group]]
-kind = "skill"
-source = "s9"
-user_collision = "unknown"
-match = "exact"
-names = ["document"]
-
-[[group]]
-kind = "skill"
-source = "s10"
-user_collision = "unknown"
-match = "exact"
-names = ["documents"]
-
-[[group]]
-kind = "skill"
-source = "s11"
-user_collision = "unknown"
-match = "exact"
-names = ["docx"]
-
-[[group]]
-kind = "skill"
-source = "s12"
-user_collision = "unknown"
-match = "exact"
-names = ["feedback"]
-
-[[group]]
-kind = "skill"
-source = "s13"
-user_collision = "unknown"
-match = "exact"
-names = ["feishu"]
-
-[[group]]
-kind = "skill"
-source = "s14"
-user_collision = "unknown"
-match = "exact"
-names = ["fleet-manager"]
-
-[[group]]
-kind = "skill"
-source = "s15"
-user_collision = "unknown"
-match = "exact"
-names = ["flights"]
-
-[[group]]
-kind = "skill"
-source = "s16"
-user_collision = "unknown"
-match = "exact"
-names = ["forget"]
-
-[[group]]
-kind = "skill"
-source = "s17"
-user_collision = "unknown"
-match = "exact"
-names = ["frontend-design"]
-
-[[group]]
-kind = "skill"
-source = "s18"
-user_collision = "unknown"
-match = "exact"
-names = ["github"]
-
-[[group]]
-kind = "skill"
-source = "s19"
-user_collision = "unknown"
-match = "exact"
-names = ["gmail"]
-
-[[group]]
-kind = "skill"
-source = "s20"
-user_collision = "unknown"
-match = "exact"
-names = ["goals"]
-
-[[group]]
-kind = "skill"
-source = "s21"
-user_collision = "unknown"
-match = "exact"
-names = ["google-calendar"]
-
-[[group]]
-kind = "skill"
-source = "s22"
-user_collision = "unknown"
-match = "exact"
-names = ["handoff"]
-
-[[group]]
-kind = "skill"
-source = "s23"
-user_collision = "unknown"
-match = "exact"
-names = ["help"]
-
-[[group]]
-kind = "skill"
-source = "s24"
-user_collision = "unknown"
-match = "exact"
-names = ["image-search"]
-
-[[group]]
-kind = "skill"
-source = "s25"
-user_collision = "unknown"
-match = "exact"
-names = ["implement"]
-
-[[group]]
-kind = "skill"
-source = "s26"
-user_collision = "unknown"
-match = "exact"
-names = ["interview"]
-
-[[group]]
-kind = "skill"
-source = "s27"
-user_collision = "unknown"
-match = "exact"
-names = ["mcp-builder"]
-
-[[group]]
-kind = "skill"
-source = "s28"
-user_collision = "unknown"
-match = "exact"
-names = ["mcp-discovery"]
-
-[[group]]
-kind = "skill"
-source = "s29"
-user_collision = "unknown"
-match = "exact"
-names = ["money"]
-
-[[group]]
-kind = "skill"
-source = "s30"
-user_collision = "unknown"
-match = "exact"
-names = ["pdf"]
-
-[[group]]
-kind = "skill"
-source = "s31"
-user_collision = "unknown"
-match = "exact"
-names = ["photos"]
-
-[[group]]
-kind = "skill"
-source = "s32"
-user_collision = "unknown"
-match = "exact"
-names = ["plan"]
-
-[[group]]
-kind = "skill"
-source = "s33"
-user_collision = "unknown"
-match = "exact"
-names = ["plugin-creator"]
-
-[[group]]
-kind = "skill"
-source = "s34"
-user_collision = "unknown"
-match = "exact"
-names = ["podcast"]
-
-[[group]]
-kind = "skill"
-source = "s35"
-user_collision = "unknown"
-match = "exact"
-names = ["pptx"]
-
-[[group]]
-kind = "skill"
-source = "s36"
-user_collision = "unknown"
-match = "exact"
-names = ["presentations"]
-
-[[group]]
-kind = "skill"
-source = "s37"
-user_collision = "unknown"
-match = "exact"
-names = ["release"]
-
-[[group]]
-kind = "skill"
-source = "s38"
-user_collision = "unknown"
-match = "exact"
-names = ["research"]
-
-[[group]]
-kind = "skill"
-source = "s39"
-user_collision = "unknown"
-match = "exact"
-names = ["review"]
-
-[[group]]
-kind = "skill"
-source = "s40"
-user_collision = "unknown"
-match = "exact"
-names = ["security-review"]
-
-[[group]]
-kind = "skill"
-source = "s41"
-user_collision = "unknown"
-match = "exact"
-names = ["shopping"]
-
-[[group]]
-kind = "skill"
-source = "s42"
-user_collision = "unknown"
-match = "exact"
-names = ["simplify"]
-
-[[group]]
-kind = "skill"
-source = "s43"
-user_collision = "unknown"
-match = "exact"
-names = ["skill-creator"]
-
-[[group]]
-kind = "skill"
-source = "s44"
-user_collision = "unknown"
-match = "exact"
-names = ["skill-installer"]
-
-[[group]]
-kind = "skill"
-source = "s45"
-user_collision = "unknown"
-match = "exact"
-names = ["spotify"]
-
-[[group]]
-kind = "skill"
-source = "s46"
-user_collision = "unknown"
-match = "exact"
-names = ["spreadsheets"]
-
-[[group]]
-kind = "skill"
-source = "s47"
-user_collision = "unknown"
-match = "exact"
-names = ["test"]
-
-[[group]]
-kind = "skill"
-source = "s48"
-user_collision = "unknown"
-match = "exact"
-names = ["tts"]
-
-[[group]]
-kind = "skill"
-source = "s49"
-user_collision = "unknown"
-match = "exact"
-names = ["v4-best-practices"]
-
-[[group]]
-kind = "skill"
-source = "s50"
-user_collision = "unknown"
-match = "exact"
-names = ["verify"]
-
-[[group]]
-kind = "skill"
-source = "s51"
-user_collision = "unknown"
-match = "exact"
-names = ["webapp-testing"]
-
-[[group]]
-kind = "skill"
-source = "s52"
-user_collision = "unknown"
-match = "exact"
-names = ["xlsx"]
+names = [
+  "batch",
+  "best-of-n",
+  "dataviz",
+  "debug",
+  "delegate",
+  "dependency-update",
+  "document",
+  "documents",
+  "docx",
+  "fleet-manager",
+  "flights",
+  "forget",
+  "frontend-design",
+  "github",
+  "gmail",
+  "goals",
+  "google-calendar",
+  "handoff",
+  "help",
+  "image-search",
+  "implement",
+  "interview",
+  "mcp-builder",
+  "mcp-discovery",
+  "money",
+  "pdf",
+  "photos",
+  "plan",
+  "plugin-creator",
+  "podcast",
+  "pptx",
+  "presentations",
+  "release",
+  "research",
+  "review",
+  "security-review",
+  "shopping",
+  "simplify",
+  "skill-creator",
+  "skill-installer",
+  "spotify",
+  "spreadsheets",
+  "test",
+  "tts",
+  "verify",
+  "webapp-testing",
+  "xlsx",
+]
 
 [[group]]
 kind = "agent"
-source = "s53"
+source = "s3"
 user_collision = "n/a"
 match = "exact"
-names = ["general", "explore", "planner", "reviewer", "implement", "test", "advisor", "custom"]
+names = ["advisor", "custom", "explore", "general", "implement", "planner", "reviewer", "test"]
+aliases = { "advisor" = [
+  "consultant",
+  "oracle",
+], "explore" = [
+  "exploration",
+  "explorer",
+  "scout",
+], "general" = [
+  "default",
+  "general-purpose",
+  "general_purpose",
+  "worker",
+], "implement" = [
+  "builder",
+  "implementation",
+  "implementer",
+], "planner" = [
+  "awaiter",
+  "plan",
+  "planning",
+], "reviewer" = [
+  "code-review",
+  "code_review",
+  "review",
+], "test" = [
+  "tester",
+  "validator",
+  "verification",
+  "verifier",
+  "verify",
+] }

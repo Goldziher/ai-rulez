@@ -1,0 +1,48 @@
+{
+  "_doc": [
+    "Excerpt of https://github.com/codewhale-hq/Codewhale/blob/v0.10.1/crates/tui/assets/skills-catalog-matrix.json"
+  ],
+  "_fields": {
+    "name": "canonical frontmatter name; also the installed directory name",
+    "tier": "BundledSkillTier::label() -- 'core' or 'tools'",
+    "invocation": "frontmatter invocation value ('model+user' or 'explicit-only')",
+    "aliases": "normalized aliases-for entries that resolve to this skill",
+    "in_model_catalogue": "true when the skill renders as an ambient catalogue line",
+    "shadowed_aliases": "aliases that collide with another canonical bundled name; the canonical skill wins resolution"
+  },
+  "generation": "17",
+  "skills": [
+    {
+      "name": "skill-creator",
+      "tier": "tools",
+      "invocation": "model+user",
+      "aliases": ["create-skill"],
+      "in_model_catalogue": true,
+      "shadowed_aliases": []
+    },
+    {
+      "name": "delegate",
+      "tier": "core",
+      "invocation": "model+user",
+      "aliases": [],
+      "in_model_catalogue": true,
+      "shadowed_aliases": []
+    },
+    {
+      "name": "docx",
+      "tier": "tools",
+      "invocation": "model+user",
+      "aliases": [],
+      "in_model_catalogue": true,
+      "shadowed_aliases": []
+    },
+    {
+      "name": "documents",
+      "tier": "tools",
+      "invocation": "model+user",
+      "aliases": ["docx"],
+      "in_model_catalogue": true,
+      "shadowed_aliases": ["docx"]
+    }
+  ]
+}

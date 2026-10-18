@@ -1,7 +1,7 @@
 schema = 1
 preset = "xum"
 harness_version = "main @ 335c4ce4a79c (tag v0.31.1-nightly.618)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,233 +10,85 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/browser/utils/slashCommands/registry.ts"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/background-monitors.md"
-verified_on = "2026-10-17"
+url = "https://github.com/coder/mux/tree/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/deep-research.md"
-verified_on = "2026-10-17"
+url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/services/agentDefinitions/builtInAgentDefinitions.ts"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/init.md"
-verified_on = "2026-10-17"
+url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/browser/utils/slashCommands/suggestions.ts"
+quote = ".filter((skill) => !SLASH_COMMAND_DEFINITION_MAP.has(skill.name))"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s5"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/loop.md"
-verified_on = "2026-10-17"
+url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/docs/agents/agent-skills.mdx"
+quote = "Built-in skills behave like any other skill for precedence purposes, so any project or global skill with the same name overrides them."
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s6"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/orchestrate.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s7"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/spawn.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s8"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/workflow-authoring.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s9"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/xum-diagram.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s10"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinSkills/xum-docs.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s11"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/compact.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s12"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/desktop.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s13"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/dream.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s14"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/exec.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s15"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/explore.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s16"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/intuition.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s17"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/name_workspace.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s18"
-url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/src/node/builtinAgents/plan.md"
-verified_on = "2026-10-17"
+url = "https://github.com/coder/mux/blob/335c4ce4a79c07274940b42ed0cfccda586e808a/docs/agents/index.mdx"
+quote = "Higher-priority definitions **override** lower-priority ones with the same id."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
 names = [
-  "clear",
-  "dream",
-  "refine",
-  "compact",
-  "model",
-  "vim",
-  "open",
-  "plan",
-  "fork",
-  "new",
-  "side",
   "btw",
-  "idle",
-  "heartbeat",
-  "goal",
-  "workflow",
+  "clear",
+  "compact",
   "debug-llm-request",
+  "dream",
+  "fast",
+  "fork",
+  "goal",
+  "heartbeat",
+  "idle",
+  "model",
+  "new",
+  "plan",
+  "refine",
+  "side",
+  "ultrafast",
+  "vim",
+  "workflow",
 ]
 
 [[group]]
 kind = "skill"
 source = "s2"
+evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
-names = ["background-monitors"]
+names = [
+  "background-monitors",
+  "deep-research",
+  "init",
+  "loop",
+  "orchestrate",
+  "spawn",
+  "workflow-authoring",
+  "xum-diagram",
+  "xum-docs",
+]
 
 [[group]]
-kind = "skill"
+kind = "agent"
 source = "s3"
+evidence = "s6"
 user_collision = "user_wins"
 match = "exact"
-names = ["deep-research"]
-
-[[group]]
-kind = "skill"
-source = "s4"
-user_collision = "user_wins"
-match = "exact"
-names = ["init"]
-
-[[group]]
-kind = "skill"
-source = "s5"
-user_collision = "user_wins"
-match = "exact"
-names = ["loop"]
-
-[[group]]
-kind = "skill"
-source = "s6"
-user_collision = "user_wins"
-match = "exact"
-names = ["orchestrate"]
-
-[[group]]
-kind = "skill"
-source = "s7"
-user_collision = "user_wins"
-match = "exact"
-names = ["spawn"]
-
-[[group]]
-kind = "skill"
-source = "s8"
-user_collision = "user_wins"
-match = "exact"
-names = ["workflow-authoring"]
-
-[[group]]
-kind = "skill"
-source = "s9"
-user_collision = "user_wins"
-match = "exact"
-names = ["xum-diagram"]
-
-[[group]]
-kind = "skill"
-source = "s10"
-user_collision = "user_wins"
-match = "exact"
-names = ["xum-docs"]
-
-[[group]]
-kind = "agent"
-source = "s11"
-user_collision = "user_wins"
-match = "exact"
-names = ["compact"]
-
-[[group]]
-kind = "agent"
-source = "s12"
-user_collision = "user_wins"
-match = "exact"
-names = ["desktop"]
-
-[[group]]
-kind = "agent"
-source = "s13"
-user_collision = "user_wins"
-match = "exact"
-names = ["dream"]
-
-[[group]]
-kind = "agent"
-source = "s14"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec"]
-
-[[group]]
-kind = "agent"
-source = "s15"
-user_collision = "user_wins"
-match = "exact"
-names = ["explore"]
-
-[[group]]
-kind = "agent"
-source = "s16"
-user_collision = "user_wins"
-match = "exact"
-names = ["intuition"]
-
-[[group]]
-kind = "agent"
-source = "s17"
-user_collision = "user_wins"
-match = "exact"
-names = ["name_workspace"]
-
-[[group]]
-kind = "agent"
-source = "s18"
-user_collision = "user_wins"
-match = "exact"
-names = ["plan"]
+names = ["compact", "desktop", "dream", "exec", "explore", "intuition", "name_workspace", "plan"]
