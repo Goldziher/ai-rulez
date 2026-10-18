@@ -66,7 +66,7 @@ def wrap(items, indent="  ", width=100):
 def parse(files):
     presets, cur = {}, None
     for f in files:
-        for line in Path(f).read_text().splitlines():
+        for line in Path(f).read_text(encoding="utf-8").splitlines():
             m = HEADER.match(line)
             if m:
                 cur = presets.setdefault(m.group(1), {"rows": []})
@@ -201,12 +201,12 @@ def build(preset, data, quotes, dropped):
 def main():
     out_dir, files = Path(sys.argv[1]), sys.argv[2:]
     qfile = Path(__file__).with_name("quotes.toml")
-    quotes = tomllib.loads(qfile.read_text()) if qfile.exists() else {}
+    quotes = tomllib.loads(qfile.read_text(encoding="utf-8")) if qfile.exists() else {}
     presets = parse(files)
     dropped = []
     out_dir.mkdir(parents=True, exist_ok=True)
     for preset, data in sorted(presets.items()):
-        (out_dir / f"{preset}.toml").write_text(build(preset, data, quotes, dropped))
+        (out_dir / f"{preset}.toml").write_text(build(preset, data, quotes, dropped), encoding="utf-8", newline="\n")
     print(f"{len(presets)} presets, {len(dropped)} entries dropped")
     for d in dropped:
         print("  dropped:", *d)

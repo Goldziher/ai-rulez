@@ -54,7 +54,7 @@ class TomlOutTest(unittest.TestCase):
     def test_every_data_file_round_trips_byte_for_byte(self):
         for path in sorted(DATA.glob("*.toml")):
             with self.subTest(path.name):
-                text = path.read_text()
+                text = path.read_text(encoding="utf-8")
                 self.assertEqual(tomlout.dump(tomllib.loads(text)), text)
 
 
@@ -161,14 +161,18 @@ class GenerateTest(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: __import__("shutil").rmtree(self.tmp))
         (self.tmp / "data").mkdir()
-        (self.tmp / "data" / "demo.toml").write_text(tomlout.dump(TABLE))
-        (self.tmp / "data" / "other.toml").write_text(tomlout.dump({**TABLE, "preset": "other"}))
+        (self.tmp / "data" / "demo.toml").write_text(tomlout.dump(TABLE), encoding="utf-8", newline="\n")
+        (self.tmp / "data" / "other.toml").write_text(
+            tomlout.dump({**TABLE, "preset": "other"}), encoding="utf-8", newline="\n"
+        )
         self.pins = self.tmp / "pins.toml"
         self.pins.write_text(
             '[demo]\nextractor = "codex"\nrepo = "o/r"\nref = "v1"\n'
             '[[demo.target]]\nkey = "x"\nkind = "command"\ncollision = "builtin_wins"\n'
             '[[demo.target]]\nkey = "y"\nkind = "command"\ncollision = "user_wins"\n'
-            '[other]\nextractor = "none"\nreason = "no public registry"\n'
+            '[other]\nextractor = "none"\nreason = "no public registry"\n',
+            encoding="utf-8",
+            newline="\n",
         )
 
     def run_main(self, *args, results=None):
@@ -195,7 +199,7 @@ class GenerateTest(unittest.TestCase):
     def test_write_updates_names_and_dates_then_check_passes(self):
         res = {"x": {"names": ["a", "new"]}, "y": {"names": ["c"]}}
         self.assertEqual(self.run_main("--write", results=res)[0], 0)
-        written = tomllib.loads((self.tmp / "data" / "demo.toml").read_text())
+        written = tomllib.loads((self.tmp / "data" / "demo.toml").read_text(encoding="utf-8"))
         self.assertEqual(written["group"][0]["names"], ["a", "new"])
         self.assertEqual(written["verified_on"], "2026-02-02")
         self.assertEqual(self.run_main("--check", results=res)[0], 0)
@@ -209,14 +213,16 @@ class GenerateTest(unittest.TestCase):
         self.assertEqual(code, 2)
 
     def test_a_data_file_without_a_pin_is_exit_2(self):
-        (self.tmp / "data" / "third.toml").write_text(tomlout.dump({**TABLE, "preset": "third"}))
+        (self.tmp / "data" / "third.toml").write_text(
+            tomlout.dump({**TABLE, "preset": "third"}), encoding="utf-8", newline="\n"
+        )
         code, _, err = self.run_main("--check")
         self.assertEqual(code, 2)
         self.assertIn("third", err)
 
     def test_none_needs_a_reason_and_unknown_keys_are_rejected(self):
         for text in ('[demo]\nextractor = "none"\n', '[demo]\nextractor = "none"\nreason = "r"\nbogus = 1\n'):
-            self.pins.write_text(text)
+            self.pins.write_text(text, encoding="utf-8", newline="\n")
             with self.subTest(text), self.assertRaises(generate.PinError):
                 generate.load_pins(self.pins)
 

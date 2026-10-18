@@ -76,8 +76,8 @@ def dump(t: dict) -> str:
 
 
 def load(path) -> dict:
-    return tomllib.loads(Path(path).read_text())
+    return tomllib.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def save(path, table: dict) -> None:
-    Path(path).write_text(dump(table))
+    Path(path).write_text(dump(table), encoding="utf-8", newline="\n")

@@ -51,7 +51,7 @@ class PinError(Exception):
 
 
 def load_pins(path: Path) -> dict:
-    pins = tomllib.loads(path.read_text())
+    pins = tomllib.loads(path.read_text(encoding="utf-8"))
     for preset, pin in pins.items():
         if not isinstance(pin, dict):
             raise PinError(f"{preset}: not a table")
@@ -145,7 +145,7 @@ def process(args, pins, preset, today, out):
     if pin["extractor"] == "none":
         return 0
     path = args.data / f"{preset}.toml"
-    old_text = path.read_text()
+    old_text = path.read_text(encoding="utf-8")
     old = tomllib.loads(old_text)
     if args.bump:
         if not pin.get("repo"):
@@ -161,9 +161,13 @@ def process(args, pins, preset, today, out):
         for line in merge.diff_names(old, new) or ["no change in names"]:
             print(f"  {line}", file=out)
         if args.apply:
-            args.pins.write_text(set_pin_ref(args.pins.read_text(), preset, pin["ref"], new_ref))
+            args.pins.write_text(
+                set_pin_ref(args.pins.read_text(encoding="utf-8"), preset, pin["ref"], new_ref),
+                encoding="utf-8",
+                newline="\n",
+            )
             merge.stamp(new, bumped, today)
-            path.write_text(tomlout.dump(new))
+            path.write_text(tomlout.dump(new), encoding="utf-8", newline="\n")
         return 0
     new = regenerate(old, pin, run_extractor(preset, pin))
     stale = tomlout.dump(new) != old_text
@@ -175,7 +179,7 @@ def process(args, pins, preset, today, out):
         print(f"{preset}: up to date", file=out)
     if args.write:
         merge.stamp(new, pin, today)
-        path.write_text(tomlout.dump(new))
+        path.write_text(tomlout.dump(new), encoding="utf-8", newline="\n")
     return 1 if stale and args.check else 0
 
 

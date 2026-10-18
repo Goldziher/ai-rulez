@@ -21,7 +21,7 @@ def load_extractor(name):
 
 
 def read(*parts) -> str:
-    return TESTDATA.joinpath(*parts).read_text()
+    return TESTDATA.joinpath(*parts).read_text(encoding="utf-8")
 
 
 def context(repo="", ref="", files=None, tree=None):
