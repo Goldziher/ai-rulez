@@ -1914,7 +1914,6 @@
                 "type": "array"
               }
             },
-            "required": ["rules", "paths"],
             "type": "object"
           },
           "type": "array"
