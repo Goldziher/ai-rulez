@@ -1217,7 +1217,8 @@ colliding with a local domain of the same name.
 A builtin ranks below every skill the project has. A skill under `.ai-rulez/skills/` replaces the builtin of the same
 name; so does a hand-written repository skill such as `.claude/skills/testing-conventions` when
 `mcp --serve-skills --discover-skills` serves it. `validate` reports either case as `AR703` (silence it with
-`lint.allow_overrides = ["testing-conventions"]`). `generate` never overwrites the hand-written file: it stops and names
+`lint.allow_overrides = ["testing-conventions"]`); `generate` logs the same collapse as a `Duplicate skill collapsed`
+warning and honours the same list. `generate` never overwrites the hand-written file: it stops and names
 the file, so the project skill is not clobbered by the generated builtin; to use the generated builtin, remove the
 hand-written copy, otherwise exclude the builtin item (`!<domain>/<item>`).
 

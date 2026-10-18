@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 const agentDelegationBuiltin = "agent-delegation"
@@ -678,21 +679,86 @@ func AllCommands(content *config.ContentTree) []config.ContentFile {
 // it. Shared by the generator and the validate command so the message and
 // precedence stay aligned.
 //
+// A name listed in cfg's lint.allow_overrides (bare, or as domain/name for a
+// copy in that domain) is intentional shadowing and is not reported, matching
+// AR703. cfg may be nil.
+//
 // It also reports an agent whose `extends` target does not exist: it is emitted
 // without inheritance. log is where the warnings go; nil is the CLI's logger.
-func WarnDuplicateContent(log logger.Logger, content *config.ContentTree) {
+func WarnDuplicateContent(log logger.Logger, content *config.ContentTree, cfg *config.Config) {
 	log = logger.Or(log)
 	for _, miss := range unresolvedExtends(content) {
 		log.Warn("Agent extends target not found; emitting agent without inheritance",
 			"agent", miss.Agent,
 			"extends", miss.Extends)
 	}
+	allow := newOverrideAllowance(cfg)
 	for _, warning := range duplicateContentWarnings(content) {
+		dup := warning.Duplicate
+		if allow.covers(dup.Name, append([]string{dup.Winner}, dup.Losers...)) {
+			continue
+		}
 		log.Warn("Duplicate "+warning.Kind+" collapsed",
 			"name", warning.Duplicate.Name,
 			"kept", warning.Duplicate.Winner,
 			"dropped", strings.Join(warning.Duplicate.Losers, ", "))
 	}
+}
+
+// overrideAllowance applies lint.allow_overrides to collapsed duplicates with
+// the same matching AR703 uses: a bare name, or "scope/name" where scope is the
+// domain a copy lives in.
+type overrideAllowance struct {
+	names      map[string]bool
+	sourceDir  string
+	authorRoot string
+}
+
+func newOverrideAllowance(cfg *config.Config) overrideAllowance {
+	a := overrideAllowance{names: map[string]bool{}}
+	if cfg == nil || cfg.Lint == nil {
+		return a
+	}
+	for _, entry := range cfg.Lint.AllowOverrides {
+		a.names[strings.ToLower(strings.TrimSpace(entry))] = true
+	}
+	a.sourceDir, _ = filepath.Abs(cfg.SourceDir())     //nolint:errcheck // falls back to empty
+	a.authorRoot, _ = filepath.Abs(cfg.AuthoredRoot()) //nolint:errcheck // falls back to empty
+	return a
+}
+
+// covers reports whether name, or the scoped name of any of its copies, is listed.
+func (a overrideAllowance) covers(name string, paths []string) bool {
+	name = strings.ToLower(name)
+	if a.names[name] {
+		return true
+	}
+	for _, p := range paths {
+		if scope := a.scopeOf(p); scope != "" && a.names[scope+"/"+name] {
+			return true
+		}
+	}
+	return false
+}
+
+// scopeOf names where a copy lives: its domain, "builtin" for an embedded file,
+// "import" for content outside the config directory, "" for root content.
+func (a overrideAllowance) scopeOf(p string) string {
+	if !filepath.IsAbs(p) {
+		return "builtin"
+	}
+	rel, err := filepath.Rel(a.sourceDir, p)
+	if err != nil || safefs.RelEscapes(rel) {
+		if safefs.Within(a.authorRoot, p) {
+			return ""
+		}
+		return "import"
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	if len(parts) > 2 && parts[0] == "domains" {
+		return parts[1]
+	}
+	return ""
 }
 
 // duplicateContentWarning is one collapsed-duplicate diagnostic. Carried as data
