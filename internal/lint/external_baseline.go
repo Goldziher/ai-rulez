@@ -34,6 +34,12 @@ type ScannerOptions struct {
 	// required for a new entry.
 	WriteBaseline bool
 	Reason        string
+	// Filter narrows what --write-baseline records; findings it leaves out stay
+	// reported and keep any entry they already have. ReasonFor maps a rule (id,
+	// `scanner:rule`, AR code or glob) to the reason of its new entries; Reason,
+	// which may contain {rule}, {severity} and {scanner}, covers the rest.
+	Filter    BaselineFilter
+	ReasonFor map[string]string
 	// Today is the YYYY-MM-DD date entries expire against; empty reads
 	// AI_RULEZ_TODAY, then the clock.
 	Today string
@@ -233,7 +239,20 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		r.addRun(CodeScannerConfigInvalid, "baseline", sanitizeScannerText(err.Error()))
 		return
 	}
-	next, err := UpdateBaseline(&Report{Findings: findings}, prev, r.opts.Scanner.Reason)
+	opts := r.opts.Scanner
+	recorded := findings
+	skipped := map[string]bool{}
+	if opts.Filter.active() {
+		recorded = make([]Finding, 0, len(findings))
+		for i := range all {
+			if opts.Filter.matches(&all[i]) {
+				recorded = append(recorded, findings[i])
+			} else {
+				skipped[all[i].Fingerprint()] = true
+			}
+		}
+	}
+	next, err := UpdateBaseline(&Report{Findings: recorded}, prev, opts.Reason)
 	if err != nil {
 		r.addRun(CodeScannerConfigInvalid, "baseline", sanitizeScannerText(err.Error()))
 		return
@@ -243,9 +262,17 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		f := all[i]
 		scanners[f.Fingerprint()] = f
 	}
+	old := baselineEntryIndex(prev)
 	for i := range next.Entries {
-		if sf, ok := scanners[next.Entries[i].Fingerprint]; ok {
-			next.Entries[i].Scanner, next.Entries[i].Rule = sf.scanner, sf.rule
+		e := &next.Entries[i]
+		sf, ok := scanners[e.Fingerprint]
+		if !ok {
+			continue
+		}
+		e.Scanner, e.Rule = sf.scanner, sf.rule
+		if _, existing := old[e.Fingerprint]; !existing {
+			e.Message = shortBaselineMessage(e.Message)
+			e.Reason = strings.TrimSpace(opts.reasonFor(&sf))
 		}
 	}
 	have := map[string]bool{}
@@ -256,7 +283,7 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 	if prev != nil {
 		for i := range prev.Entries {
 			e := prev.Entries[i]
-			if !have[e.Fingerprint] && !ran[e.Scanner] {
+			if !have[e.Fingerprint] && (!ran[e.Scanner] || skipped[e.Fingerprint]) {
 				next.Entries = append(next.Entries, e)
 			}
 		}

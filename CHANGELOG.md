@@ -14,6 +14,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- **`--min-severity`, `--rule` and `--reason-for` for `--write-baseline`.** `validate --external --write-baseline` and `scan --external --write-baseline` recorded every finding with one `--reason`. `--min-severity <level>` and repeated `--rule <glob>` (scanner rule id, `scanner:rule` or `AR` code) now narrow what is written; findings left out stay reported and keep an existing entry. `--reason-for RULE=text` sets the reason per rule, and `{rule}`, `{severity}` and `{scanner}` expand in `--reason` and `--reason-for`. A new entry stores only the first line of the message (160 characters at most), which keeps a large baseline small; the format is unchanged, so existing baselines and `--strict-baseline` work as before ([#458](https://github.com/Goldziher/ai-rulez/issues/458)).
+
 - **AR808 reads its Claude Code names from the new table and reserves aliases.** A skill replaces a built-in command but not its aliases, so a skill named `new` (an alias of `/clear`), `settings`, `share`, `undo` or `rc` is reported with a message saying the alias keeps running the built-in; the bundled skills synced from a claude.ai account (`pdf`, `xlsx`) are not reported. AR9U0 skips the Claude Code commands and bundled skills, so no name is reported twice. Authored content that the plan does not write where Claude Code reads it (a plugin-only skill, invoked as `/plugin:skill`) is no longer reported.
 
 ### Fixed
