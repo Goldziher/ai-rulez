@@ -144,7 +144,7 @@ func (s fakeScan) results() []map[string]any {
 //	                           have, so a test proves runs overlapped without depending on timing
 //	--log FILE                 append one line at the start and one at the end, with the arguments
 //	--out FILE                 write the report there instead of stdout
-//	--print-version V          print "fake-scanner V" and exit
+//	--print-version V          print "fake-scanner V" (after any --sleep) and exit
 //	--list-files (no value)    the message lists the regular files under each directory argument
 //	--also-global (no value)   one more result, without a location, besides the per-directory ones
 //
@@ -154,6 +154,9 @@ func (s fakeScan) results() []map[string]any {
 func RunFakeScanner(args []string) int {
 	s := parseFakeScan(args)
 	if v, ok := s.opts["--print-version"]; ok {
+		if d, err := time.ParseDuration(s.opts["--sleep"]); err == nil {
+			time.Sleep(d)
+		}
 		fmt.Fprintln(os.Stdout, "fake-scanner "+v) //nolint:errcheck // test scanner output
 		return 0
 	}

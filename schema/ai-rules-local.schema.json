@@ -1830,6 +1830,10 @@
                 },
                 "minItems": 1,
                 "type": "array"
+              },
+              "version_timeout": {
+                "description": "How long the version probe (`version_command`, else `command[0] --version`) may run, as a duration such as \"30s\". Default 10s. A probe that exceeds it is reported as \"version probe timed out after Ns\" (AR9E2), not as empty output; needs `version`.",
+                "type": "string"
               }
             },
             "type": "object"

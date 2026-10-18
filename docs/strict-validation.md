@@ -508,6 +508,7 @@ env_pass = []                      # extra environment variable names for an egr
 # profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
 # version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
 # version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
+# version_timeout = "30s"          # bounds the version probe (default 10s); a slow probe is reported as timed out (AR9E2)
 # required = true                  # a missing, outdated or failing scanner is an error
 # batch_size = 10                  # hand {skill_dirs} to the scanner at most 10 skills per run, each run with its own timeout
 # parallel = 4                     # run up to 4 batches at once (default 1, at most 16)
@@ -1060,8 +1061,10 @@ error and not on a scanner warning, and `--fail-on error` with `fail_on = "warni
 `<command[0]> --version`. When `command[0]` is a launcher or interpreter (`python3 scan.py`, `node scan.js`,
 `uvx scanner`), that is the launcher's version, not the scanner's: set `version_command` to the argv that prints
 the scanner's own version (`["python3", "scan.py", "--version"]`). It runs from the project root, through the same
-isolation as the probe, with a 10 second timeout; it needs `version` (`AR9E0` otherwise). A scanner outside the range,
-or one whose version output holds no version number, is not run (`AR9E2`).
+isolation as the probe, with a 10 second timeout that `version_timeout = "30s"` raises (a slow launcher on a loaded
+machine); it needs `version` (`AR9E0` otherwise). A scanner outside the range, or one whose version output holds no
+version number, is not run (`AR9E2`), and a probe that outlives its timeout is reported as
+`version probe timed out after 10s`, not as empty output.
 `ai-rulez scanners doctor --external` applies the same check and reports `not healthy` for a scanner that
 `validate --external` would refuse to run; without `--external` doctor starts nothing and prints `unverified` for an
 entry that has a `version` range.

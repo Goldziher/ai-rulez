@@ -2,6 +2,7 @@ package lint
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -335,6 +336,7 @@ func (r *runner) probeVersion(sc resolvedScanner, binary, root string) (string, 
 	}
 	return ProbeScannerVersion(scanContext(), ScannerInfo{
 		Path: binary, Isolation: string(policyOf(&r.lc).isolation), VersionCommand: sc.VersionCommand, Dir: root,
+		VersionTimeout: sc.versionTimeout(),
 	})
 }
 
@@ -351,6 +353,7 @@ func (r *runner) versionSatisfied(sc resolvedScanner, root string) bool {
 	}
 	check := CheckScannerVersion(scanContext(), ScannerInfo{
 		Path: binary, Isolation: string(policyOf(&r.lc).isolation), Version: sc.Version, VersionCommand: sc.VersionCommand, Dir: root,
+		VersionTimeout: sc.versionTimeout(),
 	})
 	if check.Problem != "" {
 		r.addRun(check.Code, sc.Name, check.Problem)
@@ -383,6 +386,11 @@ func CheckScannerVersion(ctx context.Context, info ScannerInfo) VersionCheck {
 		return VersionCheck{Code: CodeScannerConfigInvalid, Problem: fmt.Sprintf("version %q is not a version range: %v", info.Version, err)}
 	}
 	line, err := ProbeScannerVersion(ctx, info)
+	var timedOut *ProbeTimeoutError
+	if errors.As(err, &timedOut) {
+		return VersionCheck{Code: CodeScannerUnavailable,
+			Problem: fmt.Sprintf("was not run: %s (raise version_timeout to give the version command longer)", timedOut)}
+	}
 	if err != nil {
 		return VersionCheck{Line: line, Code: CodeScannerRunFailed, Problem: "was not run: its version could not be checked: " + sanitizeScannerText(err.Error())}
 	}

@@ -51,6 +51,7 @@ func externalProblems(ex config.LintExternal, ceiling time.Duration) []string {
 	problems = append(problems, cacheFilesProblems(ex.CacheFiles)...)
 	problems = append(problems, stageGlobProblems(ex)...)
 	problems = append(problems, versionCommandProblems(ex)...)
+	problems = append(problems, versionTimeoutProblems(ex, ceiling)...)
 	if !validScannerFailOn(ex.FailOn) {
 		problems = append(problems, fmt.Sprintf("fail_on %q is not error, warning or info", ex.FailOn))
 	}
@@ -104,6 +105,27 @@ func versionCommandProblems(ex config.LintExternal) []string {
 		return []string{"version_command needs version (the range its output is checked against)"}
 	case strings.TrimSpace(ex.VersionCommand[0]) == "":
 		return []string{"version_command starts with an empty program name"}
+	}
+	return nil
+}
+
+// versionTimeoutProblems lists what is wrong with version_timeout.
+func versionTimeoutProblems(ex config.LintExternal, ceiling time.Duration) []string {
+	if ex.VersionTimeout == "" {
+		return nil
+	}
+	if ex.Version == "" {
+		return []string{"version_timeout needs version (the probe it bounds)"}
+	}
+	if ceiling <= 0 {
+		ceiling = cmdrun.MaxTimeout
+	}
+	d, err := time.ParseDuration(ex.VersionTimeout)
+	switch {
+	case err != nil || d <= 0:
+		return []string{fmt.Sprintf("version_timeout %q is not a positive duration such as \"30s\"", ex.VersionTimeout)}
+	case d > ceiling:
+		return []string{fmt.Sprintf("version_timeout %s exceeds the maximum of %s", d, ceiling)}
 	}
 	return nil
 }
