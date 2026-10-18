@@ -426,6 +426,11 @@
           "type": "string",
           "description": "Replace the default skills section. {{server}} is the MCP server that serves the skills and {{skills_dir}} the config directory's skills folder, relative to the instruction file. Requires skills_instructions to be on."
         },
+        "serve_skills": {
+          "type": "boolean",
+          "default": false,
+          "description": "Make a bare `ai-rulez mcp` serve skills, as `mcp --serve-skills` does, so a client entry needs no flag. The --serve-skills flag overrides it, and --serve-skills=false turns it off."
+        },
         "discover_skills": {
           "type": "string",
           "enum": ["off", "repo", "all"],

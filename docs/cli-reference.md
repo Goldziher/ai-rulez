@@ -2087,7 +2087,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--reload-interval` | duration | `0s` | How often to check skill files for changes; default 2s (requires --serve-skills) |
 | `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (or AI_RULEZ_ROLE; requires --serve-skills) |
 | `--root` | string |  | Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory) |
-| `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools |
+| `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools (default: [mcp] serve_skills, else off) |
 | `--source` | string list |  | Serve the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory (requires --serve-skills) |
 | `--targets` | string |  | Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills) |
 | `--tools` | string list |  | Register only these tools, repeatable or comma separated (default: [mcp] tools, else every tool); an unknown name is an error that lists the valid ones |

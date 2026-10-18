@@ -551,6 +551,7 @@ editor) does not repeat the flags. The keys are accepted in `.ai-rulez/config.to
 
 ```toml
 [mcp]
+serve_skills = true                                               # --serve-skills (a bare `ai-rulez mcp` serves skills)
 read_only = true                                                  # --read-only
 tools     = ["find_skill", "load_skill", "find_context", "load_context"]   # --tools
 allow     = ["review-*"]                                          # --allow (--serve-skills)

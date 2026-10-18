@@ -44,8 +44,8 @@ and adds find_skill, load_skill and the other serving tools. It also registers
 the authoring tools, so one process serves both and a project needs one MCP
 entry. Pass --read-only to register only the read-only config and report tools,
 so the server can inspect a project but never change it. --tools limits the
-server to the tools named. The [mcp] table of the project can set read_only,
-tools, daemon, no_watch, allow and deny; a flag given on the command line wins,
+server to the tools named. The [mcp] table of the project can set serve_skills,
+read_only, tools, daemon, no_watch, allow and deny; a flag given on the command line wins,
 and an organization policy that requires read-only cannot be loosened.`,
 	Args: cobra.NoArgs,
 	RunE: runMCPServer,
@@ -61,18 +61,18 @@ func runMCP(cmd *cobra.Command) error {
 	// flushes the usage sink and telemetry instead of dropping queued records.
 	ctx, stop := signal.NotifyContext(cmdContext(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	serve, _ := cmd.Flags().GetBool("serve-skills") //nolint:errcheck // the flag is registered in init
+	settings, err := loadMCPSettings(ctx, cmd.Flags())
+	if err != nil {
+		return err
+	}
+	serve := settings.serveSkills
 	if !serve {
 		serveOnly := append([]string{flagServeProfile, flagServeTargets, flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 		for _, name := range serveOnly {
 			if cmd.Flags().Changed(name) {
-				return oops.Errorf("--%s requires --serve-skills", name)
+				return oops.Errorf("--%s requires --serve-skills (or [mcp] serve_skills = true)", name)
 			}
 		}
-	}
-	settings, err := loadMCPSettings(ctx, cmd.Flags())
-	if err != nil {
-		return err
 	}
 	if serve {
 		if done, err := runMCPDaemon(ctx, cmd, settings); done {
@@ -160,7 +160,7 @@ func buildSkillServer(ctx context.Context, cmd *cobra.Command, settings mcpSetti
 }
 
 func init() {
-	MCPCmd.Flags().Bool("serve-skills", false, "Serve skills read-only over the MCP Skills extension instead of the authoring tools")
+	MCPCmd.Flags().Bool(flagServeSkills, false, "Serve skills read-only over the MCP Skills extension instead of the authoring tools (default: [mcp] serve_skills, else off)")
 	MCPCmd.Flags().String("profile", "", "Profile whose skills to serve (default: the configured default profile; requires --serve-skills)")
 	MCPCmd.Flags().String("targets", "", "Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills)")
 	MCPCmd.Flags().StringSlice(flagServeDomain, nil, "Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills)")

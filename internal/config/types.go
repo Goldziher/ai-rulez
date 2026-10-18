@@ -382,6 +382,11 @@ type MCPConfig struct {
 	// instead of every launcher repeating a flag. A flag given on the command
 	// line wins over the key. They are read when the server starts.
 
+	// ServeSkills makes a bare `ai-rulez mcp` behave as `mcp --serve-skills`, so
+	// a client entry needs no flag. The --serve-skills flag wins, including
+	// --serve-skills=false.
+	ServeSkills *bool `yaml:"serve_skills,omitempty" json:"serve_skills,omitempty" toml:"serve_skills,omitempty"`
+
 	// ReadOnly registers only the read-only tools, as `mcp --read-only` does. An
 	// organization policy's mcp.read_only = true cannot be loosened by it.
 	ReadOnly *bool `yaml:"read_only,omitempty" json:"read_only,omitempty" toml:"read_only,omitempty"`
