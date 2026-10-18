@@ -1243,7 +1243,9 @@ directory on its own, so its result is cached **per skill**: the key is the tree
 file of its directory), the command line with the directories left out, the scanner's identity and the values above.
 A run hands the scanner only the skills without a cached result, so editing one skill of fifty costs one skill's
 scan; adding a skill scans that skill. Under `--changed` or `--since`, only the skills that hold a changed file are
-handed to the scanner (or read from the cache), and the others are neither run nor reported. `--no-scan-cache` still
+handed to the scanner (or read from the cache), and the others are neither run nor reported; the supporting files
+of the other skills are not even listed or read, so the cost of `--changed` follows the size of the change, not of the
+repository. `--no-scan-cache` still
 bypasses the cache, and `--write-baseline` ignores `--changed` so the baseline stays complete. A scanner that
 reports a result naming no file of any skill (or a path outside the stage) cannot have that result replayed from one
 skill's entry, so a run of several skills with such a result is not cached; a run of one skill caches all of it.

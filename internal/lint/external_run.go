@@ -153,7 +153,7 @@ func relFiles(r *runner, abs []string) []string {
 // staged content (egress = false scanners only) and the run is confined when
 // isolation allows it.
 func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFinding, ok bool) {
-	files := r.stageFilesFor(sc)
+	files := r.stageFilesToScan(sc)
 	if len(files) == 0 || (slices.Contains(sc.Command, phSkillDirs) && !hasSkillDir(files)) {
 		r.log().Debug("Scanner has nothing staged to scan", "scanner", sc.Name, "inputs", sc.Inputs)
 		return nil, true

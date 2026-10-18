@@ -260,3 +260,100 @@ func TestStageRootPlaceholdersKeepTheWholeRunCached(t *testing.T) {
 	// Assert
 	assert.Equal(t, [][]string{{"alpha", "beta"}, {"alpha", "beta"}}, skillsPerRun(t, logFile))
 }
+
+// runnerFor builds the runner of the project the way RunWith does, for tests
+// that look at a stage listing.
+func (p *scannerProject) runnerFor(opts Options) *runner {
+	p.t.Helper()
+	cfg := loadNoRemote(p.t, p.root)
+	tree, err := LoadTree(p.root)
+	require.NoError(p.t, err)
+	opts.External = true
+	ruleTables()
+	r, err := newRunner(cfg, tree, opts)
+	require.NoError(p.t, err)
+	if cfg.Lint != nil {
+		r.lc = *cfg.Lint
+	}
+	r.resolveSettings()
+	r.collect()
+	return r
+}
+
+func TestChangedDirsHoldEveryAncestor(t *testing.T) {
+	got := changedDirs([]string{"a/b/c.md", "x.md", "a/d/e.md"})
+	assert.Equal(t, map[string]bool{"a": true, "a/b": true, "a/d": true}, got)
+}
+
+func TestChangedRunStagesOnlyTheChangedSkillsInFull(t *testing.T) {
+	// Arrange: three skills with supporting files; only beta changed.
+	p, _ := skillUnitProject(t, "", "alpha", "beta", "gamma")
+	for _, s := range []string{"alpha", "beta", "gamma"} {
+		p.write(".ai-rulez/skills/"+s+"/references/api.md", "api "+s+"\n")
+		p.write(".ai-rulez/skills/"+s+"/scripts/run.sh", "echo "+s+"\n")
+	}
+	changed := []string{".ai-rulez/skills/beta/references/api.md"}
+	listing := func(narrow bool) []string {
+		r := p.runnerFor(Options{Scanner: ScannerOptions{ChangedFiles: changed}})
+		sc := r.scanners()[0]
+		files := r.stageFilesFor(sc)
+		if narrow {
+			files = r.stageFilesToScan(sc)
+		}
+		var rels []string
+		for _, f := range files {
+			rels = append(rels, f.rel)
+		}
+		return rels
+	}
+
+	// Act
+	full, narrow := listing(false), listing(true)
+
+	// Assert: the changed skill lists exactly what a full run lists; the others only their SKILL.md.
+	var wantNarrow []string
+	for _, rel := range full {
+		if strings.Contains(rel, "/beta/") || strings.HasSuffix(rel, "/SKILL.md") {
+			wantNarrow = append(wantNarrow, rel)
+		}
+	}
+	assert.Equal(t, wantNarrow, narrow)
+	assert.Greater(t, len(full), len(narrow))
+}
+
+func TestChangedRunReportsTheSameFindingsAsAFullRun(t *testing.T) {
+	tests := []struct {
+		name    string
+		changed []string
+	}{
+		{"a resource of one skill", []string{".ai-rulez/skills/beta/references/api.md"}},
+		{"a skill file and a resource of two skills", []string{".ai-rulez/skills/alpha/SKILL.md", ".ai-rulez/skills/gamma/scripts/run.sh"}},
+		{"a deleted file inside a skill", []string{".ai-rulez/skills/beta/references/gone.md"}},
+		{"nothing in a skill", []string{"README.md"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p, _ := skillUnitProject(t, "", "alpha", "beta", "gamma")
+			for _, s := range []string{"alpha", "beta", "gamma"} {
+				p.write(".ai-rulez/skills/"+s+"/references/api.md", "api "+s+"\n")
+				p.write(".ai-rulez/skills/"+s+"/scripts/run.sh", "echo "+s+"\n")
+			}
+			full := scannerFindings(p.run(Options{Scanner: ScannerOptions{}}))
+			// Act
+			narrow := scannerFindings(p.run(Options{Scanner: ScannerOptions{ChangedFiles: tt.changed}}))
+			// Assert: exactly the findings of the full run that lie in a skill holding a changed file that exists.
+			var want []Finding
+			for _, f := range full {
+				for _, c := range tt.changed {
+					_, statErr := os.Stat(filepath.Join(p.root, filepath.FromSlash(c)))
+					if statErr == nil && strings.HasPrefix(c, filepath.ToSlash(filepath.Dir(f.RepoPath()))+"/") { // a deleted file is not a file of the skill
+						want = append(want, f)
+						break
+					}
+				}
+			}
+			assert.Equal(t, findingFiles(want), findingFiles(narrow))
+		})
+	}
+}

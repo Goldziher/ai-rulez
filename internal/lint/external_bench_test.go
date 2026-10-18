@@ -86,3 +86,39 @@ func BenchmarkScannerStage(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkScannerStageChanged compares listing the staged files of a per-skill
+// scanner for a full run with the listing of a --changed run that touched one skill.
+func BenchmarkScannerStageChanged(b *testing.B) {
+	bin, err := os.Executable()
+	if err != nil {
+		b.Fatal(err)
+	}
+	root := stagedSkillsTree(b, 300)
+	cfg, err := config.LoadConfig(context.Background(), root, config.WithoutRemote())
+	if err != nil {
+		b.Fatal(err)
+	}
+	tree, err := LoadTree(root)
+	if err != nil {
+		b.Fatal(err)
+	}
+	opts := Options{Scanner: ScannerOptions{ChangedFiles: []string{".ai-rulez/skills/skill-0007/references/guide.md"}}}
+	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, opts: opts}
+	r.collect()
+	sc := resolvedScanner{LintExternal: config.LintExternal{Name: "bench", Command: []string{bin, "{skill_dirs}"}, Inputs: []string{inputSkills}}}
+	b.Run("full", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			r.skillFiles.Clear()
+			_ = r.stageFilesFor(sc)
+		}
+	})
+	b.Run("changed", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			r.skillFiles.Clear()
+			_ = r.stageFilesToScan(sc)
+		}
+	})
+}

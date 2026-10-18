@@ -15,6 +15,10 @@ import (
 // skill itself and is never filtered.
 type stageFilter struct {
 	globs, exclude []globMatcher
+	// unchanged, when set, reports a skill none of whose files can have changed
+	// (--changed, --since). Such a skill is neither read nor expanded: the run
+	// skips it, so only its SKILL.md is listed to keep the skill directory known.
+	unchanged func(*item) bool
 }
 
 func newStageFilter(ex config.LintExternal) stageFilter {
