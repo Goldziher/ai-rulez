@@ -778,7 +778,7 @@ func segmentKind(dir string) (string, bool) {
 		return kindRule, true
 	case "agents":
 		return kindAgent, true
-	case "commands":
+	case keyCommands:
 		return kindCommand, true
 	case "checks":
 		return kindCheck, true
