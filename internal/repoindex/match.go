@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 )
 
@@ -47,10 +48,11 @@ type dirDef struct {
 type matcher struct {
 	byFirst map[string][]dirDef
 	skip    []string
+	exclude *Excluder
 }
 
-func newMatcher(presets, skip []string) *matcher {
-	m := &matcher{byFirst: map[string][]dirDef{}, skip: skip}
+func newMatcher(presets, skip []string, exclude *Excluder) *matcher {
+	m := &matcher{byFirst: map[string][]dirDef{}, skip: skip, exclude: exclude}
 	seen := map[string]bool{}
 	add := func(dir string, kind Kind, source string) {
 		key := string(kind) + "|" + dir
@@ -63,14 +65,19 @@ func newMatcher(presets, skip []string) *matcher {
 	}
 	add(dirSkills, KindSkill, sourceSkills)
 	add(dirClaude+"/"+dirSkills, KindSkill, sourceClaude)
+	// Rules, agents and commands are indexed wherever a known convention keeps
+	// them: the files present decide, not the presets. Skill directories follow
+	// the presets.
+	every := config.IndividualPresetNames()
 	for _, kind := range []struct {
 		importer importer.Kind
 		kind     Kind
+		presets  []string
 	}{
-		{importer.KindSkill, KindSkill}, {importer.KindRule, KindRule},
-		{importer.KindAgent, KindAgent}, {importer.KindCommand, KindCommand},
+		{importer.KindSkill, KindSkill, presets}, {importer.KindRule, KindRule, every},
+		{importer.KindAgent, KindAgent, every}, {importer.KindCommand, KindCommand, every},
 	} {
-		for _, dir := range importer.KindDirectories(presets, kind.importer) {
+		for _, dir := range importer.KindDirectories(kind.presets, kind.importer) {
 			add(dir, kind.kind, sourceOfDir(dir))
 		}
 	}
@@ -115,8 +122,11 @@ func (m *matcher) skipped(segs []string, file string) bool {
 			return true
 		}
 	}
-	return false
+	return m.excluded(file)
 }
+
+// excluded reports whether an Exclude glob matches the file or a directory above it.
+func (m *matcher) excluded(file string) bool { return m.exclude.Excluded(file) }
 
 // candidate is a file that marks an item, before it is read.
 type candidate struct {

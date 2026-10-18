@@ -18,6 +18,9 @@ const (
 	toolFindSkill          = "find_skill"
 	toolLoadSkill          = "load_skill"
 	toolListSkillResources = "list_skill_resources"
+	toolSearchSkills       = "search_skills"
+	toolGetSkill           = "get_skill"
+	toolReadSkillFile      = "read_skill_file"
 )
 
 func (s *Server) registerServeTools() {

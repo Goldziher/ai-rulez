@@ -127,7 +127,7 @@ func (d *discovery) admission() Admission {
 // scanContext runs the served-skill security scan over one item of context.
 func scanContext(adm Admission, it *repoindex.Item, content []byte) *Refusal {
 	probe := &CatalogSkill{Name: it.Name, Files: []CatalogFile{{RelPath: path.Base(it.Path), Content: content}}}
-	return adm.scan(probe)
+	return adm.scanAs(probe, contextSubject(contextURI(it)))
 }
 
 // contextCandidates lists the items of context a query selects: what a path
@@ -154,7 +154,7 @@ func (v *repoView) contextCandidates(q scopeQuery) (items []repoindex.Item, scop
 		all = v.index.Items()
 	}
 	for _, it := range all {
-		if servedAsContext(it.Kind) {
+		if servedAsContext(it.Kind) && (q.Path == "" || ruleAppliesTo(&it, q.Path)) {
 			items = append(items, it)
 		}
 	}
@@ -179,15 +179,24 @@ func rankContext(items []repoindex.Item, task string) []repoindex.Item {
 
 // contextSummary is the description of an item as find_context returns it.
 func contextSummary(it *repoindex.Item) map[string]any {
-	return map[string]any{
+	out := map[string]any{
 		keyName: it.Name, keyKind: string(it.Kind), argScope: it.Scope, "source": it.Source,
 		keyDescription: it.Description, keyURI: contextURI(it), "hash": it.Hash,
 	}
+	if only := it.Only; only != nil {
+		if len(only.Paths) > 0 {
+			out["paths"] = only.Paths
+		}
+		if len(only.Globs) > 0 {
+			out["globs"] = only.Globs
+		}
+	}
+	return out
 }
 
 type findContextIn struct {
 	Task      string `json:"task,omitempty" jsonschema:"Words to rank the instruction files, rules and agents by (their name, scope, kind and description); omit to list what applies"`
-	Path      string `json:"path,omitempty" jsonschema:"A project-relative path you are working on: the context of its scope and the ancestor scopes, nearest first. Not with scope"`
+	Path      string `json:"path,omitempty" jsonschema:"A project-relative path of a file you are working on: the context of its scope and the ancestor scopes, nearest first; a rule with paths or globs in its frontmatter only if the path matches. Not with scope"`
 	Scope     string `json:"scope,omitempty" jsonschema:"One scope (a directory, '.' for the root). Not with path"`
 	Recursive bool   `json:"recursive,omitempty" jsonschema:"With scope: also the scopes below it"`
 	Kind      string `json:"kind,omitempty" jsonschema:"Only this kind of context"`
@@ -222,12 +231,13 @@ type contextOut struct {
 }
 
 func (s *Server) registerContextTools() {
+	s.noteKnown(toolFindContext, toolLoadContext)
 	if s.cat().repository() == nil {
 		return
 	}
 	addTool[findContextIn](s, toolSpec{
 		name: toolFindContext, title: "Find Context",
-		description: "Find the instruction files (AGENTS.md, CLAUDE.md, GEMINI.md), rules and agents a repository keeps at any depth. Pass path for what applies to a file (its scope and the ancestors', nearest first) or scope for one directory; add task to rank. Returns summaries (name, scope, kind, description, uri); read one with load_context. Call this before changing code in an unfamiliar package.",
+		description: "Find the instruction files (AGENTS.md, CLAUDE.md, GEMINI.md), rules and agents a repository keeps at any depth. Pass path for what applies to a file (its scope and the ancestors', nearest first; a rule with paths or globs only when the file matches) or scope for one directory; add task to rank. Returns summaries (name, scope, kind, description, uri); read one with load_context. Call this before changing code in an unfamiliar package.",
 		annotations: readOnlyAnnotations(), output: contextSearchOut{}, enums: map[string][]string{keyKind: contextKinds()},
 	}, s.findContextHandler)
 	addTool[loadContextIn](s, toolSpec{

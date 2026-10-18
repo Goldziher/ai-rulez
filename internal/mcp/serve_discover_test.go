@@ -178,6 +178,35 @@ func TestDiscoverSkills_SameNameInNestedDirectoriesIsNamespacedByPath(t *testing
 	assert.Empty(t, srv.Catalog().Discovery().Shadowed, "a namespaced skill is served, not shadowed")
 }
 
+func TestDiscoverSkills_RenamedSkillIsReportedAndWarned(t *testing.T) {
+	// Arrange
+	root := discoverProject(t, discoverConfig)
+	writeFile(t, root, ".claude/skills/dup/SKILL.md", repoSkill("dup"))
+	writeFile(t, root, "app/skills/dup/SKILL.md", repoSkill("dup"))
+	log := &testutil.LogRecorder{}
+
+	// Act
+	srv := newServerFor(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo", Log: log, Authoring: []Option{WithRoot(root)}})
+
+	// Assert
+	report := srv.Catalog().Discovery()
+	require.Len(t, report.Renamed, 1)
+	assert.Equal(t, RenamedSkill{
+		Name: "dup", ServedAs: "app.skills.dup", Path: "app/skills/dup", KeptBy: ".claude/skills/dup",
+	}, report.Renamed[0])
+	assert.Empty(t, report.Shadowed)
+	logged := log.String()
+	assert.Contains(t, logged, "WARN A repository skill shares its name with another and is served under its path")
+	for _, want := range []string{"app.skills.dup", "app/skills/dup", ".claude/skills/dup"} {
+		assert.Contains(t, logged, want)
+	}
+	session := connect(t, srv)
+	catalog, err := session.ReadResource(context.Background(), &sdkmcp.ReadResourceParams{URI: "ai-rulez://catalog"})
+	require.NoError(t, err)
+	assert.Contains(t, catalog.Contents[0].Text, `"renamed"`)
+	assert.Contains(t, catalog.Contents[0].Text, "app.skills.dup")
+}
+
 func TestDiscoverSkills_RespectsGitignore(t *testing.T) {
 	root := discoverProject(t, discoverConfig)
 	writeFile(t, root, "build/.claude/skills/gen/SKILL.md", repoSkill("gen"))
