@@ -1,7 +1,7 @@
 schema = 1
 preset = "cursor"
 harness_version = "docs-only (CLI changelog latest v2026.10.08; IDE version not stated)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://cursor.com/docs/cli/reference/slash-commands.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,7 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://cursor.com/docs/skills.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -28,56 +28,56 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "model",
-  "run-everything",
-  "plan",
-  "ask",
-  "debug",
-  "goal",
-  "logs",
-  "update",
-  "max-mode",
-  "rename",
-  "clear",
-  "resume",
-  "fork",
-  "summarize",
-  "rewind",
-  "vim",
-  "line-numbers",
-  "show-thinking",
-  "status-indicators",
-  "shell",
   "about",
-  "setup-terminal",
-  "help",
-  "feedback",
-  "open",
-  "copy-request-id",
-  "copy-conversation-id",
-  "logout",
-  "quit",
-  "exit",
-  "mcp",
-  "plugin",
+  "ask",
+  "bedrock",
+  "clear",
   "config",
   "copy",
+  "copy-conversation-id",
+  "copy-request-id",
+  "debug",
+  "exit",
+  "feedback",
+  "fork",
+  "goal",
+  "help",
+  "line-numbers",
+  "logout",
+  "logs",
+  "max-mode",
+  "mcp",
+  "model",
+  "open",
+  "plan",
+  "plugin",
+  "quit",
+  "rename",
+  "resume",
+  "rewind",
+  "run-everything",
   "sandbox",
-  "bedrock",
+  "setup-terminal",
+  "shell",
+  "show-thinking",
+  "status-indicators",
+  "summarize",
+  "update",
+  "vim",
 ]
-aliases = { "run-everything" = [
-  "auto-run",
-], "clear" = [
+aliases = { "clear" = [
   "new",
   "new-chat",
   "newchat",
-], "summarize" = [
-  "compress",
-], "shell" = [
-  "sh",
-  "run",
 ], "open" = [
   "cursor",
+], "run-everything" = [
+  "auto-run",
+], "shell" = [
+  "run",
+  "sh",
+], "summarize" = [
+  "compress",
 ] }
 
 [[group]]

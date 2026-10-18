@@ -1,7 +1,7 @@
 schema = 1
 preset = "codebuddy"
 harness_version = "docs-only"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://www.codebuddy.ai/docs/cli/slash-commands"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -23,57 +23,58 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "help",
-  "clear",
-  "login",
-  "logout",
-  "doctor",
-  "status",
   "add-dir",
+  "agent-mode",
   "agents",
-  "multitask",
+  "bashes",
   "branch",
   "btw",
+  "clear",
+  "code-review",
   "compact",
   "config",
   "context",
+  "copy",
   "cost",
+  "debug",
+  "doctor",
+  "export",
+  "feedback",
+  "fork",
+  "goal",
+  "help",
+  "ide",
   "init",
+  "insights",
+  "login",
+  "logout",
   "mcp",
   "memory",
   "model",
+  "model:image-to-image",
   "model:lite",
   "model:reasoning",
-  "agent-mode",
   "model:text-to-image",
-  "model:image-to-image",
+  "multitask",
   "permissions",
   "plan",
-  "goal",
-  "upgrade",
-  "bashes",
-  "terminal-setup",
-  "todos",
-  "statusline",
-  "security-review",
-  "theme",
-  "export",
-  "feedback",
-  "resume",
-  "rewind",
-  "sandbox",
-  "stats",
-  "ide",
   "plugin",
   "plugin-validate",
   "reload-plugins",
-  "skills",
-  "insights",
+  "resume",
+  "rewind",
+  "sandbox",
+  "security-review",
   "simplify",
-  "code-review",
+  "skills",
+  "stats",
+  "status",
+  "statusline",
+  "terminal-setup",
+  "theme",
+  "todos",
+  "upgrade",
   "verify",
-  "copy",
-  "debug",
 ]
 aliases = { "branch" = ["fork"] }
 

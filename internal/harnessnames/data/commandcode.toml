@@ -1,7 +1,7 @@
 schema = 1
 preset = "commandcode"
 harness_version = "docs-only"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://commandcode.ai/docs/reference/slash-commands"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -22,82 +22,102 @@ id = "s3"
 url = "https://commandcode.ai/docs/core-concepts/custom-agents"
 verified_on = "2026-10-17"
 
+[[source]]
+id = "s4"
+url = "https://commandcode.ai/docs/reference/slash-commands"
+quote = "So a custom command can never override a built-in"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s5"
+url = "https://commandcode.ai/docs/skills"
+quote = "A project or user skill with the same name can override a bundled skill through the normal precedence rules."
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s6"
+url = "https://commandcode.ai/docs/core-concepts/custom-agents"
+quote = "are used by built-in behavior. A custom file with one of these names is ignored."
+verified_on = "2026-10-18"
+
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
 names = [
+  "add-dir",
+  "agents",
+  "changelog",
   "clear",
-  "resume",
-  "rename",
-  "name",
-  "fork",
   "clone",
-  "tree",
-  "rewind",
-  "session-file",
-  "export",
-  "share",
-  "unshare",
-  "exit",
-  "reload",
-  "mods",
   "compact",
   "compact-mode",
-  "context",
-  "memory",
-  "init",
-  "mode",
-  "mode:default",
-  "mode:accept-edits",
-  "mode:plan",
-  "plan",
-  "plans",
-  "plan-review",
-  "goal",
-  "todos",
-  "review",
-  "pr-comments",
-  "model",
-  "effort",
+  "config",
   "connect",
-  "login",
-  "logout",
-  "skills",
-  "agents",
-  "mcp",
+  "context",
+  "copy",
   "design",
-  "loop",
-  "rc",
-  "import",
-  "taste",
-  "learn-taste",
-  "ide",
-  "terminal-setup",
-  "add-dir",
-  "worktree",
-  "usage",
-  "upgrade",
+  "effort",
+  "exit",
+  "export",
   "extra",
+  "feedback",
+  "fork",
+  "goal",
   "help",
   "hotkeys",
-  "config",
-  "theme",
+  "ide",
+  "import",
+  "init",
+  "learn",
+  "learn-taste",
+  "login",
+  "logout",
+  "loop",
+  "mcp",
+  "memory",
+  "mode",
+  "mode:accept-edits",
+  "mode:default",
+  "mode:plan",
+  "model",
+  "mods",
+  "name",
+  "plan",
+  "plan-review",
+  "plans",
+  "pr-comments",
+  "rc",
+  "reload",
+  "rename",
+  "resume",
+  "review",
+  "rewind",
+  "session-file",
+  "share",
+  "skills",
   "status",
   "statusline",
-  "changelog",
-  "learn",
-  "update",
-  "feedback",
+  "taste",
+  "terminal-setup",
+  "theme",
+  "todos",
   "trace",
-  "copy",
+  "tree",
+  "unshare",
+  "update",
+  "upgrade",
+  "usage",
+  "worktree",
 ]
-aliases = { "clear" = ["new"], "resume" = ["sessions"], "exit" = ["quit"], "feedback" = ["issue"] }
+aliases = { "clear" = ["new"], "exit" = ["quit"], "feedback" = ["issue"], "rename" = ["name"], "resume" = ["sessions"] }
 
 [[group]]
 kind = "skill"
 source = "s2"
+evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
 names = ["skill-builder", "design", "loop"]
@@ -105,6 +125,7 @@ names = ["skill-builder", "design", "loop"]
 [[group]]
 kind = "agent"
 source = "s3"
+evidence = "s6"
 user_collision = "builtin_wins"
 match = "exact"
 names = ["General", "Explore", "Plan", "review"]

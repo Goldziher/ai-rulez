@@ -1,0 +1,113 @@
+<!-- excerpt of https://commandcode.ai/docs/reference/slash-commands (2026-10-18); rows dropped -->
+<h3 class="relative scroll-mt-24" id="sessions">
+  <div class="flex justify-between">
+    <span class="group"><a class="text-inherit no-underline hover:text-inherit" href="#sessions">Sessions</a></span>
+  </div>
+</h3>
+<table class="whitespace-nowrap">
+  <thead>
+    <tr>
+      <th><strong>Command</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/clear</code> (<code>/new</code>)</td>
+      <td>Start a new session with empty context; previous stays on disk, resumable with <code>/resume</code></td>
+    </tr>
+    <tr>
+      <td><code>/resume</code> (<code>/sessions</code>)</td>
+      <td>Resume a past conversation</td>
+    </tr>
+    <tr>
+      <td><code>/rename [name]</code></td>
+      <td>Rename the current session</td>
+    </tr>
+    <tr>
+      <td><code>/name [name]</code></td>
+      <td>Alias of <code>/rename</code>; bare <code>/name</code> shows the current name</td>
+    </tr>
+    <tr>
+      <td><code>/export [html|jsonl|md]</code> or <code>/export &lt;path&gt;</code></td>
+      <td>Export the session - a bare format keyword or a file path; HTML is the default format</td>
+    </tr>
+    <tr>
+      <td><code>/share [gist [html|jsonl|md]]</code></td>
+      <td>
+        <code>/share gist</code> posts a secret GitHub gist; bare <code>/share</code> is being rebuilt and points to
+        <code>/export</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>/exit</code> (<code>/quit</code>)</td>
+      <td>Exit Command Code</td>
+    </tr>
+  </tbody>
+</table>
+<h3 class="relative scroll-mt-24" id="modes-and-planning">
+  <div class="flex justify-between">
+    <span class="group"><a class="text-inherit no-underline hover:text-inherit" href="#modes-and-planning"
+      >Modes &amp; planning</a></span>
+  </div>
+</h3>
+<table class="whitespace-nowrap">
+  <thead>
+    <tr>
+      <th><strong>Command</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/mode [default|accept-edits|plan]</code></td>
+      <td>Show or switch the permission mode; bare <code>/mode</code> prints the current mode</td>
+    </tr>
+    <tr>
+      <td><code>/mode:plan</code></td>
+      <td>Switch to plan mode (read-only, no side effects)</td>
+    </tr>
+    <tr>
+      <td><code>/plan [task]</code></td>
+      <td>Enter plan mode; <code>/plan &lt;task&gt;</code> plans that task</td>
+    </tr>
+  </tbody>
+</table>
+<h3 class="relative scroll-mt-24" id="utilities">
+  <div class="flex justify-between">
+    <span class="group"><a class="text-inherit no-underline hover:text-inherit" href="#utilities">Utilities</a></span>
+  </div>
+</h3>
+<table class="whitespace-nowrap">
+  <thead>
+    <tr>
+      <th><strong>Command</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/help</code></td>
+      <td>Show available shortcuts</td>
+    </tr>
+    <tr>
+      <td><code>/feedback [title]</code> (alias <code>/issue</code>)</td>
+      <td>Report a bug or share feedback; opens a prefilled GitHub issue</td>
+    </tr>
+  </tbody>
+</table>
+<h3 class="relative scroll-mt-24" id="statusline-in-detail">
+  <div class="flex justify-between">
+    <span class="group"><a class="text-inherit no-underline hover:text-inherit" href="#statusline-in-detail"><code
+        >/statusline</code> in detail</a></span>
+  </div>
+</h3>
+<table class="whitespace-nowrap">
+  <thead>
+    <tr>
+      <th><strong>Command</strong></th>
+      <th><strong>Effect</strong></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
