@@ -13538,7 +13538,7 @@ to keep one; `--update-baseline` without a directory or a file is an error. Noth
 filesystem-root directory outside git is refused instead of walked. `generate`, `clean` and `lock` still need a
 configuration and fail with `run ai-rulez init`, and so does `validate --config-only`, which checks a configuration
 file. `okf validate <dir>` never needed one. `validate --recursive` in a tree that holds no configuration lints that
-implicit root the same way (with `--path` and `--glob` honoured) instead of reporting that nothing was found, so
+implicit root the same way (with `--path` and `--glob` honored) instead of reporting that nothing was found, so
 adding `--recursive` never turns a failing repository into a passing one.
 
 #### Files outside the content tree
@@ -13746,6 +13746,8 @@ ai-rulez validate --strict --outputs
 | AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
 | AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
 | AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
+| AR9U0 | `harness-builtin-name-collision` | error | A skill, command or agent output has the name or alias of a built-in command, bundled skill or built-in agent of a harness that loads it (every preset that writes the output and every harness that reads the directory it lands in, such as `.agents/skills`). The message names the harness, its version, the evidence page and what the harness does (`user_wins`, `builtin_wins`, `both_listed`). Error only where the table records a quoted outcome; a built-in with an undocumented outcome is information, listed once per item. Claude Code commands and bundled skills are AR808. Allow with `[lint.builtin_names] allow` or `allow_overrides` (`name` or `preset:name`) |
+| AR9U1 | `harness-reserved-name` | error | A skill, command or agent output has a name the harness refuses to load (Claude Code `synced`, `anthropic-skills`, `anthropic-skills:*`). Not silenced by `allow` or `allow_overrides`: rename the item |
 | AR9Q0 | `claude-md-shadows-agents-md` | off | `[lint] agents_md_only = true` asserts AGENTS.md is canonical for Claude Code, but a tracked `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is not the generated `@AGENTS.md` shim and shadows the nearest AGENTS.md. Paths matching `agents_md_only_allow` are exempt, and a `--recursive` run lets each nested root report its own files |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
@@ -13864,9 +13866,10 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
-| `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
+| `AR9U0`-`AR9U9` | Harness built-in names ([#447](https://github.com/Goldziher/ai-rulez/issues/447); `AR9U0`, `AR9U1` used; reported by `validate --strict`, see [Built-in names of harnesses](#built-in-names-of-harnesses)) | allocated |
+| `AR9V0`-`AR9V9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims; moved from `AR9U` for #447) | reserved |
 
-Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+Unlisted letters (`AR9I`, `AR9T`, `AR9W`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
 a UI for `AR9H`).
 
@@ -13893,7 +13896,7 @@ skill_roots = [".claude/skills", "plugins/*/skills"]   # directories AR808 treat
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
-allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing: "name" or "domain/name" (AR703), "name" or "preset:name" (AR808)
+allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing: "name" or "domain/name" (AR703), "name" or "preset:name" (AR808, AR9U0)
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
 agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
 agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
@@ -13905,6 +13908,13 @@ profile = "default"                # default | strict | permissive (see Profiles
 [lint.severity]                    # error | warning | info | off
 AR401 = "error"
 anchor-unresolved = "off"
+
+[lint.builtin_names]               # AR9U0, AR9U1: names of harness built-ins (see Built-in names of harnesses)
+enabled = true                     # false turns both off
+allow = ["gemini:help", "usage"]   # intended collisions: "preset:name" or "name" (any harness); never silences AR9U1
+
+[lint.builtin_names.extra]         # built-ins the embedded table cannot know, per preset
+claude = ["acme-deploy"]           # organization commands, MCP prompts, plugin skills, user-level skills
 
 [lint.description]
 min_length = 30
@@ -14869,8 +14879,32 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
-| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content and hand-written files such as `.claude/skills/*`, also without a config; a hand-written skill or command is checked only where the harness loads it from (see [Skill roots](#skill-roots)). Only `claude` has a list today (`internal/lint/ar_reserved_names.go`, from the Claude Code commands reference); a project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
+| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content (not an item the plan writes only to a plugin) and hand-written files such as `.claude/skills/*`, also without a config; a hand-written skill or command is checked only where the harness loads it from (see [Skill roots](#skill-roots)). Only `claude` is reported here; its names, and their aliases (`/new` is an alias of `/clear`, and a skill replaces a built-in but not its aliases), come from `internal/harnessnames/data/claude.toml`, the same table AR9U0 reads for every other harness. A project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
 <!-- lint-rules:end -->
+
+##### Built-in names of harnesses
+
+A harness has built-in commands, bundled skills and agents, and a user item of the same name is treated differently:
+it replaces the built-in (Claude Code, OpenCode, Qwen Code, Kilo), the built-in stays and the user item is renamed or
+unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). `internal/harnessnames/data/<preset>.toml`
+holds one table per preset: the names and aliases, the page each group was taken from, and, where the harness documents
+the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` builds
+the files). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
+presets that write it and every harness that reads the directory it lands in, whether or not its preset is enabled
+(`.agents/skills` is read by Amp, Codex, Cursor, Gemini CLI, Goose and others). Names are compared as the harness
+derives them: trimmed, NFKC-normalized and case-folded; the directory or file name and the `name:` frontmatter are both
+checked. Plugin-only content is exempt: a harness invokes it under a prefix.
+
+The severity follows the evidence: an `error` only for a preset whose table is set to `error` (Claude Code, Codex,
+Gemini CLI, OpenCode, Cline, Qwen Code, Goose, Kilo, Zoo Code) and whose group has a quoted outcome; a `warning` for an
+outcome without a quote, for `both_listed`, and for names you declare; information, once per item, for a documented
+built-in whose collision outcome the vendor does not state. A table can be incomplete (`completeness` is `partial` or
+`docs-only` for most harnesses): a name that is missing from it is not reported. Acknowledge an intended collision with
+`[lint.builtin_names] allow` (or `allow_overrides`), declare names the table cannot know with
+`[lint.builtin_names.extra]`, or add a table `.ai-rulez/harness-names/<preset>.toml` in the layout of the embedded files
+(`schema = 1`, `preset`, `[[group]]` with `kind`, `names`, `user_collision`; a source is optional, findings are
+warnings unless the file sets `severity = "error"`). AR9U1 names the values a harness never loads; nothing silences it
+but the global `[lint] ignore`.
 
 ##### Skill roots
 
@@ -16049,7 +16083,7 @@ a skill or command is named like a built-in command or bundled skill of a target
 
 - Default severity: `error`
 - Analyzer: `descriptions` (scope `item`)
-- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`. A hand-written SKILL.md is checked only where the harness loads it from: `.claude/skills` (`.claude/commands` for a command), a plugin's `skills/` or `commands/` directory next to its manifest, or a local `[[skill_sources]]` directory; content under `.ai-rulez/` is always checked. A SKILL.md elsewhere (an application's own `src/public/skills/`) is still linted for format. `[lint] skill_roots = [globs]` replaces those roots (globs match the directory that holds the skill directories, relative to the project root), `[lint] ignore_paths` drops every finding for a source file, and `validate --exclude <glob>` leaves files out of a config-free run.
+- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The names are data in `internal/harnessnames/data/claude.toml` (AR808 reports the Claude Code commands and bundled skills, AR9U0 every other harness, so no name is reported twice). A name is compared NFKC-normalized and case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. An alias of a built-in (`/new` for `/clear`) is reserved too: a skill replaces the built-in command but not its aliases, so the alias keeps running the built-in. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`. A hand-written SKILL.md is checked only where the harness loads it from: `.claude/skills` (`.claude/commands` for a command), a plugin's `skills/` or `commands/` directory next to its manifest, or a local `[[skill_sources]]` directory; content under `.ai-rulez/` is always checked, except an item `validate` can see the plan does not write where the harness reads (plugin-only content, invoked under a plugin prefix). A SKILL.md elsewhere (an application's own `src/public/skills/`) is still linted for format. `[lint] skill_roots = [globs]` replaces those roots (globs match the directory that holds the skill directories, relative to the project root), `[lint] ignore_paths` drops every finding for a source file, and `validate --exclude <glob>` leaves files out of a config-free run.
 - Bad: `.claude/skills/init/SKILL.md` with the claude preset
 - Good: Rename the skill (`project-init`), or list `claude:init` in lint.allow_overrides
 
@@ -17382,6 +17416,26 @@ a skills, commands, agents or domains selector of a plugin definition matches no
 - Why: A plugin definition picks root content by name or glob and domains by name. A selector that matches nothing is almost always a typo or a skill that was renamed, and generate --plugin silently bundles less (or, when every selector misses, drops the plugin with a warning). Under --strict the warning fails the run.
 - Bad: [[plugins_authoring]] name = "notify" skills = ["notfy-*"] where no skill matches the glob
 - Good: Fix the selector, or remove it from the definition
+
+##### AR9U0 harness-builtin-name-collision
+
+a skill, command or agent is named like a built-in command, bundled skill or built-in agent of a harness that loads it (allow an intended collision with lint.builtin_names.allow; an outcome the harness does not document is only informational)
+
+- Default severity: `error`
+- Analyzer: `traps` (scope `item`)
+- Why: A harness has built-in commands, bundled skills and agents, and what happens to a user item of the same name differs: the user item replaces the built-in (Claude Code, OpenCode, Qwen Code), the built-in stays and the user item is renamed or unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). The tables are data in `internal/harnessnames/data/<preset>.toml`, one file per preset, each group with the page it was taken from and, where the harness documents the outcome, a verbatim quote. The rule checks every output against every preset that writes it and every harness that reads the directory it lands in (`.agents/skills` is read by many harnesses whether or not their preset is enabled). Names are compared as the harness derives them: surrounding space trimmed, NFKC and case-folded; the directory or file name and the `name:` frontmatter are both checked; aliases count. Outputs a harness always invokes under a prefix (plugin-only content) are exempt. The severity follows the table: error for a preset whose table records a quoted outcome and is set to error, warning for an unquoted outcome, a `both_listed` outcome and names you declare yourself, and information for a built-in whose collision outcome the vendor does not document (listed once per item, not an error). A table can be incomplete: `completeness` is `partial` or `docs-only` for most harnesses, because vendor docs list a floor, not a ceiling. Claude Code skills and commands are reported by AR808, not here. Acknowledge an intended collision with `lint.builtin_names.allow = ["name", "preset:name"]` (`lint.allow_overrides` is honored the same way), add names the table cannot know with `[lint.builtin_names.extra]`, or add a table in `.ai-rulez/harness-names/<preset>.toml`. `[lint.severity] AR9U0 = "warning"` downgrades the rule everywhere, `[lint.builtin_names] enabled = false` turns it off.
+- Bad: A skill `help` while the gemini preset is configured (Gemini CLI keeps its `/help`; the skill becomes `help1`)
+- Good: Rename the skill (`project-help`), or list `gemini:help` in lint.builtin_names.allow
+
+##### AR9U1 harness-reserved-name
+
+a skill, command or agent is named like a name the harness refuses to load; lint.builtin_names.allow does not apply
+
+- Default severity: `error`
+- Analyzer: `traps` (scope `item`)
+- Why: A harness refuses to load some names: Claude Code skips a skill or command named `synced` or `anthropic-skills`, or starting with `anthropic-skills:`, outside a plugin. Unlike a built-in, there is nothing to acknowledge: the item never loads, so `lint.builtin_names.allow` and `lint.allow_overrides` do not silence it. Rename the item.
+- Bad: `.ai-rulez/skills/synced/SKILL.md` with the claude preset
+- Good: Rename the skill (`sync-notes`)
 
 <!-- rules:end -->
 

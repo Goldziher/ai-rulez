@@ -334,7 +334,8 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 	opts := sbomOptions(cfg, sel)
 	if lint.AnalyzerSelected(sel, lint.AnalyzerTraps) {
 		// The traps judge the files a run would write, whether or not generate has run.
-		opts = append(opts, lint.WithPlanned(generator.NewPlannedFiles(cfg)))
+		planned := generator.NewPlannedFiles(cfg)
+		opts = append(opts, lint.WithPlanned(planned), lint.WithHarnessReach(generator.NewHarnessReach(cfg, planned)))
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
 		opts = append(opts, okfLintOptions(cfg)...)

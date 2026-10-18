@@ -1590,6 +1590,34 @@
           "description": "Size limits per content kind (rule, context, skill, agent, command), each a table with max_lines and max_tokens. 0 keeps the default, negative removes the limit. Tolerated findings per rule are [lint.ratchet], not this table.",
           "type": "object"
         },
+        "builtin_names": {
+          "additionalProperties": false,
+          "description": "Checks for a skill, command or agent named like a built-in of a harness that loads it (AR9U0) or like a name the harness refuses to load (AR9U1). The tables are in internal/harnessnames; project additions go in .ai-rulez/harness-names/<preset>.toml.",
+          "properties": {
+            "allow": {
+              "description": "Collisions that are intended: \"name\" (any harness) or \"preset:name\". Does not silence AR9U1. lint.allow_overrides is honoured the same way.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "enabled": {
+              "description": "false turns AR9U0 and AR9U1 off (default true).",
+              "type": "boolean"
+            },
+            "extra": {
+              "additionalProperties": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "description": "Built-in names the embedded table cannot know, per preset: organization commands, MCP prompts, plugin skills, user-level skills.",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
         "capability": {
           "additionalProperties": false,
           "description": "Tunes the capability analysis (AR030).",
@@ -1860,13 +1888,6 @@
           },
           "type": "array"
         },
-        "skill_roots": {
-          "description": "Globs, relative to the project root, of the directories that hold skill directories a harness loads from (\".claude/skills\", \"plugins/*/skills\"). AR808 checks a hand-written skill or command only in these directories; unset, the harness's own roots, a plugin's skills/ and local skill sources are used. Authored content is always checked.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "known_names": {
           "description": "Skill, agent, rule or command names provided outside this tree.",
           "items": {
@@ -2093,6 +2114,13 @@
           },
           "description": "Severity override per finding code or name.",
           "type": "object"
+        },
+        "skill_roots": {
+          "description": "Globs, relative to the project root, of the directories that hold skill directories a harness loads from (\".claude/skills\", \"plugins/*/skills\"). AR808 checks a hand-written skill or command only in these directories; unset, the harness's own roots, a plugin's skills/ and local skill sources are used. Authored content is always checked.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "traps": {
           "additionalProperties": false,
@@ -2596,11 +2624,6 @@
           },
           "type": "array"
         },
-        "serve_skills": {
-          "type": "boolean",
-          "default": false,
-          "description": "Make a bare `ai-rulez mcp` serve skills, as `mcp --serve-skills` does, so a client entry needs no flag. The --serve-skills flag overrides it, and --serve-skills=false turns it off."
-        },
         "discover_skills": {
           "default": "off",
           "description": "Make `mcp --serve-skills` also serve the skills already in the repository: \"repo\" indexes the skill directories of the working tree (root skills/, .claude/skills at any depth and the skill directories of the configured presets, respecting .gitignore and skipping generated copies); \"all\" adds the installed and included skills whatever their delivery. The --discover-skills flag overrides it.",
@@ -2651,6 +2674,11 @@
           "description": "Pin the ai-rulez version the entry runs (for example \"4.19.0\" or \"latest\"). Defaults to the version of the ai-rulez binary that runs generate, or \"latest\" for a dev build. Only applies while the self server is on (the default).",
           "pattern": "^[^\\s@/]+$",
           "type": "string"
+        },
+        "serve_skills": {
+          "default": false,
+          "description": "Make a bare `ai-rulez mcp` serve skills, as `mcp --serve-skills` does, so a client entry needs no flag. The --serve-skills flag overrides it, and --serve-skills=false turns it off.",
+          "type": "boolean"
         },
         "skills_instructions": {
           "default": true,

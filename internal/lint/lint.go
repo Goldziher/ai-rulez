@@ -169,6 +169,10 @@ type runner struct {
 	cwd          string
 	host         ambient.Host
 	planned      PlannedFiles // what a run would write, for the traps (WithPlanned)
+	reach        HarnessReach // the harnesses that load each output (WithHarnessReach)
+	namesOnce    sync.Once
+	namesMu      sync.Mutex
+	harnessNames nameTables
 	targets      *Targets     // files linted besides the content tree (WithTargets)
 	outputs      []OutputFile // generated files linted besides the authored content (WithOutputs)
 	cwdResolved  string       // cwd with its symlinks resolved, see display
@@ -546,6 +550,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 	problems = append(problems, validateNewSettings(lc)...)
 	problems = append(problems, validateEvalSettings(lc)...)
 	problems = append(problems, validateTraps(lc.Traps)...)
+	problems = append(problems, validateBuiltinNames(lc.BuiltinNames)...)
 	sort.Strings(problems)
 	return problems
 }
