@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -157,10 +158,11 @@ type runner struct {
 	injOnce      sync.Once
 	secOnce      sync.Once
 	secRes       []secretPattern
-	relMemo      sync.Map   // absolute path -> tree-relative path, see rel
-	ignoredMemo  sync.Map   // repo path -> whether git ignores it, see gitIgnored
-	skillFiles   sync.Map   // skill directory -> every file below it, see stageSkillFiles
-	runMu        sync.Mutex // guards addRun and the AR9E7 flag: scanner batches may report concurrently
+	relMemo      sync.Map        // absolute path -> tree-relative path, see rel
+	ctx          context.Context // bounds the git probes, see WithContext
+	ignoredMemo  sync.Map        // repo path -> whether git ignores it, see gitIgnored
+	skillFiles   sync.Map        // skill directory -> every file below it, see stageSkillFiles
+	runMu        sync.Mutex      // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer
@@ -301,6 +303,10 @@ func WithHost(h ambient.Host) Option { return func(r *runner) { r.host = h } }
 // the files, so an untracked target is found as well.
 func WithTargets(t *Targets) Option { return func(r *runner) { r.targets = t } }
 
+// WithContext bounds the git probes of the run (such as the ignore check of AR401) by ctx;
+// without it they are unbounded.
+func WithContext(ctx context.Context) Option { return func(r *runner) { r.ctx = ctx } }
+
 // WithCwd sets the directory finding paths are shown relative to; without it
 // they are shown as given.
 func WithCwd(dir string) Option { return func(r *runner) { r.cwd = dir } }
@@ -333,7 +339,7 @@ func newRunner(cfg *config.Config, tree *Tree, so Options) (*runner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
-	return &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
+	return &runner{ctx: scanContext(), cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
 		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}, nil
 }
 
@@ -739,9 +745,9 @@ func (r *runner) collect() {
 	}
 }
 
-func (r *runner) addTree(configDir, domain string, rules, context, skills, agents, commands, checks []config.ContentFile) {
+func (r *runner) addTree(configDir, domain string, rules, contexts, skills, agents, commands, checks []config.ContentFile) {
 	r.addItems(configDir, kindRule, domain, rules)
-	r.addItems(configDir, kindContext, domain, context)
+	r.addItems(configDir, kindContext, domain, contexts)
 	r.addItems(configDir, kindSkill, domain, skills)
 	r.addItems(configDir, kindAgent, domain, agents)
 	r.addItems(configDir, kindCommand, domain, commands)

@@ -90,7 +90,7 @@ func scanStaged(ctx context.Context, loaded *config.Config, files map[string][]b
 		if lerr != nil {
 			return nil, oops.Wrapf(lerr, "index scratch project")
 		}
-		lr, rerr := lint.RunWith(loaded, tree, lint.Options{SecurityOnly: true})
+		lr, rerr := lint.RunWith(loaded, tree, lint.Options{SecurityOnly: true}, lint.WithContext(ctx))
 		if rerr != nil {
 			return nil, oops.Wrapf(rerr, "security scan")
 		}
