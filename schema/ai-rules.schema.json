@@ -2806,6 +2806,10 @@
                 "minItems": 1,
                 "description": "The argv that prints the scanner's version for the `version` check. Default: `command[0] --version`, which names the launcher (python3, node, uvx) when command[0] is one. Runs from the project root in the scanner's isolation mode; needs `version`. `scanners doctor --external` applies the same check."
               },
+              "version_timeout": {
+                "type": "string",
+                "description": "How long the version probe (`version_command`, else `command[0] --version`) may run, as a duration such as \"30s\". Default 10s. A probe that exceeds it is reported as \"version probe timed out after Ns\" (AR9E2), not as empty output; needs `version`."
+              },
               "max_message": {
                 "type": "integer",
                 "minimum": 1,

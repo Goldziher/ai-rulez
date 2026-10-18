@@ -210,6 +210,9 @@ type LintExternal struct {
 	// (python3, node, uvx) rather than the scanner when command[0] is one. It runs
 	// from the project root, in the scanner's isolation mode; needs Version.
 	VersionCommand []string `yaml:"version_command,omitempty" json:"version_command,omitempty" toml:"version_command,omitempty"` //nolint:tagliatelle
+	// VersionTimeout bounds the version probe (a duration such as "30s"; default
+	// 10s). A probe that exceeds it is reported as timed out (AR9E2); needs Version.
+	VersionTimeout string `yaml:"version_timeout,omitempty" json:"version_timeout,omitempty" toml:"version_timeout,omitempty"` //nolint:tagliatelle
 	// BatchSize splits the skill directories handed to a command that passes
 	// {skill_dirs} into runs of at most this many directories, each with its own
 	// timeout and cached on its own. 0 (default) hands the scanner all of them

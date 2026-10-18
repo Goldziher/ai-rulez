@@ -47,6 +47,8 @@ type ScannerInfo struct {
 	// Dir the project directory it and a relative command are anchored to.
 	VersionCommand []string
 	Dir            string
+	// VersionTimeout bounds the version probe (0: DefaultVersionTimeout).
+	VersionTimeout time.Duration
 	// VersionLine is the version the probe printed and VersionProblem why the
 	// version range check failed; doctor sets both after probing (--external).
 	VersionLine    string
@@ -105,6 +107,7 @@ func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
 			timeout, _ = time.ParseDuration(sc.Timeout) //nolint:errcheck // an invalid value is in Problems
 		}
 		info.Timeout = cmdrun.EffectiveTimeoutUpTo(timeout, sc.timeoutCeiling)
+		info.VersionTimeout = sc.versionTimeout()
 		info.Path = lookExecutable(sc.Command[0], dir)
 		out = append(out, info)
 	}
@@ -150,13 +153,27 @@ func lookExecutable(name, dir string) string {
 	return p
 }
 
+// DefaultVersionTimeout bounds a version probe when version_timeout is not set.
+const DefaultVersionTimeout = 10 * time.Second
+
+// ProbeTimeoutError is returned by ProbeScannerVersion when the version command
+// was still running at its timeout, so the caller can tell a slow probe from one
+// that printed nothing.
+type ProbeTimeoutError struct{ After time.Duration }
+
+// Error implements error.
+func (e *ProbeTimeoutError) Error() string {
+	return "version probe timed out after " + e.After.String()
+}
+
 // ProbeScannerVersion asks the scanner for its version (`<command> --version`)
 // through the hardened runner: scrubbed environment, a scratch working
 // directory, a short timeout. The probe runs the scanner, so it follows the
 // scanner's isolation mode: confined (no network, writes only in the scratch
 // directory) whenever a backend works, unconfined only for "none" or for "auto"
 // with no backend, and refused with an error for "require" with no backend.
-// The version is "" when the scanner printed nothing usable.
+// The version is "" when the scanner printed nothing usable; a probe that outlives
+// info.VersionTimeout (default DefaultVersionTimeout) returns a *ProbeTimeoutError.
 func ProbeScannerVersion(ctx context.Context, info ScannerInfo) (string, error) {
 	if !info.Found() {
 		return "", nil
@@ -185,10 +202,17 @@ func ProbeScannerVersion(ctx context.Context, info ScannerInfo) (string, error) 
 		}
 		argv = w.Argv
 	}
+	limit := info.VersionTimeout
+	if limit <= 0 {
+		limit = DefaultVersionTimeout
+	}
 	res := cmdrun.Run(ctx, cmdrun.Spec{
-		Argv: argv, Dir: probeDir, Timeout: 10 * time.Second, MaxOutput: 64 << 10,
+		Argv: argv, Dir: probeDir, Timeout: limit, MaxOutput: 64 << 10,
 		Env: cmdrun.ScrubEnv(cmdrun.HostEnv(), nil, []string{"HOME=" + dir, "TMPDIR=" + dir}),
 	})
+	if res.Status == cmdrun.StatusTimeout {
+		return "", &ProbeTimeoutError{After: limit}
+	}
 	if res.Status != cmdrun.StatusOK && res.Status != cmdrun.StatusExit {
 		return "", nil
 	}

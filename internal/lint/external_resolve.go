@@ -119,6 +119,13 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 // validMaxMessage reports whether n is unset (0) or a usable max_message.
 func validMaxMessage(n int) bool { return n == 0 || (n >= 1 && n <= maxScannerMessageLimit) }
 
+// versionTimeout is the parsed version_timeout (0 when unset or invalid; an
+// invalid value is reported through allProblems).
+func (s resolvedScanner) versionTimeout() time.Duration {
+	d, _ := time.ParseDuration(s.VersionTimeout) //nolint:errcheck // an invalid value is in Problems
+	return d
+}
+
 // messageLimit is the number of characters of a finding message kept in text
 // output: the scanner's max_message, else the policy's, else the default.
 func (s resolvedScanner) messageLimit(pol scannerPolicy) int {

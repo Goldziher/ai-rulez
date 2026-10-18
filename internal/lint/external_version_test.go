@@ -107,3 +107,50 @@ func TestInspectScannersCarriesTheVersionCommand(t *testing.T) {
 	assert.Len(t, infos[0].VersionCommand, 4)
 	assert.Equal(t, p.root, infos[0].Dir)
 }
+
+func TestVersionProbeTimeoutIsConfigurableAndReported(t *testing.T) {
+	exe := filepath.ToSlash(fakeScannerExe(t, ""))
+	slow := tomlArray(fakeScannerArgv(exe, "--sleep", "2s", "--print-version", "1.0.0")...)
+	tests := []struct {
+		name    string
+		keys    string
+		wantRan bool
+		wantMsg string
+		wantBad string
+	}{
+		{"short timeout is reported as a timeout", "version_timeout = \"300ms\"\n", false, "version probe timed out after 300ms", ""},
+		{"long timeout lets a slow probe pass", "version_timeout = \"30s\"\n", true, "", ""},
+		{"invalid value", "version_timeout = \"soon\"\n", false, "", "version_timeout"},
+		{"needs version_command or version", "", true, "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			body := fakeScannerCommand(t, "--msg", "scanned") + "version = \">=1, <2\"\nversion_command = " + slow + "\n" + tt.keys
+			if tt.name == "needs version_command or version" {
+				body = fakeScannerCommand(t, "--msg", "scanned") + "version_timeout = \"5s\"\n"
+				tt.wantRan, tt.wantBad = false, "version_timeout needs version"
+			}
+			p := fakeProject(t, isolationNone, body)
+
+			// Act
+			findings := p.run(Options{})
+
+			// Assert
+			if tt.wantBad != "" {
+				invalid := ofCode(findings, CodeScannerConfigInvalid)
+				require.Len(t, invalid, 1, dump(findings))
+				assert.Contains(t, invalid[0].Message, tt.wantBad)
+				return
+			}
+			if tt.wantRan {
+				require.Len(t, scannerFindings(findings), 1, dump(findings))
+				return
+			}
+			unavailable := ofCode(findings, CodeScannerUnavailable)
+			require.Len(t, unavailable, 1, dump(findings))
+			assert.Contains(t, unavailable[0].Message, tt.wantMsg)
+			assert.NotContains(t, unavailable[0].Message, "has no version")
+		})
+	}
+}
