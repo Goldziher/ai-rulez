@@ -31,14 +31,22 @@ const (
 
 // Profile is one scanner's command template and facts.
 type Profile struct {
-	Name        string            `toml:"name"`
-	Description string            `toml:"description"`
-	Egress      bool              `toml:"egress"`
-	Command     []string          `toml:"command"`
-	Format      string            `toml:"format"`
-	Layout      string            `toml:"layout"`
-	Inputs      []string          `toml:"inputs"`
-	EgressFlags []string          `toml:"egress_flags"`
+	Name        string   `toml:"name"`
+	Description string   `toml:"description"`
+	Egress      bool     `toml:"egress"`
+	Command     []string `toml:"command"`
+	Format      string   `toml:"format"`
+	Layout      string   `toml:"layout"`
+	Inputs      []string `toml:"inputs"`
+	EgressFlags []string `toml:"egress_flags"`
+	// RequiredFlags must stay in the command of an egress = false entry: they are the
+	// switch that keeps the scanner deterministic (its absence enables a network feature).
+	RequiredFlags []string `toml:"required_flags"`
+	// BatchSize and Version fill the entry's batch_size and version when unset: a
+	// scanner that takes one input path needs batch_size = 1; Version is the range
+	// its version output must satisfy.
+	BatchSize   int               `toml:"batch_size"`
+	Version     string            `toml:"version"`
 	SeverityMap map[string]string `toml:"severity_map"`
 	MaxSeverity string            `toml:"max_severity"`
 	// When limits a preset member to projects with that configuration (WhenPlugin).

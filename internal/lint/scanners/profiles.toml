@@ -49,6 +49,25 @@ verified_on = "2026-10-05"
 tested_versions = []
 
 [[profile]]
+name = "skillspector"
+description = "NVIDIA SkillSpector in its static mode: heuristic and YARA checks of skill content, one skill per run"
+egress = false
+# `skillspector scan` takes exactly one input path, so batch_size = 1. Without
+# --no-llm it calls an LLM provider; the report goes to stdout (-o would add a
+# "Report saved to" line to it). It exits 1 when it has findings, which is a result.
+command = ["skillspector", "scan", "--no-llm", "--format", "sarif", "{skill_dirs}"]
+format = "sarif"
+inputs = ["skills"]
+batch_size = 1
+required_flags = ["--no-llm"]
+egress_flags = ["--transitive", "--mcp-registry", "--mcp-registry-compare"]
+# `skillspector --version` prints "SkillSpector v2.12.0".
+version = ">=2, <3"
+source = "https://github.com/NVIDIA/skillspector"
+verified_on = "2026-10-18"
+tested_versions = ["2.12.0"]
+
+[[profile]]
 name = "snyk-agent-scan"
 description = "Snyk agent scan: skill and MCP configuration analysis by a hosted service"
 egress = true
