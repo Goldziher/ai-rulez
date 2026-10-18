@@ -921,8 +921,9 @@ func getBuiltInPresetNames() []string {
 // (for the message) plus its source path (so both sides of a collision are
 // nameable).
 type namespaceEntry struct {
-	id   string
-	path string
+	id      string
+	path    string
+	builtin bool
 }
 
 // validateDuplicateOutputIDs detects two skills, or two commands, that resolve
@@ -1054,8 +1055,11 @@ func (c *Config) validateOutputNamespaceCollisions() error {
 				continue
 			}
 			key := strings.ToLower(itemID)
-			if _, seen := into[key]; !seen {
-				into[key] = namespaceEntry{id: itemID, path: item.Path}
+			builtin := strings.HasPrefix(item.Path, "builtin://")
+			// A project item is preferred over a builtin of the same id, so a
+			// builtin-only entry means no project item has the id.
+			if seen, ok := into[key]; !ok || (seen.builtin && !builtin) {
+				into[key] = namespaceEntry{id: itemID, path: item.Path, builtin: builtin}
 			}
 		}
 	}
@@ -1074,7 +1078,9 @@ func (c *Config) validateOutputNamespaceCollisions() error {
 	var collisions []string
 	for key, skill := range skills {
 		command, clash := commands[key]
-		if !clash {
+		// A builtin yields to a project item of the other kind: generation drops
+		// it and AR703 reports it (#445). Two builtins, or two project items, clash.
+		if !clash || skill.builtin != command.builtin {
 			continue
 		}
 		collisions = append(collisions, fmt.Sprintf(

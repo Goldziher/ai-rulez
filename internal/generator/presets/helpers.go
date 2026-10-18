@@ -205,14 +205,69 @@ func allInlineContext(content *config.ContentTree) []config.ContentFile {
 // the output id derives from — so keying dedup on Name matches the path the two
 // copies compete for.
 func allSkills(content *config.ContentTree) []config.ContentFile {
-	return combineDedupedContentFiles(content.Skills, getAllDomainSkills(content))
+	kept := combineDedupedContentFiles(content.Skills, getAllDomainSkills(content))
+	return withoutShadowedBuiltins(kept, commandOwners(content), skillIDOf)
 }
 
 // allCommands is the command counterpart to allSkills. Commands share the skill
 // output namespace (.claude/skills/{id}/SKILL.md with user-invocable set), so
 // they carry the same last-write-wins hazard and the same fix.
 func allCommands(content *config.ContentTree) []config.ContentFile {
-	return combineDedupedContentFiles(content.Commands, getAllDomainCommands(content))
+	kept := combineDedupedContentFiles(content.Commands, getAllDomainCommands(content))
+	return withoutShadowedBuiltins(kept, skillOwners(content), commandIDOf)
+}
+
+// commandIDOf is the output id of a command: its name, lowercased with spaces
+// and underscores as dashes (sanitizeAgentID).
+func commandIDOf(command config.ContentFile) string {
+	return sanitizeAgentID(command.Name)
+}
+
+func isBuiltinPath(p string) bool {
+	return strings.HasPrefix(p, "builtin://")
+}
+
+// skillOwners and commandOwners map the case-folded output id of every item a
+// project, rather than a builtin pack, supplies to its source path. A skill and
+// a command with one id share .claude/skills/{id}/SKILL.md; a builtin of the
+// other kind yields to such an item (#445). Two project items of different
+// kinds are not resolved here: validation rejects that pair.
+func skillOwners(content *config.ContentTree) map[string]string {
+	return projectOwners(content.Skills, getAllDomainSkills(content), skillIDOf)
+}
+
+func commandOwners(content *config.ContentTree) map[string]string {
+	return projectOwners(content.Commands, getAllDomainCommands(content), commandIDOf)
+}
+
+func projectOwners(root, domains []config.ContentFile, idOf func(config.ContentFile) string) map[string]string {
+	owners := map[string]string{}
+	for _, files := range [][]config.ContentFile{root, domains} {
+		for i := range files {
+			id := strings.ToLower(idOf(files[i]))
+			if _, seen := owners[id]; id == "" || seen || isBuiltinPath(files[i].Path) {
+				continue
+			}
+			owners[id] = files[i].Path
+		}
+	}
+	return owners
+}
+
+// withoutShadowedBuiltins drops the builtin items whose output id a project
+// item of the other kind already owns.
+func withoutShadowedBuiltins(items []config.ContentFile, otherOwners map[string]string, idOf func(config.ContentFile) string) []config.ContentFile {
+	if len(otherOwners) == 0 {
+		return items
+	}
+	kept := make([]config.ContentFile, 0, len(items))
+	for i := range items {
+		if _, shadowed := otherOwners[strings.ToLower(idOf(items[i]))]; shadowed && isBuiltinPath(items[i].Path) {
+			continue
+		}
+		kept = append(kept, items[i])
+	}
+	return kept
 }
 
 // allAgents returns the deduplicated, precedence-ordered agents — root (local)
@@ -795,6 +850,32 @@ func duplicateContentWarnings(content *config.ContentTree) []duplicateContentWar
 	for _, source := range sources {
 		for _, dup := range FindDuplicateContent(source.root, source.domains) {
 			warnings = append(warnings, duplicateContentWarning{Kind: source.kind, Duplicate: dup})
+		}
+	}
+	return append(warnings, crossKindWarnings(content)...)
+}
+
+// crossKindWarnings reports a builtin skill or command dropped because a project
+// item of the other kind has its output id.
+func crossKindWarnings(content *config.ContentTree) []duplicateContentWarning {
+	var warnings []duplicateContentWarning
+	dropped := []struct {
+		kind   string
+		items  []config.ContentFile
+		owners map[string]string
+		idOf   func(config.ContentFile) string
+	}{
+		{"command", getAllDomainCommands(content), skillOwners(content), commandIDOf},
+		{"skill", getAllDomainSkills(content), commandOwners(content), skillIDOf},
+	}
+	for _, d := range dropped {
+		for i := range d.items {
+			id := strings.ToLower(d.idOf(d.items[i]))
+			if winner, ok := d.owners[id]; ok && isBuiltinPath(d.items[i].Path) {
+				warnings = append(warnings, duplicateContentWarning{Kind: d.kind, Duplicate: DuplicateContent{
+					Name: d.idOf(d.items[i]), Winner: winner, Losers: []string{d.items[i].Path},
+				}})
+			}
 		}
 	}
 	return warnings
