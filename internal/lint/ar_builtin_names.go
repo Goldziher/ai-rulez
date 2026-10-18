@@ -53,7 +53,7 @@ func registerArBuiltinNames(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeBuiltinNameCollision: {
-			Why:  "A harness has built-in commands, bundled skills and agents, and what happens to a user item of the same name differs: the user item replaces the built-in (Claude Code, OpenCode, Qwen Code), the built-in stays and the user item is renamed or unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). The tables are data in `internal/harnessnames/data/<preset>.toml`, one file per preset, each group with the page it was taken from and, where the harness documents the outcome, a verbatim quote. The rule checks every output against every preset that writes it and every harness that reads the directory it lands in (`.agents/skills` is read by many harnesses whether or not their preset is enabled). Names are compared as the harness derives them: surrounding space trimmed, NFKC and case-folded; the directory or file name and the `name:` frontmatter are both checked; aliases count. Outputs a harness always invokes under a prefix (plugin-only content) are exempt. The severity follows the table: error for a preset whose table records a quoted outcome and is set to error, warning for an unquoted outcome, a `both_listed` outcome and names you declare yourself, and information for a built-in whose collision outcome the vendor does not document (listed once per item, not an error). A table can be incomplete: `completeness` is `partial` or `docs-only` for most harnesses, because vendor docs list a floor, not a ceiling. Claude Code skills and commands are reported by AR808, not here. Acknowledge an intended collision with `lint.builtin_names.allow = [\"name\", \"preset:name\"]` (`lint.allow_overrides` is honored the same way), add names the table cannot know with `[lint.builtin_names.extra]`, or add a table in `.ai-rulez/harness-names/<preset>.toml`. `[lint.severity] AR9U0 = \"warning\"` downgrades the rule everywhere, `[lint.builtin_names] enabled = false` turns it off.",
+			Why:  "A harness has built-in commands, bundled skills and agents, and what happens to a user item of the same name differs: the user item replaces the built-in (Claude Code, OpenCode, Qwen Code), the built-in stays and the user item is renamed or unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). The tables are data in `internal/harnessnames/data/<preset>.toml`, one file per preset, each group with the page it was taken from and, where the harness documents the outcome, a verbatim quote. The rule checks every output against every preset that writes it and every harness that reads the directory it lands in (`.agents/skills` is read by many harnesses whether or not their preset is enabled). Names are compared as the harness derives them: surrounding space trimmed, NFKC and case-folded; the directory or file name and the `name:` frontmatter are both checked; aliases count. Outputs a harness always invokes under a prefix (plugin-only content) are exempt. The severity follows the table: error for a preset the project writes for whose table records a quoted outcome and is set to error, warning for a harness that only reads a shared directory such as `.agents/skills` without its preset being enabled, for an unquoted outcome, a `both_listed` outcome and names you declare yourself, and information for a built-in whose collision outcome the vendor does not document (listed once per item, not an error). A table can be incomplete: `completeness` is `partial` or `docs-only` for most harnesses, because vendor docs list a floor, not a ceiling. Claude Code skills and commands are reported by AR808, not here. Acknowledge an intended collision with `lint.builtin_names.allow = [\"name\", \"preset:name\"]` (`lint.allow_overrides` is honored the same way), add names the table cannot know with `[lint.builtin_names.extra]`, or add a table in `.ai-rulez/harness-names/<preset>.toml`. `[lint.severity] AR9U0 = \"warning\"` downgrades the rule everywhere, `[lint.builtin_names] enabled = false` turns it off.",
 			Bad:  "A skill `help` while the gemini preset is configured (Gemini CLI keeps its `/help`; the skill becomes `help1`)",
 			Good: "Rename the skill (`project-help`), or list `gemini:help` in lint.builtin_names.allow",
 		},
@@ -267,19 +267,21 @@ func (r *runner) reportNameHit(it *item, c nameCandidate, t ReachTarget, h harne
 	if h.Collision == harnessnames.Unknown && !h.Declared {
 		return h.Preset
 	}
-	r.addSev(nameSeverity(h), CodeBuiltinNameCollision, it.abs, c.line, "%s", collisionMessage(it.kind, c.name, t, h))
+	r.addSev(nameSeverity(h, t), CodeBuiltinNameCollision, it.abs, c.line, "%s", collisionMessage(it.kind, c.name, t, h))
 	return ""
 }
 
 // nameSeverity is the severity of a collision finding: the table's severity only where the
 // outcome carries a verbatim quote, and never an error for a name the project declared without
-// saying so, or for an outcome of both being listed.
-func nameSeverity(h harnessnames.Hit) Severity {
+// saying so, for an outcome of both being listed, or for a harness that only reads a shared
+// directory (.agents/skills) and whose preset the project did not enable.
+func nameSeverity(h harnessnames.Hit, t ReachTarget) Severity {
 	switch {
 	case h.Declared:
 		if h.Severity == harnessnames.SeverityError {
 			return SeverityError
 		}
+	case !t.Writer:
 	case h.Quoted && h.Severity == harnessnames.SeverityError && h.Collision != harnessnames.BothListed:
 		return SeverityError
 	}
