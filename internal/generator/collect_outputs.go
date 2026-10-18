@@ -163,7 +163,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 // warnContentDiagnostics reports duplicate content, plugin-only content outside
 // a plugin, ignored plugins, legacy files and unsupported settings.
 func (g *Generator) warnContentDiagnostics(contentTree *config.ContentTree) {
-	presets.WarnDuplicateContent(g.log(), contentTree)
+	presets.WarnDuplicateContent(g.log(), contentTree, g.config)
 	g.warnUnbundledPluginOnly(contentTree)
 	g.warnIgnoredPlugins()
 	g.warnLegacyFiles()

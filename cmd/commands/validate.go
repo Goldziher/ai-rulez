@@ -139,7 +139,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		if valid {
 			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
 		}
-		presets.WarnDuplicateContent(cfg.Log(), cfg.Content)
+		presets.WarnDuplicateContent(cfg.Log(), cfg.Content, cfg)
 		warnUnpinned(cfg)
 		warnFrontmatter(ctx, cfg)
 		displayConfigurationSummary(cfg)

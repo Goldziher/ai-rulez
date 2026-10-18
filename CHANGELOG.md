@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **`{project}` names the project root in a scanner command, and the stage working directory is documented.** A relative `command[0]` was resolved against the project but a relative script argument (`["sh", "tools/t.sh"]`) against the stage, so it failed with exit status 127. `{project}/tools/t.sh` now works, the script it names is still hashed into the cache key, and the difference is documented next to `command` ([#450](https://github.com/Goldziher/ai-rulez/issues/450)).
+- **A skill-relative scanner result resolves against the skill of its own batch.** With `batch_size = 1` and `{skill_dirs}`, `SKILL.md` and `references/x.md` were matched against every staged skill, found ambiguous and dropped as `AR9E6`. Each batch now resolves against the skills it was handed; a path that is still ambiguous in a multi-skill batch is dropped as before, and `AR9E6` is an error when every result of a run was dropped ([#448](https://github.com/Goldziher/ai-rulez/issues/448)).
+- **The scanner version probe has a `version_timeout` and a timeout is reported as one.** The probe for `version` was fixed at 10 s and a slow one read as `version output ""` (`AR9E2`), so the scanner silently did not run. `version_timeout = "30s"` on `[[lint.external]]` raises it (default unchanged), and a timed-out probe says `version probe timed out after 10s` ([#449](https://github.com/Goldziher/ai-rulez/issues/449)).
+- **`generate` honours `lint.allow_overrides` in the duplicate warning.** A local skill that shadows a builtin and is listed in `lint.allow_overrides` (as `name` or `domain/name`) no longer logs `Duplicate skill collapsed` on every run, matching `validate` and `AR703` ([#444](https://github.com/Goldziher/ai-rulez/issues/444)).
+
 ## [5.5.1] - 2026-10-17
 
 ### Added
