@@ -241,6 +241,12 @@ func fromProfile(ex config.LintExternal) resolvedScanner {
 	if rs.MaxSeverity == "" {
 		rs.MaxSeverity = p.MaxSeverity
 	}
+	if rs.BatchSize == 0 {
+		rs.BatchSize = p.BatchSize
+	}
+	if rs.Version == "" {
+		rs.Version = p.Version
+	}
 	switch {
 	case ex.Egress == nil:
 		egress := p.Egress
@@ -250,6 +256,13 @@ func fromProfile(ex config.LintExternal) resolvedScanner {
 	}
 	if len(p.SeverityMap) > 0 {
 		rs.SeverityMap = mergeSeverityMaps(p.SeverityMap, ex.SeverityMap)
+	}
+	if rs.Egress != nil && !*rs.Egress {
+		for _, flag := range p.RequiredFlags {
+			if !slices.Contains(rs.Command, flag) {
+				rs.Problems = append(rs.Problems, fmt.Sprintf("profile %q requires %s in its command: without it the scanner can send content off the machine", p.Name, flag))
+			}
+		}
 	}
 	rs.Layout, rs.EgressFlags, rs.DataSent, rs.RequiresEnv = p.Layout, p.EgressFlags, p.DataSent, p.RequiresEnv
 	if rs.Egress != nil && *rs.Egress {

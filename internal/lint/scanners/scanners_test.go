@@ -1,6 +1,8 @@
 package scanners
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,4 +59,34 @@ func TestPresetsOfAndLookups(t *testing.T) {
 	assert.False(t, ok)
 	strict, _ := LookupPreset("strict")
 	assert.Equal(t, "warning", strict.FailOn)
+}
+
+func TestSkillspectorProfileIsOptInAndSingleBatch(t *testing.T) {
+	p, ok := Lookup("skillspector")
+	require.True(t, ok)
+	assert.False(t, p.Egress)
+	assert.Equal(t, 1, p.BatchSize, "skillspector scan takes exactly one input path")
+	assert.Equal(t, []string{"--no-llm"}, p.RequiredFlags)
+	assert.Contains(t, p.Command, "--no-llm")
+	assert.Contains(t, p.Command, "{skill_dirs}")
+	assert.NotEmpty(t, p.Version)
+	assert.Empty(t, PresetsOf("skillspector"), "a heuristic scanner stays out of the presets")
+}
+
+func TestRequiredFlagsAreInTheirOwnCommand(t *testing.T) {
+	for _, p := range Profiles() {
+		for _, f := range p.RequiredFlags {
+			assert.Contains(t, p.Command, f, "%s: required flag %s", p.Name, f)
+		}
+	}
+}
+
+func TestSchemasListEveryProfile(t *testing.T) {
+	for _, file := range []string{"ai-rules.schema.json", "ai-rules-local.schema.json"} {
+		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "schema", file))
+		require.NoError(t, err)
+		for _, name := range Names() {
+			assert.Contains(t, string(raw), `"`+name+`"`, "%s lists profile %s", file, name)
+		}
+	}
 }

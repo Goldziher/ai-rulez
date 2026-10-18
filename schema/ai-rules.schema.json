@@ -2803,7 +2803,7 @@
               },
               "profile": {
                 "type": "string",
-                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "snyk-agent-scan"],
+                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "skillspector", "snyk-agent-scan"],
                 "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's."
               },
               "version": {
