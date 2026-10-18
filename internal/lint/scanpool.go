@@ -197,7 +197,7 @@ func (r *runner) scanScratch() *runner {
 	return &runner{
 		cfg: r.cfg, lc: r.lc, tree: r.tree, opts: r.opts,
 		baseRel: r.baseRel, cwd: r.cwd, host: r.host,
-		sev: sev, ignore: r.ignore, ignorePaths: r.ignorePaths, allow: r.allow,
+		sev: sev, ignore: r.ignore, ignorePaths: r.ignorePaths, ignoreRules: r.ignoreRules, allow: r.allow,
 		exampleGlobs: r.exampleGlobs, protected: r.protected, noInline: r.noInline,
 		noInlineIgnore: r.noInlineIgnore, sel: r.sel,
 		skills: r.skills, commands: r.commands, agents: r.agents, rules: r.rules, contexts: r.contexts,

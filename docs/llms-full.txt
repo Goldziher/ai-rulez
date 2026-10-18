@@ -13899,6 +13899,7 @@ fail_on = "error"                  # error (default) | warning | none
 analyzers = ["security", "references"]   # run only these analyzers (see Analyzers and scopes); default: all
 ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
+# ignore_rules (below) drops chosen rules in chosen files; it is an array of tables, see Rule-scoped ignores
 skill_roots = [".claude/skills", "plugins/*/skills"]   # directories AR808 treats as harness skill roots (replaces the defaults)
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
@@ -13915,6 +13916,11 @@ profile = "default"                # default | strict | permissive (see Profiles
 [lint.severity]                    # error | warning | info | off
 AR401 = "error"
 anchor-unresolved = "off"
+
+[[lint.ignore_rules]]              # one rule family in one part of the tree (see Rule-scoped ignores)
+rules = ["AR901", "AR902"]
+paths = ["playground/**"]
+reason = "scratch projects, not shipped"
 
 [lint.builtin_names]               # AR9U0, AR9U1: names of harness built-ins (see Built-in names of harnesses)
 enabled = true                     # false turns both off
@@ -14065,6 +14071,35 @@ Guarantees:
 
 After the fixes the run reports what is left, and the exit code reflects that. The summary ends with a reminder to run
 `ai-rulez generate` so the changes reach the generated files.
+
+#### Rule-scoped ignores
+
+`ignore` drops a rule everywhere and `ignore_paths` drops every rule in some files. `[[lint.ignore_rules]]` sits in
+between: it drops the listed rules in the listed files and keeps every other finding in them.
+
+```toml
+[[lint.ignore_rules]]
+rules = ["AR901", "AR902"]     # codes, names, or a wildcard over codes (AR9*)
+paths = ["playground/**"]      # globs, relative to the repository root or to .ai-rulez/
+reason = "scratch projects"    # optional, for the reader
+
+[[lint.ignore_rules]]
+rules = ["path-missing"]
+paths = ["docs/plugins/**"]    # plugin docs that show `.claude-plugin/plugin.json` as a placeholder
+```
+
+- The key is `ignore_rules`, not `ignore`, because `[lint] ignore` is already the list of codes dropped everywhere.
+- `rules` takes a code (`AR901`), a name (`claude-md-shadow`) or a pattern with `*`, `?` or `[...]` matched against
+  codes (`AR9*`, `AR40?`). An entry needs at least one rule and one path. An unknown code, a pattern that matches no
+  code, an empty list or a malformed glob is an error when the configuration loads, like the other `[lint]` keys.
+- Paths use the same globs as `ignore_paths` (`**` crosses directories, a directory name covers everything below).
+  They name source files, so a finding reported on a generated file is not covered by the path of its source.
+- An ignored finding is dropped before the baseline and the ratchet see it: it is never written by `--update-baseline`
+  and never counts toward a `[lint.ratchet]` limit. A rule that is ignored for a file and later un-ignored reports
+  its findings as new, unless the baseline already holds them.
+- An organization policy that protects a code (see [Policy](policy.md)) refuses this route like `ignore_paths`, and
+  reports the attempt as `AR740`.
+- `validate --explain <code>` lists this route with the code filled in.
 
 #### Baseline and tolerated findings
 
@@ -20390,10 +20425,10 @@ to LF. Exit code 2 when the repository loosens the policy (the same code `genera
 - The MCP servers: `mcp --serve-skills` fails to start on a configuration that loosens the policy, and the
   `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
 - No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and
-  AR740-AR745 themselves), `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, baseline entries and
+  AR740-AR745 themselves), `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, `[[lint.ignore_rules]]`, baseline entries and
   `[lint.ratchet]` budgets are not applied. The finding stays at its enforced severity and counts toward the exit
-  code, and one AR740 finding per route names the attempt (`[lint] ignore_paths`, `ai-rulez-lint-ignore comment`,
-  `baseline`, `[lint.ratchet]`) and the codes it tried to hide.
+  code, and one AR740 finding per route names the attempt (`[lint] ignore_paths`, `[[lint.ignore_rules]]`,
+  `ai-rulez-lint-ignore comment`, `baseline`, `[lint.ratchet]`) and the codes it tried to hide.
 - Remote sources a policy refuses are dropped before anything is fetched.
 
 #### Design decisions

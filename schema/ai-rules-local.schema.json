@@ -1888,6 +1888,37 @@
           },
           "type": "array"
         },
+        "ignore_rules": {
+          "description": "Rule-scoped ignores: findings of the listed rules in the listed files are dropped, every other finding in those files is kept.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "paths": {
+                "description": "Globs, relative to the config directory or the repository root, of the source files the ignore covers.",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "reason": {
+                "description": "Why the findings are acceptable; for the reader.",
+                "type": "string"
+              },
+              "rules": {
+                "description": "Finding codes (AR901) or names (claude-md-shadow); a pattern with a wildcard (AR9*) matches codes.",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": ["rules", "paths"],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "known_names": {
           "description": "Skill, agent, rule or command names provided outside this tree.",
           "items": {
