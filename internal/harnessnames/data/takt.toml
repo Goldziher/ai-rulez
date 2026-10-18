@@ -1,7 +1,7 @@
 schema = 1
 preset = "takt"
 harness_version = "main @ c87caaba01c0 (latest tag v0.71.0)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,1980 +9,213 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/adjudicate-review-findings.md"
-verified_on = "2026-10-17"
+url = "https://github.com/nrslib/takt/tree/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/ai-antipattern-fix.md"
-verified_on = "2026-10-17"
+url = "https://github.com/nrslib/takt/tree/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/ai-antipattern-review.md"
-verified_on = "2026-10-17"
+url = "https://github.com/nrslib/takt/tree/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/apply-fix-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s5"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/apply-fix-verification.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s6"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/arbitrate.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s7"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/architect.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s8"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/architecture-audit-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s9"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/architecture-audit-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s10"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/architecture-audit-supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s11"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/architecture-audit-team-leader.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s12"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/architecture-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s13"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/audit-security-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s14"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/audit-security-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s15"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/audit-security-supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s16"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/audit-security-team-leader.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s17"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/caccia.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s18"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/coding-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s19"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/companion-moderate-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s20"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/companion-watch-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s21"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/companion-watch-testing.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s22"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/cqrs-es-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s23"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/development-implement-with-reports.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s24"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/development-implementation-completion.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s25"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/development-maintenance-with-reports.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s26"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/development-reimplement-with-reports.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s27"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/development-team-with-reports.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s28"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/e2e-audit-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s29"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/e2e-audit-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s30"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/e2e-audit-supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s31"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/e2e-audit-team-leader.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s32"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/exec-loop-monitor.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s33"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/exec-replan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s34"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/exec-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s35"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/exec-worker.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s36"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s37"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix-completion-retry.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s38"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix-maintenance.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s39"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s40"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix-plan-from-review-resolution.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s41"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix-replan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s42"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/fix-supervisor.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s43"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-ai-antipattern-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s44"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-architecture-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s45"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-coding-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s46"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-cqrs-es-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s47"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-frontend-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s48"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-review-completion-retry.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s49"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-security-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s50"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/follow-up-testing-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s51"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/frontend-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s52"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/gather-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s53"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/implement.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s54"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/implement-after-tests.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s55"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/implement-maintenance.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s56"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/implement-terraform.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s57"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/initial-ai-antipattern-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s58"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/initial-review-completion-retry.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s59"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/loop-analysis.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s60"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/loop-monitor-reviewers-fix.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s61"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/manager.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s62"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s63"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/plan-maintenance.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s64"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/reanalyze-loop-analysis.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s65"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/replan-implementation.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s66"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/request-replan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s67"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/research-analyze.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s68"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/research-dig.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s69"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/research-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s70"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/research-supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s71"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-arch.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s72"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-coding.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s73"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-completion-retry.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s74"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-cqrs-es.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s75"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-frontend.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s76"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-loop-analysis.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s77"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-remediation-problem-tracking.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s78"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-security.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s79"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-terraform.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s80"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/review-test.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s81"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-fix-plan-from-review-resolution.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s82"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-fix-replan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s83"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s84"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-plan-maintenance.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s85"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-replan-implementation.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s86"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-supervise-review-resolution.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s87"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-verification-replan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s88"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/scenario-based-write-tests-first.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s89"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/security-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s90"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/select-applicable-candidates.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s91"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/simple-implement.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s92"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/simple-implement-after-tests.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s93"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/simple-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s94"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/simple-review-coding.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s95"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/simple-supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s96"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/simple-write-tests-first.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s97"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s98"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/supervise-maintenance.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s99"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/supervise-review-resolution.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s100"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/team-leader-fix.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s101"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/team-leader-fix-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s102"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/team-leader-fix-verification.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s103"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/team-leader-implement.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s104"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/testing-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s105"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/unit-audit-plan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s106"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/unit-audit-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s107"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/unit-audit-supervise.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s108"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/unit-audit-team-leader.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s109"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/verification-replan.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s110"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/verify-fix.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s111"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/workflow-maker-create.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s112"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/workflow-maker-fix.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s113"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/workflow-maker-review.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s114"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/instructions/write-tests-first.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s115"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/architecture.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s116"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/backend.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s117"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/cqrs-es.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s118"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/e2e-testing.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s119"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/existing-system.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s120"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/frontend.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s121"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/gui.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s122"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/implementation-semantics.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s123"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/loop-analysis.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s124"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/manager.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s125"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/react.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s126"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/research.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s127"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/security.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s128"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/security-api.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s129"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/security-data.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s130"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/security-dependencies.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s131"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/security-local.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s132"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/security-web.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s133"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/takt.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s134"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/task-decomposition.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s135"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/terraform-aws.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s136"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/knowledge/unit-testing.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s137"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/ai-antipattern-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s138"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/architecture-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s139"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/balthasar.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s140"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/casper.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s141"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/coder.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s142"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/coding-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s143"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/companion-round-adjudicator.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s144"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/conductor.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s145"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/cqrs-es-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s146"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/dual-supervisor.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s147"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/exec-assistant.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s148"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/exec-worker.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s149"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/frontend-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s150"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/loop-analysis-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s151"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/loop-analyzer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s152"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/manager.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s153"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/melchior.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s154"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/planner.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s155"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/research-analyzer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s156"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/research-digger.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s157"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/research-planner.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s158"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/research-supervisor.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s159"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/review-adjudicator.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s160"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/security-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s161"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/supervisor.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s162"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/terraform-coder.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s163"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/terraform-reviewer.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s164"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/test-planner.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s165"
-url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets/personas/testing-reviewer.md"
-verified_on = "2026-10-17"
+url = "https://github.com/nrslib/takt/blob/c87caaba01c09436c89935c54687670d7b94e23b/docs/workflows.md"
+quote = "bare names are resolved through the facet layers in priority order — project `.takt/facets/<type>/`, then global `~/.takt/facets/<type>/`, then bundled `builtins/{lang}/facets/<type>/`"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
-names = ["adjudicate-review-findings"]
+names = [
+  "adjudicate-review-findings",
+  "ai-antipattern-fix",
+  "ai-antipattern-review",
+  "apply-fix-plan",
+  "apply-fix-verification",
+  "arbitrate",
+  "architect",
+  "architecture-audit-plan",
+  "architecture-audit-review",
+  "architecture-audit-supervise",
+  "architecture-audit-team-leader",
+  "architecture-review",
+  "audit-security-plan",
+  "audit-security-review",
+  "audit-security-supervise",
+  "audit-security-team-leader",
+  "caccia",
+  "coding-review",
+  "companion-moderate-review",
+  "companion-watch-review",
+  "companion-watch-testing",
+  "cqrs-es-review",
+  "development-implement-with-reports",
+  "development-implementation-completion",
+  "development-maintenance-with-reports",
+  "development-reimplement-with-reports",
+  "development-team-with-reports",
+  "e2e-audit-plan",
+  "e2e-audit-review",
+  "e2e-audit-supervise",
+  "e2e-audit-team-leader",
+  "exec-loop-monitor",
+  "exec-replan",
+  "exec-review",
+  "exec-worker",
+  "fix",
+  "fix-completion-retry",
+  "fix-maintenance",
+  "fix-plan",
+  "fix-plan-from-review-resolution",
+  "fix-replan",
+  "fix-supervisor",
+  "follow-up-ai-antipattern-review",
+  "follow-up-architecture-review",
+  "follow-up-coding-review",
+  "follow-up-cqrs-es-review",
+  "follow-up-frontend-review",
+  "follow-up-review-completion-retry",
+  "follow-up-security-review",
+  "follow-up-testing-review",
+  "frontend-review",
+  "gather-review",
+  "implement",
+  "implement-after-tests",
+  "implement-maintenance",
+  "implement-terraform",
+  "initial-ai-antipattern-review",
+  "initial-review-completion-retry",
+  "loop-analysis",
+  "loop-monitor-reviewers-fix",
+  "manager",
+  "plan",
+  "plan-maintenance",
+  "reanalyze-loop-analysis",
+  "replan-implementation",
+  "request-replan",
+  "research-analyze",
+  "research-dig",
+  "research-plan",
+  "research-supervise",
+  "review-arch",
+  "review-coding",
+  "review-completion-retry",
+  "review-cqrs-es",
+  "review-frontend",
+  "review-loop-analysis",
+  "review-remediation-problem-tracking",
+  "review-security",
+  "review-terraform",
+  "review-test",
+  "scenario-based-fix-plan-from-review-resolution",
+  "scenario-based-fix-replan",
+  "scenario-based-plan",
+  "scenario-based-plan-maintenance",
+  "scenario-based-replan-implementation",
+  "scenario-based-supervise-review-resolution",
+  "scenario-based-verification-replan",
+  "scenario-based-write-tests-first",
+  "security-review",
+  "select-applicable-candidates",
+  "simple-implement",
+  "simple-implement-after-tests",
+  "simple-plan",
+  "simple-review-coding",
+  "simple-supervise",
+  "simple-write-tests-first",
+  "supervise",
+  "supervise-maintenance",
+  "supervise-review-resolution",
+  "team-leader-fix",
+  "team-leader-fix-plan",
+  "team-leader-fix-verification",
+  "team-leader-implement",
+  "testing-review",
+  "unit-audit-plan",
+  "unit-audit-review",
+  "unit-audit-supervise",
+  "unit-audit-team-leader",
+  "verification-replan",
+  "verify-fix",
+  "workflow-maker-create",
+  "workflow-maker-fix",
+  "workflow-maker-review",
+  "write-tests-first",
+]
 
 [[group]]
-kind = "command"
+kind = "skill"
 source = "s2"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
-names = ["ai-antipattern-fix"]
+names = [
+  "architecture",
+  "backend",
+  "cqrs-es",
+  "e2e-testing",
+  "existing-system",
+  "frontend",
+  "gui",
+  "implementation-semantics",
+  "loop-analysis",
+  "manager",
+  "react",
+  "research",
+  "security",
+  "security-api",
+  "security-data",
+  "security-dependencies",
+  "security-local",
+  "security-web",
+  "takt",
+  "task-decomposition",
+  "terraform-aws",
+  "unit-testing",
+]
 
 [[group]]
-kind = "command"
+kind = "agent"
 source = "s3"
-user_collision = "user_wins"
-match = "exact"
-names = ["ai-antipattern-review"]
-
-[[group]]
-kind = "command"
-source = "s4"
-user_collision = "user_wins"
-match = "exact"
-names = ["apply-fix-plan"]
-
-[[group]]
-kind = "command"
-source = "s5"
-user_collision = "user_wins"
-match = "exact"
-names = ["apply-fix-verification"]
-
-[[group]]
-kind = "command"
-source = "s6"
-user_collision = "user_wins"
-match = "exact"
-names = ["arbitrate"]
-
-[[group]]
-kind = "command"
-source = "s7"
-user_collision = "user_wins"
-match = "exact"
-names = ["architect"]
-
-[[group]]
-kind = "command"
-source = "s8"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-audit-plan"]
-
-[[group]]
-kind = "command"
-source = "s9"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-audit-review"]
-
-[[group]]
-kind = "command"
-source = "s10"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-audit-supervise"]
-
-[[group]]
-kind = "command"
-source = "s11"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-audit-team-leader"]
-
-[[group]]
-kind = "command"
-source = "s12"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-review"]
-
-[[group]]
-kind = "command"
-source = "s13"
-user_collision = "user_wins"
-match = "exact"
-names = ["audit-security-plan"]
-
-[[group]]
-kind = "command"
-source = "s14"
-user_collision = "user_wins"
-match = "exact"
-names = ["audit-security-review"]
-
-[[group]]
-kind = "command"
-source = "s15"
-user_collision = "user_wins"
-match = "exact"
-names = ["audit-security-supervise"]
-
-[[group]]
-kind = "command"
-source = "s16"
-user_collision = "user_wins"
-match = "exact"
-names = ["audit-security-team-leader"]
-
-[[group]]
-kind = "command"
-source = "s17"
-user_collision = "user_wins"
-match = "exact"
-names = ["caccia"]
-
-[[group]]
-kind = "command"
-source = "s18"
-user_collision = "user_wins"
-match = "exact"
-names = ["coding-review"]
-
-[[group]]
-kind = "command"
-source = "s19"
-user_collision = "user_wins"
-match = "exact"
-names = ["companion-moderate-review"]
-
-[[group]]
-kind = "command"
-source = "s20"
-user_collision = "user_wins"
-match = "exact"
-names = ["companion-watch-review"]
-
-[[group]]
-kind = "command"
-source = "s21"
-user_collision = "user_wins"
-match = "exact"
-names = ["companion-watch-testing"]
-
-[[group]]
-kind = "command"
-source = "s22"
-user_collision = "user_wins"
-match = "exact"
-names = ["cqrs-es-review"]
-
-[[group]]
-kind = "command"
-source = "s23"
-user_collision = "user_wins"
-match = "exact"
-names = ["development-implement-with-reports"]
-
-[[group]]
-kind = "command"
-source = "s24"
-user_collision = "user_wins"
-match = "exact"
-names = ["development-implementation-completion"]
-
-[[group]]
-kind = "command"
-source = "s25"
-user_collision = "user_wins"
-match = "exact"
-names = ["development-maintenance-with-reports"]
-
-[[group]]
-kind = "command"
-source = "s26"
-user_collision = "user_wins"
-match = "exact"
-names = ["development-reimplement-with-reports"]
-
-[[group]]
-kind = "command"
-source = "s27"
-user_collision = "user_wins"
-match = "exact"
-names = ["development-team-with-reports"]
-
-[[group]]
-kind = "command"
-source = "s28"
-user_collision = "user_wins"
-match = "exact"
-names = ["e2e-audit-plan"]
-
-[[group]]
-kind = "command"
-source = "s29"
-user_collision = "user_wins"
-match = "exact"
-names = ["e2e-audit-review"]
-
-[[group]]
-kind = "command"
-source = "s30"
-user_collision = "user_wins"
-match = "exact"
-names = ["e2e-audit-supervise"]
-
-[[group]]
-kind = "command"
-source = "s31"
-user_collision = "user_wins"
-match = "exact"
-names = ["e2e-audit-team-leader"]
-
-[[group]]
-kind = "command"
-source = "s32"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec-loop-monitor"]
-
-[[group]]
-kind = "command"
-source = "s33"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec-replan"]
-
-[[group]]
-kind = "command"
-source = "s34"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec-review"]
-
-[[group]]
-kind = "command"
-source = "s35"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec-worker"]
-
-[[group]]
-kind = "command"
-source = "s36"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix"]
-
-[[group]]
-kind = "command"
-source = "s37"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix-completion-retry"]
-
-[[group]]
-kind = "command"
-source = "s38"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix-maintenance"]
-
-[[group]]
-kind = "command"
-source = "s39"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix-plan"]
-
-[[group]]
-kind = "command"
-source = "s40"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix-plan-from-review-resolution"]
-
-[[group]]
-kind = "command"
-source = "s41"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix-replan"]
-
-[[group]]
-kind = "command"
-source = "s42"
-user_collision = "user_wins"
-match = "exact"
-names = ["fix-supervisor"]
-
-[[group]]
-kind = "command"
-source = "s43"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-ai-antipattern-review"]
-
-[[group]]
-kind = "command"
-source = "s44"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-architecture-review"]
-
-[[group]]
-kind = "command"
-source = "s45"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-coding-review"]
-
-[[group]]
-kind = "command"
-source = "s46"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-cqrs-es-review"]
-
-[[group]]
-kind = "command"
-source = "s47"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-frontend-review"]
-
-[[group]]
-kind = "command"
-source = "s48"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-review-completion-retry"]
-
-[[group]]
-kind = "command"
-source = "s49"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-security-review"]
-
-[[group]]
-kind = "command"
-source = "s50"
-user_collision = "user_wins"
-match = "exact"
-names = ["follow-up-testing-review"]
-
-[[group]]
-kind = "command"
-source = "s51"
-user_collision = "user_wins"
-match = "exact"
-names = ["frontend-review"]
-
-[[group]]
-kind = "command"
-source = "s52"
-user_collision = "user_wins"
-match = "exact"
-names = ["gather-review"]
-
-[[group]]
-kind = "command"
-source = "s53"
-user_collision = "user_wins"
-match = "exact"
-names = ["implement"]
-
-[[group]]
-kind = "command"
-source = "s54"
-user_collision = "user_wins"
-match = "exact"
-names = ["implement-after-tests"]
-
-[[group]]
-kind = "command"
-source = "s55"
-user_collision = "user_wins"
-match = "exact"
-names = ["implement-maintenance"]
-
-[[group]]
-kind = "command"
-source = "s56"
-user_collision = "user_wins"
-match = "exact"
-names = ["implement-terraform"]
-
-[[group]]
-kind = "command"
-source = "s57"
-user_collision = "user_wins"
-match = "exact"
-names = ["initial-ai-antipattern-review"]
-
-[[group]]
-kind = "command"
-source = "s58"
-user_collision = "user_wins"
-match = "exact"
-names = ["initial-review-completion-retry"]
-
-[[group]]
-kind = "command"
-source = "s59"
-user_collision = "user_wins"
-match = "exact"
-names = ["loop-analysis"]
-
-[[group]]
-kind = "command"
-source = "s60"
-user_collision = "user_wins"
-match = "exact"
-names = ["loop-monitor-reviewers-fix"]
-
-[[group]]
-kind = "command"
-source = "s61"
-user_collision = "user_wins"
-match = "exact"
-names = ["manager"]
-
-[[group]]
-kind = "command"
-source = "s62"
-user_collision = "user_wins"
-match = "exact"
-names = ["plan"]
-
-[[group]]
-kind = "command"
-source = "s63"
-user_collision = "user_wins"
-match = "exact"
-names = ["plan-maintenance"]
-
-[[group]]
-kind = "command"
-source = "s64"
-user_collision = "user_wins"
-match = "exact"
-names = ["reanalyze-loop-analysis"]
-
-[[group]]
-kind = "command"
-source = "s65"
-user_collision = "user_wins"
-match = "exact"
-names = ["replan-implementation"]
-
-[[group]]
-kind = "command"
-source = "s66"
-user_collision = "user_wins"
-match = "exact"
-names = ["request-replan"]
-
-[[group]]
-kind = "command"
-source = "s67"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-analyze"]
-
-[[group]]
-kind = "command"
-source = "s68"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-dig"]
-
-[[group]]
-kind = "command"
-source = "s69"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-plan"]
-
-[[group]]
-kind = "command"
-source = "s70"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-supervise"]
-
-[[group]]
-kind = "command"
-source = "s71"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-arch"]
-
-[[group]]
-kind = "command"
-source = "s72"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-coding"]
-
-[[group]]
-kind = "command"
-source = "s73"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-completion-retry"]
-
-[[group]]
-kind = "command"
-source = "s74"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-cqrs-es"]
-
-[[group]]
-kind = "command"
-source = "s75"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-frontend"]
-
-[[group]]
-kind = "command"
-source = "s76"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-loop-analysis"]
-
-[[group]]
-kind = "command"
-source = "s77"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-remediation-problem-tracking"]
-
-[[group]]
-kind = "command"
-source = "s78"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-security"]
-
-[[group]]
-kind = "command"
-source = "s79"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-terraform"]
-
-[[group]]
-kind = "command"
-source = "s80"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-test"]
-
-[[group]]
-kind = "command"
-source = "s81"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-fix-plan-from-review-resolution"]
-
-[[group]]
-kind = "command"
-source = "s82"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-fix-replan"]
-
-[[group]]
-kind = "command"
-source = "s83"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-plan"]
-
-[[group]]
-kind = "command"
-source = "s84"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-plan-maintenance"]
-
-[[group]]
-kind = "command"
-source = "s85"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-replan-implementation"]
-
-[[group]]
-kind = "command"
-source = "s86"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-supervise-review-resolution"]
-
-[[group]]
-kind = "command"
-source = "s87"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-verification-replan"]
-
-[[group]]
-kind = "command"
-source = "s88"
-user_collision = "user_wins"
-match = "exact"
-names = ["scenario-based-write-tests-first"]
-
-[[group]]
-kind = "command"
-source = "s89"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-review"]
-
-[[group]]
-kind = "command"
-source = "s90"
-user_collision = "user_wins"
-match = "exact"
-names = ["select-applicable-candidates"]
-
-[[group]]
-kind = "command"
-source = "s91"
-user_collision = "user_wins"
-match = "exact"
-names = ["simple-implement"]
-
-[[group]]
-kind = "command"
-source = "s92"
-user_collision = "user_wins"
-match = "exact"
-names = ["simple-implement-after-tests"]
-
-[[group]]
-kind = "command"
-source = "s93"
-user_collision = "user_wins"
-match = "exact"
-names = ["simple-plan"]
-
-[[group]]
-kind = "command"
-source = "s94"
-user_collision = "user_wins"
-match = "exact"
-names = ["simple-review-coding"]
-
-[[group]]
-kind = "command"
-source = "s95"
-user_collision = "user_wins"
-match = "exact"
-names = ["simple-supervise"]
-
-[[group]]
-kind = "command"
-source = "s96"
-user_collision = "user_wins"
-match = "exact"
-names = ["simple-write-tests-first"]
-
-[[group]]
-kind = "command"
-source = "s97"
-user_collision = "user_wins"
-match = "exact"
-names = ["supervise"]
-
-[[group]]
-kind = "command"
-source = "s98"
-user_collision = "user_wins"
-match = "exact"
-names = ["supervise-maintenance"]
-
-[[group]]
-kind = "command"
-source = "s99"
-user_collision = "user_wins"
-match = "exact"
-names = ["supervise-review-resolution"]
-
-[[group]]
-kind = "command"
-source = "s100"
-user_collision = "user_wins"
-match = "exact"
-names = ["team-leader-fix"]
-
-[[group]]
-kind = "command"
-source = "s101"
-user_collision = "user_wins"
-match = "exact"
-names = ["team-leader-fix-plan"]
-
-[[group]]
-kind = "command"
-source = "s102"
-user_collision = "user_wins"
-match = "exact"
-names = ["team-leader-fix-verification"]
-
-[[group]]
-kind = "command"
-source = "s103"
-user_collision = "user_wins"
-match = "exact"
-names = ["team-leader-implement"]
-
-[[group]]
-kind = "command"
-source = "s104"
-user_collision = "user_wins"
-match = "exact"
-names = ["testing-review"]
-
-[[group]]
-kind = "command"
-source = "s105"
-user_collision = "user_wins"
-match = "exact"
-names = ["unit-audit-plan"]
-
-[[group]]
-kind = "command"
-source = "s106"
-user_collision = "user_wins"
-match = "exact"
-names = ["unit-audit-review"]
-
-[[group]]
-kind = "command"
-source = "s107"
-user_collision = "user_wins"
-match = "exact"
-names = ["unit-audit-supervise"]
-
-[[group]]
-kind = "command"
-source = "s108"
-user_collision = "user_wins"
-match = "exact"
-names = ["unit-audit-team-leader"]
-
-[[group]]
-kind = "command"
-source = "s109"
-user_collision = "user_wins"
-match = "exact"
-names = ["verification-replan"]
-
-[[group]]
-kind = "command"
-source = "s110"
-user_collision = "user_wins"
-match = "exact"
-names = ["verify-fix"]
-
-[[group]]
-kind = "command"
-source = "s111"
-user_collision = "user_wins"
-match = "exact"
-names = ["workflow-maker-create"]
-
-[[group]]
-kind = "command"
-source = "s112"
-user_collision = "user_wins"
-match = "exact"
-names = ["workflow-maker-fix"]
-
-[[group]]
-kind = "command"
-source = "s113"
-user_collision = "user_wins"
-match = "exact"
-names = ["workflow-maker-review"]
-
-[[group]]
-kind = "command"
-source = "s114"
-user_collision = "user_wins"
-match = "exact"
-names = ["write-tests-first"]
-
-[[group]]
-kind = "skill"
-source = "s115"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture"]
-
-[[group]]
-kind = "skill"
-source = "s116"
-user_collision = "user_wins"
-match = "exact"
-names = ["backend"]
-
-[[group]]
-kind = "skill"
-source = "s117"
-user_collision = "user_wins"
-match = "exact"
-names = ["cqrs-es"]
-
-[[group]]
-kind = "skill"
-source = "s118"
-user_collision = "user_wins"
-match = "exact"
-names = ["e2e-testing"]
-
-[[group]]
-kind = "skill"
-source = "s119"
-user_collision = "user_wins"
-match = "exact"
-names = ["existing-system"]
-
-[[group]]
-kind = "skill"
-source = "s120"
-user_collision = "user_wins"
-match = "exact"
-names = ["frontend"]
-
-[[group]]
-kind = "skill"
-source = "s121"
-user_collision = "user_wins"
-match = "exact"
-names = ["gui"]
-
-[[group]]
-kind = "skill"
-source = "s122"
-user_collision = "user_wins"
-match = "exact"
-names = ["implementation-semantics"]
-
-[[group]]
-kind = "skill"
-source = "s123"
-user_collision = "user_wins"
-match = "exact"
-names = ["loop-analysis"]
-
-[[group]]
-kind = "skill"
-source = "s124"
-user_collision = "user_wins"
-match = "exact"
-names = ["manager"]
-
-[[group]]
-kind = "skill"
-source = "s125"
-user_collision = "user_wins"
-match = "exact"
-names = ["react"]
-
-[[group]]
-kind = "skill"
-source = "s126"
-user_collision = "user_wins"
-match = "exact"
-names = ["research"]
-
-[[group]]
-kind = "skill"
-source = "s127"
-user_collision = "user_wins"
-match = "exact"
-names = ["security"]
-
-[[group]]
-kind = "skill"
-source = "s128"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-api"]
-
-[[group]]
-kind = "skill"
-source = "s129"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-data"]
-
-[[group]]
-kind = "skill"
-source = "s130"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-dependencies"]
-
-[[group]]
-kind = "skill"
-source = "s131"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-local"]
-
-[[group]]
-kind = "skill"
-source = "s132"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-web"]
-
-[[group]]
-kind = "skill"
-source = "s133"
-user_collision = "user_wins"
-match = "exact"
-names = ["takt"]
-
-[[group]]
-kind = "skill"
-source = "s134"
-user_collision = "user_wins"
-match = "exact"
-names = ["task-decomposition"]
-
-[[group]]
-kind = "skill"
-source = "s135"
-user_collision = "user_wins"
-match = "exact"
-names = ["terraform-aws"]
-
-[[group]]
-kind = "skill"
-source = "s136"
-user_collision = "user_wins"
-match = "exact"
-names = ["unit-testing"]
-
-[[group]]
-kind = "agent"
-source = "s137"
-user_collision = "user_wins"
-match = "exact"
-names = ["ai-antipattern-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s138"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s139"
-user_collision = "user_wins"
-match = "exact"
-names = ["balthasar"]
-
-[[group]]
-kind = "agent"
-source = "s140"
-user_collision = "user_wins"
-match = "exact"
-names = ["casper"]
-
-[[group]]
-kind = "agent"
-source = "s141"
-user_collision = "user_wins"
-match = "exact"
-names = ["coder"]
-
-[[group]]
-kind = "agent"
-source = "s142"
-user_collision = "user_wins"
-match = "exact"
-names = ["coding-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s143"
-user_collision = "user_wins"
-match = "exact"
-names = ["companion-round-adjudicator"]
-
-[[group]]
-kind = "agent"
-source = "s144"
-user_collision = "user_wins"
-match = "exact"
-names = ["conductor"]
-
-[[group]]
-kind = "agent"
-source = "s145"
-user_collision = "user_wins"
-match = "exact"
-names = ["cqrs-es-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s146"
-user_collision = "user_wins"
-match = "exact"
-names = ["dual-supervisor"]
-
-[[group]]
-kind = "agent"
-source = "s147"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec-assistant"]
-
-[[group]]
-kind = "agent"
-source = "s148"
-user_collision = "user_wins"
-match = "exact"
-names = ["exec-worker"]
-
-[[group]]
-kind = "agent"
-source = "s149"
-user_collision = "user_wins"
-match = "exact"
-names = ["frontend-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s150"
-user_collision = "user_wins"
-match = "exact"
-names = ["loop-analysis-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s151"
-user_collision = "user_wins"
-match = "exact"
-names = ["loop-analyzer"]
-
-[[group]]
-kind = "agent"
-source = "s152"
-user_collision = "user_wins"
-match = "exact"
-names = ["manager"]
-
-[[group]]
-kind = "agent"
-source = "s153"
-user_collision = "user_wins"
-match = "exact"
-names = ["melchior"]
-
-[[group]]
-kind = "agent"
-source = "s154"
-user_collision = "user_wins"
-match = "exact"
-names = ["planner"]
-
-[[group]]
-kind = "agent"
-source = "s155"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-analyzer"]
-
-[[group]]
-kind = "agent"
-source = "s156"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-digger"]
-
-[[group]]
-kind = "agent"
-source = "s157"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-planner"]
-
-[[group]]
-kind = "agent"
-source = "s158"
-user_collision = "user_wins"
-match = "exact"
-names = ["research-supervisor"]
-
-[[group]]
-kind = "agent"
-source = "s159"
-user_collision = "user_wins"
-match = "exact"
-names = ["review-adjudicator"]
-
-[[group]]
-kind = "agent"
-source = "s160"
-user_collision = "user_wins"
-match = "exact"
-names = ["security-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s161"
-user_collision = "user_wins"
-match = "exact"
-names = ["supervisor"]
-
-[[group]]
-kind = "agent"
-source = "s162"
-user_collision = "user_wins"
-match = "exact"
-names = ["terraform-coder"]
-
-[[group]]
-kind = "agent"
-source = "s163"
-user_collision = "user_wins"
-match = "exact"
-names = ["terraform-reviewer"]
-
-[[group]]
-kind = "agent"
-source = "s164"
-user_collision = "user_wins"
-match = "exact"
-names = ["test-planner"]
-
-[[group]]
-kind = "agent"
-source = "s165"
-user_collision = "user_wins"
-match = "exact"
-names = ["testing-reviewer"]
+evidence = "s4"
+user_collision = "user_wins"
+match = "exact"
+names = [
+  "ai-antipattern-reviewer",
+  "architecture-reviewer",
+  "balthasar",
+  "casper",
+  "coder",
+  "coding-reviewer",
+  "companion-round-adjudicator",
+  "conductor",
+  "cqrs-es-reviewer",
+  "dual-supervisor",
+  "exec-assistant",
+  "exec-worker",
+  "frontend-reviewer",
+  "loop-analysis-reviewer",
+  "loop-analyzer",
+  "manager",
+  "melchior",
+  "planner",
+  "research-analyzer",
+  "research-digger",
+  "research-planner",
+  "research-supervisor",
+  "review-adjudicator",
+  "security-reviewer",
+  "supervisor",
+  "terraform-coder",
+  "terraform-reviewer",
+  "test-planner",
+  "testing-reviewer",
+]

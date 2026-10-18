@@ -1,7 +1,7 @@
 schema = 1
 preset = "hermes"
 harness_version = "docs-only: source tree @ 4b1adbfe5d27 (pyproject version 0.0.0)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,1957 +9,253 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L85"
-verified_on = "2026-10-17"
+url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d274c5dbfaa981fcc4dd68391867701/hermes_cli/commands.py"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L87"
-verified_on = "2026-10-17"
+url = "https://github.com/NousResearch/hermes-agent/tree/4b1adbfe5d274c5dbfaa981fcc4dd68391867701/skills"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L90"
-verified_on = "2026-10-17"
+url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d274c5dbfaa981fcc4dd68391867701/agent/skill_commands.py"
+quote = "# A collision with a core command (name or alias) skips auto-registration; the skill stays"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L92"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s5"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L94"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s6"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L96"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s7"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L98"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s8"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L100"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s9"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L101"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s10"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L103"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s11"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L105"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s12"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L106"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s13"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L108"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s14"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L110"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s15"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L113"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s16"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L115"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s17"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L117"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s18"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L120"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s19"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L122"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s20"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L124"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s21"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L126"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s22"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L128"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s23"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L130"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s24"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L132"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s25"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L134"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s26"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L136"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s27"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L138"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s28"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L141"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s29"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L145"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s30"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L147"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s31"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L150"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s32"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L154"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s33"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L156"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s34"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L158"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s35"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L162"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s36"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L164"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s37"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L166"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s38"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L168"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s39"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L170"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s40"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L173"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s41"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L175"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s42"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L176"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s43"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L178"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s44"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L180"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s45"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L182"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s46"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L185"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s47"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L187"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s48"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L190"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s49"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L193"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s50"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L195"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s51"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L197"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s52"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L200"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s53"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L203"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s54"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L206"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s55"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L209"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s56"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L212"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s57"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L215"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s58"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L217"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s59"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L220"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s60"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L223"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s61"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L227"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s62"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L229"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s63"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L232"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s64"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L235"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s65"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L237"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s66"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L241"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s67"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L246"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s68"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L248"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s69"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L250"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s70"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L262"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s71"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L265"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s72"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L267"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s73"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L269"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s74"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L271"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s75"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L273"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s76"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L275"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s77"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L279"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s78"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L282"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s79"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L284"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s80"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L288"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s81"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L297"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s82"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L299"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s83"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L301"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s84"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L303"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s85"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L306"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s86"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L310"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s87"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L313"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s88"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L315"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s89"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L317"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s90"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L319"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s91"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L321"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s92"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L323"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s93"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L325"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s94"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L326"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s95"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L328"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s96"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L330"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s97"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L332"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s98"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L334"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s99"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L336"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s100"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L338"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s101"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L340"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s102"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L342"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s103"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/hermes_cli/commands.py#L346"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s104"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/airtable/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s105"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/apple/apple-notes/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s106"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/apple/apple-reminders/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s107"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/architecture-diagram/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s108"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/research/arxiv/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s109"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/ascii-video/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s110"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/baoyu-infographic/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s111"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/web/blocked-page-recovery/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s112"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/box/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s113"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/autonomous-ai-agents/claude-code/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s114"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/claude-design/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s115"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/codebase-inspection/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s116"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/autonomous-ai-agents/codex/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s117"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/research/competitor-news-monitor/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s118"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/autonomous-ai-agents/computer-use/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s119"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/design-md/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s120"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/document-to-action-items/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s121"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/docx/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s122"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/dogfood/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s123"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/email/email-inbox-triage/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s124"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/apple/findmy/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s125"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/media/gif-search/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s126"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/github/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s127"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/google-workspace/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s128"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/research/grounded-citations/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s129"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/autonomous-ai-agents/hermes-agent/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s130"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/hermes-agent-skill-authoring/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s131"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/email/himalaya/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s132"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/humanizer/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s133"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/apple/imessage/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s134"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/inspecting-hermes-desktop-dom/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s135"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/research/llm-wiki/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s136"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/manim-video/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s137"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/maps/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s138"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/meeting-action-items/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s139"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/node-inspect-debugger/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s140"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/notion/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s141"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/note-taking/obsidian/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s142"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/autonomous-ai-agents/opencode/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s143"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/p5js/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s144"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/pdf/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s145"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/popular-web-designs/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s146"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/powerpoint/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s147"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/product-price-monitor/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s148"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/python-debugpy/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s149"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/requesting-code-review/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s150"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/devops/sdlc-review/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s151"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/simplify-code/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s152"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/media/songsee/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s153"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/creative/songwriting-and-ai-music/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s154"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/spike/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s155"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/systematic-debugging/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s156"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/teams-meeting-pipeline/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s157"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/software-development/test-driven-development/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s158"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/weekly-review-planning/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s159"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/productivity/xlsx/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s160"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/social-media/xurl/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s161"
-url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d27/skills/media/youtube-content/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/NousResearch/hermes-agent/blob/4b1adbfe5d274c5dbfaa981fcc4dd68391867701/tools/skills_sync.py"
+quote = "# Never overwrite a same-named user skill."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s3"
 user_collision = "builtin_wins"
 match = "exact"
-names = ["start"]
+names = [
+  "agents",
+  "approvals",
+  "approve",
+  "autoprune",
+  "battery",
+  "bg",
+  "blueprint",
+  "branch",
+  "browser",
+  "btw",
+  "bundles",
+  "busy",
+  "clear",
+  "codex-runtime",
+  "commands",
+  "compress",
+  "config",
+  "context",
+  "copy",
+  "cron",
+  "curator",
+  "debug",
+  "deny",
+  "diff",
+  "egress",
+  "export",
+  "fast",
+  "focus",
+  "footer",
+  "goal",
+  "handoff",
+  "hatch",
+  "heartbeat",
+  "help",
+  "history",
+  "image",
+  "import",
+  "indicator",
+  "init",
+  "insights",
+  "journey",
+  "kanban",
+  "learn",
+  "login",
+  "loop",
+  "memory",
+  "moa",
+  "model",
+  "new",
+  "palette",
+  "paste",
+  "pause",
+  "personality",
+  "pet",
+  "plan",
+  "platform",
+  "platforms",
+  "plugins",
+  "profile",
+  "prompt",
+  "queue",
+  "quit",
+  "reasoning",
+  "redraw",
+  "refine",
+  "reload",
+  "reload-mcp",
+  "reload-skills",
+  "restart",
+  "resume",
+  "retry",
+  "review",
+  "rollback",
+  "save",
+  "sessions",
+  "sethome",
+  "skills",
+  "skin",
+  "snapshot",
+  "start",
+  "status",
+  "statusbar",
+  "steer",
+  "stop",
+  "subgoal",
+  "subscription",
+  "suggestions",
+  "timestamps",
+  "title",
+  "tools",
+  "toolsets",
+  "topic",
+  "topup",
+  "undo",
+  "update",
+  "usage",
+  "verbose",
+  "version",
+  "voice",
+  "wake",
+  "whoami",
+  "worktree",
+  "yolo",
+]
+aliases = { "agents" = [
+  "tasks",
+], "blueprint" = [
+  "bp",
+], "branch" = [
+  "fork",
+], "codex-runtime" = [
+  "codex_runtime",
+], "compress" = [
+  "compact",
+], "context" = [
+  "ctx",
+], "hatch" = [
+  "generate-pet",
+], "heartbeat" = [
+  "hb",
+], "journey" = [
+  "learning",
+  "memory-graph",
+], "loop" = [
+  "proactive",
+], "new" = [
+  "reset",
+], "platforms" = [
+  "gateway",
+], "prompt" = [
+  "compose",
+], "queue" = [
+  "q",
+], "quit" = [
+  "exit",
+], "reload-mcp" = [
+  "reload_mcp",
+], "reload-skills" = [
+  "reload_skills",
+], "sethome" = [
+  "set-home",
+], "snapshot" = [
+  "snap",
+], "statusbar" = [
+  "sb",
+], "steer" = [
+  "s",
+], "subscription" = [
+  "upgrade",
+], "suggestions" = [
+  "suggest",
+], "timestamps" = [
+  "ts",
+], "version" = [
+  "v",
+] }
 
 [[group]]
-kind = "command"
+kind = "skill"
 source = "s2"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["new"]
-aliases = { "new" = ["reset"] }
-
-[[group]]
-kind = "command"
-source = "s3"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["topic"]
-
-[[group]]
-kind = "command"
-source = "s4"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["clear"]
-
-[[group]]
-kind = "command"
-source = "s5"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["redraw"]
-
-[[group]]
-kind = "command"
-source = "s6"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["history"]
-
-[[group]]
-kind = "command"
-source = "s7"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["save"]
-
-[[group]]
-kind = "command"
-source = "s8"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["retry"]
-
-[[group]]
-kind = "command"
-source = "s9"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["prompt"]
-aliases = { "prompt" = ["compose"] }
-
-[[group]]
-kind = "command"
-source = "s10"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["undo"]
-
-[[group]]
-kind = "command"
-source = "s11"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["title"]
-
-[[group]]
-kind = "command"
-source = "s12"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["handoff"]
-
-[[group]]
-kind = "command"
-source = "s13"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["branch"]
-aliases = { "branch" = ["fork"] }
-
-[[group]]
-kind = "command"
-source = "s14"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["worktree"]
-
-[[group]]
-kind = "command"
-source = "s15"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["compress"]
-aliases = { "compress" = ["compact"] }
-
-[[group]]
-kind = "command"
-source = "s16"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["rollback"]
-
-[[group]]
-kind = "command"
-source = "s17"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["snapshot"]
-aliases = { "snapshot" = ["snap"] }
-
-[[group]]
-kind = "command"
-source = "s18"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["export"]
-
-[[group]]
-kind = "command"
-source = "s19"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["import"]
-
-[[group]]
-kind = "command"
-source = "s20"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["stop"]
-
-[[group]]
-kind = "command"
-source = "s21"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["pause"]
-
-[[group]]
-kind = "command"
-source = "s22"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["approve"]
-
-[[group]]
-kind = "command"
-source = "s23"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["deny"]
-
-[[group]]
-kind = "command"
-source = "s24"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["bg"]
-
-[[group]]
-kind = "command"
-source = "s25"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["btw"]
-
-[[group]]
-kind = "command"
-source = "s26"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["agents"]
-aliases = { "agents" = ["tasks"] }
-
-[[group]]
-kind = "command"
-source = "s27"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["journey"]
-aliases = { "journey" = ["learning", "memory-graph"] }
-
-[[group]]
-kind = "command"
-source = "s28"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["queue"]
-aliases = { "queue" = ["q"] }
-
-[[group]]
-kind = "command"
-source = "s29"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["steer"]
-aliases = { "steer" = ["s"] }
-
-[[group]]
-kind = "command"
-source = "s30"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["goal"]
-
-[[group]]
-kind = "command"
-source = "s31"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["heartbeat"]
-aliases = { "heartbeat" = ["hb"] }
-
-[[group]]
-kind = "command"
-source = "s32"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["refine"]
-
-[[group]]
-kind = "command"
-source = "s33"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["review"]
-
-[[group]]
-kind = "command"
-source = "s34"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["loop"]
-aliases = { "loop" = ["proactive"] }
-
-[[group]]
-kind = "command"
-source = "s35"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["plan"]
-
-[[group]]
-kind = "command"
-source = "s36"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["moa"]
-
-[[group]]
-kind = "command"
-source = "s37"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["subgoal"]
-
-[[group]]
-kind = "command"
-source = "s38"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["status"]
-
-[[group]]
-kind = "command"
-source = "s39"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["egress"]
-
-[[group]]
-kind = "command"
-source = "s40"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["context"]
-aliases = { "context" = ["ctx"] }
-
-[[group]]
-kind = "command"
-source = "s41"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["whoami"]
-
-[[group]]
-kind = "command"
-source = "s42"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["profile"]
-
-[[group]]
-kind = "command"
-source = "s43"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["sethome"]
-aliases = { "sethome" = ["set-home"] }
-
-[[group]]
-kind = "command"
-source = "s44"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["resume"]
-
-[[group]]
-kind = "command"
-source = "s45"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["sessions"]
-
-[[group]]
-kind = "command"
-source = "s46"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["config"]
-
-[[group]]
-kind = "command"
-source = "s47"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["model"]
-
-[[group]]
-kind = "command"
-source = "s48"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["codex-runtime"]
-aliases = { "codex-runtime" = ["codex_runtime"] }
-
-[[group]]
-kind = "command"
-source = "s49"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["personality"]
-
-[[group]]
-kind = "command"
-source = "s50"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["statusbar"]
-aliases = { "statusbar" = ["sb"] }
-
-[[group]]
-kind = "command"
-source = "s51"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["battery"]
-
-[[group]]
-kind = "command"
-source = "s52"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["timestamps"]
-aliases = { "timestamps" = ["ts"] }
-
-[[group]]
-kind = "command"
-source = "s53"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["diff"]
-
-[[group]]
-kind = "command"
-source = "s54"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["verbose"]
-
-[[group]]
-kind = "command"
-source = "s55"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["focus"]
-
-[[group]]
-kind = "command"
-source = "s56"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["footer"]
-
-[[group]]
-kind = "command"
-source = "s57"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["yolo"]
-
-[[group]]
-kind = "command"
-source = "s58"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["approvals"]
-
-[[group]]
-kind = "command"
-source = "s59"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["reasoning"]
-
-[[group]]
-kind = "command"
-source = "s60"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["fast"]
-
-[[group]]
-kind = "command"
-source = "s61"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["skin"]
-
-[[group]]
-kind = "command"
-source = "s62"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["indicator"]
-
-[[group]]
-kind = "command"
-source = "s63"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["voice"]
-
-[[group]]
-kind = "command"
-source = "s64"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["wake"]
-
-[[group]]
-kind = "command"
-source = "s65"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["busy"]
-
-[[group]]
-kind = "command"
-source = "s66"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["autoprune"]
-
-[[group]]
-kind = "command"
-source = "s67"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["tools"]
-
-[[group]]
-kind = "command"
-source = "s68"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["toolsets"]
-
-[[group]]
-kind = "command"
-source = "s69"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["skills"]
-
-[[group]]
-kind = "command"
-source = "s70"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["memory"]
-
-[[group]]
-kind = "command"
-source = "s71"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["bundles"]
-
-[[group]]
-kind = "command"
-source = "s72"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["pet"]
-
-[[group]]
-kind = "command"
-source = "s73"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["hatch"]
-aliases = { "hatch" = ["generate-pet"] }
-
-[[group]]
-kind = "command"
-source = "s74"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["learn"]
-
-[[group]]
-kind = "command"
-source = "s75"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["init"]
-
-[[group]]
-kind = "command"
-source = "s76"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["cron"]
-
-[[group]]
-kind = "command"
-source = "s77"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["suggestions"]
-aliases = { "suggestions" = ["suggest"] }
-
-[[group]]
-kind = "command"
-source = "s78"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["blueprint"]
-aliases = { "blueprint" = ["bp"] }
-
-[[group]]
-kind = "command"
-source = "s79"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["curator"]
-
-[[group]]
-kind = "command"
-source = "s80"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["kanban"]
-
-[[group]]
-kind = "command"
-source = "s81"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["reload"]
-
-[[group]]
-kind = "command"
-source = "s82"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["reload-mcp"]
-aliases = { "reload-mcp" = ["reload_mcp"] }
-
-[[group]]
-kind = "command"
-source = "s83"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["reload-skills"]
-aliases = { "reload-skills" = ["reload_skills"] }
-
-[[group]]
-kind = "command"
-source = "s84"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["browser"]
-
-[[group]]
-kind = "command"
-source = "s85"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["plugins"]
-
-[[group]]
-kind = "command"
-source = "s86"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["commands"]
-
-[[group]]
-kind = "command"
-source = "s87"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["help"]
-
-[[group]]
-kind = "command"
-source = "s88"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["palette"]
-
-[[group]]
-kind = "command"
-source = "s89"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["restart"]
-
-[[group]]
-kind = "command"
-source = "s90"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["usage"]
-
-[[group]]
-kind = "command"
-source = "s91"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["subscription"]
-aliases = { "subscription" = ["upgrade"] }
-
-[[group]]
-kind = "command"
-source = "s92"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["login"]
-
-[[group]]
-kind = "command"
-source = "s93"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["topup"]
-
-[[group]]
-kind = "command"
-source = "s94"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["insights"]
-
-[[group]]
-kind = "command"
-source = "s95"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["platforms"]
-aliases = { "platforms" = ["gateway"] }
-
-[[group]]
-kind = "command"
-source = "s96"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["platform"]
-
-[[group]]
-kind = "command"
-source = "s97"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["copy"]
-
-[[group]]
-kind = "command"
-source = "s98"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["paste"]
-
-[[group]]
-kind = "command"
-source = "s99"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["image"]
-
-[[group]]
-kind = "command"
-source = "s100"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["update"]
-
-[[group]]
-kind = "command"
-source = "s101"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["version"]
-aliases = { "version" = ["v"] }
-
-[[group]]
-kind = "command"
-source = "s102"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["debug"]
-
-[[group]]
-kind = "command"
-source = "s103"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["quit"]
-aliases = { "quit" = ["exit"] }
-
-[[group]]
-kind = "skill"
-source = "s104"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
-names = ["airtable"]
-
-[[group]]
-kind = "skill"
-source = "s105"
-user_collision = "user_wins"
-match = "exact"
-names = ["apple-notes"]
-
-[[group]]
-kind = "skill"
-source = "s106"
-user_collision = "user_wins"
-match = "exact"
-names = ["apple-reminders"]
-
-[[group]]
-kind = "skill"
-source = "s107"
-user_collision = "user_wins"
-match = "exact"
-names = ["architecture-diagram"]
-
-[[group]]
-kind = "skill"
-source = "s108"
-user_collision = "user_wins"
-match = "exact"
-names = ["arxiv"]
-
-[[group]]
-kind = "skill"
-source = "s109"
-user_collision = "user_wins"
-match = "exact"
-names = ["ascii-video"]
-
-[[group]]
-kind = "skill"
-source = "s110"
-user_collision = "user_wins"
-match = "exact"
-names = ["baoyu-infographic"]
-
-[[group]]
-kind = "skill"
-source = "s111"
-user_collision = "user_wins"
-match = "exact"
-names = ["blocked-page-recovery"]
-
-[[group]]
-kind = "skill"
-source = "s112"
-user_collision = "user_wins"
-match = "exact"
-names = ["box"]
-
-[[group]]
-kind = "skill"
-source = "s113"
-user_collision = "user_wins"
-match = "exact"
-names = ["claude-code"]
-
-[[group]]
-kind = "skill"
-source = "s114"
-user_collision = "user_wins"
-match = "exact"
-names = ["claude-design"]
-
-[[group]]
-kind = "skill"
-source = "s115"
-user_collision = "user_wins"
-match = "exact"
-names = ["codebase-inspection"]
-
-[[group]]
-kind = "skill"
-source = "s116"
-user_collision = "user_wins"
-match = "exact"
-names = ["codex"]
-
-[[group]]
-kind = "skill"
-source = "s117"
-user_collision = "user_wins"
-match = "exact"
-names = ["competitor-news-monitor"]
-
-[[group]]
-kind = "skill"
-source = "s118"
-user_collision = "user_wins"
-match = "exact"
-names = ["computer-use"]
-
-[[group]]
-kind = "skill"
-source = "s119"
-user_collision = "user_wins"
-match = "exact"
-names = ["design-md"]
-
-[[group]]
-kind = "skill"
-source = "s120"
-user_collision = "user_wins"
-match = "exact"
-names = ["document-to-action-items"]
-
-[[group]]
-kind = "skill"
-source = "s121"
-user_collision = "user_wins"
-match = "exact"
-names = ["docx"]
-
-[[group]]
-kind = "skill"
-source = "s122"
-user_collision = "user_wins"
-match = "exact"
-names = ["dogfood"]
-
-[[group]]
-kind = "skill"
-source = "s123"
-user_collision = "user_wins"
-match = "exact"
-names = ["email-inbox-triage"]
-
-[[group]]
-kind = "skill"
-source = "s124"
-user_collision = "user_wins"
-match = "exact"
-names = ["findmy"]
-
-[[group]]
-kind = "skill"
-source = "s125"
-user_collision = "user_wins"
-match = "exact"
-names = ["gif-search"]
-
-[[group]]
-kind = "skill"
-source = "s126"
-user_collision = "user_wins"
-match = "exact"
-names = ["github"]
-
-[[group]]
-kind = "skill"
-source = "s127"
-user_collision = "user_wins"
-match = "exact"
-names = ["google-workspace"]
-
-[[group]]
-kind = "skill"
-source = "s128"
-user_collision = "user_wins"
-match = "exact"
-names = ["grounded-citations"]
-
-[[group]]
-kind = "skill"
-source = "s129"
-user_collision = "user_wins"
-match = "exact"
-names = ["hermes-agent"]
-
-[[group]]
-kind = "skill"
-source = "s130"
-user_collision = "user_wins"
-match = "exact"
-names = ["hermes-agent-skill-authoring"]
-
-[[group]]
-kind = "skill"
-source = "s131"
-user_collision = "user_wins"
-match = "exact"
-names = ["himalaya"]
-
-[[group]]
-kind = "skill"
-source = "s132"
-user_collision = "user_wins"
-match = "exact"
-names = ["humanizer"]
-
-[[group]]
-kind = "skill"
-source = "s133"
-user_collision = "user_wins"
-match = "exact"
-names = ["imessage"]
-
-[[group]]
-kind = "skill"
-source = "s134"
-user_collision = "user_wins"
-match = "exact"
-names = ["inspecting-hermes-desktop-dom"]
-
-[[group]]
-kind = "skill"
-source = "s135"
-user_collision = "user_wins"
-match = "exact"
-names = ["llm-wiki"]
-
-[[group]]
-kind = "skill"
-source = "s136"
-user_collision = "user_wins"
-match = "exact"
-names = ["manim-video"]
-
-[[group]]
-kind = "skill"
-source = "s137"
-user_collision = "user_wins"
-match = "exact"
-names = ["maps"]
-
-[[group]]
-kind = "skill"
-source = "s138"
-user_collision = "user_wins"
-match = "exact"
-names = ["meeting-action-items"]
-
-[[group]]
-kind = "skill"
-source = "s139"
-user_collision = "user_wins"
-match = "exact"
-names = ["node-inspect-debugger"]
-
-[[group]]
-kind = "skill"
-source = "s140"
-user_collision = "user_wins"
-match = "exact"
-names = ["notion"]
-
-[[group]]
-kind = "skill"
-source = "s141"
-user_collision = "user_wins"
-match = "exact"
-names = ["obsidian"]
-
-[[group]]
-kind = "skill"
-source = "s142"
-user_collision = "user_wins"
-match = "exact"
-names = ["opencode"]
-
-[[group]]
-kind = "skill"
-source = "s143"
-user_collision = "user_wins"
-match = "exact"
-names = ["p5js"]
-
-[[group]]
-kind = "skill"
-source = "s144"
-user_collision = "user_wins"
-match = "exact"
-names = ["pdf"]
-
-[[group]]
-kind = "skill"
-source = "s145"
-user_collision = "user_wins"
-match = "exact"
-names = ["popular-web-designs"]
-
-[[group]]
-kind = "skill"
-source = "s146"
-user_collision = "user_wins"
-match = "exact"
-names = ["powerpoint"]
-
-[[group]]
-kind = "skill"
-source = "s147"
-user_collision = "user_wins"
-match = "exact"
-names = ["product-price-monitor"]
-
-[[group]]
-kind = "skill"
-source = "s148"
-user_collision = "user_wins"
-match = "exact"
-names = ["python-debugpy"]
-
-[[group]]
-kind = "skill"
-source = "s149"
-user_collision = "user_wins"
-match = "exact"
-names = ["requesting-code-review"]
-
-[[group]]
-kind = "skill"
-source = "s150"
-user_collision = "user_wins"
-match = "exact"
-names = ["sdlc-review"]
-
-[[group]]
-kind = "skill"
-source = "s151"
-user_collision = "user_wins"
-match = "exact"
-names = ["simplify-code"]
-
-[[group]]
-kind = "skill"
-source = "s152"
-user_collision = "user_wins"
-match = "exact"
-names = ["songsee"]
-
-[[group]]
-kind = "skill"
-source = "s153"
-user_collision = "user_wins"
-match = "exact"
-names = ["songwriting-and-ai-music"]
-
-[[group]]
-kind = "skill"
-source = "s154"
-user_collision = "user_wins"
-match = "exact"
-names = ["spike"]
-
-[[group]]
-kind = "skill"
-source = "s155"
-user_collision = "user_wins"
-match = "exact"
-names = ["systematic-debugging"]
-
-[[group]]
-kind = "skill"
-source = "s156"
-user_collision = "user_wins"
-match = "exact"
-names = ["teams-meeting-pipeline"]
-
-[[group]]
-kind = "skill"
-source = "s157"
-user_collision = "user_wins"
-match = "exact"
-names = ["test-driven-development"]
-
-[[group]]
-kind = "skill"
-source = "s158"
-user_collision = "user_wins"
-match = "exact"
-names = ["weekly-review-planning"]
-
-[[group]]
-kind = "skill"
-source = "s159"
-user_collision = "user_wins"
-match = "exact"
-names = ["xlsx"]
-
-[[group]]
-kind = "skill"
-source = "s160"
-user_collision = "user_wins"
-match = "exact"
-names = ["xurl"]
-
-[[group]]
-kind = "skill"
-source = "s161"
-user_collision = "user_wins"
-match = "exact"
-names = ["youtube-content"]
+names = [
+  "airtable",
+  "apple-notes",
+  "apple-reminders",
+  "architecture-diagram",
+  "arxiv",
+  "ascii-video",
+  "baoyu-infographic",
+  "blocked-page-recovery",
+  "box",
+  "claude-code",
+  "claude-design",
+  "codebase-inspection",
+  "codex",
+  "competitor-news-monitor",
+  "computer-use",
+  "design-md",
+  "document-to-action-items",
+  "docx",
+  "dogfood",
+  "email-inbox-triage",
+  "findmy",
+  "gif-search",
+  "github",
+  "google-workspace",
+  "grounded-citations",
+  "hermes-agent",
+  "hermes-agent-skill-authoring",
+  "himalaya",
+  "humanizer",
+  "imessage",
+  "inspecting-hermes-desktop-dom",
+  "llm-wiki",
+  "manim-video",
+  "maps",
+  "meeting-action-items",
+  "node-inspect-debugger",
+  "notion",
+  "obsidian",
+  "opencode",
+  "p5js",
+  "pdf",
+  "popular-web-designs",
+  "powerpoint",
+  "product-price-monitor",
+  "python-debugpy",
+  "requesting-code-review",
+  "sdlc-review",
+  "simplify-code",
+  "songsee",
+  "songwriting-and-ai-music",
+  "spike",
+  "systematic-debugging",
+  "teams-meeting-pipeline",
+  "test-driven-development",
+  "weekly-review-planning",
+  "xlsx",
+  "xurl",
+  "youtube-content",
+]

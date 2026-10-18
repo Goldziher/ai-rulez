@@ -1,7 +1,7 @@
 schema = 1
 preset = "deepagents"
 harness_version = "deepagents-code 0.1.86 @ 0c99fd026c4c"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,33 +9,30 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c/libs/code/COMMANDS.md"
-verified_on = "2026-10-17"
+url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c41a08e6725a5e45d5ac111dcc6bb/libs/code/COMMANDS.md"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c/libs/code/deepagents_code/built_in_skills/deepagents-plugin-discovery/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/langchain-ai/deepagents/tree/0c99fd026c4c41a08e6725a5e45d5ac111dcc6bb/libs/code/deepagents_code/built_in_skills"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c/libs/code/deepagents_code/built_in_skills/deepagents-thread-inspector/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c41a08e6725a5e45d5ac111dcc6bb/libs/deepagents/deepagents/middleware/subagents.py"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c/libs/code/deepagents_code/built_in_skills/remember/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c41a08e6725a5e45d5ac111dcc6bb/libs/code/deepagents_code/skills/merge.py"
+quote = "A higher-precedence skill replaces a lower-precedence skill with the same name."
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s5"
-url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c/libs/code/deepagents_code/built_in_skills/skill-creator/SKILL.md"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s6"
-url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c/libs/deepagents/deepagents/middleware/subagents.py#L523"
-verified_on = "2026-10-17"
+url = "https://github.com/langchain-ai/deepagents/blob/0c99fd026c4c41a08e6725a5e45d5ac111dcc6bb/libs/deepagents/deepagents/graph.py"
+quote = "if gp_profile.enabled is not False and not any(spec[\"name\"] == GENERAL_PURPOSE_SUBAGENT[\"name\"] for spec in inline_subagents):"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -54,6 +51,8 @@ names = [
   "context-doctor",
   "copy",
   "cost",
+  "debug",
+  "debug-error",
   "docs",
   "editor",
   "effort",
@@ -89,8 +88,6 @@ names = [
   "update",
   "version",
   "yolo",
-  "debug",
-  "debug-error",
 ]
 aliases = { "auth" = [
   "connect",
@@ -109,34 +106,15 @@ aliases = { "auth" = [
 [[group]]
 kind = "skill"
 source = "s2"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
-names = ["deepagents-plugin-discovery"]
-
-[[group]]
-kind = "skill"
-source = "s3"
-user_collision = "user_wins"
-match = "exact"
-names = ["deepagents-thread-inspector"]
-
-[[group]]
-kind = "skill"
-source = "s4"
-user_collision = "user_wins"
-match = "exact"
-names = ["remember"]
-
-[[group]]
-kind = "skill"
-source = "s5"
-user_collision = "user_wins"
-match = "exact"
-names = ["skill-creator"]
+names = ["deepagents-plugin-discovery", "deepagents-thread-inspector", "remember", "skill-creator"]
 
 [[group]]
 kind = "agent"
-source = "s6"
+source = "s3"
+evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
 names = ["general-purpose"]

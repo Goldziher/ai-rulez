@@ -1,7 +1,7 @@
 schema = 1
 preset = "goose"
 harness_version = "main@bfcc6ee6f1ee (latest release v1.55.0)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "error"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,49 +9,51 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose/src/agents/execute_commands.rs"
-verified_on = "2026-10-17"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee18d0c4c852a65c49b25f87ee40dc/crates/goose/src/agents/execute_commands.rs"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose-cli/src/session/input.rs"
-verified_on = "2026-10-17"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee18d0c4c852a65c49b25f87ee40dc/crates/goose-cli/src/session/input.rs"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose/src/skills/builtins/goose_doc_guide.md"
-verified_on = "2026-10-17"
+url = "https://github.com/block/goose/tree/bfcc6ee6f1ee18d0c4c852a65c49b25f87ee40dc/crates/goose/src/skills/builtins"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/block/goose/blob/bfcc6ee6f1ee/crates/goose/src/skills/builtins/web_search.md"
-verified_on = "2026-10-17"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee18d0c4c852a65c49b25f87ee40dc/crates/goose/src/slash_commands/slash_command.rs"
+quote = ".filter(|command| !reserved_names.contains(&normalize_command_name(&command.name))),"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s5"
+url = "https://github.com/block/goose/blob/bfcc6ee6f1ee18d0c4c852a65c49b25f87ee40dc/crates/goose/src/skills/mod.rs"
+quote = "if !seen.contains(&source.name) {"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
-names = ["prompts", "prompt", "compact", "clear", "skills", "doctor", "goal", "grind", "status", "summarize"]
+names = ["clear", "compact", "doctor", "goal", "grind", "prompt", "prompts", "skills", "status", "summarize"]
 
 [[group]]
 kind = "command"
 source = "s2"
 user_collision = "unknown"
 match = "exact"
-names = ["exit", "help", "t", "r", "extension", "builtin", "mode", "model", "edit", "new"]
+names = ["builtin", "edit", "exit", "extension", "help", "mode", "model", "new", "r", "t"]
 aliases = { "exit" = ["quit"], "help" = ["?"] }
 
 [[group]]
 kind = "skill"
 source = "s3"
+evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
-names = ["goose-doc-guide"]
-
-[[group]]
-kind = "skill"
-source = "s4"
-user_collision = "user_wins"
-match = "exact"
-names = ["web-search"]
+names = ["goose-doc-guide", "web-search"]
