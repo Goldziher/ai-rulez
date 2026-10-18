@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -79,7 +80,7 @@ func TestWriteBaselineFilterKeepsEntriesItSkips(t *testing.T) {
 	// Arrange: everything is recorded with one reason first.
 	p := newScannerProject(t, threeLevels, "egress = false\ninputs = [\"rules\"]\n", nil)
 	baseline := filepath.Join(p.root, ".ai-rulez", ScannerBaselineFile)
-	p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "first"})})
+	p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "first", NoCache: true})})
 	// Act: a filtered rewrite must not drop or re-reason the entries it skips.
 	p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "second", Filter: BaselineFilter{MinSeverity: SeverityError}})})
 	// Assert
@@ -126,4 +127,34 @@ func TestShortBaselineMessage(t *testing.T) {
 func withWrite(o ScannerOptions) ScannerOptions {
 	o.WriteBaseline = true
 	return o
+}
+
+// A rewrite must not grow a message that an earlier write shortened, even when
+// the scanner words the same finding differently.
+func TestWriteBaselineKeepsShortenedMessagesOnRewrite(t *testing.T) {
+	// Arrange
+	result := filepath.Join(t.TempDir(), "result.json")
+	emit := func(text string) {
+		doc := `{"version":"2.1.0","runs":[{"results":[` + scanResult("SEC-1", "error", text, 1) + `]}]}`
+		if err := os.WriteFile(result, []byte(doc), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	emit(strings.Repeat("word ", 80) + `\\nsecond line`)
+	p := newScannerProject(t, "cat '"+result+"'\n", "egress = false\ninputs = [\"rules\"]\n", nil)
+	baseline := filepath.Join(p.root, ".ai-rulez", ScannerBaselineFile)
+	p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "first", NoCache: true})})
+
+	// Act
+	emit(strings.Repeat("other ", 80) + `\\nsecond line`)
+	p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "second", NoCache: true})})
+
+	// Assert
+	b, err := LoadBaseline(baseline)
+	if err != nil || b == nil || len(b.Entries) != 1 {
+		t.Fatalf("baseline = %+v, %v", b, err)
+	}
+	if n := len([]rune(b.Entries[0].Message)); n > baselineMessageLimit || strings.Contains(b.Entries[0].Message, "\n") {
+		t.Errorf("rewritten message is %d runes: %q", n, b.Entries[0].Message)
+	}
 }
