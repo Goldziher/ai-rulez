@@ -2450,6 +2450,11 @@ warning and honours the same list. `generate` never overwrites the hand-written 
 the file, so the project skill is not clobbered by the generated builtin; to use the generated builtin, remove the
 hand-written copy, otherwise exclude the builtin item (`!<domain>/<item>`).
 
+Skills and commands share one output namespace (`.claude/skills/{id}/SKILL.md`), so the same holds across the two kinds:
+a project skill replaces a builtin command of the same id, and a project command replaces a builtin skill. The builtin
+is dropped, `generate` logs `Duplicate command collapsed` (or `skill`) and `validate` reports `AR703`, both silenced by
+`lint.allow_overrides`. A skill and a command that are both project items, or both builtins, with one id remain an error.
+
 ###### Exclude auto-included builtins
 
 `ai-governance` is auto-included whenever builtins are configured. Exclude it with `!`:

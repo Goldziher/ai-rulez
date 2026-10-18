@@ -233,3 +233,86 @@ func TestCommandAsSkills_WarnsWhenACommandIDCollides(t *testing.T) {
 	assert.Contains(t, joined, `command "ship" is not written as a codex skill`)
 	assert.Contains(t, joined, `command "my_cmd" is not written as a codex skill`)
 }
+
+// crossKindTree holds a project item of one kind and a builtin of the other
+// kind under one output id, plus an unrelated builtin of each kind.
+func crossKindTree(localSkill bool) *config.ContentTree {
+	builtin := &config.Domain{Name: "pack", Builtin: true}
+	tree := &config.ContentTree{Domains: map[string]*config.Domain{"pack": builtin}}
+	builtin.Skills = []config.ContentFile{{Name: "other-skill", Path: "builtin://pack/skills/other-skill/SKILL.md"}}
+	builtin.Commands = []config.ContentFile{{Name: "other-cmd", Path: "builtin://pack/commands/other-cmd.md"}}
+	if localSkill {
+		tree.Skills = []config.ContentFile{{Name: "iterate", Path: "/p/.ai-rulez/skills/iterate/SKILL.md"}}
+		builtin.Commands = append(builtin.Commands, config.ContentFile{Name: "iterate", Path: "builtin://pack/commands/iterate.md"})
+		return tree
+	}
+	tree.Commands = []config.ContentFile{{Name: "iterate", Path: "/p/.ai-rulez/commands/iterate.md"}}
+	builtin.Skills = append(builtin.Skills, config.ContentFile{Name: "iterate", Path: "builtin://pack/skills/iterate/SKILL.md"})
+	return tree
+}
+
+func TestCrossKindBuiltinShadowing(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		localSkill   bool
+		wantSkills   []string
+		wantCommands []string
+		wantKind     string
+		wantWinner   string
+		wantLoser    string
+	}{
+		{
+			name:         "local skill drops builtin command",
+			localSkill:   true,
+			wantSkills:   []string{"iterate", "other-skill"},
+			wantCommands: []string{"other-cmd"},
+			wantKind:     "command",
+			wantWinner:   "/p/.ai-rulez/skills/iterate/SKILL.md",
+			wantLoser:    "builtin://pack/commands/iterate.md",
+		},
+		{
+			name:         "local command drops builtin skill",
+			localSkill:   false,
+			wantSkills:   []string{"other-skill"},
+			wantCommands: []string{"iterate", "other-cmd"},
+			wantKind:     "skill",
+			wantWinner:   "/p/.ai-rulez/commands/iterate.md",
+			wantLoser:    "builtin://pack/skills/iterate/SKILL.md",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			tree := crossKindTree(tc.localSkill)
+
+			// Act
+			skills, commands := ruleNames(allSkills(tree)), ruleNames(allCommands(tree))
+			dups := CollapsedDuplicates(tree)
+
+			// Assert
+			assert.Equal(t, tc.wantSkills, skills)
+			assert.Equal(t, tc.wantCommands, commands)
+			require.Len(t, dups, 1)
+			assert.Equal(t, CollapsedDuplicate{
+				Kind: tc.wantKind, Name: "iterate", Winner: tc.wantWinner, Losers: []string{tc.wantLoser},
+			}, dups[0])
+		})
+	}
+}
+
+func TestCrossKindShadowing_nonBuiltinPairIsKept(t *testing.T) {
+	t.Parallel()
+
+	tree := &config.ContentTree{
+		Skills:   []config.ContentFile{{Name: "x", Path: "/p/skills/x/SKILL.md"}},
+		Commands: []config.ContentFile{{Name: "x", Path: "/p/commands/x.md"}},
+	}
+
+	assert.Equal(t, []string{"x"}, ruleNames(allSkills(tree)))
+	assert.Equal(t, []string{"x"}, ruleNames(allCommands(tree)))
+	assert.Empty(t, CollapsedDuplicates(tree), "validation rejects this pair; generation does not guess")
+}

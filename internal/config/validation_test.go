@@ -386,6 +386,39 @@ func TestConfigValidateOutputNamespaceCollisions(t *testing.T) {
 		assert.NoError(t, cfg.Validate())
 	})
 
+	t.Run("local skill shadowing a builtin command passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{{Name: "iterate", Path: "skills/iterate/SKILL.md"}}
+		cfg.Content.Domains = map[string]*Domain{
+			"default-commands": {
+				Name: "default-commands", Builtin: true,
+				Commands: []ContentFile{{Name: "iterate", Path: "builtin://universal/default-commands/commands/iterate.md"}},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("local command shadowing a builtin skill passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{{Name: "testing-conventions", Path: "commands/testing-conventions.md"}}
+		cfg.Content.Domains = map[string]*Domain{
+			"testing": {
+				Name: "testing", Builtin: true,
+				Skills: []ContentFile{{Name: "testing-conventions", Path: "builtin://universal/testing/skills/testing-conventions/SKILL.md"}},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("builtin skill and builtin command with one id still error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Domains = map[string]*Domain{
+			"a": {Name: "a", Builtin: true, Skills: []ContentFile{{Name: "x", Path: "builtin://a/skills/x/SKILL.md"}}},
+			"b": {Name: "b", Builtin: true, Commands: []ContentFile{{Name: "x", Path: "builtin://b/commands/x.md"}}},
+		}
+		require.Error(t, cfg.Validate())
+	})
+
 	t.Run("multiple collisions reported", func(t *testing.T) {
 		cfg := base()
 		cfg.Content.Skills = []ContentFile{

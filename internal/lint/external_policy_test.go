@@ -52,8 +52,9 @@ func fakeBin(t *testing.T, name, body string) string {
 	return path
 }
 
-// isolatedBin installs an executable shell script called name as the only entry
-// of PATH for the test, so a scanner installed on the machine cannot leak in.
+// isolatedBin installs an executable shell script called name in front of the
+// system directories only (the process sandbox lives there), so a scanner
+// installed under the user's home cannot leak in.
 func isolatedBin(t *testing.T, name, body string) {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -61,7 +62,7 @@ func isolatedBin(t *testing.T, name, body string) {
 	}
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\n"+body), 0o755)) //nolint:gosec // a test script
-	t.Setenv("PATH", dir)
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+"/usr/bin"+string(os.PathListSeparator)+"/bin")
 }
 
 func sarifFor(rule, level, msg string) string {
