@@ -2,6 +2,8 @@ package lint
 
 import (
 	"bytes"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -354,6 +356,30 @@ func TestChangedRunReportsTheSameFindingsAsAFullRun(t *testing.T) {
 				}
 			}
 			assert.Equal(t, findingFiles(want), findingFiles(narrow))
+		})
+	}
+}
+
+// The "served from the cache" log counts the skills read from the cache, not the
+// ones --changed left out, and says nothing under --no-scan-cache (#461).
+func TestCacheServedLogCountsOnlyCachedSkills(t *testing.T) {
+	tests := []struct {
+		name string
+		opts Options
+		want string // substring of the log; "" means the line must be absent
+	}{
+		{"changed run without a cache", Options{Scanner: ScannerOptions{NoCache: true, ChangedFiles: []string{".ai-rulez/skills/beta/SKILL.md"}}}, ""},
+		{"changed run with a cold cache", Options{Scanner: ScannerOptions{Cache: nil, ChangedFiles: []string{".ai-rulez/skills/beta/SKILL.md"}}}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p, _ := skillUnitProject(t, "", "alpha", "beta", "gamma")
+			rec := &testutil.LogRecorder{}
+			// Act
+			p.runWith(tt.opts, WithHost(ambient.Host{Log: rec}))
+			// Assert
+			assert.NotContains(t, strings.Join(rec.Lines(), "\n"), "served from the cache")
 		})
 	}
 }
