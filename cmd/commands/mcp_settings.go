@@ -2,9 +2,11 @@ package commands
 
 import (
 	"context"
+	"strings"
 
 	"github.com/spf13/pflag"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 )
@@ -23,6 +25,9 @@ type mcpSettings struct {
 	// serveSkills is true when the run serves skills: the flag, else [mcp] serve_skills.
 	serveSkills        bool
 	allow, deny, tools []string
+	// ignoredSkillsKeys names the [mcp] keys that only apply when skills are
+	// served and are set while they are not, so the server ignores them.
+	ignoredSkillsKeys []string
 }
 
 // resolveMCPSettings merges the command line over the project's [mcp] table.
@@ -56,7 +61,39 @@ func resolveMCPSettings(flags *pflag.FlagSet, project mcp.ProjectSettings) mcpSe
 		deny:     listSetting("deny", keys.Deny),
 		tools:    listSetting(flagMCPTools, keys.Tools),
 	}
+	if !serve {
+		settings.ignoredSkillsKeys = skillsOnlyKeysSet(keys, settings)
+	}
 	return settings
+}
+
+// skillsOnlyKeysSet names the keys that only `mcp --serve-skills` reads and
+// that are in effect, in a fixed order: the resolved values for the settings a
+// flag can override, the [mcp] table for the rest.
+func skillsOnlyKeysSet(keys config.MCPConfig, resolved mcpSettings) []string {
+	var set []string
+	add := func(name string, isSet bool) {
+		if isSet {
+			set = append(set, name)
+		}
+	}
+	add("discover_skills", keys.DiscoverSkills != "" && keys.DiscoverSkills != config.DiscoverOff)
+	add("allow", len(resolved.allow) > 0)
+	add("deny", len(resolved.deny) > 0)
+	add("exclude", len(keys.Exclude) > 0)
+	add("no_watch", resolved.noWatch)
+	add("daemon", resolved.daemon)
+	return set
+}
+
+// ignoredSkillsKeysWarning is the startup warning for skills-only [mcp] keys
+// that a server not serving skills ignores; empty when there are none.
+func ignoredSkillsKeysWarning(keys []string) string {
+	if len(keys) == 0 {
+		return ""
+	}
+	return "[mcp] " + strings.Join(keys, ", ") + " set but ignored: skills are not served; " +
+		"pass --serve-skills or set [mcp] serve_skills = true"
 }
 
 // validate checks the tool allow-list against the tools the server has.

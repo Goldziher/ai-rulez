@@ -44,7 +44,7 @@ func TestResolveMCPSettings_FlagsWinOverTheConfiguration(t *testing.T) {
 		{
 			name:    "the configuration applies when no flag is given",
 			project: mcp.ProjectSettings{MCP: config.MCPConfig{ReadOnly: boolPtrOf(true), Daemon: boolPtrOf(true), NoWatch: boolPtrOf(true), Allow: []string{"a"}, Deny: []string{"b"}, Tools: []string{"find_skill"}}},
-			want:    mcpSettings{readOnly: true, daemon: true, noWatch: true, allow: []string{"a"}, deny: []string{"b"}, tools: []string{"find_skill"}},
+			want:    mcpSettings{readOnly: true, daemon: true, noWatch: true, allow: []string{"a"}, deny: []string{"b"}, tools: []string{"find_skill"}, ignoredSkillsKeys: []string{"allow", "deny", "no_watch", "daemon"}},
 		},
 		{
 			name:    "a flag set to false wins over a true key",
@@ -62,7 +62,7 @@ func TestResolveMCPSettings_FlagsWinOverTheConfiguration(t *testing.T) {
 			name:    "lists given on the command line replace the configured ones",
 			args:    []string{"--allow=x-*", "--deny=y", "--tools=find_skill,load_skill"},
 			project: mcp.ProjectSettings{MCP: config.MCPConfig{Allow: []string{"a"}, Deny: []string{"b"}, Tools: []string{"load_context"}}},
-			want:    mcpSettings{allow: []string{"x-*"}, deny: []string{"y"}, tools: []string{"find_skill", "load_skill"}},
+			want:    mcpSettings{allow: []string{"x-*"}, deny: []string{"y"}, tools: []string{"find_skill", "load_skill"}, ignoredSkillsKeys: []string{"allow", "deny"}},
 		},
 		{
 			name:    "an empty flag list clears the configured one",
@@ -249,4 +249,43 @@ func TestResolveMCPSettings_ServeSkills(t *testing.T) {
 			assert.Equal(t, tt.want, got.serveSkills)
 		})
 	}
+}
+
+func TestResolveMCPSettings_IgnoredSkillsKeys(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		keys config.MCPConfig
+		want []string
+	}{
+		{name: "nothing set"},
+		{
+			name: "every skills-only key is named in a fixed order",
+			keys: config.MCPConfig{
+				DiscoverSkills: "repo", Allow: []string{"a"}, Deny: []string{"b"}, Exclude: []string{"c"},
+				NoWatch: boolPtrOf(true), Daemon: boolPtrOf(true),
+			},
+			want: []string{"discover_skills", "allow", "deny", "exclude", "no_watch", "daemon"},
+		},
+		{name: "discover_skills off is not a setting", keys: config.MCPConfig{DiscoverSkills: "off"}},
+		{name: "false booleans are not settings", keys: config.MCPConfig{NoWatch: boolPtrOf(false), Daemon: boolPtrOf(false)}},
+		{name: "nothing is ignored when skills are served by the key", keys: config.MCPConfig{ServeSkills: boolPtrOf(true), DiscoverSkills: "all"}},
+		{name: "nothing is ignored when skills are served by the flag", args: []string{"--serve-skills"}, keys: config.MCPConfig{DiscoverSkills: "all"}},
+		{name: "the flag turning serving off ignores the keys", args: []string{"--serve-skills=false"}, keys: config.MCPConfig{ServeSkills: boolPtrOf(true), Allow: []string{"a"}}, want: []string{"allow"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveMCPSettings(settingsFlags(t, tt.args...), mcp.ProjectSettings{MCP: tt.keys})
+
+			assert.Equal(t, tt.want, got.ignoredSkillsKeys)
+		})
+	}
+}
+
+func TestIgnoredSkillsKeysWarning(t *testing.T) {
+	assert.Empty(t, ignoredSkillsKeysWarning(nil))
+	got := ignoredSkillsKeysWarning([]string{"discover_skills", "allow"})
+	assert.Contains(t, got, "discover_skills, allow")
+	assert.Contains(t, got, "--serve-skills")
+	assert.Contains(t, got, "[mcp] serve_skills")
 }

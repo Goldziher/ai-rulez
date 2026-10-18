@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -72,6 +73,9 @@ func runMCP(cmd *cobra.Command) error {
 			if cmd.Flags().Changed(name) {
 				return oops.Errorf("--%s requires --serve-skills (or [mcp] serve_skills = true)", name)
 			}
+		}
+		if msg := ignoredSkillsKeysWarning(settings.ignoredSkillsKeys); msg != "" {
+			logger.Warn(msg)
 		}
 	}
 	if serve {
