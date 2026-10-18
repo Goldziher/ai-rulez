@@ -1,7 +1,7 @@
 schema = 1
 preset = "crush"
 harness_version = "v0.98.1"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,83 +9,66 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/charmbracelet/crush/blob/12f96b4acd8f/internal/skills/builtin/crush-config/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/charmbracelet/crush/tree/v0.98.1/internal/skills/builtin"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/charmbracelet/crush/blob/12f96b4acd8f/internal/skills/builtin/crush-hooks/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/charmbracelet/crush/blob/v0.98.1/internal/ui/dialog/commands.go"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/charmbracelet/crush/blob/12f96b4acd8f/internal/skills/builtin/jq/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/charmbracelet/crush/blob/v0.98.1/internal/config/config.go"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/charmbracelet/crush/blob/12f96b4acd8f/internal/ui/dialog/commands.go"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s5"
-url = "https://github.com/charmbracelet/crush/blob/12f96b4acd8f/internal/config/config.go#L61"
-verified_on = "2026-10-17"
+url = "https://github.com/charmbracelet/crush/blob/v0.98.1/internal/skills/skills.go"
+quote = "user skills (appended after builtins) // override builtin skills with the same name."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "skill"
 source = "s1"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
-names = ["crush-config"]
-
-[[group]]
-kind = "skill"
-source = "s2"
-user_collision = "user_wins"
-match = "exact"
-names = ["crush-hooks"]
-
-[[group]]
-kind = "skill"
-source = "s3"
-user_collision = "user_wins"
-match = "exact"
-names = ["jq"]
+names = ["crush-config", "crush-hooks", "jq"]
 
 [[group]]
 kind = "command"
-source = "s4"
+source = "s2"
 user_collision = "n/a"
 match = "exact"
 names = [
-  "new_session",
-  "switch_session",
-  "switch_model",
-  "summarize",
-  "toggle_thinking",
-  "select_reasoning_effort",
-  "toggle_sidebar",
-  "file_picker",
-  "open_external_editor",
-  "enable_docker_mcp",
   "disable_docker_mcp",
-  "toggle_mcps",
-  "toggle_pills",
-  "select_notifications",
-  "toggle_yolo",
-  "toggle_help",
+  "enable_docker_mcp",
+  "file_picker",
   "init",
-  "toggle_transparent",
-  "switch_theme",
-  "toggle_mouse",
+  "new_session",
+  "open_external_editor",
   "quit",
+  "select_notifications",
+  "select_reasoning_effort",
+  "summarize",
+  "switch_model",
+  "switch_session",
+  "switch_theme",
+  "toggle_help",
+  "toggle_mcps",
+  "toggle_mouse",
+  "toggle_pills",
+  "toggle_sidebar",
+  "toggle_thinking",
+  "toggle_transparent",
+  "toggle_yolo",
 ]
 aliases = { "new_session" = ["clear"], "quit" = ["exit"] }
 
 [[group]]
 kind = "agent"
-source = "s5"
+source = "s3"
 user_collision = "n/a"
 match = "exact"
-names = ["coder", "task"]
+names = ["coder", "plan", "task"]

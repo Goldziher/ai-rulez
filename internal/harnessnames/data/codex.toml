@@ -20,6 +20,7 @@ verified_on = "2026-10-18"
 [[source]]
 id = "s3"
 url = "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/agent/role.rs"
+quote = ".get(role_name) .or_else(|| built_in::configs().get(role_name))"
 verified_on = "2026-10-18"
 
 [[source]]

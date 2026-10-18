@@ -1,7 +1,7 @@
 schema = 1
 preset = "gemini"
-harness_version = "v0.64.0 (latest stable tag; nightlies v0.66.0 not checked)"
-verified_on = "2026-10-17"
+harness_version = "v0.64.0"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "error"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,48 +10,35 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/cli/src/services/BuiltinCommandLoader.ts"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/skills/builtin/skill-creator/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/google-gemini/gemini-cli/tree/v0.64.0/packages/core/src/skills/builtin"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/skills/builtin/antigravity-support/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/agents/registry.ts"
+quote = "The later definition will be ignored."
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
-url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/agents/codebase-investigator.ts"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s5"
-url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/agents/cli-help-agent.ts"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s6"
-url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/agents/generalist-agent.ts"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s7"
-url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/agents/browser/browserAgentDefinition.ts"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s8"
 url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/cli/src/services/SlashCommandResolver.ts"
 quote = "Built-in commands always keep the original name."
 verified_on = "2026-10-17"
 
+[[source]]
+id = "s5"
+url = "https://github.com/google-gemini/gemini-cli/blob/v0.64.0/packages/core/src/skills/skillManager.ts"
+quote = "1. Built-in skills (lowest precedence)"
+verified_on = "2026-10-18"
+
 [[group]]
 kind = "command"
 source = "s1"
-evidence = "s8"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
 names = [
@@ -66,22 +53,21 @@ names = [
   "compress",
   "copy",
   "corgi",
-  "docs",
-  "export-session",
   "directory",
+  "docs",
   "editor",
+  "export-session",
   "extensions",
-  "help",
   "footer",
-  "shortcuts",
+  "gemma",
+  "help",
   "hooks",
-  "rewind",
   "ide",
   "init",
-  "oncall",
   "mcp",
   "memory",
   "model",
+  "oncall",
   "permissions",
   "plan",
   "policies",
@@ -90,24 +76,25 @@ names = [
   "quit",
   "restore",
   "resume",
+  "rewind",
+  "settings",
+  "setup-github",
+  "shortcuts",
+  "skills",
   "stats",
+  "tasks",
+  "terminal-setup",
   "theme",
   "tools",
-  "skills",
-  "settings",
-  "gemma",
-  "tasks",
-  "vim",
-  "setup-github",
-  "terminal-setup",
-  "voice",
   "upgrade",
+  "vim",
+  "voice",
 ]
 aliases = { "clear" = [
   "new",
 ], "compress" = [
-  "summarize",
   "compact",
+  "summarize",
 ], "directory" = [
   "dir",
 ], "footer" = [
@@ -117,48 +104,21 @@ aliases = { "clear" = [
 ], "stats" = [
   "usage",
 ], "tasks" = [
-  "bg",
   "background",
+  "bg",
 ] }
 
 [[group]]
 kind = "skill"
 source = "s2"
+evidence = "s5"
 user_collision = "user_wins"
 match = "exact"
-names = ["skill-creator"]
+names = ["antigravity-support", "skill-creator"]
 
 [[group]]
-kind = "skill"
+kind = "agent"
 source = "s3"
-user_collision = "user_wins"
-match = "exact"
-names = ["antigravity-support"]
-
-[[group]]
-kind = "agent"
-source = "s4"
 user_collision = "builtin_wins"
 match = "exact"
-names = ["codebase_investigator"]
-
-[[group]]
-kind = "agent"
-source = "s5"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["cli_help"]
-
-[[group]]
-kind = "agent"
-source = "s6"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["generalist"]
-
-[[group]]
-kind = "agent"
-source = "s7"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["browser_agent"]
+names = ["browser_agent", "cli_help", "codebase_investigator", "generalist"]

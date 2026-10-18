@@ -1,7 +1,7 @@
 schema = 1
 preset = "pi"
-harness_version = "v1.3.0 docs (main)"
-verified_on = "2026-10-17"
+harness_version = "v1.3.0"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,8 +9,8 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/slash-commands.md"
-verified_on = "2026-10-17"
+url = "https://github.com/earendil-works/pi/tree/v1.3.0/packages/coding-agent/src"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -18,29 +18,30 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "settings",
-  "model",
-  "thinking",
-  "scoped-models",
-  "login",
-  "logout",
-  "llama",
-  "new",
-  "resume",
-  "name",
-  "session",
-  "tree",
-  "fork",
+  "bug",
+  "changelog",
   "clone",
   "compact",
-  "import",
   "copy",
   "export",
-  "share",
-  "bug",
-  "trust",
-  "reload",
+  "fork",
   "hotkeys",
-  "changelog",
+  "import",
+  "llama",
+  "login",
+  "logout",
+  "mcp",
+  "model",
+  "name",
+  "new",
   "quit",
+  "reload",
+  "resume",
+  "scoped-models",
+  "session",
+  "settings",
+  "share",
+  "thinking",
+  "tree",
+  "trust",
 ]
