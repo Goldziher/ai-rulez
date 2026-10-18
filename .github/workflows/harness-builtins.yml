@@ -1,0 +1,108 @@
+name: Harness built-in names
+
+# Weekly check of internal/harnessnames/data against the public sources it was taken from:
+#   generate.py --check   each data file against what its pinned registry yields
+#   check_sources.py      every quote against its page, and a quote for every recorded outcome
+# Drift or a failure opens (or updates) one issue. The check job only reads; the report job
+# holds the only write permission and never runs repository code.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 05:00 UTC every Monday.
+    - cron: "0 5 * * 1"
+  pull_request:
+    paths:
+      - ".github/workflows/harness-builtins.yml"
+
+concurrency:
+  group: harness-builtins-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  check:
+    name: Check pinned sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      failed: ${{ steps.report.outputs.failed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+
+      - name: Unit tests
+        working-directory: tools/harness-builtins
+        run: python3 -I -m unittest discover -s tests -t .
+
+      - name: Compare data files and quotes with their sources
+        id: report
+        env:
+          # raises the GitHub API rate limit; sent only to api.github.com and raw.githubusercontent.com
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/report"
+          report="$RUNNER_TEMP/report/report.md"
+          failed=0
+          echo "## generate.py --check" > "$report"
+          python3 -I tools/harness-builtins/generate.py --check >> "$report" 2>&1 || failed=1
+          printf '\n## check_sources.py\n' >> "$report"
+          python3 -I tools/harness-builtins/check_sources.py >> "$report" 2>&1 || failed=1
+          cat "$report"
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+
+      - name: Upload report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: harness-builtins-report
+          path: ${{ runner.temp }}/report/report.md
+          retention-days: 14
+
+  issue:
+    name: Open or update the drift issue
+    needs: check
+    if: needs.check.outputs.failed == '1' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: harness-builtins-report
+          path: report
+
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Harness built-in names drifted from their sources"
+          {
+            echo "The weekly check of \`internal/harnessnames/data\` failed: $RUN_URL"
+            echo
+            echo "Run \`task harness:builtins:check\` to reproduce and \`python3 -I tools/harness-builtins/generate.py --write <preset>\` to regenerate a data file; a missing quote needs a new verbatim quote or the outcome set to \`unknown\`."
+            echo
+            echo '```'
+            head -c 50000 report/report.md
+            echo '```'
+          } > body.md
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi
