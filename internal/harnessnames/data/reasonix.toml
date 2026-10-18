@@ -1,7 +1,7 @@
 schema = 1
 preset = "reasonix"
 harness_version = "v2.43.0"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,18 +9,25 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/esengine/DeepSeek-Reasonix/blob/v2.43.0/docs/CLI.md"
-verified_on = "2026-10-17"
+url = "https://github.com/esengine/DeepSeek-Reasonix/blob/v2.43.0/internal/frontend/cli/slash_registry.go"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
-url = "https://github.com/esengine/DeepSeek-Reasonix/blob/v2.43.0/internal/ext/skill/builtins.go"
-verified_on = "2026-10-17"
+url = "https://github.com/esengine/DeepSeek-Reasonix/tree/v2.43.0/internal/ext/skill"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
-url = "https://github.com/esengine/DeepSeek-Reasonix/blob/v2.43.0/internal/ext/skill/builtincontent/reasonix-guide/SKILL.md"
-verified_on = "2026-10-17"
+url = "https://github.com/esengine/DeepSeek-Reasonix/blob/v2.43.0/docs/CLI.md"
+quote = "Preferred built-in fallback when an existing custom command or compatible plugin/skill alias owns `/docs`"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s4"
+url = "https://github.com/esengine/DeepSeek-Reasonix/blob/v2.43.0/internal/ext/skill/skill.go"
+quote = "name collision: project > custom > global > builtin."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -28,51 +35,92 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "model",
-  "provider",
-  "resume",
-  "status",
-  "preset",
-  "theme",
-  "currency",
-  "paste-image",
-  "mouse",
-  "effort",
-  "output-style",
-  "verbose",
-  "sandbox",
-  "goal",
-  "mcp",
-  "skills",
-  "hooks",
-  "remember",
-  "memory",
-  "rewind",
-  "tree",
+  "ask-timeout",
   "branch",
-  "switch",
-  "reload",
+  "browser",
+  "clear",
+  "cls",
+  "compact",
+  "context",
+  "copy",
+  "currency",
+  "diff-fold",
+  "effort",
+  "export",
+  "forget",
+  "goal",
+  "graph",
   "help",
+  "hooks",
+  "language",
+  "mcp",
+  "memory",
+  "migrate",
+  "model",
+  "mouse",
+  "new",
+  "output-style",
+  "paste-image",
+  "plugins",
+  "preset",
+  "provider",
+  "quit",
+  "reasoning-language",
+  "reload",
+  "reload-cmd",
+  "remember",
+  "remote",
+  "rename",
+  "resume",
+  "rewind",
+  "sandbox",
+  "skills",
+  "status",
+  "switch",
+  "theme",
+  "todo",
+  "tree",
+  "verbose",
+  "web",
 ]
-aliases = { "preset" = ["work-mode", "profile"] }
+aliases = { "migrate" = [
+  "migration",
+], "output-style" = [
+  "output-styles",
+], "plugins" = [
+  "plugin",
+], "preset" = [
+  "profile",
+  "work-mode",
+], "quit" = [
+  "exit",
+], "skills" = [
+  "skill",
+] }
 
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s3"
 user_collision = "user_wins"
 match = "exact"
-names = ["docs", "reasonix:docs"]
+names = ["docs"]
+aliases = { "docs" = ["reasonix:docs"] }
 
 [[group]]
 kind = "skill"
 source = "s2"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
-names = ["init", "explore", "locate", "research", "install-capability", "review", "security-review", "test"]
-
-[[group]]
-kind = "skill"
-source = "s3"
-user_collision = "user_wins"
-match = "exact"
-names = ["reasonix-guide"]
+names = [
+  "explore",
+  "init",
+  "install-capability",
+  "locate",
+  "reasonix-guide",
+  "research",
+  "review",
+  "security-review",
+  "test",
+]

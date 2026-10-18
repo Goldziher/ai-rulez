@@ -1,7 +1,7 @@
 schema = 1
 preset = "codebuff"
 harness_version = "main @ 8d0e7b59e038 (CodebuffAI/codebuff)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,8 +9,8 @@ namespaced = false
 
 [[source]]
 id = "s1"
-url = "https://github.com/CodebuffAI/codebuff/blob/main/cli/src/data/slash-commands.ts"
-verified_on = "2026-10-17"
+url = "https://github.com/CodebuffAI/codebuff/blob/8d0e7b59e038e89d142c799f96ff8c906566c588/cli/src/data/slash-commands.ts"
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -18,85 +18,67 @@ source = "s1"
 user_collision = "n/a"
 match = "exact"
 names = [
-  "help",
-  "diagnostics",
-  "ads:enable",
   "ads:disable",
-  "init",
-  "usage",
-  "subscribe",
-  "interview",
-  "plan",
-  "review",
-  "queue",
-  "todo",
-  "new",
-  "history",
-  "copy",
-  "export",
+  "ads:enable",
   "agent:gpt-5",
-  "feedback",
   "bash",
-  "image",
-  "theme:toggle",
   "byok",
-  "model",
-  "reasoning",
-  "end-session",
+  "copy",
   "dashboard",
-  "logout",
+  "diagnostics",
+  "end-session",
   "exit",
+  "export",
+  "feedback",
+  "help",
+  "history",
+  "image",
+  "init",
+  "interview",
+  "logout",
   "mode:default",
   "mode:lite",
   "mode:max",
   "mode:plan",
+  "model",
+  "new",
+  "plan",
+  "queue",
+  "reasoning",
+  "review",
+  "subscribe",
+  "theme:toggle",
+  "todo",
+  "usage",
 ]
-aliases = { "help" = [
-  "h",
-  "?",
+aliases = { "bash" = [
+  "!",
+], "byok" = [
+  "provider",
+], "copy" = [
+  "copy-chat",
+], "dashboard" = [
+  "stats",
+  "streak",
+  "usage",
 ], "diagnostics" = [
   "diag",
   "processes",
-], "usage" = [
-  "credits",
-], "subscribe" = [
-  "strong",
-  "sub",
-  "buy-credits",
-], "queue" = [
-  "queued",
-], "todo" = [
-  "todos",
-], "new" = [
-  "n",
-  "clear",
-  "c",
-  "reset",
-], "history" = [
-  "chats",
-], "copy" = [
-  "copy-chat",
+], "exit" = [
+  "q",
+  "quit",
 ], "export" = [
   "export-chat",
-], "bash" = [
-  "!",
+], "help" = [
+  "?",
+  "h",
+], "history" = [
+  "chats",
 ], "image" = [
-  "img",
   "attach",
-], "byok" = [
-  "provider",
-], "reasoning" = [
-  "effort",
-  "think",
-], "dashboard" = [
-  "usage",
-  "stats",
-  "streak",
+  "img",
 ], "logout" = [
   "signout",
-], "exit" = [
-  "quit",
-  "q",
 ], "mode:default" = [
   "model:default",
 ], "mode:lite" = [
@@ -105,4 +87,22 @@ aliases = { "help" = [
   "model:max",
 ], "mode:plan" = [
   "model:plan",
+], "new" = [
+  "c",
+  "clear",
+  "n",
+  "reset",
+], "queue" = [
+  "queued",
+], "reasoning" = [
+  "effort",
+  "think",
+], "subscribe" = [
+  "buy-credits",
+  "strong",
+  "sub",
+], "todo" = [
+  "todos",
+], "usage" = [
+  "credits",
 ] }
