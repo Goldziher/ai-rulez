@@ -22,6 +22,12 @@ id = "s3"
 url = "https://bob.ibm.com/docs/ide/features/subagents"
 verified_on = "2026-10-17"
 
+[[source]]
+id = "s4"
+url = "https://bob.ibm.com/docs/ide/features/slash-commands"
+quote = "These mode commands cannot be overridden by custom workflow commands."
+verified_on = "2026-10-18"
+
 [[group]]
 kind = "command"
 source = "s1"
@@ -32,6 +38,7 @@ names = ["init", "review", "create-pr"]
 [[group]]
 kind = "command"
 source = "s1"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
 names = ["mode", "code", "ask"]

@@ -22,9 +22,16 @@ id = "s3"
 url = "https://ampcode.com/docs/models-and-subagents"
 verified_on = "2026-10-17"
 
+[[source]]
+id = "s4"
+url = "https://ampcode.com/docs/markdown/customize/skills"
+quote = "Local skills mask repository skills with the same name. A personal skill masks a workspace skill with the same name, and both mask official Amp skills."
+verified_on = "2026-10-18"
+
 [[group]]
 kind = "skill"
 source = "s1"
+evidence = "s4"
 user_collision = "user_wins"
 match = "exact"
 names = ["building-skills"]

@@ -1,0 +1,105 @@
+<!-- excerpt of https://www.codebuddy.ai/docs/cli/slash-commands (2026-10-18); rows dropped -->
+<h2 id="built-in-slash-commands" tabindex="-1">
+  Built-in Slash Commands <a
+    class="header-anchor"
+    href="#built-in-slash-commands"
+    aria-label="Permalink to “Built-in Slash Commands”"
+  >​</a>
+</h2><p>
+  These commands are used to manage your CodeBuddy Code sessions. Here is the current support status:
+</p><table tabindex="0">
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Parameters</th>
+      <th style="text-align:center;">CodeBuddy Support</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/help</code></td>
+      <td></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>Display help information and provide guidance on feedback channels.</td>
+    </tr>
+    <tr>
+      <td><code>/agents</code></td>
+      <td></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>
+        Manage built-in and custom AI agents; view the effective routing values and their sources for built-in
+        sub-agents, and save model settings to Global or Project scope. Specific scenario models can be viewed in <code
+        >/model</code>. Use <code>/agent-mode</code> to switch the current session&#39;s main Agent mode.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/branch</code></td>
+      <td><code>[name]</code></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>
+        Create a branch at the current conversation point, carrying over the main Agent mode, model, output style, and
+        additional directories, and automatically switch to it. Branching is not yet supported for conversations that
+        contain subagent history. Optionally specify a branch name.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/config</code></td>
+      <td><code>[list | get | set]</code></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>
+        View or modify local configuration. Opens an interactive panel when used without parameters, <code>list</code>
+        lists current settings, <code>get &lt;key&gt;</code> reads a setting, <code>set &lt;key&gt; &lt;value&gt;</code>
+        modifies a setting.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/model</code></td>
+      <td><code>[list | model-name]</code></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>
+        Switch or view the main model. Opens an interactive interface when used without parameters. <code>list</code>
+        lists available models; when provided with a model name, directly switches the main model. Switching is rejected
+        while a task is running. If the context exceeds the target model&#39;s window, a standard <code>/compact</code>
+        runs first; the switch is rejected only if the context still does not fit after compaction.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/model:lite</code></td>
+      <td><code>[list | model-id]</code></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>
+        Switch or view the effective model and source for the <code>lite</code> scenario variant (used by lightweight
+        subtasks like Explore). Opens an interactive selection interface when used without parameters (including Global
+        / Project settings), <code>list</code> lists available models, or directly switches when provided with a model
+        ID.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/fork</code></td>
+      <td><code>[name]</code></td>
+      <td style="text-align:center;">✅ Supported</td>
+      <td>
+        Alias for <code>/branch</code>. Copies active conversation history, carries over session settings, and
+        automatically switches to the new branch. Conversations containing subagent history show a not-yet-supported
+        notice. Use <code>/resume</code> to return to the original conversation.
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h2>Frontmatter and Metadata</h2><table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Description</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>description</code></td>
+      <td>x</td>
+      <td>y</td>
+    </tr>
+  </tbody>
+</table>

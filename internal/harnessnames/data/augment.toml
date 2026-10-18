@@ -1,7 +1,7 @@
 schema = 1
 preset = "augment"
 harness_version = "docs-only (docs.augmentcode.com, fetched 2026-10-17)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "docs-only"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.augmentcode.com/cli/interactive.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -27,46 +27,46 @@ match = "exact"
 names = [
   "about",
   "account",
+  "add-workspace",
+  "agents",
   "ask",
+  "bash",
   "btw",
+  "canvas",
   "clear",
   "config",
+  "context",
   "copy",
+  "diffs",
   "editor",
   "exit",
   "feedback",
   "fork",
   "github-workflow",
   "help",
+  "hooks",
   "image",
   "logout",
   "mcp",
+  "model",
   "new",
+  "pause",
   "permissions",
+  "persona",
+  "plan",
+  "plugins",
+  "queue",
   "rename",
   "request-id",
+  "restart-mcp",
+  "resume",
   "rules",
   "sessions",
   "share",
+  "skills",
   "stats",
   "status",
   "task",
   "verbose",
   "vim",
-  "add-workspace",
-  "agents",
-  "bash",
-  "canvas",
-  "context",
-  "diffs",
-  "hooks",
-  "model",
-  "persona",
-  "plan",
-  "plugins",
-  "queue",
-  "pause",
-  "resume",
-  "restart-mcp",
-  "skills",
 ]

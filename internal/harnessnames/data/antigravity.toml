@@ -1,7 +1,7 @@
 schema = 1
 preset = "antigravity"
 harness_version = "docs-only; CLI v1.4.0, App v2.24.0 per https://antigravity.google/docs/changelog (2026-10-15)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://antigravity.google/docs/cli/reference"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -73,8 +73,8 @@ names = [
   "permissions",
   "planning",
   "plugin",
-  "rename",
   "remote-control",
+  "rename",
   "resume",
   "rewind",
   "schedule",
@@ -97,8 +97,8 @@ aliases = { "clear" = [
 ], "plugin" = [
   "plugins",
 ], "resume" = [
-  "switch",
   "conversation",
+  "switch",
 ], "rewind" = [
   "undo",
 ], "teamwork-preview" = [

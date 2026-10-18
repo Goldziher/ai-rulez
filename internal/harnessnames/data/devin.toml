@@ -1,7 +1,7 @@
 schema = 1
 preset = "devin"
 harness_version = "Devin CLI stable v3000.11.92 (changelog dated 2026-10-14)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.devin.ai/cli/reference/commands.md#slash-commands"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,13 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://docs.devin.ai/cli/subagents.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s4"
+url = "https://docs.devin.ai/cli/subagents.md"
+quote = "Custom subagent profiles that conflict with a built-in profile name (e.g., `subagent_explore`, `subagent_general`) are skipped with a warning."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -28,81 +34,80 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "mode",
-  "normal",
   "accept-edits",
-  "smart",
-  "plan",
-  "ask",
-  "bypass",
-  "autonomous",
-  "model",
-  "fast",
-  "theme",
-  "clear",
-  "continue",
-  "fork",
-  "steps",
-  "revert",
-  "resume",
-  "ls",
-  "title",
-  "rename-session",
-  "rm-session",
-  "export",
-  "exit",
-  "workspace",
   "add-dir",
-  "undo-add-dir",
-  "remove-dir",
-  "loop",
+  "archive",
+  "ask",
+  "autonomous",
   "btw",
-  "hooks",
-  "mcp",
-  "help",
-  "shortcuts",
-  "config",
   "bug",
+  "bypass",
+  "clear",
+  "cloud",
+  "compact",
+  "config",
+  "context",
+  "continue",
+  "copy",
+  "exit",
+  "export",
+  "fast",
+  "feedback",
+  "fork",
+  "handoff",
+  "help",
+  "hooks",
+  "login",
+  "login-status",
+  "logout",
+  "loop",
+  "ls",
+  "mcp",
+  "mode",
+  "model",
+  "mouse",
+  "normal",
+  "open",
+  "org",
+  "pickup",
+  "plan",
+  "platform",
+  "remove-dir",
+  "rename",
+  "rename-session",
+  "repo",
+  "resume",
+  "revert",
+  "rm-session",
+  "session-stats",
+  "shortcuts",
+  "smart",
+  "ssh",
+  "status",
+  "steps",
+  "theme",
+  "title",
+  "undo-add-dir",
   "update",
   "upgrade",
-  "login",
-  "logout",
-  "login-status",
-  "org",
-  "copy",
-  "feedback",
-  "mouse",
-  "context",
   "usage",
-  "session-stats",
-  "compact",
-  "cloud",
-  "handoff",
-  "repo",
-  "platform",
-  "open",
-  "ssh",
-  "pickup",
-  "rename",
-  "archive",
+  "workspace",
 ]
 aliases = { "bypass" = [
-  "yolo",
   "dangerous",
+  "yolo",
 ], "clear" = [
   "new",
-], "ls" = [
-  "list-sessions",
 ], "exit" = [
   "quit",
-], "workspace" = [
-  "workspaces",
-], "undo-add-dir" = [
-  "remove-dir",
-], "login-status" = [
-  "status",
+], "ls" = [
+  "list-sessions",
 ], "session-stats" = [
   "stats",
+], "undo-add-dir" = [
+  "remove-dir",
+], "workspace" = [
+  "workspaces",
 ] }
 
 [[group]]
@@ -115,6 +120,7 @@ names = ["goal", "recap", "cloud-attach", "cloud-sessions"]
 [[group]]
 kind = "agent"
 source = "s3"
+evidence = "s4"
 user_collision = "builtin_wins"
 match = "exact"
 names = ["subagent_explore", "subagent_general"]
