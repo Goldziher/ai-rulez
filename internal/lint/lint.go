@@ -163,6 +163,7 @@ type runner struct {
 	missingMu    sync.Mutex      // guards missing
 	missing      []missingPath   // AR401 findings, see dropIgnoredMissing
 	skillFiles   sync.Map        // skill directory -> every file below it, see stageSkillFiles
+	skillTrees   sync.Map        // skill directory -> []*dirFile, see skillTree
 	runMu        sync.Mutex      // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
