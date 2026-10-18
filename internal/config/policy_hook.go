@@ -61,6 +61,9 @@ type PolicyOutcome struct {
 	// Accepted lists repository overrides the policy allowed, such as an
 	// allowlist the repository narrowed.
 	Accepted []string
+	// MCPReadOnly is true when the policy requires `ai-rulez mcp` to be
+	// read-only (mcp.read_only = true). The command line cannot loosen it.
+	MCPReadOnly bool
 	// Warn is --policy-mode warn: the values are still clamped, but the
 	// violations are reported as warnings and do not fail the run.
 	Warn bool

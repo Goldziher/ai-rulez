@@ -143,3 +143,76 @@ func TestApplyHooksAllowedWithoutPolicyKeepsGroups(t *testing.T) {
 	assert.Len(t, cfg.Hooks, 1)
 	assert.Empty(t, out.Violations)
 }
+
+func TestParseMCPReadOnly(t *testing.T) {
+	tests := []struct {
+		name, body string
+		want       bool
+	}{
+		{"required", "policy_version = 1\n[mcp]\nread_only = true\n", true},
+		{"false constrains nothing", "policy_version = 1\n[mcp]\nread_only = false\n", false},
+		{"unset", "policy_version = 1\n[mcp]\ndeny_transports = [\"sse\"]\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			_, p, err := Parse("p.toml", []byte(tt.body))
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, p.MCP.ReadOnly)
+		})
+	}
+}
+
+func TestMergeMCPReadOnlyTurnsOn(t *testing.T) {
+	on, off := Policy{MCP: MCP{ReadOnly: true}}, Policy{}
+
+	assert.True(t, Merge(on, off).MCP.ReadOnly)
+	assert.True(t, Merge(off, on).MCP.ReadOnly)
+	assert.False(t, Merge(off, off).MCP.ReadOnly)
+}
+
+func TestMCPReadOnlyShowsInTheEffectivePolicy(t *testing.T) {
+	tree := Policy{MCP: MCP{ReadOnly: true}}.Tree()
+
+	assert.Equal(t, map[string]any{"read_only": true}, tree["mcp"])
+	assert.Empty(t, Policy{}.Tree())
+}
+
+func TestApplyMCPReadOnly(t *testing.T) {
+	yes, no := true, false
+	tests := []struct {
+		name       string
+		policy     bool
+		configured *bool
+		hasMCP     bool
+		wantCodes  []string
+		wantOn     bool
+	}{
+		{"unset is forced silently", true, nil, false, nil, true},
+		{"explicit true is fine", true, &yes, true, nil, true},
+		{"explicit false is a loosening", true, &no, true, []string{"AR740 mcp.read_only"}, true},
+		{"a table without the key is forced silently", true, nil, true, nil, true},
+		{"no policy leaves the config alone", false, &no, true, nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := testConfig(t, "name = \"x\"\n")
+			if tt.hasMCP {
+				cfg.MCP = &config.MCPConfig{ReadOnly: tt.configured}
+			}
+			res := Resolve([]Layer{layer("managed", Policy{MCP: MCP{ReadOnly: tt.policy}})})
+			// Act
+			out := res.Apply(cfg).Outcome
+			// Assert
+			assert.ElementsMatch(t, tt.wantCodes, codes(out))
+			assert.Equal(t, tt.wantOn, out.MCPReadOnly, "the outcome says the policy requires read-only")
+			if tt.wantOn {
+				require.NotNil(t, cfg.MCP)
+				require.NotNil(t, cfg.MCP.ReadOnly)
+				assert.True(t, *cfg.MCP.ReadOnly)
+			}
+		})
+	}
+}

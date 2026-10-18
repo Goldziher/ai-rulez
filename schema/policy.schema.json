@@ -312,6 +312,10 @@
           "type": "array",
           "description": "Transports no server may use. Layers union.",
           "items": { "enum": ["stdio", "http", "sse"] }
+        },
+        "read_only": {
+          "type": "boolean",
+          "description": "true makes `ai-rulez mcp` register only its read-only tools, whatever [mcp] read_only or --read-only say; a repository that sets read_only = false is reported (AR740). false constrains nothing. Layers union."
         }
       }
     },

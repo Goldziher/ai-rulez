@@ -1547,7 +1547,7 @@
           "type": "array"
         },
         "allow_overrides": {
-          "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them.",
+          "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them. `name` or `preset:name` (for example `claude:init`) also acknowledges a skill or command that overrides a built-in (AR808).",
           "items": {
             "type": "string"
           },
@@ -1766,15 +1766,15 @@
                 },
                 "type": "array"
               },
-              "max_severity": {
-                "description": "Ceiling for this scanner's findings.",
-                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
-              },
               "max_message": {
                 "description": "Characters of a finding message kept in text output. Default 500 (or [lint.scanner_policy] max_message). A cut message ends in \"...\"; the JSON report (full_message) and SARIF output (properties.fullMessage) keep the whole text.",
                 "maximum": 100000,
                 "minimum": 1,
                 "type": "integer"
+              },
+              "max_severity": {
+                "description": "Ceiling for this scanner's findings.",
+                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
               },
               "name": {
                 "type": "string"
@@ -2564,17 +2564,53 @@
       "additionalProperties": false,
       "description": "Project-level MCP generation options, distinct from the individual [[mcp_servers]] definitions.",
       "properties": {
+        "allow": {
+          "description": "Serve only the skills whose name matches one of these path.Match globs, as `mcp --serve-skills --allow` does. The --allow flag overrides it.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "daemon": {
+          "description": "Share one long-lived skills server per repository, as `mcp --serve-skills --daemon` does. The --daemon flag overrides it.",
+          "type": "boolean"
+        },
+        "deny": {
+          "description": "Never serve the skills whose name matches one of these path.Match globs; wins over allow. The --deny flag overrides it.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
         "discover_skills": {
           "default": "off",
           "description": "Make `mcp --serve-skills` also serve the skills already in the repository: \"repo\" indexes the skill directories of the working tree (root skills/, .claude/skills at any depth and the skill directories of the configured presets, respecting .gitignore and skipping generated copies); \"all\" adds the installed and included skills whatever their delivery. The --discover-skills flag overrides it.",
           "enum": ["off", "repo", "all"],
           "type": "string"
         },
+        "exclude": {
+          "description": "Globs, relative to the project root, of the paths repository discovery (`mcp --serve-skills --discover-skills`) never reads: skill directories and the context index (CLAUDE.md, AGENTS.md, rules, agents) alike. `**` crosses directories, `*` and `?` do not, `{a,b}` alternates, a pattern without a slash matches at any depth and a trailing slash matches a directory and everything below it. The --exclude flag adds to this list.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
         "index_cache": {
-          "type": "string",
-          "enum": ["user", "repo", "off"],
           "default": "user",
-          "description": "Where the repository index of `mcp --serve-skills --discover-skills` keeps its cache of item summaries and scan verdicts (never file bodies): \"user\" is the user cache directory, with a gitignored directory in the project (.ai-rulez/.cache/) as the fallback when it is not writable; \"repo\" always uses that project directory; \"off\" keeps no cache. The scan, allow and deny rules run again whenever an item is loaded."
+          "description": "Where the repository index of `mcp --serve-skills --discover-skills` keeps its cache of item summaries and scan verdicts (never file bodies): \"user\" is the user cache directory, with a gitignored directory in the project (.ai-rulez/.cache/) as the fallback when it is not writable; \"repo\" always uses that project directory; \"off\" keeps no cache. The scan, allow and deny rules run again whenever an item is loaded.",
+          "enum": ["user", "repo", "off"],
+          "type": "string"
+        },
+        "no_watch": {
+          "description": "Do not reload the served skills when their files change, as `mcp --serve-skills --no-watch` does. The --no-watch flag overrides it.",
+          "type": "boolean"
+        },
+        "read_only": {
+          "description": "Register only the read-only tools, as `mcp --read-only` does: the server can inspect the project but not change it, and its instructions and prompts follow the tools it has. The --read-only flag overrides it. An organization policy with mcp.read_only = true cannot be loosened by it.",
+          "type": "boolean"
         },
         "self_server": {
           "default": true,
@@ -2607,6 +2643,14 @@
         "skills_instructions_text": {
           "description": "Replace the default skills section. {{server}} is the MCP server that serves the skills and {{skills_dir}} the config directory's skills folder, relative to the instruction file. Requires skills_instructions to be on.",
           "type": "string"
+        },
+        "tools": {
+          "description": "The only tools the server registers, for example [\"find_skill\", \"load_skill\", \"find_context\", \"load_context\"] for a server that can only read. An unknown name fails the server start and names the valid ones. The --tools flag overrides it.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "type": "object"

@@ -82,6 +82,7 @@ const (
 	switchGovernanceEnforce  = "governance.enforce"
 	switchForbidSelfApproval = "governance.forbid_self_approval"
 	switchHooksAllow         = "hooks.allow"
+	switchMCPReadOnly        = "mcp.read_only"
 )
 
 // switchValues reports, per switch key, whether a policy has the restriction on.
@@ -95,6 +96,7 @@ var switchValues = map[string]func(Policy) bool{
 	switchGovernanceEnforce:  func(p Policy) bool { return p.Governance.Enforce },
 	switchForbidSelfApproval: func(p Policy) bool { return p.Governance.ForbidSelfApproval },
 	switchHooksAllow:         func(p Policy) bool { return p.Hooks.Forbidden },
+	switchMCPReadOnly:        func(p Policy) bool { return p.MCP.ReadOnly },
 }
 
 func displayChain(stack []string) []string {
