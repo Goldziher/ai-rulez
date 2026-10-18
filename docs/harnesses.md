@@ -100,7 +100,8 @@ user-level table is in [User-level configuration](user-scope.md#where-things-go)
   harness. `validate` checks each output against the harnesses that load it, including those that only read a
   shared directory such as `.agents/skills/`: AR9U0 for a built-in, AR9U1 for a name the harness refuses to
   load. The tables (`internal/harnessnames/data/<preset>.toml`, one per preset above) record the page each name
-  was taken from and mark how complete the list is. See
+  was taken from and mark how complete the list is; for most harnesses the names are regenerated from the harness's
+  own registry at a pinned tag (`tools/harness-builtins`). See
   [Built-in names of harnesses](strict-validation.md#built-in-names-of-harnesses).
 - **Native tool and model names.** Frontmatter is translated to each harness's own tool names, and bare Claude
   model aliases (`sonnet`, `opus`, `haiku`) are dropped where the harness has no such model.

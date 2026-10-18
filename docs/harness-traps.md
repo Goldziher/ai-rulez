@@ -106,6 +106,8 @@ older than `[lint.traps] max_table_age_days` from the repository config (90 when
 overrides). It does not use the network. `HARNESS_VERIFY_FETCH=1 task harness:verify` also fetches each source and
 fails when a quote, of a trap or of a name table, is no longer on its page. `[lint.traps] max_table_age_days` (AR9C0) also covers the name tables of the harnesses a project writes for.
 
+The name tables are not edited by hand where a harness keeps its built-ins in a public registry. `tools/harness-builtins/generate.py` reads the registry at the tag or commit pinned in `pins.toml` and rewrites the names; `task harness:builtins:check` (network) fails when a data file differs from its pinned source or a quote is gone from its page, `task harness:builtins:refresh` shows what a newer tag would change, and a weekly workflow opens an issue on drift. A harness with no registry to read is recorded as `extractor = "none"` with the reason. See `tools/harness-builtins/README.md`.
+
 ## The traps
 
 "Inert" means the harness certainly ignores the file, not just applies it less often.
