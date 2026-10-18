@@ -240,18 +240,7 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		return
 	}
 	opts := r.opts.Scanner
-	recorded := findings
-	skipped := map[string]bool{}
-	if opts.Filter.active() {
-		recorded = make([]Finding, 0, len(findings))
-		for i := range all {
-			if opts.Filter.matches(&all[i]) {
-				recorded = append(recorded, findings[i])
-			} else {
-				skipped[all[i].Fingerprint()] = true
-			}
-		}
-	}
+	recorded, skipped := opts.Filter.split(all, findings)
 	next, err := UpdateBaseline(&Report{Findings: recorded}, prev, opts.Reason)
 	if err != nil {
 		r.addRun(CodeScannerConfigInvalid, "baseline", sanitizeScannerText(err.Error()))
@@ -262,19 +251,7 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		f := all[i]
 		scanners[f.Fingerprint()] = f
 	}
-	old := baselineEntryIndex(prev)
-	for i := range next.Entries {
-		e := &next.Entries[i]
-		sf, ok := scanners[e.Fingerprint]
-		if !ok {
-			continue
-		}
-		e.Scanner, e.Rule = sf.scanner, sf.rule
-		if _, existing := old[e.Fingerprint]; !existing {
-			e.Message = shortBaselineMessage(e.Message)
-			e.Reason = strings.TrimSpace(opts.reasonFor(&sf))
-		}
-	}
+	opts.describeEntries(next, baselineEntryIndex(prev), scanners)
 	have := map[string]bool{}
 	for i := range next.Entries {
 		e := next.Entries[i]

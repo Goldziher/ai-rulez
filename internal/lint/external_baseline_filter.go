@@ -116,3 +116,38 @@ func shortBaselineMessage(msg string) string {
 	runes := []rune(msg)
 	return strings.TrimSpace(string(runes[:baselineMessageLimit-1])) + "…"
 }
+
+// split divides the findings (index-aligned with all) into the ones the filter
+// records and the fingerprints of the ones it leaves out.
+func (f BaselineFilter) split(all []scannerFinding, findings []Finding) (recorded []Finding, skipped map[string]bool) {
+	if !f.active() {
+		return findings, nil
+	}
+	recorded = make([]Finding, 0, len(findings))
+	skipped = map[string]bool{}
+	for i := range all {
+		if f.matches(&all[i]) {
+			recorded = append(recorded, findings[i])
+		} else {
+			skipped[all[i].Fingerprint()] = true
+		}
+	}
+	return recorded, skipped
+}
+
+// describeEntries names the scanner and rule of every entry and, for the ones
+// that are new (not in old), shortens the message and sets the reason.
+func (o ScannerOptions) describeEntries(next *Baseline, old map[string]BaselineEntry, scanners map[string]scannerFinding) {
+	for i := range next.Entries {
+		e := &next.Entries[i]
+		sf, ok := scanners[e.Fingerprint]
+		if !ok {
+			continue
+		}
+		e.Scanner, e.Rule = sf.scanner, sf.rule
+		if _, existing := old[e.Fingerprint]; !existing {
+			e.Message = shortBaselineMessage(e.Message)
+			e.Reason = strings.TrimSpace(o.reasonFor(&sf))
+		}
+	}
+}
