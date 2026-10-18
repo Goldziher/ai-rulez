@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **AR402 no longer reads the code span in a link's text as a resource reference.** `[`b` `references/s.md`](../../b/references/s.md)` was reported as a missing `references/s.md` although the link target exists. A code span inside the text of an inline link is its label; the link target is checked instead (an unresolved target is reported as a broken link, not as AR402) ([#456](https://github.com/Goldziher/ai-rulez/issues/456)).
+
 ## [5.5.2] - 2026-10-18
 
 ### Added
