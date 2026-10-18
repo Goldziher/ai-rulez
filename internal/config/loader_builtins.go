@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/samber/oops"
@@ -145,15 +146,19 @@ func groupProfileBuiltinRefs(refs []string) (whole []string, only map[string]map
 // resolution confines it to the profiles that reference it.
 func loadBuiltinDomains(config *Config, names []string, only map[string]map[string]bool, ruleExclusions map[string]bool, scoped bool) {
 	for _, name := range names {
-		// Skip if domain already exists (local content has higher priority)
-		if _, exists := config.Content.Domains[name]; exists {
-			config.Log().Debug("Skipping builtin (local domain exists)", "name", name)
-			continue
-		}
-
 		entries, err := builtins.LoadDomainContent(name)
 		if err != nil {
 			config.Warn("Failed to load builtin", "name", name, "error", err)
+			continue
+		}
+
+		// Skip if domain already exists (local content has higher priority). An
+		// earlier builtin load owning the name is not a loss; a local or include
+		// domain is, because the pack's other items are never loaded.
+		if existing, exists := config.Content.Domains[name]; exists {
+			if !existing.Builtin {
+				warnBuiltinPackSkipped(config, name, entries, only, ruleExclusions)
+			}
 			continue
 		}
 		if len(entries) == 0 {
@@ -214,4 +219,58 @@ func loadBuiltinDomains(config *Config, names []string, only map[string]map[stri
 			"commands", len(domain.Commands),
 		)
 	}
+}
+
+// warnBuiltinPackSkipped reports, once per pack, that a local or included domain
+// of the same name keeps the builtin pack from loading, and names the pack items
+// that are lost: those no same-named item of the project shadows anyway (#446).
+// Merging the pack into the domain is not done: a domain is either a builtin
+// (skipped by the lock, SBOM and policy readers, which cannot open builtin://
+// paths) or not, and one output id twice in a domain is a validation error.
+func warnBuiltinPackSkipped(config *Config, pack string, entries []builtins.ContentEntry, only map[string]map[string]bool, excluded map[string]bool) {
+	owned := projectItemNames(config.Content)
+	var lost []string
+	for _, entry := range entries {
+		if !itemSelected(pack, entry.Name, only, excluded) || owned[entry.Type+"/"+entry.Name] {
+			continue
+		}
+		lost = append(lost, entry.Type+"/"+entry.Name)
+	}
+	if len(lost) == 0 {
+		config.Log().Debug("Skipping builtin (local domain exists)", "name", pack)
+		return
+	}
+	sort.Strings(lost)
+	config.WarnOnce("builtin-pack-skipped:"+pack,
+		"Builtin pack skipped because a domain with the same name exists; its items are not loaded",
+		"pack", pack,
+		"lost", strings.Join(lost, ", "),
+		"hint", "rename the domain "+pack+", or provide the items yourself, or drop "+pack+" from builtins")
+}
+
+// projectItemNames lists the "kind/name" of every item the project's own root and
+// non-builtin domains define.
+func projectItemNames(content *ContentTree) map[string]bool {
+	names := map[string]bool{}
+	add := func(kind string, files []ContentFile) {
+		for i := range files {
+			names[kind+"/"+files[i].Name] = true
+		}
+	}
+	add("rules", content.Rules)
+	add("context", content.Context)
+	add(skillsDir, content.Skills)
+	add("agents", content.Agents)
+	add("commands", content.Commands)
+	for _, domain := range content.Domains {
+		if domain == nil || domain.Builtin {
+			continue
+		}
+		add("rules", domain.Rules)
+		add("context", domain.Context)
+		add(skillsDir, domain.Skills)
+		add("agents", domain.Agents)
+		add("commands", domain.Commands)
+	}
+	return names
 }
