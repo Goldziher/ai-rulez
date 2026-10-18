@@ -23,6 +23,7 @@ const (
 	flagServePoll          = "reload-interval"
 	flagServeDaemon        = "daemon"
 	flagServeDiscover      = "discover-skills"
+	flagServeExclude       = "exclude"
 	// flagServeDaemonServer marks the process the proxy spawned as the daemon
 	// itself. It is hidden: a user runs --daemon, and the proxy adds this flag
 	// on the child only.
@@ -33,7 +34,7 @@ const (
 var dynamicServeFlagNames = []string{
 	flagServeSource, flagServeRole, flagServeFrozen, flagServeOffline, flagServeIncludeStatic,
 	flagServeBudget, flagServeMaxClone, flagServeUsageLog, flagServeUsageSink, flagServeNoWatch, flagServePoll,
-	flagServeDaemon, flagServeDiscover,
+	flagServeDaemon, flagServeDiscover, flagServeExclude,
 }
 
 func registerDynamicServeFlags(cmd *cobra.Command) {
@@ -52,6 +53,7 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 	f.Bool(flagServeDaemon, false, "Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills)")
 	f.String(flagServeDiscover, "", "Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honoring .gitignore) or all (repo plus installed and included skills); either also indexes nested AGENTS.md, CLAUDE.md, GEMINI.md, rules and agents by scope for find_context, load_context and the path and scope arguments of find_skill; a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills)")
 	f.Lookup(flagServeDiscover).NoOptDefVal = "repo"
+	f.StringArray(flagServeExclude, nil, "Glob, relative to the project root, of paths repository discovery never reads (skill directories and the context index: CLAUDE.md, AGENTS.md, rules, agents); repeatable, and added to [mcp] exclude; ** crosses directories, a pattern without a slash matches at any depth (requires --serve-skills and --discover-skills or [mcp] discover_skills)")
 	f.Bool(flagServeDaemonServer, false, "Run as the shared daemon itself instead of proxying to it; set by the spawned child, not from the command line")
 	_ = f.MarkHidden(flagServeDaemonServer) //nolint:errcheck // the flag was just registered
 }
@@ -60,8 +62,8 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 // skills that are served, scans them, and wraps them in the read-only server.
 // It starts the live-reload watcher on ctx. Nothing is written to disk except
 // the optional usage log and the source cache.
-func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
-	setup, err := serveSetupFromFlags(cmd)
+func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command, settings mcpSettings) (*mcp.Server, error) {
+	setup, err := serveSetupFor(cmd, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +75,17 @@ func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Serv
 	return srv, nil
 }
 
+// serveSetupFor is the setup of this run: the flags of `mcp --serve-skills`,
+// with the settings the flags and the project's [mcp] table resolved to.
+func serveSetupFor(cmd *cobra.Command, settings mcpSettings) (*mcp.ServeSetup, error) {
+	setup, err := serveSetupFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+	settings.applyTo(setup)
+	return setup, nil
+}
+
 // serveSetupFromFlags reads the flags of `mcp --serve-skills`.
 func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	flags := cmd.Flags()
@@ -80,11 +93,8 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	// The merged server registers the authoring surface too, so `mcp
 	// --serve-skills` is the one MCP entry a project needs. The engines and the
 	// directory confinement come from the command line exactly as for `mcp`;
-	// --read-only narrows the authoring tools to the read-only ones.
+	// serveSetupFor narrows them with the read-only and tool settings.
 	setup.Authoring = append(engineOptions(), authoringOptions(cmd)...)
-	if readOnly, _ := flags.GetBool(flagMCPReadOnly); readOnly { //nolint:errcheck // the flag is registered in init
-		setup.Authoring = append(setup.Authoring, mcp.WithReadOnly())
-	}
 	var err error
 	read := func(name string, f func() error) {
 		if err == nil {
@@ -109,6 +119,7 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	read(flagServePoll, func() (e error) { setup.PollInterval, e = flags.GetDuration(flagServePoll); return })
 	read(flagServeDaemon, func() (e error) { setup.Daemon, e = flags.GetBool(flagServeDaemon); return })
 	read(flagServeDiscover, func() (e error) { setup.DiscoverSkills, e = flags.GetString(flagServeDiscover); return })
+	read(flagServeExclude, func() (e error) { setup.Exclude, e = flags.GetStringArray(flagServeExclude); return })
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped above
 	}

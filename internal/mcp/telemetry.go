@@ -52,8 +52,8 @@ var telemetryTools = map[string]toolItem{
 	"list_context": {kind: telemetry.KindContext},
 	"list_skills":  {kind: telemetry.KindSkill},
 	// Served-skills surface (NewSkillServer).
-	"get_skill":     {kind: telemetry.KindSkill, idArg: argName, served: true},
-	"search_skills": {kind: telemetry.KindSkill, served: true},
+	toolGetSkill:     {kind: telemetry.KindSkill, idArg: argName, served: true},
+	toolSearchSkills: {kind: telemetry.KindSkill, served: true},
 	// Pending on the served-skills branch: find_skill / load_skill.
 	"load_skill": {kind: telemetry.KindSkill, idArg: argName, served: true},
 	"find_skill": {kind: telemetry.KindSkill, served: true},

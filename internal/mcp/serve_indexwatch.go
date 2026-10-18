@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
 	"github.com/Goldziher/ai-rulez/v5/internal/watch"
 )
 
@@ -38,6 +40,9 @@ type IndexWatch struct {
 	// Skip lists project-relative directories whose changes are not index
 	// changes (the configuration directory, which the poll covers).
 	Skip []string
+	// Exclude lists the globs of the paths discovery leaves out; the watcher
+	// does not follow them.
+	Exclude []string
 	// Debounce is the quiet period after the last change before a refresh
 	// (0 selects 300 ms).
 	Debounce time.Duration
@@ -91,8 +96,57 @@ func relevantIndexChange(rel string, isDir bool) bool {
 	return false
 }
 
+// maxDirProbe bounds the entries a directory event looks at; a directory larger
+// than that is taken as a change.
+const maxDirProbe = 2000
+
+// dirMayChangeIndex reports whether a directory that changed can change the
+// index: it is or lies below a convention directory, or holds a convention file
+// or directory somewhere below it. Windows reports a write on a directory
+// whenever a file in it changes, so an ordinary source directory does not count;
+// a new directory that arrived with an instruction file or skill in it does.
+func dirMayChangeIndex(dir, rel string, ignore func(string) bool) bool {
+	for _, seg := range strings.Split(rel, "/") {
+		if isConventionDir(seg) {
+			return true
+		}
+	}
+	seen, found := 0, false
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // the callback never fails the walk
+		if err != nil || p == dir {
+			return nil //nolint:nilerr // an unreadable entry holds nothing the index can read either
+		}
+		seen++
+		switch {
+		case seen > maxDirProbe:
+			found = true
+		case d.IsDir() && ignore(p):
+			return fs.SkipDir
+		case d.IsDir() && isConventionDir(d.Name()), !d.IsDir() && isConventionFile(d.Name()):
+			found = true
+		}
+		if found {
+			return fs.SkipAll
+		}
+		return nil
+	})
+	return found
+}
+
+// changeMayAffectIndex reports whether a path the watcher reported can change
+// the index. A directory that still exists is looked into; a vanished path
+// without an extension may have been a directory and counts.
+func changeMayAffectIndex(p, rel string, ignore func(string) bool) bool {
+	info, err := os.Lstat(p)
+	if err == nil && info.IsDir() {
+		return dirMayChangeIndex(p, rel, ignore)
+	}
+	vanishedDir := err != nil && !strings.Contains(filepath.Base(p), ".")
+	return relevantIndexChange(rel, vanishedDir)
+}
+
 // indexWatchIgnore filters the paths the watcher follows.
-func indexWatchIgnore(root string, skip []string) func(string) bool {
+func indexWatchIgnore(root string, skip []string, exclude *repoindex.Excluder) func(string) bool {
 	return func(p string) bool {
 		rel, err := filepath.Rel(root, p)
 		if err != nil || rel == "." {
@@ -109,7 +163,7 @@ func indexWatchIgnore(root string, skip []string) func(string) bool {
 				return true
 			}
 		}
-		return false
+		return exclude.Excluded(rel) || exclude.ExcludedDir(rel)
 	}
 }
 
@@ -120,11 +174,16 @@ func runIndexWatch(ctx context.Context, iw *IndexWatch, log logger.Logger, refre
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
 		root = resolved
 	}
+	exclude, err := repoindex.NewExcluder(iw.Exclude)
+	if err != nil {
+		log.Warn("Ignoring the exclude globs of the repository watcher", "error", err.Error())
+	}
 	debug := func(msg string, kv ...any) { log.Debug(msg, kv...) }
 	warn := func(msg string, kv ...any) { log.Warn(msg, kv...) }
-	err := watch.Watch(ctx, watch.Options{
+	ignore := indexWatchIgnore(root, iw.Skip, exclude)
+	err = watch.Watch(ctx, watch.Options{
 		Targets:  func() []watch.Target { return []watch.Target{{Path: root}} },
-		Ignore:   indexWatchIgnore(root, iw.Skip),
+		Ignore:   ignore,
 		Debounce: iw.Debounce,
 		Log:      debug,
 		Warn:     warn,
@@ -134,12 +193,7 @@ func runIndexWatch(ctx context.Context, iw *IndexWatch, log logger.Logger, refre
 				if err != nil || strings.HasPrefix(rel, "..") {
 					continue
 				}
-				info, statErr := os.Lstat(p)
-				isDir := statErr == nil && info.IsDir()
-				if statErr != nil && !strings.Contains(filepath.Base(p), ".") {
-					isDir = true // a vanished path without an extension may have been a directory
-				}
-				if relevantIndexChange(filepath.ToSlash(rel), isDir) {
+				if changeMayAffectIndex(p, filepath.ToSlash(rel), ignore) {
 					select {
 					case refresh <- struct{}{}:
 					default: // a refresh is already waiting

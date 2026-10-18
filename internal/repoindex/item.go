@@ -9,6 +9,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
@@ -45,7 +46,40 @@ func newItem(c *candidate, content []byte) Item {
 		desc = firstHeading(block.Body)
 	}
 	it.Description = boundText(desc, maxDescriptionBytes)
+	if c.kind == KindRule {
+		it.Only = ruleGlobs(front)
+	}
 	return it
+}
+
+// ruleGlobs reads the path restriction of a rule from its frontmatter: `paths`
+// (Claude Code) and `globs` (Cursor, ignored for a rule that is always applied).
+func ruleGlobs(front map[string]any) *PathGlobs {
+	g := &PathGlobs{Paths: globList(front["paths"])}
+	if always, _ := front["alwaysApply"].(bool); !always { //nolint:errcheck // absent or not a bool means not always applied
+		g.Globs = globList(front["globs"])
+	}
+	if len(g.Paths) == 0 && len(g.Globs) == 0 {
+		return nil
+	}
+	return g
+}
+
+// globList reads a frontmatter value that is one string or a list of strings,
+// each holding one glob or several separated by commas outside braces.
+func globList(v any) []string {
+	var raw []string
+	switch t := v.(type) {
+	case string:
+		raw = []string{t}
+	case []any:
+		for _, e := range t {
+			if s, ok := e.(string); ok {
+				raw = append(raw, s)
+			}
+		}
+	}
+	return config.NormalizeGlobs(raw)
 }
 
 func stringOf(v any) string {

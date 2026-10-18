@@ -115,6 +115,18 @@ Each phase is test-first, ships with its documentation, and leaves the previous 
 - `watch` skips `.git`, `node_modules`, `vendor`, `target`, `dist`, `build` and other output directories by name
   rather than reading `.gitignore`, so a gitignored directory with another name is watched.
 
+## Implementation notes (discovery fixes)
+
+- Rules, agents and commands are indexed in every known convention; `presets` only chooses the skill directories
+  searched. A lint-only configuration (`presets = []`) therefore serves the same context as no configuration.
+- `[mcp] exclude` and `--exclude` are globs applied to the file listing before any file is classified or read, so an
+  excluded file costs nothing and marks no scope. The watcher ignores the same paths.
+- A rule's `paths:` (Claude Code) or `globs:` (Cursor) are kept in the index and its cache entries (cache format 2),
+  and `find_context` with `path` filters on them, relative to the scope directory.
+- Scan findings of a file of context name its `context://` URI; an error finding withholds the file at every trust
+  level.
+- Two repository skills with one name: the later is served under its path and reported in `skill_discovery.renamed`.
+
 ## Open points
 
 - Whether `[[scopes]]` names should flow into scope labels in the catalog. Default: yes, as an alias only.

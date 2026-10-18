@@ -104,6 +104,10 @@ type ServeSetup struct {
 	// included skills whatever their delivery, "off" neither. Empty takes [mcp]
 	// discover_skills from the configuration (off when unset). See serve_discover.go.
 	DiscoverSkills string
+	// Exclude lists globs, relative to the project root, of the paths repository
+	// discovery never reads (skill directories and the context index); they add
+	// to [mcp] exclude. It needs discovery to be on.
+	Exclude []string
 	// Daemon opts `mcp --serve-skills` into the shared per-repo daemon: the
 	// process either runs the daemon or proxies its stdin/stdout to one, and it
 	// falls back to serving in-process when no daemon can be reached. Off is
@@ -203,7 +207,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			return b.catalog, nil
 		}
 		if first.catalog.repository() != nil {
-			opts.IndexWatch = &IndexWatch{Root: first.cfg.BaseDir, Skip: configDirSkip(first.cfg), Debounce: st.IndexWatchDebounce}
+			opts.IndexWatch = &IndexWatch{Root: first.cfg.BaseDir, Skip: configDirSkip(first.cfg), Exclude: st.excludeGlobs(first.cfg), Debounce: st.IndexWatchDebounce}
 		}
 		logs := st.usageFiles(first.cfg)
 		opts.Fingerprint = func() (string, error) { return fingerprint(roots, logs...) }
@@ -215,9 +219,16 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		st.logger().Warn(first.empty)
 	}
 	st.warnShadowed(first.catalog.Discovery())
+	st.warnRenamed(first.catalog.Discovery())
 	st.warnIndexLimit(first.catalog.Discovery())
 	if st.Authoring != nil {
-		srv = NewMergedServer(st.Version, first.catalog, opts, st.Authoring...)
+		authoring := st.Authoring
+		if first.cfg.ConfigDir == "" {
+			// No configuration was found, so the build served what discovery
+			// found: offer only what works without one.
+			authoring = append(slices.Clone(authoring), WithoutProject())
+		}
+		srv = NewMergedServer(st.Version, first.catalog, opts, authoring...)
 	} else {
 		srv = NewSkillServerWith(st.Version, first.catalog, opts)
 	}
@@ -315,6 +326,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	}
 	mode, err := st.discoverMode(b.cfg)
 	if err != nil {
+		return nil, err
+	}
+	if err := st.checkExclude(mode); err != nil {
 		return nil, err
 	}
 	// The rendered catalog is a function of the files this build fingerprints and
@@ -470,12 +484,15 @@ type renderedSkills struct {
 	preset  string
 	served  []generator.ServedSkill
 	taken   map[string]bool
+	// builtin maps the name of a builtin skill that still holds its name to its
+	// source: a repository skill replaces it (see appendDiscovered).
+	builtin map[string]string
 }
 
 // renderProjectSkills renders the project's skills for the view; empty when the
 // project has no content tree (a server of --source skills only).
 func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Generator, mode string) (*renderedSkills, error) {
-	out := &renderedSkills{profile: st.Profile, preset: st.Preset, taken: map[string]bool{}}
+	out := &renderedSkills{profile: st.Profile, preset: st.Preset, taken: map[string]bool{}, builtin: map[string]string{}}
 	if cfg.Content == nil {
 		return out, nil
 	}
@@ -503,6 +520,9 @@ func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Gen
 	// serve, or load_skill would hand out another procedure under its name.
 	for i := range served {
 		out.taken[catalogName(&served[i])] = true
+		if strings.HasPrefix(served[i].Source, builtinSourcePrefix) {
+			out.builtin[catalogName(&served[i])] = served[i].Source
+		}
 	}
 	out.served = selectByDelivery(served, st.IncludeStatic)
 	if mode == config.DiscoverAll {
@@ -510,6 +530,9 @@ func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Gen
 	}
 	return out, nil
 }
+
+// builtinSourcePrefix starts the source of a skill that ships with ai-rulez.
+const builtinSourcePrefix = "builtin://"
 
 // defaultServePreset renders the skills of a configuration that names no preset.
 const defaultServePreset = "claude"

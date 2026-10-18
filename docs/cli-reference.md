@@ -2065,6 +2065,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--discover-skills` | string |  | Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honoring .gitignore) or all (repo plus installed and included skills); either also indexes nested AGENTS.md, CLAUDE.md, GEMINI.md, rules and agents by scope for find_context, load_context and the path and scope arguments of find_skill; a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills) |
 | `--domain` | string list |  | Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills) |
+| `--exclude` | string list |  | Glob, relative to the project root, of paths repository discovery never reads (skill directories and the context index: CLAUDE.md, AGENTS.md, rules, agents); repeatable, and added to [mcp] exclude; ** crosses directories, a pattern without a slash matches at any depth (requires --serve-skills and --discover-skills or [mcp] discover_skills) |
 | `--frozen` | bool |  | Never use the network and require ai-rulez.lock to cover every remote include, installed skill and skill source (requires --serve-skills) |
 | `--include-static` | bool |  | Also serve skills whose delivery is static (requires --serve-skills) |
 | `--max-clone-bytes` | int | `0` | Largest git skill source clone in bytes for sources that set no max_clone_bytes; overrides AI_RULEZ_MAX_CLONE_BYTES; 0 uses the environment variable, then 256 MiB (requires --serve-skills) |
@@ -2089,6 +2090,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools |
 | `--source` | string list |  | Serve the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory (requires --serve-skills) |
 | `--targets` | string |  | Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills) |
+| `--tools` | string list |  | Register only these tools, repeatable or comma separated (default: [mcp] tools, else every tool); an unknown name is an error that lists the valid ones |
 | `--usage-log` | string |  | Append one identifier-only JSON line per load_skill to this file (requires --serve-skills) |
 | `--usage-sink` | string |  | Shell command that receives each load_skill usage line on stdin (requires --serve-skills) |
 

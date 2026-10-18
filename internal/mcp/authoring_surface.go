@@ -41,14 +41,19 @@ func (s *Server) itemReaders() map[string]handlerFunc {
 }
 
 func (s *Server) registerAuthoringResources() {
-	s.mcpServer.AddResource(&sdkmcp.Resource{
-		URI: uriConfig, Name: "config", Title: "Project Configuration", MIMEType: mimeJSON,
-		Description: "The parsed settings of the project: name, presets, profiles, builtins, includes (read_config)",
-		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.8},
-	}, s.readAuthoringResource)
+	catalogDescription := "Every rule, skill, agent, command and context file with owner, tokens and digest (catalog)"
+	if s.noProject {
+		catalogDescription = "The skills and instruction files discovered in the repository, with the skill discovery report"
+	} else {
+		s.mcpServer.AddResource(&sdkmcp.Resource{
+			URI: uriConfig, Name: "config", Title: "Project Configuration", MIMEType: mimeJSON,
+			Description: "The parsed settings of the project: name, presets, profiles, builtins, includes (read_config)",
+			Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.8},
+		}, s.readAuthoringResource)
+	}
 	s.mcpServer.AddResource(&sdkmcp.Resource{
 		URI: uriCatalog, Name: "catalog", Title: "Content Catalog", MIMEType: mimeJSON,
-		Description: "Every rule, skill, agent, command and context file with owner, tokens and digest (catalog)",
+		Description: catalogDescription,
 		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.6},
 	}, s.readAuthoringResource)
 	if s.cat().repository() != nil {
@@ -58,6 +63,10 @@ func (s *Server) registerAuthoringResources() {
 			Description: "The catalog with its scopes section narrowed: ai-rulez://catalog?path=<path>, ?scope=<scope> or ?scope=<scope>&recursive=true",
 			Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.5},
 		}, s.readAuthoringResource)
+	}
+	if s.noProject {
+		// There is no root to read an item of.
+		return
 	}
 	s.mcpServer.AddResourceTemplate(&sdkmcp.ResourceTemplate{
 		URITemplate: uriItemTemplate, Name: "item", Title: "Project Item", MIMEType: mimeMarkdown,
@@ -93,12 +102,12 @@ func (s *Server) parseAuthoringURI(uri string) (authoringTarget, bool) {
 	}
 	switch uri {
 	case uriConfig:
-		return authoringTarget{config: true}, true
+		return authoringTarget{config: true}, !s.noProject
 	case uriCatalog:
 		return authoringTarget{catalog: true}, true
 	}
 	rest, found := strings.CutPrefix(uri, resourceScheme)
-	if !found {
+	if !found || s.noProject {
 		return authoringTarget{}, false
 	}
 	parts := strings.Split(rest, "/")
@@ -137,6 +146,9 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 	if !ok {
 		return nil, resourceNotFound(req.Params.URI)
 	}
+	if s.noProject {
+		return s.readProjectlessCatalog(req.Params.URI, target)
+	}
 	args, err := s.resourceArgs()
 	if err != nil {
 		return nil, err
@@ -171,16 +183,24 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 		text = content
 	}
 	if target.catalog {
-		query, err := scopeQueryFromURI(target.query)
-		if err != nil {
-			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.Error()}
+		if text, err = s.decorateCatalog(text, target.query); err != nil {
+			return nil, err
 		}
-		if text, err = withScopes(text, s.cat().repository(), query); err != nil {
-			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.Error()}
-		}
-		text = withSkillDiscovery(text, s.cat().Discovery())
 	}
 	return &sdkmcp.ReadResourceResult{Contents: []*sdkmcp.ResourceContents{{URI: req.Params.URI, MIMEType: mime, Text: text}}}, nil
+}
+
+// decorateCatalog adds to the JSON document of the catalog resource the scopes
+// section (narrowed by the URI's query) and the skill discovery report.
+func (s *Server) decorateCatalog(text, rawQuery string) (string, error) {
+	query, err := scopeQueryFromURI(rawQuery)
+	if err != nil {
+		return "", &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.Error()}
+	}
+	if text, err = withScopes(text, s.cat().repository(), query); err != nil {
+		return "", &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.Error()}
+	}
+	return withSkillDiscovery(text, s.cat().Discovery()), nil
 }
 
 // withSkillDiscovery adds the skill discovery report, when discovery ran, to the
@@ -245,7 +265,7 @@ func authoringPrompts() []promptSpec {
 3. Call create_skill with name %q, the description and the content.
 4. Call scan_content to confirm the skill trips no security check, and validate_config to confirm it lints clean. Fix what they report with update_skill.
 5. Call cost_report and tell me how many tokens the skill adds to the always-loaded and on-demand surface.
-Do not call generate_outputs until I say so.`, a["name"], a["purpose"], a["name"])
+Do not generate output files until I say so.`, a["name"], a["purpose"], a["name"])
 			},
 		},
 		{
@@ -304,6 +324,9 @@ Do not change anything. End with a short list of the changes you would make, eac
 
 func (s *Server) registerPrompts() {
 	for _, spec := range authoringPrompts() {
+		if !s.hasAll(s.promptNeeds(spec)...) {
+			continue
+		}
 		s.mcpServer.AddPrompt(&sdkmcp.Prompt{
 			Name: spec.name, Title: spec.title, Description: spec.description, Arguments: spec.args,
 		}, func(_ context.Context, req *sdkmcp.GetPromptRequest) (*sdkmcp.GetPromptResult, error) {

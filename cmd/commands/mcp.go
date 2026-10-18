@@ -43,7 +43,10 @@ extension, SEP-2640) as skill:// resources, answers skills/list and skills/get,
 and adds find_skill, load_skill and the other serving tools. It also registers
 the authoring tools, so one process serves both and a project needs one MCP
 entry. Pass --read-only to register only the read-only config and report tools,
-so the server can inspect a project but never change it.`,
+so the server can inspect a project but never change it. --tools limits the
+server to the tools named. The [mcp] table of the project can set read_only,
+tools, daemon, no_watch, allow and deny; a flag given on the command line wins,
+and an organization policy that requires read-only cannot be loosened.`,
 	Args: cobra.NoArgs,
 	RunE: runMCPServer,
 }
@@ -58,8 +61,7 @@ func runMCP(cmd *cobra.Command) error {
 	// flushes the usage sink and telemetry instead of dropping queued records.
 	ctx, stop := signal.NotifyContext(cmdContext(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	serve, _ := cmd.Flags().GetBool("serve-skills")     //nolint:errcheck // the flag is registered in init
-	readOnly, _ := cmd.Flags().GetBool(flagMCPReadOnly) //nolint:errcheck // the flag is registered in init
+	serve, _ := cmd.Flags().GetBool("serve-skills") //nolint:errcheck // the flag is registered in init
 	if !serve {
 		serveOnly := append([]string{flagServeProfile, flagServeTargets, flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 		for _, name := range serveOnly {
@@ -68,8 +70,12 @@ func runMCP(cmd *cobra.Command) error {
 			}
 		}
 	}
+	settings, err := loadMCPSettings(ctx, cmd.Flags())
+	if err != nil {
+		return err
+	}
 	if serve {
-		if done, err := runMCPDaemon(ctx, cmd); done {
+		if done, err := runMCPDaemon(ctx, cmd, settings); done {
 			return err
 		}
 	}
@@ -78,17 +84,12 @@ func runMCP(cmd *cobra.Command) error {
 		transport = mcp.NewGuardedStdioTransport(os.Stdin, os.Stdout, nil)
 	)
 	if serve {
-		var err error
-		if srv, err = buildSkillServer(ctx, cmd); err != nil {
+		if srv, err = buildSkillServer(ctx, cmd, settings); err != nil {
 			return oops.Wrapf(err, "MCP: build skills server")
 		}
 		transport = srv.WrapTransport(transport)
 	} else {
-		opts := authoringOptions(cmd)
-		if readOnly {
-			opts = append(opts, mcp.WithReadOnly())
-		}
-		srv = NewAuthoringMCPServer(opts...)
+		srv = NewAuthoringMCPServer(append(authoringOptions(cmd), settings.options()...)...)
 		transport = mcp.GuardLifecycle(transport)
 	}
 
@@ -106,14 +107,12 @@ func runMCP(cmd *cobra.Command) error {
 // the daemon or through a proxy to it); false means no daemon was asked for, or
 // none could be reached, so the caller serves in-process exactly as without
 // --daemon — a missing or broken daemon never fails a session.
-func runMCPDaemon(ctx context.Context, cmd *cobra.Command) (done bool, err error) {
-	flags := cmd.Flags()
-	asServer, _ := flags.GetBool(flagServeDaemonServer) //nolint:errcheck // the flag is registered in init
-	daemon, _ := flags.GetBool(flagServeDaemon)         //nolint:errcheck // the flag is registered in init
-	if !asServer && !daemon {
+func runMCPDaemon(ctx context.Context, cmd *cobra.Command, settings mcpSettings) (done bool, err error) {
+	asServer, _ := cmd.Flags().GetBool(flagServeDaemonServer) //nolint:errcheck // the flag is registered in init
+	if !asServer && !settings.daemon {
 		return false, nil
 	}
-	setup, err := serveSetupFromFlags(cmd)
+	setup, err := serveSetupFor(cmd, settings)
 	if err != nil {
 		return true, err
 	}
@@ -156,8 +155,8 @@ func serveUntilDone(ctx context.Context, run func(context.Context) error, closer
 }
 
 // buildSkillServer builds the read-only serving server; see mcp_serve.go.
-func buildSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
-	return buildDynamicSkillServer(ctx, cmd)
+func buildSkillServer(ctx context.Context, cmd *cobra.Command, settings mcpSettings) (*mcp.Server, error) {
+	return buildDynamicSkillServer(ctx, cmd, settings)
 }
 
 func init() {
@@ -170,5 +169,6 @@ func init() {
 	registerDynamicServeFlags(MCPCmd)
 	MCPCmd.Flags().String(flagMCPRoot, "", "Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory)")
 	MCPCmd.Flags().Bool(flagAllowAnyDir, false, "Let the authoring tools use any working_directory, not only the root")
+	MCPCmd.Flags().StringSlice(flagMCPTools, nil, "Register only these tools, repeatable or comma separated (default: [mcp] tools, else every tool); an unknown name is an error that lists the valid ones")
 	MCPCmd.Flags().Bool(flagMCPReadOnly, false, "Register only the read-only authoring tools, so the server can inspect a project but not change it (with --serve-skills, keeps the merged server read-only)")
 }

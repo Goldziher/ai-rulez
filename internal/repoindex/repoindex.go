@@ -44,6 +44,17 @@ type Item struct {
 	Description string `json:"description,omitempty"`
 	Hash        string `json:"hash"`
 	Path        string `json:"path"`
+	// Only, when set, restricts a rule to the files that match it; nil means the
+	// rule applies everywhere in its scope.
+	Only *PathGlobs `json:"only,omitempty"`
+}
+
+// PathGlobs are the globs a rule names the files it applies to by, relative to
+// the rule's scope: `paths:` in the Claude Code form, `globs:` in a Cursor rule
+// that is not always applied.
+type PathGlobs struct {
+	Paths []string `json:"paths,omitempty"`
+	Globs []string `json:"globs,omitempty"`
 }
 
 // Scope is a directory that holds convention files.
@@ -79,14 +90,20 @@ var ErrTooLarge = errors.New("the file is larger than the index reads")
 type Options struct {
 	// Root is the project root; every path the index holds is relative to it.
 	Root string
-	// Presets are the enabled presets; their skills, rules, agents and commands
-	// directories are indexed. The skills and .claude/skills directories always are.
+	// Presets are the enabled presets; their skills directories are indexed, and
+	// the skills and .claude/skills directories always are. Rules, agents and
+	// commands are indexed in every known convention, whatever the presets.
 	Presets []string
 	// MaxItems caps the items held (0 selects DefaultMaxItems). Past it the
 	// shallowest scopes are kept.
 	MaxItems int
 	// Skip lists project-relative directories the index never enters.
 	Skip []string
+	// Exclude lists globs, relative to Root and slash separated, of the paths the
+	// index never enters: a file a glob matches, or one below a directory it
+	// matches, is not read and marks no scope. A pattern without a slash matches
+	// at any depth and a trailing slash names a directory.
+	Exclude []string
 	// Files, when set, is the file listing to index instead of listing the
 	// project (slash separated, relative to Root).
 	Files []string
@@ -109,9 +126,10 @@ type Options struct {
 // CachedItem is the summary of one file a Cache keeps. It never holds the file
 // body.
 type CachedItem struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Hash        string `json:"hash"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Hash        string     `json:"hash"`
+	Only        *PathGlobs `json:"only,omitempty"`
 	// Generated records that a generator's header was found in the file.
 	Generated bool `json:"generated,omitempty"`
 }
@@ -151,19 +169,24 @@ func Build(ctx context.Context, opts Options) (*Index, error) {
 	if limit <= 0 {
 		limit = DefaultMaxItems
 	}
+	exclude, err := NewExcluder(opts.Exclude)
+	if err != nil {
+		return nil, err
+	}
 	files := opts.Files
 	if files == nil {
 		files = listFiles(ctx, opts.Root)
 	}
-	b := &builder{opts: opts, limit: limit, markers: map[string]map[string]bool{}}
+	b := &builder{opts: opts, limit: limit, exclude: exclude, markers: map[string]map[string]bool{}}
 	b.collect(files)
 	b.read()
 	return b.finish(), nil
 }
 
 type builder struct {
-	opts  Options
-	limit int
+	opts    Options
+	limit   int
+	exclude *Excluder
 	// cands are the units to read, in index order, after the cap.
 	cands []candidate
 	found int
@@ -179,7 +202,7 @@ type builder struct {
 
 // collect classifies the listed files and applies the cap.
 func (b *builder) collect(files []string) {
-	m := newMatcher(b.opts.Presets, b.opts.Skip)
+	m := newMatcher(b.opts.Presets, b.opts.Skip, b.exclude)
 	var skills, others []candidate
 	for _, file := range files {
 		segs := strings.Split(file, "/")
@@ -324,7 +347,9 @@ func (b *builder) readCached(c *candidate) {
 		return
 	}
 	it, generated := b.admit(c, content)
-	b.opts.Cache.Store(c.file, size, mtime, CachedItem{Name: it.Name, Description: it.Description, Hash: it.Hash, Generated: generated})
+	b.opts.Cache.Store(c.file, size, mtime, CachedItem{
+		Name: it.Name, Description: it.Description, Hash: it.Hash, Only: it.Only, Generated: generated,
+	})
 }
 
 // fromCache applies a cached summary. It reports false when the item cannot be
@@ -334,7 +359,7 @@ func (b *builder) fromCache(c *candidate, ci CachedItem, abs string) bool {
 		b.generated[c.kind]++
 		return true
 	}
-	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash}
+	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash, Only: ci.Only}
 	if b.opts.Screen != nil {
 		if b.opts.ScreenKnown == nil {
 			return false
