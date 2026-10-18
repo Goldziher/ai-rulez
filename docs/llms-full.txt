@@ -14405,7 +14405,12 @@ occurrence index. Identical (scanner, fingerprint) pairs are reported once.
 `.ai-rulez/scanner-baseline.json` accepts findings, in the format of the [lint baseline](#baseline-and-tolerated-findings) with
 each entry also naming its `scanner` and `rule`. `scan --external --write-baseline --reason "..."` records every
 current scanner finding (keeping the entries of scanners that did not run, dropping stale ones). Accepted findings
-are not reported (their count is logged); editing the flagged line makes the finding new. An entry past its
+are not reported (their count is logged); editing the flagged line makes the finding new. `--min-severity <level>`
+and repeated `--rule <glob>` narrow what is written (a rule matches the scanner's rule id, `scanner:rule` or the
+`AR` code; `*` is a wildcard); findings left out stay reported and an existing entry for one is kept. The reason of a
+new entry is the longest-matching `--reason-for RULE=text`, else `--reason`; both may use `{rule}`, `{severity}` and
+`{scanner}`. A new entry stores only the first line of the message, at most 160 characters, since only the
+fingerprint is matched; entries written earlier keep theirs. An entry past its
 `expires` date (the day itself still counts) reports the finding again plus `AR9E5`.
 
 Design decisions: the baseline reuses the lint baseline format (`version`, `entries`) rather than a second schema;
@@ -29409,7 +29414,7 @@ ai-rulez validate [flags]
 | `--fail-on`           | string  | Lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--external`          | boolean | Also run the `[[lint.external]]` scanners and merge their findings |
 | `--allow-egress`      | strings | With `--external`: allow the named scanners that declare `egress = true` to run (repeatable; a name no `[[lint.external]]` declares is an error) |
-| `--write-baseline`, `--reason`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
+| `--write-baseline`, `--reason`, `--reason-for`, `--min-severity`, `--rule`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
 | `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
 | `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
 | `--baseline`          | string  | Accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
@@ -29864,6 +29869,8 @@ exits 2 when the bundle on disk differs. `--index-style` (default `okf.index_sty
 
 ##### `ai-rulez import okf`
 
+| `--min-severity <level>`, `--rule <glob>` | With `--write-baseline`, record only findings of at least that severity, or of those scanner rule ids (`rule`, `scanner:rule` or an `AR` code; `*` globs; `--rule` repeats). Findings left out stay reported and keep any entry they already have |
+| `--reason-for <rule>=<text>` | With `--write-baseline`, the reason of new entries of that rule (a glob; repeatable; the most specific pattern wins); `--reason` covers the rest. `{rule}`, `{severity}` and `{scanner}` in either are replaced per entry |
 ```bash
 ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json]
 ```
@@ -33633,7 +33640,8 @@ ai-rulez scan --path vendor/skills
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
-| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry) |
+| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry); {rule}, {severity} and {scanner} are replaced per entry |
+| `--reason-for` | string list |  | With --write-baseline, RULE=text: the reason of new entries of that rule (a glob; repeatable); --reason covers the rest |
 | `--recursive` | bool |  | Scan every configuration file found recursively |
 | `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
 | `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
@@ -33652,6 +33660,7 @@ Inspect the external scanners configured in [[lint.external]]
 ```text
 ai-rulez scanners [flags]
 ```
+| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 
 Examples:
 
@@ -33671,6 +33680,7 @@ ai-rulez scanners doctor <name>... | --all [flags]
 Examples:
 
 ```bash
+| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 ai-rulez scanners doctor --all
 ai-rulez scanners doctor semgrep
 ```
@@ -34542,7 +34552,8 @@ ai-rulez validate --outputs
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
-| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry) |
+| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry); {rule}, {severity} and {scanner} are replaced per entry |
+| `--reason-for` | string list |  | With --write-baseline, RULE=text: the reason of new entries of that rule (a glob; repeatable); --reason covers the rest |
 | `--recursive` | bool |  | Validate every configuration file found recursively |
 | `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
 | `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
@@ -34561,6 +34572,7 @@ ai-rulez validate --outputs
 
 Run the deterministic repo checks declared as [[verifiers]]
 
+| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 ```text
 ai-rulez verifiers [flags]
 ```
@@ -34580,6 +34592,7 @@ Measure how reliable an llm verifier's failures are, so it may gate
 
 ```text
 ai-rulez verifiers calibrate [name...] [flags]
+| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 ```
 
 Examples:

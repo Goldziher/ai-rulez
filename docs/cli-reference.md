@@ -3036,6 +3036,7 @@ ai-rulez scan --path vendor/skills
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
 | `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json"). A matched file that is not linted is named on stderr as "<file>: not linted (<reason>)" and in the JSON report's notices, and a glob that matches nothing warns |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile) |
+| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
@@ -3052,9 +3053,11 @@ ai-rulez scan --path vendor/skills
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
-| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry) |
+| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry); {rule}, {severity} and {scanner} are replaced per entry |
+| `--reason-for` | string list |  | With --write-baseline, RULE=text: the reason of new entries of that rule (a glob; repeatable); --reason covers the rest |
 | `--recursive` | bool |  | Scan every configuration file found recursively |
 | `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
+| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 | `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
 | `--show-suppressed` | bool |  | With --external, also show scanner results the tool marked suppressed, as info |
 | `--since` | string |  | Report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree |
@@ -3944,6 +3947,7 @@ ai-rulez validate --outputs
 | `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json"). A matched file that is not linted is named on stderr as "<file>: not linted (<reason>)" and in the JSON report's notices, and a glob that matches nothing warns |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile) |
 | `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); needs --strict |
+| `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
@@ -3961,9 +3965,11 @@ ai-rulez validate --outputs
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
-| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry) |
+| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry); {rule}, {severity} and {scanner} are replaced per entry |
+| `--reason-for` | string list |  | With --write-baseline, RULE=text: the reason of new entries of that rule (a glob; repeatable); --reason covers the rest |
 | `--recursive` | bool |  | Validate every configuration file found recursively |
 | `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
+| `--rule` | string list |  | With --write-baseline, record only findings of this scanner rule id, scanner:rule or AR code (a glob; repeatable) |
 | `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
 | `--show-policy` | bool |  | Print the effective organization policy with the origin of every value and what the repository tried to loosen (text, or JSON with --format json), then exit |
 | `--show-suppressed` | bool |  | With --external, also show scanner results the tool marked suppressed, as info |

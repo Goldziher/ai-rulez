@@ -256,7 +256,7 @@ func buildCapabilities() []Capability {
 // lintCLIFlags are the flags of `validate` and `scan` that no tool takes.
 // withFix adds the autofix flags, which only validate has.
 func lintCLIFlags(withFix bool) []Exclusion {
-	writes := []string{"dry-run", "write-baseline", "update-baseline", "baseline", "baseline-reason", "reason", "strict-baseline", "scanner-baseline", "output"}
+	writes := []string{"dry-run", "write-baseline", "update-baseline", "baseline", "baseline-reason", "reason", "reason-for", "min-severity", "rule", "strict-baseline", "scanner-baseline", "output"}
 	if withFix {
 		writes = append(writes, "fix", "fix-unsafe")
 	}

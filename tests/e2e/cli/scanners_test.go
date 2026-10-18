@@ -100,6 +100,19 @@ func TestScannersCLI_ScanBaselineLifecycle(t *testing.T) {
 	expired := testutil.RunCLIWithEnv(t, dir, map[string]string{"AI_RULEZ_TODAY": "2999-01-01"}, "scan", "--external")
 	require.Equal(t, 0, expired.ExitCode, expired.Stdout) // no expiry date was set: the entry stays valid
 
+	// The filters and per-rule reasons narrow what is recorded; bad values are refused.
+	filtered := testutil.RunCLI(t, dir, "scan", "--external", "--write-baseline", "--reason", "{rule} fixture", "--rule", "NOPE-*", "--reason-for", "FAKE-*=accepted")
+	require.Equal(t, 0, filtered.ExitCode, filtered.Stdout+filtered.Stderr)
+	data, err = os.ReadFile(filepath.Join(dir, ".ai-rulez", "scanner-baseline.json"))
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"reason": "fixture token"`) // the existing entry is kept as it was
+	badSeverity := testutil.RunCLI(t, dir, "scan", "--external", "--write-baseline", "--reason", "x", "--min-severity", "loud")
+	require.Equal(t, 1, badSeverity.ExitCode)
+	badSeverity.AssertStderrContains(t, "--min-severity")
+	orphan := testutil.RunCLI(t, dir, "scan", "--external", "--rule", "X")
+	require.Equal(t, 1, orphan.ExitCode)
+	orphan.AssertStderrContains(t, "only apply with --write-baseline")
+
 	// The flags mean nothing without --external.
 	bad := testutil.RunCLI(t, dir, "scan", "--write-baseline", "--reason", "x")
 	require.Equal(t, 1, bad.ExitCode)

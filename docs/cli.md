@@ -2222,7 +2222,7 @@ ai-rulez validate [flags]
 | `--fail-on`           | string  | Lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--external`          | boolean | Also run the `[[lint.external]]` scanners and merge their findings |
 | `--allow-egress`      | strings | With `--external`: allow the named scanners that declare `egress = true` to run (repeatable; a name no `[[lint.external]]` declares is an error) |
-| `--write-baseline`, `--reason`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
+| `--write-baseline`, `--reason`, `--reason-for`, `--min-severity`, `--rule`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
 | `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
 | `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
 | `--baseline`          | string  | Accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
@@ -2642,6 +2642,8 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 | --- | --- |
 | `--allow-egress <name>` | Allow a scanner declared `egress = true` to run (repeatable) |
 | `--write-baseline --reason <text>` | Accept every current scanner finding in `.ai-rulez/scanner-baseline.json` and exit as if clean; `--reason` is required |
+| `--min-severity <level>`, `--rule <glob>` | With `--write-baseline`, record only findings of at least that severity, or of those scanner rule ids (`rule`, `scanner:rule` or an `AR` code; `*` globs; `--rule` repeats). Findings left out stay reported and keep any entry they already have |
+| `--reason-for <rule>=<text>` | With `--write-baseline`, the reason of new entries of that rule (a glob; repeatable; the most specific pattern wins); `--reason` covers the rest. `{rule}`, `{severity}` and `{scanner}` in either are replaced per entry |
 | `--scanner-baseline <file>` | Use another scanner baseline file |
 | `--show-suppressed` | Also show results the scanner marked suppressed, as `info` |
 | `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-runs) |
