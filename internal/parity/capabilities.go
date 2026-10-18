@@ -266,7 +266,7 @@ func lintCLIFlags(withFix bool) []Exclusion {
 			Reason: "git-diff scoping, cache and presentation controls of the command line run"},
 		{Names: []string{"external", "allow-egress", "recursive"},
 			Reason: "runs scanner programs, possibly with network egress, or walks other projects"},
-		{Names: []string{"path", "glob", "outputs"},
+		{Names: []string{"path", "glob", "exclude", "outputs"},
 			Reason: "name files outside the content tree from the command line's working directory, or render the generated files; the tool lints the configured content"},
 	}
 	if withFix {
