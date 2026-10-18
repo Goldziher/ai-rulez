@@ -65,6 +65,8 @@ type capProfile struct {
 	counts   [tierCount]int
 	credRead bool
 	stealth  bool
+	// cmds maps each classified command to its highest tier.
+	cmds map[string]int
 }
 
 func (p capProfile) describe() string {
@@ -96,6 +98,7 @@ func (p *capProfile) classify(line string) {
 		}
 		if known {
 			p.counts[tier]++
+			p.note(cmd, tier)
 		}
 	}
 	if _, ok := detectCredentialAccess(line); ok {
