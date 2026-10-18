@@ -92,6 +92,7 @@ func (r *runner) runSkillUnits(sc resolvedScanner, root string, files []stagedFi
 	var norm []externalFinding
 	outOfScope, firstOut := 0, ""
 	var misses []int
+	served := 0
 	for i := range units {
 		u := &units[i]
 		if u.skip {
@@ -101,6 +102,7 @@ func (r *runner) runSkillUnits(sc resolvedScanner, root string, files []stagedFi
 		if u.key != "" {
 			if hit, found := r.cacheGet(sc, u.cache, u.key); found {
 				u.hit = &hit
+				served++
 				norm = append(norm, fromCached(hit.Findings)...)
 				outOfScope, firstOut = outOfScope+hit.OutOfScope, firstNonEmpty(firstOut, hit.FirstOut)
 				continue
@@ -118,8 +120,8 @@ func (r *runner) runSkillUnits(sc resolvedScanner, root string, files []stagedFi
 		norm = append(norm, fresh...)
 		outOfScope, firstOut, ok = outOfScope+freshOut, firstNonEmpty(firstOut, freshFirst), good
 	}
-	if n := len(units) - len(misses); n > 0 {
-		r.log().Debug("Scanner results served from the cache", "scanner", sc.Name, "skills", n)
+	if served > 0 {
+		r.log().Debug("Scanner results served from the cache", "scanner", sc.Name, "skills", served)
 	}
 	return r.convertFindings(sc, stagedScope(files), norm, outOfScope, firstOut), ok
 }
