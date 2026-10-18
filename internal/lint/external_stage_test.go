@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const stagedSkill = "---\nname: deploy\ndescription: Use when deploying the service to production.\n---\n# Deploy\n\nRun the script.\n"
@@ -580,4 +582,70 @@ func TestStagedMCPRedactsArgumentsAndURLs(t *testing.T) {
 	if got := redactStageURL("https://user:pw@host.example/mcp?key=abc#frag"); got != "https://host.example/mcp" {
 		t.Fatalf("url = %q", got)
 	}
+}
+
+func TestSkillRelativeResultsResolveAgainstTheBatchsOwnSkills(t *testing.T) {
+	// Arrange: a scanner that prints a uri relative to the skill it was handed.
+	script := `printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"X1","level":"warning","message":{"text":"found"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"SKILL.md"},"region":{"startLine":1}}}]}]}]}'` + "\n"
+	other := map[string]string{".ai-rulez/skills/other/SKILL.md": fakeSkill("other")}
+	tests := []struct {
+		name      string
+		keys      string
+		wantFiles []string
+		wantDrop  string
+		wantSev   Severity
+	}{
+		{
+			name:      "batch_size 1 resolves each batch against its own skill",
+			keys:      "egress = false\ninputs = [\"skills\"]\nbatch_size = 1\nargs = \"{skill_dirs}\"\n",
+			wantFiles: []string{".ai-rulez/skills/deploy/SKILL.md", ".ai-rulez/skills/other/SKILL.md"},
+		},
+		{
+			name:     "a multi-skill batch stays ambiguous and every result dropped is an error",
+			keys:     "egress = false\ninputs = [\"skills\"]\nargs = \"{skill_dirs}\"\n",
+			wantDrop: "reported 1 result(s)",
+			wantSev:  SeverityError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newScannerProject(t, script, tt.keys, other)
+
+			// Act
+			findings := p.run(Options{})
+
+			// Assert
+			var files []string
+			for _, f := range ofCode(findings, CodeExternalFinding) {
+				files = append(files, f.File)
+			}
+			require.Len(t, files, len(tt.wantFiles), dump(findings))
+			for i, want := range tt.wantFiles {
+				assert.True(t, strings.HasSuffix(files[i], want), "%s does not end in %s", files[i], want)
+			}
+			dropped := ofCode(findings, CodeScannerOutOfScope)
+			if tt.wantDrop == "" {
+				assert.Empty(t, dropped, dump(findings))
+				return
+			}
+			require.Len(t, dropped, 1, dump(findings))
+			assert.Contains(t, dropped[0].Message, tt.wantDrop)
+			assert.Equal(t, tt.wantSev, dropped[0].Severity)
+		})
+	}
+}
+
+func TestPartiallyDroppedResultsStayAWarning(t *testing.T) {
+	// Arrange: one staged file and one that is not.
+	script := `printf '{"version":"2.1.0","runs":[{"results":[` +
+		`{"ruleId":"A","message":{"text":"rule file"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":".ai-rulez/rules/r.md"}}}]},` +
+		`{"ruleId":"D","message":{"text":"ok"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":".ai-rulez/skills/deploy/SKILL.md"},"region":{"startLine":1}}}]}]}]}'` + "\n"
+	p := newScannerProject(t, script, "egress = false\ninputs = [\"skills\"]\n", nil)
+
+	// Act
+	dropped := ofCode(p.run(Options{}), CodeScannerOutOfScope)
+
+	// Assert
+	require.Len(t, dropped, 1)
+	assert.Equal(t, SeverityWarning, dropped[0].Severity)
 }

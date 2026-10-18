@@ -302,7 +302,7 @@ ai-rulez validate --strict --outputs
 | AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF or adapter output, or exited non-zero with no results; or `isolation = "require"` and the scanner cannot be confined |
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
 | AR9E5 | `scanner-baseline-expired` | warning | An entry of `scanner-baseline.json` is past its `expires` date, so the scanner finding it accepted is reported again |
-| AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped |
+| AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped (an error when every result of the run was dropped) |
 | AR9E7 | `scanner-isolation-degraded` | warning | `isolation = "auto"` found no process isolation backend, so staged scanners ran without network or write confinement (once per run) |
 | AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#ai-rulez-convert)) |
 | AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
@@ -906,8 +906,11 @@ scratch temp directory. Placeholders need `inputs`; an unknown one is `AR9E0`.
 
 A result is attributed to the project file a staged file came from. A path that is not a staged file (absolute,
 `..`, another project file) is dropped and reported once per scanner as `AR9E6`. A relative path that matches no
-staged file at the root is tried against the staged skill directories (scanners handed `{skill_dirs}` print paths
-relative to them) and must match exactly one.
+staged file at the root is tried against the skill directories the run was handed (scanners handed `{skill_dirs}`
+print paths relative to them) and must match exactly one. With `batch_size = 1` a run holds one skill, so `SKILL.md`
+and `references/x.md` resolve to that skill; in a batch of several skills, or without `batch_size`, a path that
+names a file in more than one of them is ambiguous and dropped. `AR9E6` is an error when every result of a run was
+dropped, so a scanner whose paths never resolve cannot pass as clean.
 
 Severity is the first of: `severity_map` (rule id or glob to `critical`, `high`, `medium`, `low`, `info`, or
 `error`, `warning`; exact id first, then the longest glob), SARIF `properties.security-severity` of the result or
@@ -3175,8 +3178,8 @@ a staged [[lint.external]] scanner reported a result for a file that was not sta
 
 - Default severity: `warning`
 - Analyzer: `security` (scope `bundle`)
-- Why: A staged scanner sees only the files staged for it. A result for any other path cannot be attributed to ai-rulez content and may be an attempt to attach a finding to an arbitrary file, so it is dropped.
-- Bad: A scanner that reports `/etc/passwd` or a path that is not under the stage
+- Why: A staged scanner sees only the files staged for it. A result for any other path cannot be attributed to ai-rulez content and may be an attempt to attach a finding to an arbitrary file, so it is dropped. A run whose every result was dropped is an error, because the scan then found nothing it could attribute.
+- Bad: A scanner that reports `/etc/passwd` or a path that is not under the stage, or a skill-relative path such as `SKILL.md` in a batch of several skills
 - Good: Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy
 
 ### AR9E7 scanner-isolation-degraded

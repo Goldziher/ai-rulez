@@ -351,8 +351,8 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Fix the finding and remove the entry, or renew it with `scan --external --write-baseline --reason`",
 		},
 		CodeScannerOutOfScope: {
-			Why:  "A staged scanner sees only the files staged for it. A result for any other path cannot be attributed to ai-rulez content and may be an attempt to attach a finding to an arbitrary file, so it is dropped.",
-			Bad:  "A scanner that reports `/etc/passwd` or a path that is not under the stage",
+			Why:  "A staged scanner sees only the files staged for it. A result for any other path cannot be attributed to ai-rulez content and may be an attempt to attach a finding to an arbitrary file, so it is dropped. A run whose every result was dropped is an error, because the scan then found nothing it could attribute.",
+			Bad:  "A scanner that reports `/etc/passwd` or a path that is not under the stage, or a skill-relative path such as `SKILL.md` in a batch of several skills",
 			Good: "Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy",
 		},
 		CodeScannerNoIsolation: {

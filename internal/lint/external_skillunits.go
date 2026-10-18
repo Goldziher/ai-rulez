@@ -210,6 +210,8 @@ type batchOutcome struct {
 type preparedBatch struct {
 	spec    cmdrun.Spec
 	usesOut bool
+	// dirs are the absolute stage paths of the skills handed to the batch.
+	dirs []string
 }
 
 // runBatches runs the batches one after the other, or up to the scanner's
@@ -264,14 +266,19 @@ func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scanner
 	return outcomes
 }
 
-// batchArgv is the argv of one batch: the command with the batch's skill
-// directories in place of {skill_dirs}.
-func (r *runner) batchArgv(sc resolvedScanner, root string, st *scannerStage, units []skillUnit, b unitBatch) []string {
+// batchDirs are the absolute stage paths of the skill directories of a batch.
+func (r *runner) batchDirs(st *scannerStage, units []skillUnit, b unitBatch) []string {
 	dirs := make([]string, len(b.units))
 	for i, ui := range b.units {
 		dirs[i] = filepath.Join(st.root, filepath.FromSlash(units[ui].dir))
 	}
-	argv := st.expandFor(sc.Command, dirs, b.idx)
+	return dirs
+}
+
+// batchArgv is the argv of one batch: the command with the batch's skill
+// directories in place of {skill_dirs}.
+func (r *runner) batchArgv(sc resolvedScanner, root string, st *scannerStage, units []skillUnit, b unitBatch) []string {
+	argv := st.expandFor(sc.Command, r.batchDirs(st, units, b), b.idx)
 	if strings.ContainsAny(argv[0], `/\`) && !filepath.IsAbs(argv[0]) {
 		argv[0] = filepath.Join(root, argv[0]) // a relative command is relative to the project, not the stage
 	}
@@ -289,13 +296,13 @@ func (r *runner) prepareUnitBatch(sc resolvedScanner, root, binary string, st *s
 	spec.InheritEnv = false
 	spec.Env = st.envFor(sc.EnvPass, cmdrun.HostEnv(), b.idx)
 	spec, usesOut, ok := r.prepareBatch(sc, st, spec, argv, binary, b.idx)
-	return preparedBatch{spec: spec, usesOut: usesOut}, ok
+	return preparedBatch{spec: spec, usesOut: usesOut, dirs: r.batchDirs(st, units, b)}, ok
 }
 
 // runPrepared starts a prepared batch and reads its report. It is safe to call
 // from several goroutines for different batches of one stage.
 func (r *runner) runPrepared(sc resolvedScanner, st *scannerStage, p preparedBatch, idx int) batchOutcome {
-	norm, outOfScope, firstOut, ok := r.finishBatch(sc, st, p.usesOut, idx, cmdrun.Run(scanContext(), p.spec))
+	norm, outOfScope, firstOut, ok := r.finishBatch(sc, st, p.dirs, p.usesOut, idx, cmdrun.Run(scanContext(), p.spec))
 	return batchOutcome{norm: norm, outOfScope: outOfScope, firstOut: firstOut, ok: ok, ran: true}
 }
 

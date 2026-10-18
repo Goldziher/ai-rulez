@@ -316,8 +316,10 @@ func evidenceURL(raw string) string {
 // resolveRel maps a path a scanner printed to the stage-relative slash path of
 // a staged file. A relative path that is not under the stage root is tried
 // against the staged skill directories, which is where a scanner that was
-// handed one prints its paths from; it must match exactly one.
-func (st *scannerStage) resolveRel(raw string) (string, bool) {
+// handed one prints its paths from; it must match exactly one. dirs are the
+// skill directories to try: the ones the producing run was handed, so a
+// batch of one skill resolves "SKILL.md" to that skill.
+func (st *scannerStage) resolveRel(raw string, dirs []string) (string, bool) {
 	if rel, ok := st.lookup(raw, st.root); ok {
 		return rel, true
 	}
@@ -325,7 +327,7 @@ func (st *scannerStage) resolveRel(raw string) (string, bool) {
 		return "", false
 	}
 	hit, n := "", 0
-	for _, dir := range st.skillDirs {
+	for _, dir := range dirs {
 		if rel, ok := st.lookup(raw, dir); ok {
 			hit, n = rel, n+1
 		}
@@ -373,11 +375,20 @@ func (r *runner) externalFinding(scanner, abs string, line int, sev Severity, ms
 // addRun records a finding about a scanner itself (not one of its results),
 // attributed to the config file.
 func (r *runner) addRun(code, scanner, msg string) {
+	r.addRunAs(code, scanner, "", msg)
+}
+
+// addRunAs is addRun with an escalated severity: raise replaces the rule's
+// severity unless the rule is switched off. "" keeps the rule's.
+func (r *runner) addRunAs(code, scanner string, raise Severity, msg string) {
 	r.runMu.Lock()
 	defer r.runMu.Unlock()
 	sev := r.sev[code]
 	if code == CodeScannerUnavailable && r.opts.Scanner.required[scanner] {
 		sev = SeverityError // a required scanner that did not run is a failure, whatever the rule's severity
+	}
+	if raise != "" && sev != SeverityOff {
+		sev = raise
 	}
 	if sev == SeverityOff || r.ignore[code] {
 		return
