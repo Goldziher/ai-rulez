@@ -2,8 +2,6 @@ package lint
 
 import (
 	"bytes"
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,6 +11,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // invocation is one start of the fake scanner, read back from its --log file.
