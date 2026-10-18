@@ -239,6 +239,7 @@ global internal/govview/lock.go 1
 global internal/govview/snapshot.go 1
 global internal/guard/guard.go 3
 global internal/harnesslimits/limits.go 3
+global internal/harnessnames/harnessnames.go 1
 global internal/importer/apm.go 3
 global internal/importer/convert.go 2
 global internal/importer/frontmatter.go 4
