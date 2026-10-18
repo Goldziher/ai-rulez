@@ -1,7 +1,7 @@
 schema = 1
 preset = "poolside"
 harness_version = "docs-only"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,12 +10,13 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.poolside.ai/cli/cli-reference.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
 url = "https://docs.poolside.ai/subagents.md"
-verified_on = "2026-10-17"
+quote = "The name `general` is reserved for the built-in subagent."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -23,34 +24,35 @@ source = "s1"
 user_collision = "unknown"
 match = "exact"
 names = [
-  "model",
-  "mode",
   "agent-mode",
-  "thought-level",
-  "new",
-  "copy",
-  "delete",
-  "rewind",
-  "resume",
-  "rename",
-  "move",
-  "set-option",
-  "system",
-  "feedback",
-  "logs",
-  "logout",
-  "quit",
-  "debug:dump",
-  "plan",
+  "clear",
   "compact",
-  "share",
+  "copy",
+  "debug:dump",
+  "delete",
+  "feedback",
+  "logout",
+  "logs",
   "mcp",
+  "mode",
+  "model",
+  "move",
+  "new",
+  "plan",
+  "quit",
+  "rename",
+  "resume",
+  "rewind",
   "sandbox",
   "sandbox-apply-to-host",
+  "set-option",
+  "share",
   "skills",
+  "system",
+  "thought-level",
   "usage",
 ]
-aliases = { "agent-mode" = ["collaboration-mode"], "thought-level" = ["effort"], "new" = ["clear"], "quit" = ["exit"] }
+aliases = { "agent-mode" = ["collaboration-mode"], "new" = ["clear"], "quit" = ["exit"], "thought-level" = ["effort"] }
 
 [[group]]
 kind = "agent"

@@ -1,0 +1,119 @@
+<!-- Excerpt of https://junie.jetbrains.com/docs/slash-commands.html, fetched 2026-10-18 -->
+<html>
+  <body>
+    <h2>Built-in slash commands</h2>
+    <table class="wide">
+      <thead>
+        <tr class="ijRowHead">
+          <th><p>Command</p></th>
+          <th><p>Description</p></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><p><code class="code">/account</code></p></td>
+          <td>
+            <p>
+              Manage your Junie Accounts and Junie API keys, or connect your own API key from Anthropic, OpenAI, and
+              other OpenAI API-compatible providers.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/branch [name]</code></p></td>
+          <td>
+            <p>
+              Copy the current conversation into a new session and switch to it. If you provide <code class="code"
+              >[name]</code>, Junie uses it as the title of the new session.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/history [sessionId]</code></p></td>
+          <td>
+            <p>
+              Open Task history to search sessions, switch between live sessions, or resume a saved session from a
+              previous run. Press <code class="code">Tab</code> to toggle between sessions from all directories and only
+              the current project directory. If you provide <code class="code">[sessionId]</code>, Junie resumes or
+              switches directly to that session &mdash; handy with the <code class="code">/branch</code> flow.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/quit</code></p></td>
+          <td><p>Exit Junie CLI interactive mode while staying logged in.</p></td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/title [name]</code></p></td>
+          <td>
+            <p>
+              Set the title of the current session. If you provide <code class="code">[name]</code>, Junie uses it as
+              the session title. If you omit it, Junie auto-generates a title by summarizing the whole conversation. A
+              title you set this way persists across session reloads and is shown in <code class="code">/history</code>,
+              the terminal window title, and task-completion notifications, and it is not overwritten by the agent's
+              automatic name. Alias: <code class="code">/rename</code>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/stats</code></p></td>
+          <td>
+            <p>
+              Show usage statistics for the current session and all-time totals, including token usage, used models,
+              code changes, and (on JetBrains AI) your remaining balance. Aliases: <code class="code">/usage</code>,
+              <code class="code">/cost</code>, <code class="code">/quota</code>, <code class="code">/balance</code>,
+              <code class="code">/credits</code>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/compress</code></p></td>
+          <td>
+            <p>
+              Compress the conversation context before the next task, which may discard some information. Alias: <code
+                class="code"
+              >/compact</code>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/logs</code></p></td>
+          <td>
+            <p>
+              Export the current session logs as a ZIP archive for bug reports. Alias: <code class="code"
+              >/export-logs</code>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><p><code class="code">/voice</code></p></td>
+          <td>
+            <p>
+              Record voice input from your microphone. Aliases: <code class="code">/mic</code>, <code class="code"
+              >/record</code>.
+            </p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <h2>Navigation</h2>
+    <table class="wide">
+      <thead>
+        <tr class="ijRowHead">
+          <th><p>Shortcut</p></th>
+          <th><p>Description</p></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><p><code class="code">Ctrl+C</code> twice</p></td>
+          <td><p>Quit Junie CLI interactive mode.</p></td>
+        </tr>
+        <tr>
+          <td><p><code class="code">!</code></p></td>
+          <td><p>Run a shell command in the embedded terminal. Example: <code class="code">!ls</code>.</p></td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

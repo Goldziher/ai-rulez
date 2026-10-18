@@ -1,7 +1,7 @@
 schema = 1
 preset = "factory"
 harness_version = "docs-only (docs.factory.com, fetched 2026-10-17)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.factory.com/droid-cli/cli-reference.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -38,6 +38,7 @@ names = [
   "billing",
   "btw",
   "bug",
+  "cd",
   "clear",
   "commands",
   "compress",
@@ -45,11 +46,9 @@ names = [
   "copy",
   "cost",
   "create-skill",
-  "cd",
   "cwd",
   "diagnostics",
   "droids",
-  "missions",
   "fast",
   "favorite",
   "fork",
@@ -63,6 +62,7 @@ names = [
   "login",
   "logout",
   "mcp",
+  "missions",
   "model",
   "new",
   "plugins",
