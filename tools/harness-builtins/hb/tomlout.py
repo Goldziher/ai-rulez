@@ -4,6 +4,10 @@ The layout is fixed so that regenerating an unchanged table yields the same byte
 header keys, then [[source]] tables, then [[group]] tables.
 """
 
+from pathlib import Path
+
+import tomllib
+
 HEADER_KEYS = ("schema", "preset", "harness_version", "verified_on", "completeness", "severity")
 
 
@@ -57,3 +61,11 @@ def dump(t: dict) -> str:
         if g.get("aliases"):
             out.append("aliases = " + aliases_value(g["aliases"]))
     return "\n".join(out) + "\n"
+
+
+def load(path) -> dict:
+    return tomllib.loads(Path(path).read_text())
+
+
+def save(path, table: dict) -> None:
+    Path(path).write_text(dump(table))
