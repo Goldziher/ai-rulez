@@ -560,6 +560,10 @@ daemon    = true                                                  # --daemon (--
 no_watch  = true                                                  # --no-watch (--serve-skills)
 ```
 
+- **Skills keys without serving.** `allow`, `deny`, `daemon`, `no_watch`, `exclude` and `discover_skills` only apply
+  when skills are served (`--serve-skills` or `serve_skills = true`). A server started without serving them logs one
+  warning on stderr naming the keys that are set and ignored; the same settings as flags stop the server with
+  `requires --serve-skills`, because a key may be shared by launches that do not serve skills.
 - **A flag wins.** A flag given on the command line replaces the key, including `--read-only=false` and an empty
   `--tools=`. A flag that is not given leaves the key in charge.
 - **Read at start.** The settings are read when the server starts; change them and restart the server. They are
