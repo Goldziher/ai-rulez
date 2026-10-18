@@ -22,6 +22,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **AR401 no longer reports a documented path that git ignores.** A missing path matched by `.gitignore`, `.git/info/exclude` or the global excludes file (`.claude/settings.local.json`, `.claude/personal-preferences.md`) is a local file, not stale guidance. `[lint] allow_paths`, `[[lint.ignore_rules]]` and an inline `ai-rulez-lint-ignore` comment cover placeholder paths, and are now listed in `validate --explain AR401` ([#459](https://github.com/Goldziher/ai-rulez/issues/459)).
+
 - **AR808 only checks skills and commands where the harness loads them from.** A hand-written `SKILL.md` is compared with the Claude Code built-ins only inside `.claude/skills` (or `.claude/commands`), a plugin's `skills/` directory, a local `[[skill_sources]]` directory or a `skill_roots` glob; an application's own `x/src/public/skills/code-review/SKILL.md` is still linted for format but no longer reports `shadows the built-in /code-review`. Authored `.ai-rulez/` content is always checked ([#457](https://github.com/Goldziher/ai-rulez/issues/457)).
 - **AR402 no longer reads the code span in a link's text as a resource reference.** `[`b` `references/s.md`](../../b/references/s.md)` was reported as a missing `references/s.md` although the link target exists. A code span inside the text of an inline link is its label; the link target is checked instead (an unresolved target is reported as a broken link, not as AR402) ([#456](https://github.com/Goldziher/ai-rulez/issues/456)).
 
