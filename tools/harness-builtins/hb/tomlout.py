@@ -11,8 +11,20 @@ import tomllib
 HEADER_KEYS = ("schema", "preset", "harness_version", "verified_on", "completeness", "severity")
 
 
+ESCAPES = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\t": "\\t", "\r": "\\r"}
+
+
 def q(s: str) -> str:
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    """A TOML basic string: backslash, quote and control characters are escaped."""
+    out = []
+    for ch in s:
+        if ch in ESCAPES:
+            out.append(ESCAPES[ch])
+        elif ord(ch) < 0x20 or ord(ch) == 0x7F:
+            out.append(f"\\u{ord(ch):04x}")
+        else:
+            out.append(ch)
+    return '"' + "".join(out) + '"'
 
 
 def names_value(names, width=120):
