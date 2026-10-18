@@ -1,4 +1,4 @@
-package lint
+package presets
 
 import (
 	"path/filepath"
@@ -23,8 +23,8 @@ func TestScopeOfTreatsDotDotPrefixedNamesAsInside(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := scopeOf(tt.path, configDir); got != tt.want {
-				t.Errorf("scopeOf(%q) = %q, want %q", tt.path, got, tt.want)
+			if got := ScopeOf(tt.path, configDir); got != tt.want {
+				t.Errorf("ScopeOf(%q) = %q, want %q", tt.path, got, tt.want)
 			}
 		})
 	}
