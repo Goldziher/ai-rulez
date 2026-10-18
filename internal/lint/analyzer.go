@@ -77,7 +77,7 @@ var analyzerGroups = []analyzerGroup{
 	{AnalyzerMCP, ScopeBundle, []string{"AR601"}},
 	{AnalyzerMCP, ScopeItem, []string{"AR602"}},
 	{AnalyzerDuplicates, ScopeBundle, []string{"AR701", "AR702", "AR703"}},
-	{AnalyzerDescriptions, ScopeItem, []string{"AR801", "AR802", "AR803", "AR804", "AR805", "AR806", "AR807"}},
+	{AnalyzerDescriptions, ScopeItem, []string{"AR801", "AR802", "AR803", "AR804", "AR805", "AR806", "AR807", "AR808"}},
 	{AnalyzerBudgets, ScopeItem, []string{"AR901", "AR902"}},
 	{AnalyzerMetadata, ScopeItem, []string{"AR951", "AR952", "AR953", "AR954"}},
 	{AnalyzerPlugin, ScopeBundle, []string{"AR961", "AR9T0", "AR9T1"}},

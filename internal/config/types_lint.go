@@ -58,7 +58,8 @@ type LintConfig struct {
 	RequireMetadata map[string][]string `yaml:"require_metadata,omitempty" json:"require_metadata,omitempty" toml:"require_metadata,omitempty"` //nolint:tagliatelle
 	// AllowOverrides lists content names ("name") or domain-qualified names
 	// ("domain/name") whose shadowing of another copy is intentional, so they
-	// are not reported as collapsed duplicates.
+	// are not reported as collapsed duplicates. "name" or "preset:name" also
+	// acknowledges a skill or command named like a harness built-in (AR808).
 	AllowOverrides []string `yaml:"allow_overrides,omitempty" json:"allow_overrides,omitempty" toml:"allow_overrides,omitempty"` //nolint:tagliatelle
 	// AllowedKeys lists frontmatter keys accepted in addition to the built-in
 	// Agent Skills, Claude Code and ai-rulez keys.

@@ -241,6 +241,7 @@ func (r *runner) checkCollapsed() {
 	for _, a := range r.lc.AllowOverrides {
 		allow[strings.ToLower(strings.TrimSpace(a))] = true
 	}
+	r.checkRepoSkillCollapsed(allow, configDir, authored)
 	for _, dup := range presets.CollapsedDuplicates(r.cfg.Content) {
 		name := strings.ToLower(dup.Name)
 		paths := append([]string{dup.Winner}, dup.Losers...)
@@ -264,6 +265,58 @@ func (r *runner) checkCollapsed() {
 			dup.Kind, dup.Name, r.labelPath(dup.Winner), r.labelPaths(dup.Losers), dup.Name)
 	}
 }
+
+// checkRepoSkillCollapsed reports a hand-written skill (a discovered repository
+// skill such as .claude/skills/<name>) that has the name of a skill the
+// configuration defines. Serving keeps one: the repository skill beats a
+// builtin, the configured skill beats the repository skill. The same
+// lint.allow_overrides entries silence it as for any other duplicate.
+func (r *runner) checkRepoSkillCollapsed(allow map[string]bool, configDir, authored string) {
+	defined := r.definedSkills()
+	for i := range r.items {
+		repo := &r.items[i]
+		if repo.kind != kindSkill || repo.isDoc || !repo.targetOnly {
+			continue
+		}
+		name := strings.ToLower(itemID(repo.kind, repo.cf))
+		other, ok := defined[name]
+		if !ok || allow[name] {
+			continue
+		}
+		winner, loser := repo.abs, other.cf.Path
+		if !isBuiltinItem(other) {
+			winner, loser = other.abs, repo.abs // a configured skill outranks a repository skill
+		}
+		if collapseAllowed(allow, name, []string{winner, loser}, configDir, authored) {
+			continue
+		}
+		if !isBuiltinItem(other) && filepath.IsAbs(other.abs) {
+			r.dep(repo.abs, other.abs)
+		}
+		id := itemID(repo.kind, repo.cf)
+		r.add(CodeDuplicateCollapsed, repo.abs, 1, "skill %q is defined in %s (kept) and %s (dropped); rename one, or list %q in lint.allow_overrides if the shadowing is intended",
+			id, r.labelPath(winner), r.labelPath(loser), id)
+	}
+}
+
+// definedSkills maps a skill name to the configured skill that holds it: a
+// builtin only when nothing else has the name.
+func (r *runner) definedSkills() map[string]*item {
+	defined := map[string]*item{}
+	for i := range r.items {
+		it := &r.items[i]
+		if it.kind != kindSkill || it.isDoc || it.targetOnly {
+			continue
+		}
+		name := strings.ToLower(itemID(it.kind, it.cf))
+		if prev, ok := defined[name]; !ok || (isBuiltinItem(prev) && !isBuiltinItem(it)) {
+			defined[name] = it
+		}
+	}
+	return defined
+}
+
+func isBuiltinItem(it *item) bool { return strings.HasPrefix(it.cf.Path, "builtin://") }
 
 func (r *runner) labelPath(p string) string {
 	if label, ok := includeCacheLabel(p); ok {

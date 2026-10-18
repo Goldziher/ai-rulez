@@ -386,7 +386,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom` and `validate --strict`, see [SBOM](sbom.md)) | allocated |
-| `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
+| `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR808`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
 | `AR960`-`AR969` | Plugins and evals presence (`AR961`-`AR964`) | allocated |
@@ -441,7 +441,7 @@ ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
-allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
+allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing: "name" or "domain/name" (AR703), "name" or "preset:name" (AR808)
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
 agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
 agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
@@ -663,7 +663,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
-| `descriptions` | `AR801`-`AR807` |
+| `descriptions` | `AR801`-`AR808` |
 | `budgets` | `AR901`, `AR902` |
 | `metadata` | `AR951`-`AR954` |
 | `plugin` | `AR961`-`AR964` |
@@ -1363,6 +1363,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
+| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content and hand-written files such as `.claude/skills/*`, also without a config. Only `claude` has a list today (`internal/lint/ar_reserved_names.go`, from the Claude Code commands reference); a project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
 <!-- lint-rules:end -->
 
 <!-- lint-rules-notes:begin -->
@@ -2524,6 +2525,16 @@ a content file does not end with a newline
 - Why: Tools disagree about a last line without a newline: diffs show `\ No newline at end of file`, concatenated or appended text lands on the same line, and formatters rewrite the file. `validate --fix` adds the newline (CRLF files get CRLF).
 - Bad: A rule file whose last byte is not a line feed
 - Good: End the file with exactly one newline
+
+### AR808 reserved-name
+
+a skill or command is named like a built-in command or bundled skill of a target assistant, so it replaces the built-in (allow an intentional override with lint.allow_overrides)
+
+- Default severity: `error`
+- Analyzer: `descriptions` (scope `item`)
+- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`.
+- Bad: `.claude/skills/init/SKILL.md` with the claude preset
+- Good: Rename the skill (`project-init`), or list `claude:init` in lint.allow_overrides
 
 ### AR901 size-lines
 
