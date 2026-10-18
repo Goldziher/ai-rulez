@@ -39,8 +39,8 @@ func TestReservedNameAR808(t *testing.T) {
 		},
 		{
 			name:  "hand-written claude skills",
-			files: map[string]string{".claude/skills/review/SKILL.md": reservedSkill("review"), ".claude/skills/security-review/SKILL.md": reservedSkill("security-review")},
-			want:  []string{"skills/review/SKILL.md", "skills/security-review/SKILL.md"},
+			files: map[string]string{".claude/skills/init/SKILL.md": reservedSkill("init"), ".claude/skills/security-review/SKILL.md": reservedSkill("security-review")},
+			want:  []string{"skills/init/SKILL.md", "skills/security-review/SKILL.md"},
 		},
 		{
 			name:  "command shadows a built-in",
