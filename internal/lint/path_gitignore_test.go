@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,4 +40,26 @@ func TestPathMissingSkipsGitIgnoredPaths(t *testing.T) {
 			assert.Equal(t, tt.want, countCode(fs, CodePathMissing), "%s", dump(fs))
 		})
 	}
+}
+
+// The ignore probe runs under the caller's context: a cancelled run cannot ask
+// git, so a missing path stays reported instead of being assumed ignored.
+func TestPathMissingIgnoreProbeHonoursContext(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, precisionTree("Local overrides live in `.claude/settings.local.json`.", "", map[string]string{
+		".gitignore":            ".claude/settings.local.json\n",
+		".claude/settings.json": "{}\n",
+	}))
+	gitAdd(t, root)
+	cfg, err := loadWithResolvers(context.Background(), root)
+	require.NoError(t, err)
+	tree, err := LoadTree(root)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rep, err := Run(cfg, tree, WithContext(ctx))
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, countCode(rep.Findings, CodePathMissing), "%s", dump(rep.Findings))
 }

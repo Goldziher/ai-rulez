@@ -271,7 +271,7 @@ func (r *runner) gitIgnored(rel string) bool {
 	if r.baseRel != "" {
 		probes = append(probes, r.baseRel+"/"+rel)
 	}
-	ignored, err := gitutil.IgnoredAmong(r.tree.Top, probes)
+	ignored, err := gitutil.New(r.host.Runner).IgnoredAmongContext(r.ctx, r.tree.Top, probes)
 	hit := err == nil && len(ignored) > 0
 	r.ignoredMemo.Store(rel, hit)
 	return hit

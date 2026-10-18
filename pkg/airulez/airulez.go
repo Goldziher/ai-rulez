@@ -465,7 +465,7 @@ func (p *Project) Validate(ctx context.Context, o ValidateOptions) (*Report, err
 	if err := ctx.Err(); err != nil {
 		return nil, &Error{Code: CodeValidate, Err: err}
 	}
-	lr, err := lint.Run(p.cfg, tree)
+	lr, err := lint.Run(p.cfg, tree, lint.WithContext(ctx), lint.WithHost(ambient.Host{Runner: p.run}))
 	if err != nil {
 		return nil, &Error{Code: CodeValidate, Err: oops.Wrapf(err, "run the strict checks")}
 	}

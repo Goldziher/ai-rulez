@@ -243,7 +243,7 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	report, err := lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
 		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),
-	}, opts...)
+	}, append(opts, lint.WithContext(ctx))...)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
@@ -694,7 +694,7 @@ func authoredSecretGate(ctx context.Context, cfg *config.Config, accepted []stri
 	if err != nil {
 		return oops.Wrapf(err, "index content for the secret scan")
 	}
-	report, err := lint.RunWith(cfg, tree, lint.Options{SecurityOnly: true, SecretsOnly: true})
+	report, err := lint.RunWith(cfg, tree, lint.Options{SecurityOnly: true, SecretsOnly: true}, lint.WithContext(ctx))
 	if err != nil {
 		return oops.Wrapf(err, "scan content for secrets")
 	}

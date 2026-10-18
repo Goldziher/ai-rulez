@@ -83,7 +83,7 @@ func (w *judgeWorkspace) lintFiles(ctx context.Context, cfg *config.Config, abs 
 	if err != nil {
 		return nil, err.Error()
 	}
-	report, err = lint.RunWith(cfg, w.tree, lint.Options{Cwd: w.root}, lint.WithTargets(targets))
+	report, err = lint.RunWith(cfg, w.tree, lint.Options{Cwd: w.root}, lint.WithTargets(targets), lint.WithContext(ctx))
 	if err != nil {
 		return nil, err.Error()
 	}
