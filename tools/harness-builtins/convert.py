@@ -30,7 +30,14 @@ ROLLOUT_ERROR = {
     "kilo",
     "zoocode",
 }
-SPACES = {"codex": [["skill"], ["agent"]]}
+# Kinds that share one namespace. Codex has no user slash commands. OpenCode and Kilo skip a skill
+# whose name an existing command already has ("if (commands[item.name]) continue"), so a skill
+# never replaces a command and the two do not collide.
+SPACES = {
+    "codex": [["skill"], ["agent"]],
+    "opencode": [["command"], ["skill"], ["agent"]],
+    "kilo": [["command"], ["skill"], ["agent"]],
+}
 DEFAULT_SPACES = [["command", "skill"], ["agent"]]
 COLLISIONS = {"user_wins", "builtin_wins", "both_listed", "error", "n/a", "unknown"}
 HEADER = re.compile(r"^### `([a-z0-9-]+)` - ")

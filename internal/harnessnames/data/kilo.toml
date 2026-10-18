@@ -4,7 +4,7 @@ harness_version = "main@1552877e82ce (release v7.8.14)"
 verified_on = "2026-10-17"
 completeness = "partial"
 severity = "error"
-invocation_spaces = [["command", "skill"], ["agent"]]
+invocation_spaces = [["command"], ["skill"], ["agent"]]
 namespaced = false
 
 [[source]]
