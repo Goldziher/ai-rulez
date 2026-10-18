@@ -22,12 +22,20 @@ func TestScannerOptionsValidatesFlagCombinations(t *testing.T) {
 		show    bool
 		wantErr string
 		noToday bool
+		minSev  string
+		rules   []string
+		reasons []string
 	}{
 		{name: "nothing set", extern: false, noToday: true},
 		{name: "external alone", extern: true},
 		{name: "write with reason", extern: true, write: true, reason: "why"},
 		{name: "write without reason", extern: true, write: true, wantErr: "needs --reason"},
-		{name: "reason without write", extern: true, reason: "why", wantErr: "only applies with --write-baseline"},
+		{name: "reason without write", extern: true, reason: "why", wantErr: "only apply with --write-baseline"},
+		{name: "filters with write", extern: true, write: true, reason: "why", minSev: "warning", rules: []string{"A-*"}, reasons: []string{"A-1=because"}},
+		{name: "min-severity without write", extern: true, minSev: "error", wantErr: "only apply with --write-baseline"},
+		{name: "rule without write", extern: true, rules: []string{"A-1"}, wantErr: "only apply with --write-baseline"},
+		{name: "unknown severity", extern: true, write: true, reason: "why", minSev: "loud", wantErr: "--min-severity"},
+		{name: "malformed reason-for", extern: true, write: true, reason: "why", reasons: []string{"nope"}, wantErr: "RULE=text"},
 		{name: "write without external", write: true, reason: "why", wantErr: "require --external"},
 		{name: "show-suppressed without external", show: true, wantErr: "require --external"},
 	}
@@ -35,9 +43,12 @@ func TestScannerOptionsValidatesFlagCombinations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			oldE, oldW, oldR, oldS, oldT := validateExtern, scanWriteBaseline, scanReason, scanShowSuppressed, validateToday
+			oldM, oldRules, oldRF := scanMinSeverity, scanRules, scanReasonFor
 			t.Cleanup(func() {
 				validateExtern, scanWriteBaseline, scanReason, scanShowSuppressed, validateToday = oldE, oldW, oldR, oldS, oldT
+				scanMinSeverity, scanRules, scanReasonFor = oldM, oldRules, oldRF
 			})
+			scanMinSeverity, scanRules, scanReasonFor = tt.minSev, tt.rules, tt.reasons
 			validateExtern, scanWriteBaseline, scanReason, scanShowSuppressed, validateToday = tt.extern, tt.write, tt.reason, tt.show, "2026-10-06"
 			// Act
 			opts, err := scannerOptions()
