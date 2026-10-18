@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/harnessnames"
 )
 
 // fakeReach is a HarnessReach that returns the same targets for every item.
@@ -418,5 +420,31 @@ func TestReservedNameAR808SkipsWhatTheHarnessDoesNotLoad(t *testing.T) {
 				t.Fatalf("AR808 count = %d, want %d:\n%s", len(got), tt.want, dump(got))
 			}
 		})
+	}
+}
+
+// No embedded group reports AR9U0 as an error without a verbatim quote of the outcome.
+func TestEmbeddedTablesNeverErrorWithoutAQuote(t *testing.T) {
+	kinds := []string{"command", "skill", "agent"}
+	for _, preset := range harnessnames.Presets() {
+		table, _ := harnessnames.For(preset)
+		for _, e := range table.Entries(kinds) {
+			for _, kind := range kinds {
+				for _, h := range table.Find(kind, e.Name) {
+					if h.Kind == harnessnames.KindReserved || h.Collision == harnessnames.Error {
+						if !h.Quoted { // AR9U1 is always an error: its outcome needs the quote
+							t.Errorf("%s reserved %q has no quote", preset, e.Name)
+						}
+						continue
+					}
+					if h.Quoted {
+						continue
+					}
+					if got := nameSeverity(h, ReachTarget{Preset: preset, Role: kind, Writer: true}); got == SeverityError {
+						t.Errorf("%s %s %q (%s) is an error without a quote", preset, kind, e.Name, h.Collision)
+					}
+				}
+			}
+		}
 	}
 }
