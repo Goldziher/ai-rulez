@@ -533,7 +533,7 @@ var (
 	listMarkerRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(?:[-*+>]|\d+[.)])\s+`) })
 	invokeWords  = map[string]bool{
 		"run": true, "runs": true, "invoke": true, "invokes": true, keyType: true, "use": true,
-		"call": true, hookTypeCommand: true, "commands": true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
+		"call": true, hookTypeCommand: true, keyCommands: true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
 	}
 )
 

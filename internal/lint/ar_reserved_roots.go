@@ -39,7 +39,7 @@ func (r *runner) inHarnessRoot(it *item, preset string) bool {
 	roots := table.SkillRoots
 	pluginDir := "skills"
 	if it.kind == kindCommand {
-		roots, pluginDir = table.CommandRoots, "commands"
+		roots, pluginDir = table.CommandRoots, keyCommands
 	}
 	for _, root := range roots {
 		if dir == root || strings.HasSuffix(dir, "/"+root) {
