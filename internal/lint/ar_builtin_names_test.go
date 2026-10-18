@@ -314,8 +314,12 @@ func TestReservedNameAliasAR808(t *testing.T) {
 	}
 	var alias bool
 	for _, f := range got {
-		if strings.Contains(f.Message, `skill "new" is an alias of the Claude Code built-in /clear`) && strings.Contains(f.Message, "keeps running the built-in") {
-			alias = true
+		isAlias := strings.Contains(f.Message, `skill "new" is an alias of the Claude Code built-in /clear`) && strings.Contains(f.Message, "keeps running the built-in")
+		alias = alias || isAlias
+		// The docs say the skill loads and only its alias keeps the built-in, so an alias is a
+		// warning; shadowing a built-in command stays an error.
+		if want := map[bool]Severity{true: SeverityWarning, false: SeverityError}[isAlias]; f.Severity != want {
+			t.Errorf("%s has severity %s, want %s", f.Message, f.Severity, want)
 		}
 	}
 	if !alias {
