@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -243,7 +244,12 @@ func probeScanners(ctx context.Context, infos []lint.ScannerInfo) []lint.Scanner
 			s.VersionLine, s.VersionProblem = check.Line, check.Problem
 			continue
 		}
-		s.VersionLine, _ = lint.ProbeScannerVersion(ctx, *s) //nolint:errcheck // a refused probe leaves the version empty
+		line, err := lint.ProbeScannerVersion(ctx, *s)
+		s.VersionLine = line
+		var timedOut *lint.ProbeTimeoutError
+		if errors.As(err, &timedOut) {
+			s.VersionNote = timedOut.Error()
+		}
 	}
 	return out
 }
@@ -256,6 +262,8 @@ func scannerVersionText(s lint.ScannerInfo, probe bool) string {
 		return "not probed (pass --external)"
 	case s.VersionLine != "":
 		return s.VersionLine
+	case s.VersionNote != "":
+		return s.VersionNote + " (raise version_timeout)"
 	}
 	return "unknown (the version command printed nothing usable)"
 }

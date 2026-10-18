@@ -53,6 +53,8 @@ type ScannerInfo struct {
 	// version range check failed; doctor sets both after probing (--external).
 	VersionLine    string
 	VersionProblem string
+	// VersionNote says why the probe printed no version when it timed out.
+	VersionNote string
 	// DataSent is what an egress scanner's vendor documents receiving.
 	DataSent []string
 	// Isolation is the [lint.scanner_policy] isolation mode and Backend the
