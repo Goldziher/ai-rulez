@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -307,5 +308,98 @@ func TestGeneratePiMergeShouldRefreshOpenCodeMetadata(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(root, "package.json"), data, 0o644))
 		require.Error(t, VerifyProvenance(root))
+	}
+}
+
+func TestRebasePiPromptLinks(t *testing.T) {
+	tests := []struct {
+		name      string
+		skillsDir string
+		body      string
+		want      string
+	}{
+		{name: "root skills tree is two levels up", skillsDir: "skills",
+			body: "Load [add](../skills/add/SKILL.md) first.",
+			want: "Load [add](../../skills/add/SKILL.md) first."},
+		{name: "default dir keeps the link", skillsDir: ".pi/skills",
+			body: "Load [add](../skills/add/SKILL.md) first.",
+			want: "Load [add](../skills/add/SKILL.md) first."},
+		{name: "custom skills dir", skillsDir: "packages/skills",
+			body: "[a](../skills/a/SKILL.md)",
+			want: "[a](../../packages/skills/a/SKILL.md)"},
+		{name: "other root files follow the prompt depth", skillsDir: "skills",
+			body: "See [readme](../README.md) and [docs](../docs/guide.md#top).",
+			want: "See [readme](../../README.md) and [docs](../../docs/guide.md#top)."},
+		{name: "fragment and title survive", skillsDir: "skills",
+			body: `[a](../skills/a/SKILL.md#usage "the skill")`,
+			want: `[a](../../skills/a/SKILL.md#usage "the skill")`},
+		{name: "links that do not climb are untouched", skillsDir: "skills",
+			body: "[a](references/x.md) [b](https://example.com/../x) [c](#anchor) [d](/abs/path)",
+			want: "[a](references/x.md) [b](https://example.com/../x) [c](#anchor) [d](/abs/path)"},
+		{name: "code spans and fences are left as written", skillsDir: "skills",
+			body: "Write `[demo](../skills/demo/SKILL.md)` like this:\n\n```md\n[demo](../skills/demo/SKILL.md)\n```\n\nThen [demo](../skills/demo/SKILL.md).",
+			want: "Write `[demo](../skills/demo/SKILL.md)` like this:\n\n```md\n[demo](../skills/demo/SKILL.md)\n```\n\nThen [demo](../../skills/demo/SKILL.md)."},
+		{name: "angle-bracket destinations", skillsDir: "skills",
+			body: "[demo](<../skills/demo/SKILL.md>)",
+			want: "[demo](<../../skills/demo/SKILL.md>)"},
+		{name: "reference definitions", skillsDir: "skills",
+			body: "See [demo].\n\n[demo]: ../skills/demo/SKILL.md \"Demo\"\n[home]: <../README.md#top>\n",
+			want: "See [demo].\n\n[demo]: ../../skills/demo/SKILL.md \"Demo\"\n[home]: <../../README.md#top>\n"},
+		{name: "reference definitions inside a fence are left alone", skillsDir: "skills",
+			body: "```\n[demo]: ../skills/demo/SKILL.md\n```\n",
+			want: "```\n[demo]: ../skills/demo/SKILL.md\n```\n"},
+		{name: "reserved characters in the skills dir are escaped", skillsDir: "packages/skills#v1",
+			body: "[a](../skills/a/SKILL.md#usage)",
+			want: "[a](../../packages/skills%23v1/a/SKILL.md#usage)"},
+		{name: "spaces in the skills dir are escaped", skillsDir: "my skills",
+			body: "[a](../skills/a/SKILL.md?x=1)",
+			want: "[a](../../my%20skills/a/SKILL.md?x=1)"},
+		{name: "a link leaving the bundle root is kept", skillsDir: "skills",
+			body: "[a](../../outside.md)",
+			want: "[a](../../outside.md)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, rebasePiPromptLinks(tt.body, tt.skillsDir))
+		})
+	}
+}
+
+func TestRenderPiPromptLinksResolveToTheSkills(t *testing.T) {
+	tests := []struct {
+		name      string
+		skillsDir string
+		skillPath string
+	}{
+		{name: "root skills tree", skillsDir: "skills", skillPath: "skills/alpha/SKILL.md"},
+		{name: "default skills tree", skillPath: ".pi/skills/alpha/SKILL.md"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			alpha := writePiSkill(t, root, "alpha", "---\nname: alpha\n---\nbody\n")
+			cmdPath := filepath.Join(root, ".ai-rulez", "commands", "go.md")
+			require.NoError(t, os.MkdirAll(filepath.Dir(cmdPath), 0o755))
+			require.NoError(t, os.WriteFile(cmdPath, []byte("---\ndescription: d\n---\nLoad [alpha](../skills/alpha/SKILL.md).\n"), 0o644))
+			m := &Manifest{
+				Name: "basemind", Version: "1.0.0", SourceDir: root, PiSkillsDir: tt.skillsDir,
+				Skills: []config.ContentFile{alpha}, Commands: []config.ContentFile{{Name: "go", Path: cmdPath, Content: "Load [alpha](../skills/alpha/SKILL.md).\n"}},
+			}
+			dest := t.TempDir()
+
+			// Act
+			outputs, err := renderPi(m, dest)
+			require.NoError(t, err)
+
+			// Assert: the link, taken from where the prompt is written, reaches the skill.
+			prompt := outputByPath(t, outputs, ".pi/prompts/go.md")
+			link := regexp.MustCompile(`\]\(([^)]+)\)`).FindStringSubmatch(string(prompt.RawContent))
+			require.Len(t, link, 2, "prompt: %s", prompt.RawContent)
+			resolved := filepath.Join(filepath.Dir(prompt.Path), filepath.FromSlash(link[1]))
+			want := filepath.Join(dest, filepath.FromSlash(tt.skillPath))
+			assert.Equal(t, want, resolved)
+			assert.True(t, hasOutputSuffix(outputs, tt.skillPath), "the skill is generated at %s", tt.skillPath)
+		})
 	}
 }
