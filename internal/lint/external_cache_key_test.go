@@ -95,3 +95,24 @@ echo '{}'
 	assert.Equal(t, 1, hits, "inside the TTL the result is served from the cache")
 	assert.Equal(t, 2, runs(t, counter), "past the TTL a launcher scanner is run again")
 }
+
+func TestScanCacheKeyIgnoresEntriesWrittenUnderMappingOne(t *testing.T) {
+	// Arrange: mapping 1 predates the path normalisation and the OutOfScope/FirstOut batch fields.
+	sc, bin := keyFixture(t)
+	sc.EnvPass = nil
+	info, err := os.Stat(bin)
+	require.NoError(t, err)
+	legacy := scanCacheKeyInput{
+		Isolation: "auto/none", Mapping: 1, V: scanCacheVersion, Scanner: sc.Name, Binary: bin,
+		BinSize: info.Size(), BinTime: info.ModTime().UnixNano(), Command: sc.Command, Format: sc.Format,
+		Tree: "sha256:tree",
+	}.hash()
+
+	// Act
+	key, ok := scanKeyFor(sc, bin, "sha256:tree", nil, false, "auto/none")
+
+	// Assert
+	require.True(t, ok)
+	assert.Equal(t, 2, scanMappingVersion)
+	assert.NotEqual(t, legacy, key, "an entry written under mapping 1 must be a cache miss")
+}
