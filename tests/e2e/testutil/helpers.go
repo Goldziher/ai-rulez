@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,10 +18,18 @@ const (
 	TestTimeout    = 30 * time.Second
 )
 
-var binaryPath string
+var (
+	binaryPath string
+	binaryMu   sync.Mutex
+)
 
+// SetupTestBinary builds the CLI once per test process and returns its path.
+// The binary lives until RemoveTestBinary runs, normally from TestMain.
 func SetupTestBinary(t *testing.T) string {
 	t.Helper()
+
+	binaryMu.Lock()
+	defer binaryMu.Unlock()
 
 	if binaryPath != "" {
 		if _, err := os.Stat(binaryPath); err == nil {
@@ -67,7 +76,15 @@ func SetupTestBinary(t *testing.T) string {
 	return binaryPath
 }
 
-func CleanupTestBinary() {
+// CleanupTestBinary is a no-op kept for existing callers: the binary is shared
+// by every test in the process, so removing it per test forced a rebuild (and
+// relink) for the next one. RemoveTestBinary deletes it at the end of the run.
+func CleanupTestBinary() {}
+
+// RemoveTestBinary deletes the shared test binary. Call it from TestMain.
+func RemoveTestBinary() {
+	binaryMu.Lock()
+	defer binaryMu.Unlock()
 	if binaryPath != "" {
 		//nolint:errcheck,gosec
 		os.Remove(binaryPath)
