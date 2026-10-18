@@ -1,0 +1,39 @@
+# Where each harness keeps its built-in names, and the ref the data files were last generated
+# from. generate.py reads the registry at that ref (or the live documentation page when there is
+# no repo) and rewrites the names of the groups the targets select. Everything else in
+# internal/harnessnames/data/<preset>.toml is hand-curated and kept.
+#
+# [<preset>]            extractor   file in extractors/ (without .py), or "none" with a reason
+#                       repo, ref   the GitHub repository and the tag or commit the names are read at
+#                       track       "tags" (default) or "head": what --bump proposes
+#                       tag_pattern regexp a tag must match to be proposed by --bump
+#                       harness_version  copied into the data file
+# [[<preset>.target]]   key         the key of the extractor result
+#                       kind        group kind
+#                       url_contains  text of the url of the group's source (selects the group)
+#                       collision   narrows the selection to one user_collision value
+#                       add, exclude  names the registry does not show / that are not real names
+#                                   (say why in a comment)
+# Every data file has exactly one entry.
+
+[codex]
+extractor = "codex"
+repo = "openai/codex"
+ref = "rust-v0.163.0"
+tag_pattern = '^rust-v\d+\.\d+\.\d+$'
+harness_version = "rust-v0.163.0"
+
+[[codex.target]]
+key = "command"
+kind = "command"
+url_contains = "slash_command.rs"
+
+[[codex.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/src/assets/samples"
+
+[[codex.target]]
+key = "agent"
+kind = "agent"
+url_contains = "agent/role.rs"
