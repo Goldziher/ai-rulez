@@ -210,7 +210,7 @@ func (r *runner) execStaged(sc resolvedScanner, st *scannerStage, spec cmdrun.Sp
 		return nil, 0, "", false
 	}
 	r.banner(sc)
-	return r.finishBatch(sc, st, usesOut, 0, cmdrun.Run(scanContext(), spec))
+	return r.finishBatch(sc, st, st.skillDirs, usesOut, 0, cmdrun.Run(scanContext(), spec))
 }
 
 // prepareBatch readies run idx of a stage: it creates the {out} file the
@@ -241,7 +241,7 @@ func (r *runner) prepareBatch(sc resolvedScanner, st *scannerStage, spec cmdrun.
 // finishBatch turns the outcome of run idx into findings with stage-relative
 // paths: the {out} file replaces stdout, the report is parsed and paths that are
 // not staged files are dropped and counted.
-func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, usesOut bool, idx int, res cmdrun.Result) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
+func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, dirs []string, usesOut bool, idx int, res cmdrun.Result) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
 	if usesOut && (res.Status == cmdrun.StatusOK || res.Status == cmdrun.StatusExit) {
 		data, rerr := st.readOut(idx)
 		if rerr != nil {
@@ -254,7 +254,7 @@ func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, usesOut bool,
 	if !good {
 		return nil, 0, "", false
 	}
-	norm, outOfScope, firstOut = st.normalize(found)
+	norm, outOfScope, firstOut = st.normalize(found, dirs)
 	return norm, outOfScope, firstOut, true
 }
 
@@ -545,11 +545,11 @@ func (r *runner) parseRun(sc resolvedScanner, res cmdrun.Result) ([]externalFind
 // slash paths and drops the ones that are not a staged file, counting them
 // (AR9E6). The result no longer depends on where the stage was written, which
 // is what the cache stores.
-func (st *scannerStage) normalize(found []externalFinding) (out []externalFinding, outOfScope int, firstOut string) {
+func (st *scannerStage) normalize(found []externalFinding, dirs []string) (out []externalFinding, outOfScope int, firstOut string) {
 	for i := range found {
 		f := found[i]
 		if f.File != "" {
-			rel, ok := st.resolveRel(f.File)
+			rel, ok := st.resolveRel(f.File, dirs)
 			if !ok {
 				outOfScope++
 				if firstOut == "" {
@@ -708,7 +708,7 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 	var out []scannerFinding
 	occurrence := map[string]int{}
 	limit := sc.messageLimit(policyOf(&r.lc))
-	cutCount := 0
+	cutCount, inScope := 0, 0
 	for i := range found {
 		f := found[i]
 		f.Line = min(max(f.Line, 0), maxScannerLine)
@@ -725,6 +725,7 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 			note = " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
 			abs = r.configFilePath()
 		}
+		inScope++
 		if u := evidenceURL(f.HelpURI); u != "" {
 			note += " (" + u + ")"
 		}
@@ -749,7 +750,13 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 			"scanner", sc.Name, "truncated", cutCount, "max_message", limit)
 	}
 	if outOfScope > 0 {
-		r.addRun(CodeScannerOutOfScope, sc.Name, fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut))
+		msg := fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut)
+		if inScope == 0 {
+			// Nothing was kept: the scan found nothing it could attribute, which must not read as a clean run.
+			r.addRunAs(CodeScannerOutOfScope, sc.Name, SeverityError, msg+"; no result of the run could be attributed to a staged file")
+		} else {
+			r.addRun(CodeScannerOutOfScope, sc.Name, msg)
+		}
 	}
 	return out
 }
