@@ -3,6 +3,11 @@ package lint
 // Strings the rule files share: frontmatter and JSON keys, command names,
 // hook handler types and the units of the load-budget table.
 const (
+	filePackageJSON = "package.json"
+	fileNpmrc       = ".npmrc"
+	toolBash        = "Bash"
+	keyURL          = "url"
+
 	keyAgents          = "agents"
 	keyAllowedTools    = "allowed-tools"
 	keyAlwaysApply     = "alwaysApply"

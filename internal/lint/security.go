@@ -410,13 +410,34 @@ func (r *runner) injectionRes() []gatedRe {
 	return r.injRes
 }
 
-func (r *runner) scanInjection(abs string, no int, line string) {
+// injectionIn returns the first injection phrase the line holds, "" when none.
+func (r *runner) injectionIn(line string) string {
 	for _, re := range r.injectionRes() {
 		if m := re.FindString(line); m != "" {
-			r.add(CodeInjectionPhrase, abs, no, "text reads like an attempt to override instructions: %q", m)
-			return
+			return m
 		}
 	}
+	return ""
+}
+
+func (r *runner) scanInjection(abs string, no int, line string) {
+	if m := r.injectionIn(line); m != "" {
+		r.add(CodeInjectionPhrase, abs, no, "text reads like an attempt to override instructions: %q", m)
+	}
+}
+
+// commentSuspicious reports whether the body of an HTML comment carries
+// imperative, agent-addressed or injection-style text.
+func (r *runner) commentSuspicious(body string) bool {
+	if imperativeRe().MatchString(body) || commentAddressesAgent(body) {
+		return true
+	}
+	for _, re := range r.injectionRes() {
+		if re.MatchString(body) {
+			return true
+		}
+	}
+	return false
 }
 
 // scanComments reports HTML comments that carry instruction-like text; such a
@@ -428,13 +449,7 @@ func (r *runner) scanComments(abs, raw string) {
 		if strings.Contains(body, "ai-rulez-lint-ignore") {
 			continue
 		}
-		suspicious := imperativeRe().MatchString(body) || commentAddressesAgent(body)
-		for _, re := range r.injectionRes() {
-			if re.MatchString(body) {
-				suspicious = true
-			}
-		}
-		if suspicious {
+		if r.commentSuspicious(body) {
 			line += strings.Count(raw[from:m[0]], "\n")
 			from = m[0]
 			r.add(CodeCommentInstruction, abs, line, "HTML comment contains instruction-like text the reader will not see")
