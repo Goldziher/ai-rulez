@@ -13889,6 +13889,7 @@ fail_on = "error"                  # error (default) | warning | none
 analyzers = ["security", "references"]   # run only these analyzers (see Analyzers and scopes); default: all
 ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
+skill_roots = [".claude/skills", "plugins/*/skills"]   # directories AR808 treats as harness skill roots (replaces the defaults)
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
@@ -14868,8 +14869,19 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
-| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content and hand-written files such as `.claude/skills/*`, also without a config. Only `claude` has a list today (`internal/lint/ar_reserved_names.go`, from the Claude Code commands reference); a project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
+| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content and hand-written files such as `.claude/skills/*`, also without a config; a hand-written skill or command is checked only where the harness loads it from (see [Skill roots](#skill-roots)). Only `claude` has a list today (`internal/lint/ar_reserved_names.go`, from the Claude Code commands reference); a project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
 <!-- lint-rules:end -->
+
+##### Skill roots
+
+AR808 compares a skill name with the built-ins of a harness, which only matters where the harness reads the skill. A `SKILL.md` or command that `validate` finds by convention (or that `--path` and `--glob` name) is checked only inside a root of the preset's harness:
+
+- Claude Code: `.claude/skills` and `.claude/commands` at any depth (`x/.claude/skills`), a plugin's `skills/` directory next to its `.claude-plugin/plugin.json`, and the directory of a local `[[skill_sources]]` entry.
+- Content authored under `.ai-rulez/` is always checked, because `generate` writes it into those roots.
+
+A `SKILL.md` anywhere else, such as an application's own `src/public/skills/`, is still linted for format (descriptions, links, security) but cannot shadow a built-in. `[lint] skill_roots = [globs]` replaces the harness roots: each glob is relative to the project root and matches the directory that holds the skill directories (`x/**/skills`, `plugins/*/skills`), so list `.claude/skills` as well to keep it. To leave files out altogether use `validate --exclude <glob>` (works without a configuration and takes the files found by convention, `--path` and `--glob` out of the run) or `[lint] ignore_paths` (drops the findings of matching source files). `.ai-rulezignore` is not read.
+
+The roots live in the preset table (`internal/lint/ar_reserved_names.go`). The per-harness name tables planned in [#447](https://github.com/Goldziher/ai-rulez/issues/447) extend that table, so each harness gets its own list of reserved names and roots, and `skill_roots` applies to every preset in the table.
 
 <!-- lint-rules-notes:begin -->
 ##### Changes to existing rules
@@ -16033,11 +16045,11 @@ a content file does not end with a newline
 
 ##### AR808 reserved-name
 
-a skill or command is named like a built-in command or bundled skill of a target assistant, so it replaces the built-in (allow an intentional override with lint.allow_overrides)
+a skill or command is named like a built-in command or bundled skill of a target assistant, so it replaces the built-in (allow an intentional override with lint.allow_overrides; only skills the harness loads are checked, see lint.skill_roots)
 
 - Default severity: `error`
 - Analyzer: `descriptions` (scope `item`)
-- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`.
+- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`. A hand-written SKILL.md is checked only where the harness loads it from: `.claude/skills` (`.claude/commands` for a command), a plugin's `skills/` or `commands/` directory next to its manifest, or a local `[[skill_sources]]` directory; content under `.ai-rulez/` is always checked. A SKILL.md elsewhere (an application's own `src/public/skills/`) is still linted for format. `[lint] skill_roots = [globs]` replaces those roots (globs match the directory that holds the skill directories, relative to the project root), `[lint] ignore_paths` drops every finding for a source file, and `validate --exclude <glob>` leaves files out of a config-free run.
 - Bad: `.claude/skills/init/SKILL.md` with the claude preset
 - Good: Rename the skill (`project-init`), or list `claude:init` in lint.allow_overrides
 
@@ -33538,6 +33550,7 @@ ai-rulez scan --path vendor/skills
 | `--changed` | string |  | Like --since, with an optional base: bare --changed is --since HEAD (only files with uncommitted or untracked changes) and --changed=REV is --since REV |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing |
+| `--exclude` | string list |  | Leave the files matching this glob (relative to the project root, for example "x/src/public/skills/**") out of the files found by convention, --path and --glob; works without a configuration. Findings in the configured content tree are dropped with [lint] ignore_paths in config.toml (repeatable) |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
 | `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
@@ -34441,6 +34454,7 @@ ai-rulez validate --outputs
 | `--config-only` | bool |  | Check the configuration file only and skip the content checks |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | With --fix or --fix-unsafe, print the unified diff and change nothing |
+| `--exclude` | string list |  | Leave the files matching this glob (relative to the project root, for example "x/src/public/skills/**") out of the files found by convention, --path and --glob; works without a configuration. Findings in the configured content tree are dropped with [lint] ignore_paths in config.toml (repeatable) |
 | `--explain` | string |  | Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
 | `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |

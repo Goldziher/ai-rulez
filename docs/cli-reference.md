@@ -3030,6 +3030,7 @@ ai-rulez scan --path vendor/skills
 | `--changed` | string |  | Like --since, with an optional base: bare --changed is --since HEAD (only files with uncommitted or untracked changes) and --changed=REV is --since REV |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing |
+| `--exclude` | string list |  | Leave the files matching this glob (relative to the project root, for example "x/src/public/skills/**") out of the files found by convention, --path and --glob; works without a configuration. Findings in the configured content tree are dropped with [lint] ignore_paths in config.toml (repeatable) |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
 | `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
@@ -3933,6 +3934,7 @@ ai-rulez validate --outputs
 | `--config-only` | bool |  | Check the configuration file only and skip the content checks |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--dry-run` / `-n` | bool |  | With --fix or --fix-unsafe, print the unified diff and change nothing |
+| `--exclude` | string list |  | Leave the files matching this glob (relative to the project root, for example "x/src/public/skills/**") out of the files found by convention, --path and --glob; works without a configuration. Findings in the configured content tree are dropped with [lint] ignore_paths in config.toml (repeatable) |
 | `--explain` | string |  | Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
 | `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |

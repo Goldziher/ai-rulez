@@ -12,6 +12,12 @@ type reservedPreset struct {
 	Source, Verified string
 	// Names are lower-case with hyphens; a skill's name is normalized the same way.
 	Names []string
+	// SkillRoots and CommandRoots are the directories (slash paths below any project directory)
+	// the harness loads project skills and commands from. A hand-written skill or command
+	// elsewhere cannot shadow a built-in. Plugin says the harness also loads the skills/ and
+	// commands/ directories of a plugin.
+	SkillRoots, CommandRoots []string
+	Plugin                   bool
 }
 
 // reservedPresetTable is the table, keyed by preset name. Add a harness by
@@ -19,9 +25,12 @@ type reservedPreset struct {
 func reservedPresetTable() map[string]reservedPreset {
 	return map[string]reservedPreset{
 		presetClaude: {
-			Title:    "Claude Code",
-			Source:   "https://code.claude.com/docs/en/commands",
-			Verified: "2026-10-17",
+			Title:        "Claude Code",
+			Source:       "https://code.claude.com/docs/en/commands",
+			Verified:     "2026-10-17",
+			SkillRoots:   []string{".claude/skills"},
+			CommandRoots: []string{".claude/commands"},
+			Plugin:       true,
 			Names: strings.Fields(`
 				add-dir advisor agents artifact-capabilities artifact-diagramming artifacts auto-mode-setup
 				autocompact autofix-pr background batch branch btw bug cd chrome claude-api claude-in-chrome clear

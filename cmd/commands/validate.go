@@ -49,6 +49,12 @@ plugin manifests, hooks and MCP files) are taken as hand-written and checked,
 and nothing is written. --path and --glob replace that detection with the files
 you name; generate, clean and lock still need a configuration.
 
+To leave files out: --exclude <glob> (repeatable, works without a configuration)
+drops matching files from that detection, and [lint] ignore_paths in config.toml
+drops the findings of matching source files. AR808 (reserved-name) checks a
+hand-written skill only in the directories its harness loads from (.claude/skills,
+a plugin's skills/, a local skill source); [lint] skill_roots replaces that list.
+
 Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 2 findings at or above --fail-on (default error).`,
 	Aliases: []string{"val"},

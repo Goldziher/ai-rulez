@@ -76,6 +76,10 @@ type TargetSpec struct {
 	// Generated also collects the targets that carry the generated header, as
 	// outputs to lint (Targets.Generated), instead of skipping them.
 	Generated bool
+	// Exclude lists globs (slash paths relative to the tree top) of files left out of the
+	// targets, however they were picked: the way to keep an application's own SKILL.md out of
+	// a run that has no configuration to say [lint] ignore_paths in (#457).
+	Exclude []string
 	// Lenient reports a named file that cannot be read or is over the size limit in
 	// Targets.Skipped instead of failing the run, so one such file does not stop a list.
 	Lenient bool
@@ -202,6 +206,7 @@ func ResolveTargets(ctx context.Context, tree *Tree, spec TargetSpec) (*Targets,
 	if spec.Detect {
 		rels = append(rels, dropFiles(cands.conventional(spec.Under, picked), spec.ExceptFiles)...)
 	}
+	rels = dropMatching(rels, spec.Exclude)
 	if len(rels) > maxTargetFiles {
 		return nil, fmt.Errorf("%d files match --path, --glob or [lint] paths; the limit is %d: narrow the selection", len(rels), maxTargetFiles)
 	}
@@ -240,6 +245,21 @@ func (t *Targets) recordSkip(spec TargetSpec, rel string, how pick, out loadOutc
 		}
 	}
 	t.noteSkipped(rel, how, out)
+}
+
+// dropMatching returns rels without the files that match one of the globs.
+func dropMatching(rels, globs []string) []string {
+	matchers := compileGlobs(globs)
+	if len(matchers) == 0 {
+		return rels
+	}
+	kept := rels[:0:0]
+	for _, rel := range rels {
+		if !globsMatch(matchers, rel) {
+			kept = append(kept, rel)
+		}
+	}
+	return kept
 }
 
 // dropFiles returns rels without the files in except.

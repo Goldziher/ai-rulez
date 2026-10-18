@@ -1860,6 +1860,13 @@
           },
           "type": "array"
         },
+        "skill_roots": {
+          "description": "Globs, relative to the project root, of the directories that hold skill directories a harness loads from (\".claude/skills\", \"plugins/*/skills\"). AR808 checks a hand-written skill or command only in these directories; unset, the harness's own roots, a plugin's skills/ and local skill sources are used. Authored content is always checked.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "known_names": {
           "description": "Skill, agent, rule or command names provided outside this tree.",
           "items": {
