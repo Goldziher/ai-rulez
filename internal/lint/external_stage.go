@@ -57,12 +57,13 @@ const (
 	phSkillDirs = "{skill_dirs}"
 	phOut       = "{out}"
 	phTmp       = "{tmp}"
+	phProject   = "{project}"
 )
 
 var (
 	stagePlaceholderRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\{[a-z_]+\}`) })
 	listHolders        = map[string]bool{phFiles: true, phSkillDirs: true}
-	allHolders         = map[string]bool{phStage: true, phRoot: true, phFiles: true, phSkillDirs: true, phOut: true, phTmp: true}
+	allHolders         = map[string]bool{phStage: true, phRoot: true, phFiles: true, phSkillDirs: true, phOut: true, phTmp: true, phProject: true}
 )
 
 // inputProblems lists what is wrong with an entry's inputs and its command's placeholders.
@@ -77,7 +78,7 @@ func inputProblems(ex config.LintExternal) []string {
 		for _, ph := range stagePlaceholderRe().FindAllString(arg, -1) {
 			switch {
 			case !allHolders[ph]:
-				problems = append(problems, fmt.Sprintf("command has the unknown placeholder %s (use %s)", ph, "{stage}, {root}, {files}, {skill_dirs}, {out} or {tmp}"))
+				problems = append(problems, fmt.Sprintf("command has the unknown placeholder %s (use %s)", ph, "{stage}, {root}, {project}, {files}, {skill_dirs}, {out} or {tmp}"))
 			case len(ex.Inputs) == 0:
 				problems = append(problems, fmt.Sprintf("command uses %s, which needs inputs (the staged content)", ph))
 			case listHolders[ph] && arg != ph:
@@ -101,6 +102,7 @@ func containsString(list []string, s string) bool {
 type scannerStage struct {
 	scratch string // the scratch directory that holds everything below
 	root    string // scratch/stage
+	project string // the project root, for {project}
 	// files are the absolute stage paths of every staged file, sorted.
 	files []string
 	// skillDirs are the absolute stage paths of the staged skill directories.
@@ -126,7 +128,7 @@ func (r *runner) buildStageFrom(files []stagedFile) (*scannerStage, error) {
 	if resolved, rerr := filepath.EvalSymlinks(base); rerr == nil {
 		base = resolved // a scanner prints paths it resolved; match them
 	}
-	st := &scannerStage{scratch: base, root: filepath.Join(base, "stage"), source: map[string]string{}}
+	st := &scannerStage{scratch: base, root: filepath.Join(base, "stage"), project: r.rootAbs(), source: map[string]string{}}
 	if err := st.write(files); err != nil {
 		st.cleanup()
 		return nil, err
@@ -487,7 +489,7 @@ func (st *scannerStage) expand(cmd []string) []string {
 // expandFor is expand for run idx, handing the scanner the skill directories
 // dirs (absolute stage paths) instead of all of them.
 func (st *scannerStage) expandFor(cmd, dirs []string, idx int) []string {
-	repl := strings.NewReplacer(phStage, st.root, phRoot, st.root, phOut, st.outFileN(idx), phTmp, st.tmpDirN(idx))
+	repl := strings.NewReplacer(phStage, st.root, phRoot, st.root, phOut, st.outFileN(idx), phTmp, st.tmpDirN(idx), phProject, st.project)
 	argv := make([]string, 0, len(cmd)+len(st.files))
 	for _, arg := range cmd {
 		switch arg {

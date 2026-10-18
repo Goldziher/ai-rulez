@@ -13949,6 +13949,7 @@ env_pass = []                      # extra environment variable names for an egr
 # inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
 # profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
 # version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
+# command = ["python3", "{project}/tools/scan.py", "{stage}"]   # with inputs the cwd is the stage: reach project files through {project}
 # version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
 # version_timeout = "30s"          # bounds the version probe (default 10s); a slow probe is reported as timed out (AR9E2)
 # required = true                  # a missing, outdated or failing scanner is an error
@@ -14344,7 +14345,14 @@ stage_exclude = ["evals/**"]
 Placeholders in `command` are expanded as arguments, never through a shell: `{stage}` and `{root}` the stage root,
 `{files}` one argument per staged file, `{skill_dirs}` one per staged skill directory (each on its own, not inside a
 longer argument), `{out}` a private file the scanner may write its report to (read instead of stdout), `{tmp}` the
-scratch temp directory. Placeholders need `inputs`; an unknown one is `AR9E0`.
+scratch temp directory, `{project}` the project root. Placeholders need `inputs`; an unknown one is `AR9E0`.
+
+A scanner with `inputs` runs with the stage as its working directory, so a relative `command[0]`
+(`["tools/scan.sh", "{skill_dirs}"]`) is resolved against the project root, but a relative script argument of an
+interpreter command (`["sh", "tools/scan.sh"]`) is looked up in the stage and fails with exit status 127. Name the
+script through `{project}`: `["sh", "{project}/tools/scan.sh", "{skill_dirs}"]`. `{project}` is only a path; the
+scanner still sees only the staged files unless it reads that path itself, and the cache key hashes the script
+named through it like any other.
 
 A result is attributed to the project file a staged file came from. A path that is not a staged file (absolute,
 `..`, another project file) is dropped and reported once per scanner as `AR9E6`. A relative path that matches no

@@ -165,7 +165,10 @@ type LintSecretPattern struct {
 
 // LintExternal is an external scanner. Command is an argv, run from the
 // project root with the paths of the scanned files appended; it must print
-// SARIF 2.1.0 or the ai-rulez JSON list to stdout. It never runs through a
+// SARIF 2.1.0 or the ai-rulez JSON list to stdout. A relative command[0] is
+// resolved against the project root, but with inputs the scanner's working
+// directory is the stage, so a relative script argument is not: write it as
+// {project}/tools/scan.py. It never runs through a
 // shell, and every run is bounded by a timeout, an output cap and a process
 // group kill.
 type LintExternal struct {
@@ -189,7 +192,7 @@ type LintExternal struct {
 	// Inputs turns staging on: the scanner runs in a scratch directory that holds
 	// a read-only copy of exactly these kinds of content (rules, context, skills,
 	// agents, commands, checks, hooks, mcp, imports) and nothing else. The
-	// placeholders {stage}, {root}, {files}, {skill_dirs}, {out} and {tmp} in
+	// placeholders {stage}, {root}, {project}, {files}, {skill_dirs}, {out} and {tmp} in
 	// command are expanded as argv elements; no file path is appended.
 	Inputs []string `yaml:"inputs,omitempty" json:"inputs,omitempty" toml:"inputs,omitempty"`
 	// SeverityMap maps a scanner rule id (glob) to a severity: critical, high,
