@@ -25,9 +25,9 @@ func TestStrictValidateChecksEveryHarnessThatReadsTheOutputDirectory(t *testing.
 	require.NoError(t, err)
 	var gemini bool
 	for _, f := range rep.Findings {
-		if f.Code == lint.CodeBuiltinNameCollision && f.Severity == lint.SeverityError {
+		if f.Code == lint.CodeBuiltinNameCollision && f.Severity == lint.SeverityWarning {
 			gemini = gemini || assert.Contains(t, f.Message, "gemini built-in command /help") && assert.Contains(t, f.Message, ".agents/skills")
 		}
 	}
-	assert.True(t, gemini, "an enabled preset need not be the one that collides: %+v", rep.Findings)
+	assert.True(t, gemini, "an enabled preset need not be the one that collides (a reader is a warning): %+v", rep.Findings)
 }
