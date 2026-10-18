@@ -45,14 +45,23 @@ def http_get(url: str) -> str:
         return _curl(url, e)
 
 
-def _curl(url: str, cause) -> str:
-    # Some Python builds ship without a usable trust store; curl uses the system one.
+def _curl(url: str, cause: Exception) -> str:
+    # Some Python builds ship without a usable trust store; curl uses the system one. The
+    # request goes through a curl config on stdin so a token never appears in the argument list.
+    req = _request(url)
+    config = [f'url = "{url}"', f'user-agent = "{USER_AGENT}"']
+    if "Authorization" in req.headers:
+        config.append(f'header = "Authorization: {req.headers["Authorization"]}"')
     try:
         out = subprocess.run(
-            ["curl", "-sSLf", "-m", str(TIMEOUT), "-A", USER_AGENT, url], capture_output=True, check=True
+            ["curl", "-sSLf", "-m", str(TIMEOUT), "-K", "-"],
+            input="\n".join(config).encode(),
+            capture_output=True,
+            check=True,
         )
     except (OSError, subprocess.CalledProcessError) as e:
-        raise FetchError(f"{url}: {cause}") from e
+        detail = e.stderr.decode("utf-8", "replace").strip() if isinstance(e, subprocess.CalledProcessError) else str(e)
+        raise FetchError(f"{url}: {detail or cause} (rate limited? set GITHUB_TOKEN)") from e
     return out.stdout.decode("utf-8", "replace")
 
 
