@@ -285,7 +285,7 @@ func xumMCPEntry(cfg *config.Config, server *config.MCPServer) interface{} {
 		if server.IsEnabled() {
 			return command
 		}
-		return map[string]interface{}{"transport": config.TransportStdio, "command": command, keyDisabled: true}
+		return map[string]interface{}{"transport": config.TransportStdio, keyCommand: command, keyDisabled: true}
 	}
 }
 

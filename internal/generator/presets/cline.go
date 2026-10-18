@@ -225,7 +225,7 @@ func yamlScalar(s string) string {
 var clineToolNames = map[string]string{
 	"read": "read_file", "write": "write_to_file", "edit": clineReplaceInFile, "multiedit": clineReplaceInFile,
 	"bash": "execute_command", "grep": "search_files", "glob": clineListFiles, "ls": clineListFiles,
-	"webfetch": "web_fetch", "websearch": "web_search", "task": "use_subagents", "skill": "use_skill",
+	"webfetch": "web_fetch", "websearch": "web_search", "task": "use_subagents", keySkill: "use_skill",
 	"askuserquestion": "ask_followup_question",
 }
 

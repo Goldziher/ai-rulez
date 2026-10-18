@@ -44,6 +44,7 @@ const (
 	keyDescription = "description"
 	keyModel       = "model"
 	keyCommand     = "command"
+	keySkill       = "skill"
 	keyArgs        = "args"
 	keyDisabled    = "disabled"
 	keyHeaders     = "headers"

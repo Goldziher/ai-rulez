@@ -685,10 +685,8 @@ func (r *runner) planIsolation(sc resolvedScanner, p planInfo) string {
 	return fmt.Sprintf("%s (%s, writes only under the scratch directory; mode %s)", b, net, mode)
 }
 
-// convertFindings turns parsed findings into AR011 findings: path mapping,
-// severity bands, fingerprints. outOfScope and firstOut carry the results a
-// staged run already dropped (AR9E6).
-func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []externalFinding, outOfScope int, firstOut string) []scannerFinding {
+// sortExternalFindings orders findings by file, line, rule, message and fingerprint.
+func sortExternalFindings(found []externalFinding) {
 	sort.SliceStable(found, func(i, j int) bool {
 		a, b := found[i], found[j]
 		if a.File != b.File {
@@ -705,6 +703,13 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 		}
 		return a.Fingerprint < b.Fingerprint
 	})
+}
+
+// convertFindings turns parsed findings into AR011 findings: path mapping,
+// severity bands, fingerprints. outOfScope and firstOut carry the results a
+// staged run already dropped (AR9E6).
+func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []externalFinding, outOfScope int, firstOut string) []scannerFinding {
+	sortExternalFindings(found)
 	var out []scannerFinding
 	occurrence := map[string]int{}
 	limit := sc.messageLimit(policyOf(&r.lc))

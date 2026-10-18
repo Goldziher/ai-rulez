@@ -851,8 +851,8 @@ func duplicateContentWarnings(content *config.ContentTree) []duplicateContentWar
 	}{
 		{"rule", content.Rules, getAllDomainRules(content)},
 		{"context", content.Context, getAllDomainContext(content)},
-		{"skill", content.Skills, getAllDomainSkills(content)},
-		{"command", content.Commands, getAllDomainCommands(content)},
+		{keySkill, content.Skills, getAllDomainSkills(content)},
+		{keyCommand, content.Commands, getAllDomainCommands(content)},
 		{"check", content.Checks, getAllDomainChecks(content)},
 	}
 
@@ -876,7 +876,7 @@ func crossKindWarnings(content *config.ContentTree) []duplicateContentWarning {
 		idOf   func(config.ContentFile) string
 	}{
 		{"command", getAllDomainCommands(content), skillOwners(content), commandIDOf},
-		{"skill", getAllDomainSkills(content), commandOwners(content), skillIDOf},
+		{keySkill, getAllDomainSkills(content), commandOwners(content), skillIDOf},
 	}
 	for _, d := range dropped {
 		for i := range d.items {
