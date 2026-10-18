@@ -2630,7 +2630,9 @@ Builtins have the **lowest** priority. Content is merged in this order:
 3. **Project content** (highest) — in your `.ai-rulez/` directory (not to be confused with
    machine-local content under `.ai-rulez/local/`, see [Local overlay](#local-overlay))
 
-If a local domain has the same name as a builtin, the local domain is used and the builtin is skipped entirely.
+If a local domain has the same name as a builtin, the local domain is used and the builtin is skipped entirely. The builtin pack is not merged into the
+domain, so its other items are lost; `generate` and `validate` log a `Builtin pack skipped` warning once per pack that names
+them. To get a pack item, define it in your own domain or rename the domain.
 
 ##### `defaults`
 
