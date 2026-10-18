@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **`[mcp] serve_skills` makes a bare `ai-rulez mcp` serve skills.** The key (default `false`) behaves as `--serve-skills`, so a client entry can be `ai-rulez mcp` alone; the flag wins, and `--serve-skills=false` turns the key off. It is in the schema and accepted by `validate` ([#454](https://github.com/Goldziher/ai-rulez/issues/454)).
+- **`skillspector` scanner profile for NVIDIA SkillSpector.** `profile = "skillspector"` runs `skillspector scan --no-llm --format sarif` one skill per run, checks the `>=2, <3` version range, and keeps the scanner offline: `--no-llm` is required and `--transitive`, `--mcp-registry` and `--mcp-registry-compare` are deny-listed. Profiles can now set `batch_size`, `version` and `required_flags`, which entries inherit and override. Opt-in, not part of `baseline` or `strict`; contract-tested against SkillSpector 2.12.0, with a recipe in `docs/strict-validation.md` ([#448](https://github.com/Goldziher/ai-rulez/issues/448)).
 
 ### Fixed
 

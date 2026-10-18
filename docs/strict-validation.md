@@ -986,11 +986,15 @@ installed; a scanner that is not on `PATH` is an `AR9E2` notice.
 | `agnix` | no | SARIF | baseline, strict | `agnix --format sarif <stage>`; not yet checked against a real binary |
 | `claude-plugin-validate` | no | `adapter:claude-validate-json` | baseline, strict (only with `[plugin]` or `[marketplace]`) | `claude plugin validate --json <stage>`; staged in the plugin layout (`skills/<name>/SKILL.md`, `agents/`, `commands/`); output shape checked against claude 2.1.285 |
 | `cisco-skill-scanner` | no | SARIF | strict | deterministic mode; its LLM, VirusTotal, AI Defense and OSV flags are deny-listed; not yet checked against a real binary |
+| `skillspector` | no | SARIF | none (opt-in) | NVIDIA SkillSpector in `--no-llm` mode, one skill per run (`batch_size = 1`); `--no-llm` is required in the command (`AR9E0` without it) and `--transitive`, `--mcp-registry` and `--mcp-registry-compare` are deny-listed; version range `>=2, <3`; output checked against SkillSpector 2.12.0 |
 | `snyk-agent-scan` | **yes** | `adapter:snyk-json` | none | needs `SNYK_TOKEN` (passed through to it); never part of a preset; the vendor documents receiving skill content, MCP server configuration and tool descriptions, and agent application details |
 
 A preset member is replaced by an entry with the same name or the same `profile`. `[[lint.external]]` with
 `profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
-less egress than the profile: `AR9E0`), severity map and flag deny-list; keys set on the entry win.
+less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size` and `version` range; keys set on
+the entry win. A profile can also name `required_flags`: a flag of its command (`--no-llm` for `skillspector`) that
+an egress = false entry must keep when it writes its own `command`, because dropping it switches on a network feature
+(`AR9E0`).
 `ai-rulez scanners list` shows the preset of each scanner.
 
 ### Long messages
@@ -1042,6 +1046,41 @@ The `timeout` of a run stays bounded: the runner never lets one command run long
 `[lint.scanner_policy] max_timeout` raises the 15 minute default ceiling, so a `timeout` written in an entry (or a
 pull request that edits one) cannot lift its own limit past what the policy allows. `scanners doctor` shows the effective
 timeout.
+
+### Recipe: single-path scanners (SkillSpector)
+
+Some scanners take exactly one input path: `skillspector scan INPUT_PATH` rejects a second argument. Pass
+`{skill_dirs}` with `batch_size = 1` so every run holds one skill. That also gives each skill its own timeout and
+cache entry, and a finding path such as `SKILL.md` or `references/x.md` resolves to the skill of its own run.
+The embedded profile does this for [NVIDIA SkillSpector](https://github.com/NVIDIA/skillspector) (install it with
+`uv tool install skillspector`):
+
+```toml
+[[lint.external]]
+name = "skillspector"
+profile = "skillspector"
+# command, format, inputs, batch_size = 1 and version = ">=2, <3" come from the profile
+# severity_map = { "YR*" = "warning" }   # optional: demote the YARA rule matches
+```
+
+- **Egress.** Without `--no-llm` SkillSpector calls an LLM provider with skill content, so the profile declares
+  `egress = false`, keeps `--no-llm` in the command, and denies `--transitive` (follows external references),
+  `--mcp-registry` and `--mcp-registry-compare`. A `command` of your own that drops `--no-llm` is `AR9E0`, one that
+  adds a denied option is `AR9E4`. The scrubbed environment also hides provider credentials from it.
+- **Exit codes.** SkillSpector exits 1 when it reports findings, 0 when clean and 2 on a usage error. With SARIF
+  output on stdout, ai-rulez reads the report whatever the exit code, so findings are results; a run that prints no
+  report is `AR9E3`. Use stdout, not `--output`: the file form adds a `Report saved to:` line to stdout.
+- **Severity.** The SARIF `level` is used as is. Static rules such as `P1`, `PE3`, `SC2` and `TM2` are `error`, so
+  `validate --external` exits 2 for them; `E1` is `warning`. Use `severity_map` (rule id glob to severity) or
+  `max_severity` to lower a noisy rule, and `fail_on` to choose what fails the run.
+- **Overlap.** The built-in checks (`AR004`, `AR005`, `AR036`) and SkillSpector can report the same line; both are
+  kept, each with its own code, and the scanner's carry `[skillspector]` and its rule id (`AR011`).
+- **Not in a preset.** The profile is opt-in. `strict` fails on warnings, and SkillSpector's regex and YARA
+  heuristics are noisier than the structural checks in `baseline` and `strict`, need a separate tool install, and
+  run once per skill; a project chooses that cost by adding the entry.
+
+The same shape fits any scanner with one path argument: `batch_size = 1`, `{skill_dirs}`, SARIF on stdout, and an
+`egress_flags` / `required_flags` pair in a profile for the options that reach the network.
 
 ### Failing on scanner findings
 
