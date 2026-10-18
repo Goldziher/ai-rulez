@@ -160,7 +160,8 @@ type runner struct {
 	secRes       []secretPattern
 	relMemo      sync.Map        // absolute path -> tree-relative path, see rel
 	ctx          context.Context // bounds the git probes, see WithContext
-	ignoredMemo  sync.Map        // repo path -> whether git ignores it, see gitIgnored
+	missingMu    sync.Mutex      // guards missing
+	missing      []missingPath   // AR401 findings, see dropIgnoredMissing
 	skillFiles   sync.Map        // skill directory -> every file below it, see stageSkillFiles
 	runMu        sync.Mutex      // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe
@@ -421,6 +422,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
 	r.unit(unitOf("improve-config", AnalyzerEvals), r.checkImproveConfig)
 	r.unit(unitOf("search-index", AnalyzerSearch, AnalyzerConfig), r.checkSearchIndex)
+	r.dropIgnoredMissing()
 	r.reportSuppressionAttempts()
 	r.checkMaxFindings()
 	r.keepSelected()

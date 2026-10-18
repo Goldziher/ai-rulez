@@ -1,11 +1,14 @@
 package lint
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"sync"
 
@@ -249,32 +252,72 @@ func (r *runner) checkToken(it *item, line int, tok, text string, end int, notAC
 	if r.baseRel != "" {
 		r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(r.baseRel), filepath.FromSlash(tok)))
 	}
-	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) && !r.existsNearFile(it, tok) &&
-		!r.gitIgnored(tok) {
-		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
+	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) && !r.existsNearFile(it, tok) {
+		msg := fmt.Sprintf("path %q does not exist in the repository", path.Clean(tok))
+		r.add(CodePathMissing, it.abs, line, "%s", msg)
+		r.noteMissing(it.abs, line, msg, tok)
 	}
 }
 
-// gitIgnored reports whether git ignores the missing path rel (slash path from
-// the repository top) through a .gitignore, .git/info/exclude or the global
-// excludes file: a file the repository documents but keeps local
-// (`.claude/settings.local.json`), which its own checkout may not have. It asks
-// git only for a path already found missing, and once per path. Outside a
-// repository nothing is ignored.
-func (r *runner) gitIgnored(rel string) bool {
-	rel = path.Clean(rel)
-	if v, ok := r.ignoredMemo.Load(rel); ok {
-		hit, _ := v.(bool) //nolint:errcheck // the memo holds only bools
-		return hit
-	}
+// missingPath is an AR401 finding that dropIgnoredMissing may still withdraw.
+type missingPath struct {
+	file    string
+	line    int
+	message string
+	probes  []string // the repository paths git is asked about
+}
+
+// noteMissing remembers a reported missing path so a path git ignores can be withdrawn once the
+// run has them all (dropIgnoredMissing): one git call for the run, not one per path.
+func (r *runner) noteMissing(abs string, line int, msg, tok string) {
+	rel := path.Clean(tok)
 	probes := []string{rel}
 	if r.baseRel != "" {
 		probes = append(probes, r.baseRel+"/"+rel)
 	}
+	r.missingMu.Lock()
+	r.missing = append(r.missing, missingPath{file: r.display(abs), line: max(line, 1), message: msg, probes: probes})
+	r.missingMu.Unlock()
+}
+
+// dropIgnoredMissing withdraws the AR401 findings for paths that .gitignore, .git/info/exclude or
+// the global excludes file hides: a file the repository documents but keeps local
+// (`.claude/settings.local.json`), which its own checkout may not have. git is asked once, for
+// the paths already found missing. Outside a repository, or when git fails, nothing is withdrawn.
+func (r *runner) dropIgnoredMissing() {
+	if len(r.missing) == 0 {
+		return
+	}
+	seen := map[string]bool{}
+	var probes []string
+	for _, m := range r.missing {
+		for _, p := range m.probes {
+			if !seen[p] {
+				seen[p] = true
+				probes = append(probes, p)
+			}
+		}
+	}
+	sort.Strings(probes)
 	ignored, err := gitutil.New(r.host.Runner).IgnoredAmongContext(r.ctx, r.tree.Top, probes)
-	hit := err == nil && len(ignored) > 0
-	r.ignoredMemo.Store(rel, hit)
-	return hit
+	if err != nil || len(ignored) == 0 {
+		return
+	}
+	drop := map[string]bool{}
+	for _, m := range r.missing {
+		if slices.ContainsFunc(m.probes, func(p string) bool { return ignored[p] }) {
+			drop[fmt.Sprintf("%s\x00%d\x00%s", m.file, m.line, m.message)] = true
+		}
+	}
+	kept := r.findings[:0:0]
+	for i := range r.findings {
+		f := &r.findings[i]
+		if f.Code == CodePathMissing && drop[fmt.Sprintf("%s\x00%d\x00%s", f.File, f.Line, f.Message)] {
+			continue
+		}
+		kept = append(kept, *f)
+	}
+	r.findings = kept
 }
 
 // existsNearFile reports whether tok exists relative to the directory of the file that names it, or
