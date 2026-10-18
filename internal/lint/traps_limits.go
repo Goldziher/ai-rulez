@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
+	"github.com/Goldziher/ai-rulez/v5/internal/harnessnames"
 	"github.com/samber/oops"
 )
 
@@ -217,6 +218,9 @@ func (r *runner) checkTableAge() {
 		return
 	}
 	for _, row := range TableRows() {
+		if row.Harness != "" && !r.namesPresetInUse(row.Harness) {
+			continue // a name table is judged for the harnesses the project writes for
+		}
 		days, ok := rowAgeDays(row.VerifiedOn, r.trapClock())
 		if ok && days <= r.lc.Traps.MaxTableAgeDays {
 			continue
@@ -250,25 +254,37 @@ func rowAgeDays(verifiedOn string, now time.Time) (int, bool) {
 
 // TableRow is one row of the trap or limits table, as the freshness task lists it.
 type TableRow struct {
-	Kind       string // trap or limit
+	Kind       string // trap, limit or names
+	Harness    string // the preset of a names row
 	ID         string
 	Source     string
 	VerifiedOn string
 }
 
-// TableRows lists every row of the trap and limits tables with its source and
-// verification date.
+// TableRows lists every row of the trap and limits tables, and the harness name
+// table of every preset, with its source and verification date.
 func TableRows() []TableRow {
 	var rows []TableRow
 	traps, _ := Traps() //nolint:errcheck // an unreadable table has no rows
 	for i := range traps {
 		t := &traps[i]
-		rows = append(rows, TableRow{"trap", t.Code + " " + t.Name + " (" + t.Harness + ")", t.Source, t.VerifiedOn})
+		rows = append(rows, TableRow{Kind: "trap", ID: t.Code + " " + t.Name + " (" + t.Harness + ")", Source: t.Source, VerifiedOn: t.VerifiedOn})
 	}
 	limits, _ := harnesslimits.All() //nolint:errcheck // an unreadable table has no rows
 	for i := range limits {
 		l := &limits[i]
-		rows = append(rows, TableRow{"limit", l.ID, l.Source, l.VerifiedOn})
+		rows = append(rows, TableRow{Kind: "limit", ID: l.ID, Source: l.Source, VerifiedOn: l.VerifiedOn})
+	}
+	for _, preset := range harnessnames.Presets() {
+		t, _ := harnessnames.For(preset)
+		if t.Completeness == harnessnames.None {
+			continue
+		}
+		src := ""
+		if len(t.Source) > 0 {
+			src = t.Source[0].URL
+		}
+		rows = append(rows, TableRow{Kind: "names", Harness: preset, ID: preset + " " + t.HarnessVersion, Source: src, VerifiedOn: t.VerifiedOn})
 	}
 	return rows
 }

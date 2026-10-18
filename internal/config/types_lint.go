@@ -86,6 +86,8 @@ type LintConfig struct {
 	Evals *LintEvals `yaml:"evals,omitempty" json:"evals,omitempty" toml:"evals,omitempty"`
 	// Traps configures the harness trap checks (AR9C1...).
 	Traps *LintTraps `yaml:"traps,omitempty" json:"traps,omitempty" toml:"traps,omitempty"`
+	// BuiltinNames configures the harness built-in name checks (AR9U0, AR9U1).
+	BuiltinNames *LintBuiltinNames `yaml:"builtin_names,omitempty" json:"builtin_names,omitempty" toml:"builtin_names,omitempty"` //nolint:tagliatelle
 	// AgentsMDOnly turns on the CLAUDE.md shadow check (AR9Q0): when AGENTS.md
 	// is canonical for Claude Code, every tracked CLAUDE.md, .claude/CLAUDE.md
 	// and CLAUDE.local.md that is not the generated "@AGENTS.md" shim is
@@ -103,6 +105,25 @@ type LintConfig struct {
 	// with the analyzers that judge what a model reads: security, references and
 	// descriptions. The same as `validate --outputs`.
 	LintOutputs bool `yaml:"lint_outputs,omitempty" json:"lint_outputs,omitempty" toml:"lint_outputs,omitempty"` //nolint:tagliatelle
+}
+
+// LintBuiltinNames configures the checks for a skill, command or agent that is named like a
+// built-in of a harness that loads it (AR9U0) or like a name the harness refuses to load (AR9U1).
+type LintBuiltinNames struct {
+	// Enabled turns the checks off when false; unset or true runs them.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// Allow lists collisions that are intended: "name" (any harness) or "preset:name".
+	// It does not silence AR9U1, which the harness enforces. lint.allow_overrides is
+	// honored the same way.
+	Allow []string `yaml:"allow,omitempty" json:"allow,omitempty" toml:"allow,omitempty"`
+	// Extra maps a preset to built-in names the embedded table cannot know: commands of
+	// the organization, MCP prompts, plugin skills, user-level skills.
+	Extra map[string][]string `yaml:"extra,omitempty" json:"extra,omitempty" toml:"extra,omitempty"`
+}
+
+// BuiltinNamesEnabled reports whether the checks run. Safe on a nil receiver.
+func (b *LintBuiltinNames) BuiltinNamesEnabled() bool {
+	return b == nil || b.Enabled == nil || *b.Enabled
 }
 
 // LintTraps configures the checks for files a harness silently ignores.

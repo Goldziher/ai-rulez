@@ -1,6 +1,8 @@
 package lint
 
-import "strings"
+import (
+	"github.com/Goldziher/ai-rulez/v5/internal/harnessnames"
+)
 
 // reservedPreset is the built-in slash commands and bundled skills of one
 // harness. A project skill or command with one of these names replaces the
@@ -10,8 +12,12 @@ type reservedPreset struct {
 	Title string
 	// Source is the vendor page the names were taken from, verified on Verified.
 	Source, Verified string
-	// Names are lower-case with hyphens; a skill's name is normalized the same way.
+	// Names are the built-in names and aliases as the table records them; a name is
+	// compared with harnessnames.Normalize.
 	Names []string
+	// Aliases maps an alias to the command it belongs to. The harness keeps running the
+	// built-in for an alias, whatever a project skill does.
+	Aliases map[string]string
 	// SkillRoots and CommandRoots are the directories (slash paths below any project directory)
 	// the harness loads project skills and commands from. A hand-written skill or command
 	// elsewhere cannot shadow a built-in. Plugin says the harness also loads the skills/ and
@@ -20,31 +26,27 @@ type reservedPreset struct {
 	Plugin                   bool
 }
 
-// reservedPresetTable is the table, keyed by preset name. Add a harness by
-// adding an entry, and list a name only when the vendor documents it.
+// reservedPresetTable is the table, keyed by preset name. The names are not listed here: they
+// come from the per-harness tables of internal/harnessnames (the commands and bundled skills a
+// user item replaces), so AR808 and AR9U0 read one source. Add a harness by adding an entry,
+// and list a name only when the vendor documents it.
 func reservedPresetTable() map[string]reservedPreset {
-	return map[string]reservedPreset{
-		presetClaude: {
-			Title:        "Claude Code",
-			Source:       "https://code.claude.com/docs/en/commands",
-			Verified:     "2026-10-17",
-			SkillRoots:   []string{".claude/skills"},
-			CommandRoots: []string{".claude/commands"},
-			Plugin:       true,
-			Names: strings.Fields(`
-				add-dir advisor agents artifact-capabilities artifact-diagramming artifacts auto-mode-setup
-				autocompact autofix-pr background batch branch btw bug cd chrome claude-api claude-in-chrome clear
-				code-review color compact config context copy cost dataviz debug deep-research design design-login
-				design-sync desktop diff doctor effort exit export fast feedback fewer-permission-prompts focus
-				fork goal heapdump help hooks ide import init insights install-github-app install-slack-app
-				keybindings list-agents login logout loop mcp memory mobile model output-style passes permissions
-				plan plugin plugin-authoring powerup pr-comments privacy-settings radio rate-limit-options recap
-				release-notes reload-plugins reload-skills remote-control remote-env rename resume review rewind
-				run run-skill-generator sandbox schedule scroll-speed security-review setup-bedrock setup-vertex
-				simplify skill-doctor skills slides stats status statusline stickers stop subtask tasks
-				team-onboarding teleport terminal-setup theme tui ultraplan ultrareview update-config upgrade
-				usage usage-credits verify vim voice web-setup workflow-authoring workflows
-			`),
-		},
+	claude := reservedPreset{
+		Title:        "Claude Code",
+		Source:       "https://code.claude.com/docs/en/commands",
+		SkillRoots:   []string{".claude/skills"},
+		CommandRoots: []string{".claude/commands"},
+		Plugin:       true,
+		Aliases:      map[string]string{},
 	}
+	if t, ok := harnessnames.For(presetClaude); ok {
+		claude.Verified = t.VerifiedOn
+		for _, e := range t.Entries([]string{harnessnames.KindCommand, harnessnames.KindSkill}, harnessnames.UserWins) {
+			claude.Names = append(claude.Names, e.Name)
+			if e.Alias {
+				claude.Aliases[harnessnames.Normalize(e.Name)] = e.AliasOf
+			}
+		}
+	}
+	return map[string]reservedPreset{presetClaude: claude}
 }

@@ -14,6 +14,8 @@ import (
 	"time"
 
 	toml "github.com/pelletier/go-toml/v2"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/harnessnames"
 )
 
 // defaultMaxTableAgeDays is the age `task harness:verify` allows when neither
@@ -77,6 +79,14 @@ func verifyQuotesOnline(t *testing.T) {
 	for _, tr := range traps {
 		rows = append(rows, quoteRow{tr.Code + " " + tr.Harness, tr.Source, tr.Quote})
 	}
+	for _, preset := range harnessnames.Presets() {
+		t, _ := harnessnames.For(preset)
+		for _, src := range t.Source {
+			if src.Quote != "" {
+				rows = append(rows, quoteRow{"names " + preset + " " + src.ID, rawSourceURL(src.URL), src.Quote})
+			}
+		}
+	}
 	pages := map[string]string{}
 	client := &http.Client{Timeout: 30 * time.Second}
 	for _, row := range rows {
@@ -101,6 +111,16 @@ func verifyQuotesOnline(t *testing.T) {
 			t.Errorf("%s: quote no longer on %s: %q", row.id, row.source, row.quote)
 		}
 	}
+}
+
+// githubBlob matches a GitHub file page; the quote is looked for in the raw file.
+var githubBlob = regexp.MustCompile(`^https://github\.com/([^/]+/[^/]+)/blob/([^/]+)/([^#]*)`)
+
+func rawSourceURL(u string) string {
+	if m := githubBlob.FindStringSubmatch(u); m != nil {
+		return "https://raw.githubusercontent.com/" + m[1] + "/" + m[2] + "/" + m[3]
+	}
+	return u
 }
 
 func TestNormaliseQuote(t *testing.T) {

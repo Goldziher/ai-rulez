@@ -48,6 +48,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerArActivationCases,
 		registerArAgentIntent,
 		registerArBudget,
+		registerArBuiltinNames,
 		registerArCapability,
 		registerArCmdrisk,
 		registerArCommands,

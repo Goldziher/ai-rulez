@@ -2958,6 +2958,30 @@
           },
           "additionalProperties": false
         },
+        "builtin_names": {
+          "type": "object",
+          "description": "Checks for a skill, command or agent named like a built-in of a harness that loads it (AR9U0) or like a name the harness refuses to load (AR9U1). The tables are in internal/harnessnames; project additions go in .ai-rulez/harness-names/<preset>.toml.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "false turns AR9U0 and AR9U1 off (default true)."
+            },
+            "allow": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Collisions that are intended: \"name\" (any harness) or \"preset:name\". Does not silence AR9U1. lint.allow_overrides is honoured the same way."
+            },
+            "extra": {
+              "type": "object",
+              "description": "Built-in names the embedded table cannot know, per preset: organization commands, MCP prompts, plugin skills, user-level skills.",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
         "agents_md_only": {
           "type": "boolean",
           "description": "Report (AR9Q0) every tracked CLAUDE.md, .claude/CLAUDE.md and CLAUDE.local.md that is not the generated \"@AGENTS.md\" shim, when AGENTS.md is canonical for Claude Code. Off by default."
