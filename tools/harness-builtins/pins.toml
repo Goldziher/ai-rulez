@@ -16,6 +16,149 @@
 #                                   (say why in a comment)
 # Every data file has exactly one entry.
 
+[aiassistant]
+extractor = "none"
+reason = "completeness is none: JetBrains AI Assistant is closed source and its help pages describe chat commands in prose with no list of built-in command, skill or agent names, so the data file has no names to regenerate."
+
+[amp]
+extractor = "none"
+reason = "ampcode.com/docs/markdown/customize/skills names the one built-in skill (building-skills) only in a sentence and models-and-subagents lists the subagents in prose bullets next to mode names, so there is no table or list a parser can read."
+
+[antigravity]
+extractor = "antigravity"
+
+[[antigravity.target]]
+key = "command"
+kind = "command"
+url_contains = "docs/cli/reference"
+
+[augment]
+extractor = "augment"
+
+[[augment.target]]
+key = "command"
+kind = "command"
+url_contains = "interactive.md"
+
+[baz]
+extractor = "none"
+reason = "completeness is none: baz is a closed-source code review product with no public registry or documentation page that lists built-in command, skill or agent names, so the data file has no names to regenerate."
+
+[bob]
+extractor = "none"
+reason = "bob.ibm.com/docs/ide/features/slash-commands is a client-rendered HTML page with no markdown rendition (the .md URL is a 404); the built-in commands are headings, the mode commands (/code, /ask) are named only in prose, and the built-in skills and subagents appear in prose or in an untitled HTML table."
+
+[claude]
+extractor = "claude"
+harness_version = "2.1.302 (local binary); docs fetched 2026-10-18"
+
+[[claude.target]]
+key = "command"
+kind = "command"
+url_contains = "commands.md"
+
+# bundled skills and the bundled /deep-research workflow are marked Skill / Workflow in the same table
+[[claude.target]]
+key = "skill"
+kind = "skill"
+url_contains = "commands.md"
+
+# a subagent the page says a same-named user or project subagent overrides
+[[claude.target]]
+key = "agent_override"
+kind = "agent"
+url_contains = "sub-agents.md"
+collision = "user_wins"
+
+# the other built-in subagents: the page does not say what a same-named user subagent does
+[[claude.target]]
+key = "agent"
+kind = "agent"
+url_contains = "sub-agents.md"
+collision = "unknown"
+# the tab title is capitalised; the subagent_type the page and the Agent tool use is lower case
+exclude = ["General-purpose"]
+add = ["general-purpose"]
+
+[cline]
+extractor = "cline"
+repo = "cline/cline"
+ref = "v4.1.25"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "vscode extension 4.1.25 / cli 3.0.72 (v4.1.25)"
+
+[[cline.target]]
+key = "command_tui"
+kind = "command"
+url_contains = "slash-command-registry.ts"
+
+[[cline.target]]
+key = "command_webview"
+kind = "command"
+url_contains = "useMessageHandlers.ts"
+# compact is also a TUI command and is listed once, in the TUI group
+exclude = ["compact"]
+
+[[cline.target]]
+key = "command_builtin"
+kind = "command"
+url_contains = "builtin-slash-commands.ts"
+
+[codebuddy]
+extractor = "codebuddy"
+
+[[codebuddy.target]]
+key = "command"
+kind = "command"
+url_contains = "cli/slash-commands"
+
+[codebuff]
+extractor = "codebuff"
+repo = "CodebuffAI/codebuff"
+ref = "8d0e7b59e038e89d142c799f96ff8c906566c588"
+track = "head"
+harness_version = "main @ 8d0e7b59e038 (CodebuffAI/codebuff)"
+
+# ALL_SLASH_COMMANDS (Codebuff and Freebuff builds together) plus the generated mode:<name> commands.
+[[codebuff.target]]
+key = "command"
+kind = "command"
+url_contains = "slash-commands.ts"
+
+[codewhale]
+extractor = "codewhale"
+repo = "codewhale-hq/Codewhale"
+ref = "v0.10.1"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v0.10.1"
+
+# Commands the repository may not shadow (PROTECTED_BUILTINS in user_registry.rs).
+[[codewhale.target]]
+key = "command_protected"
+kind = "command"
+url_contains = "src/commands/groups"
+collision = "builtin_wins"
+
+# Every other registered command: a workspace or user command of the same name replaces it.
+[[codewhale.target]]
+key = "command"
+kind = "command"
+url_contains = "src/commands/groups"
+collision = "user_wins"
+
+# The bundled starter pack (assets/skills-catalog-matrix.json, kept in bijection with BUNDLED_SKILLS).
+# assets/skills/ also holds contributor-onboarding, feedback (repo-local project skills, not installed),
+# feishu (optional, not auto-installed) and v4-best-practices (retired), so the directory is not the registry.
+[[codewhale.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills-catalog-matrix.json"
+
+[[codewhale.target]]
+key = "agent"
+kind = "agent"
+url_contains = "docs/SUBAGENTS.md"
+
 [codex]
 extractor = "codex"
 repo = "openai/codex"
@@ -37,3 +180,689 @@ url_contains = "skills/src/assets/samples"
 key = "agent"
 kind = "agent"
 url_contains = "agent/role.rs"
+
+[commandcode]
+extractor = "commandcode"
+
+[[commandcode.target]]
+key = "command"
+kind = "command"
+url_contains = "reference/slash-commands"
+
+[copilot]
+extractor = "copilot"
+
+[[copilot.target]]
+key = "command"
+kind = "command"
+url_contains = "copilot-vscode-features"
+
+# docs.github.com is built from the github/docs repository; the markdown source is read at a commit.
+[copilot-cli]
+extractor = "copilot_cli"
+repo = "github/docs"
+ref = "dae83f7d28f3b8e10015bd6b6d8b72267cedceca"
+track = "head"
+
+[[copilot-cli.target]]
+key = "command"
+kind = "command"
+url_contains = "cli-command-reference"
+
+[[copilot-cli.target]]
+key = "agent"
+kind = "agent"
+url_contains = "cli-command-reference"
+
+[[copilot-cli.target]]
+key = "skill"
+kind = "skill"
+url_contains = "built-in-skills"
+
+[cortex]
+extractor = "cortex"
+
+[[cortex.target]]
+key = "command"
+kind = "command"
+url_contains = "cli-reference"
+
+[[cortex.target]]
+key = "skill"
+kind = "skill"
+url_contains = "bundled-skills"
+
+[crush]
+extractor = "crush"
+repo = "charmbracelet/crush"
+ref = "v0.98.1"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v0.98.1"
+
+[[crush.target]]
+key = "command"
+kind = "command"
+url_contains = "dialog/commands.go"
+
+[[crush.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/builtin"
+
+[[crush.target]]
+key = "agent"
+kind = "agent"
+url_contains = "config/config.go"
+
+[cursor]
+extractor = "cursor"
+
+[[cursor.target]]
+key = "command"
+kind = "command"
+url_contains = "cli/reference/slash-commands"
+
+[[cursor.target]]
+key = "skill"
+kind = "skill"
+url_contains = "docs/skills.md"
+
+[deepagents]
+extractor = "deepagents"
+repo = "langchain-ai/deepagents"
+ref = "0c99fd026c4c41a08e6725a5e45d5ac111dcc6bb"
+track = "head"
+harness_version = "deepagents-code 0.1.86 @ 0c99fd026c4c"
+
+[[deepagents.target]]
+key = "command"
+kind = "command"
+url_contains = "libs/code/COMMANDS.md"
+
+[[deepagents.target]]
+key = "skill"
+kind = "skill"
+url_contains = "built_in_skills"
+
+[[deepagents.target]]
+key = "agent"
+kind = "agent"
+url_contains = "middleware/subagents.py"
+
+[devin]
+extractor = "devin"
+
+[[devin.target]]
+key = "command"
+kind = "command"
+url_contains = "reference/commands.md"
+# commands.md, "Slash commands in ACP hosts": `/status` is the ACP name for the CLI's `/login-status`, so ACP hosts take /status
+add = ["status"]
+
+[[devin.target]]
+key = "agent"
+kind = "agent"
+url_contains = "cli/subagents.md"
+
+[dsh]
+extractor = "dsh"
+repo = "deepseek-ai/deepseek-harness"
+ref = "687f282e8625c6b8d11ff58211a90524be2e4317"
+track = "head"
+harness_version = "0.2.1-rc.2 @ 687f282e8625"
+
+# Slash commands have no central table (each command-* plugin registers its own), so no target feeds
+# the command groups; they are maintained by hand.
+[[dsh.target]]
+key = "office"
+kind = "skill"
+url_contains = "skill-office/src/index.ts"
+
+[[dsh.target]]
+key = "acl"
+kind = "skill"
+url_contains = "sandbox-windows-acl/src/acl-skill.ts"
+
+[factory]
+extractor = "factory"
+
+[[factory.target]]
+key = "command"
+kind = "command"
+url_contains = "droid-cli/cli-reference"
+
+[gemini]
+extractor = "gemini"
+repo = "google-gemini/gemini-cli"
+ref = "v0.64.0"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v0.64.0"
+
+[[gemini.target]]
+key = "command"
+kind = "command"
+url_contains = "BuiltinCommandLoader.ts"
+
+[[gemini.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/builtin"
+
+[[gemini.target]]
+key = "agent"
+kind = "agent"
+url_contains = "agents/registry.ts"
+
+[gitlab-duo]
+extractor = "gitlab_duo"
+ref = "7af2780a003c"
+harness_version = "@gitlab/duo-cli app 9.30.0 @ gitlab-lsp 7af2780a003c"
+
+[[gitlab-duo.target]]
+key = "command"
+kind = "command"
+url_contains = "slash_commands/handlers"
+# /custom-command and /plugin-command are internal dispatchers for user-defined and plugin commands,
+# not commands a user types
+exclude = ["custom-command", "plugin-command"]
+
+[goose]
+extractor = "goose"
+repo = "block/goose"
+ref = "bfcc6ee6f1ee18d0c4c852a65c49b25f87ee40dc"
+track = "head"
+harness_version = "main@bfcc6ee6f1ee (latest release v1.55.0)"
+
+[[goose.target]]
+key = "command_agent"
+kind = "command"
+url_contains = "execute_commands.rs"
+
+[[goose.target]]
+key = "command_session"
+kind = "command"
+url_contains = "session/input.rs"
+# These are agent commands, listed (and resolved first) in the agent group above
+exclude = ["prompts", "prompt", "compact", "clear", "skills", "summarize"]
+
+[[goose.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/builtins"
+
+[grok]
+extractor = "grok"
+
+[[grok.target]]
+key = "command"
+kind = "command"
+url_contains = "build/modes-and-commands"
+
+[[grok.target]]
+key = "agent"
+kind = "agent"
+url_contains = "features/subagents"
+
+[hermes]
+extractor = "hermes"
+repo = "NousResearch/hermes-agent"
+ref = "4b1adbfe5d274c5dbfaa981fcc4dd68391867701"
+track = "head"
+harness_version = "docs-only: source tree @ 4b1adbfe5d27 (pyproject version 0.0.0)"
+
+[[hermes.target]]
+key = "command"
+kind = "command"
+url_contains = "hermes_cli/commands.py"
+
+[[hermes.target]]
+key = "skill"
+kind = "skill"
+url_contains = "hermes-agent/tree"
+
+[junie]
+extractor = "junie"
+
+[[junie.target]]
+key = "command"
+kind = "command"
+url_contains = "slash-commands.html"
+
+[kilo]
+extractor = "kilo"
+repo = "Kilo-Org/kilocode"
+ref = "v7.8.14"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v7.8.14"
+
+# init, review, goal, resume-claude, resume-codex: registered by the command service; goal is
+# the name kilocode/command/reserved.ts refuses for a user command
+[[kilo.target]]
+key = "command_default"
+kind = "command"
+url_contains = "command/index.ts"
+collision = "user_wins"
+
+[[kilo.target]]
+key = "command_reserved"
+kind = "command"
+url_contains = "command/index.ts"
+collision = "builtin_wins"
+
+# slash names of the TUI (packages/tui/src) and of Kilo's own TUI code (packages/opencode/src/kilocode),
+# listed next to the user's commands; the group's source is their common parent directory
+[[kilo.target]]
+key = "command_tui"
+kind = "command"
+url_contains = "/tree/"
+
+[[kilo.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/builtin.ts"
+
+[[kilo.target]]
+key = "agent"
+kind = "agent"
+url_contains = "agent/agent.ts"
+
+[kimi]
+extractor = "kimi"
+harness_version = "docs-only (changelog 2.1.1, 2026-09-24)"
+
+[[kimi.target]]
+key = "command"
+kind = "command"
+url_contains = "reference/slash-commands.md"
+
+[[kimi.target]]
+key = "skill"
+kind = "skill"
+url_contains = "reference/slash-commands.md"
+
+[[kimi.target]]
+key = "agent"
+kind = "agent"
+url_contains = "customization/agents.md"
+# the main agent's own built-in profile: customization/agents.md says a project file named
+# agent.md with override: true replaces the default main agent; it is prose, not a list
+add = ["agent"]
+
+[kiro]
+extractor = "kiro"
+
+[[kiro.target]]
+key = "cli"
+kind = "command"
+url_contains = "reference/slash-commands"
+
+[[kiro.target]]
+key = "ide"
+kind = "command"
+url_contains = "ide/chat/slash-commands"
+# /workflow-run is documented in the "Declarative workflows" prose of the same page (IDE 1.3 and later),
+# not in the table of predefined steering commands
+add = ["workflow-run"]
+
+[letta]
+extractor = "letta"
+repo = "letta-ai/letta-code"
+ref = "v0.34.16"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v0.34.16"
+
+# Every key of the registry runs, hidden aliases (/cd, /pinned, ...) included.
+[[letta.target]]
+key = "command"
+kind = "command"
+url_contains = "commands/registry.ts"
+
+[[letta.target]]
+key = "skill"
+kind = "skill"
+url_contains = "src/skills/builtin"
+
+[[letta.target]]
+key = "agent"
+kind = "agent"
+url_contains = "src/agent/subagents/builtin"
+
+[mimocode]
+extractor = "mimocode"
+repo = "XiaomiMiMo/MiMo-Code"
+ref = "b53297d8e6f01d3cfeecb75eac59b542869901e7"
+track = "head"
+harness_version = "main @ b53297d8e6f1 (latest release v0.1.15)"
+
+# The Default table of command/index.ts; deep-research and loops are registered only behind
+# MIMOCODE_EXPERIMENTAL_WORKFLOW_TOOL / MIMOCODE_EXPERIMENTAL_CRON and stay listed.
+[[mimocode.target]]
+key = "command"
+kind = "command"
+url_contains = "command/index.ts"
+
+# `slash:` entries of the TUI command palette (app.tsx, component/prompt/index.tsx, routes/session/index.tsx).
+[[mimocode.target]]
+key = "tui"
+kind = "command"
+url_contains = "cli/cmd/tui"
+
+[[mimocode.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skill/builtin/.bundle"
+
+# The `max` agent exists only with experimental.maxMode configured, so it is not listed.
+[[mimocode.target]]
+key = "agent"
+kind = "agent"
+url_contains = "agent/agent.ts"
+
+[muse]
+extractor = "none"
+reason = "The docs (dev.meta.ai/docs/muse-code interactive, configuration, extending, changelog) mention slash commands only in running prose and changelog entries; there is no table or list of the built-in commands, skills or agents to parse deterministically, and Muse Code has no public source repository."
+
+[omp]
+extractor = "omp"
+repo = "can1357/oh-my-pi"
+ref = "v18.12.0"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v18.12.0"
+
+[[omp.target]]
+key = "command"
+kind = "command"
+url_contains = "src/slash-commands"
+
+[[omp.target]]
+key = "agent"
+kind = "agent"
+url_contains = "src/task/agents.ts"
+
+[openclaw]
+extractor = "openclaw"
+repo = "openclaw/openclaw"
+ref = "v2026.10.4"
+tag_pattern = '^v\d{4}\.\d+\.\d+$'
+harness_version = "v2026.10.4"
+
+# Core registry (src/auto-reply/commands-registry.shared.ts) plus the bundled plugin commands the docs table lists.
+[[openclaw.target]]
+key = "command"
+kind = "command"
+url_contains = "docs/tools/slash-commands.md"
+collision = "unknown"
+exclude = ["dashboard"]                       # the reserved group carries it
+
+[[openclaw.target]]
+key = "reserved"
+kind = "command"
+url_contains = "docs/tools/slash-commands.md"
+collision = "builtin_wins"
+
+[[openclaw.target]]
+key = "skill"
+kind = "skill"
+url_contains = "tree/v2026.10.4/skills"
+
+[opencode]
+extractor = "opencode"
+repo = "anomalyco/opencode"
+ref = "v1.19.3"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v1.19.3"
+
+# init and review, registered by the command service itself
+[[opencode.target]]
+key = "command_default"
+kind = "command"
+url_contains = "command/index.ts"
+
+# every TUI command with a slashName / slash.name, listed next to the user's commands
+[[opencode.target]]
+key = "command_tui"
+kind = "command"
+url_contains = "packages/tui/src"
+
+[[opencode.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skill/index.ts"
+
+[[opencode.target]]
+key = "agent"
+kind = "agent"
+url_contains = "agent/agent.ts"
+
+[pi]
+extractor = "pi"
+# the repository badlogic/pi-mono was renamed; raw.githubusercontent.com and api.github.com redirect the old name
+repo = "earendil-works/pi"
+ref = "v1.3.0"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v1.3.0"
+
+# BUILTIN_SLASH_COMMANDS plus the commands the built-in extensions (llama.cpp, mcp) register
+[[pi.target]]
+key = "command"
+kind = "command"
+url_contains = "packages/coding-agent/src"
+
+[poolside]
+extractor = "poolside"
+
+[[poolside.target]]
+key = "command"
+kind = "command"
+url_contains = "cli/cli-reference"
+
+[qoder]
+extractor = "qoder"
+
+[[qoder.target]]
+key = "command"
+kind = "command"
+url_contains = "slash-reference"
+
+[[qoder.target]]
+key = "skill"
+kind = "skill"
+url_contains = "builtins-reference"
+
+[[qoder.target]]
+key = "agent"
+kind = "agent"
+url_contains = "builtins-reference"
+
+[qwen]
+extractor = "qwen"
+repo = "QwenLM/qwen-code"
+ref = "v0.25.2"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v0.25.2"
+
+[[qwen.target]]
+key = "command"
+kind = "command"
+url_contains = "BuiltinCommandLoader.ts"
+
+[[qwen.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/bundled"
+
+[[qwen.target]]
+key = "agent"
+kind = "agent"
+url_contains = "builtin-agents.ts"
+
+[reasonix]
+extractor = "reasonix"
+repo = "esengine/DeepSeek-Reasonix"
+ref = "v2.43.0"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v2.43.0"
+
+# builtinSlashSpecs() minus the commands that have a reasonix:-qualified fallback alias.
+[[reasonix.target]]
+key = "command"
+kind = "command"
+url_contains = "slash_registry.go"
+collision = "unknown"
+
+# /docs yields to a custom command or plugin alias of the same name (docs/CLI.md); /reasonix:docs is its fallback alias.
+[[reasonix.target]]
+key = "fallback"
+kind = "command"
+url_contains = "slash_registry.go"
+collision = "user_wins"
+
+# builtinSkills() plus the embedded builtincontent/*/SKILL.md directories.
+[[reasonix.target]]
+key = "skill"
+kind = "skill"
+url_contains = "internal/ext/skill"
+
+[replit]
+extractor = "replit"
+
+[[replit.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills-directory"
+
+[rovodev]
+extractor = "rovodev"
+
+[[rovodev.target]]
+key = "command"
+kind = "command"
+url_contains = "rovo-dev-cli-commands"
+# /help is named only in the sentence that introduces the list ("use /help"), not as a list item
+add = ["help"]
+
+[takt]
+extractor = "takt"
+repo = "nrslib/takt"
+ref = "c87caaba01c09436c89935c54687670d7b94e23b"
+track = "head"
+harness_version = "main @ c87caaba01c0 (latest tag v0.71.0)"
+
+[[takt.target]]
+key = "command"
+kind = "command"
+url_contains = "facets/instructions"
+
+[[takt.target]]
+key = "skill"
+kind = "skill"
+url_contains = "facets/knowledge"
+
+[[takt.target]]
+key = "agent"
+kind = "agent"
+url_contains = "facets/personas"
+
+[trae]
+extractor = "none"
+reason = "docs.trae.ai is a client-rendered app: the .md and llms.txt URLs return the same 1.9 MB JavaScript shell (the visible text is the page title), so the slash command, skill and built-in agent pages have no content a parser can read; TRAE is closed source."
+
+[vibe]
+extractor = "vibe"
+repo = "mistralai/mistral-vibe"
+ref = "v2.26.1"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v2.26.1"
+
+[[vibe.target]]
+key = "command"
+kind = "command"
+url_contains = "vibe/cli/commands.py"
+
+[[vibe.target]]
+key = "skill"
+kind = "skill"
+url_contains = "skills/builtins"
+
+[[vibe.target]]
+key = "agent"
+kind = "agent"
+url_contains = "agents/models.py"
+
+[warp]
+extractor = "warp"
+
+[[warp.target]]
+key = "app"
+kind = "command"
+url_contains = "capabilities/slash-commands"
+
+[[warp.target]]
+key = "cli"
+kind = "command"
+url_contains = "agents/cli/reference"
+
+[xum]
+extractor = "xum"
+repo = "coder/mux"
+ref = "335c4ce4a79c07274940b42ed0cfccda586e808a"
+track = "head"
+harness_version = "main @ 335c4ce4a79c (tag v0.31.1-nightly.618)"
+
+# SLASH_COMMAND_DEFINITIONS of the composer; /plan's child "open" is the sub-command `/plan open`.
+[[xum.target]]
+key = "command"
+kind = "command"
+url_contains = "slashCommands/registry.ts"
+
+[[xum.target]]
+key = "skill"
+kind = "skill"
+url_contains = "src/node/builtinSkills"
+
+[[xum.target]]
+key = "agent"
+kind = "agent"
+url_contains = "builtInAgentDefinitions.ts"
+
+[zcode]
+extractor = "zcode"
+
+[[zcode.target]]
+key = "command"
+kind = "command"
+url_contains = "docs/commands"
+
+[zed]
+extractor = "zed"
+repo = "zed-industries/zed"
+ref = "56934ec0560bce8929025497411de7f5322fb6ca"
+track = "head"
+harness_version = "main@56934ec0560b (release v1.24.2); docs zed.dev/docs/ai fetched 2026-10-17"
+
+[[zed.target]]
+key = "command"
+kind = "command"
+url_contains = "crates/agent/src/agent.rs"
+
+[[zed.target]]
+key = "skill"
+kind = "skill"
+url_contains = "agent_skills/agent_skills.rs"
+
+[zoocode]
+extractor = "zoocode"
+repo = "Zoo-Code-Org/Zoo-Code"
+ref = "v3.90.0"
+tag_pattern = '^v\d+\.\d+\.\d+$'
+harness_version = "v3.90.0"
+
+[[zoocode.target]]
+key = "command"
+kind = "command"
+url_contains = "built-in-commands.ts"
+
+[[zoocode.target]]
+key = "agent"
+kind = "agent"
+url_contains = "packages/types/src/mode.ts"
