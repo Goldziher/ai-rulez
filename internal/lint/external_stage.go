@@ -146,6 +146,39 @@ func (r *runner) stageFilesFor(sc resolvedScanner) []stagedFile {
 	return r.stageFilesWith(want, sc.Layout, newStageFilter(sc.LintExternal))
 }
 
+// stageFilesToScan is stageFilesFor for a run that scans: under --changed or
+// --since a per-skill scanner is handed only the skills with a changed file, so
+// the supporting files of every other skill are not listed, read or filtered.
+// The skills that do hold a changed path (a superset of the changed ones) are
+// listed in full, and markUnchanged then decides exactly as for a full listing.
+func (r *runner) stageFilesToScan(sc resolvedScanner) []stagedFile {
+	want := map[string]bool{}
+	for _, in := range sc.Inputs {
+		want[in] = true
+	}
+	filter := newStageFilter(sc.LintExternal)
+	if changed := r.opts.Scanner.ChangedFiles; changed != nil && !r.opts.Scanner.WriteBaseline && perSkillCommand(sc.Command) {
+		dirs := changedDirs(changed)
+		filter.unchanged = func(it *item) bool {
+			rel := r.tree.Rel(it.itemDir)
+			return rel != "" && !dirs[rel]
+		}
+	}
+	return r.stageFilesWith(want, sc.Layout, filter)
+}
+
+// changedDirs is the set of directories (repository-relative slash paths) that
+// hold at least one of the changed files, at any depth.
+func changedDirs(changed []string) map[string]bool {
+	dirs := make(map[string]bool, len(changed)*3)
+	for _, c := range changed {
+		for d := path.Dir(filepath.ToSlash(c)); d != "." && d != "/" && !dirs[d]; d = path.Dir(d) {
+			dirs[d] = true
+		}
+	}
+	return dirs
+}
+
 // stageFiles lists the files for the wanted inputs, sorted by stage path.
 func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
 	return r.stageFilesWith(want, layout, stageFilter{})
@@ -195,6 +228,10 @@ func (r *runner) stageItem(it *item, layout, cfgFile string, filter stageFilter,
 		return nil
 	}
 	file := stagedFile{rel: claim(rel), data: []byte(it.cf.Content), source: it.abs}
+	if it.owned && dir != "" && filter.unchanged != nil && filter.unchanged(it) {
+		file.skillOf = path.Dir(file.rel)
+		return []stagedFile{file}
+	}
 	if it.owned {
 		// The loaded content has its frontmatter removed; the scanner must see the file
 		// as it is on disk, so reported line numbers match the real file.
@@ -208,7 +245,13 @@ func (r *runner) stageItem(it *item, layout, cfgFile string, filter stageFilter,
 		return []stagedFile{file}
 	}
 	file.skillOf = path.Dir(file.rel)
-	out := []stagedFile{file}
+	return append([]stagedFile{file}, r.stageResources(it, file, cfgFile, filter, claim)...)
+}
+
+// stageResources lists the supporting files of the skill directory whose
+// SKILL.md is file.
+func (r *runner) stageResources(it *item, file stagedFile, cfgFile string, filter stageFilter, claim func(string) string) []stagedFile {
+	var out []stagedFile
 	for _, res := range r.stageSkillFiles(it) {
 		rr := path.Clean(strings.ReplaceAll(res.RelPath, `\`, "/"))
 		if rr == "." || path.IsAbs(rr) || rr == ".." || strings.HasPrefix(rr, "../") || !filter.keep(rr) {
