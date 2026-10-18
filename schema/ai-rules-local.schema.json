@@ -1734,6 +1734,7 @@
                 "type": "array"
               },
               "command": {
+                "description": "The argv to run, without a shell. A relative command[0] is resolved against the project root. With `inputs` the scanner's working directory is the stage, so a relative script argument (`[\"python3\", \"tools/scan.py\"]`) is not found there: write it as `{project}/tools/scan.py`.",
                 "items": {
                   "type": "string"
                 },
@@ -1760,7 +1761,7 @@
                 "type": "string"
               },
               "inputs": {
-                "description": "Stage a read-only copy of exactly these kinds of content in a scratch directory and run the scanner there with HOME and TMPDIR inside it. The command's placeholders {stage}, {root}, {files}, {skill_dirs}, {out} and {tmp} are expanded as arguments, and no file path is appended.",
+                "description": "Stage a read-only copy of exactly these kinds of content in a scratch directory and run the scanner there with HOME and TMPDIR inside it. The command's placeholders {stage}, {root} (the stage root), {project} (the project root), {files}, {skill_dirs}, {out} and {tmp} are expanded as arguments, and no file path is appended.",
                 "items": {
                   "enum": ["rules", "context", "skills", "agents", "commands", "checks", "hooks", "mcp", "imports"]
                 },

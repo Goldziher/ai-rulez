@@ -649,3 +649,31 @@ func TestPartiallyDroppedResultsStayAWarning(t *testing.T) {
 	require.Len(t, dropped, 1)
 	assert.Equal(t, SeverityWarning, dropped[0].Severity)
 }
+
+func TestProjectPlaceholderNamesTheProjectRoot(t *testing.T) {
+	// Arrange: the scanner reports whether {project} is the project root (main.go is not staged) and where its cwd is.
+	script := `HAS=no; [ -f "$1/main.go" ] && HAS=yes
+printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"P","level":"warning","message":{"text":"project=%s"}}]}]}' "$HAS"` + "\n"
+	tests := []struct {
+		name string
+		keys string
+	}{
+		{"whole stage", "egress = false\ninputs = [\"skills\"]\nargs = \"{project}\"\n"},
+		{"per skill batches", "egress = false\ninputs = [\"skills\"]\nargs = \"{project}\", \"{skill_dirs}\"\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newScannerProject(t, script, tt.keys, nil)
+
+			// Act
+			findings := p.run(Options{})
+
+			// Assert
+			problems := ofCode(findings, CodeScannerConfigInvalid)
+			require.Empty(t, problems, dump(findings))
+			got := ofCode(findings, CodeExternalFinding)
+			require.Len(t, got, 1, dump(findings))
+			assert.Contains(t, got[0].Message, "project=yes")
+		})
+	}
+}

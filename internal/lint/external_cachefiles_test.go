@@ -28,6 +28,7 @@ func TestInterpreterScript(t *testing.T) {
 		{"uv run", []string{"uv", "run", "scan.py"}, "scan.py"},
 		{"bash script in a subdirectory", []string{"bash", "tools/check.sh"}, "tools/check.sh"},
 		{"an absolute script", []string{"sh", filepath.Join(root, "tools", "check.sh")}, "tools/check.sh"},
+		{"a {project} path is the project's", []string{"sh", "{project}/tools/check.sh"}, "tools/check.sh"},
 		{"inline code is not a file", []string{"sh", "-c", "echo hi"}, ""},
 		{"a missing script", []string{"node", "--flag", "missing.js"}, ""},
 		{"not an interpreter", []string{"scanner", "scan.py"}, ""},

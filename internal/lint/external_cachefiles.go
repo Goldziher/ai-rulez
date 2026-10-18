@@ -55,7 +55,7 @@ func interpreterScript(command []string, root string) string {
 		if arg == "" || strings.HasPrefix(arg, "-") {
 			continue
 		}
-		p := filepath.FromSlash(arg)
+		p := filepath.FromSlash(strings.ReplaceAll(arg, phProject, filepath.ToSlash(root)))
 		if !filepath.IsAbs(p) {
 			p = filepath.Join(root, p)
 		}
