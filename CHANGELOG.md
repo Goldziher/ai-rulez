@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **The `lint.allow_overrides` scope matching has one implementation.** `generate` and `validate` (`AR703`) shared the matching only by copy; both now call `presets.CollapseAllowed`, with no change in behaviour.
 - **`scanners doctor --external` reports a timed-out version probe.** For a scanner without a `version` range the timeout was discarded and the row read `unknown (the version command printed nothing usable)`; it now says `version probe timed out after 10s`.
 - **An explicit `AR9E6` severity is no longer overridden when every scanner result is dropped.** The escalation to an error applies only while the rule has its default severity; `[lint.severity] AR9E6 = "info"` (or `"warning"`) is kept, and `off` still disables it ([#448](https://github.com/Goldziher/ai-rulez/issues/448)).
 - **Cached scanner results written by earlier builds are not served.** The path normalisation and the out-of-scope batch fields changed how a report maps to findings, so the scan cache mapping version is bumped and older entries miss once ([#448](https://github.com/Goldziher/ai-rulez/issues/448)).

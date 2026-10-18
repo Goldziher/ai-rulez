@@ -248,7 +248,7 @@ func (r *runner) checkCollapsed() {
 		if allow[name] {
 			continue
 		}
-		if collapseAllowed(allow, name, paths, configDir, authored) {
+		if presets.CollapseAllowed(allow, name, paths, configDir, authored) {
 			continue
 		}
 		anchor := dup.Winner
@@ -287,7 +287,7 @@ func (r *runner) checkRepoSkillCollapsed(allow map[string]bool, configDir, autho
 		if !isBuiltinItem(other) {
 			winner, loser = other.abs, repo.abs // a configured skill outranks a repository skill
 		}
-		if collapseAllowed(allow, name, []string{winner, loser}, configDir, authored) {
+		if presets.CollapseAllowed(allow, name, []string{winner, loser}, configDir, authored) {
 			continue
 		}
 		if !isBuiltinItem(other) && filepath.IsAbs(other.abs) {
@@ -349,40 +349,6 @@ func (r *runner) labelPaths(paths []string) string {
 		out[i] = r.labelPath(p)
 	}
 	return strings.Join(out, ", ")
-}
-
-// collapseAllowed reports whether lint.allow_overrides lists a copy of name by its
-// scope (a domain, "import"...). sourceDir is where the scopes are rooted;
-// authored is the project's own content root, which also holds the root
-// AGENTS.md of an "agents" source outside .agents.
-func collapseAllowed(allow map[string]bool, name string, paths []string, sourceDir, authored string) bool {
-	for _, p := range paths {
-		scope := scopeOf(p, sourceDir)
-		if scope == "import" && filepath.IsAbs(p) && safefs.Within(authored, p) {
-			scope = ""
-		}
-		if scope != "" && allow[scope+"/"+name] {
-			return true
-		}
-	}
-	return false
-}
-
-// scopeOf names where a copy lives: its domain, "builtin" for an embedded file,
-// "import" for content outside this config directory, "" for root content.
-func scopeOf(p, configDir string) string {
-	if !filepath.IsAbs(p) {
-		return "builtin"
-	}
-	rel, err := filepath.Rel(configDir, p)
-	if err != nil || safefs.RelEscapes(rel) {
-		return "import"
-	}
-	parts := strings.Split(filepath.ToSlash(rel), "/")
-	if len(parts) > 2 && parts[0] == "domains" {
-		return parts[1]
-	}
-	return ""
 }
 
 // namesTOMLString reports whether the line holds name as a basic ("name") or

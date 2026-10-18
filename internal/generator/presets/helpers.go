@@ -788,25 +788,35 @@ func (a overrideAllowance) covers(name string, paths []string) bool {
 	if a.names[name] {
 		return true
 	}
+	return CollapseAllowed(a.names, name, paths, a.sourceDir, a.authorRoot)
+}
+
+// CollapseAllowed reports whether allow (lower-cased lint.allow_overrides
+// entries) lists a copy of name as "scope/name". sourceDir is where the scopes
+// are rooted; authored is the project's own content root, which also holds the
+// root AGENTS.md of an "agents" source outside .agents. The bare-name entry is
+// the caller's check.
+func CollapseAllowed(allow map[string]bool, name string, paths []string, sourceDir, authored string) bool {
 	for _, p := range paths {
-		if scope := a.scopeOf(p); scope != "" && a.names[scope+"/"+name] {
+		scope := ScopeOf(p, sourceDir)
+		if scope == "import" && filepath.IsAbs(p) && safefs.Within(authored, p) {
+			scope = ""
+		}
+		if scope != "" && allow[scope+"/"+name] {
 			return true
 		}
 	}
 	return false
 }
 
-// scopeOf names where a copy lives: its domain, "builtin" for an embedded file,
+// ScopeOf names where a copy lives: its domain, "builtin" for an embedded file,
 // "import" for content outside the config directory, "" for root content.
-func (a overrideAllowance) scopeOf(p string) string {
+func ScopeOf(p, configDir string) string {
 	if !filepath.IsAbs(p) {
 		return "builtin"
 	}
-	rel, err := filepath.Rel(a.sourceDir, p)
+	rel, err := filepath.Rel(configDir, p)
 	if err != nil || safefs.RelEscapes(rel) {
-		if safefs.Within(a.authorRoot, p) {
-			return ""
-		}
 		return "import"
 	}
 	parts := strings.Split(filepath.ToSlash(rel), "/")
