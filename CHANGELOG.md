@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`scanners doctor --external` reports a timed-out version probe.** For a scanner without a `version` range the timeout was discarded and the row read `unknown (the version command printed nothing usable)`; it now says `version probe timed out after 10s`.
 - **An explicit `AR9E6` severity is no longer overridden when every scanner result is dropped.** The escalation to an error applies only while the rule has its default severity; `[lint.severity] AR9E6 = "info"` (or `"warning"`) is kept, and `off` still disables it ([#448](https://github.com/Goldziher/ai-rulez/issues/448)).
 - **Cached scanner results written by earlier builds are not served.** The path normalisation and the out-of-scope batch fields changed how a report maps to findings, so the scan cache mapping version is bumped and older entries miss once ([#448](https://github.com/Goldziher/ai-rulez/issues/448)).
 - **A server started without `--serve-skills` warns about skills-only `[mcp]` keys.** `discover_skills`, `allow`, `deny`, `exclude`, `no_watch` and `daemon` were accepted and silently ignored, leaving a client with the authoring tools and no `find_skill`. `mcp` now logs one warning at startup naming the keys that are set and ignored, and says to pass `--serve-skills` or set `[mcp] serve_skills` ([#455](https://github.com/Goldziher/ai-rulez/issues/455)).

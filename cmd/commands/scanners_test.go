@@ -228,3 +228,23 @@ func TestWriteDoctor_AppliesTheVersionRangeLikeARun(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteDoctor_ReportsAVersionProbeTimeout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script scanner")
+	}
+	// Arrange: a scanner without a version range whose --version never answers in time.
+	dir := t.TempDir()
+	slow := filepath.Join(dir, "slow")
+	require.NoError(t, os.WriteFile(slow, []byte("#!/bin/sh\nsleep 5\n"), 0o755)) //nolint:gosec // test script
+	info := lint.ScannerInfo{Name: "s", Command: "slow", Path: slow, Egress: "false", Format: "sarif", Timeout: time.Second,
+		Isolation: "none", Dir: dir, VersionTimeout: 200 * time.Millisecond}
+	var buf bytes.Buffer
+
+	// Act
+	writeDoctor(t.Context(), &buf, info, true)
+
+	// Assert
+	assert.Contains(t, buf.String(), "version probe timed out after 200ms")
+	assert.NotContains(t, buf.String(), "printed nothing usable")
+}
