@@ -1,0 +1,13 @@
+# Excerpt of the blob paths of https://github.com/nrslib/takt/tree/c87caaba01c09436c89935c54687670d7b94e23b/builtins/en/facets (first four files per facet type, plus _system)
+builtins/en/facets/instructions/_system/fallback-notice.md
+builtins/en/facets/instructions/adjudicate-review-findings.md
+builtins/en/facets/instructions/ai-antipattern-fix.md
+builtins/en/facets/instructions/ai-antipattern-review.md
+builtins/en/facets/knowledge/architecture.md
+builtins/en/facets/knowledge/backend.md
+builtins/en/facets/knowledge/cqrs-es.md
+builtins/en/facets/knowledge/e2e-testing.md
+builtins/en/facets/personas/ai-antipattern-reviewer.md
+builtins/en/facets/personas/architecture-reviewer.md
+builtins/en/facets/personas/balthasar.md
+builtins/en/facets/personas/casper.md

@@ -1,7 +1,7 @@
 schema = 1
 preset = "claude"
-harness_version = "2.1.302 (local binary); docs fetched 2026-10-17"
-verified_on = "2026-10-17"
+harness_version = "2.1.302 (local binary); docs fetched 2026-10-18"
+verified_on = "2026-10-18"
 completeness = "partial"
 severity = "error"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -9,8 +9,8 @@ namespaced = true
 
 [[source]]
 id = "s1"
-url = "https://code.claude.com/docs/en/commands#all-commands"
-verified_on = "2026-10-17"
+url = "https://code.claude.com/docs/en/commands.md"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,7 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://code.claude.com/docs/en/sub-agents.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s4"
@@ -72,7 +72,6 @@ names = [
   "config",
   "context",
   "copy",
-  "cost",
   "design-login",
   "desktop",
   "diff",
@@ -129,7 +128,6 @@ names = [
   "setup-vertex",
   "skill-doctor",
   "skills",
-  "stats",
   "status",
   "statusline",
   "stickers",
@@ -142,6 +140,7 @@ names = [
   "theme",
   "tui",
   "ultraplan",
+  "ultrareview",
   "upgrade",
   "usage",
   "usage-credits",
@@ -155,8 +154,8 @@ aliases = { "background" = [
 ], "bug" = [
   "share",
 ], "clear" = [
-  "reset",
   "new",
+  "reset",
 ], "config" = [
   "settings",
 ], "desktop" = [
@@ -164,8 +163,8 @@ aliases = { "background" = [
 ], "exit" = [
   "quit",
 ], "mobile" = [
-  "ios",
   "android",
+  "ios",
 ], "permissions" = [
   "allowed-tools",
 ], "remote-control" = [
@@ -197,6 +196,7 @@ names = [
   "code-review",
   "dataviz",
   "debug",
+  "deep-research",
   "design",
   "design-sync",
   "doctor",
@@ -210,15 +210,7 @@ names = [
   "verify",
   "workflow-authoring",
 ]
-aliases = { "code-review" = ["review", "ultrareview"], "doctor" = ["checkup"], "loop" = ["proactive"] }
-
-[[group]]
-kind = "skill"
-source = "s1"
-evidence = "s6"
-user_collision = "user_wins"
-match = "exact"
-names = ["deep-research"]
+aliases = { "code-review" = ["review"], "doctor" = ["checkup"], "loop" = ["proactive"] }
 
 [[group]]
 kind = "skill"
@@ -240,7 +232,7 @@ kind = "agent"
 source = "s3"
 user_collision = "unknown"
 match = "exact"
-names = ["Plan", "general-purpose", "claude", "statusline-setup", "claude-code-guide"]
+names = ["Plan", "claude", "claude-code-guide", "general-purpose", "statusline-setup"]
 
 [[group]]
 kind = "reserved"

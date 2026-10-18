@@ -1,7 +1,7 @@
 schema = 1
 preset = "kimi"
 harness_version = "docs-only (changelog 2.1.1, 2026-09-24)"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,28 +10,35 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://moonshotai.github.io/kimi-code/en/reference/slash-commands.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s2"
 url = "https://moonshotai.github.io/kimi-code/en/reference/slash-commands.md#built-in-skill-commands"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s3"
 url = "https://moonshotai.github.io/kimi-code/en/customization/agents.md#built-in-sub-agents"
-verified_on = "2026-10-17"
-
-[[source]]
-id = "s4"
-url = "https://moonshotai.github.io/kimi-code/en/customization/agents.md"
-verified_on = "2026-10-17"
+verified_on = "2026-10-18"
 
 [[source]]
 id = "s5"
 url = "https://moonshotai.github.io/kimi-code/en/reference/slash-commands.md"
 quote = "as long as the name is not taken by a system slash command or a plugin command"
 verified_on = "2026-10-17"
+
+[[source]]
+id = "s6"
+url = "https://moonshotai.github.io/kimi-code/en/customization/skills.md"
+quote = "**Built-in Skills** are distributed with the CLI and have the lowest priority."
+verified_on = "2026-10-18"
+
+[[source]]
+id = "s7"
+url = "https://moonshotai.github.io/kimi-code/en/customization/agents.md"
+quote = "A directory-discovered file does not override a same-name built-in Agent unless its frontmatter declares `override: true`."
+verified_on = "2026-10-18"
 
 [[group]]
 kind = "command"
@@ -40,103 +47,98 @@ evidence = "s5"
 user_collision = "builtin_wins"
 match = "exact"
 names = [
-  "login",
-  "logout",
-  "provider",
-  "model",
-  "secondary-model",
-  "settings",
-  "experiments",
-  "permission",
-  "editor",
-  "theme",
-  "new",
-  "sessions",
-  "tasks",
-  "fork",
-  "title",
-  "compact",
-  "undo",
-  "reload",
-  "reload-tui",
-  "init",
-  "export-md",
-  "export-debug-zip",
-  "copy",
   "add-dir",
-  "web",
-  "desktop",
-  "yolo",
   "auto",
-  "plan",
-  "swarm",
+  "btw",
+  "compact",
+  "copy",
+  "desktop",
+  "editor",
+  "exit",
+  "experiments",
+  "export-debug-zip",
+  "export-md",
+  "feedback",
+  "fork",
   "goal",
   "help",
-  "btw",
-  "usage",
-  "status",
+  "init",
+  "login",
+  "logout",
   "mcp",
+  "model",
+  "new",
+  "permission",
+  "plan",
   "plugins",
+  "provider",
+  "reload",
+  "reload-tui",
+  "secondary-model",
+  "sessions",
+  "settings",
+  "status",
+  "swarm",
+  "tasks",
+  "theme",
+  "title",
+  "undo",
+  "usage",
   "version",
-  "feedback",
-  "exit",
+  "web",
+  "yolo",
 ]
-aliases = { "secondary-model" = [
-  "subagent-model",
-], "settings" = [
-  "config",
+aliases = { "desktop" = [
+  "install-desktop",
+], "exit" = [
+  "q",
+  "quit",
 ], "experiments" = [
   "experimental",
+], "export-md" = [
+  "export",
+], "feedback" = [
+  "bug",
+], "help" = [
+  "?",
+  "h",
 ], "new" = [
   "clear",
+], "secondary-model" = [
+  "subagent-model",
 ], "sessions" = [
   "resume",
+], "settings" = [
+  "config",
 ], "tasks" = [
   "task",
 ], "title" = [
   "rename",
-], "export-md" = [
-  "export",
-], "desktop" = [
-  "install-desktop",
 ], "yolo" = [
   "yes",
-], "help" = [
-  "h",
-  "?",
-], "feedback" = [
-  "bug",
-], "exit" = [
-  "quit",
-  "q",
 ] }
 
 [[group]]
 kind = "skill"
 source = "s2"
+evidence = "s6"
 user_collision = "user_wins"
 match = "exact"
 names = [
-  "mcp-config",
-  "custom-theme",
-  "update-config",
   "check-kimi-code-docs",
+  "custom-theme",
   "import-from-cc-codex",
+  "mcp-config",
   "sub-skill",
-  "sub-skill.review",
   "sub-skill.consolidate",
+  "sub-skill.review",
+  "update-config",
 ]
 
 [[group]]
 kind = "agent"
 source = "s3"
+evidence = "s7"
 user_collision = "builtin_wins"
 match = "exact"
-names = ["coder", "explore", "plan"]
-
-[[group]]
-kind = "agent"
-source = "s4"
-user_collision = "builtin_wins"
-match = "exact"
-names = ["agent"]
+names = ["agent", "coder", "explore", "plan"]
