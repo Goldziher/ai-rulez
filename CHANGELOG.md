@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pi prompts keep working links to the skills.** A command's relative links are written against `commands/`, so `../skills/x/SKILL.md` reaches the root `skills/` tree, but the Pi prompt generated from it sits two levels down in `.pi/prompts/` and its skills may live in a `[plugin.pi] skills_dir` of their own. The prompt copied the link unchanged, so with `skills_dir = "skills"` it resolved to `.pi/skills/x/SKILL.md`, which does not exist. Relative links that climb out of the command are now resolved from `commands/` and rewritten from `.pi/prompts/` to where the target is (`../../skills/x/SKILL.md`); with the default `.pi/skills` they are unchanged ([#452](https://github.com/Goldziher/ai-rulez/issues/452)).
+
 ## [5.5.0] - 2026-10-17
 
 ### Added

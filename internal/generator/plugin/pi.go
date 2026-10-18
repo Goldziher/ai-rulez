@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/samber/oops"
 )
 
@@ -50,7 +51,7 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	prompts, err := piPrompts(m, baseDir)
+	prompts, err := piPrompts(m, baseDir, skillsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +205,7 @@ func piOwnedFields(pkg piPackage) map[string]any {
 	return fields
 }
 
-func piPrompts(m *Manifest, baseDir string) ([]config.OutputFile, error) {
+func piPrompts(m *Manifest, baseDir, skillsDir string) ([]config.OutputFile, error) {
 	provider, err := providers.LoadBuiltin("pi")
 	if err != nil {
 		return nil, oops.Wrapf(err, "load Pi prompt renderer")
@@ -218,12 +219,63 @@ func piPrompts(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	root := filepath.Join(baseDir, ".pi", "prompts") + string(filepath.Separator)
 	for _, out := range outputs {
 		if strings.HasPrefix(out.Path, root) {
-			out.RawContent = []byte(out.Content)
+			out.RawContent = []byte(rebasePiPromptLinks(out.Content, skillsDir))
 			out.Content = ""
 			prompts = append(prompts, out)
 		}
 	}
 	return prompts, nil
+}
+
+const (
+	// commandsDir is where a command's relative links are written to resolve: the
+	// bundle's commands/ directory, beside skills/ at the root.
+	commandsDir  = "commands"
+	piPromptsDir = ".pi/prompts"
+	skillsRoot   = "skills"
+)
+
+// rebasePiPromptLinks rewrites the relative links in a command body for the Pi
+// prompt it becomes. Links are authored against commands/, so ../skills/x/SKILL.md
+// reaches the root skills/ tree. A Pi prompt lives two levels down in
+// .pi/prompts/, and its skills sit in skillsDir, so the link is resolved from
+// commands/ and re-expressed from .pi/prompts/ to wherever the target now is.
+// Inline links and reference definitions are rewritten, bare or in angle
+// brackets, outside fenced code and inline code spans; the path is escaped for a
+// link destination and any query or fragment is kept. A link that leaves the
+// bundle root is kept as written.
+func rebasePiPromptLinks(body, skillsDir string) string {
+	skills := filepath.ToSlash(filepath.Clean(skillsDir))
+	rebase := func(dest string, _ int) (string, bool) {
+		inner, wrapped := dest, false
+		if len(dest) >= 2 && dest[0] == '<' && dest[len(dest)-1] == '>' {
+			inner, wrapped = dest[1:len(dest)-1], true
+		}
+		p, suffix, internal := okf.SplitDest(inner)
+		if !internal || !strings.HasPrefix(p, "../") {
+			return "", false
+		}
+		resolved, ok, inside := okf.ResolveLink(commandsDir, inner)
+		if !ok || !inside {
+			return "", false
+		}
+		switch {
+		case resolved == skillsRoot:
+			resolved = skills
+		case strings.HasPrefix(resolved, skillsRoot+"/"):
+			resolved = skills + strings.TrimPrefix(resolved, skillsRoot)
+		}
+		rebased, err := filepath.Rel(piPromptsDir, filepath.FromSlash(resolved))
+		if err != nil {
+			return "", false
+		}
+		out := okf.JoinDest(filepath.ToSlash(rebased), suffix)
+		if wrapped {
+			out = "<" + out + ">"
+		}
+		return out, true
+	}
+	return okf.RewriteLinkDefs(okf.RewriteLinks(body, rebase), rebase)
 }
 
 func piResourcePaths(files []string, skillsDir string) piResources {
