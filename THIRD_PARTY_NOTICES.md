@@ -10,10 +10,42 @@ the `NOTICE.txt` files under `testdata/`) are listed there, not here.
 ## NVIDIA SkillSpector
 
 - **Source:** <https://github.com/NVIDIA/SkillSpector>
-- **License:** [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0); the project ships no `NOTICE`
-  file. The full license text goes in `LICENSES/Apache-2.0.txt`, added with the first derived file.
+- **License:** [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), full text in
+  [`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt); the project ships no `NOTICE` file.
 - **Copyright:** Copyright 2026 NVIDIA CORPORATION & AFFILIATES
-- **Derived files:** none yet. List each one as `<file>: <upstream path> at <upstream commit>`.
+- **What is derived:** behaviour and regular expressions of the static pattern analyzers, and test fixtures from the
+  pattern tests, reimplemented as RE2 rules and Go table tests in `internal/lint`.
+- **Modification notice (Apache-2.0 section 4(b)):** every derived file is marked as modified in its header. The
+  changes are a rewrite from Python to Go, translation of patterns to RE2, and replacement of the SkillSpector
+  finding model with ai-rulez rule codes.
+- **Derived files**, all taken from upstream commit `cf5cac7ba5c756a6e0ebf52dc9763f49422f889f`:
+
+| File | Derived from (SkillSpector rule ids) |
+| --- | --- |
+| `internal/lint/ar_prose.go`, `internal/lint/ar_prose_test.go` | AR1-AR3, E4, P3 (AR041, AR042) |
+| `internal/lint/ar_exec.go`, `internal/lint/ar_exec_test.go` | RA2, DS1-DS4, SSRF1-SSRF3 (AR043-AR045) |
+| `internal/lint/ar_hidden.go`, `internal/lint/ar_hidden_test.go` | SC8, SC9, P3, P9, AE4, AE6 (AR051-AR053) |
+| `internal/lint/ar_manifest.go`, `internal/lint/ar_manifest_data.go` | SC1, SC6, SC10 (AR054-AR056) |
+
+The rules AR046-AR050 (`internal/lint/ar_malware.go`), AR057 (`internal/lint/ar_mcpmeta.go`) and AR058 (`internal/lint/ar_declared.go`) are written from the public behaviour of each threat family and carry no upstream text.
+
+The rules AR046-AR050 (`internal/lint/ar_malware.go`), AR057 (`internal/lint/ar_mcpmeta.go`) and AR058
+(`internal/lint/ar_declared.go`) are written from the public behaviour of each threat family and carry no upstream text.
+
+### Header for derived files
+
+Put this block at the top of every Go file that contains derived rules or tests, ahead of the `package` clause. Replace `<sha>` with the upstream commit the content was taken from (a full 40-character hash), list the upstream files after it, and describe the changes on the second line.
+
+```go
+// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Derived from NVIDIA/SkillSpector at commit <sha> (<upstream files>).
+// Modified by the ai-rulez authors: <what changed>.
+// See THIRD_PARTY_NOTICES.md.
+```
+
+`scripts/transcode-skillspector-tests.py` writes this header for the tables it generates.
 
 ## Neo23x0 signature-base
 
