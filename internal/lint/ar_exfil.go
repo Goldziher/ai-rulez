@@ -125,6 +125,23 @@ func mayExfil(text string) bool {
 	return hasCmdWord(low, exfilWords...) || strings.Contains(low, "http ") || strings.Contains(low, "https ") || strings.Contains(low, "http\t") || strings.Contains(low, "https\t") // httpie
 }
 
+// dumpsEnvironment reports whether the line, or an inline code span of a prose line, pipes the
+// environment or a credential file to a network tool.
+func dumpsEnvironment(t *scanText, l scanLine) bool {
+	if envDumpRe().MatchString(l.Text) || envPipeRe().MatchString(l.Text) {
+		return true
+	}
+	if !t.prose(l) {
+		return false
+	}
+	for _, m := range backtickRe().FindAllStringSubmatch(l.Text, -1) {
+		if envDumpRe().MatchString(m[1]) || envPipeRe().MatchString(m[1]) {
+			return true
+		}
+	}
+	return false
+}
+
 func scanExfilCommands(r *runner, t *scanText) {
 	for _, l := range t.logicalLines() {
 		if l.Front {
@@ -146,7 +163,7 @@ func scanExfilCommands(r *runner, t *scanText) {
 			} else {
 				r.add(CodeExfilCommand, t.abs, l.No, "sends the secret $%s to a remote host in a URL or body", secretVars(rest)[0])
 			}
-		case envDumpRe().MatchString(text), envPipeRe().MatchString(text):
+		case dumpsEnvironment(t, l):
 			if r.allHostsAllowed(text) {
 				continue
 			}

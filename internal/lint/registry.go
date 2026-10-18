@@ -63,6 +63,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerArMcp,
 		registerArPlugin,
 		registerArPrompt,
+		registerArProse,
 		registerArQuality,
 		registerArReserved,
 		registerArSettings,

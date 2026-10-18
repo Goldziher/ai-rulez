@@ -63,7 +63,7 @@ var analyzerGroups = []analyzerGroup{
 	}},
 	{AnalyzerSecurity, ScopeItem, []string{
 		"AR007", "AR012", "AR013", "AR014", "AR015", "AR016", "AR017", "AR018", "AR019", "AR020", "AR021", "AR022",
-		"AR023", "AR024", "AR025", "AR026", "AR027", "AR028", "AR029", "AR030", "AR031", "AR032", "AR033", "AR034", "AR036", "AR037", "AR038",
+		"AR023", "AR024", "AR025", "AR026", "AR027", "AR028", "AR029", "AR030", "AR031", "AR032", "AR033", "AR034", "AR036", "AR037", "AR038", "AR041", "AR042",
 	}},
 	// Project-level security: supply chain, permissions, scanner egress and
 	// the trust rule of the user-only [llm] and [telemetry] keys.
