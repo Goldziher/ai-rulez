@@ -15,6 +15,7 @@ name = "proj"
 presets = ["claude"]
 
 [mcp]
+serve_skills = true
 read_only = true
 daemon = true
 no_watch = true
@@ -48,6 +49,8 @@ func TestMCPServeSettings_LoadFromEachLayout(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, cfg.MCP)
+			require.NotNil(t, cfg.MCP.ServeSkills)
+			assert.True(t, *cfg.MCP.ServeSkills)
 			require.NotNil(t, cfg.MCP.ReadOnly)
 			assert.True(t, *cfg.MCP.ReadOnly)
 			require.NotNil(t, cfg.MCP.Daemon)

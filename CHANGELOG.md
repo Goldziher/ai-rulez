@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[mcp] serve_skills` makes a bare `ai-rulez mcp` serve skills.** The key (default `false`) behaves as `--serve-skills`, so a client entry can be `ai-rulez mcp` alone; the flag wins, and `--serve-skills=false` turns the key off. It is in the schema and accepted by `validate` ([#454](https://github.com/Goldziher/ai-rulez/issues/454)).
+
 ### Fixed
 
 - **`{project}` names the project root in a scanner command, and the stage working directory is documented.** A relative `command[0]` was resolved against the project but a relative script argument (`["sh", "tools/t.sh"]`) against the stage, so it failed with exit status 127. `{project}/tools/t.sh` now works, the script it names is still hashed into the cache key, and the difference is documented next to `command` ([#450](https://github.com/Goldziher/ai-rulez/issues/450)).

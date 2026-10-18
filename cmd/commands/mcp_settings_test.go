@@ -21,6 +21,7 @@ func settingsFlags(t *testing.T, args ...string) *pflag.FlagSet {
 	t.Helper()
 	fs := pflag.NewFlagSet("mcp", pflag.ContinueOnError)
 	fs.Bool(flagMCPReadOnly, false, "")
+	fs.Bool(flagServeSkills, false, "")
 	fs.Bool(flagServeDaemon, false, "")
 	fs.Bool(flagServeNoWatch, false, "")
 	fs.StringSlice("allow", nil, "")
@@ -224,6 +225,28 @@ func TestLoadMCPSettings_PolicyRequiredReadOnlyCannotBeLoosened(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 			assert.True(t, got.readOnly)
+		})
+	}
+}
+
+func TestResolveMCPSettings_ServeSkills(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		keys config.MCPConfig
+		want bool
+	}{
+		{name: "off by default"},
+		{name: "the key turns it on", keys: config.MCPConfig{ServeSkills: boolPtrOf(true)}, want: true},
+		{name: "the flag turns it on", args: []string{"--serve-skills"}, want: true},
+		{name: "the flag false wins over a true key", args: []string{"--serve-skills=false"}, keys: config.MCPConfig{ServeSkills: boolPtrOf(true)}},
+		{name: "the flag true wins over a false key", args: []string{"--serve-skills"}, keys: config.MCPConfig{ServeSkills: boolPtrOf(false)}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveMCPSettings(settingsFlags(t, tt.args...), mcp.ProjectSettings{MCP: tt.keys})
+
+			assert.Equal(t, tt.want, got.serveSkills)
 		})
 	}
 }

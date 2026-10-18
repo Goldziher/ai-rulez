@@ -12,12 +12,17 @@ import (
 // flagMCPTools names the --tools flag, the allow-list of registered tools.
 const flagMCPTools = "tools"
 
+// flagServeSkills names the --serve-skills flag.
+const flagServeSkills = "serve-skills"
+
 // mcpSettings are the settings of `mcp` that both a flag and an [mcp] key can
 // give. A flag that was given wins over the key; the organization policy's
 // read-only requirement wins over both.
 type mcpSettings struct {
 	readOnly, daemon, noWatch bool
-	allow, deny, tools        []string
+	// serveSkills is true when the run serves skills: the flag, else [mcp] serve_skills.
+	serveSkills        bool
+	allow, deny, tools []string
 }
 
 // resolveMCPSettings merges the command line over the project's [mcp] table.
@@ -40,7 +45,9 @@ func resolveMCPSettings(flags *pflag.FlagSet, project mcp.ProjectSettings) mcpSe
 		}
 		return key
 	}
-	return mcpSettings{
+	serve := boolSetting(flagServeSkills, keys.ServeSkills)
+	settings := mcpSettings{
+		serveSkills: serve,
 		// A policy that requires read-only is not a default a flag can override.
 		readOnly: boolSetting(flagMCPReadOnly, keys.ReadOnly) || project.PolicyReadOnly,
 		daemon:   boolSetting(flagServeDaemon, keys.Daemon),
@@ -49,6 +56,7 @@ func resolveMCPSettings(flags *pflag.FlagSet, project mcp.ProjectSettings) mcpSe
 		deny:     listSetting("deny", keys.Deny),
 		tools:    listSetting(flagMCPTools, keys.Tools),
 	}
+	return settings
 }
 
 // validate checks the tool allow-list against the tools the server has.
