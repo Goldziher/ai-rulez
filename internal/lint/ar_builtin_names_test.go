@@ -82,8 +82,8 @@ func TestHarnessBuiltinNames(t *testing.T) {
 			contains: []string{"Both are listed"},
 		},
 		{
-			name: "an outcome without a quote is a warning, not an error", presets: `"goose"`,
-			files: map[string]string{".ai-rulez/skills/web-search/SKILL.md": reservedSkill("web-search")},
+			name: "a quoted outcome in a table set to warning is a warning, not an error", presets: `"vibe"`,
+			files: map[string]string{".ai-rulez/skills/skill-creator/SKILL.md": reservedSkill("skill-creator")},
 			code:  CodeBuiltinNameCollision, want: []Severity{SeverityWarning},
 		},
 		{
