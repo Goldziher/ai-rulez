@@ -1484,8 +1484,7 @@ A harness has built-in commands, bundled skills and agents, and a user item of t
 it replaces the built-in (Claude Code, OpenCode, Qwen Code, Kilo), the built-in stays and the user item is renamed or
 unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). `internal/harnessnames/data/<preset>.toml`
 holds one table per preset: the names and aliases, the page each group was taken from, and, where the harness documents
-the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` builds
-the files). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
+the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` regenerates the names from each harness's registry at a pinned tag and `task harness:builtins:check` verifies every quote against its page; a recorded outcome without a verbatim quote is set to `unknown`). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
 presets that write it and every harness that reads the directory it lands in, whether or not its preset is enabled
 (`.agents/skills` is read by Amp, Codex, Cursor, Gemini CLI, Goose and others). Names are compared as the harness
 derives them: trimmed, NFKC-normalized and case-folded; the directory or file name and the `name:` frontmatter are both

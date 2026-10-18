@@ -9025,7 +9025,8 @@ user-level table is in [User-level configuration](user-scope.md#where-things-go)
   harness. `validate` checks each output against the harnesses that load it, including those that only read a
   shared directory such as `.agents/skills/`: AR9U0 for a built-in, AR9U1 for a name the harness refuses to
   load. The tables (`internal/harnessnames/data/<preset>.toml`, one per preset above) record the page each name
-  was taken from and mark how complete the list is. See
+  was taken from and mark how complete the list is; for most harnesses the names are regenerated from the harness's
+  own registry at a pinned tag (`tools/harness-builtins`). See
   [Built-in names of harnesses](strict-validation.md#built-in-names-of-harnesses).
 - **Native tool and model names.** Frontmatter is translated to each harness's own tool names, and bare Claude
   model aliases (`sonnet`, `opus`, `haiku`) are dropped where the harness has no such model.
@@ -11504,6 +11505,8 @@ renaming or moving a file, or choosing `resources`, is a decision.
 older than `[lint.traps] max_table_age_days` from the repository config (90 when unset; `HARNESS_MAX_AGE_DAYS`
 overrides). It does not use the network. `HARNESS_VERIFY_FETCH=1 task harness:verify` also fetches each source and
 fails when a quote, of a trap or of a name table, is no longer on its page. `[lint.traps] max_table_age_days` (AR9C0) also covers the name tables of the harnesses a project writes for.
+
+The name tables are not edited by hand where a harness keeps its built-ins in a public registry. `tools/harness-builtins/generate.py` reads the registry at the tag or commit pinned in `pins.toml` and rewrites the names; `task harness:builtins:check` (network) fails when a data file differs from its pinned source or a quote is gone from its page, `task harness:builtins:refresh` shows what a newer tag would change, and a weekly workflow opens an issue on drift. A harness with no registry to read is recorded as `extractor = "none"` with the reason. See `tools/harness-builtins/README.md`.
 
 #### The traps
 
@@ -14942,8 +14945,7 @@ A harness has built-in commands, bundled skills and agents, and a user item of t
 it replaces the built-in (Claude Code, OpenCode, Qwen Code, Kilo), the built-in stays and the user item is renamed or
 unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). `internal/harnessnames/data/<preset>.toml`
 holds one table per preset: the names and aliases, the page each group was taken from, and, where the harness documents
-the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` builds
-the files). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
+the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` regenerates the names from each harness's registry at a pinned tag and `task harness:builtins:check` verifies every quote against its page; a recorded outcome without a verbatim quote is set to `unknown`). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
 presets that write it and every harness that reads the directory it lands in, whether or not its preset is enabled
 (`.agents/skills` is read by Amp, Codex, Cursor, Gemini CLI, Goose and others). Names are compared as the harness
 derives them: trimmed, NFKC-normalized and case-folded; the directory or file name and the `name:` frontmatter are both
