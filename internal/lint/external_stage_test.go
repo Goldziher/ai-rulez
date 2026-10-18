@@ -677,3 +677,34 @@ printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"P","level":"warning","
 		})
 	}
 }
+
+func TestAllDroppedEscalationKeepsAnExplicitSeverity(t *testing.T) {
+	// Arrange: every result is out of scope, so AR9E6 would escalate to an error.
+	script := `printf '{"version":"2.1.0","runs":[{"results":[` +
+		`{"ruleId":"A","message":{"text":"rule file"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":".ai-rulez/rules/r.md"}}}]}]}]}'` + "\n"
+	tests := []struct {
+		name string
+		pre  string
+		want []Severity
+	}{
+		{"default escalates to error", "", []Severity{SeverityError}},
+		{"explicit info stays info", "\n[lint.severity]\nAR9E6 = \"info\"\n", []Severity{SeverityInfo}},
+		{"explicit warning stays warning", "\n[lint.severity]\nAR9E6 = \"warning\"\n", []Severity{SeverityWarning}},
+		{"off disables it", "\n[lint.severity]\nAR9E6 = \"off\"\n", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newScannerProject(t, script, "egress = false\ninputs = [\"skills\"]\n", map[string]string{"config.pre": tt.pre})
+
+			// Act
+			dropped := ofCode(p.run(Options{}), CodeScannerOutOfScope)
+
+			// Assert
+			var got []Severity
+			for _, f := range dropped {
+				got = append(got, f.Severity)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

@@ -918,7 +918,8 @@ staged file at the root is tried against the skill directories the run was hande
 print paths relative to them) and must match exactly one. With `batch_size = 1` a run holds one skill, so `SKILL.md`
 and `references/x.md` resolve to that skill; in a batch of several skills, or without `batch_size`, a path that
 names a file in more than one of them is ambiguous and dropped. `AR9E6` is an error when every result of a run was
-dropped, so a scanner whose paths never resolve cannot pass as clean.
+dropped, so a scanner whose paths never resolve cannot pass as clean. A severity set for `AR9E6` in `[lint.severity]` (or
+switched off) is kept as set.
 
 Severity is the first of: `severity_map` (rule id or glob to `critical`, `high`, `medium`, `low`, `info`, or
 `error`, `warning`; exact id first, then the longest glob), SARIF `properties.security-severity` of the result or

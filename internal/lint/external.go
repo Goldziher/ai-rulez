@@ -379,7 +379,8 @@ func (r *runner) addRun(code, scanner, msg string) {
 }
 
 // addRunAs is addRun with an escalated severity: raise replaces the rule's
-// severity unless the rule is switched off. "" keeps the rule's.
+// severity unless the rule is switched off or its severity was changed from the
+// default (by the user or a profile). "" keeps the rule's.
 func (r *runner) addRunAs(code, scanner string, raise Severity, msg string) {
 	r.runMu.Lock()
 	defer r.runMu.Unlock()
@@ -387,7 +388,7 @@ func (r *runner) addRunAs(code, scanner string, raise Severity, msg string) {
 	if code == CodeScannerUnavailable && r.opts.Scanner.required[scanner] {
 		sev = SeverityError // a required scanner that did not run is a failure, whatever the rule's severity
 	}
-	if raise != "" && sev != SeverityOff {
+	if raise != "" && sev != SeverityOff && r.escalatable(code, sev) {
 		sev = raise
 	}
 	if sev == SeverityOff || r.ignore[code] {
@@ -405,6 +406,21 @@ func (r *runner) addRunAs(code, scanner string, raise Severity, msg string) {
 		Code: code, Name: rule.Name, Severity: sev, File: file, Line: 1,
 		Message: "[" + scanner + "] " + msg, Root: r.display(r.rootAbs()),
 	})
+}
+
+// escalatable reports whether a rule still has its default severity, so an
+// escalation does not override a severity the user set (even to the default) or a profile.
+func (r *runner) escalatable(code string, sev Severity) bool {
+	rule, ok := lookupRule(code)
+	if !ok || sev != rule.Default {
+		return false
+	}
+	for key := range r.lc.Severity {
+		if set, found := lookupRule(key); found && set.Code == code {
+			return false
+		}
+	}
+	return true
 }
 
 // scannedFiles lists the files the built-in scan read, for the external scanners.
