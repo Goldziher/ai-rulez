@@ -19,6 +19,12 @@ type LintConfig struct {
 	// IgnorePaths lists globs, relative to the config directory, of source
 	// files whose findings are dropped.
 	IgnorePaths []string `yaml:"ignore_paths,omitempty" json:"ignore_paths,omitempty" toml:"ignore_paths,omitempty"` //nolint:tagliatelle
+	// SkillRoots lists globs, relative to the project root, of the directories
+	// that hold skill directories (".claude/skills", "plugins/*/skills") a
+	// harness loads from. AR808 checks a hand-written skill or command only in
+	// these directories; unset, the harness's own roots, a plugin's skills/ and
+	// local skill sources are used. Authored content is always checked.
+	SkillRoots []string `yaml:"skill_roots,omitempty" json:"skill_roots,omitempty" toml:"skill_roots,omitempty"` //nolint:tagliatelle
 	// Severity overrides the severity of a code or name: error, warning, info, off.
 	Severity map[string]string `yaml:"severity,omitempty" json:"severity,omitempty" toml:"severity,omitempty"`
 	// ExamplePaths lists globs, relative to the config directory or the repo

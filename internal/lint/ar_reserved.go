@@ -31,10 +31,10 @@ func normalizeReservedName(n string) string {
 }
 
 func registerArReserved(s *ruleSet) {
-	s.addRules(RuleInfo{CodeReservedName, "reserved-name", SeverityError, "a skill or command is named like a built-in command or bundled skill of a target assistant, so it replaces the built-in (allow an intentional override with lint.allow_overrides)"})
+	s.addRules(RuleInfo{CodeReservedName, "reserved-name", SeverityError, "a skill or command is named like a built-in command or bundled skill of a target assistant, so it replaces the built-in (allow an intentional override with lint.allow_overrides; only skills the harness loads are checked, see lint.skill_roots)"})
 	s.addDocs(map[string]RuleDoc{
 		CodeReservedName: {
-			Why:  "In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = [\"init\"]` or `[\"claude:init\"]`.",
+			Why:  "In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = [\"init\"]` or `[\"claude:init\"]`. A hand-written SKILL.md is checked only where the harness loads it from: `.claude/skills` (`.claude/commands` for a command), a plugin's `skills/` or `commands/` directory next to its manifest, or a local `[[skill_sources]]` directory; content under `.ai-rulez/` is always checked. A SKILL.md elsewhere (an application's own `src/public/skills/`) is still linted for format. `[lint] skill_roots = [globs]` replaces those roots (globs match the directory that holds the skill directories, relative to the project root), `[lint] ignore_paths` drops every finding for a source file, and `validate --exclude <glob>` leaves files out of a config-free run.",
 			Bad:  "`.claude/skills/init/SKILL.md` with the claude preset",
 			Good: "Rename the skill (`project-init`), or list `claude:init` in lint.allow_overrides",
 		},
@@ -83,6 +83,9 @@ func checkReservedName(r *runner, it *item, d doc, _ frontmatter) {
 	}
 	seen := map[string]bool{}
 	for _, preset := range r.reservedPresets() {
+		if !r.inHarnessRoot(it, preset) {
+			continue
+		}
 		for _, c := range candidates {
 			name := normalizeReservedName(c)
 			title, ok := table[preset][name]

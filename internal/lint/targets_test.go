@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -443,6 +444,42 @@ func TestNamedFiles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := namedFiles(tt.names, tt.limit); got != tt.want {
 				t.Errorf("namedFiles = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveTargetsExclude(t *testing.T) {
+	skill := "---\nname: s\ndescription: Use when testing the exclusion of targets.\n---\nbody\n"
+	tests := []struct {
+		name    string
+		exclude []string
+		want    []string
+	}{
+		{"nothing excluded", nil, []string{".claude/skills/s/SKILL.md", "x/src/public/skills/s/SKILL.md"}},
+		{"directory glob", []string{"x/**"}, []string{".claude/skills/s/SKILL.md"}},
+		{"exact file", []string{"x/src/public/skills/s/SKILL.md"}, []string{".claude/skills/s/SKILL.md"}},
+		{"glob that matches nothing", []string{"nope/**"}, []string{".claude/skills/s/SKILL.md", "x/src/public/skills/s/SKILL.md"}},
+		{"everything", []string{"**"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".claude/skills/s/SKILL.md":      skill,
+				"x/src/public/skills/s/SKILL.md": skill,
+			})
+			gitAdd(t, root)
+			tree, err := LoadTree(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := ResolveTargets(context.Background(), tree, TargetSpec{Detect: true, Cwd: root, Exclude: tt.exclude})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if rels := got.Rels(); !slices.Equal(rels, tt.want) {
+				t.Errorf("targets = %v, want %v", rels, tt.want)
 			}
 		})
 	}

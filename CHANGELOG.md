@@ -6,8 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[lint] skill_roots` and `validate --exclude <glob>`.** `skill_roots` lists the directories AR808 treats as harness skill roots, replacing the defaults; `--exclude` leaves matching files out of the files `validate` and `scan` find by convention, `--path` and `--glob`, with or without a configuration. `[lint] ignore_paths` is now described in `validate --help` and in `validate --explain AR808` ([#457](https://github.com/Goldziher/ai-rulez/issues/457)).
+
 ### Fixed
 
+- **AR808 only checks skills and commands where the harness loads them from.** A hand-written `SKILL.md` is compared with the Claude Code built-ins only inside `.claude/skills` (or `.claude/commands`), a plugin's `skills/` directory, a local `[[skill_sources]]` directory or a `skill_roots` glob; an application's own `x/src/public/skills/code-review/SKILL.md` is still linted for format but no longer reports `shadows the built-in /code-review`. Authored `.ai-rulez/` content is always checked ([#457](https://github.com/Goldziher/ai-rulez/issues/457)).
 - **AR402 no longer reads the code span in a link's text as a resource reference.** `[`b` `references/s.md`](../../b/references/s.md)` was reported as a missing `references/s.md` although the link target exists. A code span inside the text of an inline link is its label; the link target is checked instead (an unresolved target is reported as a broken link, not as AR402) ([#456](https://github.com/Goldziher/ai-rulez/issues/456)).
 
 ## [5.5.2] - 2026-10-18
