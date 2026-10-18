@@ -1975,6 +1975,13 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 # skills_instructions_text = "..."           # replace that section; {{server}}, {{skills_dir}}
 # discover_skills = "repo"                   # mcp --serve-skills also serves the skills already in the repository
 # index_cache = "user"                       # "user" (default), "repo" or "off": where the repository index is cached
+# read_only = true                           # mcp registers only its read-only tools (--read-only)
+# tools = ["find_skill", "load_skill"]       # mcp registers only these tools (--tools)
+# allow = ["review-*"]                       # mcp --serve-skills serves only matching skills (--allow)
+# deny = ["draft-*"]                         # mcp --serve-skills never serves matching skills (--deny)
+# daemon = true                              # mcp --serve-skills shares one server per repository (--daemon)
+# no_watch = true                            # mcp --serve-skills does not reload on file changes (--no-watch)
+# exclude = ["third_party/**"]               # globs of paths repository discovery never reads (--exclude adds to them)
 ```
 
 | Field                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -1986,7 +1993,14 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 | `skills_instructions`      | While skills are served, every instruction file gets a short "Unlisted skills" section telling the agent to call `find_skill`, then `load_skill`, on the MCP server that serves them, with the on-disk fallback (`.ai-rulez/skills/<name>/SKILL.md`). Default `true`; `false` leaves it out. Written when a configured preset can call MCP, and only into the root file of a harness that can; the shared `AGENTS.md` carries it once.                                                                                                          |
 | `skills_instructions_text` | Replaces the default section (write your own heading). `{{server}}` is the MCP server that serves the skills, `{{skills_dir}}` the config directory's skills folder (`.ai-rulez/skills`). Unknown variables, blank text, and text beside `skills_instructions = false` are configuration errors.                                                                                                                                                                                                                                                |
 | `discover_skills`          | `off` (the default), `repo` or `all`: whether `mcp --serve-skills` also serves the skills the repository already keeps (`skills/`, `.claude/skills` at any depth, the configured presets' skill directories). `all` adds the installed and included skills whatever their delivery. The `--discover-skills` flag overrides it. See [Discovering skills already in the repository](mcp-server.md#discovering-skills-already-in-the-repository). |
+| `exclude`                  | Globs, relative to the project root, of the paths repository discovery never reads: skill directories and the context index (`CLAUDE.md`, `AGENTS.md`, rules, agents) alike. `**` crosses directories, a pattern without a slash matches at any depth. The `mcp --exclude` flag (repeatable) adds to the list. See [Excluding paths](mcp-server.md#excluding-paths). |
 | `index_cache`              | `user` (the default), `repo` or `off`: where the repository index of the discovery keeps its cache of item summaries and scan verdicts, never file bodies. `user` is the user cache directory, with a gitignored directory in the project (`.ai-rulez/.cache/`, or `.ai-rulez-cache/` in the root layout) as the fallback when it is not writable; `repo` always uses that directory; `off` keeps none. See [The index cache](mcp-server.md#the-index-cache). |
+| `read_only`                | `true` registers only the read-only tools, as `mcp --read-only` does; the server instructions and prompts follow. The `--read-only` flag overrides it. An organization policy with `[mcp] read_only = true` cannot be loosened by it (`AR740`). |
+| `tools`                    | The only tools the server registers, as `mcp --tools` does, for example `["find_skill", "load_skill", "find_context", "load_context"]`. An unknown name stops the server and lists the valid ones. The `--tools` flag overrides it. |
+| `allow`, `deny`            | Glob patterns on the served skill names (`mcp --serve-skills --allow` and `--deny`); `deny` wins. The flags override them. |
+| `daemon`, `no_watch`       | `mcp --serve-skills --daemon` (one shared server per repository) and `--no-watch` (no live reload). The flags override them. |
+
+The `mcp` serve keys are read when the server starts. See [Settings in the configuration](mcp-server.md#settings-in-the-configuration).
 
 Behavior:
 
@@ -2423,6 +2437,15 @@ frontend = ["frontend"]
 opt-in. A pack the root `builtins` field already enables stays global — the prefix selects
 a pack, it does not un-globalize one. Prefixing also keeps a builtin (`builtin:rust`) from
 colliding with a local domain of the same name.
+
+###### Precedence over a builtin skill
+
+A builtin ranks below every skill the project has. A skill under `.ai-rulez/skills/` replaces the builtin of the same
+name; so does a hand-written repository skill such as `.claude/skills/testing-conventions` when
+`mcp --serve-skills --discover-skills` serves it. `validate` reports either case as `AR703` (silence it with
+`lint.allow_overrides = ["testing-conventions"]`). `generate` never overwrites the hand-written file: it stops and names
+the file, so the project skill is not clobbered by the generated builtin; to use the generated builtin, remove the
+hand-written copy, otherwise exclude the builtin item (`!<domain>/<item>`).
 
 ###### Exclude auto-included builtins
 
@@ -10204,7 +10227,7 @@ It is on by default for a project that generates for Claude Code, and it does no
 # when = "remote"        # "remote": act only when CLAUDE_CODE_REMOTE is set; "always": every session
 # mode = "auto"          # auto | locked | frozen | plain
 # timeout = 120          # seconds the whole run may take before it is killed
-# version = "5.5.0"      # pin npx and uvx to a release; default is the latest published one
+# version = "5.5.1"      # pin npx and uvx to a release; default is the latest published one
 # command = ["ai-rulez"] # replaces the launcher; runs without a shell; excludes version
 # prompt = true          # inject the short briefing
 # prompt_text = "..."    # replaces the briefing; {{server}} is the ai-rulez MCP server's name
@@ -13284,7 +13307,7 @@ These are two independent choices:
   The publish workflow moves it to the commit of each successfully published stable v5 release,
   after GitHub, npm, PyPI and Homebrew publication. Release candidates never move it, and rerunning
   an older release cannot move it backward.
-- `with: version: 5.5.0` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, or `latest`
+- `with: version: 5.5.1` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, or `latest`
   (the default). `version: v5` is unsupported: the floating tag is an action ref, not a binary release.
   Omitting `version` downloads the latest public GitHub release, even when the action ref is pinned.
 
@@ -13307,7 +13330,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.5.0
+          version: 5.5.1
       - run: ai-rulez generate --check
       - run: ai-rulez validate --strict
       - run: ai-rulez lock --check
@@ -13362,7 +13385,7 @@ steps:
       fetch-depth: 2
   - uses: Goldziher/ai-rulez@v5
     with:
-      version: 5.5.0
+      version: 5.5.1
       llm-provider: openai
       llm-model: gpt-4o-mini
       llm-api-key-env: OPENAI_API_KEY
@@ -13388,7 +13411,7 @@ diagnostic requires a project; `llm estimate` can run without one.
 ```yaml
 - uses: Goldziher/ai-rulez@v5
   with:
-    version: 5.5.0
+    version: 5.5.1
 - name: Inspect LLM configuration without a request
   env:
     AI_RULEZ_LLM_PROVIDER: openai
@@ -13804,7 +13827,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom` and `validate --strict`, see [SBOM](sbom.md)) | allocated |
-| `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
+| `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR808`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
 | `AR960`-`AR969` | Plugins and evals presence (`AR961`-`AR964`) | allocated |
@@ -13859,7 +13882,7 @@ ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
-allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
+allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing: "name" or "domain/name" (AR703), "name" or "preset:name" (AR808)
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
 agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
 agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
@@ -14081,7 +14104,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
-| `descriptions` | `AR801`-`AR807` |
+| `descriptions` | `AR801`-`AR808` |
 | `budgets` | `AR901`, `AR902` |
 | `metadata` | `AR951`-`AR954` |
 | `plugin` | `AR961`-`AR964` |
@@ -14781,6 +14804,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
+| AR808 | `reserved-name` | error | A skill or command (directory or file name, or `name:` frontmatter) equals a built-in command or bundled skill of a configured preset, so it replaces the built-in: `skill "init" shadows the Claude Code built-in /init (preset claude)`. Names are compared case-insensitively, trimmed, with `_` and spaces read as `-`. Checks authored content and hand-written files such as `.claude/skills/*`, also without a config. Only `claude` has a list today (`internal/lint/ar_reserved_names.go`, from the Claude Code commands reference); a project with no preset is treated as `claude`. Silence an intentional override with `allow_overrides = ["init"]` or `["claude:init"]` |
 <!-- lint-rules:end -->
 
 <!-- lint-rules-notes:begin -->
@@ -15942,6 +15966,16 @@ a content file does not end with a newline
 - Why: Tools disagree about a last line without a newline: diffs show `\ No newline at end of file`, concatenated or appended text lands on the same line, and formatters rewrite the file. `validate --fix` adds the newline (CRLF files get CRLF).
 - Bad: A rule file whose last byte is not a line feed
 - Good: End the file with exactly one newline
+
+##### AR808 reserved-name
+
+a skill or command is named like a built-in command or bundled skill of a target assistant, so it replaces the built-in (allow an intentional override with lint.allow_overrides)
+
+- Default severity: `error`
+- Analyzer: `descriptions` (scope `item`)
+- Why: In Claude Code a project skill or command replaces the built-in of the same name, so `.claude/skills/init` silently disables `/init`. The list of reserved names per preset is data in `internal/lint/ar_reserved_names.go`. A name is compared case-insensitively with surrounding space trimmed and `_` or spaces read as `-`. The `name:` frontmatter and the directory or file name are both checked. Acknowledge an intentional override with `lint.allow_overrides = ["init"]` or `["claude:init"]`.
+- Bad: `.claude/skills/init/SKILL.md` with the claude preset
+- Good: Rename the skill (`project-init`), or list `claude:init` in lint.allow_overrides
 
 ##### AR901 size-lines
 
@@ -17798,7 +17832,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.5.0"
+revision = "v5.5.1"
 hooks = ["ai-rulez-validate"]
 ```
 
@@ -20061,6 +20095,7 @@ issuer   = "https://token.actions.githubusercontent.com"
 [mcp]
 allowed_commands = ["npx", "uvx"]                               # the only commands a stdio MCP server may run
 deny_transports  = ["http", "sse"]                              # no remote MCP endpoint
+read_only        = true                                         # `ai-rulez mcp` registers only its read-only tools
 
 [hooks]
 allow = false                                                   # any [[hooks]] group is a violation
@@ -20139,6 +20174,7 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `signing.thresholds` | per subject, the larger value; a subject the repository leaves unset takes the floor | a lower explicit `[signing.thresholds]` value | `AR740` |
 | `mcp.allowed_commands` | the stdio servers whose command the list names (compared as written); an empty list allows none | an MCP server running another command; the server is not loaded. An imported agent, skill or command with such an inline `mcpServers` entry loses the whole `mcpServers` key | `AR748` |
 | `mcp.deny_transports` | union of layers | an MCP server on a denied transport (`stdio`, `http`, `sse`); the server is not loaded (inline `mcpServers` of imported content: as above) | `AR748` |
+| `mcp.read_only` | `true` (any layer; layers union) | `[mcp] read_only = false`; the server is read-only anyway, and `--read-only=false` cannot turn it off | `AR740` |
 | `hooks.allow` | `false` forbids every hook group | a `[[hooks]]` group; it is not loaded. An imported agent, skill or command that declares `hooks` in its frontmatter loses the key | `AR748` |
 | `governance.approvers` | the repository's entries that the list names; the policy list when it sets none or none is left. An empty policy list means nobody may approve | an entry the list does not name; the entry is dropped | `AR740` |
 
@@ -20907,6 +20943,7 @@ ai-rulez mcp --serve-skills --read-only          # serve skills and inspect, nev
 | `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
 | `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. The `judge` tool is not registered either: it sends file content to a model provider and spends money. |
+| `--tools` | Register only these tools (repeatable or comma separated), for example `--tools find_skill,load_skill,find_context,load_context` for a server that can only read skills and context. Applies to `mcp` and to `mcp --serve-skills`. An unknown name is an error that lists the valid tools; a valid name the server would not register anyway (a writing tool under `--read-only`, a context tool without discovery) is simply absent. |
 | `--root` / `--allow-any-dir` | Confine the authoring tools to a directory, as for plain `mcp`. |
 
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
@@ -21105,6 +21142,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
 | `--discover-skills[=mode]` | Also serve the skills already in the repository: `repo` (the default when the flag has no value) or `all`; `off` turns a configured discovery off. Write the value with `=`. Either mode also indexes nested instruction files, rules and agents by scope. See [Discovering skills already in the repository](#discovering-skills-already-in-the-repository) and [Monorepos](#monorepos-scopes-and-nested-context). |
+| `--exclude <glob>` | Leave the paths a glob matches out of repository discovery: skill directories and the context index alike. Repeatable; added to `[mcp] exclude`. Needs discovery (`--discover-skills` or `[mcp] discover_skills`). See [Excluding paths](#excluding-paths). |
 | `--max-clone-bytes` | Clone size limit in bytes for git skill sources that set no `max_clone_bytes`. Overrides `AI_RULEZ_MAX_CLONE_BYTES`; 0 (default) defers to it, then to 256 MiB. |
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
@@ -21114,6 +21152,36 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
 `--serve-skills`. The authoring tools are registered too, so one process serves both; `--read-only` registers
 only the read-only tools, so a project can be inspected but never changed.
+
+##### Settings in the configuration
+
+A project can pin how `mcp` runs in its `[mcp]` table, so every launcher (`.mcp.json`, a plugin, a teammate's
+editor) does not repeat the flags. The keys are accepted in `.ai-rulez/config.toml`, a root `ai-rulez.toml`, the
+`config.<name>.toml` layers and `config.local.toml`; a list in a later layer replaces the earlier one.
+
+```toml
+[mcp]
+read_only = true                                                  # --read-only
+tools     = ["find_skill", "load_skill", "find_context", "load_context"]   # --tools
+allow     = ["review-*"]                                          # --allow (--serve-skills)
+deny      = ["draft-*"]                                           # --deny (--serve-skills)
+daemon    = true                                                  # --daemon (--serve-skills)
+no_watch  = true                                                  # --no-watch (--serve-skills)
+```
+
+- **A flag wins.** A flag given on the command line replaces the key, including `--read-only=false` and an empty
+  `--tools=`. A flag that is not given leaves the key in charge.
+- **Read at start.** The settings are read when the server starts; change them and restart the server. They are
+  read from the project the server was started in (or the project above it), offline. A project that cannot be read is
+  reported on stderr and the command line decides; a tool name that does not exist stops the server with the list of
+  valid ones.
+- **Policy only tightens.** An [organization policy](policy.md) with `[mcp] read_only = true` makes the server
+  read-only whatever `[mcp] read_only` and `--read-only=false` say; a repository that sets `read_only = false` under
+  it is reported as `AR740` and the server stays read-only.
+- **The surface follows the tools.** The server instructions are written from the tools that are registered, and
+  each authoring prompt (`add-rule`, `author-skill`, `review-config`, `trim-context`) is listed only when every
+  tool it calls is. A read-only server therefore does not tell the model to use the CRUD tools or `generate_outputs`,
+  and offers `review-config` alone.
 
 ##### Discovering skills already in the repository
 
@@ -21164,11 +21232,15 @@ a copy whose body was edited fails the header check and is a repository skill.
 **Names.** A skill is served under its frontmatter `name` (the directory name when it has none), and the first
 claimant keeps a name in this order:
 
-1. The skills ai-rulez defines, then the skill sources: a repository skill with their name is *shadowed*, not served.
+1. The skills ai-rulez defines (project, installed and included), then the skill sources: a repository skill with
+   their name is *shadowed*, not served. A **builtin** skill is the exception: it ranks below repository skills, so a
+   repository skill with its name (for example `.claude/skills/testing-conventions` beside `builtins = ["testing"]`)
+   replaces it, as a skill under `.ai-rulez/skills/` does. The start-up log names the builtin that was replaced.
 2. Repository skills, shallowest directory first, then by path. A later one with a name already taken is served
    under its path from the project root, `/` turned into `.` and the leading dot of each segment dropped:
    `pkg/.claude/skills/bar` becomes `pkg.claude.skills.bar` (its frontmatter `name` is rewritten to match).
-   If that name is taken too, it is shadowed.
+   If that name is taken too, it is shadowed. Each rename is a start-up warning naming both directories and the served
+   name, and is listed under `skill_discovery.renamed` (`name`, `served_as`, `path`, `kept_by`).
 
 Every shadowed skill is a start-up warning and is listed, with its path and what shadows it, under
 `skill_discovery.shadowed` in the `ai-rulez://catalog` resource, next to the served ones (`skill_discovery.served`)
@@ -21180,6 +21252,14 @@ findings, warns on the rest). With `[lock] enforce`, it must be pinned like any 
 cached while discovery is on, and live reload watches the skill roots found at start (and `skills/`, `.claude/skills`
 and the preset directories at the project root when they exist): a new skill folder in an existing root is picked
 up, a new `.claude/skills` elsewhere needs a restart.
+
+**Without a configuration.** `--discover-skills` works in a directory with no `.ai-rulez/` or `ai-rulez.toml`. The
+server then has no configuration to manage, so it registers only the tools that work without one (`find_skill`,
+`load_skill`, `list_skill_resources`, `search_skills`, `get_skill`, `read_skill_file`, `find_context`,
+`load_context`, `get_version`, `list_builtins`, `show_builtin`, `policy_show`, `okf_validate` and `init_project`)
+and no authoring prompt. `ai-rulez://config` and the `ai-rulez://{kind}/{name}` item resources are not listed;
+`ai-rulez://catalog` is, and is built from what was discovered: the served skills as `items`, the `scopes` with the
+instruction files, rules and agents found, and the `skill_discovery` report.
 
 ##### Monorepos: scopes and nested context
 
@@ -21194,6 +21274,11 @@ root is the scope `.`. Scopes are inferred from the tree; nothing is configured.
 (`skill`, `instruction`, `rule`, `agent`, `command`), a `source` (`claude`, `agents`, `codex`, `cursor`, `copilot`,
 `gemini`, `skills-dir`), a `name`, a `description` (the frontmatter `description`, else the first heading) and a content
 `hash`. The index keeps summaries only, never a file body.
+
+Instruction files, rules, agents and commands are indexed wherever a known convention keeps them (`.claude/`,
+`.agents/`, `.cursor/`, `.github/`, ...): the files present decide, not the `presets` list, so a configuration with
+`presets = []` (lint-only), `["claude"]` or no configuration at all serves the same context. Only the skill
+directories follow the presets, as in [Where `repo` looks](#discovering-skills-already-in-the-repository).
 
 **What applies to a path.** The scopes that are the path or one of its ancestors, nearest first. A skill, agent or
 command is shadowed by one of the same name in a nearer scope, as harnesses shadow by name; instruction files and rules
@@ -21240,6 +21325,16 @@ description (an item with no matching word is left out), `kind` (`instruction`, 
    "description": "Code style for the whole repository", "uri": "context://./style", "hash": "sha256:..."}]}
 ```
 
+**Rules with `paths`.** A rule can name the files it applies to. With `path`, `find_context` returns such a rule only
+when the path matches one of its globs: `paths:` in the frontmatter of a Claude Code rule, and `globs:` of a Cursor
+`.mdc` rule that is not `alwaysApply`. The globs are relative to the scope directory, the one that holds `.claude`
+(or `.cursor`), as in `ai-rulez validate`: `pkg/api/.claude/rules/handlers.md` with `paths: "handlers/**"` applies to
+`pkg/api/handlers/user.go`, not to `pkg/api/other/handlers/user.go`. `paths` globs are anchored at that directory
+(`*.py` is a file directly in it, `**/*.py` any depth); Cursor `globs` also match a bare pattern such as `*.tsx` at any
+depth. A rule without either applies everywhere in its scope, and instruction files and agents are never narrowed. A
+`scope` query (no `path`) lists every rule of the scope whatever its globs. A rule's result carries its `paths` or
+`globs`, so you can see what narrows it. Pass a file as `path`: a directory matches no glob.
+
 `load_context` reads one, by `scope` and `name` or by `uri`, with an optional `budget_bytes`:
 
 ```json
@@ -21253,8 +21348,11 @@ enumerate: find items with `find_context`. Commands are indexed and counted but 
 
 The context tools apply what skills do: the `--allow` and `--deny` patterns match an item's name or `scope/name`
 (`--deny AGENTS.md` hides every `AGENTS.md`; a non-empty `--allow` is an allowlist for context too); the security
-scan runs when the index is built, so a refused file is a start-up warning and is not listed, and again on the content
-read at load time; reads count against the session budget (`--budget-bytes`), which `load_context`, `load_skill`,
+scan runs when the index is built, so a file with an error finding is withheld (not listed, not loadable) and is a
+start-up warning, and again on the content read at load time. The finding names the item by its `context://` URI and
+line, for example `AR005 risky-shell-exec at context://./CLAUDE.md:2` (`skill://` stays for skills); the scan level
+(`trust`) is a skill setting and does not change what happens to a file of context, since an error finding withholds it
+and the lesser findings are logged while the file is served; reads count against the session budget (`--budget-bytes`), which `load_context`, `load_skill`,
 `get_skill`, `read_skill_file` and `resources/read` share. A symlink is never followed and a generated copy is skipped.
 Domains, roles, the lock and approvals apply to skills only.
 
@@ -21313,6 +21411,32 @@ the scan level and of the names and content hashes of the scanned files). It nev
   `load_context` scans the body it reads again on every call.
 - **Cost.** `docs/performance.md` has the measured numbers; on the benchmark monorepo (1500 items over 500 scopes) a
   warm start takes about a tenth of a cold one.
+
+###### Excluding paths
+
+`--exclude <glob>` (repeatable) and `exclude = [...]` under `[mcp]` in `.ai-rulez/config.toml` (or the root
+`ai-rulez.toml`) leave paths out of discovery:
+
+```toml
+[mcp]
+discover_skills = "repo"
+exclude = ["third_party/**", "**/fixtures/"]
+```
+
+```bash
+ai-rulez mcp --serve-skills --discover-skills --exclude 'examples/**' --exclude '**/testdata/'
+```
+
+Globs are relative to the project root with slashes: `**` crosses directories, `*` and `?` stay within one, `{a,b}`
+alternates, a pattern without a slash (`AGENTS.md`, `legacy`) matches at any depth, and a pattern naming a directory
+(`third_party`, `third_party/`, `third_party/**`) excludes everything below it. A glob that leaves the project
+(`../x`) or is empty is rejected. The flag's globs are added to the configuration's; neither replaces the other.
+
+An excluded file is dropped from the file listing before anything is read, so it costs no parsing, scan or cache
+entry. The globs apply to the skill directories and to the whole context index: `CLAUDE.md`, `AGENTS.md`,
+`GEMINI.md`, Copilot instructions, rules, agents and commands. An excluded directory marks no scope. The file watcher
+does not follow excluded paths either, so a change below one does not refresh the index. `--exclude` without
+discovery is an error, as it would silently do nothing; the configuration key is ignored while discovery is off.
 
 ###### Live refresh of the index
 
@@ -32380,6 +32504,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--discover-skills` | string |  | Also serve the skills already in the repository: repo (skill directories of the working tree: skills/, .claude/skills at any depth and the configured presets' skill directories, honoring .gitignore) or all (repo plus installed and included skills); either also indexes nested AGENTS.md, CLAUDE.md, GEMINI.md, rules and agents by scope for find_context, load_context and the path and scope arguments of find_skill; a bare --discover-skills means repo; default is [mcp] discover_skills, else off (requires --serve-skills) |
 | `--domain` | string list |  | Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills) |
+| `--exclude` | string list |  | Glob, relative to the project root, of paths repository discovery never reads (skill directories and the context index: CLAUDE.md, AGENTS.md, rules, agents); repeatable, and added to [mcp] exclude; ** crosses directories, a pattern without a slash matches at any depth (requires --serve-skills and --discover-skills or [mcp] discover_skills) |
 | `--frozen` | bool |  | Never use the network and require ai-rulez.lock to cover every remote include, installed skill and skill source (requires --serve-skills) |
 | `--include-static` | bool |  | Also serve skills whose delivery is static (requires --serve-skills) |
 | `--max-clone-bytes` | int | `0` | Largest git skill source clone in bytes for sources that set no max_clone_bytes; overrides AI_RULEZ_MAX_CLONE_BYTES; 0 uses the environment variable, then 256 MiB (requires --serve-skills) |
@@ -32404,6 +32529,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools |
 | `--source` | string list |  | Serve the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory (requires --serve-skills) |
 | `--targets` | string |  | Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills) |
+| `--tools` | string list |  | Register only these tools, repeatable or comma separated (default: [mcp] tools, else every tool); an unknown name is an error that lists the valid ones |
 | `--usage-log` | string |  | Append one identifier-only JSON line per load_skill to this file (requires --serve-skills) |
 | `--usage-sink` | string |  | Shell command that receives each load_skill usage line on stdin (requires --serve-skills) |
 
@@ -34587,7 +34713,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`agents_md_split`**: With the agents source, read `AGENTS.md` as one context item per `##` heading (default `false`); see [Splitting AGENTS.md](agents-source.md#splitting-agentsmd)
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `discover_skills`, `index_cache`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `discover_skills`, `index_cache`, `read_only`, `daemon`, `no_watch`, `allow`, `deny`, `tools`, `exclude`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle
