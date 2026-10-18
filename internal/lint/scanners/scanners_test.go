@@ -1,8 +1,11 @@
 package scanners
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -81,12 +84,46 @@ func TestRequiredFlagsAreInTheirOwnCommand(t *testing.T) {
 	}
 }
 
-func TestSchemasListEveryProfile(t *testing.T) {
-	for _, file := range []string{"ai-rules.schema.json", "ai-rules-local.schema.json"} {
-		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "schema", file))
-		require.NoError(t, err)
-		for _, name := range Names() {
-			assert.Contains(t, string(raw), `"`+name+`"`, "%s lists profile %s", file, name)
+// profileEnums collects the "enum" of every scanner "profile" property (described as
+// an embedded scanner profile) in a decoded JSON schema.
+func profileEnums(node any, out *[][]string) {
+	switch v := node.(type) {
+	case map[string]any:
+		for key, child := range v {
+			if props, ok := child.(map[string]any); ok && key == "profile" {
+				desc, _ := props["description"].(string) //nolint:errcheck // absent means not the scanner profile
+				if enum, ok := props["enum"].([]any); ok && strings.HasPrefix(desc, "An embedded scanner profile") {
+					names := make([]string, 0, len(enum))
+					for _, e := range enum {
+						names = append(names, fmt.Sprint(e))
+					}
+					*out = append(*out, names)
+				}
+			}
+			profileEnums(child, out)
 		}
+	case []any:
+		for _, child := range v {
+			profileEnums(child, out)
+		}
+	}
+}
+
+// The schemas hard-code the profile names: adding a profile without updating the
+// enum makes validate reject the entry that uses it.
+func TestSchemaProfileEnumsMatchTheEmbeddedProfiles(t *testing.T) {
+	for _, file := range []string{"ai-rules.schema.json", "ai-rules-local.schema.json"} {
+		t.Run(file, func(t *testing.T) {
+			raw, err := os.ReadFile(filepath.Join("..", "..", "..", "schema", file))
+			require.NoError(t, err)
+			var doc any
+			require.NoError(t, json.Unmarshal(raw, &doc))
+			var enums [][]string
+			profileEnums(doc, &enums)
+			require.NotEmpty(t, enums, "no profile enum found in %s", file)
+			for _, enum := range enums {
+				assert.ElementsMatch(t, Names(), enum)
+			}
+		})
 	}
 }
