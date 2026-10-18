@@ -12,10 +12,11 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-// resetMCPFlags returns every flag of MCPCmd to its default after a test parsed arguments.
+// resetMCPFlags returns every flag of MCPCmd to its default now, so state left by
+// other tests does not leak in, and again after the test that parses arguments.
 func resetMCPFlags(t *testing.T) {
 	t.Helper()
-	t.Cleanup(func() {
+	reset := func() {
 		MCPCmd.Flags().VisitAll(func(f *pflag.Flag) {
 			if sv, ok := f.Value.(pflag.SliceValue); ok {
 				_ = sv.Replace(nil) //nolint:errcheck // resetting a test flag
@@ -24,7 +25,9 @@ func resetMCPFlags(t *testing.T) {
 			}
 			f.Changed = false
 		})
-	})
+	}
+	reset()
+	t.Cleanup(reset)
 }
 
 // closedStdio replaces stdin with an empty file and stdout with a scratch file
