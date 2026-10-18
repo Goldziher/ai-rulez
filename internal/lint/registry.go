@@ -53,6 +53,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerArCmdrisk,
 		registerArCommands,
 		registerArCredtable,
+		registerArExec,
 		registerArExfil,
 		registerArFmcomponents,
 		registerArFrontmatter,
