@@ -158,6 +158,7 @@ type runner struct {
 	secOnce      sync.Once
 	secRes       []secretPattern
 	relMemo      sync.Map   // absolute path -> tree-relative path, see rel
+	ignoredMemo  sync.Map   // repo path -> whether git ignores it, see gitIgnored
 	skillFiles   sync.Map   // skill directory -> every file below it, see stageSkillFiles
 	runMu        sync.Mutex // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe

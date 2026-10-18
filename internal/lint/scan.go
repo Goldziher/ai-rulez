@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 var (
@@ -247,9 +249,32 @@ func (r *runner) checkToken(it *item, line int, tok, text string, end int, notAC
 	if r.baseRel != "" {
 		r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(r.baseRel), filepath.FromSlash(tok)))
 	}
-	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) && !r.existsNearFile(it, tok) {
+	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) && !r.existsNearFile(it, tok) &&
+		!r.gitIgnored(tok) {
 		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
 	}
+}
+
+// gitIgnored reports whether git ignores the missing path rel (slash path from
+// the repository top) through a .gitignore, .git/info/exclude or the global
+// excludes file: a file the repository documents but keeps local
+// (`.claude/settings.local.json`), which its own checkout may not have. It asks
+// git only for a path already found missing, and once per path. Outside a
+// repository nothing is ignored.
+func (r *runner) gitIgnored(rel string) bool {
+	rel = path.Clean(rel)
+	if v, ok := r.ignoredMemo.Load(rel); ok {
+		hit, _ := v.(bool) //nolint:errcheck // the memo holds only bools
+		return hit
+	}
+	probes := []string{rel}
+	if r.baseRel != "" {
+		probes = append(probes, r.baseRel+"/"+rel)
+	}
+	ignored, err := gitutil.IgnoredAmong(r.tree.Top, probes)
+	hit := err == nil && len(ignored) > 0
+	r.ignoredMemo.Store(rel, hit)
+	return hit
 }
 
 // existsNearFile reports whether tok exists relative to the directory of the file that names it, or

@@ -73,8 +73,8 @@
                 "text": "a backticked repo path does not exist"
               },
               "help": {
-                "text": "a backticked repo path does not exist.\nA backticked repository path that does not exist is stale guidance that misleads the model.\nBad: `Edit src/old_module/api.py` after the module moved\nGood: Update the path, or list generated paths in lint.allow_paths",
-                "markdown": "**a backticked repo path does not exist**\n\nA backticked repository path that does not exist is stale guidance that misleads the model.\n\n- Bad: `Edit src/old_module/api.py` after the module moved\n- Good: Update the path, or list generated paths in lint.allow_paths\n\n[Documentation](https://goldziher.github.io/ai-rulez/strict-validation/#ar401-path-missing)"
+                "text": "a backticked repo path does not exist.\nA backticked repository path that does not exist is stale guidance that misleads the model.\nBad: `Edit src/old_module/api.py` after the module moved\nGood: Update the path, list paths that need not exist in lint.allow_paths, or drop the rule for some files with [[lint.ignore_rules]]. A path that git ignores (.gitignore, .git/info/exclude, the global excludes file) is local by design and is not reported",
+                "markdown": "**a backticked repo path does not exist**\n\nA backticked repository path that does not exist is stale guidance that misleads the model.\n\n- Bad: `Edit src/old_module/api.py` after the module moved\n- Good: Update the path, list paths that need not exist in lint.allow_paths, or drop the rule for some files with [[lint.ignore_rules]]. A path that git ignores (.gitignore, .git/info/exclude, the global excludes file) is local by design and is not reported\n\n[Documentation](https://goldziher.github.io/ai-rulez/strict-validation/#ar401-path-missing)"
               },
               "helpUri": "https://goldziher.github.io/ai-rulez/strict-validation/#ar401-path-missing",
               "defaultConfiguration": {
