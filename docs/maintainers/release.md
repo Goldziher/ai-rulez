@@ -83,10 +83,11 @@ push), and the same ref identity is carried.
 | `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host                    | verified in the v5.4.0 publish run |
 | `ai-rulez_<v>_windows_amd64.zip`          | `windows-latest`   | host (MinGW gcc)        | verified in the v5.4.0 publish run; see below |
 
-`windows/arm64` is not supported. Archive names, layout (`ai-rulez`/`ai-rulez.exe`, `README.md`, `LICENSE`,
-`THIRD_PARTY_NOTICES.md` and `LICENSES/` at the archive root) and `checksums.txt` are unchanged from the GoReleaser era, so the npm and PyPI wrappers and the Homebrew
-formula work as before; both wrappers still fail closed when `checksums.txt` or the archive's entry is missing or does
-not match.
+`windows/arm64` is not supported. Archive names and `checksums.txt` are unchanged from the GoReleaser era. The archive
+root holds `ai-rulez`/`ai-rulez.exe`, `README.md` and `LICENSE` as before, plus `THIRD_PARTY_NOTICES.md` and
+`LICENSES/`, which are new. The npm and PyPI wrappers extract only the binary (and on Windows any `.dll` beside it), so
+they and the Homebrew formula work as before; both wrappers still fail closed when `checksums.txt` or the archive's
+entry is missing or does not match.
 
 Builds use `-trimpath -buildvcs=false -ldflags "-s -w -X main.version=<version>"`; archives have fixed mtimes, sorted
 entries and no owner or gzip timestamp, so two builds of the same inputs on the same toolchain are byte-identical.
