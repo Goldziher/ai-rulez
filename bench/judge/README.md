@@ -2,7 +2,8 @@
 
 The evaluation of [`ai-rulez judge`](../../docs/judge.md). Everything under `corpus/` is **synthetic**: fake hosts
 (`*.example`, `*.example-cdn.io`), fake credentials, no customer data. The malicious samples exist to be flagged and are never
-executed.
+executed. The credentials in the `JR-S14` units (for example `mal-s14-c/.claude/settings.json`) are deliberate
+placeholders shaped to trip secret scanners, never real tokens; reports of them as leaks are expected and need no rotation.
 
 | Path | What |
 | ---- | ---- |
