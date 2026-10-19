@@ -26,6 +26,7 @@ func TestLazyTablesBuild(t *testing.T) {
 		"deserStems":          func() any { return deserStems() },
 		"exfilDestStems":      func() any { return exfilDestStems() },
 		"exfilProseStems":     func() any { return exfilProseStems() },
+		"fileExts":            func() any { return fileExts() },
 		"grantWrappers":       func() any { return grantWrappers() },
 		"internalStems":       func() any { return internalStems() },
 		"localSpecPrefixes":   func() any { return localSpecPrefixes() },

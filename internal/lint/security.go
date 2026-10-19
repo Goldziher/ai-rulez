@@ -464,6 +464,10 @@ var (
 	governingNegRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|cannot|can'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|refuse\w*|reject\w*|banned|ban)\b|❌|⛔|🚫`)
 	})
+	// doubleNegWordRe is a verb that cancels the negation before it.
+	doubleNegWordRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:forget|forgetting|hesitate|fail|neglect|omit)$`)
+	})
 	// imperativeMarkerRe is a word that turns the span into something to do.
 	imperativeMarkerRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?i)\b(?:run|execute|paste|install|required|first|then|before|use)\b`)
@@ -511,6 +515,10 @@ func negatedVerbOnly(clause string) bool {
 	}
 	between := strings.Fields(clause[locs[len(locs)-1][1]:])
 	if len(between) > negLeadWords {
+		return false
+	}
+	// "never forget to send", "do not hesitate to send": a double negation is an instruction.
+	if len(between) > 0 && doubleNegWordRe().MatchString(between[0]) {
 		return false
 	}
 	for i, w := range between {
@@ -575,13 +583,24 @@ func (r *runner) scanShell(abs string, no int, line string, prose bool) {
 	}
 	r.scanCredentialAccess(abs, no, line)
 	if strings.Contains(line, ">") || strings.Contains(line, "tee") { // what writeOutsideRe starts from
-		if m := writeOutsideRe().FindString(line); m != "" && !writesPersistence(line) {
+		if m := writeOutsideNonPersistence(line); m != "" {
 			r.add(CodeShellAccess, abs, no, "writes outside the project (%s...)", strings.TrimSpace(m))
 		}
 	}
 	if strings.Contains(line, "chmod") && chmod777Re().MatchString(line) {
 		r.add(CodeShellAccess, abs, no, "makes files world-writable (chmod 777)")
 	}
+}
+
+// writeOutsideNonPersistence returns the first write outside the project whose own command
+// segment is not a persistence write, which AR043 reports instead.
+func writeOutsideNonPersistence(line string) string {
+	for _, seg := range pipeSegSplitRe().Split(line, -1) {
+		if m := writeOutsideRe().FindString(seg); m != "" && !writesPersistence(seg) {
+			return m
+		}
+	}
+	return ""
 }
 
 func (r *runner) scanHosts(abs string, no int, line string) {
