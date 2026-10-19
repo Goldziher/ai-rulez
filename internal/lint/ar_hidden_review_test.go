@@ -131,7 +131,7 @@ func TestShippedExecutableMoreExtensionsAR051(t *testing.T) {
 	for _, name := range []string{"m.wasm", "m.pyd", "m.node", "m.o", "m.a", "m.obj", "m.elf", "m.jar", "m.exe"} {
 		cases = append(cases, ruleCase{
 			name: name, skill: body,
-			files: map[string]string{".ai-rulez/skills/bad/scripts/" + name: "x"},
+			files: map[string]string{".ai-rulez/skills/bad/scripts/" + name: "x\x00"},
 			want:  []string{"AR051:" + name},
 		})
 	}

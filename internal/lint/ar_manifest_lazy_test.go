@@ -16,6 +16,7 @@ import (
 // added without an entry here fails it.
 func TestLazyTablesBuild(t *testing.T) {
 	tables := map[string]func() any{
+		"ambiguousExt":        func() any { return ambiguousExt() },
 		"antiRefusalPatterns": func() any { return antiRefusalPatterns() },
 		"bypassPatterns":      func() any { return bypassPatterns() },
 		"bytecodeExt":         func() any { return bytecodeExt() },
