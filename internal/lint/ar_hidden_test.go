@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (tests of the rules SC8, SC9, P3, P9, AE4 and AE6).
-// Modified by the ai-rulez authors: the fixtures are written for this implementation and are not a transcription of the upstream tests.
+// Modified by the ai-rulez authors: the fixtures are written for this implementation and are only partly derived from the upstream tests.
 // See THIRD_PARTY_NOTICES.md.
 
 package lint
