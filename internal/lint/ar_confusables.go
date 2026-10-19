@@ -1,3 +1,5 @@
+// Derived from Unicode confusables.txt (Unicode-3.0, see THIRD_PARTY_NOTICES.md); U+0196, U+0399, U+0406 map to I.
+
 package lint
 
 import "sync"

@@ -157,7 +157,8 @@ ai-rulez is MIT licensed. A rule, pattern or test derived from a project under a
 2. **Add a notices entry.** List the file, upstream path and commit under its project in
    [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Keep the full text of each upstream license under `LICENSES/`
    (`LICENSES/Apache-2.0.txt` for Apache-2.0), copied unmodified from the official source; add it with the first file
-   derived under that license.
+   derived under that license. Embedded data files (word lists, Unicode tables) need an entry too. Every file in
+   `LICENSES/` ships in the release archives and the npm, PyPI and Homebrew packages.
 
 3. **Do not copy YARA rules from signature-base.** SkillSpector's YARA files are based on
    [Neo23x0/signature-base](https://github.com/Neo23x0/signature-base) (DRL-1.1). Re-derive such a pattern as an RE2
