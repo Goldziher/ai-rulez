@@ -137,7 +137,9 @@ var persistRules = sync.OnceValue(func() []persistRule {
 	}
 })
 
-var persistStems = []string{"cron", "launch", "systemd", "systemctl", "chkconfig", "update-rc", "schtasks", "scheduledtask", "currentversion", "login item", "init.d", "rc.local", "autostart", "bashrc", "zshrc", "profile", "zshenv", "zlogin", "cshrc", "xinitrc", "xsessionrc", "config.fish", "bash_login", "/environment"}
+var persistStems = sync.OnceValue(func() []string {
+	return []string{"cron", "launch", "systemd", "systemctl", "chkconfig", "update-rc", "schtasks", "scheduledtask", "currentversion", "login item", "init.d", "rc.local", "autostart", "bashrc", "zshrc", "profile", "zshenv", "zlogin", "cshrc", "xinitrc", "xsessionrc", "config.fish", "bash_login", "/environment"}
+})
 
 func scanPersistence(r *runner, t *scanText) {
 	for _, l := range t.lines {
@@ -145,7 +147,7 @@ func scanPersistence(r *runner, t *scanText) {
 			continue
 		}
 		for _, frag := range t.codeFragments(l) {
-			if !containsAnyStem(frag, true, persistStems) {
+			if !containsAnyStem(frag, true, persistStems()) {
 				continue
 			}
 			if rule, seg := firstPersistence(frag); seg != "" {
@@ -160,7 +162,7 @@ func scanPersistence(r *runner, t *scanText) {
 // entry, which AR043 reports as a warning; AR006 leaves that write to it. An append to
 // a shell startup file stays with AR006 as well.
 func writesPersistence(line string) bool {
-	if !containsAnyStem(line, true, persistStems) {
+	if !containsAnyStem(line, true, persistStems()) {
 		return false
 	}
 	rule, seg := firstPersistence(line)
@@ -208,7 +210,9 @@ var deserRules = sync.OnceValue(func() []deserRule {
 	}
 })
 
-var deserStems = []string{"load", "nserialize", "ObjectInputStream", "XMLDecoder", "funcster", "serialize-to-js", "node-serialize", "pickle", "Unpickler", "DefaultTyping", "restore", "deserialize"}
+var deserStems = sync.OnceValue(func() []string {
+	return []string{"load", "nserialize", "ObjectInputStream", "XMLDecoder", "funcster", "serialize-to-js", "node-serialize", "pickle", "Unpickler", "DefaultTyping", "restore", "deserialize"}
+})
 
 // deserLang is the language family of a script by extension, or "" for a
 // markdown file and for a script of unknown language, which every rule reads.
@@ -248,7 +252,7 @@ func scanDeserialization(r *runner, t *scanText) {
 			continue
 		}
 		for _, frag := range t.codeFragments(l) {
-			if !containsAnyStem(frag, false, deserStems) {
+			if !containsAnyStem(frag, false, deserStems()) {
 				continue
 			}
 			call := t.callText(i, frag)
@@ -298,11 +302,13 @@ var (
 	})
 )
 
-var internalStems = []string{"169.254", "100.100.100", "metadata.google", "fd00:ec2", "localhost", "127.0.0.1", "0.0.0.0", "[::1]"}
+var internalStems = sync.OnceValue(func() []string {
+	return []string{"169.254", "100.100.100", "metadata.google", "fd00:ec2", "localhost", "127.0.0.1", "0.0.0.0", "[::1]"}
+})
 
 func scanInternalRequest(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if l.Neg || l.Front || !containsAnyStem(l.Text, true, internalStems) {
+		if l.Neg || l.Front || !containsAnyStem(l.Text, true, internalStems()) {
 			continue
 		}
 		if sev, what := internalTarget(t, l); what != "" {

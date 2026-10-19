@@ -46,6 +46,8 @@ func TestShippedExecutableAR051(t *testing.T) {
 		{name: "mach-o renamed to png", skill: body, files: asset("assets/logo.png", "\xcf\xfa\xed\xfe\x07\x00\x00\x01"), want: []string{"AR051:SKILL.md:2"}},
 		{name: "portable executable renamed to md", skill: body, files: asset("references/guide.md", peImage()), want: []string{"AR051:SKILL.md:2"}},
 		{name: "headerless pyc by magic", skill: body, files: asset("assets/blob", pycImage(3495)), want: []string{"AR051:SKILL.md:2"}},
+		{name: "git-ignored pycache is not shipped", skill: body, files: map[string]string{".gitignore": "__pycache__/\n", ".ai-rulez/skills/bad/scripts/__pycache__/helper.cpython-312.pyc": pycImage(3531)}, absent: []string{"AR051"}},
+		{name: "git-ignored pycache beside a shipped library", skill: body, files: map[string]string{".gitignore": "__pycache__/\n", ".ai-rulez/skills/bad/scripts/__pycache__/helper.cpython-312.pyc": pycImage(3531), ".ai-rulez/skills/bad/scripts/helper.so": "x"}, want: []string{"AR051:SKILL.md:2"}},
 		{name: "plain text next to it", skill: body, files: asset("references/a.md", "# A\n"), absent: []string{"AR051"}},
 		{name: "text starting with MZ", skill: body, files: asset("references/mz.txt", "MZ is a prefix in this note, not a header\n"+big), absent: []string{"AR051"}},
 		{name: "short MZ file", skill: body, files: asset("references/mz2.txt", "MZ\x00\x00\x00\x00"), absent: []string{"AR051"}},
@@ -144,7 +146,7 @@ func TestFoldObfuscation(t *testing.T) {
 }
 
 func TestConfusableTableOnlyHoldsASCIITargets(t *testing.T) {
-	for from, to := range confusableLetters {
+	for from, to := range confusableLetters() {
 		if from < 0x80 || to >= 0x80 || !isLetterByte(byte(to)) {
 			t.Errorf("confusableLetters[%U] = %q: want a non-ASCII key and an ASCII letter", from, to)
 		}

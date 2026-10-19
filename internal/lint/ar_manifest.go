@@ -298,7 +298,7 @@ func (r *runner) checkRequirements(t *scanText) {
 		}
 		if req, ok := parseRequirement(l.text); ok {
 			r.reportPin(t.abs, l.no, req)
-			r.reportTyposquat(t.abs, l.no, req.name, pyPIUniverse)
+			r.reportTyposquat(t.abs, l.no, req.name, pyPIUniverse())
 		}
 	}
 }
@@ -347,7 +347,7 @@ func (r *runner) checkPyproject(t *scanText) {
 		}
 		line := lineContaining(t.rawLines(), spec)
 		r.reportPin(t.abs, line, req)
-		r.reportTyposquat(t.abs, line, req.name, pyPIUniverse)
+		r.reportTyposquat(t.abs, line, req.name, pyPIUniverse())
 	}
 	var urls []string
 	urls = append(urls, doc.Tool.UV.IndexURL)
@@ -373,7 +373,9 @@ func sortedKeys[V any](m map[string]V) []string {
 	return keys
 }
 
-var packageJSONSections = []string{"dependencies", "devDependencies", "optionalDependencies"}
+var packageJSONSections = sync.OnceValue(func() []string {
+	return []string{"dependencies", "devDependencies", "optionalDependencies"}
+})
 
 // npmSpec is the reading of one package.json dependency value; skip marks a
 // value that names no registry release (a local path, a tarball URL).
@@ -383,14 +385,16 @@ type npmSpec struct {
 	skip  bool
 }
 
-var localSpecPrefixes = []string{"file:", "link:", "workspace:", "portal:", "patch:", "catalog:", "./", "../", "/", "~/"}
+var localSpecPrefixes = sync.OnceValue(func() []string {
+	return []string{"file:", "link:", "workspace:", "portal:", "patch:", "catalog:", "./", "../", "/", "~/"}
+})
 
 func classifyNPMSpec(v string) npmSpec {
 	v = strings.TrimSpace(v)
 	switch {
 	case v == "" || v == "*" || strings.EqualFold(v, "x") || strings.EqualFold(v, "latest"):
 		return npmSpec{level: pinNone}
-	case hasAnyPrefix(v, localSpecPrefixes):
+	case hasAnyPrefix(v, localSpecPrefixes()):
 		return npmSpec{skip: true}
 	case strings.HasPrefix(v, "npm:"):
 		return classifyNPMAlias(v)
@@ -443,7 +447,7 @@ func (r *runner) checkPackageJSON(t *scanText) {
 		return
 	}
 	lines := t.rawLines()
-	for _, section := range packageJSONSections {
+	for _, section := range packageJSONSections() {
 		var deps map[string]string
 		if raw, ok := pkg[section]; !ok || json.Unmarshal(raw, &deps) != nil {
 			continue
@@ -454,7 +458,7 @@ func (r *runner) checkPackageJSON(t *scanText) {
 			if spec := classifyNPMSpec(deps[name]); !spec.skip {
 				r.reportPin(t.abs, line, requirement{name: name, level: spec.level, vcs: spec.vcs, spec: deps[name]})
 			}
-			r.reportTyposquat(t.abs, line, name, npmUniverse)
+			r.reportTyposquat(t.abs, line, name, npmUniverse())
 		}
 	}
 }
@@ -471,7 +475,9 @@ func lineFrom(lines []string, from int, needle string) int {
 
 func (t *scanText) rawLines() []string { return strings.Split(t.raw, "\n") }
 
-var defaultSourceHosts = nameSet("pypi.org files.pythonhosted.org registry.npmjs.org registry.yarnpkg.com")
+var defaultSourceHosts = sync.OnceValue(func() map[string]bool {
+	return nameSet("pypi.org files.pythonhosted.org registry.npmjs.org registry.yarnpkg.com")
+})
 
 var (
 	pipOptionRe = sync.OnceValue(func() *regexp.Regexp {
@@ -550,7 +556,7 @@ func (r *runner) redirectHost(value string, bareHost bool) (string, bool) {
 		return "", false
 	}
 	host := strings.ToLower(u.Hostname())
-	if loopback, _ := hostClass(host); loopback || defaultSourceHosts[host] || hostAllowed(host, r.security().AllowedHosts) {
+	if loopback, _ := hostClass(host); loopback || defaultSourceHosts()[host] || hostAllowed(host, r.security().AllowedHosts) {
 		return "", false
 	}
 	return host, true

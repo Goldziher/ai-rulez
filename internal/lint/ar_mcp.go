@@ -134,6 +134,8 @@ func (r *runner) configMCPServer(name string) *config.MCPServer {
 // sameMCPServer reports whether a server read from a JSON file carries the same
 // launch definition as the config.toml server of that name, so the file is a
 // generated copy. Any difference means the file was edited and is checked itself.
+// Generation writes no description, so a file without metadata matches; metadata
+// the file carries must equal the config's.
 func sameMCPServer(j *mcpServer, gen *config.MCPServer) bool {
 	g := &mcpServer{
 		transport: writtenTransport(gen), command: gen.Command, url: gen.URL,
@@ -143,7 +145,7 @@ func sameMCPServer(j *mcpServer, gen *config.MCPServer) bool {
 		effectiveTransport(j) == effectiveTransport(g) &&
 		j.oauth == g.oauth && j.oauthClientID == g.oauthClientID &&
 		slices.Equal(j.args, gen.Args) && maps.Equal(j.env, gen.Env) && maps.Equal(j.headers, gen.Headers) &&
-		slices.Equal(j.meta, configMCPMeta(gen))
+		(len(j.meta) == 0 || slices.Equal(j.meta, configMCPMeta(gen)))
 }
 
 // isGeneratedSelfServer reports whether srv is the ai-rulez self server that

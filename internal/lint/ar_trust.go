@@ -272,7 +272,7 @@ func (r *runner) skillTree(dir string) []*dirFile {
 		return cached.([]*dirFile) //nolint:forcetypeassert // only skillTree stores here
 	}
 	var files []*dirFile
-	walkSkillFiles(dir, bytecodeSkipDirs, func(p string, size int) {
+	walkSkillFiles(dir, bytecodeSkipDirs(), func(p string, size int) {
 		files = append(files, &dirFile{path: p, size: size})
 	})
 	r.skillTrees.Store(dir, files)

@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // CodeUndeclaredCapability is the code of the declared-versus-used capability check.
@@ -57,7 +58,7 @@ func parseGrants(tools []string) toolGrants {
 
 // proseCommandWords are command names that are also plain words, so a template
 // or a sentence in an untagged fence reads like a command ("service degradation").
-var proseCommandWords = nameSet("service host patch install mount")
+var proseCommandWords = sync.OnceValue(func() map[string]bool { return nameSet("service host patch install mount") })
 
 func (g toolGrants) covers(cmd string) bool {
 	return g.allShell || slices.Contains(g.scopes, cmd)
@@ -87,7 +88,7 @@ func (r *runner) reportUndeclared(it *item, line int, g toolGrants, p capProfile
 	network := false
 	for _, cmd := range slices.Sorted(maps.Keys(p.cmds)) {
 		tier := p.cmds[cmd]
-		if tier == tierRead || proseCommandWords[cmd] || g.covers(cmd) {
+		if tier == tierRead || proseCommandWords()[cmd] || g.covers(cmd) {
 			continue
 		}
 		uncovered = append(uncovered, cmd)
