@@ -26,7 +26,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/tk/SKILL.md file 0644 137 42ea8f74f5128842ff368a7e6a516b4c25ce320f85c822e27140a88b6b0a1900
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2465 ba9aac8ae100ae7a6e86536697b1bf2790de9a7ad6717070f4fc1b6d2e3fc5ba
-.ai-rulez/.generated-manifest.local.json file 0644 5116 dd8987d8e8175eda41280419da625c9f327b65ae62b82eb17af7982794b43dea
+.ai-rulez/.generated-manifest.local.json file 0644 5116 7b359c4ec9c444d4ce5029186ea00feb3563937e0588f075b455e4207bedf6ab
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -142,7 +142,7 @@ Includes:
 .agents/skills/tk/SKILL.md file 0644 137 42ea8f74f5128842ff368a7e6a516b4c25ce320f85c822e27140a88b6b0a1900
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2465 ba9aac8ae100ae7a6e86536697b1bf2790de9a7ad6717070f4fc1b6d2e3fc5ba
-.ai-rulez/.generated-manifest.local.json file 0644 5116 dd8987d8e8175eda41280419da625c9f327b65ae62b82eb17af7982794b43dea
+.ai-rulez/.generated-manifest.local.json file 0644 5116 7b359c4ec9c444d4ce5029186ea00feb3563937e0588f075b455e4207bedf6ab
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
