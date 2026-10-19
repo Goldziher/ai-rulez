@@ -14580,6 +14580,12 @@ profile = "skillspector"
   `egress = false`, keeps `--no-llm` in the command, and denies `--transitive` (follows external references),
   `--mcp-registry` and `--mcp-registry-compare`. A `command` of your own that drops `--no-llm` is `AR9E0`, one that
   adds a denied option is `AR9E4`. The scrubbed environment also hides provider credentials from it.
+- **OSV.dev lookups.** SkillSpector's `SC4` check queries OSV.dev for the dependencies of a `requirements*.txt` even
+  with `--no-llm`, and has no option to turn that off. It sends package names and versions, not file content. When
+  the lookup fails, as it does under network isolation, SkillSpector reports one low `SC4` result per file saying
+  "OSV.dev unreachable, using static fallback". Because the entry declares `egress = false`, ai-rulez drops exactly
+  those results (rule `SC4` and that message) and logs the count under `--debug`; an `SC4` finding about a
+  vulnerable package is never dropped. Setting `egress = true` on the entry keeps the notices.
 - **Exit codes.** SkillSpector exits 1 when it reports findings, 0 when clean and 2 on a usage error. With SARIF
   output on stdout, ai-rulez reads the report whatever the exit code, so findings are results; a run that prints no
   report is `AR9E3`. Use stdout, not `--output`: the file form adds a `Report saved to:` line to stdout.
