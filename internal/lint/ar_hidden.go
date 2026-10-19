@@ -102,7 +102,7 @@ func checkShippedExecutables(r *runner) {
 					"the skill directory ships %d more file(s) the text rules cannot read", len(found)-j)
 				break
 			}
-			r.add(CodeShippedExecutable, e.path, 1, "the skill ships %s, a %s the text rules cannot read", e.rel, e.kind)
+			r.add(CodeShippedExecutable, e.path, 1, "the skill ships %s, %s the text rules cannot read", e.rel, withArticle(e.kind))
 		}
 	}
 }
@@ -223,7 +223,11 @@ func executableKind(f *dirFile) string {
 	if filepath.Base(filepath.Dir(f.path)) == pycacheDir {
 		return "Python bytecode cache"
 	}
-	if kind, ok := bytecodeExt()[strings.ToLower(filepath.Ext(f.path))]; ok {
+	ext := strings.ToLower(filepath.Ext(f.path))
+	if kind, ok := bytecodeExt()[ext]; ok {
+		if ambiguousExt()[ext] && !f.looksCompiled() {
+			return ""
+		}
 		return kind
 	}
 	if f.size < 4 {
@@ -234,6 +238,31 @@ func executableKind(f *dirFile) string {
 		return ""
 	}
 	return magicKind(head[:min(len(head), magicProbeSize)], f.path, f.size)
+}
+
+// ambiguousExt are the extensions that text formats share with compiled code: .obj
+// is also the Wavefront model format, and .o and .a are used for plain data.
+var ambiguousExt = sync.OnceValue(func() map[string]bool {
+	return map[string]bool{".o": true, ".obj": true, ".a": true}
+})
+
+// looksCompiled reports whether an ambiguous-extension file is object code: it has a
+// known executable header, an ar archive header, or binary content.
+func (f *dirFile) looksCompiled() bool {
+	head, ok := f.leading()
+	if !ok || len(head) == 0 {
+		return false
+	}
+	head = head[:min(len(head), magicProbeSize)]
+	return magicKind(head, f.path, f.size) != "" || bytes.HasPrefix(head, []byte("!<arch>\n")) || bytes.IndexByte(head, 0) >= 0
+}
+
+// withArticle prefixes a kind with a or an.
+func withArticle(kind string) string {
+	if kind != "" && strings.ContainsRune("aeiouAEIOU", rune(kind[0])) {
+		return "an " + kind
+	}
+	return "a " + kind
 }
 
 // magicKind classifies the leading bytes of a file; the file is opened again only to
@@ -298,7 +327,7 @@ func isPythonBytecode(head []byte) bool {
 const padMinBlankLines = 20
 
 var padInstructionRe = sync.OnceValue(func() *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\b(?:you\s+(?:must|should|will|are)|always|never|do\s+not|don'?t|ignore|disregard|assistant|system\s+prompt|instructions?)\b`)
+	return regexp.MustCompile(`(?i)\b(?:you\s+(?:must|should|will|are)|always|never|do\s+not|don'?t|ignore|disregard|system\s+prompt)\b`)
 })
 
 // htmlBlankRe matches a line made only of white space, non-breaking-space
@@ -371,6 +400,11 @@ func scanBlankPadding(r *runner, t *scanText) {
 // separator, that mark a run as spelled out.
 const minSpacedLetters = 4
 
+// minShortRuns is how many three-letter runs, set apart by wider gaps, also mark a
+// line as spelled out (Y O U  A R E  N O W): a phrase of short words never reaches
+// minSpacedLetters in one run.
+const minShortRuns = 3
+
 func isLetterByte(c byte) bool { return c|0x20 >= 'a' && c|0x20 <= 'z' }
 
 func isLetterSep(c byte) bool {
@@ -381,11 +415,10 @@ func isLetterSep(c byte) bool {
 	return false
 }
 
-// hasSpacedRun reports whether s holds minSpacedLetters letters separated by
-// single separators. It is the cheap test that lets an ordinary line skip the
-// folding.
+// hasSpacedRun reports whether s holds three letters separated by single
+// separators. It is the cheap test that lets an ordinary line skip the folding.
 func hasSpacedRun(s string) bool {
-	const span = 2*minSpacedLetters - 1
+	const span = 2*3 - 1
 	for i := 0; i+span <= len(s); i++ {
 		if !isLetterByte(s[i]) || !isLetterSep(s[i+1]) {
 			continue
@@ -413,12 +446,13 @@ type spacedRun struct{ start, end, letters int }
 // collapseSpaced joins every run of single letters separated by single
 // separators into one word and leaves the rest of s as it was. Two or more
 // white-space characters between runs stay, so word gaps survive. It joins
-// nothing unless some run has minSpacedLetters letters; it then also joins the
+// nothing unless some run has minSpacedLetters letters or minShortRuns runs have
+// three; it then also joins the
 // shorter runs, so that "a l l" in a spelled-out phrase becomes "all". It
 // reports whether anything was joined.
 func collapseSpaced(s string) (string, bool) {
 	var runs []spacedRun
-	longest := 0
+	longest, short := 0, 0
 	for i := 0; i < len(s); {
 		end, letters := spacedRunAt(s, i)
 		if letters < 2 {
@@ -427,9 +461,12 @@ func collapseSpaced(s string) (string, bool) {
 		}
 		runs = append(runs, spacedRun{i, end, letters})
 		longest = max(longest, letters)
+		if letters >= 3 {
+			short++
+		}
 		i = end
 	}
-	if longest < minSpacedLetters {
+	if longest < minSpacedLetters && short < minShortRuns {
 		return s, false
 	}
 	var b strings.Builder
@@ -547,6 +584,14 @@ func (r *runner) relaxedInjectionRes() []gatedRe {
 		for _, g := range injectionPhrases {
 			g.re = regexp.MustCompile(strings.ReplaceAll(g.re.String(), `\s+`, `\s*`))
 			r.relaxedRes = append(r.relaxedRes, g)
+		}
+		for _, p := range r.security().InjectionPhrases { // the configured phrases, word gaps optional
+			if words := strings.Fields(p); len(words) > 0 {
+				for i, w := range words {
+					words[i] = regexp.QuoteMeta(w)
+				}
+				r.relaxedRes = append(r.relaxedRes, newGatedRe(`(?i)`+strings.Join(words, `\s*`), true))
+			}
 		}
 	})
 	return r.relaxedRes
