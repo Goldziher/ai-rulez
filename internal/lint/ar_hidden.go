@@ -42,7 +42,7 @@ func registerArHidden(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeShippedExecutable: {
-			Why:  "Bytecode and native code cannot be reviewed as text, and the scanner skips `__pycache__` directories, so a `.pyc` can differ from the source file next to it. Besides `.pyc`, `.class`, `.so`, `.dll`, `.dylib` and `.exe`, the extensions `.pyd`, `.node`, `.o`, `.obj`, `.a`, `.jar`, `.elf` and `.wasm` are reported. An executable renamed to `.txt` or `.png` is found by its leading bytes (ELF, Mach-O, PE, Java class, Python bytecode). AR034 reports the share of a skill that is opaque; this rule names the executable files. One finding is reported per file, on the file itself. A file that git ignores and does not track (a local `__pycache__`, an installed `node_modules`) is not reported; a tracked one is, wherever it lies, `node_modules` and `.venv` included. Outside a git repository those two directories are not searched.",
+			Why:  "Bytecode and native code cannot be reviewed as text, and the scanner skips `__pycache__` directories, so a `.pyc` can differ from the source file next to it. Besides `.pyc`, `.class`, `.so`, `.dll`, `.dylib` and `.exe`, the extensions `.pyd`, `.node`, `.o`, `.obj`, `.a`, `.jar`, `.elf` and `.wasm` are reported; `.o`, `.obj` and `.a` only when the file is binary or has a known object header, so a Wavefront `.obj` text model is not. An executable renamed to `.txt` or `.png` is found by its leading bytes (ELF, Mach-O, PE, Java class, Python bytecode). AR034 reports the share of a skill that is opaque; this rule names the executable files. One finding is reported per file, on the file itself. A file that git ignores and does not track (a local `__pycache__`, an installed `node_modules`) is not reported; a tracked one is, wherever it lies, `node_modules` and `.venv` included. Outside a git repository those two directories are not searched.",
 			Bad:  "`scripts/__pycache__/helper.cpython-312.pyc`, `assets/logo.png` that starts with `\\x7fELF`",
 			Good: "Ship the source (`scripts/helper.py`) and add `__pycache__/` to `.gitignore`; download a binary at install time from a pinned, checksummed URL",
 		},
@@ -155,7 +155,10 @@ func (r *runner) trackedInSkippedDirs(dir string) []*dirFile {
 		slices.Sort(paths)
 		v, _ = r.skillTrees.LoadOrStore(trackedSkippedKey, paths)
 	}
-	paths, _ := v.([]string)
+	paths, ok := v.([]string)
+	if !ok {
+		return nil
+	}
 	prefix := r.rel(dir)
 	if prefix != "" {
 		prefix += "/"
@@ -173,7 +176,7 @@ func (r *runner) trackedInSkippedDirs(dir string) []*dirFile {
 // inSkippedDir reports whether a slash path lies inside a node_modules or .venv directory.
 func inSkippedDir(rel string) bool {
 	for _, part := range strings.Split(rel, "/") {
-		if part == "node_modules" || part == ".venv" {
+		if part == dirNodeModules || part == dirVenv {
 			return true
 		}
 	}

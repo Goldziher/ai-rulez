@@ -116,7 +116,7 @@ func imageRefToken(tok string) bool {
 // buildDirs are directory names a build, an installer or a runtime creates and a
 // repository rarely tracks.
 var buildDirs = map[string]bool{
-	"target": true, "node_modules": true, ".venv": true, "venv": true, "vendor": true,
+	"target": true, dirNodeModules: true, dirVenv: true, "venv": true, "vendor": true,
 	"dist": true, "build": true, "__pycache__": true, ".tox": true, ".pytest_cache": true,
 	".gradle": true, ".next": true,
 }

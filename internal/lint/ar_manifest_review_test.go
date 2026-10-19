@@ -91,7 +91,7 @@ func TestSourceRedirectParsersAR055(t *testing.T) {
 		{name: "skill root npmrc", skill: body, files: files(".npmrc", "registry=https://npm.evil.example/\n"), want: []string{"AR055:.npmrc:1"}},
 		{name: "skill root pip.conf", skill: body, files: files("pip.conf", "[global]\nindex-url = "+evil+"\n"), want: []string{"AR055:pip.conf:2"}},
 		{name: "yarnrc.yml registry", skill: body, files: files(".yarnrc.yml", "npmRegistryServer: \"https://npm.evil.example/\"\n"), want: []string{"AR055:.yarnrc.yml:1"}},
-		{name: "yarnrc.yml scoped registry is a dependency-confusion defence", skill: body, files: files(".yarnrc.yml", "npmScopes:\n  acme:\n    npmRegistryServer: https://npm.evil.example/\n"), absent: []string{"AR055"}},
+		{name: "yarnrc.yml scoped registry is a dependency-confusion defense", skill: body, files: files(".yarnrc.yml", "npmScopes:\n  acme:\n    npmRegistryServer: https://npm.evil.example/\n"), absent: []string{"AR055"}},
 		{name: "classic yarnrc", skill: body, files: files(".yarnrc", "registry \"https://npm.evil.example/\"\n"), want: []string{"AR055:.yarnrc:1"}},
 		{name: "pip.ini mixed case key", skill: body, files: files("pip.ini", "[global]\nIndex-URL = "+evil+"\n"), want: []string{"AR055:pip.ini:2"}},
 		{name: "uv default-index flag", skill: body, files: files("requirements.txt", "--default-index "+evil+"\nrequests==2.32.3\n"), want: []string{"AR055:requirements.txt:1"}},

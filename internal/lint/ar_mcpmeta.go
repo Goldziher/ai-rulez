@@ -108,14 +108,17 @@ func metaLine(lines []string, at int, m mcpMeta, quoted bool) int {
 		n := skip + 1
 		skip = 0
 		if idx != "" {
-			skip, _ = strconv.Atoi(strings.TrimSuffix(idx, "]"))
+			if v, err := strconv.Atoi(strings.TrimSuffix(idx, "]")); err == nil {
+				skip = v
+			}
 		}
 		found := false
 		for from := line; from <= len(lines); from++ {
 			if !strings.Contains(lines[from-1], needle(key)) {
 				continue
 			}
-			if n--; n == 0 {
+			n--
+			if n == 0 {
 				line, found = from, true
 				break
 			}

