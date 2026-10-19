@@ -12,7 +12,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1047 65dc88f5bc08b2eefc9f449a62bde3126985c6eeec07fe63fe6f7cdb05b3da53
-.ai-rulez/.generated-manifest.local.json file 0644 2292 ab75e1e502f70406108b486280c9a2d436df9746366434e8d6d0adb526b5b68f
+.ai-rulez/.generated-manifest.local.json file 0644 2292 5359cca46248006de1e6d32dade17643f31661673688f2effd9893f72a2f380b
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -166,7 +166,7 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2292 ab75e1e502f70406108b486280c9a2d436df9746366434e8d6d0adb526b5b68f
+.ai-rulez/.generated-manifest.local.json file 0644 2292 5359cca46248006de1e6d32dade17643f31661673688f2effd9893f72a2f380b
 >>>>
 {
   "version": "1",
@@ -179,8 +179,8 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "c41dbcb68aa9fdb2b5c507dcfe83d148ac6cbc582ae995ff6e8a821dde80fe1e"
+          "3692d8447dde42993231cf179961d41b4cae26a55b28c6920f96429ee7129ca4",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -235,7 +235,7 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
     ]
   },
   "digests": {
-    ".claude/settings.json": "e8b393ed4d73a2f438bd882093c508e696791434cd1f7e91efead98f6b3f705e",
+    ".claude/settings.json": "ff1d598888f6873c6d504cf3ccd4eb0ea56447bf34f4c0b345fddbb98dbac95e",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",
