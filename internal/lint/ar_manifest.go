@@ -996,20 +996,23 @@ func versionedFork(a, b string) bool {
 }
 
 // oneEdit reports whether a and b differ by exactly one insertion, deletion,
-// substitution or swap of two adjacent characters.
+// substitution or swap of two adjacent characters. It compares bytes in one pass
+// and allocates nothing, so it can run against every popular name for every
+// dependency of a large manifest.
 func oneEdit(a, b string) bool {
-	if a == b {
-		return false
-	}
-	if editDistance(a, b) == 1 {
-		return true
-	}
-	if len(a) != len(b) {
+	la, lb := len(a), len(b)
+	if la-lb > 1 || lb-la > 1 || a == b {
 		return false
 	}
 	i := 0
-	for a[i] == b[i] {
+	for i < la && i < lb && a[i] == b[i] {
 		i++
 	}
-	return i+1 < len(a) && a[i] == b[i+1] && a[i+1] == b[i] && a[i+2:] == b[i+2:]
+	switch {
+	case la == lb:
+		return a[i+1:] == b[i+1:] || (i+1 < la && a[i] == b[i+1] && a[i+1] == b[i] && a[i+2:] == b[i+2:])
+	case la > lb:
+		return a[i+1:] == b[i:]
+	}
+	return b[i+1:] == a[i:]
 }
