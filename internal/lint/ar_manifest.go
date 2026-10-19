@@ -502,8 +502,10 @@ func lockedBeside(abs string, locks ...string) bool {
 }
 
 var (
-	npmLocks    = []string{"package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"}
-	pythonLocks = []string{"uv.lock", "poetry.lock", "pdm.lock"}
+	npmLocks = sync.OnceValue(func() []string {
+		return []string{"package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"}
+	})
+	pythonLocks = sync.OnceValue(func() []string { return []string{"uv.lock", "poetry.lock", "pdm.lock"} })
 )
 
 func (r *runner) checkRequirements(t *scanText) {
@@ -662,7 +664,7 @@ func (r *runner) checkPyproject(t *scanText) {
 		return
 	}
 	idx := newLineIndex(t.rawLines())
-	rep := &depReporter{r: r, abs: t.abs, locked: lockedBeside(t.abs, pythonLocks...)}
+	rep := &depReporter{r: r, abs: t.abs, locked: lockedBeside(t.abs, pythonLocks()...)}
 	for _, spec := range pyprojectSpecs(doc) {
 		if req, ok := parseRequirement(spec); ok {
 			rep.dep(idx.literal(spec), req, pyPIUniverse())
@@ -834,7 +836,7 @@ func (r *runner) checkPackageJSON(t *scanText) {
 		return
 	}
 	keys := jsonKeyLines(t.rawLines())
-	rep := &depReporter{r: r, abs: t.abs, locked: lockedBeside(t.abs, npmLocks...)}
+	rep := &depReporter{r: r, abs: t.abs, locked: lockedBeside(t.abs, npmLocks()...)}
 	for _, section := range packageJSONSections() {
 		var deps map[string]json.RawMessage
 		if raw, ok := pkg[section]; !ok || json.Unmarshal(raw, &deps) != nil {
