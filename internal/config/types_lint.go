@@ -289,6 +289,12 @@ type LintExternal struct {
 	// output (default 500, at most 100000). The full text stays in the JSON
 	// report and SARIF output. It wins over [lint.scanner_policy] max_message.
 	MaxMessage int `yaml:"max_message,omitempty" json:"max_message,omitempty" toml:"max_message,omitempty"` //nolint:tagliatelle
+	// MessageProperties lists SARIF result property paths (dotted, for example
+	// "evidence" or "snippet") whose values are appended to the finding message as
+	// "[name: value; ...]", counted against max_message. "location.snippet" reads
+	// the standard locations[0].physicalLocation.region.snippet.text. Values are
+	// sanitized like the message. SARIF format only.
+	MessageProperties []string `yaml:"message_properties,omitempty" json:"message_properties,omitempty" toml:"message_properties,omitempty"` //nolint:tagliatelle
 	// Required makes a missing, outdated or failing scanner an error instead of a notice.
 	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
 }

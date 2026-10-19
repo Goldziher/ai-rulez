@@ -117,6 +117,7 @@ type cachedFinding struct {
 	DefaultLevel string  `json:"default_level,omitempty"`
 	HelpURI      string  `json:"help_uri,omitempty"`
 	Suppressed   bool    `json:"suppressed,omitempty"`
+	Extra        string  `json:"extra,omitempty"`
 }
 
 // cachedScan is one cached run. File of each finding is the stage-relative path.
@@ -284,8 +285,10 @@ type scanCacheKeyInput struct {
 	// SeverityMap is sorted "pattern=value" pairs.
 	SeverityMap []string `json:"severity_map,omitempty"`
 	MaxSeverity string   `json:"max_severity,omitempty"`
-	Suppressed  bool     `json:"suppressed,omitempty"`
-	Tree        string   `json:"tree"`
+	// MessageProps are the message_properties, which change the parsed message text.
+	MessageProps []string `json:"message_properties,omitempty"`
+	Suppressed   bool     `json:"suppressed,omitempty"`
+	Tree         string   `json:"tree"`
 	// Files are digests of the interpreter script and the cache_files matches, see keyFiles.
 	Files []string `json:"files,omitempty"`
 }
@@ -326,7 +329,7 @@ func scanKeyFor(sc resolvedScanner, bin, tree string, files []string, showSuppre
 		EnvValues: envValueHashes(sc.EnvPass, cmdrun.HostEnv()), Isolation: isolation, Mapping: scanMappingVersion,
 		V: scanCacheVersion, Scanner: sc.Name, Binary: bin, BinSize: info.Size(), BinTime: info.ModTime().UnixNano(),
 		Command: sc.Command, Format: sc.Format, Layout: sc.Layout, Inputs: sc.Inputs,
-		EnvPass: sc.EnvPass, SeverityMap: smap, MaxSeverity: sc.MaxSeverity, Suppressed: showSuppressed, Tree: tree, Files: files,
+		EnvPass: sc.EnvPass, SeverityMap: smap, MaxSeverity: sc.MaxSeverity, MessageProps: sc.MessageProperties, Suppressed: showSuppressed, Tree: tree, Files: files,
 	}.hash(), true
 }
 

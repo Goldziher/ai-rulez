@@ -59,6 +59,9 @@ command = ["skillspector", "scan", "--no-llm", "--format", "sarif", "{skill_dirs
 format = "sarif"
 inputs = ["skills"]
 batch_size = 1
+# SkillSpector puts the matched text and evidence in the SARIF result properties,
+# not in the message, so a CI annotation would show only the rule title.
+message_properties = ["evidence", "snippet"]
 required_flags = ["--no-llm"]
 egress_flags = ["--transitive", "--mcp-registry", "--mcp-registry-compare"]
 # SC4 queries OSV.dev even with --no-llm (SkillSpector has no offline switch) and

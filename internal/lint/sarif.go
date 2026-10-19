@@ -41,6 +41,8 @@ type externalFinding struct {
 	HelpURI string `json:"-"`
 	// Suppressed marks a result the tool suppressed in source or externally.
 	Suppressed bool `json:"-"`
+	// Extra is the message_properties text appended to the message, already sanitized.
+	Extra string `json:"-"`
 }
 
 const (
@@ -122,6 +124,9 @@ type sarifResult struct {
 			} `json:"artifactLocation"`
 			Region struct {
 				StartLine int `json:"startLine"`
+				Snippet   struct {
+					Text string `json:"text"`
+				} `json:"snippet"`
 			} `json:"region"`
 		} `json:"physicalLocation"`
 	} `json:"locations"`
@@ -138,6 +143,12 @@ func parseExternal(format string, out []byte, exitCode int) ([]externalFinding, 
 // parseExternalKeep is parseExternal that keeps suppressed results, flagged
 // Suppressed, when keepSuppressed is set (--show-suppressed).
 func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed bool) ([]externalFinding, error) {
+	return parseExternalProps(format, out, exitCode, keepSuppressed, nil)
+}
+
+// parseExternalProps is parseExternalKeep that also reads the SARIF result
+// properties named by messageProps into each finding's Extra.
+func parseExternalProps(format string, out []byte, exitCode int, keepSuppressed bool, messageProps []string) ([]externalFinding, error) {
 	if len(bytes.TrimSpace(out)) == 0 {
 		return nil, oops.Errorf("no output")
 	}
@@ -171,7 +182,7 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 			if len(found) >= maxScannerResults {
 				return nil, oops.Errorf("more than %d results", maxScannerResults)
 			}
-			found = append(found, sarifFinding(run, res, suppressed))
+			found = append(found, sarifFinding(run, res, suppressed, messageProps))
 		}
 	}
 	return found, nil
@@ -194,7 +205,7 @@ func parseJSONFindings(out []byte, exitCode int) ([]externalFinding, error) {
 
 // sarifFinding converts one SARIF result of run into a finding: message, rule
 // (from the result or its rules[] entry), score, fingerprint and first location.
-func sarifFinding(run sarifRun, res sarifResult, suppressed bool) externalFinding {
+func sarifFinding(run sarifRun, res sarifResult, suppressed bool, messageProps []string) externalFinding {
 	msg := res.Message.Text
 	if strings.TrimSpace(msg) == "" {
 		msg = res.Message.Markdown
@@ -221,6 +232,7 @@ func sarifFinding(run sarifRun, res sarifResult, suppressed bool) externalFindin
 		f.File = sarifLocationPath(loc.ArtifactLocation.URI, loc.ArtifactLocation.URIBaseID, run.OriginalURIBaseIDs, 0)
 		f.Line = min(max(loc.Region.StartLine, 0), maxScannerLine)
 	}
+	f.Extra = messageExtra(res, messageProps)
 	return f
 }
 

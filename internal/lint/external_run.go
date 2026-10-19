@@ -530,7 +530,7 @@ func (r *runner) parseRun(sc resolvedScanner, res cmdrun.Result) ([]externalFind
 		r.addRun(CodeScannerRunFailed, sc.Name, fmt.Sprintf("printed more than %d bytes; output was not ingested", cmdrun.DefaultMaxOutput))
 		return nil, false
 	}
-	found, err := parseExternalKeep(sc.Format, res.Stdout, res.ExitCode, r.opts.Scanner.ShowSuppressed)
+	found, err := parseExternalProps(sc.Format, res.Stdout, res.ExitCode, r.opts.Scanner.ShowSuppressed, sc.MessageProperties)
 	if err != nil {
 		detail := strings.TrimSpace(string(res.Stderr))
 		if res.Err != nil {
@@ -799,14 +799,18 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 // cut to limit characters (ending in "..."), then note. full is the same message
 // with the whole text when the text was cut, and "" otherwise.
 func scannerMessage(f externalFinding, limit int, lead, note string) (msg, full string) {
-	text, cut := truncateRunes(cleanScannerText(f.Message), limit)
+	body := cleanScannerText(f.Message)
+	if f.Extra != "" {
+		body += " [" + f.Extra + "]"
+	}
+	text, cut := truncateRunes(body, limit)
 	prefix := lead
 	if rule := sanitizeScannerText(f.Rule); rule != "" {
 		prefix += rule + ": "
 	}
 	msg = prefix + text + note
 	if cut {
-		full = prefix + cleanScannerText(f.Message) + note
+		full = prefix + body + note
 	}
 	return msg, full
 }

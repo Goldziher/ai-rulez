@@ -45,10 +45,13 @@ type Profile struct {
 	// BatchSize and Version fill the entry's batch_size and version when unset: a
 	// scanner that takes one input path needs batch_size = 1; Version is the range
 	// its version output must satisfy.
-	BatchSize   int               `toml:"batch_size"`
-	Version     string            `toml:"version"`
-	SeverityMap map[string]string `toml:"severity_map"`
-	MaxSeverity string            `toml:"max_severity"`
+	BatchSize int    `toml:"batch_size"`
+	Version   string `toml:"version"`
+	// MessageProperties fills the entry's message_properties when unset: the SARIF
+	// result properties the scanner puts its evidence in.
+	MessageProperties []string          `toml:"message_properties"`
+	SeverityMap       map[string]string `toml:"severity_map"`
+	MaxSeverity       string            `toml:"max_severity"`
 	// OfflineNotices lists the "lookup unreachable" results an egress = false entry drops.
 	OfflineNotices []OfflineNotice `toml:"offline_notices"`
 	// When limits a preset member to projects with that configuration (WhenPlugin).

@@ -239,6 +239,9 @@ func fillProfileDefaults(rs *resolvedScanner, p scanners.Profile) {
 	if rs.Version == "" {
 		rs.Version = p.Version
 	}
+	if len(rs.MessageProperties) == 0 {
+		rs.MessageProperties = append([]string(nil), p.MessageProperties...)
+	}
 }
 
 // fromProfile fills ex from its profile: command, format, inputs and egress
