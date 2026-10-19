@@ -48,7 +48,7 @@ jobs:
           args: --timeout=10m
 
       - name: Test the SkillSpector test transcoder
-        run: python3 -m unittest discover -s scripts -p 'test_transcode_skillspector_tests.py' -v
+        run: python3 -I -m unittest discover -s scripts -p 'test_transcode_skillspector_tests.py' -v
 
   tidy:
     name: go mod tidy

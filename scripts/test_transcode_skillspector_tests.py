@@ -1,7 +1,9 @@
 """Golden and behaviour tests for the SkillSpector test transcoder."""
 
 import importlib.util
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -60,6 +62,68 @@ class TranscodeTest(unittest.TestCase):
     def test_unresolvable_content_is_skipped(self):
         tree = DATA / "test_sample.py"
         self.assertTrue(all(sc.files for sc in MODULE.extract(tree)))
+
+
+def git(cwd, *args):
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+
+def init_repo(path):
+    path.mkdir(parents=True, exist_ok=True)
+    git(path, "init", "-q")
+    (path / "f").write_text("x")
+    git(path, "add", "f")
+    git(path, "commit", "-q", "-m", "init")
+
+
+class UpstreamCommitTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name).resolve()
+
+    def run_main(self, tests, *extra):
+        args = ["--tests", str(tests), "--rule", "ZZ9", *extra]
+        with open(self.root / "err", "w") as sink:
+            old = sys.stdout, sys.stderr
+            sys.stdout = sys.stderr = sink
+            try:
+                return MODULE.main(args)
+            finally:
+                sys.stdout, sys.stderr = old
+
+    def test_checkout_root_yields_full_sha(self):
+        repo = self.root / "ss"
+        init_repo(repo)
+        (repo / "tests").mkdir()
+        sha = MODULE.upstream_commit(repo / "tests")
+        self.assertRegex(sha, r"^[0-9a-f]{40}$")
+
+    def test_non_git_directory_is_an_error(self):
+        (self.root / "plain" / "tests").mkdir(parents=True)
+        with self.assertRaises(MODULE.UpstreamError):
+            MODULE.upstream_commit(self.root / "plain" / "tests")
+        self.assertEqual(self.run_main(self.root / "plain" / "tests"), 2)
+
+    def test_copy_nested_in_another_repo_is_an_error(self):
+        init_repo(self.root / "other")
+        (self.root / "other" / "copy" / "tests").mkdir(parents=True)
+        with self.assertRaises(MODULE.UpstreamError):
+            MODULE.upstream_commit(self.root / "other" / "copy" / "tests")
+        self.assertEqual(self.run_main(self.root / "other" / "copy" / "tests"), 2)
+
+    def test_short_or_malformed_upstream_is_an_error(self):
+        for bad in ("abc1234", "UNKNOWN", "G" * 40, "A" * 40):
+            with self.subTest(bad=bad):
+                self.assertEqual(self.run_main(DATA, "--upstream", bad), 2)
+
+    def test_explicit_full_sha_is_accepted(self):
+        self.assertEqual(self.run_main(DATA, "--upstream", UPSTREAM), 0)
 
 
 if __name__ == "__main__":

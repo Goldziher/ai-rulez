@@ -592,7 +592,10 @@ def render(
         absent = sorted(mapping) or [wanted.pattern]
     if not want and not absent:
         return None
-    code = lambda c: mapping.get(c, c.rstrip("*"))
+
+    def code(c: str) -> str:
+        return mapping.get(c, c.rstrip("*"))
+
     name = "SKILL.md" if sc.filename.lower().endswith(".md") else Path(sc.filename).name
     fields = [f"name: {go_string(go_name(sc.test))}", placement(sc.files)]
     if want:
@@ -669,16 +672,46 @@ def parse_mapping(entries: list[str]) -> dict[str, str]:
     return {k.strip(): v.strip() for k, v in pairs}
 
 
+SHA_RE = re.compile(r"[0-9a-f]{40}")
+
+
+class UpstreamError(ValueError):
+    """The upstream commit cannot be established reliably."""
+
+
+def validate_sha(value: str) -> str:
+    if not SHA_RE.fullmatch(value):
+        raise UpstreamError(f"upstream commit must be a full 40-character lowercase hex sha, got {value!r}")
+    return value
+
+
 def upstream_commit(tests: Path) -> str:
+    """Return HEAD of the SkillSpector checkout whose ``tests`` directory is ``tests``.
+
+    The checkout root must be the parent of ``tests``: a copy of the tests that sits inside some other
+    repository would otherwise be stamped with that repository's commit.
+    """
+    parent = tests.resolve().parent
     try:
-        return subprocess.run(
-            ["git", "-C", str(tests), "rev-parse", "HEAD"],
+        top = subprocess.run(
+            ["git", "-C", str(parent), "rev-parse", "--show-toplevel"],
             check=True,
             capture_output=True,
             text=True,
         ).stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return "UNKNOWN"
+        head = subprocess.run(
+            ["git", "-C", str(parent), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        raise UpstreamError(f"{parent} is not a git checkout; pass --upstream <40-hex sha>") from exc
+    if Path(top).resolve() != parent:
+        raise UpstreamError(
+            f"{tests} is not at the root of a git checkout (root is {top}); pass --upstream <40-hex sha>"
+        )
+    return validate_sha(head)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -708,11 +741,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--upstream",
         default="",
-        help="upstream commit; defaults to git rev-parse of --tests",
+        help="full 40-hex upstream commit; defaults to HEAD of the git checkout containing --tests (its parent)",
     )
     ap.add_argument("--out", type=Path, help="write here instead of stdout")
     args = ap.parse_args(argv)
-    upstream = args.upstream or upstream_commit(args.tests)
+    try:
+        upstream = validate_sha(args.upstream) if args.upstream else upstream_commit(args.tests)
+    except UpstreamError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     text, count = transcode(
         args.tests, args.rule, parse_mapping(args.map), upstream, args.only
     )

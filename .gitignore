@@ -52,6 +52,9 @@ coverage.*
 /release/**/README.md
 !/release/npm/README.md
 !/release/pypi/README.md
+/release/**/THIRD_PARTY_NOTICES.md
+/release/**/LICENSES/
+/release/**/LICENSE
 
 # Dependencies
 /vendor/
