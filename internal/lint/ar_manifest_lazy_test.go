@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
+	"os"
 	"strings"
 	"testing"
 )
@@ -66,27 +66,36 @@ func TestLazyTablesBuild(t *testing.T) {
 func lazyTableVars(t *testing.T) []string {
 	t.Helper()
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, ".", func(fi fs.FileInfo) bool { return !strings.HasSuffix(fi.Name(), "_test.go") }, 0)
+	entries, err := os.ReadDir(".")
 	if err != nil {
 		t.Fatal(err)
 	}
+	var files []*ast.File
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		file, perr := parser.ParseFile(fset, e.Name(), nil, 0)
+		if perr != nil {
+			t.Fatal(perr)
+		}
+		files = append(files, file)
+	}
 	var out []string
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.VAR {
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.VAR {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				vs, ok := spec.(*ast.ValueSpec)
+				if !ok {
 					continue
 				}
-				for _, spec := range gen.Specs {
-					vs, ok := spec.(*ast.ValueSpec)
-					if !ok {
-						continue
-					}
-					for i, v := range vs.Values {
-						if i < len(vs.Names) && isOnceValueTable(v) {
-							out = append(out, vs.Names[i].Name)
-						}
+				for i, v := range vs.Values {
+					if i < len(vs.Names) && isOnceValueTable(v) {
+						out = append(out, vs.Names[i].Name)
 					}
 				}
 			}
@@ -116,5 +125,5 @@ func isOnceValueTable(expr ast.Expr) bool {
 		return true
 	}
 	sx, ok := star.X.(*ast.SelectorExpr)
-	return !(ok && sx.Sel.Name == "Regexp")
+	return !ok || sx.Sel.Name != "Regexp"
 }

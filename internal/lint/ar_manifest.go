@@ -45,12 +45,12 @@ func registerArManifest(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeUnpinnedManifest: {
-			Why:  "A dependency without an exact version resolves to whatever release is current when the skill's scripts run, so a compromised or broken release reaches the agent's machine unreviewed. Bounded ranges (`~=`, `^`, `>=1,<2`) report at info, open-ended ones at warning. The rule reads the manifests anywhere in a skill directory: `requirements*.txt` (also `*-requirements.txt`, `requirements.lock` and files in a `requirements/` directory), `package.json`, and `pyproject.toml` with `[project]`, `[build-system]`, `[dependency-groups]`, `[tool.poetry]`, `[tool.pdm]` and `[tool.uv]` dependencies. `requirements.in` is the input of a lock compiler and is never reported. A manifest the rule cannot read (over 512 KiB, or binary) is reported at info as not analyzable; a UTF-16 file is decoded, a byte order mark is ignored, and a file is listed at most 100 times with a count of the rest.",
+			Why:  "A dependency without an exact version resolves to whatever release is current when the skill's scripts run, so a compromised or broken release reaches the agent's machine unreviewed. Bounded ranges (`~=`, `^`, `>=1,<2`) report at info, open-ended ones at warning. The rule reads the manifests anywhere in a skill directory: `requirements*.txt` (also `*-requirements.txt`, `requirements.lock` and files in a `requirements/` directory), `package.json`, and `pyproject.toml` with `[project]`, `[build-system]`, `[dependency-groups]`, `[tool.poetry]`, `[tool.pdm]` and `[tool.uv]` dependencies. `requirements.in` is the input of a lock compiler and is never reported. A manifest next to a lock file (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `uv.lock`, `poetry.lock`, `pdm.lock` and the like) is not reported, and `[build-system]` requirements report at info at most. A manifest the rule cannot read (over 512 KiB, binary, or not parseable) is reported at info as not analyzable; a UTF-16 file is decoded, a byte order mark is ignored, and a file is listed at most 100 times with a count of the rest.",
 			Bad:  "`requests` or `requests>=2` in `scripts/requirements.txt`, or `\"left-pad\": \"latest\"` in `package.json`",
 			Good: "`requests==2.32.3` (ideally with `--hash=`), `\"left-pad\": \"1.3.0\"`, or a git requirement that names a full commit",
 		},
 		CodeSourceRedirect: {
-			Why:  "An index or registry other than the default decides which package a name resolves to. `--extra-index-url` lets a same-named package on another host win (dependency confusion), and `--trusted-host` turns TLS verification off for that host. The rule reads `--index-url`, `--extra-index-url`, `--default-index`, `--index`, `--find-links` and `--trusted-host`, `pip.conf`/`pip.ini`/`uv.toml`, `pyproject.toml` (`[tool.uv]`, `[tool.poetry.source]`, `[tool.pdm.source]`), `.npmrc`, `.yarnrc`, `.yarnrc.yml` and `registry` options of install commands. `pypi.org`, `pypi.python.org`, `files.pythonhosted.org`, the npm and Yarn registries and `download.pytorch.org` are default hosts. List the project's own mirror in `lint.security.allowed_hosts`.",
+			Why:  "An index or registry other than the default decides which package a name resolves to. `--extra-index-url` lets a same-named package on another host win (dependency confusion), and `--trusted-host` turns TLS verification off for that host. The rule reads `--index-url`, `--extra-index-url`, `--default-index`, `--index`, `--find-links` and `--trusted-host`, `pip.conf`/`pip.ini`/`uv.toml`, `pyproject.toml` (`[tool.uv]`, `[tool.poetry.source]`, `[tool.pdm.source]`), `.npmrc`, `.yarnrc`, `.yarnrc.yml` and `registry` options of install commands. A scoped registry (`@myorg:registry=`, `npmScopes`) is the usual defense against dependency confusion and is not reported. `pypi.org`, `pypi.python.org`, `files.pythonhosted.org`, the npm and Yarn registries and `download.pytorch.org` are default hosts. List the project's own mirror in `lint.security.allowed_hosts`.",
 			Bad:  "`pip install --extra-index-url https://pkgs.example.net/simple helper` or `registry=https://npm.example.net/` in `.npmrc`",
 			Good: "Install from the default index, or name the project's mirror in `lint.security.allowed_hosts`",
 		},
@@ -523,18 +523,24 @@ func (r *runner) checkRequirements(t *scanText) {
 // tomlMap, tomlList and tomlString read a decoded TOML or JSON value, giving the zero
 // value for any other type, so one key of the wrong type cannot hide the rest.
 func tomlMap(v any) map[string]any {
-	m, _ := v.(map[string]any)
-	return m
+	if m, ok := v.(map[string]any); ok {
+		return m
+	}
+	return nil
 }
 
 func tomlList(v any) []any {
-	l, _ := v.([]any)
-	return l
+	if l, ok := v.([]any); ok {
+		return l
+	}
+	return nil
 }
 
 func tomlString(v any) string {
-	s, _ := v.(string)
-	return s
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 func tomlDig(v any, path ...string) any {
@@ -603,16 +609,16 @@ func poetryRequirement(name string, v any) (requirement, bool) {
 	case map[string]any:
 		return poetryTableRequirement(name, t)
 	case []any:
-		req, any := requirement{name: name, level: pinned}, false
+		req, found := requirement{name: name, level: pinned}, false
 		for _, e := range t {
 			if r, ok := poetryRequirement(name, e); ok {
-				any = true
+				found = true
 				if r.level > req.level || r.vcs {
 					req = r
 				}
 			}
 		}
-		return req, any
+		return req, found
 	}
 	return requirement{}, false
 }
@@ -931,7 +937,7 @@ func (r *runner) checkIndexConfig(t *scanText, re *regexp.Regexp) {
 }
 
 // checkYarnrcYml reads npmRegistryServer, except inside npmScopes: a scoped registry is
-// the usual defence against dependency confusion, not a redirect.
+// the usual defense against dependency confusion, not a redirect.
 func (r *runner) checkYarnrcYml(t *scanText) {
 	inScopes := false
 	for _, l := range t.lines {

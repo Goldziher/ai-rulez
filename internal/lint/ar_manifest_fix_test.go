@@ -22,7 +22,7 @@ func TestManifestReviewFixes(t *testing.T) {
 		{name: "pinned git with an environment marker", skill: body, files: with("requirements.txt", "repo @ git+https://github.com/org/repo.git@"+sha+" ; python_version >= \"3.8\"\n"), absent: []string{"AR054"}},
 		{name: "pinned git in pyproject with a marker", skill: body, files: with("pyproject.toml", "[project]\ndependencies = [\"repo @ git+https://github.com/org/repo.git@"+sha+" ; python_version >= '3.8'\"]\n"), absent: []string{"AR054"}},
 		{name: "unpinned git with a marker still warns", skill: body, files: with("requirements.txt", "repo @ git+https://github.com/org/repo.git@main ; python_version >= \"3.8\"\n"), want: []string{"AR054:requirements.txt:1"}},
-		{name: "scoped npmrc registry is the confusion defence", skill: body, files: with(".npmrc", "@myorg:registry=https://npm.pkg.github.com\n"), absent: []string{"AR055"}},
+		{name: "scoped npmrc registry is the confusion defense", skill: body, files: with(".npmrc", "@myorg:registry=https://npm.pkg.github.com\n"), absent: []string{"AR055"}},
 		{name: "unscoped npmrc registry still warns", skill: body, files: with(".npmrc", "registry=https://npm.example.net/\n"), want: []string{"AR055:.npmrc:1"}},
 		{name: "scoped yarnrc registry", skill: body, files: with(".yarnrc", "\"@myorg:registry\" \"https://npm.pkg.github.com\"\n"), absent: []string{"AR055"}},
 		{name: "scoped yarnrc.yml registry", skill: body, files: with(".yarnrc.yml", "npmScopes:\n  myorg:\n    npmRegistryServer: \"https://npm.pkg.github.com\"\n"), absent: []string{"AR055"}},
