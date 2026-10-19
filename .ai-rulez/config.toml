@@ -19,6 +19,7 @@ ignore_paths = [
   "internal/builtins/**",
   "tests/review/golden/**/fixtures/**",
   "tests/fixtures/**",
+  "tools/**/testdata/**",
 ]
 
 [mcp]
