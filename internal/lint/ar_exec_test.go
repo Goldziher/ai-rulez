@@ -116,6 +116,8 @@ func TestInternalRequestAR045(t *testing.T) {
 		{name: "kubelet and etcd", skill: body("```sh\ncurl -k https://127.0.0.1:10250/pods\nwget localhost:2379/v2/keys\n```\n"), want: []string{"AR045:SKILL.md:6", "AR045:SKILL.md:7"}},
 		{name: "dev server port", skill: body("```sh\ncurl http://localhost:3000/health\ncurl http://127.0.0.1:8080/\ncurl https://localhost:8001/sra/ http://localhost:9200/_cluster/health\n```\nOpen `https://localhost:8001/sra/` in the browser.\n"), absent: []string{"AR045"}},
 		{name: "bare port without a fetch command", skill: body("```sh\nkubectl port-forward svc/x 2379:2379   # localhost:2379\nexport ADDR=localhost:2375\n```\n"), absent: []string{"AR045"}},
+		{name: "reviewer lead span", skill: body("Look for requests to `http://169.254.169.254/latest/meta-data/` in scripts.\n"), absent: []string{"AR045"}},
+		{name: "flag span", skill: body("Flag any call to `curl http://169.254.169.254/latest/`.\n"), absent: []string{"AR045"}},
 		{name: "explanation without a request", skill: body("The address 169.254.169.254 is the link-local instance metadata endpoint used by clouds.\nAWS also offers fd00:ec2::254 over IPv6.\n"), absent: []string{"AR045"}},
 		{name: "negated prose", skill: body("Never fetch 169.254.169.254 from a tool call.\nDo not request http://metadata.google.internal from the sandbox.\n"), absent: []string{"AR045"}},
 		{name: "defensive prose", skill: body("The proxy rejects any request to 169.254.169.254 and blocks fetch calls to metadata.google.internal.\n"), absent: []string{"AR045"}},
