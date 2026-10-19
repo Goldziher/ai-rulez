@@ -36,6 +36,8 @@ func TestLazyTablesBuild(t *testing.T) {
 		"malwareRules":        func() any { return malwareRules() },
 		"mcpLaunchKeys":       func() any { return mcpLaunchKeys() },
 		"mcpMetaKeys":         func() any { return mcpMetaKeys() },
+		"npmLocks":            func() any { return npmLocks() },
+		"pythonLocks":         func() any { return pythonLocks() },
 		"npmUniverse":         func() any { return npmUniverse() },
 		"packageJSONSections": func() any { return packageJSONSections() },
 		"persistRules":        func() any { return persistRules() },
