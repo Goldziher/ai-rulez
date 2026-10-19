@@ -10,6 +10,7 @@ package lint
 import (
 	"slices"
 	"strings"
+	"sync"
 )
 
 // nameUniverse is the set of package names AR056 compares a dependency against:
@@ -48,11 +49,14 @@ func nameSet(names string) map[string]bool {
 // reviewed known-legitimate lists of SkillSpector, reduced to the names within one edit
 // of this file's popular lists; the rest were found by running the rule over
 // real manifests.
-var (
-	pyPIUniverse = newUniverse(true,
+var pyPIUniverse = sync.OnceValue(func() nameUniverse {
+	return newUniverse(true,
 		"requests numpy pandas flask django boto3 botocore setuptools urllib3 pyyaml cryptography pillow pydantic sqlalchemy pytest click jinja2 httpx aiohttp fastapi celery paramiko beautifulsoup4 lxml scrapy redis pymongo psycopg2 matplotlib scipy scikit-learn tensorflow torch keras transformers openai langchain gunicorn uvicorn rich typer black ruff mypy pylint flake8 isort colorama python-dateutil python-dotenv pycryptodome certifi idna charset-normalizer packaging wheel six attrs protobuf grpcio jsonschema markupsafe werkzeug tqdm pytz typing-extensions pyjwt openpyxl xlrd selenium playwright anthropic tiktoken numba sympy seaborn plotly streamlit gradio pytest-cov pytest-asyncio tox poetry virtualenv pipenv aiofiles websockets starlette alembic marshmallow cachetools google-auth awscli s3transfer msgpack orjson ujson toml tomli pexpect psutil docker kubernetes ansible fabric",
 		"aiofile crick fastai grequests hyper ipytest jinja pyaml pycryptodomex pylink pymantic scapy scipp torchx unicorn usort vyper willow")
-	npmUniverse = newUniverse(false,
+})
+
+var npmUniverse = sync.OnceValue(func() nameUniverse {
+	return newUniverse(false,
 		"express react react-dom next vue angular lodash axios moment chalk commander inquirer webpack babel eslint prettier typescript jest mocha chai puppeteer socket.io mongoose sequelize passport jsonwebtoken dotenv cors body-parser nodemon pm2 electron ethers cross-env jquery nodemailer bootstrap rxjs redux uuid yargs minimist debug async request underscore bluebird glob rimraf mkdirp semver tslib zod vite rollup esbuild tailwindcss postcss autoprefixer sass svelte nuxt gatsby graphql apollo-server prisma knex pg mysql2 redis ioredis mongodb sqlite3 cheerio playwright cypress vitest ts-node tsx nx lerna turbo husky lint-staged dayjs date-fns ramda immer classnames clsx formik yup helmet morgan multer ws got node-fetch cross-fetch openai langchain",
 		"enquirer expresso gaxios jslint mquery preact tslint ttypescript")
-)
+})

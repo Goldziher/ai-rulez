@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
@@ -30,10 +31,14 @@ type mcpMeta struct {
 }
 
 // mcpMetaKeys are the definition keys whose strings the model reads as tool metadata.
-var mcpMetaKeys = map[string]bool{keyDescription: true, "title": true, "instructions": true, "summary": true}
+var mcpMetaKeys = sync.OnceValue(func() map[string]bool {
+	return map[string]bool{keyDescription: true, "title": true, "instructions": true, "summary": true}
+})
 
 // mcpLaunchKeys hold launch data, not text for the model; other rules check them.
-var mcpLaunchKeys = map[string]bool{hookTypeCommand: true, "args": true, keyEnv: true, "headers": true, keyURL: true, "oauth": true}
+var mcpLaunchKeys = sync.OnceValue(func() map[string]bool {
+	return map[string]bool{hookTypeCommand: true, "args": true, keyEnv: true, "headers": true, keyURL: true, "oauth": true}
+})
 
 func configMCPMeta(s *config.MCPServer) []mcpMeta {
 	if s.Description == "" {
@@ -45,7 +50,7 @@ func configMCPMeta(s *config.MCPServer) []mcpMeta {
 func jsonMCPMeta(def map[string]json.RawMessage) []mcpMeta {
 	var out []mcpMeta
 	for _, key := range sortedKeys(def) {
-		if mcpLaunchKeys[key] {
+		if mcpLaunchKeys()[key] {
 			continue
 		}
 		var v any
@@ -59,7 +64,7 @@ func jsonMCPMeta(def map[string]json.RawMessage) []mcpMeta {
 func collectMCPMeta(out []mcpMeta, key string, v any) []mcpMeta {
 	switch t := v.(type) {
 	case string:
-		if mcpMetaKeys[key] {
+		if mcpMetaKeys()[key] {
 			out = append(out, mcpMeta{key, t})
 		}
 	case []any:

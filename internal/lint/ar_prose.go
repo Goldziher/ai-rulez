@@ -155,13 +155,15 @@ var (
 	})
 	// exfilDestStems are the words every destPat match holds; a line with none is skipped
 	// before any regexp runs.
-	exfilDestStems  = []string{"http", "external", "remote", "third-party"}
-	exfilProseStems = []string{"send", "transmit", "upload", "post", "forward", "submit", "export", "dump", "stream", "relay", "ship", "exfiltrate", "email", "log", "pipe", "sync", "copy"}
+	exfilDestStems  = sync.OnceValue(func() []string { return strings.Fields("http external remote third-party") })
+	exfilProseStems = sync.OnceValue(func() []string {
+		return strings.Fields("send transmit upload post forward submit export dump stream relay ship exfiltrate email log pipe sync copy")
+	})
 )
 
 func scanContextExfil(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if !t.prose(l) || !containsAnyFold(l.Text, exfilDestStems) || !containsAnyFold(l.Text, exfilProseStems) {
+		if !t.prose(l) || !containsAnyFold(l.Text, exfilDestStems()) || !containsAnyFold(l.Text, exfilProseStems()) {
 			continue
 		}
 		if m := contextExfilTarget(r, l.Text); m != "" {

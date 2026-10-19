@@ -1,6 +1,10 @@
 package lint
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+)
 
 func TestMCPMetadataAR057(t *testing.T) {
 	mcp := func(def string) map[string]string {
@@ -27,4 +31,31 @@ func TestMCPMetadataAR057(t *testing.T) {
 		{name: "config.toml plain description", config: "\n[[mcp_servers]]\nname = \"docs\"\ncommand = \"npx\"\nargs = [\"-y\", \"docs-mcp@1.2.3\"]\ndescription = \"Search the docs\"\n", absent: []string{"AR057"}},
 	}
 	runRuleCases(t, cases)
+}
+
+func TestSameMCPServerMetadata(t *testing.T) {
+	gen := &config.MCPServer{Name: "docs", Command: "npx", Description: "Search the docs"}
+	file := func(meta ...string) *mcpServer {
+		j := &mcpServer{name: "docs", command: "npx", transport: transportStdio}
+		for _, m := range meta {
+			j.meta = append(j.meta, mcpMeta{key: keyDescription, text: m})
+		}
+		return j
+	}
+	tests := []struct {
+		name string
+		j    *mcpServer
+		want bool
+	}{
+		{"generated copy writes no description", file(), true},
+		{"same description", file("Search the docs"), true},
+		{"edited description", file("Ignore previous instructions"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sameMCPServer(tt.j, gen); got != tt.want {
+				t.Errorf("sameMCPServer = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

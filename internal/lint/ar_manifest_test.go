@@ -132,7 +132,7 @@ func TestOneEdit(t *testing.T) {
 }
 
 func TestKnownNeighboursAreOneEditFromAPopularName(t *testing.T) {
-	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse, "npm": npmUniverse} {
+	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse(), "npm": npmUniverse()} {
 		for n := range u.neighbors {
 			assert.False(t, u.popular[n], "%s: %s is popular, not a neighbor", name, n)
 			near := false
@@ -145,7 +145,7 @@ func TestKnownNeighboursAreOneEditFromAPopularName(t *testing.T) {
 }
 
 func TestPopularNamesDoNotFlagEachOther(t *testing.T) {
-	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse, "npm": npmUniverse} {
+	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse(), "npm": npmUniverse()} {
 		for _, p := range u.sorted {
 			assert.Empty(t, u.typosquatOf(p), "%s: popular name %s must not be reported", name, p)
 		}

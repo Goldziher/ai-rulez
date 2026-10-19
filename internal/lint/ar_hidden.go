@@ -20,6 +20,9 @@ import (
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Codes for the rules about content that hides from a reader.
@@ -37,7 +40,7 @@ func registerArHidden(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeShippedExecutable: {
-			Why:  "Bytecode and native code cannot be reviewed as text, and the scanner skips `__pycache__` directories, so a `.pyc` can differ from the source file next to it. An executable renamed to `.txt` or `.png` is found by its leading bytes (ELF, Mach-O, PE, Java class, Python bytecode). AR034 reports the share of a skill that is opaque; this rule names the executable files.",
+			Why:  "Bytecode and native code cannot be reviewed as text, and the scanner skips `__pycache__` directories, so a `.pyc` can differ from the source file next to it. An executable renamed to `.txt` or `.png` is found by its leading bytes (ELF, Mach-O, PE, Java class, Python bytecode). AR034 reports the share of a skill that is opaque; this rule names the executable files. A file that git ignores (a local `__pycache__`) is not reported.",
 			Bad:  "`scripts/__pycache__/helper.cpython-312.pyc`, `assets/logo.png` that starts with `\\x7fELF`",
 			Good: "Ship the source (`scripts/helper.py`) and add `__pycache__/` to `.gitignore`; download a binary at install time from a pinned, checksummed URL",
 		},
@@ -58,18 +61,19 @@ func registerArHidden(s *ruleSet) {
 	s.addTextScan(scanObfuscatedPhrases, AnalyzerSecurity)
 }
 
-var (
-	bytecodeExt = map[string]string{
+var bytecodeExt = sync.OnceValue(func() map[string]string {
+	return map[string]string{
 		".pyc": kindPyBytecode, ".pyo": kindPyBytecode, ".class": "Java class", ".so": kindNativeLib, ".dll": kindNativeLib,
 		".dylib": kindNativeLib, extExe: "executable",
 	}
-	// bytecodeSkipDirs is skipDirs without __pycache__, which is what AR051 looks for.
-	bytecodeSkipDirs = func() map[string]bool {
-		m := maps.Clone(skipDirs)
-		delete(m, pycacheDir)
-		return m
-	}()
-)
+})
+
+// bytecodeSkipDirs is skipDirs without __pycache__, which is what AR051 looks for.
+var bytecodeSkipDirs = sync.OnceValue(func() map[string]bool {
+	m := maps.Clone(skipDirs)
+	delete(m, pycacheDir)
+	return m
+})
 
 const (
 	kindPyBytecode = "Python bytecode"
@@ -85,13 +89,7 @@ func checkShippedExecutables(r *runner) {
 		if !it.owned || it.isDoc || it.kind != kindSkill || it.itemDir == "" {
 			continue
 		}
-		var found []string
-		for _, f := range r.skillTree(it.itemDir) {
-			if kind := executableKind(f); kind != "" {
-				rel, _ := filepath.Rel(it.itemDir, f.path) //nolint:errcheck // display only
-				found = append(found, filepath.ToSlash(rel)+" ("+kind+")")
-			}
-		}
+		found := r.shippedExecutables(it.itemDir)
 		if len(found) == 0 {
 			continue
 		}
@@ -106,13 +104,65 @@ func checkShippedExecutables(r *runner) {
 	}
 }
 
+// shippedExecutables lists the files of a skill directory that are bytecode or
+// executables, as "relative/path (kind)", leaving out the files git ignores: a local
+// __pycache__ is not shipped.
+func (r *runner) shippedExecutables(dir string) []string {
+	var files []*dirFile
+	var kinds []string
+	for _, f := range r.skillTree(dir) {
+		if kind := executableKind(f); kind != "" {
+			files = append(files, f)
+			kinds = append(kinds, kind)
+		}
+	}
+	ignored := r.ignoredFiles(files)
+	var found []string
+	for i, f := range files {
+		if !ignored[f.path] {
+			rel, _ := filepath.Rel(dir, f.path) //nolint:errcheck // display only
+			found = append(found, filepath.ToSlash(rel)+" ("+kinds[i]+")")
+		}
+	}
+	return found
+}
+
+// ignoredFiles returns the paths of files that git ignores, in one git call; it is empty
+// outside a repository or when git fails.
+func (r *runner) ignoredFiles(files []*dirFile) map[string]bool {
+	if len(files) == 0 || r.tree.Top == "" {
+		return nil
+	}
+	top := gitutil.Resolve(r.tree.Top)
+	byRel := make(map[string]string, len(files))
+	rels := make([]string, 0, len(files))
+	for _, f := range files {
+		rel, err := filepath.Rel(top, gitutil.Resolve(f.path))
+		if err != nil || safefs.RelEscapes(rel) {
+			continue
+		}
+		rel = filepath.ToSlash(rel)
+		byRel[rel] = f.path
+		rels = append(rels, rel)
+	}
+	hidden, err := gitutil.New(r.host.Runner).IgnoredAmongContext(r.ctx, r.tree.Top, rels)
+	if err != nil {
+		return nil
+	}
+	out := make(map[string]bool, len(hidden))
+	for rel := range hidden {
+		out[byRel[rel]] = true
+	}
+	return out
+}
+
 // executableKind names what a file is when it is bytecode or an executable, by
 // directory, extension or leading bytes, and returns "" for anything else.
 func executableKind(f *dirFile) string {
 	if filepath.Base(filepath.Dir(f.path)) == pycacheDir {
 		return "Python bytecode cache"
 	}
-	if kind, ok := bytecodeExt[strings.ToLower(filepath.Ext(f.path))]; ok {
+	if kind, ok := bytecodeExt()[strings.ToLower(filepath.Ext(f.path))]; ok {
 		return kind
 	}
 	if f.size < 4 {
@@ -192,12 +242,14 @@ var padInstructionRe = sync.OnceValue(func() *regexp.Regexp {
 
 // invisibleRunes are characters that render as nothing; a line of only these
 // and white space is blank to a reader.
-var invisibleRunes = map[rune]bool{
-	'\u00ad': true, '\u180e': true, '\u200b': true, '\u200c': true, '\u200d': true, '\u2060': true, '\ufeff': true,
-}
+var invisibleRunes = sync.OnceValue(func() map[rune]bool {
+	return map[rune]bool{
+		'\u00ad': true, '\u180e': true, '\u200b': true, '\u200c': true, '\u200d': true, '\u2060': true, '\ufeff': true,
+	}
+})
 
 func isBlankText(s string) bool {
-	return strings.TrimFunc(s, func(c rune) bool { return unicode.IsSpace(c) || invisibleRunes[c] }) == ""
+	return strings.TrimFunc(s, func(c rune) bool { return unicode.IsSpace(c) || invisibleRunes()[c] }) == ""
 }
 
 // instructionLike reports whether text reads as an instruction to the model.
@@ -342,10 +394,10 @@ func spacedRunAt(s string, i int) (end, letters int) {
 // characters.
 func foldLookalikes(s string) string {
 	return strings.Map(func(c rune) rune {
-		if invisibleRunes[c] {
+		if invisibleRunes()[c] {
 			return -1
 		}
-		if to, ok := confusableLetters[c]; ok {
+		if to, ok := confusableLetters()[c]; ok {
 			return to
 		}
 		return c
@@ -367,20 +419,15 @@ func foldObfuscation(line string) (folded string, joined bool) {
 
 // relaxedInjectionRes are the AR004 phrases with their word gaps optional, for
 // a line whose letters were spelled out with no wider gap between words.
-var (
-	relaxedOnce sync.Once
-	relaxedRes  []gatedRe
-)
-
-func relaxedInjectionRes() []gatedRe {
-	relaxedOnce.Do(func() {
+func (r *runner) relaxedInjectionRes() []gatedRe {
+	r.relaxedOnce.Do(func() {
 		ruleTables() // a family adds its phrases when the registry is built
 		for _, g := range injectionPhrases {
 			g.re = regexp.MustCompile(strings.ReplaceAll(g.re.String(), `\s+`, `\s*`))
-			relaxedRes = append(relaxedRes, g)
+			r.relaxedRes = append(r.relaxedRes, g)
 		}
 	})
-	return relaxedRes
+	return r.relaxedRes
 }
 
 // obfuscatedPhrase returns the injection phrase hidden in line, or "" when the
@@ -402,7 +449,7 @@ func (r *runner) obfuscatedPhrase(line string) string {
 		}
 	}
 	if joined {
-		for _, re := range relaxedInjectionRes() {
+		for _, re := range r.relaxedInjectionRes() {
 			if m := re.FindString(folded); m != "" {
 				return m
 			}
