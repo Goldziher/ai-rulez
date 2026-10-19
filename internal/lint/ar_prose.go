@@ -216,9 +216,20 @@ func techObject(tail string) bool {
 	return techWordRe().MatchString(head)
 }
 
+var antiRefusalStems = sync.OnceValue(func() *stemGroups {
+	patterns := antiRefusalPatterns()
+	lists := make([][]string, len(patterns))
+	for i, p := range patterns {
+		lists[i] = p.stems
+	}
+	// Every stem follows \b or a space in its pattern, so it begins a word.
+	return newWordStemGroups(lists...)
+})
+
 func firstAntiRefusal(line string) (string, bool) {
-	for _, p := range antiRefusalPatterns() {
-		if !containsAnyFold(line, p.stems) {
+	hit := antiRefusalStems().match(foldText(line))
+	for i, p := range antiRefusalPatterns() {
+		if !hit[i] {
 			continue
 		}
 		for _, loc := range p.re.FindAllStringIndex(line, -1) {
@@ -279,11 +290,15 @@ var (
 	exfilProseStems = sync.OnceValue(func() []string {
 		return strings.Fields("send transmit upload post forward submit export dump stream relay ship exfiltrate email pipe")
 	})
+	exfilStems = sync.OnceValue(func() *stemGroups { return newStemGroups(exfilDestStems(), exfilProseStems()) })
 )
 
 func scanContextExfil(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if !t.prose(l) || !containsAnyFold(l.Text, exfilDestStems()) || !containsAnyFold(l.Text, exfilProseStems()) {
+		if !t.prose(l) {
+			continue
+		}
+		if hit := exfilStems().match(foldText(l.Text)); !hit[0] || !hit[1] {
 			continue
 		}
 		if m := contextExfilTarget(r, l.Text); m != "" {

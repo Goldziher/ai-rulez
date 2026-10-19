@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"bytes"
 	"regexp"
 	"sort"
 	"strings"
@@ -188,10 +189,18 @@ func containsAnyStem(s string, fold bool, stems []string) bool {
 // characters is compared against the lower-cased text. Like the patterns it
 // guards, it treats U+017F (long s) as an s.
 func containsAnyFold(s string, stems []string) bool {
+	// A line that fits the buffer is lower-cased once (ASCII letters only, so
+	// offsets and other bytes are kept) and each ASCII stem is found with the
+	// vectorized bytes.Contains instead of visiting every hit of its first letter.
+	var buf [foldBufLen]byte
+	var low []byte
+	if len(s) <= foldBufLen {
+		low = lowerASCIIInto(buf[:0], s)
+	}
 	var lowered string
 	for _, st := range stems {
 		if isASCII(st) {
-			if indexFoldASCII(s, st) >= 0 {
+			if low != nil && bytes.Contains(low, []byte(st)) || low == nil && indexFoldASCII(s, st) >= 0 {
 				return true
 			}
 			continue
@@ -204,6 +213,174 @@ func containsAnyFold(s string, stems []string) bool {
 		}
 	}
 	return foldsToASCII(s) || strings.Contains(s, "\u212a")
+}
+
+// foldedText is a text lower-cased once for several containsAnyFold checks
+// against lower-case stems. A long s does not lower-case to s, and a Kelvin sign
+// lower-cases to a k that would end a word, so either keeps every check true, as
+// containsAnyFold does.
+type foldedText struct {
+	low   string
+	folds bool
+}
+
+func foldText(s string) foldedText {
+	return foldedText{low: strings.ToLower(s), folds: foldsToASCII(s) || strings.Contains(s, "\u212a")}
+}
+
+// stemIndex finds which of a fixed set of lower-case stems occur in a text in
+// one pass over it, instead of one search per stem: a table of every stem's
+// first two bytes says where a stem may start. Stems shorter than two bytes
+// are compared by strings.Contains. With wordStart set, a stem that opens with
+// a letter or digit counts only where it begins a word, for patterns whose
+// stems all follow \b or a space ("agree" is not found in "disagree").
+type stemIndex struct {
+	stems     []string
+	pair      map[uint16][]int
+	starts    [1 << 16]bool
+	short     []int
+	wordStart bool
+}
+
+func newStemIndex(stems []string) *stemIndex {
+	x := &stemIndex{stems: stems, pair: map[uint16][]int{}}
+	for i, st := range stems {
+		if len(st) < 2 {
+			x.short = append(x.short, i)
+			continue
+		}
+		k := uint16(st[0])<<8 | uint16(st[1])
+		x.starts[k] = true
+		x.pair[k] = append(x.pair[k], i)
+	}
+	return x
+}
+
+// find marks found[i] for every stem i that occurs in folded's text; found must
+// be at least as long as the stem list. A long s marks every stem (see foldedText).
+func (x *stemIndex) find(folded foldedText, found []bool) {
+	if folded.folds {
+		for i := range x.stems {
+			found[i] = true
+		}
+		return
+	}
+	s := folded.low
+	for i := 0; i+1 < len(s); i++ {
+		k := uint16(s[i])<<8 | uint16(s[i+1])
+		if !x.starts[k] {
+			continue
+		}
+		midWord := x.wordStart && i > 0 && isWordByte(s[i-1]) && isWordByte(s[i])
+		for _, j := range x.pair[k] {
+			if !found[j] && !midWord && strings.HasPrefix(s[i:], x.stems[j]) {
+				found[j] = true
+			}
+		}
+	}
+	for _, j := range x.short {
+		if strings.Contains(s, x.stems[j]) {
+			found[j] = true
+		}
+	}
+}
+
+// containsAny reports whether one of the stems occurs in folded's text.
+func (x *stemIndex) containsAny(folded foldedText) bool {
+	if folded.folds {
+		return true
+	}
+	s := folded.low
+	for i := 0; i+1 < len(s); i++ {
+		k := uint16(s[i])<<8 | uint16(s[i+1])
+		if !x.starts[k] || x.wordStart && i > 0 && isWordByte(s[i-1]) && isWordByte(s[i]) {
+			continue
+		}
+		for _, j := range x.pair[k] {
+			if strings.HasPrefix(s[i:], x.stems[j]) {
+				return true
+			}
+		}
+	}
+	for _, j := range x.short {
+		if strings.Contains(s, x.stems[j]) {
+			return true
+		}
+	}
+	return false
+}
+
+// anyFound reports whether found marks one of the stem indexes; an empty list
+// matches everything, like a gatedRe without stems.
+func anyFound(found []bool, idx []int) bool {
+	if len(idx) == 0 {
+		return true
+	}
+	for _, i := range idx {
+		if found[i] {
+			return true
+		}
+	}
+	return false
+}
+
+// stemGroups is a stemIndex over the union of several stem lists, with each
+// list's stems as indexes into the union.
+type stemGroups struct {
+	index  *stemIndex
+	groups [][]int
+}
+
+// newWordStemGroups is newStemGroups whose stems must begin a word.
+func newWordStemGroups(lists ...[]string) *stemGroups {
+	sg := newStemGroups(lists...)
+	sg.index.wordStart = true
+	return sg
+}
+
+func newStemGroups(lists ...[]string) *stemGroups {
+	var union []string
+	pos := map[string]int{}
+	groups := make([][]int, len(lists))
+	for g, list := range lists {
+		for _, st := range list {
+			i, ok := pos[st]
+			if !ok {
+				i = len(union)
+				pos[st] = i
+				union = append(union, st)
+			}
+			groups[g] = append(groups[g], i)
+		}
+	}
+	return &stemGroups{index: newStemIndex(union), groups: groups}
+}
+
+// match reports, for each list, whether one of its stems occurs in folded's text.
+func (sg *stemGroups) match(folded foldedText) []bool {
+	found := make([]bool, len(sg.index.stems))
+	sg.index.find(folded, found)
+	hit := make([]bool, len(sg.groups))
+	for g, idx := range sg.groups {
+		hit[g] = anyFound(found, idx)
+	}
+	return hit
+}
+
+// foldBufLen is the longest text containsAnyFold lower-cases on the stack.
+const foldBufLen = 1024
+
+// lowerASCIIInto appends s to dst with ASCII letters lower-cased and every
+// other byte unchanged.
+func lowerASCIIInto(dst []byte, s string) []byte {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		dst = append(dst, c)
+	}
+	return dst
 }
 
 // indexFoldASCII is the index of the first occurrence of stem (lower-case
