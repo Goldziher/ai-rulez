@@ -3,6 +3,8 @@ package lint
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -25,9 +27,10 @@ func registerArMcpMeta(s *ruleSet) {
 	})
 }
 
-// mcpMeta is one metadata string of a server definition and the JSON key it came from.
+// mcpMeta is one metadata string of a server definition, the JSON key it came from and,
+// for a string below the top level of the definition, its dotted path (tools[0].description).
 type mcpMeta struct {
-	key, text string
+	key, text, path string
 }
 
 // mcpMetaKeys are the definition keys whose strings the model reads as tool metadata.
@@ -44,7 +47,7 @@ func configMCPMeta(s *config.MCPServer) []mcpMeta {
 	if s.Description == "" {
 		return nil
 	}
-	return []mcpMeta{{keyDescription, s.Description}}
+	return []mcpMeta{{key: keyDescription, text: s.Description}}
 }
 
 func jsonMCPMeta(def map[string]json.RawMessage) []mcpMeta {
@@ -55,28 +58,73 @@ func jsonMCPMeta(def map[string]json.RawMessage) []mcpMeta {
 		}
 		var v any
 		if json.Unmarshal(def[key], &v) == nil {
-			out = collectMCPMeta(out, key, v)
+			out = collectMCPMeta(out, nil, key, key, v)
 		}
 	}
 	return out
 }
 
-func collectMCPMeta(out []mcpMeta, key string, v any) []mcpMeta {
+// collectMCPMeta gathers the metadata strings below v. path holds the labels of the
+// containers above it; label is v's own (the key, with [i] for an array element).
+func collectMCPMeta(out []mcpMeta, path []string, key, label string, v any) []mcpMeta {
 	switch t := v.(type) {
 	case string:
 		if mcpMetaKeys()[key] {
-			out = append(out, mcpMeta{key, t})
+			m := mcpMeta{key: key, text: t}
+			if len(path) > 0 {
+				m.path = strings.Join(append(slices.Clone(path), label), ".")
+			}
+			out = append(out, m)
 		}
 	case []any:
-		for _, e := range t {
-			out = collectMCPMeta(out, key, e)
+		for i, e := range t {
+			out = collectMCPMeta(out, path, key, fmt.Sprintf("%s[%d]", strings.SplitN(label, "[", 2)[0], i), e)
 		}
 	case map[string]any:
+		inner := append(slices.Clone(path), label)
 		for _, k := range sortedKeys(t) {
-			out = collectMCPMeta(out, k, t[k])
+			out = collectMCPMeta(out, inner, k, k, t[k])
 		}
 	}
 	return out
+}
+
+// metaLine finds the line of a metadata string by following its path through the
+// definition: each key is searched for after the line of the one above it, and the
+// n-th element of an array of objects is the n-th occurrence of its first key.
+func metaLine(lines []string, at int, m mcpMeta, quoted bool) int {
+	needle := func(k string) string {
+		if quoted {
+			return fmt.Sprintf("%q", k)
+		}
+		return k
+	}
+	if m.path == "" {
+		return lineFrom(lines, at, needle(m.key))
+	}
+	line, skip := at, 0
+	for _, label := range strings.Split(m.path, ".") {
+		key, idx, _ := strings.Cut(label, "[")
+		n := skip + 1
+		skip = 0
+		if idx != "" {
+			skip, _ = strconv.Atoi(strings.TrimSuffix(idx, "]"))
+		}
+		found := false
+		for from := line; from <= len(lines); from++ {
+			if !strings.Contains(lines[from-1], needle(key)) {
+				continue
+			}
+			if n--; n == 0 {
+				line, found = from, true
+				break
+			}
+		}
+		if !found {
+			return line
+		}
+	}
+	return line
 }
 
 func (r *runner) checkMCPMetadata(s *mcpServer, lines []string, at int) {
@@ -84,13 +132,13 @@ func (r *runner) checkMCPMetadata(s *mcpServer, lines []string, at int) {
 		return // frontmatter is part of the text the security scan reads
 	}
 	for _, m := range s.meta {
-		needle := m.key
-		if s.section != "" {
-			needle = fmt.Sprintf("%q", m.key)
+		line := metaLine(lines, max(at, 1), m, s.section != "")
+		name := m.key
+		if m.path != "" {
+			name = m.path
 		}
-		line := lineFrom(lines, at, needle)
 		for _, problem := range r.metadataProblems(m.text) {
-			r.add(CodeMCPMetadata, s.file, line, "MCP server %q %s %s", s.name, m.key, problem)
+			r.add(CodeMCPMetadata, s.file, line, "MCP server %q %s %s", s.name, name, problem)
 		}
 	}
 }
