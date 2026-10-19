@@ -132,6 +132,40 @@ fix(mcp): correct parameter handling in update_rule tool
 docs(contributing): clarify project architecture
 ```
 
+### Derived rules and tests
+
+ai-rulez is MIT licensed. A rule, pattern or test derived from a project under another license, such as
+[NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) (Apache-2.0), must keep that license's conditions:
+
+1. **Keep the upstream header and mark the change.** Retain the original copyright and SPDX lines, and state that the
+   file was modified (Apache-2.0 section 4(b)). Record the upstream repository, path and commit in the header:
+
+   ```go
+   // SPDX-License-Identifier: Apache-2.0
+   // Copyright 2026 NVIDIA CORPORATION & AFFILIATES
+   //
+   // Derived from https://github.com/NVIDIA/SkillSpector/blob/<commit>/<path>
+   // at commit <full-commit-sha>.
+   // Modified by the ai-rulez contributors: <one line on what changed>.
+   // The modifications are licensed under the MIT License; see LICENSE.
+   ```
+
+   Use the comment syntax of the file (`#` for TOML or YAML, `<!-- -->` for Markdown). Copy the copyright line from the
+   upstream file; if it has none, use the one in the upstream `LICENSE`.
+
+2. **Add a notices entry.** List the file, upstream path and commit under its project in
+   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Keep the full text of each upstream license under `LICENSES/`
+   (`LICENSES/Apache-2.0.txt` for Apache-2.0), copied unmodified from the official source; add it with the first file
+   derived under that license.
+
+3. **Do not copy YARA rules from signature-base.** SkillSpector's YARA files are based on
+   [Neo23x0/signature-base](https://github.com/Neo23x0/signature-base) (DRL-1.1). Re-derive such a pattern as an RE2
+   regular expression instead of copying the file, and credit the original rule name, its author and reference, and the
+   DRL-1.1 license in the header and in `THIRD_PARTY_NOTICES.md`.
+
+Contributions that go the other way, from ai-rulez to an upstream project, follow that project's terms; SkillSpector
+requires a DCO sign-off (`git commit -s`). This does not apply to commits in this repository.
+
 ### Pull Request Process
 
 1.  Create a feature branch from `main`.
