@@ -253,6 +253,9 @@ func scanDeserialization(r *runner, t *scanText) {
 			continue
 		}
 		for _, frag := range t.codeFragments(l) {
+			if lang != langJS && lang != langPHP && lang != langJava {
+				frag = stripShellComment(frag)
+			}
 			if !containsAnyStem(frag, false, deserStems()) {
 				continue
 			}
@@ -265,12 +268,35 @@ func scanDeserialization(r *runner, t *scanText) {
 	}
 }
 
+// callArgs is the text inside the parentheses of the call rule matched, up to the balanced
+// closing one, so a safe loader named elsewhere on the line does not exempt it.
+func callArgs(call string, re *regexp.Regexp) string {
+	loc := re.FindStringIndex(call)
+	if len(loc) != 2 {
+		return call
+	}
+	rest := call[loc[1]:]
+	depth := 1
+	for i := 0; i < len(rest); i++ {
+		switch rest[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return rest[:i]
+			}
+		}
+	}
+	return rest
+}
+
 func unsafeDeserialization(call, lang string, ruamel bool) string {
 	for _, rule := range deserRules() {
 		if !rule.appliesTo(lang) || !rule.re.MatchString(call) {
 			continue
 		}
-		if rule.exempt != nil && rule.exempt.MatchString(call) {
+		if rule.exempt != nil && rule.exempt.MatchString(callArgs(call, rule.re)) {
 			continue
 		}
 		if ruamel && strings.HasPrefix(rule.what, "yaml.load") {
@@ -301,10 +327,18 @@ var (
 	// defenseTailRe is a refusal after the address: only a word that rejects the request counts
 	// there, because a file named "filter.out" after the URL defends nothing.
 	defenseTailRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`(?i)\b(?:raise|forbid\w*|reject\w*|den(?:y|ied)|block\w*|refus\w*|prevent\w*|disallow\w*)\b`)
+		return regexp.MustCompile(`(?i)\b(?:raise|throw|forbid\w*|reject\w*|den(?:y|ied)|refus\w*|disallow\w*)\b`)
+	})
+	passiveRefusalRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:is|are|be|gets?|get)\s+(?:blocked|rejected|denied|forbidden|refused|disallowed)\b`)
+	})
+	// defenseBeforeRe is a defense in code that precedes the address: a deny list literal, a
+	// startswith/endswith test, a raise or throw, or a conditional that names a defense word.
+	defenseBeforeRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:block\w*|den(?:y|ied|ylist)|reject\w*|refus\w*|forbid\w*|disallow\w*|prevent\w*|ssrf|allow-?list|white-?list|black-?list|sanitiz\w*|validate\w*|validati(?:on|ng)|filter\w*)\s*(?::?=|\+=|:)\s*[\[({]|\b(?:startswith|endswith)\b|\b(?:raise|throw)\b|\b(?:if|elif|unless|assert|when|while)\b[^\n]*\b(?:block\w*|den(?:y|ied|ylist)|reject\w*|refus\w*|forbid\w*|disallow\w*|ssrf|allow-?list|white-?list|black-?list|sanitiz\w*|validate\w*|validati(?:on|ng)|filter\w*)\b`)
 	})
 	defenseRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`(?i)\b(?:block\w*|den(?:y|ied|ylist)|reject\w*|refus\w*|forbid\w*|disallow\w*|prevent\w*|ssrf|allow-?list|white-?list|black-?list|sanitiz\w*|validat\w*|filter\w*|startswith|endswith|raise)\b`)
+		return regexp.MustCompile(`(?i)\b(?:block\w*|den(?:y|ied|ylist)|reject\w*|refus\w*|forbid\w*|disallow\w*|prevent\w*|ssrf|allow-?list|white-?list|black-?list|sanitiz\w*|validate\w*|validati(?:on|ng)|filter\w*|startswith|endswith|raise)\b`)
 	})
 )
 
@@ -326,26 +360,37 @@ func scanInternalRequest(r *runner, t *scanText) {
 func internalTarget(t *scanText, l scanLine) (sev Severity, what string) {
 	for _, frag := range t.codeFragments(l) {
 		frag = stripShellComment(frag)
-		if loc := metadataRe().FindStringIndex(frag); loc != nil && requestRe().MatchString(frag) && !defended(frag, loc) {
+		if loc := metadataRe().FindStringIndex(frag); len(loc) == 2 && requestRe().MatchString(frag) && !defended(frag, loc) {
 			return SeverityWarning, "a cloud metadata endpoint"
 		}
-		if loc := localAdmRe().FindStringIndex(frag); loc != nil && (strings.Contains(frag[loc[0]:loc[1]], "://") || requestRe().MatchString(frag)) && !defended(frag, loc) {
+		if loc := localAdmRe().FindStringIndex(frag); len(loc) == 2 && (strings.Contains(frag[loc[0]:loc[1]], "://") || requestRe().MatchString(frag)) && !defended(frag, loc) {
 			return SeverityInfo, "the administration port of a local service"
 		}
 	}
-	if t.prose(l) && !defenseRe().MatchString(l.Plain) {
+	if t.prose(l) {
 		switch {
-		case proseMetaRe().MatchString(l.Plain):
+		case proseRequest(l.Plain, proseMetaRe()):
 			return SeverityWarning, "a cloud metadata endpoint"
-		case proseAdmRe().MatchString(l.Plain):
+		case proseRequest(l.Plain, proseAdmRe()):
 			return SeverityInfo, "the administration port of a local service"
 		}
 	}
 	return "", ""
 }
 
-// defended reports whether the code around the address at loc refuses it: any defence word
-// before it, or a rejecting word after it.
+// proseRequest reports whether the line tells the agent to request the address re finds and
+// does not defend against it. Only a defense word before the address, or a passive refusal
+// after it ("are blocked"), counts: "fetch X and validate the output" defends nothing.
+func proseRequest(plain string, re *regexp.Regexp) bool {
+	loc := re.FindStringIndex(plain)
+	if len(loc) != 2 {
+		return false
+	}
+	return !defenseRe().MatchString(plain[:loc[1]]) && !passiveRefusalRe().MatchString(plain[loc[1]:])
+}
+
+// defended reports whether the code around the address at loc refuses it: a deny list, a
+// conditional or a raise before it, or a rejecting word after it.
 func defended(frag string, loc []int) bool {
-	return defenseRe().MatchString(frag[:loc[0]]) || defenseTailRe().MatchString(frag[loc[1]:])
+	return defenseBeforeRe().MatchString(frag[:loc[0]]) || defenseTailRe().MatchString(frag[loc[1]:])
 }
