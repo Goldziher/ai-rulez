@@ -54,9 +54,6 @@ type antiRefusalPattern struct {
 	// means the phrase is ordinary technical or editorial guidance (a settings page, a license
 	// header), not an instruction to the agent.
 	exempt *regexp.Regexp
-	// object, when set, must match the start of the rest of the sentence: "never refuse" is
-	// an instruction only when it governs a request, not "refuse to run tests".
-	object *regexp.Regexp
 	// tech marks a phrase exempt when a product-setting word sits in the object position
 	// right after it (see techObject).
 	tech bool
@@ -65,15 +62,12 @@ type antiRefusalPattern struct {
 var antiRefusalPatterns = sync.OnceValue(func() []antiRefusalPattern {
 	const subject = `(?:user|requests?|prompts?|queries|commands?|instructions?)`
 	const apos = `['’]`
-	// refuseObject is what "never refuse" must govern: a request, the user, a task, "anything",
-	// a coordinated refuse/decline/say no, or the end of the clause.
-	refuseObject := regexp.MustCompile(`(?i)^(?:\s*$|\s*[,:)\x{2014}-]|\s+(?:or|and)\s+(?:refuse|decline|say\s+no)\b|\s+(?:(?:a|an|any|every|each|all|the|your|that|this|whatever|such|of|their)\s+)*(?:\w+\s+){0,2}?(?:requests?|users?|prompts?|tasks?|questions?|quer(?:y|ies)|instructions?|commands?|anything|everything|one|them|it)\b)`)
 	// docTail marks a sentence about the content of a generated document.
 	docTail := regexp.MustCompile(`(?i)\b(?:in|from|to|on)\s+(?:the\s+|a\s+|your\s+)?(?:\w+\s+){0,3}(?:headers?|footers?|pdf|licen[sc]es?|readme|docs?|documentation|emails?|comments?|changelog|commits?|page|ui|files?|copyright)\b`)
 	// helpTail marks a refusal rule about ordinary work between colleagues, or "refuse to <verb>".
-	helpTail := regexp.MustCompile(`(?i)^\s+to\s+\w|\b(?:from|by)\s+(?:a|an|the|your|any)\s+(?:teammates?|colleagues?|reviewers?|maintainers?|contributors?|developers?|peers?)\b|\bcode\s+review\b|\bpull\s+request\b|\bto\s+help\s+you\s+(?:format|lint|build|write|refactor|test|review)\b`)
+	helpTail := regexp.MustCompile(`(?i)^\s+to\s+(?:run|fix|test|build|review|commit|deploy|merge|update|write|read|check|lint|format|refactor|install|compile|push|release|add|implement|document|debug|rebase|validate|verify|use|edit|open|ship|rename|delete|remove|create|generate|install|upgrade)\b|^\s+(?:(?:a|an|the|your|that|this|any)\s+)?(?:\w+\s+){0,2}?(?:meetings?|invites?|invitations?|prs?|pull\s+requests?|reviews?|calls?|offers?|appointments?|handshakes?)\b|\b(?:from|by)\s+(?:a|an|the|your|any)\s+(?:teammates?|colleagues?|reviewers?|maintainers?|contributors?|developers?|peers?)\b|\bcode\s+review\b|\bpull\s+request\b|\bto\s+help\s+you\s+(?:format|lint|build|write|refactor|test|review)\b`)
 	return []antiRefusalPattern{
-		{re: regexp.MustCompile(`(?i)\b(?:never|do\s+not|don` + apos + `?t)\s+(?:ever\s+)?(?:refuse|decline)\b|\byou\s+(?:must|will|should|can)\s*(?:not|never)\s+(?:refuse|decline|say\s+no)\b|\byou\s+(?:cannot|can` + apos + `?t|can\s+not)\s+(?:refuse|decline|say\s+no)\b`), stems: []string{"refuse", "decline"}, exempt: helpTail, object: refuseObject},
+		{re: regexp.MustCompile(`(?i)\b(?:never|do\s+not|don` + apos + `?t)\s+(?:ever\s+)?(?:refuse|decline)\b|\byou\s+(?:must|will|should|can)\s*(?:not|never)\s+(?:refuse|decline|say\s+no)\b|\byou\s+(?:cannot|can` + apos + `?t|can\s+not)\s+(?:refuse|decline|say\s+no)\b`), stems: []string{"refuse", "decline"}, exempt: helpTail},
 		{re: regexp.MustCompile(`(?i)\bnever\s+say\s+(?:that\s+)?(?:you\s+)?(?:can` + apos + `?t|cannot|won` + apos + `?t|no)\b`), stems: []string{"never say"}},
 		{re: regexp.MustCompile(`(?i)\balways\s+(?:comply|obey)\b(?:\s+(?:with\s+)?(?:(?:the|every|all|any|each|whatever)\s+)*` + subject + `|\s*[.;!]|\s*,\s*(?:no|regardless|even|whatever|without|never|and\s+never)\b|\s*$)|\b(?:comply\s+with|obey)\s+(?:every|all|any|each)\s+` + subject + `\b`), stems: []string{"comply", "obey"}},
 		{re: regexp.MustCompile(`(?i)\balways\s+agree\s+(?:with|to)\s+(?:(?:the|every|all|any|each)\s+)?` + subject + `\b|\bmust\s+always\s+agree\b`), stems: []string{"agree"}},
@@ -232,7 +226,7 @@ func firstAntiRefusal(line string) (string, bool) {
 			if spokenAbout(line, loc[0], loc[1]) || scopeLimited(tail) || p.exempt != nil && p.exempt.MatchString(tail) {
 				continue
 			}
-			if p.object != nil && !p.object.MatchString(tail) || p.tech && techObject(tail) {
+			if p.tech && techObject(tail) {
 				continue
 			}
 			return strings.TrimSpace(line[loc[0]:loc[1]]), true
