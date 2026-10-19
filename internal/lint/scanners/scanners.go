@@ -49,6 +49,8 @@ type Profile struct {
 	Version     string            `toml:"version"`
 	SeverityMap map[string]string `toml:"severity_map"`
 	MaxSeverity string            `toml:"max_severity"`
+	// OfflineNotices lists the "lookup unreachable" results an egress = false entry drops.
+	OfflineNotices []OfflineNotice `toml:"offline_notices"`
 	// When limits a preset member to projects with that configuration (WhenPlugin).
 	When        string   `toml:"when"`
 	RequiresEnv []string `toml:"requires_env"`
@@ -57,6 +59,15 @@ type Profile struct {
 	Source         string   `toml:"source"`
 	VerifiedOn     string   `toml:"verified_on"`
 	TestedVersions []string `toml:"tested_versions"`
+}
+
+// OfflineNotice identifies a result a scanner emits only when its own network
+// lookup fails. Both fields must match, so a real finding of the same rule stays.
+type OfflineNotice struct {
+	// Rule is the exact rule id of the result.
+	Rule string `toml:"rule"`
+	// Contains is a fragment of the result message.
+	Contains string `toml:"contains"`
 }
 
 // Preset is a named list of profiles.
