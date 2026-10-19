@@ -134,9 +134,6 @@ func dumpsEnvironment(t *scanText, l scanLine) bool {
 	if !t.prose(l) {
 		return false
 	}
-	if l.Neg {
-		return false
-	}
 	for _, m := range backtickRe().FindAllStringSubmatchIndex(l.Text, -1) {
 		span := l.Text[m[2]:m[3]]
 		if (envDumpRe().MatchString(span) || envPipeRe().MatchString(span)) && !spokenAbout(l.Text, m[0], m[1]) {
