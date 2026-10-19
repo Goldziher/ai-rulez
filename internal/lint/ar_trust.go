@@ -259,8 +259,8 @@ func (f *dirFile) leading() (head []byte, ok bool) {
 		}
 		defer fh.Close() //nolint:errcheck // read-only
 		buf := make([]byte, leadingBytes)
-		n, _ := fh.Read(buf) //nolint:errcheck // a short or empty read is fine
-		f.head, f.ok = buf[:n], true
+		n, _ := fh.Read(buf)                      //nolint:errcheck // a short or empty read is fine
+		f.head, f.ok = bytes.Clone(buf[:n]), true // buf[:n] would keep all 8 KiB alive for a small file
 	})
 	return f.head, f.ok
 }

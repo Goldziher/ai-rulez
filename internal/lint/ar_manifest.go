@@ -8,19 +8,26 @@
 package lint
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/pelletier/go-toml/v2"
 )
 
 // The rules for dependency manifests a skill ships (requirements*.txt,
-// package.json, pyproject.toml, pip.conf, .npmrc) and for the commands that
+// package.json, pyproject.toml, pip.conf, .npmrc, .yarnrc) and for the commands that
 // install from them.
 
 // Codes for the manifest rules.
@@ -38,22 +45,23 @@ func registerArManifest(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeUnpinnedManifest: {
-			Why:  "A dependency without an exact version resolves to whatever release is current when the skill's scripts run, so a compromised or broken release reaches the agent's machine unreviewed. Bounded ranges (`~=`, `^`, `>=1,<2`) report at info, open-ended ones at warning. `requirements.in` is the input of a lock compiler and is never reported.",
+			Why:  "A dependency without an exact version resolves to whatever release is current when the skill's scripts run, so a compromised or broken release reaches the agent's machine unreviewed. Bounded ranges (`~=`, `^`, `>=1,<2`) report at info, open-ended ones at warning. The rule reads the manifests anywhere in a skill directory: `requirements*.txt` (also `*-requirements.txt`, `requirements.lock` and files in a `requirements/` directory), `package.json`, and `pyproject.toml` with `[project]`, `[build-system]`, `[dependency-groups]`, `[tool.poetry]`, `[tool.pdm]` and `[tool.uv]` dependencies. `requirements.in` is the input of a lock compiler and is never reported. A manifest the rule cannot read (over 512 KiB, or binary) is reported at info as not analyzable; a UTF-16 file is decoded, a byte order mark is ignored, and a file is listed at most 100 times with a count of the rest.",
 			Bad:  "`requests` or `requests>=2` in `scripts/requirements.txt`, or `\"left-pad\": \"latest\"` in `package.json`",
 			Good: "`requests==2.32.3` (ideally with `--hash=`), `\"left-pad\": \"1.3.0\"`, or a git requirement that names a full commit",
 		},
 		CodeSourceRedirect: {
-			Why:  "An index or registry other than the default decides which package a name resolves to. `--extra-index-url` lets a same-named package on another host win (dependency confusion), and `--trusted-host` turns TLS verification off for that host. List the project's own mirror in `lint.security.allowed_hosts`.",
+			Why:  "An index or registry other than the default decides which package a name resolves to. `--extra-index-url` lets a same-named package on another host win (dependency confusion), and `--trusted-host` turns TLS verification off for that host. The rule reads `--index-url`, `--extra-index-url`, `--default-index`, `--index`, `--find-links` and `--trusted-host`, `pip.conf`/`pip.ini`/`uv.toml`, `pyproject.toml` (`[tool.uv]`, `[tool.poetry.source]`, `[tool.pdm.source]`), `.npmrc`, `.yarnrc`, `.yarnrc.yml` and `registry` options of install commands. `pypi.org`, `pypi.python.org`, `files.pythonhosted.org`, the npm and Yarn registries and `download.pytorch.org` are default hosts. List the project's own mirror in `lint.security.allowed_hosts`.",
 			Bad:  "`pip install --extra-index-url https://pkgs.example.net/simple helper` or `registry=https://npm.example.net/` in `.npmrc`",
 			Good: "Install from the default index, or name the project's mirror in `lint.security.allowed_hosts`",
 		},
 		CodeTyposquat: {
-			Why:  "A package name one keystroke from a popular one is how typosquatting works. The check compares against a short embedded list of widely installed PyPI and npm packages and skips known real neighbors such as `preact` and names that differ only by trailing digits (`psycopg`/`psycopg2`, `httpx`/`httpx2`), so it reports at info: a legitimate package that happens to sit one edit away is a false positive, and a squat of a package outside the list is missed.",
+			Why:  "A package name one keystroke from a popular one is how typosquatting works. The check compares each dependency with the 300 most downloaded PyPI and npm packages and about 230 hand-picked popular ones (it embeds the public download rankings, about 300 KB, and uses no network) and skips every name that is itself in the top 10,000 of its ecosystem, a known real neighbor, or differs only by trailing digits (`psycopg`/`psycopg2`). It reports at info: a real package outside the rankings that happens to sit one edit away is a false positive, and a squat of a package outside the top 300 is missed.",
 			Bad:  "`reqeusts==2.0.0` in `requirements.txt` (a transposition of `requests`)",
 			Good: "`requests==2.32.3`, or `# ai-rulez-lint-ignore: AR056` above a real package that is one edit from a popular one",
 		},
 	})
 	s.addTextScan(scanManifest, AnalyzerSecurity)
+	s.addRunCheck(checkSkillManifests, AnalyzerSecurity)
 }
 
 type manifestKind int
@@ -64,31 +72,66 @@ const (
 	manifestPackageJSON
 	manifestPyproject
 	manifestIni
+	manifestUvToml
 	manifestNpmrc
+	manifestYarnrc
+	manifestYarnrcYml
+)
+
+const (
+	dirRequirements = "requirements"
+	bom             = "\ufeff"
+	// maxManifestBytes is the largest manifest the rules read, like the cap on skill resources.
+	maxManifestBytes = 512 * 1024
+	// maxManifestFindings is how many AR054 and how many AR056 findings one file lists.
+	maxManifestFindings = 100
 )
 
 var requirementsFileRe = sync.OnceValue(func() *regexp.Regexp {
-	return regexp.MustCompile(`^(?:requirements|constraints)(?:[-_.][a-z0-9_.-]+)?\.txt$`)
+	return regexp.MustCompile(`^(?:.+[-_.])?(?:requirements|constraints)(?:[-_.][a-z0-9_.-]+)?\.(?:txt|lock)$`)
 })
 
 func manifestOf(abs string) manifestKind {
 	base := strings.ToLower(filepath.Base(abs))
 	switch {
-	case requirementsFileRe().MatchString(base):
+	case requirementsFileRe().MatchString(base),
+		strings.HasSuffix(base, ".txt") && strings.EqualFold(filepath.Base(filepath.Dir(abs)), dirRequirements):
 		return manifestRequirements
 	case base == filePackageJSON:
 		return manifestPackageJSON
 	case base == "pyproject.toml":
 		return manifestPyproject
-	case base == "pip.conf" || base == "pip.ini" || base == "uv.toml":
+	case base == "pip.conf" || base == "pip.ini":
 		return manifestIni
-	case base == fileNpmrc || base == ".yarnrc":
+	case base == "uv.toml":
+		return manifestUvToml
+	case base == fileNpmrc:
 		return manifestNpmrc
+	case base == ".yarnrc":
+		return manifestYarnrc
+	case base == ".yarnrc.yml":
+		return manifestYarnrcYml
 	}
 	return manifestNone
 }
 
+// withoutBOM returns t without a UTF-8 byte order mark at its start, which would
+// otherwise make the first requirement or the JSON document unreadable.
+func withoutBOM(t *scanText) *scanText {
+	if !strings.HasPrefix(t.raw, bom) {
+		return t
+	}
+	c := *t
+	c.raw = strings.TrimPrefix(t.raw, bom)
+	c.lines = slices.Clone(t.lines)
+	if len(c.lines) > 0 {
+		c.lines[0].Text = strings.TrimPrefix(c.lines[0].Text, bom)
+	}
+	return &c
+}
+
 func scanManifest(r *runner, t *scanText) {
+	t = withoutBOM(t)
 	switch manifestOf(t.abs) {
 	case manifestRequirements:
 		r.checkRequirements(t)
@@ -98,10 +141,91 @@ func scanManifest(r *runner, t *scanText) {
 		r.checkPyproject(t)
 	case manifestIni:
 		r.checkIndexConfig(t, iniSourceRe())
+	case manifestUvToml:
+		r.checkIndexConfig(t, uvTomlSourceRe())
 	case manifestNpmrc:
 		r.checkIndexConfig(t, npmrcSourceRe())
+	case manifestYarnrc:
+		r.checkIndexConfig(t, yarnrcSourceRe())
+	case manifestYarnrcYml:
+		r.checkIndexConfig(t, yarnrcYmlSourceRe())
 	}
 	r.checkInstallCommands(t)
+}
+
+// checkSkillManifests reads the manifests of a skill that the resource scan does not:
+// those outside scripts/, references/ and assets/ (the skill root, lib/, ...), and those
+// the resource scan skips as too large, binary or not UTF-8. A file it can decode
+// goes through the same scan as a resource; one it cannot read is reported as not
+// analyzable, so silence does not read as a clean manifest.
+func checkSkillManifests(r *runner) {
+	for i := range r.items {
+		it := &r.items[i]
+		if !it.owned || it.isDoc || it.kind != kindSkill || it.itemDir == "" {
+			continue
+		}
+		scanned := map[string]bool{}
+		for _, res := range it.cf.Resources {
+			if scannableResource(res) {
+				scanned[filepath.Join(it.itemDir, filepath.FromSlash(res.RelPath))] = true
+			}
+		}
+		for _, f := range r.skillTree(it.itemDir) {
+			if scanned[f.path] || manifestOf(f.path) == manifestNone || inPycache(f.path) {
+				continue
+			}
+			r.scanUnreadManifest(it.itemDir, f)
+		}
+	}
+}
+
+func (r *runner) scanUnreadManifest(dir string, f *dirFile) {
+	rel, _ := filepath.Rel(dir, f.path) //nolint:errcheck // display only
+	rel = filepath.ToSlash(rel)
+	notAnalyzable := func(why string) {
+		r.addSev(SeverityInfo, CodeUnpinnedManifest, f.path, 1, "%s is not analyzable (%s): AR054, AR055 and AR056 did not read it", rel, why)
+	}
+	if f.size > maxManifestBytes {
+		notAnalyzable("larger than 512 KiB")
+		return
+	}
+	data, err := os.ReadFile(f.path)
+	if err != nil {
+		return
+	}
+	text, why := decodeManifest(data)
+	if why != "" {
+		notAnalyzable(why)
+		return
+	}
+	r.securityScan(f.path, text)
+}
+
+// decodeManifest turns the bytes of a manifest into UTF-8 text: a UTF-16 file with a
+// byte order mark (what PowerShell redirection writes) is decoded, and a stray
+// invalid byte is replaced. why is set for content that is not text.
+func decodeManifest(data []byte) (text, why string) {
+	switch {
+	case bytes.HasPrefix(data, []byte{0xFF, 0xFE}), bytes.HasPrefix(data, []byte{0xFE, 0xFF}):
+		return decodeUTF16(data), ""
+	case bytes.IndexByte(data, 0) >= 0:
+		return "", "binary content"
+	case !utf8.Valid(data):
+		return strings.ToValidUTF8(string(data), "\ufffd"), ""
+	}
+	return string(data), ""
+}
+
+func decodeUTF16(data []byte) string {
+	order := func(b []byte) uint16 { return uint16(b[0]) | uint16(b[1])<<8 }
+	if data[0] == 0xFE {
+		order = func(b []byte) uint16 { return uint16(b[1]) | uint16(b[0])<<8 }
+	}
+	units := make([]uint16, 0, len(data)/2)
+	for i := 2; i+1 < len(data); i += 2 {
+		units = append(units, order(data[i:]))
+	}
+	return string(utf16.Decode(units))
 }
 
 // pinLevel is how firmly a dependency specifier fixes the release.
@@ -249,18 +373,58 @@ func vcsRequirement(name, u string) requirement {
 	return requirement{name: name, level: level, vcs: true}
 }
 
-// reportPin adds the AR054 finding the requirement deserves, if any.
-func (r *runner) reportPin(abs string, line int, req requirement) {
+// pinFinding is the AR054 finding the requirement deserves, if any.
+func pinFinding(req requirement) (sev Severity, msg string, ok bool) {
 	switch {
 	case req.level == pinned:
+		return "", "", false
 	case req.vcs:
-		r.addSev(SeverityWarning, CodeUnpinnedManifest, abs, line, "%s installs from a VCS URL that does not name a full commit; pin the 40-character commit so the code cannot change under the skill", req.name)
+		return SeverityWarning, fmt.Sprintf("%s installs from a VCS URL that does not name a full commit; pin the 40-character commit so the code cannot change under the skill", req.name), true
 	case req.level == pinNone:
-		r.addSev(SeverityWarning, CodeUnpinnedManifest, abs, line, "%s has no pinned version; pin it with == so a new release cannot change what the skill installs", req.name)
+		return SeverityWarning, fmt.Sprintf("%s has no pinned version; pin it with == so a new release cannot change what the skill installs", req.name), true
 	case req.level == pinOpen:
-		r.addSev(SeverityWarning, CodeUnpinnedManifest, abs, line, "%s sets only a lower bound (%s), so any later release is accepted; pin it with ==", req.name, req.spec)
-	default:
-		r.addSev(SeverityInfo, CodeUnpinnedManifest, abs, line, "%s allows a version range (%s); pin it with == or install from a lock file", req.name, req.spec)
+		return SeverityWarning, fmt.Sprintf("%s sets only a lower bound (%s), so any later release is accepted; pin it with ==", req.name, req.spec), true
+	}
+	return SeverityInfo, fmt.Sprintf("%s allows a version range (%s); pin it with == or install from a lock file", req.name, req.spec), true
+}
+
+// depReporter reports the dependencies of one manifest, at most maxManifestFindings
+// AR054 and as many AR056 findings, and counts the rest into one summary each.
+type depReporter struct {
+	r          *runner
+	abs        string
+	pins       int
+	squats     int
+	morePins   int
+	moreSquats int
+}
+
+func (d *depReporter) dep(line int, req requirement, u nameUniverse) {
+	if sev, msg, ok := pinFinding(req); ok {
+		if d.pins < maxManifestFindings {
+			d.pins++
+			d.r.addSev(sev, CodeUnpinnedManifest, d.abs, line, "%s", msg)
+		} else {
+			d.morePins++
+		}
+	}
+	if near := u.typosquatOf(req.name); near != "" {
+		if d.squats < maxManifestFindings {
+			d.squats++
+			d.r.add(CodeTyposquat, d.abs, line, "%q is one edit from the popular package %q; check that it is the package you mean (typosquatting)", req.name, near)
+		} else {
+			d.moreSquats++
+		}
+	}
+}
+
+// finish adds the summaries of the findings the cap left out.
+func (d *depReporter) finish() {
+	if d.morePins > 0 {
+		d.r.addSev(SeverityInfo, CodeUnpinnedManifest, d.abs, 1, "%d more dependencies in this file are not pinned; only the first %d are listed", d.morePins, maxManifestFindings)
+	}
+	if d.moreSquats > 0 {
+		d.r.add(CodeTyposquat, d.abs, 1, "%d more dependency names in this file are one edit from a popular package; only the first %d are listed", d.moreSquats, maxManifestFindings)
 	}
 }
 
@@ -291,77 +455,234 @@ func manifestLines(t *scanText) []manifestLine {
 }
 
 func (r *runner) checkRequirements(t *scanText) {
+	rep := &depReporter{r: r, abs: t.abs}
 	for _, l := range manifestLines(t) {
 		if strings.HasPrefix(l.text, "-") && !strings.HasPrefix(l.text, "-e ") && !strings.HasPrefix(l.text, "--editable ") {
 			r.reportSources(t.abs, l.no, l.text)
 			continue
 		}
 		if req, ok := parseRequirement(l.text); ok {
-			r.reportPin(t.abs, l.no, req)
-			r.reportTyposquat(t.abs, l.no, req.name, pyPIUniverse())
+			rep.dep(l.no, req, pyPIUniverse())
 		}
 	}
+	rep.finish()
 }
 
-type pyprojectDoc struct {
-	Project struct {
-		Dependencies         []string            `toml:"dependencies"`
-		OptionalDependencies map[string][]string `toml:"optional-dependencies"`
-	} `toml:"project"`
-	DependencyGroups map[string][]any `toml:"dependency-groups"`
-	Tool             struct {
-		UV struct {
-			IndexURL      string           `toml:"index-url"`
-			ExtraIndexURL []string         `toml:"extra-index-url"`
-			Index         []map[string]any `toml:"index"`
-			DevDeps       []string         `toml:"dev-dependencies"`
-		} `toml:"uv"`
-		Poetry struct {
-			Source []map[string]any `toml:"source"`
-		} `toml:"poetry"`
-	} `toml:"tool"`
+// tomlMap, tomlList and tomlString read a decoded TOML or JSON value, giving the zero
+// value for any other type, so one key of the wrong type cannot hide the rest.
+func tomlMap(v any) map[string]any {
+	m, _ := v.(map[string]any)
+	return m
 }
 
-func (r *runner) checkPyproject(t *scanText) {
-	var doc pyprojectDoc
-	if toml.Unmarshal([]byte(t.raw), &doc) != nil {
-		return
+func tomlList(v any) []any {
+	l, _ := v.([]any)
+	return l
+}
+
+func tomlString(v any) string {
+	s, _ := v.(string)
+	return s
+}
+
+func tomlDig(v any, path ...string) any {
+	for _, key := range path {
+		v = tomlMap(v)[key]
 	}
-	var specs []string
-	specs = append(specs, doc.Project.Dependencies...)
-	for _, name := range sortedKeys(doc.Project.OptionalDependencies) {
-		specs = append(specs, doc.Project.OptionalDependencies[name]...)
+	return v
+}
+
+// tomlStrings returns the string elements of a list value.
+func tomlStrings(v any) []string {
+	var out []string
+	for _, e := range tomlList(v) {
+		if s, ok := e.(string); ok {
+			out = append(out, s)
+		}
 	}
-	for _, name := range sortedKeys(doc.DependencyGroups) {
-		for _, e := range doc.DependencyGroups[name] {
-			if s, ok := e.(string); ok {
-				specs = append(specs, s)
+	return out
+}
+
+// pyprojectSpecs lists the PEP 508 strings of a pyproject.toml: project, build,
+// dependency-group, PDM and uv dependencies.
+func pyprojectSpecs(doc map[string]any) []string {
+	specs := tomlStrings(tomlDig(doc, "project", "dependencies"))
+	specs = append(specs, tomlStrings(tomlDig(doc, "build-system", "requires"))...)
+	for _, groups := range []map[string]any{tomlMap(tomlDig(doc, "project", "optional-dependencies")), tomlMap(tomlDig(doc, "dependency-groups")), tomlMap(tomlDig(doc, "tool", "pdm", "dev-dependencies"))} {
+		for _, name := range sortedKeys(groups) {
+			specs = append(specs, tomlStrings(groups[name])...)
+		}
+	}
+	return append(specs, tomlStrings(tomlDig(doc, "tool", "uv", "dev-dependencies"))...)
+}
+
+// poetryDep is one entry of a [tool.poetry] dependency table.
+type poetryDep struct {
+	name string
+	req  requirement
+}
+
+// poetryDeps reads the dependency tables of [tool.poetry]: dependencies,
+// dev-dependencies and every group. Local paths and URLs name no release.
+func poetryDeps(doc map[string]any) []poetryDep {
+	poetry := tomlMap(tomlDig(doc, "tool", "poetry"))
+	tables := []map[string]any{tomlMap(poetry["dependencies"]), tomlMap(poetry["dev-dependencies"])}
+	groups := tomlMap(poetry["group"])
+	for _, g := range sortedKeys(groups) {
+		tables = append(tables, tomlMap(tomlMap(groups[g])["dependencies"]))
+	}
+	var out []poetryDep
+	for _, table := range tables {
+		for _, name := range sortedKeys(table) {
+			if req, ok := poetryRequirement(name, table[name]); ok {
+				out = append(out, poetryDep{name, req})
 			}
 		}
 	}
-	specs = append(specs, doc.Tool.UV.DevDeps...)
-	for _, spec := range specs {
-		req, ok := parseRequirement(spec)
-		if !ok {
-			continue
-		}
-		line := lineContaining(t.rawLines(), spec)
-		r.reportPin(t.abs, line, req)
-		r.reportTyposquat(t.abs, line, req.name, pyPIUniverse())
+	return out
+}
+
+func poetryRequirement(name string, v any) (requirement, bool) {
+	if strings.EqualFold(name, "python") {
+		return requirement{}, false
 	}
-	var urls []string
-	urls = append(urls, doc.Tool.UV.IndexURL)
-	urls = append(urls, doc.Tool.UV.ExtraIndexURL...)
-	for _, src := range slices.Concat(doc.Tool.UV.Index, doc.Tool.Poetry.Source) {
-		if u, ok := src[keyURL].(string); ok {
-			urls = append(urls, u)
+	switch t := v.(type) {
+	case string:
+		return requirement{name: name, level: poetryLevel(t), spec: t}, true
+	case map[string]any:
+		return poetryTableRequirement(name, t)
+	case []any:
+		req, any := requirement{name: name, level: pinned}, false
+		for _, e := range t {
+			if r, ok := poetryRequirement(name, e); ok {
+				any = true
+				if r.level > req.level || r.vcs {
+					req = r
+				}
+			}
+		}
+		return req, any
+	}
+	return requirement{}, false
+}
+
+func poetryTableRequirement(name string, t map[string]any) (requirement, bool) {
+	if t["path"] != nil || t[keyURL] != nil {
+		return requirement{}, false
+	}
+	if git := tomlString(t["git"]); git != "" {
+		req := requirement{name: name, level: pinNone, vcs: true}
+		if fullCommitRe().MatchString(tomlString(t["rev"])) {
+			req.level = pinned
+		}
+		return req, true
+	}
+	version := tomlString(t["version"])
+	return requirement{name: name, level: poetryLevel(version), spec: version}, true
+}
+
+// poetryLevel classifies a Poetry version constraint: a bare version is an exact
+// pin, ^ and ~ and wildcards are bounded, comparison operators follow PEP 440.
+func poetryLevel(spec string) pinLevel {
+	spec = strings.TrimSpace(spec)
+	switch {
+	case spec == "" || spec == "*":
+		return pinNone
+	case strings.HasPrefix(spec, "^") || strings.HasPrefix(spec, "~") && !strings.HasPrefix(spec, "~="):
+		return pinBounded
+	case strings.ContainsAny(spec, "<>=!,"):
+		return classifyPySpec(spec)
+	case strings.Contains(spec, "*"):
+		return pinBounded
+	}
+	return pinned
+}
+
+func (r *runner) checkPyproject(t *scanText) {
+	var doc map[string]any
+	if toml.Unmarshal([]byte(t.raw), &doc) != nil {
+		return
+	}
+	idx := newLineIndex(t.rawLines())
+	rep := &depReporter{r: r, abs: t.abs}
+	for _, spec := range pyprojectSpecs(doc) {
+		if req, ok := parseRequirement(spec); ok {
+			rep.dep(idx.literal(spec), req, pyPIUniverse())
+		}
+	}
+	for _, d := range poetryDeps(doc) {
+		rep.dep(idx.key(d.name), d.req, pyPIUniverse())
+	}
+	rep.finish()
+	urls := append(tomlStrings(tomlDig(doc, "tool", "uv", "extra-index-url")), tomlString(tomlDig(doc, "tool", "uv", "index-url")))
+	for _, tab := range [][]any{tomlList(tomlDig(doc, "tool", "uv", "index")), tomlList(tomlDig(doc, "tool", "poetry", "source")), tomlList(tomlDig(doc, "tool", "pdm", "source"))} {
+		for _, src := range tab {
+			urls = append(urls, tomlString(tomlMap(src)[keyURL]))
 		}
 	}
 	for _, u := range urls {
 		if u != "" {
-			r.reportRedirect(t.abs, lineContaining(t.rawLines(), u), "package index", u, false)
+			r.reportRedirect(t.abs, idx.literal(u), "package index", u, false)
 		}
 	}
+}
+
+// lineIndex finds the line of a string literal or a key in one pass over a file, so
+// that looking up many dependencies costs one scan, not one scan each. A value that
+// occurs on several lines is handed out in file order.
+type lineIndex struct {
+	lits, keys map[string][]int
+	used       map[string]int
+}
+
+var (
+	literalRe    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`"((?:[^"\\]|\\.)*)"|'([^']*)'`) })
+	tomlKeyRe    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s*(?:"([^"]+)"|([A-Za-z0-9_.-]+))\s*=`) })
+	jsonKeyRe    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`"((?:[^"\\]|\\.)*)"\s*:`) })
+	nameAssignRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s*name\s*=`) })
+)
+
+func newLineIndex(lines []string) *lineIndex {
+	x := &lineIndex{lits: map[string][]int{}, keys: map[string][]int{}, used: map[string]int{}}
+	for i, line := range lines {
+		no := i + 1
+		if m := tomlKeyRe().FindStringSubmatch(line); m != nil {
+			x.keys[m[1]+m[2]] = append(x.keys[m[1]+m[2]], no)
+		}
+		if nameAssignRe().MatchString(line) {
+			continue // the project's own name is not one of its dependencies
+		}
+		for _, m := range literalRe().FindAllStringSubmatch(line, -1) {
+			lit := m[2]
+			if m[0][0] == '"' {
+				lit = unquoteBasic(m[1])
+			}
+			x.lits[lit] = append(x.lits[lit], no)
+		}
+	}
+	return x
+}
+
+func unquoteBasic(s string) string {
+	if u, err := strconv.Unquote(`"` + s + `"`); err == nil {
+		return u
+	}
+	return s
+}
+
+// literal is the next line holding s as a whole string, 1 when there is none.
+func (x *lineIndex) literal(s string) int { return x.take("l"+s, x.lits[s]) }
+
+// key is the next line that assigns the TOML key name, 1 when there is none.
+func (x *lineIndex) key(name string) int { return x.take("k"+name, x.keys[name]) }
+
+func (x *lineIndex) take(id string, lines []int) int {
+	n := x.used[id]
+	if n >= len(lines) {
+		return 1
+	}
+	x.used[id] = n + 1
+	return lines[n]
 }
 
 func sortedKeys[V any](m map[string]V) []string {
@@ -446,21 +767,51 @@ func (r *runner) checkPackageJSON(t *scanText) {
 	if json.Unmarshal([]byte(t.raw), &pkg) != nil {
 		return
 	}
-	lines := t.rawLines()
+	keys := jsonKeyLines(t.rawLines())
+	rep := &depReporter{r: r, abs: t.abs}
 	for _, section := range packageJSONSections() {
-		var deps map[string]string
+		var deps map[string]json.RawMessage
 		if raw, ok := pkg[section]; !ok || json.Unmarshal(raw, &deps) != nil {
 			continue
 		}
-		from := lineContaining(lines, `"`+section+`"`)
+		from := keys.after(section, 1)
 		for _, name := range sortedKeys(deps) {
-			line := lineFrom(lines, from, `"`+name+`"`)
-			if spec := classifyNPMSpec(deps[name]); !spec.skip {
-				r.reportPin(t.abs, line, requirement{name: name, level: spec.level, vcs: spec.vcs, spec: deps[name]})
+			var value string
+			if json.Unmarshal(deps[name], &value) != nil {
+				continue // a value that is not a string names no release
 			}
-			r.reportTyposquat(t.abs, line, name, npmUniverse())
+			line := keys.after(name, from)
+			req := requirement{name: name, level: pinned}
+			if spec := classifyNPMSpec(value); !spec.skip {
+				req = requirement{name: name, level: spec.level, vcs: spec.vcs, spec: value}
+			}
+			rep.dep(line, req, npmUniverse())
 		}
 	}
+	rep.finish()
+}
+
+// jsonKeys maps each JSON object key of a file to the sorted lines it appears on.
+type jsonKeys map[string][]int
+
+func jsonKeyLines(lines []string) jsonKeys {
+	keys := jsonKeys{}
+	for i, line := range lines {
+		for _, m := range jsonKeyRe().FindAllStringSubmatch(line, -1) {
+			name := unquoteBasic(m[1])
+			keys[name] = append(keys[name], i+1)
+		}
+	}
+	return keys
+}
+
+// after is the first line at or after from that holds the key name, or from.
+func (k jsonKeys) after(name string, from int) int {
+	lines := k[name]
+	if i := sort.SearchInts(lines, from); i < len(lines) {
+		return lines[i]
+	}
+	return from
 }
 
 // lineFrom is the 1-based line at or after from that holds needle, or from.
@@ -476,12 +827,12 @@ func lineFrom(lines []string, from int, needle string) int {
 func (t *scanText) rawLines() []string { return strings.Split(t.raw, "\n") }
 
 var defaultSourceHosts = sync.OnceValue(func() map[string]bool {
-	return nameSet("pypi.org files.pythonhosted.org registry.npmjs.org registry.yarnpkg.com")
+	return nameSet("pypi.org pypi.python.org files.pythonhosted.org registry.npmjs.org registry.yarnpkg.com download.pytorch.org")
 })
 
 var (
 	pipOptionRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`(?:^|\s)(--index-url|--extra-index-url|--find-links|--trusted-host|-i|-f)(?:=|\s+)(\S+)`)
+		return regexp.MustCompile(`(?:^|\s)(--index-url|--extra-index-url|--default-index|--index|--find-links|--trusted-host|-i|-f)(?:=|\s+)(\S+)`)
 	})
 	npmOptionRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?:^|\s)--(?:@[A-Za-z0-9_.-]+:)?registry(?:=|\s+)(\S+)`)
@@ -493,7 +844,16 @@ var (
 		return regexp.MustCompile(`\b(?:PIP_INDEX_URL|PIP_EXTRA_INDEX_URL|UV_INDEX_URL|UV_EXTRA_INDEX_URL|UV_DEFAULT_INDEX|(?i:npm_config_registry))=(\S+)`)
 	})
 	iniSourceRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`^\s*(index-url|extra-index-url|find-links|trusted-host)\s*[=:]\s*(\S+)`)
+		return regexp.MustCompile(`(?i)^\s*(index-url|extra-index-url|find-links|trusted-host)\s*[=:]\s*(\S+)`)
+	})
+	uvTomlSourceRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:^|[\s{,\[])(index-url|extra-index-url|find-links|default-index|url)\s*=\s*["']?([^"'\s,}]+)`)
+	})
+	yarnrcSourceRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^\s*"?(?:@[A-Za-z0-9_.-]+:)?(registry)"?[\s=]+"?([^"\s]+)`)
+	})
+	yarnrcYmlSourceRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^\s*(npmRegistryServer)\s*:\s*["']?([^"'\s]+)`)
 	})
 	npmrcSourceRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`^\s*(?:@[A-Za-z0-9_.-]+:)?(registry)\s*=\s*(\S+)`)
@@ -518,12 +878,12 @@ func (r *runner) reportSources(abs string, line int, text string) {
 }
 
 func (r *runner) reportOption(abs string, line int, option, value string) {
-	switch option {
+	switch strings.ToLower(option) {
 	case "--trusted-host":
 		r.reportRedirect(abs, line, "trusted host (TLS verification off)", value, true)
 	case "--find-links", "-f", "find-links":
 		r.reportRedirect(abs, line, "find-links location", value, false)
-	case "registry":
+	case "registry", "npmregistryserver":
 		r.reportRedirect(abs, line, "npm registry", value, false)
 	default:
 		r.reportRedirect(abs, line, "package index", value, false)
@@ -542,6 +902,11 @@ func (r *runner) reportRedirect(abs string, line int, what, value string, bareHo
 
 func (r *runner) redirectHost(value string, bareHost bool) (string, bool) {
 	value = strings.Trim(value, "\"'`,;")
+	if i := strings.Index(value, "://"); i > 0 { // uv: --index name=https://host/simple
+		if eq := strings.LastIndex(value[:i], "="); eq >= 0 {
+			value = value[eq+1:]
+		}
+	}
 	if value == "" || strings.ContainsAny(value, "${}") {
 		return "", false
 	}
@@ -597,13 +962,6 @@ func (r *runner) checkSourceCommand(abs string, line int, seg string) {
 	}
 }
 
-// reportTyposquat adds AR056 when name is one edit from a popular package.
-func (r *runner) reportTyposquat(abs string, line int, name string, u nameUniverse) {
-	if near := u.typosquatOf(name); near != "" {
-		r.add(CodeTyposquat, abs, line, "%q is one edit from the popular package %q; check that it is the package you mean (typosquatting)", name, near)
-	}
-}
-
 var pep503SepRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[-_.]+`) })
 
 // minSquatLen is the shortest name AR056 compares: below it, one edit reaches
@@ -615,10 +973,10 @@ func (u nameUniverse) typosquatOf(name string) string {
 	if u.pep503 {
 		n = pep503SepRe().ReplaceAllString(n, "-")
 	}
-	if len(n) < minSquatLen || strings.HasPrefix(n, "@") || u.popular[n] || u.neighbors[n] {
+	if len(n) < minSquatLen || strings.HasPrefix(n, "@") || u.real[n] {
 		return ""
 	}
-	for _, p := range u.sorted {
+	for _, p := range u.targets {
 		if len(p) >= minSquatLen && oneEdit(n, p) && !versionedFork(n, p) {
 			return p
 		}

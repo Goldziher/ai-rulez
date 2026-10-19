@@ -1,9 +1,11 @@
 package lint
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func manifestFiles(name, content string) map[string]string {
@@ -108,7 +110,7 @@ func TestTyposquatAR056(t *testing.T) {
 		{name: "short names are never compared", skill: body, files: req("rich==13.7.1\nrick==1.0\nsix==1.16\nsx==1\n"), absent: []string{"AR056"}},
 		{name: "unrelated internal package", skill: body, files: req("acme-billing-client==1.0\n"), absent: []string{"AR056"}},
 		{name: "scoped npm package", skill: body, files: pkg("{\"dependencies\": {\"@acme/reactt\": \"1.0.0\"}}"), absent: []string{"AR056"}},
-		{name: "npm keeps separators distinct", skill: body, files: pkg("{\"dependencies\": {\"socket-io\": \"1.0.0\"}}"), want: []string{"AR056:package.json:0"}},
+		{name: "npm keeps separators distinct", skill: body, files: pkg("{\"dependencies\": {\"socket.ii\": \"1.0.0\"}}"), want: []string{"AR056:package.json:0"}},
 		{name: "inline ignore", skill: body, files: req("# ai-rulez-lint-ignore: AR056\nreqeusts==2.0.0\n"), absent: []string{"AR056"}},
 	})
 }
@@ -131,23 +133,29 @@ func TestOneEdit(t *testing.T) {
 	}
 }
 
-func TestKnownNeighboursAreOneEditFromAPopularName(t *testing.T) {
+func TestUniverseListsAreWellFormed(t *testing.T) {
 	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse(), "npm": npmUniverse()} {
-		for n := range u.neighbors {
-			assert.False(t, u.popular[n], "%s: %s is popular, not a neighbor", name, n)
-			near := false
-			for _, p := range u.sorted {
-				near = near || oneEdit(n, p)
-			}
-			assert.True(t, near, "%s: neighbor %s is not one edit from a popular name", name, n)
+		assert.GreaterOrEqual(t, len(u.real), 9000, "%s: the ranking is embedded", name)
+		assert.GreaterOrEqual(t, len(u.targets), 200, "%s: the targets come from the top ranks", name)
+		for _, p := range u.targets {
+			assert.True(t, u.real[p], "%s: target %s must be a real package", name, p)
+			assert.Equal(t, strings.ToLower(p), p, "%s: names are lower case", name)
 		}
 	}
 }
 
 func TestPopularNamesDoNotFlagEachOther(t *testing.T) {
 	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse(), "npm": npmUniverse()} {
-		for _, p := range u.sorted {
+		for _, p := range u.targets {
 			assert.Empty(t, u.typosquatOf(p), "%s: popular name %s must not be reported", name, p)
+		}
+	}
+}
+
+func TestEveryRankedNameIsReal(t *testing.T) {
+	for name, u := range map[string]nameUniverse{"pypi": pyPIUniverse(), "npm": npmUniverse()} {
+		for p := range u.real {
+			require.Empty(t, u.typosquatOf(p), "%s: ranked name %s must not be reported", name, p)
 		}
 	}
 }
