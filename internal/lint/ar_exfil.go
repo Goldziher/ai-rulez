@@ -125,7 +125,7 @@ func mayExfil(text string) bool {
 	return hasCmdWord(low, exfilWords...) || strings.Contains(low, "http ") || strings.Contains(low, "https ") || strings.Contains(low, "http\t") || strings.Contains(low, "https\t") // httpie
 }
 
-// dumpsEnvironment reports whether the line, or an inline code span of a prose line, pipes the
+// dumpsEnvironment reports whether the line, or an inline code span of a prose line that is neither negated nor quoted, pipes the
 // environment or a credential file to a network tool.
 func dumpsEnvironment(t *scanText, l scanLine) bool {
 	if envDumpRe().MatchString(l.Text) || envPipeRe().MatchString(l.Text) {
@@ -134,8 +134,12 @@ func dumpsEnvironment(t *scanText, l scanLine) bool {
 	if !t.prose(l) {
 		return false
 	}
-	for _, m := range backtickRe().FindAllStringSubmatch(l.Text, -1) {
-		if envDumpRe().MatchString(m[1]) || envPipeRe().MatchString(m[1]) {
+	if l.Neg {
+		return false
+	}
+	for _, m := range backtickRe().FindAllStringSubmatchIndex(l.Text, -1) {
+		span := l.Text[m[2]:m[3]]
+		if (envDumpRe().MatchString(span) || envPipeRe().MatchString(span)) && !spokenAbout(l.Text, m[0], m[1]) {
 			return true
 		}
 	}
