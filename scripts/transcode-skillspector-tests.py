@@ -3,7 +3,7 @@
 Reads Python test files that call an analyzer with (content, filename[, type]) and assert that a
 rule id is present or absent in the findings, and prints one ruleCase row per scenario.
 
-    transcode-skillspector-tests.py --tests DIR --rule 'DS[1-4]' --map DS1=AR050 --upstream SHA
+    transcode-skillspector-tests.py --tests DIR --rule 'DS[1-4]' --map DS1=AR044 --upstream SHA
 """
 
 from __future__ import annotations
@@ -561,9 +561,18 @@ def number_duplicates(rows: list[str]) -> list[str]:
     return out
 
 
+AR_CODE = re.compile(r"^AR\d{3}$")
+
+
 def parse_mapping(entries: list[str]) -> dict[str, str]:
-    pairs = (e.split("=", 1) for e in entries)
-    return {k.strip(): v.strip() for k, v in pairs}
+    """Parse ``SSID=ARNNN`` entries; raise ValueError naming the first malformed one."""
+    mapping = {}
+    for entry in entries:
+        key, sep, value = (part.strip() for part in entry.partition("="))
+        if not sep or not RULE_ID.match(key) or not AR_CODE.match(value):
+            raise ValueError(f"--map expects SSID=ARNNN (e.g. DS1=AR044), got {entry!r}")
+        mapping[key] = value
+    return mapping
 
 
 SHA_RE = re.compile(r"[0-9a-f]{40}")
@@ -636,11 +645,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, help="write here instead of stdout")
     args = ap.parse_args(argv)
     try:
+        mapping = parse_mapping(args.map)
+    except ValueError as exc:
+        ap.error(str(exc))
+    try:
         upstream = validate_sha(args.upstream) if args.upstream else upstream_commit(args.tests)
     except UpstreamError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    text, count = transcode(args.tests, args.rule, parse_mapping(args.map), upstream, args.only)
+    text, count = transcode(args.tests, args.rule, mapping, upstream, args.only)
     if args.out:
         args.out.write_text(text, encoding="utf-8")
     else:

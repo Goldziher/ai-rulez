@@ -1,6 +1,8 @@
 """Golden and behaviour tests for the SkillSpector test transcoder."""
 
+import contextlib
 import importlib.util
+import io
 import subprocess
 import sys
 import tempfile
@@ -14,11 +16,23 @@ sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 DATA = HERE / "testdata" / "skillspector"
 UPSTREAM = "0" * 40
+# The fixture is stored as test_sample.py.txt so pytest does not collect it as a test module;
+# setUpModule copies it under the name the transcoder looks for (test_*.py).
+TESTS = None
+
+
+def setUpModule():
+    global TESTS
+    tmp = tempfile.TemporaryDirectory()
+    unittest.addModuleCleanup(tmp.cleanup)
+    TESTS = Path(tmp.name) / "tests"
+    TESTS.mkdir()
+    (TESTS / "test_sample.py").write_bytes((DATA / "test_sample.py.txt").read_bytes())
 
 
 class TranscodeTest(unittest.TestCase):
     def render(self, pattern, mapping=None):
-        return MODULE.transcode(DATA, pattern, mapping or {}, UPSTREAM)
+        return MODULE.transcode(TESTS, pattern, mapping or {}, UPSTREAM)
 
     def test_matches_golden_file(self):
         text, count = self.render("AR1|DS1|SSRF[12]|SC8", {"AR1": "AR100"})
@@ -56,7 +70,7 @@ class TranscodeTest(unittest.TestCase):
         self.assertEqual(MODULE.go_string("\ufeffi\u034f"), '"\\ufeffi\\u034f"')
 
     def test_unresolvable_content_is_skipped(self):
-        tree = DATA / "test_sample.py"
+        tree = TESTS / "test_sample.py"
         self.assertTrue(all(sc.files for sc in MODULE.extract(tree)))
 
 
@@ -116,10 +130,31 @@ class UpstreamCommitTest(unittest.TestCase):
     def test_short_or_malformed_upstream_is_an_error(self):
         for bad in ("abc1234", "UNKNOWN", "G" * 40, "A" * 40):
             with self.subTest(bad=bad):
-                self.assertEqual(self.run_main(DATA, "--upstream", bad), 2)
+                self.assertEqual(self.run_main(TESTS, "--upstream", bad), 2)
 
     def test_explicit_full_sha_is_accepted(self):
-        self.assertEqual(self.run_main(DATA, "--upstream", UPSTREAM), 0)
+        self.assertEqual(self.run_main(TESTS, "--upstream", UPSTREAM), 0)
+
+
+class ParseMappingTest(unittest.TestCase):
+    def test_valid_entries_are_parsed(self):
+        self.assertEqual(
+            MODULE.parse_mapping(["DS1=AR044", " SC10 = AR056 "]),
+            {"DS1": "AR044", "SC10": "AR056"},
+        )
+
+    def test_malformed_entry_is_a_value_error(self):
+        for bad in ("DS1", "DS1=", "=AR044", "DS1=AR44", "ds1=AR044", "DS1=AR044=x"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                MODULE.parse_mapping([bad])
+
+    def test_main_reports_malformed_map_as_usage_error(self):
+        err = io.StringIO()
+        args = ["--tests", str(TESTS), "--rule", "DS1", "--map", "DS1", "--upstream", UPSTREAM]
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as ctx:
+            MODULE.main(args)
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("SSID=ARNNN", err.getvalue())
 
 
 if __name__ == "__main__":
