@@ -149,7 +149,15 @@ func TestExecHardeningAR043toAR045(t *testing.T) {
 		{name: "metadata with an echo attack", files: script("m.sh", "curl http://169.254.169.254/latest/meta-data/ || echo \"attack\"\n"), skill: body("x\n"), want: []string{"AR045:m.sh:1"}},
 		{name: "ecs task credentials", skill: body("```sh\ncurl http://169.254.170.2/v2/credentials/abc\n```\n"), want: []string{"AR045:SKILL.md:6"}},
 		{name: "metadata with a filter word after the url", skill: body("```sh\ncurl http://169.254.169.254/latest/meta-data/iam/security-credentials/ -o filter.out\n```\n"), want: []string{"AR045:SKILL.md:6"}},
-		{name: "defence before the url", skill: body("```python\nif url.startswith(\"http://169.254.169.254\"): raise Blocked\n```\n"), absent: []string{"AR045"}},
+		{name: "defense before the url", skill: body("```python\nif url.startswith(\"http://169.254.169.254\"): raise Blocked\n```\n"), absent: []string{"AR045"}},
+		{name: "yaml load with a comment naming SafeLoader", files: script("a.py", "data = yaml.load(f)  # never use SafeLoader here\n"), skill: body("x\n"), want: []string{"AR044:a.py:1"}},
+		{name: "yaml load then safe call on the line", files: script("a.py", "y = yaml.load(open(p)); z = yaml.safe_load(q, Loader=SafeLoader)\n"), skill: body("x\n"), want: []string{"AR044:a.py:1"}},
+		{name: "xmldecoder", files: script("A.java", "Object o = new XMLDecoder(in).readObject();\n"), skill: body("x\n"), want: []string{"AR044:A.java:1"}},
+		{name: "register scheduled task", files: script("t.ps1", "Register-ScheduledTask -TaskName x -Action $a -Trigger $t\n"), skill: body("x\n"), want: []string{"AR043:t.ps1:1"}},
+		{name: "metadata piped through grep -v blocked", skill: body("```sh\ncurl http://169.254.169.254/latest/meta-data/ | grep -v blocked\n```\n"), want: []string{"AR045:SKILL.md:6"}},
+		{name: "metadata prose then validate", skill: body("Fetch http://169.254.169.254/latest/meta-data/ and validate the output.\n"), want: []string{"AR045:SKILL.md:5"}},
+		{name: "metadata assigned to validated", files: script("a.py", "validated = requests.get(\"http://169.254.169.254/latest/\")\n"), skill: body("x\n"), want: []string{"AR045:a.py:1"}},
+		{name: "metadata prose passive block", skill: body("Requests to 169.254.169.254 are blocked by the proxy.\n"), absent: []string{"AR045"}},
 		{name: "reading the docs about the address", skill: body("Read the AWS docs about 169.254.169.254.\n"), absent: []string{"AR045"}},
 	})
 }
