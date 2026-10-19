@@ -359,6 +359,9 @@ func scanInternalRequest(r *runner, t *scanText) {
 
 func internalTarget(t *scanText, l scanLine) (sev Severity, what string) {
 	for _, frag := range t.codeFragments(l) {
+		if t.md && !l.Fenced && reviewerLedSpan(l.Text, frag) {
+			continue
+		}
 		frag = stripShellComment(frag)
 		if loc := metadataRe().FindStringIndex(frag); len(loc) == 2 && requestRe().MatchString(frag) && !defended(frag, loc) {
 			return SeverityWarning, "a cloud metadata endpoint"
@@ -376,6 +379,21 @@ func internalTarget(t *scanText, l scanLine) (sev Severity, what string) {
 		}
 	}
 	return "", ""
+}
+
+// reviewerLedSpan reports whether the inline code span frag of a prose line follows a
+// reviewer verb in its clause ("Look for requests to `http://169.254.169.254/`"): the span is
+// what to look for, not a request to make.
+func reviewerLedSpan(line, frag string) bool {
+	i := strings.Index(line, frag)
+	if i < 0 {
+		return false
+	}
+	head := lastClause(line[:i])
+	if j := strings.LastIndexByte(head, ','); j >= 0 {
+		head = head[j+1:]
+	}
+	return reviewGoverns(head)
 }
 
 // proseRequest reports whether the line tells the agent to request the address re finds and
