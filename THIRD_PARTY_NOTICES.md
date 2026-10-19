@@ -24,8 +24,8 @@ the `NOTICE.txt` files under `testdata/`) are listed there, not here.
 | --- | --- |
 | `internal/lint/ar_prose.go`, `internal/lint/ar_prose_test.go` | AR1-AR3, E4, P3 (AR041, AR042) |
 | `internal/lint/ar_exec.go`, `internal/lint/ar_exec_test.go` | RA2, DS1-DS4, SSRF1-SSRF3 (AR043-AR045) |
-| `internal/lint/ar_hidden.go`, `internal/lint/ar_hidden_test.go` | SC8, SC9, P3, P9, AE4, AE6 (AR051-AR053); partly derived, some fixtures and patterns are original |
-| `internal/lint/ar_manifest.go`, `internal/lint/ar_manifest_data.go`, `internal/lint/ar_manifest_test.go` | SC1, SC6, SC10 (AR054-AR056); SC10 and the semantic-version expression come from `src/skillspector/dependency_sources.py` and `src/skillspector/mcp_registry.py`, and some fixtures from `tests/nodes/analyzers/test_dependency_sources.py` and `test_dependency_source_budget_behavior.py` |
+| `internal/lint/ar_hidden.go`, `internal/lint/ar_hidden_test.go` | SC8, SC9, P3, P9, AE4, AE6 (AR051-AR053); partly derived (some fixtures and patterns are original), with fixtures from `tests/nodes/analyzers/test_sc8_shipped_bytecode.py`, `tests/nodes/analyzers/test_static_patterns.py` and `tests/nodes/test_security_remediation.py` |
+| `internal/lint/ar_manifest.go`, `internal/lint/ar_manifest_data.go`, `internal/lint/ar_manifest_test.go` | SC1, SC6, SC10 (AR054-AR056); SC10 and the semantic-version expression come from `src/skillspector/dependency_sources.py` and `src/skillspector/mcp_registry.py`, and some fixtures from `tests/unit/test_patterns_new.py`, `tests/nodes/analyzers/test_dependency_sources.py` and `tests/nodes/analyzers/test_dependency_source_budget_behavior.py` |
 
 The rules AR046-AR050 (`internal/lint/ar_malware.go`), AR057 (`internal/lint/ar_mcpmeta.go`) and AR058
 (`internal/lint/ar_declared.go`) are written from public threat-family behaviour. SkillSpector's YARA files

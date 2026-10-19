@@ -138,7 +138,9 @@ ai-rulez is MIT licensed. A rule, pattern or test derived from a project under a
 [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) (Apache-2.0), must keep that license's conditions:
 
 1. **Keep the upstream header and mark the change.** Retain the original copyright and SPDX lines, and state that the
-   file was modified (Apache-2.0 section 4(b)). Record the upstream repository, path and commit in the header:
+   file was modified (Apache-2.0 section 4(b)). Record the upstream repository, the repository-relative path of each
+   upstream file (`src/skillspector/nodes/analyzers/static_patterns_ssrf.py`, not `static_patterns_ssrf.py`) and the
+   commit in the header:
 
    ```go
    // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.

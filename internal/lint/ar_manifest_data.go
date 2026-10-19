@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (the known-legitimate name lists of the typosquat check in static_patterns_supply_chain.py).
+// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (the known-legitimate name lists of the typosquat check in src/skillspector/nodes/analyzers/static_patterns_supply_chain.py).
 // Modified by the ai-rulez authors: replaced by lists of real package names taken from public download rankings (see the notes on the embedded files below).
 // See THIRD_PARTY_NOTICES.md.
 

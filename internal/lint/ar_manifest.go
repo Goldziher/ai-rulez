@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (supply-chain checks SC1, SC6 and SC10 in static_patterns_supply_chain.py, and the MCP registry data in mcp_registry.py).
+// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (supply-chain checks SC1 and SC6 in src/skillspector/nodes/analyzers/static_patterns_supply_chain.py, SC10 in src/skillspector/dependency_sources.py, and the MCP registry data in src/skillspector/mcp_registry.py).
 // Modified by the ai-rulez authors: rewritten as offline RE2 matchers.
 // See THIRD_PARTY_NOTICES.md.
 
