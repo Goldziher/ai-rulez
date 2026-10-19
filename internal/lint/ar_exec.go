@@ -143,7 +143,7 @@ var persistStems = sync.OnceValue(func() []string {
 
 func scanPersistence(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if l.Neg {
+		if t.md && l.Neg {
 			continue
 		}
 		for _, frag := range t.codeFragments(l) {
@@ -203,7 +203,8 @@ var deserRules = sync.OnceValue(func() []deserRule {
 		{re: regexp.MustCompile(`\b(?:np|numpy)\.load\s*\([^)]*allow_pickle\s*=\s*True`), langs: langPython, what: "numpy.load with allow_pickle=True"},
 		{re: regexp.MustCompile(`(?:^|[^\w>.:$\\])unserialize\s*\(`), langs: langPHP, exempt: regexp.MustCompile(`allowed_classes['"]?\s*=>\s*false`), what: "PHP unserialize"},
 		{re: regexp.MustCompile(`\bMarshal\.(?:load|restore)\b`), langs: langRuby, what: "Ruby Marshal"},
-		{re: regexp.MustCompile(`\b(?:YAML|Psych)\.(?:load|unsafe_load|load_stream)\s*\(`), langs: langRuby, exempt: regexp.MustCompile(`permitted_classes|safe`), what: "Ruby YAML.load"},
+		{re: regexp.MustCompile(`\b(?:YAML|Psych)\.unsafe_load(?:_file|_stream)?\s*\(`), langs: langRuby, what: "Ruby YAML.unsafe_load"},
+		{re: regexp.MustCompile(`\b(?:YAML|Psych)\.(?:load|load_stream)\s*\(`), langs: langRuby, exempt: regexp.MustCompile(`permitted_classes|safe_load`), what: "Ruby YAML.load"},
 		{re: regexp.MustCompile(`\bOj\.load\s*\(`), langs: langRuby, exempt: regexp.MustCompile(`mode:\s*:(?:strict|compat|null|rails)|:mode\s*=>\s*:(?:strict|compat|null|rails)`), what: "Oj.load in object mode"},
 		{re: regexp.MustCompile(`require\(\s*['"](?:node-serialize|serialize-to-js)['"]\s*\)|\bfrom\s+['"](?:node-serialize|serialize-to-js)['"]|\bfuncster\b`), langs: langJS, what: "node-serialize"},
 		{re: regexp.MustCompile(`\bnew\s+(?:ObjectInputStream|XMLDecoder)\s*\(|\.enableDefaultTyping\s*\(|\bSerializationUtils\.deserialize\s*\(`), langs: langJava, what: "Java object deserialization"},
@@ -248,7 +249,7 @@ func scanDeserialization(r *runner, t *scanText) {
 	lang := deserLang(t)
 	ruamel := strings.Contains(t.raw, "ruamel")
 	for i, l := range t.lines {
-		if l.Neg {
+		if t.md && l.Neg {
 			continue
 		}
 		for _, frag := range t.codeFragments(l) {
@@ -281,12 +282,12 @@ func unsafeDeserialization(call, lang string, ruamel bool) string {
 }
 
 const (
-	metadataIP   = `(?:169\.254\.169\.254|100\.100\.100\.200)`
+	metadataIP   = `(?:169\.254\.169\.254|169\.254\.170\.2|100\.100\.100\.200)`
 	metadataName = `(?i:metadata\.google\.internal|\bfd00:ec2::254)`
 	metadataPat  = `(?:(?:^|[^\d.])` + metadataIP + `(?:$|[^\d])|` + metadataName + `)`
 	proseMetaPat = `(?:` + metadataIP + `(?:$|[^\d])|` + metadataName + `)`
 	localAdmin   = `(?i:(?:https?://)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):(?:2375|2376|2379|6443|10250|10255)\b)`
-	proseVerbs   = `(?i:\b(?:fetch|curl|wget|query|queries|request|call|access|retrieve|hit|contact|connect\s+to|read|get)\b[^.\n]{0,80}?)`
+	proseVerbs   = `(?i:\b(?:fetch|curl|wget|query|queries|request|call|access|retrieve|hit|contact|connect\s+to)\b[^.\n]{0,80}?)`
 )
 
 var (
@@ -296,6 +297,11 @@ var (
 	proseAdmRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(proseVerbs + localAdmin) })
 	requestRe   = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?i)https?://|(?:^|[\s;&|(` + "`" + `])(?:curl|wget|nc|ncat|iwr|irm|invoke-webrequest|invoke-restmethod)\s|\b(?:fetch|axios|httpx|requests|urllib\w*|urlopen)\b`)
+	})
+	// defenseTailRe is a refusal after the address: only a word that rejects the request counts
+	// there, because a file named "filter.out" after the URL defends nothing.
+	defenseTailRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:raise|forbid\w*|reject\w*|den(?:y|ied)|block\w*|refus\w*|prevent\w*|disallow\w*)\b`)
 	})
 	defenseRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`(?i)\b(?:block\w*|den(?:y|ied|ylist)|reject\w*|refus\w*|forbid\w*|disallow\w*|prevent\w*|ssrf|allow-?list|white-?list|black-?list|sanitiz\w*|validat\w*|filter\w*|startswith|endswith|raise)\b`)
@@ -308,7 +314,7 @@ var internalStems = sync.OnceValue(func() []string {
 
 func scanInternalRequest(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if l.Neg || l.Front || !containsAnyStem(l.Text, true, internalStems()) {
+		if t.md && l.Neg || l.Front || !containsAnyStem(l.Text, true, internalStems()) {
 			continue
 		}
 		if sev, what := internalTarget(t, l); what != "" {
@@ -320,13 +326,10 @@ func scanInternalRequest(r *runner, t *scanText) {
 func internalTarget(t *scanText, l scanLine) (sev Severity, what string) {
 	for _, frag := range t.codeFragments(l) {
 		frag = stripShellComment(frag)
-		if defenseRe().MatchString(frag) {
-			continue
-		}
-		if metadataRe().MatchString(frag) && requestRe().MatchString(frag) {
+		if loc := metadataRe().FindStringIndex(frag); loc != nil && requestRe().MatchString(frag) && !defended(frag, loc) {
 			return SeverityWarning, "a cloud metadata endpoint"
 		}
-		if m := localAdmRe().FindString(frag); m != "" && (strings.Contains(m, "://") || requestRe().MatchString(frag)) {
+		if loc := localAdmRe().FindStringIndex(frag); loc != nil && (strings.Contains(frag[loc[0]:loc[1]], "://") || requestRe().MatchString(frag)) && !defended(frag, loc) {
 			return SeverityInfo, "the administration port of a local service"
 		}
 	}
@@ -339,4 +342,10 @@ func internalTarget(t *scanText, l scanLine) (sev Severity, what string) {
 		}
 	}
 	return "", ""
+}
+
+// defended reports whether the code around the address at loc refuses it: any defence word
+// before it, or a rejecting word after it.
+func defended(frag string, loc []int) bool {
+	return defenseRe().MatchString(frag[:loc[0]]) || defenseTailRe().MatchString(frag[loc[1]:])
 }
