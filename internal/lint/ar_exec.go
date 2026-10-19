@@ -137,8 +137,8 @@ var persistRules = sync.OnceValue(func() []persistRule {
 	}
 })
 
-var persistStems = sync.OnceValue(func() []string {
-	return []string{"cron", "launch", "systemd", "systemctl", "chkconfig", "update-rc", "schtasks", "scheduledtask", "currentversion", "login item", "init.d", "rc.local", "autostart", "bashrc", "zshrc", "profile", "zshenv", "zlogin", "cshrc", "xinitrc", "xsessionrc", "config.fish", "bash_login", "/environment"}
+var persistStems = sync.OnceValue(func() *stemIndex {
+	return newStemIndex([]string{"cron", "launch", "systemd", "systemctl", "chkconfig", "update-rc", "schtasks", "scheduledtask", "currentversion", "login item", "init.d", "rc.local", "autostart", "bashrc", "zshrc", "profile", "zshenv", "zlogin", "cshrc", "xinitrc", "xsessionrc", "config.fish", "bash_login", "/environment"})
 })
 
 func scanPersistence(r *runner, t *scanText) {
@@ -147,7 +147,7 @@ func scanPersistence(r *runner, t *scanText) {
 			continue
 		}
 		for _, frag := range t.codeFragments(l) {
-			if !containsAnyStem(frag, true, persistStems()) {
+			if !persistStems().containsAny(foldText(frag)) {
 				continue
 			}
 			if rule, seg := firstPersistence(frag); seg != "" {
@@ -162,7 +162,7 @@ func scanPersistence(r *runner, t *scanText) {
 // entry, which AR043 reports as a warning; AR006 leaves that write to it. An append to
 // a shell startup file stays with AR006 as well.
 func writesPersistence(line string) bool {
-	if !containsAnyStem(line, true, persistStems()) {
+	if !persistStems().containsAny(foldText(line)) {
 		return false
 	}
 	rule, seg := firstPersistence(line)
@@ -342,13 +342,13 @@ var (
 	})
 )
 
-var internalStems = sync.OnceValue(func() []string {
-	return []string{"169.254", "100.100.100", "metadata.google", "fd00:ec2", "localhost", "127.0.0.1", "0.0.0.0", "[::1]"}
+var internalStems = sync.OnceValue(func() *stemIndex {
+	return newStemIndex([]string{"169.254", "100.100.100", "metadata.google", "fd00:ec2", "localhost", "127.0.0.1", "0.0.0.0", "[::1]"})
 })
 
 func scanInternalRequest(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if t.md && l.Neg || l.Front || !containsAnyStem(l.Text, true, internalStems()) {
+		if t.md && l.Neg || l.Front || !internalStems().containsAny(foldText(l.Text)) {
 			continue
 		}
 		if sev, what := internalTarget(t, l); what != "" {

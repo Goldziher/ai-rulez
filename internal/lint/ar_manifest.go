@@ -1026,9 +1026,12 @@ func (r *runner) checkInstallCommands(t *scanText) {
 	}
 }
 
+var redirectSourceStems = sync.OnceValue(func() *stemIndex {
+	return newStemIndex([]string{"index", "registry", "trusted-host", "find-links", " -i ", " -f "})
+})
+
 func mayRedirectSource(text string) bool {
-	text = strings.ToLower(text)
-	return strings.Contains(text, "index") || strings.Contains(text, "registry") || strings.Contains(text, "trusted-host") || strings.Contains(text, "find-links") || strings.Contains(text, " -i ") || strings.Contains(text, " -f ")
+	return redirectSourceStems().containsAny(foldText(text))
 }
 
 func (r *runner) checkSourceCommand(abs string, line int, seg string) {
