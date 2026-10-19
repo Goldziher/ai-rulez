@@ -55,7 +55,7 @@ func registerArManifest(s *ruleSet) {
 			Good: "Install from the default index, or name the project's mirror in `lint.security.allowed_hosts`",
 		},
 		CodeTyposquat: {
-			Why:  "A package name one keystroke from a popular one is how typosquatting works. The check compares each dependency with the 300 most downloaded PyPI and npm packages and about 230 hand-picked popular ones (it embeds the public download rankings, about 300 KB, and uses no network) and skips every name that is itself in the top 10,000 of its ecosystem, a known real neighbor, or differs only by trailing digits (`psycopg`/`psycopg2`). It reports at info: a real package outside the rankings that happens to sit one edit away is a false positive, and a squat of a package outside the top 300 is missed.",
+			Why:  "A package name one keystroke from a popular one is how typosquatting works. The check compares each dependency with the 300 most downloaded PyPI and npm packages and about 200 hand-picked popular ones (it embeds the public download rankings, about 300 KB, and uses no network) and skips every name that is itself in the top 10,000 of its ecosystem, a known real neighbor, or differs only by trailing digits (`psycopg`/`psycopg2`). It reports at info: a real package outside the rankings that happens to sit one edit away is a false positive, and a squat of a package outside the top 300 is missed.",
 			Bad:  "`reqeusts==2.0.0` in `requirements.txt` (a transposition of `requests`)",
 			Good: "`requests==2.32.3`, or `# ai-rulez-lint-ignore: AR056` above a real package that is one edit from a popular one",
 		},
@@ -148,7 +148,7 @@ func scanManifest(r *runner, t *scanText) {
 	case manifestYarnrc:
 		r.checkIndexConfig(t, yarnrcSourceRe())
 	case manifestYarnrcYml:
-		r.checkIndexConfig(t, yarnrcYmlSourceRe())
+		r.checkYarnrcYml(t)
 	}
 	r.checkInstallCommands(t)
 }
@@ -179,12 +179,16 @@ func checkSkillManifests(r *runner) {
 	}
 }
 
+// notAnalyzable reports a manifest the rules could not read, so silence does not
+// read as a clean manifest.
+func (r *runner) notAnalyzable(abs, rel, why string) {
+	r.addSev(SeverityInfo, CodeUnpinnedManifest, abs, 1, "%s is not analyzable (%s): AR054, AR055 and AR056 did not read it", rel, why)
+}
+
 func (r *runner) scanUnreadManifest(dir string, f *dirFile) {
 	rel, _ := filepath.Rel(dir, f.path) //nolint:errcheck // display only
 	rel = filepath.ToSlash(rel)
-	notAnalyzable := func(why string) {
-		r.addSev(SeverityInfo, CodeUnpinnedManifest, f.path, 1, "%s is not analyzable (%s): AR054, AR055 and AR056 did not read it", rel, why)
-	}
+	notAnalyzable := func(why string) { r.notAnalyzable(f.path, rel, why) }
 	if f.size > maxManifestBytes {
 		notAnalyzable("larger than 512 KiB")
 		return
@@ -297,7 +301,8 @@ func vcsRef(u string) string {
 		return ""
 	}
 	if i := strings.LastIndex(path, "@"); i >= 0 {
-		return path[i+1:]
+		ref, _, _ := strings.Cut(strings.TrimSpace(path[i+1:]), " ")
+		return ref
 	}
 	return ""
 }
@@ -328,10 +333,31 @@ func requirementText(text string) (clean string, hashed bool) {
 			text = strings.TrimSpace(rest)
 		}
 	}
-	if i := strings.Index(text, ";"); i >= 0 && !strings.Contains(text[:i], "://") {
+	if i := markerIndex(text); i >= 0 {
 		text = strings.TrimSpace(text[:i])
 	}
 	return text, hashed
+}
+
+// markerIndex is where the environment marker of a requirement starts, -1 when it has
+// none. After a URL the marker must follow whitespace (PEP 508), because a bare ; can
+// belong to the URL.
+func markerIndex(text string) int {
+	i := strings.Index(text, ";")
+	if i < 0 || !strings.Contains(text[:i], "://") {
+		return i
+	}
+	for j := i; j >= 0; {
+		if j > 0 && (text[j-1] == ' ' || text[j-1] == '\t') {
+			return j
+		}
+		k := strings.Index(text[j+1:], ";")
+		if k < 0 {
+			return -1
+		}
+		j += 1 + k
+	}
+	return -1
 }
 
 // parseRequirement reads one requirement. ok is false for lines that name no
@@ -373,19 +399,24 @@ func vcsRequirement(name, u string) requirement {
 	return requirement{name: name, level: level, vcs: true}
 }
 
-// pinFinding is the AR054 finding the requirement deserves, if any.
-func pinFinding(req requirement) (sev Severity, msg string, ok bool) {
+// pinFinding is the AR054 finding the requirement deserves, if any. npm names the
+// ecosystem so the advice fits it: == is Python syntax.
+func pinFinding(req requirement, npm bool) (sev Severity, msg string, ok bool) {
+	pin := "pin it with =="
+	if npm {
+		pin = "pin an exact version (1.2.3)"
+	}
 	switch {
 	case req.level == pinned:
 		return "", "", false
 	case req.vcs:
 		return SeverityWarning, fmt.Sprintf("%s installs from a VCS URL that does not name a full commit; pin the 40-character commit so the code cannot change under the skill", req.name), true
 	case req.level == pinNone:
-		return SeverityWarning, fmt.Sprintf("%s has no pinned version; pin it with == so a new release cannot change what the skill installs", req.name), true
+		return SeverityWarning, fmt.Sprintf("%s has no pinned version; %s so a new release cannot change what the skill installs", req.name, pin), true
 	case req.level == pinOpen:
-		return SeverityWarning, fmt.Sprintf("%s sets only a lower bound (%s), so any later release is accepted; pin it with ==", req.name, req.spec), true
+		return SeverityWarning, fmt.Sprintf("%s sets only a lower bound (%s), so any later release is accepted; %s", req.name, req.spec, pin), true
 	}
-	return SeverityInfo, fmt.Sprintf("%s allows a version range (%s); pin it with == or install from a lock file", req.name, req.spec), true
+	return SeverityInfo, fmt.Sprintf("%s allows a version range (%s); %s or install from a lock file", req.name, req.spec, pin), true
 }
 
 // depReporter reports the dependencies of one manifest, at most maxManifestFindings
@@ -393,6 +424,8 @@ func pinFinding(req requirement) (sev Severity, msg string, ok bool) {
 type depReporter struct {
 	r          *runner
 	abs        string
+	locked     bool // a lock file beside the manifest fixes the versions
+	infoOnly   bool // the dependencies are build tooling: no finding above info
 	pins       int
 	squats     int
 	morePins   int
@@ -400,7 +433,10 @@ type depReporter struct {
 }
 
 func (d *depReporter) dep(line int, req requirement, u nameUniverse) {
-	if sev, msg, ok := pinFinding(req); ok {
+	if sev, msg, ok := pinFinding(req, !u.pep503); ok && !d.locked {
+		if d.infoOnly {
+			sev = SeverityInfo
+		}
 		if d.pins < maxManifestFindings {
 			d.pins++
 			d.r.addSev(sev, CodeUnpinnedManifest, d.abs, line, "%s", msg)
@@ -454,6 +490,22 @@ func manifestLines(t *scanText) []manifestLine {
 	return out
 }
 
+// lockedBeside reports whether the directory of a manifest holds one of the lock files.
+func lockedBeside(abs string, locks ...string) bool {
+	dir := filepath.Dir(abs)
+	for _, name := range locks {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	npmLocks    = []string{"package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"}
+	pythonLocks = []string{"uv.lock", "poetry.lock", "pdm.lock"}
+)
+
 func (r *runner) checkRequirements(t *scanText) {
 	rep := &depReporter{r: r, abs: t.abs}
 	for _, l := range manifestLines(t) {
@@ -503,11 +555,10 @@ func tomlStrings(v any) []string {
 	return out
 }
 
-// pyprojectSpecs lists the PEP 508 strings of a pyproject.toml: project, build,
+// pyprojectSpecs lists the PEP 508 strings of a pyproject.toml: project,
 // dependency-group, PDM and uv dependencies.
 func pyprojectSpecs(doc map[string]any) []string {
 	specs := tomlStrings(tomlDig(doc, "project", "dependencies"))
-	specs = append(specs, tomlStrings(tomlDig(doc, "build-system", "requires"))...)
 	for _, groups := range []map[string]any{tomlMap(tomlDig(doc, "project", "optional-dependencies")), tomlMap(tomlDig(doc, "dependency-groups")), tomlMap(tomlDig(doc, "tool", "pdm", "dev-dependencies"))} {
 		for _, name := range sortedKeys(groups) {
 			specs = append(specs, tomlStrings(groups[name])...)
@@ -601,15 +652,23 @@ func poetryLevel(spec string) pinLevel {
 func (r *runner) checkPyproject(t *scanText) {
 	var doc map[string]any
 	if toml.Unmarshal([]byte(t.raw), &doc) != nil {
+		r.notAnalyzable(t.abs, filepath.Base(t.abs), "does not parse")
 		return
 	}
 	idx := newLineIndex(t.rawLines())
-	rep := &depReporter{r: r, abs: t.abs}
+	rep := &depReporter{r: r, abs: t.abs, locked: lockedBeside(t.abs, pythonLocks...)}
 	for _, spec := range pyprojectSpecs(doc) {
 		if req, ok := parseRequirement(spec); ok {
 			rep.dep(idx.literal(spec), req, pyPIUniverse())
 		}
 	}
+	rep.infoOnly = true // the build backend is tooling, not what the skill's scripts import
+	for _, spec := range tomlStrings(tomlDig(doc, "build-system", "requires")) {
+		if req, ok := parseRequirement(spec); ok {
+			rep.dep(idx.literal(spec), req, pyPIUniverse())
+		}
+	}
+	rep.infoOnly = false
 	for _, d := range poetryDeps(doc) {
 		rep.dep(idx.key(d.name), d.req, pyPIUniverse())
 	}
@@ -765,10 +824,11 @@ func isGitSpec(v string) bool {
 func (r *runner) checkPackageJSON(t *scanText) {
 	var pkg map[string]json.RawMessage
 	if json.Unmarshal([]byte(t.raw), &pkg) != nil {
+		r.notAnalyzable(t.abs, filepath.Base(t.abs), "does not parse")
 		return
 	}
 	keys := jsonKeyLines(t.rawLines())
-	rep := &depReporter{r: r, abs: t.abs}
+	rep := &depReporter{r: r, abs: t.abs, locked: lockedBeside(t.abs, npmLocks...)}
 	for _, section := range packageJSONSections() {
 		var deps map[string]json.RawMessage
 		if raw, ok := pkg[section]; !ok || json.Unmarshal(raw, &deps) != nil {
@@ -835,10 +895,10 @@ var (
 		return regexp.MustCompile(`(?:^|\s)(--index-url|--extra-index-url|--default-index|--index|--find-links|--trusted-host|-i|-f)(?:=|\s+)(\S+)`)
 	})
 	npmOptionRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`(?:^|\s)--(?:@[A-Za-z0-9_.-]+:)?registry(?:=|\s+)(\S+)`)
+		return regexp.MustCompile(`(?:^|\s)--registry(?:=|\s+)(\S+)`)
 	})
 	configSetRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`\b(?:(?:npm|yarn|pnpm)\s+config\s+set\s+(?:@[A-Za-z0-9_.-]+:)?registry|pip3?\s+config\s+set\s+\S*index-url)\s+(\S+)`)
+		return regexp.MustCompile(`\b(?:(?:npm|yarn|pnpm)\s+config\s+set\s+registry|pip3?\s+config\s+set\s+\S*index-url)\s+(\S+)`)
 	})
 	sourceEnvRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`\b(?:PIP_INDEX_URL|PIP_EXTRA_INDEX_URL|UV_INDEX_URL|UV_EXTRA_INDEX_URL|UV_DEFAULT_INDEX|(?i:npm_config_registry))=(\S+)`)
@@ -850,13 +910,13 @@ var (
 		return regexp.MustCompile(`(?i)(?:^|[\s{,\[])(index-url|extra-index-url|find-links|default-index|url)\s*=\s*["']?([^"'\s,}]+)`)
 	})
 	yarnrcSourceRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`^\s*"?(?:@[A-Za-z0-9_.-]+:)?(registry)"?[\s=]+"?([^"\s]+)`)
+		return regexp.MustCompile(`^\s*"?(registry)"?[\s=]+"?([^"\s]+)`)
 	})
 	yarnrcYmlSourceRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`^\s*(npmRegistryServer)\s*:\s*["']?([^"'\s]+)`)
 	})
 	npmrcSourceRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`^\s*(?:@[A-Za-z0-9_.-]+:)?(registry)\s*=\s*(\S+)`)
+		return regexp.MustCompile(`^\s*(registry)\s*=\s*(\S+)`)
 	})
 	pipContextRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\b(?:pip3?|pipx|uv|poetry)\b`) })
 	npmContextRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\b(?:npm|npx|yarn|pnpm|bun)\b`) })
@@ -865,6 +925,23 @@ var (
 func (r *runner) checkIndexConfig(t *scanText, re *regexp.Regexp) {
 	for _, l := range t.lines {
 		if m := re.FindStringSubmatch(l.Text); m != nil {
+			r.reportOption(t.abs, l.No, m[1], m[2])
+		}
+	}
+}
+
+// checkYarnrcYml reads npmRegistryServer, except inside npmScopes: a scoped registry is
+// the usual defence against dependency confusion, not a redirect.
+func (r *runner) checkYarnrcYml(t *scanText) {
+	inScopes := false
+	for _, l := range t.lines {
+		if l.Text != "" && l.Text[0] != ' ' && l.Text[0] != '\t' && l.Text[0] != '#' {
+			inScopes = strings.HasPrefix(l.Text, "npmScopes:")
+		}
+		if inScopes {
+			continue
+		}
+		if m := yarnrcYmlSourceRe().FindStringSubmatch(l.Text); m != nil {
 			r.reportOption(t.abs, l.No, m[1], m[2])
 		}
 	}
