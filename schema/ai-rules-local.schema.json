@@ -1801,6 +1801,16 @@
                 "minimum": 1,
                 "type": "integer"
               },
+              "message_properties": {
+                "description": "SARIF result property paths whose values are appended to the finding message as \"[name: value; ...]\" (counted against max_message). A dotted path reads nested properties; \"location.snippet\" reads locations[0].physicalLocation.region.snippet.text. Values are sanitized like the message (control characters removed, whitespace collapsed, secrets masked). SARIF format only; a profile can set a default (skillspector: evidence, snippet).",
+                "items": {
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*$",
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
               "max_severity": {
                 "description": "Ceiling for this scanner's findings.",
                 "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]

@@ -48,6 +48,7 @@ func externalProblems(ex config.LintExternal, ceiling time.Duration) []string {
 	if !validMaxMessage(ex.MaxMessage) {
 		problems = append(problems, fmt.Sprintf("max_message %d is not between 1 and %d", ex.MaxMessage, maxScannerMessageLimit))
 	}
+	problems = append(problems, messagePropertiesProblems(ex.MessageProperties)...)
 	problems = append(problems, cacheFilesProblems(ex.CacheFiles)...)
 	problems = append(problems, stageGlobProblems(ex)...)
 	problems = append(problems, versionCommandProblems(ex)...)

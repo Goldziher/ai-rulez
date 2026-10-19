@@ -13996,6 +13996,7 @@ env_pass = []                      # extra environment variable names for an egr
 # fail_on = "error"                # lowest severity of this scanner's findings that fails the run
 # cache_files = ["tools/**/*.py"]  # files the scanner reads; part of the result cache key (a script run through python3, node, sh... is hashed anyway)
 # max_message = 1000               # characters of a finding message kept in text output (default 500)
+# message_properties = ["evidence", "snippet"]   # SARIF result properties appended to the message (skillspector sets these)
 
 [lint.scanner_policy]
 preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
@@ -14505,7 +14506,7 @@ installed; a scanner that is not on `PATH` is an `AR9E2` notice.
 
 A preset member is replaced by an entry with the same name or the same `profile`. `[[lint.external]]` with
 `profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
-less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size` and `version` range; keys set on
+less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size`, `message_properties` and `version` range; keys set on
 the entry win. A profile can also name `required_flags`: a flag of its command (`--no-llm` for `skillspector`) that
 an egress = false entry must keep when it writes its own `command`, because dropping it switches on a network feature
 (`AR9E0`).
@@ -14518,6 +14519,28 @@ readable. Set it for every scanner in `[lint.scanner_policy]` or for one `[[lint
 A cut message ends in `...`, and nothing is lost: the JSON report carries the whole text as `full_message` on the
 finding, and SARIF output as the result property `fullMessage`. With `--debug`, the run logs how many messages of
 each scanner were cut. Fingerprints, the baseline and the result cache do not depend on the limit.
+
+##### Evidence in the message
+
+Some scanners keep the matched text out of the SARIF `message` and put it in the result `properties`, so a CI
+annotation shows only a rule title such as `PE3: Credential Access`. `message_properties` on a `[[lint.external]]`
+entry lists the property paths to append, in order:
+
+```toml
+[[lint.external]]
+name = "skillspector"
+profile = "skillspector"
+message_properties = ["evidence", "snippet"]   # the profile's default
+```
+
+The message becomes `PE3: Credential Access [evidence: cat ~/.aws/credentials; snippet: ...]`. A path is dotted
+(`details.match` reads `properties.details.match`); the reserved path `location.snippet` reads the standard
+`locations[0].physicalLocation.region.snippet.text`. Strings, numbers, booleans and arrays of those are used; a
+missing, empty or object-valued property is skipped. Values are sanitized like the message itself (escape and control
+characters removed, whitespace collapsed to single spaces, secret-shaped text masked) and the whole message stays
+within `max_message`, so a long snippet cuts the end. Paths are letters, digits, `_` and `-` joined by dots, at most
+16 per entry (`AR9E0` otherwise). The `skillspector` profile sets `["evidence", "snippet"]`; an entry's own list wins.
+A profile or entry with the JSON or adapter formats ignores the key.
 
 ```toml
 [lint.scanner_policy]
