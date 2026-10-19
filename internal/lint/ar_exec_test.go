@@ -135,3 +135,21 @@ func TestExecRulesAreInertOnPlainProse(t *testing.T) {
 		{name: "plain prose", skill: skillDoc("", prose), absent: []string{"AR043", "AR044", "AR045"}},
 	})
 }
+
+func TestExecHardeningAR043toAR045(t *testing.T) {
+	body := func(s string) string { return skillDoc("", s) }
+	runRuleCases(t, []ruleCase{
+		{name: "ruby yaml unsafe_load", files: script("a.rb", "YAML.unsafe_load(File.read(\"x.yml\"))\n"), skill: body("x\n"), want: []string{"AR044:a.rb:1"}},
+		{name: "ruby psych unsafe_load", files: script("a.rb", "Psych.unsafe_load(s)\n"), skill: body("x\n"), want: []string{"AR044:a.rb:1"}},
+		{name: "ruby yaml load of a file named safe", files: script("a.rb", "YAML.load(File.read(\"safe.yml\"))\n"), skill: body("x\n"), want: []string{"AR044:a.rb:1"}},
+		{name: "ruby yaml safe_load", files: script("a.rb", "YAML.safe_load(s)\nYAML.load(s, permitted_classes: [Symbol])\n"), skill: body("x\n"), absent: []string{"AR044"}},
+		{name: "pickle with a trailing comment word", files: script("a.py", "data = pickle.loads(blob)  # do not worry\n"), skill: body("x\n"), want: []string{"AR044:a.py:1"}},
+		{name: "pickle with not bad", files: script("a.py", "data = pickle.loads(x)  # not bad\n"), skill: body("x\n"), want: []string{"AR044:a.py:1"}},
+		{name: "crontab with a trailing comment word", files: script("c.sh", "(crontab -l; echo \"* * * * * x\") | crontab -  # not a threat\n"), skill: body("x\n"), want: []string{"AR043:c.sh:1"}},
+		{name: "metadata with an echo attack", files: script("m.sh", "curl http://169.254.169.254/latest/meta-data/ || echo \"attack\"\n"), skill: body("x\n"), want: []string{"AR045:m.sh:1"}},
+		{name: "ecs task credentials", skill: body("```sh\ncurl http://169.254.170.2/v2/credentials/abc\n```\n"), want: []string{"AR045:SKILL.md:6"}},
+		{name: "metadata with a filter word after the url", skill: body("```sh\ncurl http://169.254.169.254/latest/meta-data/iam/security-credentials/ -o filter.out\n```\n"), want: []string{"AR045:SKILL.md:6"}},
+		{name: "defence before the url", skill: body("```python\nif url.startswith(\"http://169.254.169.254\"): raise Blocked\n```\n"), absent: []string{"AR045"}},
+		{name: "reading the docs about the address", skill: body("Read the AWS docs about 169.254.169.254.\n"), absent: []string{"AR045"}},
+	})
+}
