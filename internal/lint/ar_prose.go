@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (rules AR1-AR3, E4 and P3 in static_patterns_anti_refusal.py, static_patterns_data_exfiltration.py and static_patterns_prompt_injection.py).
+// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (rules AR1-AR3, E4 and P3 in src/skillspector/nodes/analyzers/static_patterns_anti_refusal.py, src/skillspector/nodes/analyzers/static_patterns_data_exfiltration.py and src/skillspector/nodes/analyzers/static_patterns_prompt_injection.py).
 // Modified by the ai-rulez authors: the patterns are rewritten for RE2, narrowed, and evaluated with the negation and quotation context of the ai-rulez scan model.
 // See THIRD_PARTY_NOTICES.md.
 

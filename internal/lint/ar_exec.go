@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (rules RA2 in static_patterns_rogue_agent.py, DS1-DS4 in static_patterns_deserialization.py and SSRF1-SSRF3 in static_patterns_ssrf.py).
+// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (rules RA2 in src/skillspector/nodes/analyzers/static_patterns_rogue_agent.py, DS1-DS4 in src/skillspector/nodes/analyzers/static_patterns_deserialization.py and SSRF1-SSRF3 in src/skillspector/nodes/analyzers/static_patterns_ssrf.py).
 // Modified by the ai-rulez authors: a rewrite from Python to Go with RE2 patterns and the context rules of the neighboring command rules.
 // See THIRD_PARTY_NOTICES.md.
 

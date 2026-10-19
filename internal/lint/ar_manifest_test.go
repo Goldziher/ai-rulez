@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (tests of the supply-chain checks SC1, SC6 and SC10).
+// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (tests of the supply-chain checks SC1, SC6 and SC10 in tests/unit/test_patterns_new.py, tests/nodes/analyzers/test_dependency_sources.py and tests/nodes/analyzers/test_dependency_source_budget_behavior.py).
 // Modified by the ai-rulez authors: the fixtures are written for this implementation.
 // See THIRD_PARTY_NOTICES.md.
 

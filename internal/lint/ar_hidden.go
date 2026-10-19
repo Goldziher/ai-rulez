@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (rules SC8 and SC9 in static_patterns_supply_chain.py, P3 and P9 (padding form only) in static_patterns_prompt_injection.py, AE4 and AE6 in artifact_integrity.py).
+// Derived from NVIDIA/SkillSpector at commit cf5cac7ba5c756a6e0ebf52dc9763f49422f889f (rules SC8 and SC9 in src/skillspector/nodes/analyzers/static_patterns_supply_chain.py, P3 and P9 (padding form only) in src/skillspector/nodes/analyzers/static_patterns_prompt_injection.py, AE4 and AE6 in src/skillspector/nodes/analyzers/artifact_integrity.py).
 // Modified by the ai-rulez authors: bytecode and executable detection by extension and leading bytes, padding found by counting blank lines, and obfuscated phrases found by normalizing a line once and matching the AR004 phrases against the result.
 // See THIRD_PARTY_NOTICES.md.
 
