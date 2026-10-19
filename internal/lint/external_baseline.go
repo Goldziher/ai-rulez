@@ -241,7 +241,10 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 	}
 	opts := r.opts.Scanner
 	recorded, skipped := opts.Filter.split(all, findings)
-	next, err := UpdateBaseline(&Report{Findings: recorded}, prev, opts.Reason)
+	// External marks the report as having looked for scanner findings, so
+	// UpdateBaseline judges (and drops) the entries that match none of them;
+	// entries of scanners that did not run are restored below.
+	next, err := UpdateBaseline(&Report{Findings: recorded, External: true}, prev, opts.Reason)
 	if err != nil {
 		r.addRun(CodeScannerConfigInvalid, "baseline", sanitizeScannerText(err.Error()))
 		return

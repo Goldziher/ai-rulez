@@ -14442,13 +14442,14 @@ occurrence index. Identical (scanner, fingerprint) pairs are reported once.
 
 `.ai-rulez/scanner-baseline.json` accepts findings, in the format of the [lint baseline](#baseline-and-tolerated-findings) with
 each entry also naming its `scanner` and `rule`. `scan --external --write-baseline --reason "..."` records every
-current scanner finding (keeping the entries of scanners that did not run, dropping stale ones). Accepted findings
+current scanner finding (keeping the entries of scanners that did not run, and dropping every entry that matches
+no current finding, so the file always reflects the run). Accepted findings
 are not reported (their count is logged); editing the flagged line makes the finding new. `--min-severity <level>`
 and repeated `--rule <glob>` narrow what is written (a rule matches the scanner's rule id, `scanner:rule` or the
 `AR` code; `*` is a wildcard); findings left out stay reported and an existing entry for one is kept. The reason of a
 new entry is the longest-matching `--reason-for RULE=text`, else `--reason`; both may use `{rule}`, `{severity}` and
-`{scanner}`. A new entry stores only the first line of the message, at most 160 characters, since only the
-fingerprint is matched; entries written earlier keep theirs. An entry past its
+`{scanner}`. An entry stores only the first line of the message, at most 160 characters, since only the
+fingerprint is matched; a rewrite shortens the messages of older entries too. An entry past its
 `expires` date (the day itself still counts) reports the finding again plus `AR9E5`.
 
 Design decisions: the baseline reuses the lint baseline format (`version`, `entries`) rather than a second schema;

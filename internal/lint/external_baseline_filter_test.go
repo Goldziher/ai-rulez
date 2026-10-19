@@ -3,6 +3,7 @@ package lint
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -127,6 +128,59 @@ func TestShortBaselineMessage(t *testing.T) {
 func withWrite(o ScannerOptions) ScannerOptions {
 	o.WriteBaseline = true
 	return o
+}
+
+// A rewrite reflects the current findings: an entry that matches none is
+// dropped, while the entries of a finding the filter skips are kept.
+func TestWriteBaselineDropsStaleEntries(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter BaselineFilter
+		before []string // rule ids the scanner reported on the first write
+		after  []string // rule ids the scanner reports on the rewrite
+		want   []string // rules left in the baseline
+	}{
+		{name: "stale entry is dropped", before: []string{"SEC-1", "STYLE-2"}, after: []string{"SEC-1", "NOTE-3"}, want: []string{"NOTE-3", "SEC-1"}},
+		{name: "all findings gone empties the baseline", before: []string{"SEC-1"}, after: nil, want: nil},
+		{name: "entries the filter skips are kept", filter: BaselineFilter{MinSeverity: SeverityError}, before: []string{"SEC-1", "STYLE-2"}, after: []string{"SEC-1", "STYLE-2"}, want: []string{"SEC-1", "STYLE-2"}},
+	}
+	levels := map[string]string{"SEC-1": "error", "STYLE-2": "warning", "NOTE-3": "note"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			result := filepath.Join(t.TempDir(), "result.json")
+			emit := func(rules []string) {
+				var parts []string
+				for i, r := range rules {
+					parts = append(parts, scanResult(r, levels[r], "msg "+r, i+1))
+				}
+				doc := `{"version":"2.1.0","runs":[{"results":[` + strings.Join(parts, ",") + `]}]}`
+				if err := os.WriteFile(result, []byte(doc), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			emit(tt.before)
+			p := newScannerProject(t, "cat '"+result+"'\n", "egress = false\ninputs = [\"rules\"]\n", nil)
+			baseline := filepath.Join(p.root, ".ai-rulez", ScannerBaselineFile)
+			p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "first", NoCache: true})})
+			// Act
+			emit(tt.after)
+			p.run(Options{Scanner: withWrite(ScannerOptions{Reason: "second", NoCache: true, Filter: tt.filter})})
+			// Assert
+			b, err := LoadBaseline(baseline)
+			if err != nil || b == nil {
+				t.Fatalf("load: %v", err)
+			}
+			var got []string
+			for _, e := range b.Entries {
+				got = append(got, e.Rule)
+			}
+			sort.Strings(got)
+			if strings.Join(got, ",") != strings.Join(tt.want, ",") {
+				t.Errorf("entries %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 // A rewrite must not grow a message that an earlier write shortened, even when

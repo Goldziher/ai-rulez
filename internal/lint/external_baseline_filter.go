@@ -135,8 +135,8 @@ func (f BaselineFilter) split(all []scannerFinding, findings []Finding) (recorde
 	return recorded, skipped
 }
 
-// describeEntries names the scanner and rule of every entry and, for the ones
-// that are new (not in old), shortens the message and sets the reason.
+// describeEntries names the scanner and rule of every entry, shortens its
+// message and, for the ones that are new (not in old), sets the reason.
 func (o ScannerOptions) describeEntries(next *Baseline, old map[string]BaselineEntry, scanners map[string]scannerFinding) {
 	for i := range next.Entries {
 		e := &next.Entries[i]
@@ -145,8 +145,8 @@ func (o ScannerOptions) describeEntries(next *Baseline, old map[string]BaselineE
 			continue
 		}
 		e.Scanner, e.Rule = sf.scanner, sf.rule
+		e.Message = shortBaselineMessage(e.Message)
 		if _, existing := old[e.Fingerprint]; !existing {
-			e.Message = shortBaselineMessage(e.Message)
 			e.Reason = strings.TrimSpace(o.reasonFor(&sf))
 		}
 	}
