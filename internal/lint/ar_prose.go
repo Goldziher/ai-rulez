@@ -237,7 +237,7 @@ func firstAntiRefusal(line string) (string, bool) {
 
 const (
 	sendVerbPat   = `(?:send|transmit|upload|post|forward|submit|export|dump|stream|relay|ship|exfiltrate|email|pipe)(?:s|ing)?`
-	hostCore      = `(?:(?:[a-z0-9-]+\.)+[a-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})\b(?::\d+)?`
+	hostCore      = `(?:(?:[a-z0-9-]+\.)+(?:com|net|org|io|dev|app|ai|co|me|sh|fun|xyz|site|online|info|biz|cc|tk|ru|cn|de|uk|us|eu|fr|jp|in|br|it|nl|es|se|no|fi|pl|ch|at|be|ca|au|nz|za|mx|ar|kr|tw|hk|sg|id|vn|tr|ir|ua|cz|ro|hu|gr|pt|ie|il|top|club|live|cloud|tech|store|shop|link|click|work|space|website|pw|ws|ml|ga|cf|gq|to|tv|im|is|ly|gg|la|lol|zip|mov)|\d{1,3}(?:\.\d{1,3}){3})\b(?::\d+)?`
 	bareHostPat   = `(?:[\w.+-]+@)?` + hostCore + `(?:/[^\s)>"'` + "`" + `]*)?`
 	destPat       = `\b(?:to|at|into|via)\s+(?:[\w'-]+\s+){0,4}?(?:[<"'` + "`" + `(]?https?://[^\s)>"'` + "`" + `]+|` + bareHostPat + `|` + namedDestPat + `)`
 	namedDestPat  = `(?:external|remote|third-party)\s+(?:server|endpoint|service|host|api|url|webhook|collector|site)s?\b`
