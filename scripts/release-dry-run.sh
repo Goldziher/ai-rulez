@@ -59,7 +59,7 @@ if [ "$ext" = zip ]; then
 else
   tar -xzf "$work/dist/$name" -C "$work/x"
 fi
-for f in "ai-rulez${exe}" README.md LICENSE THIRD_PARTY_NOTICES.md LICENSES/Apache-2.0.txt; do
+for f in "ai-rulez${exe}" README.md LICENSE THIRD_PARTY_NOTICES.md LICENSES/*; do
   [ -f "$work/x/$f" ] || fail "$f missing from the archive"
 done
 

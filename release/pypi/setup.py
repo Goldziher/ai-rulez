@@ -88,7 +88,7 @@ setup(
         "llm-evaluation",
         "standards",
     ],
-    license_expression="MIT AND Apache-2.0",
+    license_expression="MIT AND Apache-2.0 AND Unicode-3.0",
     license_files=["LICENSE", "THIRD_PARTY_NOTICES.md", "LICENSES/*"],
     packages=find_packages(),
     install_requires=[],

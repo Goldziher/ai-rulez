@@ -63,18 +63,35 @@ to the license.
 
 ## Unicode confusables data
 
-`internal/lint/ar_confusables.go` holds 84 mappings selected from the Unicode Consortium's confusables data
-(UTS #39, `confusables.txt`), which SkillSpector also uses as its source. The table is not copied from SkillSpector.
+- **Source:** the Unicode Consortium's confusables data (UTS #39, `confusables.txt`,
+  <https://www.unicode.org/Public/security/latest/confusables.txt>), which SkillSpector also uses as its source. The
+  table is not copied from SkillSpector.
+- **License:** Unicode License v3 (SPDX `Unicode-3.0`), full text in
+  [`LICENSES/Unicode-3.0.txt`](LICENSES/Unicode-3.0.txt).
+- **Copyright:** Copyright © 1991-2026 Unicode, Inc.
+- **Derived file:** `internal/lint/ar_confusables.go` holds 84 mappings selected from `confusables.txt`. Three are
+  remapped on purpose: U+0196, U+0399 and U+0406 map to `I`, where `confusables.txt` maps them to `l`.
 
-Copyright (c) 1991-2026 Unicode, Inc. All rights reserved. Distributed under the Terms of Use in
-<https://www.unicode.org/copyright.html>. Permission is hereby granted, free of charge, to any person obtaining a copy of
-the Unicode data files and any associated documentation (the "Data Files") to deal in the Data Files without
-restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, and/or sell
-copies of the Data Files, provided that either (a) this copyright and permission notice appear with all copies of the
-Data Files, or (b) this copyright and permission notice appear in associated Documentation. The Data Files are provided
-"AS IS", without warranty of any kind. See <https://www.unicode.org/license.txt> for the full Unicode License v3.
+## npm-high-impact
+
+- **Source:** <https://github.com/wooorm/npm-high-impact>, version 1.13.0, `lib/top-download.js`.
+- **License:** MIT, full text in [`LICENSES/MIT-npm-high-impact.txt`](LICENSES/MIT-npm-high-impact.txt).
+- **Copyright:** Copyright (c) Titus Wormer
+- **Derived file:** `internal/lint/ar_manifest_npm.txt`, the first 10,000 names of that list (the npm packages with
+  the most downloads), embedded by `internal/lint/ar_manifest_data.go` for AR056.
+
+## top-pypi-packages
+
+- **Source:** <https://github.com/hugovk/top-pypi-packages>, release `2026.10.1` (`top-pypi-packages.min.json`), by
+  Hugo van Kemenade and contributors. The project builds the list from the public PyPI download statistics (the
+  ClickHouse PyPI dataset).
+- **License:** the repository states no license. Its Zenodo archive (<https://doi.org/10.5281/zenodo.23082845>) lists
+  CC-BY-4.0, which is Zenodo's default for releases archived from GitHub, not a choice stated in the repository.
+- **Derived file:** `internal/lint/ar_manifest_pypi.txt`, the first 10,000 project names of that release, folded as in
+  PEP 503 and with the download counts dropped, embedded by `internal/lint/ar_manifest_data.go` for AR056. The file
+  holds only public package names in download order.
 
 ## Redistribution
 
 Release archives (`ai-rulez_<version>_<os>_<arch>.tar.gz` and `.zip`), the Homebrew formula and the npm and PyPI
-packages include this file, `LICENSE` and `LICENSES/`, so the Apache-2.0 text accompanies the binary.
+packages include this file, `LICENSE` and every file in `LICENSES/`, so the license texts above accompany the binary.
