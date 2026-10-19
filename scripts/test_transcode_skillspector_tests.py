@@ -8,9 +8,7 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).parent
-SPEC = importlib.util.spec_from_file_location(
-    "transcode", HERE / "transcode-skillspector-tests.py"
-)
+SPEC = importlib.util.spec_from_file_location("transcode", HERE / "transcode-skillspector-tests.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
@@ -25,9 +23,7 @@ class TranscodeTest(unittest.TestCase):
     def test_matches_golden_file(self):
         text, count = self.render("AR1|DS1|SSRF[12]|SC8", {"AR1": "AR100"})
         self.assertEqual(count, 6)
-        self.assertEqual(
-            text, (DATA / "sample.golden.go.txt").read_text(encoding="utf-8")
-        )
+        self.assertEqual(text, (DATA / "sample.golden.go.txt").read_text(encoding="utf-8"))
 
     def test_header_marks_modification_and_upstream(self):
         text, _ = self.render("DS1")

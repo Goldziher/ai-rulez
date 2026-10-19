@@ -80,11 +80,7 @@ def evaluate_node(node: ast.AST, env: dict[str, object]) -> object:
         case ast.Attribute() if node.attr == "parent":
             return PurePosixPath(str(evaluate(node.value, env))).parent
         case ast.Dict():
-            return {
-                evaluate(k, env): evaluate(v, env)
-                for k, v in zip(node.keys, node.values, strict=True)
-                if k
-            }
+            return {evaluate(k, env): evaluate(v, env) for k, v in zip(node.keys, node.values, strict=True) if k}
         case ast.Tuple() | ast.List() | ast.Set():
             return [evaluate(e, env) for e in node.elts]
         case ast.Call():
@@ -108,14 +104,8 @@ def binop(node: ast.BinOp, env: dict[str, object]) -> object:
     raise Unresolved("binop")
 
 
-def comprehension(
-    node: ast.GeneratorExp | ast.ListComp, env: dict[str, object]
-) -> list[object]:
-    if (
-        len(node.generators) != 1
-        or node.generators[0].ifs
-        or not isinstance(node.generators[0].target, ast.Name)
-    ):
+def comprehension(node: ast.GeneratorExp | ast.ListComp, env: dict[str, object]) -> list[object]:
+    if len(node.generators) != 1 or node.generators[0].ifs or not isinstance(node.generators[0].target, ast.Name):
         raise Unresolved("comprehension")
     gen = node.generators[0]
     items = evaluate(gen.iter, env)
@@ -137,11 +127,7 @@ def call(node: ast.Call, env: dict[str, object]) -> object:
         return ord(args[0])  # type: ignore[arg-type]
     if name == "range":
         return range(*args)  # type: ignore[arg-type]
-    if (
-        name in {"int", "len"}
-        or name == "str"
-        and not isinstance(args[0], PurePosixPath)
-    ):
+    if name in {"int", "len"} or name == "str" and not isinstance(args[0], PurePosixPath):
         return {"str": str, "int": int, "len": len}[name](args[0])  # type: ignore[operator]
     if name == "str" and args and isinstance(args[0], PurePosixPath):
         return str(args[0])
@@ -187,11 +173,7 @@ def dotted(node: ast.AST) -> str:
 def module_env(tree: ast.Module) -> dict[str, object]:
     env: dict[str, object] = {}
     for stmt in tree.body:
-        if (
-            isinstance(stmt, ast.Assign)
-            and len(stmt.targets) == 1
-            and isinstance(stmt.targets[0], ast.Name)
-        ):
+        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
             try:
                 env[stmt.targets[0].id] = evaluate(stmt.value, env)
             except Unresolved:
@@ -199,31 +181,19 @@ def module_env(tree: ast.Module) -> dict[str, object]:
     return env
 
 
-def parametrizations(
-    func: ast.FunctionDef, env: dict[str, object]
-) -> list[dict[str, object]]:
+def parametrizations(func: ast.FunctionDef, env: dict[str, object]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = [{}]
     for dec in func.decorator_list:
-        if not (
-            isinstance(dec, ast.Call)
-            and dotted(dec.func).endswith("parametrize")
-            and len(dec.args) >= 2
-        ):
+        if not (isinstance(dec, ast.Call) and dotted(dec.func).endswith("parametrize") and len(dec.args) >= 2):
             continue
         try:
             spec = evaluate(dec.args[0], env)
-            names = [
-                n.strip()
-                for n in (spec if isinstance(spec, list) else str(spec).split(","))
-            ]
+            names = [n.strip() for n in (spec if isinstance(spec, list) else str(spec).split(","))]
             values = evaluate(dec.args[1], env)
         except Unresolved:
             return []
         entries = [v if len(names) > 1 else [v] for v in values]  # type: ignore[union-attr]
-        rows = [
-            {**r, **dict(zip(names, e, strict=False))}
-            for r, e in itertools.product(rows, entries)
-        ]
+        rows = [{**r, **dict(zip(names, e, strict=False))} for r, e in itertools.product(rows, entries)]
         if len(rows) > MAX_EXPANSION:
             return []
     return rows
@@ -234,19 +204,13 @@ def walk_statements(body: list[ast.stmt]):
         yield stmt
         for attr in ("body", "orelse", "finalbody"):
             inner = getattr(stmt, attr, None)
-            if isinstance(inner, list) and not isinstance(
-                stmt, ast.FunctionDef | ast.ClassDef
-            ):
+            if isinstance(inner, list) and not isinstance(stmt, ast.FunctionDef | ast.ClassDef):
                 yield from walk_statements(inner)
 
 
 def find_analyze_call(node: ast.AST) -> ast.Call | None:
     for sub in ast.walk(node):
-        if (
-            isinstance(sub, ast.Call)
-            and sub.args
-            and callee(sub) in CALLEES | STATE_CALLEES
-        ):
+        if isinstance(sub, ast.Call) and sub.args and callee(sub) in CALLEES | STATE_CALLEES:
             return sub
     return None
 
@@ -265,9 +229,7 @@ def input_files(hit: ast.Call, env: dict[str, object]) -> dict[str, str] | None:
     for value in values:
         if isinstance(value, dict) and isinstance(value.get("file_cache"), dict):
             cache = value["file_cache"]
-            if cache and all(
-                isinstance(k, str) and isinstance(v, str) for k, v in cache.items()
-            ):
+            if cache and all(isinstance(k, str) and isinstance(v, str) for k, v in cache.items()):
                 return dict(cache)
     if callee(hit) in STATE_CALLEES or not isinstance(values[0], str):
         return None
@@ -279,18 +241,12 @@ def input_files(hit: ast.Call, env: dict[str, object]) -> dict[str, str] | None:
 def rule_ids(node: ast.AST, env: dict[str, object]) -> list[str]:
     ids = []
     for sub in ast.walk(node):
-        if (
-            isinstance(sub, ast.Compare)
-            and "rule_id" in ast.dump(sub.left)
-            and len(sub.comparators) == 1
-        ):
+        if isinstance(sub, ast.Compare) and "rule_id" in ast.dump(sub.left) and len(sub.comparators) == 1:
             ids.extend(strings(sub.comparators[0], env, RULE_ID))
     return ids
 
 
-def strings(
-    node: ast.AST, env: dict[str, object], pattern: re.Pattern[str]
-) -> list[str]:
+def strings(node: ast.AST, env: dict[str, object], pattern: re.Pattern[str]) -> list[str]:
     try:
         value = evaluate(node, env)
     except Unresolved:
@@ -310,12 +266,7 @@ def startswith_prefixes(node: ast.AST) -> list[str]:
 
 
 def is_zero(node: ast.AST) -> bool:
-    return (
-        isinstance(node, ast.Constant)
-        and node.value == 0
-        or isinstance(node, ast.List)
-        and not node.elts
-    )
+    return isinstance(node, ast.Constant) and node.value == 0 or isinstance(node, ast.List) and not node.elts
 
 
 def polarity_flips(test: ast.expr) -> bool:
@@ -326,9 +277,7 @@ def polarity_flips(test: ast.expr) -> bool:
     return False
 
 
-def collect(
-    func: ast.FunctionDef, bind: dict[str, object], base: dict[str, object], source: str
-) -> list[Scenario]:
+def collect(func: ast.FunctionDef, bind: dict[str, object], base: dict[str, object], source: str) -> list[Scenario]:
     env = {**base, **bind}
     scenarios: list[Scenario] = []
     current: Scenario | None = None
@@ -351,9 +300,7 @@ def collect(
             hit = find_analyze_call(stmt.value)
             files = input_files(hit, env) if hit is not None else None
             if files:
-                current = Scenario(
-                    test=func.name, source=source, files=files, var=target
-                )
+                current = Scenario(test=func.name, source=source, files=files, var=target)
                 current.aliases[target] = set(rule_ids(stmt.value, env))
                 scenarios.append(current)
             elif current is not None and refers_to(stmt.value, current):
@@ -381,21 +328,11 @@ def collect(
 
 
 def is_name_assign(stmt: ast.stmt) -> bool:
-    return (
-        isinstance(stmt, ast.Assign)
-        and len(stmt.targets) == 1
-        and isinstance(stmt.targets[0], ast.Name)
-    )
+    return isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name)
 
 
-def record_write(
-    written: dict[str, str | bytes], node: ast.expr, env: dict[str, object]
-) -> bool:
-    if not (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.args
-    ):
+def record_write(written: dict[str, str | bytes], node: ast.expr, env: dict[str, object]) -> bool:
+    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.args):
         return False
     if node.func.attr not in {"write_text", "write_bytes"}:
         return False
@@ -411,8 +348,7 @@ def record_write(
 
 def invokes_graph(node: ast.expr) -> bool:
     return any(
-        isinstance(sub, ast.Call)
-        and (callee(sub) == "invoke" or any(takes_tmp_path(a) for a in sub.args))
+        isinstance(sub, ast.Call) and (callee(sub) == "invoke" or any(takes_tmp_path(a) for a in sub.args))
         for sub in ast.walk(node)
     )
 
@@ -450,35 +386,21 @@ def visit(sc: Scenario, test: ast.expr, env: dict[str, object], neg: bool) -> No
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         visit(sc, test.operand, env, not neg)
         return
-    if (
-        isinstance(test, ast.Compare)
-        and len(test.comparators) == 1
-        and isinstance(test.ops[0], ast.In | ast.NotIn)
-    ):
+    if isinstance(test, ast.Compare) and len(test.comparators) == 1 and isinstance(test.ops[0], ast.In | ast.NotIn):
         ids = strings(test.left, env, RULE_ID)
         if ids and refers_to(test.comparators[0], sc):
             record(sc, ids, neg ^ isinstance(test.ops[0], ast.NotIn))
             return
-    if (
-        isinstance(test, ast.Compare)
-        and len(test.comparators) == 1
-        and isinstance(test.ops[0], ast.Eq)
-    ):
+    if isinstance(test, ast.Compare) and len(test.comparators) == 1 and isinstance(test.ops[0], ast.Eq):
         ids = strings(test.comparators[0], env, RULE_ID)
-        if (
-            ids
-            and isinstance(test.comparators[0], ast.Set | ast.List)
-            and refers_to(test.left, sc)
-        ):
+        if ids and isinstance(test.comparators[0], ast.Set | ast.List) and refers_to(test.left, sc):
             record(sc, ids, neg)
             return
     if not refers_to(test, sc) and not find_analyze_call(test):
         return
     flip = neg ^ polarity_flips(test)
     ids = rule_ids(test, env)
-    for name in sorted(
-        {n.id for n in ast.walk(test) if isinstance(n, ast.Name)} & set(sc.aliases)
-    ):
+    for name in sorted({n.id for n in ast.walk(test) if isinstance(n, ast.Name)} & set(sc.aliases)):
         ids += sorted(sc.aliases[name])
     record(sc, ids, flip)
     prefixes = startswith_prefixes(test)
@@ -491,11 +413,7 @@ def extract(path: Path) -> list[Scenario]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     base = module_env(tree)
     found: list[Scenario] = []
-    funcs = [
-        n
-        for n in ast.walk(tree)
-        if isinstance(n, ast.FunctionDef) and n.name.startswith("test")
-    ]
+    funcs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name.startswith("test")]
     for func in funcs:
         for bind in parametrizations(func, base) or [{}]:
             found.extend(collect(func, bind, dict(base), path.name))
@@ -524,9 +442,7 @@ def go_string(text: str | bytes) -> str:
         raw = True
     else:
         raw = False
-    for ch in (
-        text.encode("utf-8", "replace").decode("utf-8", "replace") if not raw else text
-    ):
+    for ch in text.encode("utf-8", "replace").decode("utf-8", "replace") if not raw else text:
         if raw and (ord(ch) < 0x20 or ord(ch) >= 0x7F) and ch not in "\n\t":
             out.append(f"\\x{ord(ch):02x}")
         elif ch in '"\\':
@@ -536,9 +452,7 @@ def go_string(text: str | bytes) -> str:
         elif ch == "\t":
             out.append("\\t")
         elif invisible(ch):
-            out.append(
-                f"\\u{ord(ch):04x}" if ord(ch) <= 0xFFFF else f"\\U{ord(ch):08x}"
-            )
+            out.append(f"\\u{ord(ch):04x}" if ord(ch) <= 0xFFFF else f"\\U{ord(ch):08x}")
         else:
             out.append(ch)
     out.append('"')
@@ -562,30 +476,20 @@ def in_family(code: str, wanted: re.Pattern[str]) -> bool:
 
 def skill_path(name: str) -> str:
     rel = PurePosixPath(name)
-    return (
-        f".ai-rulez/skills/bad/{rel}"
-        if len(rel.parts) > 1
-        else f".ai-rulez/skills/bad/scripts/{rel.name}"
-    )
+    return f".ai-rulez/skills/bad/{rel}" if len(rel.parts) > 1 else f".ai-rulez/skills/bad/scripts/{rel.name}"
 
 
 def placement(files: dict[str, str]) -> str:
     docs = {n: c for n, c in files.items() if n.lower().endswith(".md")}
     others = {n: c for n, c in files.items() if n not in docs}
-    skill = (
-        f"skill: body({go_string(next(iter(docs.values())))})"
-        if docs
-        else 'skill: body("x\\n")'
-    )
+    skill = f"skill: body({go_string(next(iter(docs.values())))})" if docs else 'skill: body("x\\n")'
     if not others:
         return skill
     entries = ", ".join(f'"{skill_path(n)}": {go_string(c)}' for n, c in others.items())
     return f"files: map[string]string{{{entries}}}, {skill}"
 
 
-def render(
-    sc: Scenario, wanted: re.Pattern[str], mapping: dict[str, str]
-) -> str | None:
+def render(sc: Scenario, wanted: re.Pattern[str], mapping: dict[str, str]) -> str | None:
     want = sorted(c for c in sc.want if in_family(c, wanted))
     absent = sorted(c for c in sc.absent if in_family(c, wanted))
     if not want and not absent and sc.absent_all and mentions_family(sc, wanted):
@@ -599,15 +503,9 @@ def render(
     name = "SKILL.md" if sc.filename.lower().endswith(".md") else Path(sc.filename).name
     fields = [f"name: {go_string(go_name(sc.test))}", placement(sc.files)]
     if want:
-        fields.append(
-            "want: []string{"
-            + ", ".join(go_string(f"{code(c)}:{name}:0") for c in want)
-            + "}"
-        )
+        fields.append("want: []string{" + ", ".join(go_string(f"{code(c)}:{name}:0") for c in want) + "}")
     if absent:
-        fields.append(
-            "absent: []string{" + ", ".join(go_string(code(c)) for c in absent) + "}"
-        )
+        fields.append("absent: []string{" + ", ".join(go_string(code(c)) for c in absent) + "}")
     return "\t\t{" + ", ".join(fields) + "}, // " + f"{sc.source} {sc.filename}"
 
 
@@ -633,9 +531,7 @@ def transcode(
     seen: set[tuple[str, str]] = set()
     for path in sorted(tests.rglob("test_*.py")):
         for sc in extract(path):
-            if name_filter and not re.search(
-                name_filter, f"{sc.test} {sc.source}", re.IGNORECASE
-            ):
+            if name_filter and not re.search(name_filter, f"{sc.test} {sc.source}", re.IGNORECASE):
                 continue
             row = render(sc, wanted, mapping)
             key = (row, "")
@@ -645,9 +541,7 @@ def transcode(
             rows.append(row)
             sources.add(f"tests/{path.relative_to(tests)}")
     rows = number_duplicates(rows)
-    head = HEADER.format(
-        upstream=upstream, sources=", ".join(sorted(sources)) or "no tests matched"
-    )
+    head = HEADER.format(upstream=upstream, sources=", ".join(sorted(sources)) or "no tests matched")
     body = "\n".join(rows)
     return (
         f"{head}\n// family {pattern}: {len(rows)} rows\nrunRuleCases(t, []ruleCase{{\n{body}\n}})\n",
@@ -715,12 +609,8 @@ def upstream_commit(tests: Path) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    ap.add_argument(
-        "--tests", type=Path, required=True, help="SkillSpector tests directory"
-    )
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--tests", type=Path, required=True, help="SkillSpector tests directory")
     ap.add_argument(
         "--rule",
         required=True,
@@ -750,9 +640,7 @@ def main(argv: list[str] | None = None) -> int:
     except UpstreamError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    text, count = transcode(
-        args.tests, args.rule, parse_mapping(args.map), upstream, args.only
-    )
+    text, count = transcode(args.tests, args.rule, parse_mapping(args.map), upstream, args.only)
     if args.out:
         args.out.write_text(text, encoding="utf-8")
     else:
