@@ -24,17 +24,19 @@ the `NOTICE.txt` files under `testdata/`) are listed there, not here.
 | --- | --- |
 | `internal/lint/ar_prose.go`, `internal/lint/ar_prose_test.go` | AR1-AR3, E4, P3 (AR041, AR042) |
 | `internal/lint/ar_exec.go`, `internal/lint/ar_exec_test.go` | RA2, DS1-DS4, SSRF1-SSRF3 (AR043-AR045) |
-| `internal/lint/ar_hidden.go`, `internal/lint/ar_hidden_test.go` | SC8, SC9, P3, P9, AE4, AE6 (AR051-AR053) |
-| `internal/lint/ar_manifest.go`, `internal/lint/ar_manifest_data.go` | SC1, SC6, SC10 (AR054-AR056) |
-
-The rules AR046-AR050 (`internal/lint/ar_malware.go`), AR057 (`internal/lint/ar_mcpmeta.go`) and AR058 (`internal/lint/ar_declared.go`) are written from the public behaviour of each threat family and carry no upstream text.
+| `internal/lint/ar_hidden.go`, `internal/lint/ar_hidden_test.go` | SC8, SC9, P3, P9, AE4, AE6 (AR051-AR053); partly derived, some fixtures and patterns are original |
+| `internal/lint/ar_manifest.go`, `internal/lint/ar_manifest_data.go`, `internal/lint/ar_manifest_test.go` | SC1, SC6, SC10 (AR054-AR056); SC10 and the semantic-version expression come from `src/skillspector/dependency_sources.py` and `src/skillspector/mcp_registry.py`, and some fixtures from `tests/nodes/analyzers/test_dependency_sources.py` and `test_dependency_source_budget_behavior.py` |
 
 The rules AR046-AR050 (`internal/lint/ar_malware.go`), AR057 (`internal/lint/ar_mcpmeta.go`) and AR058
-(`internal/lint/ar_declared.go`) are written from the public behaviour of each threat family and carry no upstream text.
+(`internal/lint/ar_declared.go`) are written from public threat-family behaviour. SkillSpector's YARA files
+(`yara_rules/*.yar`) were read for reference when choosing which families to cover; no YARA text is copied (checked: no
+common substring of 40 or more characters), and no rule name, description or string identifier is reused.
 
 ### Header for derived files
 
-Put this block at the top of every Go file that contains derived rules or tests, ahead of the `package` clause. Replace `<sha>` with the upstream commit the content was taken from (a full 40-character hash), list the upstream files after it, and describe the changes on the second line.
+Put this block at the top of every Go file that contains derived rules or tests, ahead of the `package` clause.
+Replace `<sha>` with the upstream commit the content was taken from (a full 40-character hash), list the upstream files
+after it, and describe the changes on the second line.
 
 ```go
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -45,7 +47,8 @@ Put this block at the top of every Go file that contains derived rules or tests,
 // See THIRD_PARTY_NOTICES.md.
 ```
 
-`scripts/transcode-skillspector-tests.py` writes this header for the tables it generates.
+`scripts/transcode-skillspector-tests.py` writes this header for the tables it generates; the output is a fragment to
+merge into a file that already carries the header once.
 
 ## Neo23x0 signature-base
 
@@ -57,3 +60,21 @@ to the license.
 
 - **Derived files:** none yet. List each one as
   `<file>: rule <original rule> by <rule author>, signature-base at <upstream commit>`.
+
+## Unicode confusables data
+
+`internal/lint/ar_confusables.go` holds 84 mappings selected from the Unicode Consortium's confusables data
+(UTS #39, `confusables.txt`), which SkillSpector also uses as its source. The table is not copied from SkillSpector.
+
+Copyright (c) 1991-2026 Unicode, Inc. All rights reserved. Distributed under the Terms of Use in
+<https://www.unicode.org/copyright.html>. Permission is hereby granted, free of charge, to any person obtaining a copy of
+the Unicode data files and any associated documentation (the "Data Files") to deal in the Data Files without
+restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files, provided that either (a) this copyright and permission notice appear with all copies of the
+Data Files, or (b) this copyright and permission notice appear in associated Documentation. The Data Files are provided
+"AS IS", without warranty of any kind. See <https://www.unicode.org/license.txt> for the full Unicode License v3.
+
+## Redistribution
+
+Release archives (`ai-rulez_<version>_<os>_<arch>.tar.gz` and `.zip`), the Homebrew formula and the npm and PyPI
+packages include this file, `LICENSE` and `LICENSES/`, so the Apache-2.0 text accompanies the binary.

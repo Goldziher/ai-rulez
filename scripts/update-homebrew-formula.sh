@@ -52,7 +52,7 @@ class AiRulez < Formula
   desc "Standards-compliant lifecycle tool for agent knowledge and capabilities: author, generate, bundle, validate, govern, publish"
   homepage "https://goldziher.github.io/ai-rulez/"
   version "${VERSION}"
-  license "MIT"
+  license all_of: ["MIT", "Apache-2.0"]
 
   on_macos do
     on_arm do
@@ -78,6 +78,7 @@ class AiRulez < Formula
 
   def install
     bin.install "ai-rulez"
+    doc.install "LICENSE", "THIRD_PARTY_NOTICES.md", "LICENSES"
   end
 
   test do

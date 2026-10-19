@@ -66,7 +66,7 @@
   "bugs": {
     "url": "https://github.com/Goldziher/ai-rulez/issues"
   },
-  "license": "MIT",
+  "license": "MIT AND Apache-2.0",
   "author": {
     "name": "Na'aman Hirschfeld",
     "email": "nhirschfeld@gmail.com",
@@ -90,7 +90,7 @@
   "bin": {
     "ai-rulez": "./ai-rulez.js"
   },
-  "files": ["ai-rulez.js", "install.js", "README.md", "bin/ai-rulez-*", "bin/liter_llm_ffi.dll"],
+  "files": ["ai-rulez.js", "install.js", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "LICENSES", "bin/ai-rulez-*", "bin/liter_llm_ffi.dll"],
   "os": ["darwin", "linux", "win32"],
   "cpu": ["x64", "arm64"],
   "scripts": {},

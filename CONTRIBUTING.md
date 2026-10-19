@@ -162,14 +162,16 @@ ai-rulez is MIT licensed. A rule, pattern or test derived from a project under a
    regular expression instead of copying the file, and credit the original rule name, its author and reference, and the
    DRL-1.1 license in the header and in `THIRD_PARTY_NOTICES.md`.
 
-4. **Write your own patterns and check them.** Write patterns as RE2 expressions of your own, applying this to rule code
-   whose patterns come from an upstream analyzer and to transcoded test tables; a file that only takes the idea and
-   shares no pattern or fixture needs no header. Start from negative fixtures, and do not carry over an upstream
-   heuristic without checking it against a real corpus for false positives.
+4. **Reuse upstream patterns only as RE2, and check them.** Upstream regular expressions and fixtures may be reused
+   where they are valid RE2, provided the file carries the header from item 1; otherwise write the pattern yourself. A
+   file that only takes the idea and shares no pattern or fixture needs no header. Start from negative fixtures, and do
+   not carry over an upstream heuristic without checking it against a real corpus for false positives.
 
 5. **Transcode tests with the script.** `scripts/transcode-skillspector-tests.py` turns SkillSpector pattern tests into
-   candidate `ruleCase` rows with the header already in place (`--rule` selects rule ids, `--map SSID=ARNNN` maps them
-   to ai-rulez codes). Review every generated row. Its tests are in `scripts/test_transcode_skillspector_tests.py` and
+   candidate `ruleCase` rows (`--rule` selects rule ids, `--map SSID=ARNNN` maps them to ai-rulez codes). The output is
+   a fragment that starts with the header: merge it into the target file and keep a single copy of the header. `--tests`
+   must be the `tests` directory of a SkillSpector git checkout, or pass the full 40-character commit with `--upstream`;
+   the script exits with an error rather than stamp an unknown commit. Review every generated row. Its tests are in `scripts/test_transcode_skillspector_tests.py` and
    run with `python3 -m unittest discover -s scripts -p 'test_transcode_skillspector_tests.py'`.
 
 Contributions that go the other way, from ai-rulez to an upstream project, follow that project's terms; SkillSpector

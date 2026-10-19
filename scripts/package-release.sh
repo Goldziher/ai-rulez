@@ -6,8 +6,9 @@
 #   1. fetches + sha256-verifies the liter-llm static library pinned by go.mod (setup-liter-llm.sh),
 #   2. builds with CGO_ENABLED=1, statically linking it,
 #   3. smoke-tests the binary,
-#   4. writes ai-rulez_<version>_<os>_<arch>.{tar.gz,zip} (README.md, LICENSE, the binary at the
-#      archive root: the layout release/npm and release/pypi extract).
+#   4. writes ai-rulez_<version>_<os>_<arch>.{tar.gz,zip} (README.md, LICENSE,
+#      THIRD_PARTY_NOTICES.md, the binary and LICENSES/ at the archive root: the layout release/npm and
+#      release/pypi extract; the Apache-2.0 text must travel with the binary, see THIRD_PARTY_NOTICES.md).
 #
 # Usage: package-release.sh <os>/<arch>      e.g. linux/amd64, darwin/arm64, windows/amd64
 # Env:   VERSION        release version without "v" (required; becomes main.version)
@@ -125,11 +126,12 @@ else
   build static
 fi
 
-cp README.md LICENSE "$stage/"
+cp README.md LICENSE THIRD_PARTY_NOTICES.md "$stage/"
+cp -R LICENSES "$stage/LICENSES"
 
 # Deterministic archives: fixed mtime, sorted names, no owner info, no gzip timestamp.
 files=()
-while IFS= read -r f; do files+=("$f"); done < <(cd "$stage" && find . -maxdepth 1 -type f -print | sed 's|^\./||' | LC_ALL=C sort)
+while IFS= read -r f; do files+=("$f"); done < <(cd "$stage" && find . -type f -print | sed 's|^\./||' | LC_ALL=C sort)
 (cd "$stage" && TZ=UTC touch -t 198001010000 "${files[@]}")
 
 out="$(cd "$OUT_DIR" && pwd)/$archive"
