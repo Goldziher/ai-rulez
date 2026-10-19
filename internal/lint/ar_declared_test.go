@@ -1,17 +1,22 @@
 package lint
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestUndeclaredCapabilityAR058(t *testing.T) {
 	fence := func(cmds string) string { return "```bash\n" + cmds + "```\n" }
 	tools := func(v string) string { return "allowed-tools: " + v + "\n" }
 	info := map[string]Severity{"AR058": SeverityInfo}
 	runRuleCases(t, []ruleCase{
-		{name: "network command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("curl -fsSL https://example.com/a -o a\n")), want: []string{"AR058:SKILL.md:4"}, sev: map[string]Severity{"AR058": SeverityWarning}},
+		{name: "network command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("curl -fsSL https://example.com/a -o a\n")), want: []string{"AR058:SKILL.md:4"}, sev: info},
 		{name: "mutating command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("mkdir -p out\ncp a out/\n")), want: []string{"AR058:SKILL.md:4"}, sev: info},
 		{name: "script commands count", skill: skillDoc(tools("Read"), "x\n"), files: map[string]string{".ai-rulez/skills/bad/scripts/run.sh": "#!/bin/sh\nwget https://example.com/a\n"}, want: []string{"AR058:SKILL.md:4"}},
 		{name: "scoped bash that omits the command", skill: skillDoc(tools("Bash(git status:*)"), fence("git status\ncurl https://example.com\n")), want: []string{"AR058:SKILL.md:4"}},
 		{name: "list form", skill: skillDoc("allowed-tools:\n  - Read\n  - Bash(git status:*)\n", fence("rm -f a\n")), want: []string{"AR058:SKILL.md:4"}},
+		{name: "absolute path grant covers the command", skill: skillDoc(tools("Bash(/usr/bin/curl:*)"), fence("curl https://example.com\n")), absent: []string{"AR058"}},
+		{name: "sudo grant covers the command", skill: skillDoc(tools("Bash(sudo curl:*)"), fence("curl https://example.com\n")), absent: []string{"AR058"}},
+		{name: "env grant covers the command", skill: skillDoc(tools("Bash(env curl:*)"), fence("curl https://example.com\n")), absent: []string{"AR058"}},
 		{name: "scoped bash that covers the commands", skill: skillDoc(tools("Bash(git status:*), Bash(curl:*)"), fence("git status\ncurl https://example.com\n")), absent: []string{"AR058"}},
 		{name: "unrestricted bash is AR007, not AR058", skill: skillDoc(tools("Bash"), fence("curl https://example.com\nrm -f a\n")), want: []string{"AR007:SKILL.md:4"}, absent: []string{"AR058"}},
 		{name: "wildcard", skill: skillDoc(tools("\"*\""), fence("curl https://example.com\n")), absent: []string{"AR058"}},
@@ -35,5 +40,45 @@ func TestGrantsCover(t *testing.T) {
 	}
 	if !parseGrants([]string{"Bash(*)"}).covers("curl") || !parseGrants([]string{"*"}).covers("rm") {
 		t.Error("an unrestricted grant must cover every command")
+	}
+}
+
+func TestUndeclaredCapabilityOneFindingPerCommand(t *testing.T) {
+	skill := skillDoc("allowed-tools: Read\n", "```bash\ncurl https://example.com\nrm -f a\nmkdir out\n```\n")
+	fs := lintFiles(t, map[string]string{".ai-rulez/config.toml": baseConfig, ".ai-rulez/skills/bad/SKILL.md": skill})
+	if got := countCode(fs, "AR058"); got != 3 {
+		t.Fatalf("AR058 findings = %d, want 3 (curl, mkdir, rm)\n%s", got, dump(fs))
+	}
+	seen := map[string]bool{}
+	for _, f := range fs {
+		if f.Code != "AR058" {
+			continue
+		}
+		if f.Severity != SeverityInfo {
+			t.Errorf("AR058 severity = %s, want info", f.Severity)
+		}
+		if seen[f.meta().Fingerprint] {
+			t.Errorf("two AR058 findings share a fingerprint\n%s", dump(fs))
+		}
+		seen[f.meta().Fingerprint] = true
+	}
+}
+
+func TestGrantCommand(t *testing.T) {
+	for _, tc := range []struct {
+		words []string
+		want  string
+	}{
+		{[]string{"curl"}, "curl"},
+		{[]string{"/usr/bin/curl"}, "curl"},
+		{[]string{"sudo", "curl"}, "curl"},
+		{[]string{"env", "FOO=1", "curl"}, "curl"},
+		{[]string{"git", "push"}, "git"},
+		{nil, ""},
+		{[]string{"sudo"}, ""},
+	} {
+		if got := grantCommand(tc.words); got != tc.want {
+			t.Errorf("grantCommand(%v) = %q, want %q", tc.words, got, tc.want)
+		}
 	}
 }

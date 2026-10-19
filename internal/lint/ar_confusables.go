@@ -5,8 +5,11 @@ import "sync"
 // confusableLetters maps the Greek, Cyrillic and Latin-extended characters that
 // look like an ASCII letter to that letter. Characters that NFKC already folds
 // (full-width forms, mathematical alphanumerics, ligatures) are not listed. The
-// table is the subset of Unicode UTS #39 confusables.txt whose target is one
-// ASCII letter; a capital that looks like an I maps to I, not to l.
+// table is a hand-curated set of look-alikes in the style of Unicode UTS #39
+// confusables.txt whose target is one ASCII letter, not a generated copy of that
+// file; lookalikeExtras adds Armenian letters and a few small capitals, and
+// accents on Latin letters are removed separately. A capital that looks like an I
+// maps to I, not to l.
 var confusableLetters = sync.OnceValue(func() map[rune]rune {
 	return map[rune]rune{
 		'\u00fe': 'p', // latin small letter thorn
