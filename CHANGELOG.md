@@ -6,6 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **`validate --path` above the configuration's directory outside git.** In a tree git does not track, the project
+  root was the configuration's directory, so `--config sub/.ai-rulez/config.toml --path docs/AGENTS.md` failed with
+  "outside the project root" although you named the file. A `--path` above it now widens the root to the nearest
+  directory that holds the configuration and every named path, when that directory lies inside the working directory.
+  Git work trees, `--repo-root`, `--glob` and `[lint] paths` are unchanged. (#470)
+
 ## [5.6.0] - 2026-10-19
 
 ### Added
