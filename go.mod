@@ -1,6 +1,6 @@
 module github.com/Goldziher/ai-rulez/v5
 
-go 1.27.3
+go 1.27.2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.3
