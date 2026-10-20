@@ -1051,7 +1051,10 @@ A preset member is replaced by an entry with the same name or the same `profile`
 less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size`, `message_properties` and `version` range; keys set on
 the entry win. A profile can also name `required_flags`: a flag of its command (`--no-llm` for `skillspector`) that
 an egress = false entry must keep when it writes its own `command`, because dropping it switches on a network feature
-(`AR9E0`).
+(`AR9E0`). A profile can also list the results its scanner reports only because a lookup was unreachable: with
+`egress = false` the `skillspector` profile drops SkillSpector's `SC4` "OSV.dev unreachable" notice, one per
+`requirements*.txt`, and keeps real `SC4` vulnerability findings. SkillSpector has no offline switch, so it still
+attempts that lookup, sending the package names, unless the network is blocked around it.
 `ai-rulez scanners list` shows the preset of each scanner.
 
 ### Long messages
