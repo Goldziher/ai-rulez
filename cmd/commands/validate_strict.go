@@ -197,6 +197,50 @@ func loadStrictTree(ctx context.Context, base string) (*lint.Tree, error) {
 	return strictTreeCache.LoadContext(ctx, base) //nolint:wrapcheck // the caller wraps it
 }
 
+// rootForNamedPaths roots the strict tree above the configuration's directory
+// when a --path names a file outside it in a tree git does not track. Outside
+// git the project root is the configuration's directory, so a file above it was
+// refused although the user named it. The new root is the nearest directory that
+// holds the configuration and every named path, and it must lie inside the
+// working directory: a path typed on the command line is the user's choice, and
+// the working directory bounds the walk an untracked tree needs. --repo-root and
+// a git work tree keep their root, [lint] paths are not widened, and a recursive
+// run keeps one root per configuration.
+func rootForNamedPaths(ctx context.Context, base string) {
+	paths, _ := lintTargetFlags()
+	cwd := workingDir()
+	if _, orphans := orphanRootsFrom(ctx); orphans || validateRecursive {
+		return
+	}
+	if len(paths) == 0 || cwd == "" || strictTreeCache.Root != "" || (gitutil.Git{}).IsRepoContext(ctx, base) {
+		return
+	}
+	cwd, base = gitutil.Resolve(cwd), gitutil.Resolve(base)
+	root := base
+	for _, p := range paths {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(cwd, p)
+		}
+		root = commonDir(root, gitutil.Resolve(filepath.Clean(p)))
+	}
+	if root == base || !pathWithin(root, cwd) {
+		return
+	}
+	strictTreeCache = &lint.Loader{Root: root}
+}
+
+// commonDir is the nearest directory that holds both the directory dir and p.
+func commonDir(dir, p string) string {
+	for !pathWithin(p, dir) {
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return dir
+		}
+		dir = parent
+	}
+	return dir
+}
+
 // strictLint lints one loaded root.
 func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if validateLintProfile != "" {
@@ -210,6 +254,7 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if problems := lint.ValidateSettings(cfg.Lint); len(problems) > 0 {
 		return nil, oops.Errorf("invalid [lint] settings: %v", problems)
 	}
+	rootForNamedPaths(ctx, cfg.BaseDir)
 	tree, err := loadStrictTree(ctx, cfg.BaseDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")

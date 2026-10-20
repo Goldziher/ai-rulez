@@ -108,7 +108,10 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
 - **Inside the project root only.** Every path, glob match and `[lint] paths` entry must resolve inside the
   repository root once symlinks are followed: a path that leaves it is an error, and a file reached through a
   symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
-  matches at any depth). A glob that matches nothing is reported on stderr.
+  matches at any depth). A glob that matches nothing is reported on stderr. Outside git the project root is the
+  configuration's directory; a `--path` above it widens the root to the nearest directory that holds both, when that
+  directory lies inside the working directory (run from the top of the tree, or pass an absolute path from a
+  directory that contains it). `[lint] paths` and globs do not widen it.
 - **Nothing you name is dropped silently.** A file picked with `--path`, `--glob` or `[lint] paths` that is not
   linted is named on stderr as `<file>: not linted (<reason>)` and listed once in the `notices` array of the JSON report
   (`validate --format json`, `scan --format json`; a file that two `--recursive` roots both skipped is reported once). The reasons are: larger than 2 MiB, a binary file, not a regular

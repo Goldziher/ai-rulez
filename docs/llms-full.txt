@@ -13569,7 +13569,10 @@ paths = ["catalog", "vendor/skills"]   # always linted, relative to the project 
 - **Inside the project root only.** Every path, glob match and `[lint] paths` entry must resolve inside the
   repository root once symlinks are followed: a path that leaves it is an error, and a file reached through a
   symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
-  matches at any depth). A glob that matches nothing is reported on stderr.
+  matches at any depth). A glob that matches nothing is reported on stderr. Outside git the project root is the
+  configuration's directory; a `--path` above it widens the root to the nearest directory that holds both, when that
+  directory lies inside the working directory (run from the top of the tree, or pass an absolute path from a
+  directory that contains it). `[lint] paths` and globs do not widen it.
 - **Nothing you name is dropped silently.** A file picked with `--path`, `--glob` or `[lint] paths` that is not
   linted is named on stderr as `<file>: not linted (<reason>)` and listed once in the `notices` array of the JSON report
   (`validate --format json`, `scan --format json`; a file that two `--recursive` roots both skipped is reported once). The reasons are: larger than 2 MiB, a binary file, not a regular
@@ -33907,7 +33910,7 @@ ai-rulez scan --path vendor/skills
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
 | `--outputs` | bool |  | Also lint the generated files (what generate writes, or would write) for secrets, broken references and descriptions; a finding in one is marked as output and a problem the authored source already has is reported once (the same as [lint] lint_outputs) |
-| `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; a marketplace, plugin, hook file or skill is recognized by its content wherever it is). A path that does not exist or leaves the root exits 1, and so does a named file that is unreadable or over 2 MiB. A text file named here that is no content kind (.env, YAML) is scanned for secrets only |
+| `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; outside git a path above the configuration's directory widens the root to the nearest directory holding both, if it lies inside the working directory; a marketplace, plugin, hook file or skill is recognized by its content wherever it is). A path that does not exist or leaves the root exits 1, and so does a named file that is unreadable or over 2 MiB. A text file named here that is no content kind (.env, YAML) is scanned for secrets only |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
@@ -34819,7 +34822,7 @@ ai-rulez validate --outputs
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
 | `--output` / `-o` | string |  | Write the report to this file instead of stdout |
 | `--outputs` | bool |  | Also lint the generated files (what generate writes, or would write) for secrets, broken references and descriptions; a finding in one is marked as output and a problem the authored source already has is reported once (the same as [lint] lint_outputs) |
-| `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; a marketplace, plugin, hook file or skill is recognized by its content wherever it is). A path that does not exist or leaves the root exits 1, and so does a named file that is unreadable or over 2 MiB. A text file named here that is no content kind (.env, YAML) is scanned for secrets only |
+| `--path` | string list |  | Also lint this file or directory, which must lie inside the project root (repeatable; outside git a path above the configuration's directory widens the root to the nearest directory holding both, if it lies inside the working directory; a marketplace, plugin, hook file or skill is recognized by its content wherever it is). A path that does not exist or leaves the root exits 1, and so does a named file that is unreadable or over 2 MiB. A text file named here that is no content kind (.env, YAML) is scanned for secrets only |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
 | `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
