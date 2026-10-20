@@ -76,7 +76,7 @@ Grade instruction files (`AGENTS.md`, rules, skills, agents, commands) with a mo
 
 ### `ai-rulez scan`
 
-Security checks only (`AR0xx`): secrets, hidden characters, prompt injection, risky shell, unpinned remotes. Same output, baseline and changed-only flags as `validate`, plus `--external` for `[[lint.external]]` scanners (`--write-baseline --reason`, `--scanner-baseline`, `--show-suppressed`). `ai-rulez scanners list|doctor [--external] [--format json]` inspects those scanners.
+Security checks only (`AR0xx`): secrets, hidden characters, prompt injection (also obfuscated), risky shell, unpinned remotes, exfiltration and anti-refusal prose, persistence, unsafe deserialization, malware-shaped content, shipped executables, dependency manifests and MCP metadata. Same output, baseline and changed-only flags as `validate`, plus `--external` for `[[lint.external]]` scanners (`--write-baseline --reason`, `--scanner-baseline`, `--show-suppressed`). `ai-rulez scanners list|doctor [--external] [--format json]` inspects those scanners.
 
 ### `ai-rulez doctor`
 
