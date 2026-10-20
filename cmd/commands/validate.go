@@ -555,7 +555,10 @@ var ScanCmd = &cobra.Command{
 secret patterns, hidden or bidirectional characters, prompt-injection phrases,
 HTML comments that carry instructions, curl-pipe-shell, eval and base64 payloads,
 credential access, unrestricted allowed-tools, outbound hosts outside an
-allow-list, and unpinned remote sources. By default nothing is fetched or
+allow-list, unpinned remote sources, anti-refusal and context-exfiltration
+prose, persistence, unsafe deserialization, requests to internal endpoints,
+malware-shaped content, shipped executables, dependency manifests and MCP
+metadata. By default nothing is fetched or
 executed. With --external the scanners configured in [[lint.external]] are run
 as programs (those that declare egress = true also need --allow-egress).
 
