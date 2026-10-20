@@ -13,7 +13,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c
-.ai-rulez/.generated-manifest.local.json file 0644 2208 2157a05214bf030158176754ec435413e2c36af070cbb82be972bbcd77cc603a
+.ai-rulez/.generated-manifest.local.json file 0644 2208 bf88fcdcaf19c6ec3d214559b2115c064ec4d1bbd5759ab077bd9e1283ef4a6e
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -179,7 +179,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2208 2157a05214bf030158176754ec435413e2c36af070cbb82be972bbcd77cc603a
+.ai-rulez/.generated-manifest.local.json file 0644 2208 bf88fcdcaf19c6ec3d214559b2115c064ec4d1bbd5759ab077bd9e1283ef4a6e
 >>>>
 {
   "version": "1",
@@ -192,8 +192,8 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
           "PreToolUse"
         ],
         "elementSums": [
-          "3692d8447dde42993231cf179961d41b4cae26a55b28c6920f96429ee7129ca4",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "7c8760177183ecf62e17005078a8fed70d1566479a9714efd205a06260ccdde2"
         ]
       },
       {
@@ -248,7 +248,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
     ]
   },
   "digests": {
-    ".claude/settings.json": "ff1d598888f6873c6d504cf3ccd4eb0ea56447bf34f4c0b345fddbb98dbac95e",
+    ".claude/settings.json": "d44f814695cb6a6e6364b24d25f309b5b6b284cc195af0cb0066a87af9a35953",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",
