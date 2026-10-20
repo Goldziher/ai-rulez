@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This guide provides everything you 
 
 ### Prerequisites
 
-- **Go 1.27.2+**, matching `go.mod`
+- **Go 1.27.3+**, matching `go.mod`
 - **A C toolchain and cgo** for the liter-llm native library
 - **[Task](https://taskfile.dev)** for build scripts
 - **Poly** for linting, formatting and Git hooks

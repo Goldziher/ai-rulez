@@ -158,10 +158,11 @@ The binding is cgo over a Rust library, so a build needs `CGO_ENABLED=1`, a C to
 
 A cgo `#cgo LDFLAGS` shim inside the repository cannot replace the environment variable: the binding's own `-L` and `-lliter_llm_ffi` come first on the link line and resolve to the shared library the module ships, so the binary keeps a load command for it (checked on macOS arm64; `-Wl,-dead_strip_dylibs`, which would drop it, is not allowed in `#cgo` flags). That is why `scripts/setup-liter-llm.sh` supplies the static archive through `CGO_LDFLAGS` rather than an in-repo cgo shim.
 
-Verification history for liter-llm (the current pin is v2.2.4; earlier platform checks retain their tested versions):
+Verification history for liter-llm (the current pin is v2.3.0; earlier platform checks retain their tested versions):
 
 | Platform | Result | Verified on |
 | --- | --- | --- |
+| macOS arm64 | static link; `internal/llm` and `internal/evals` tests, race checks on `internal/llm` and `llm doctor` pass, and the binary has no load command for the shared library | v2.3.0 |
 | macOS arm64 | static link; full Go tests, race checks and a live OpenAI smoke test pass | v2.2.4 |
 | Linux arm64 (glibc, Debian bookworm container) | release archive and smoke test pass; static liter-llm link, `ldd` lists libm, libgcc_s and libc only; highest required symbol is `GLIBC_2.34` | v2.2.4 |
 | Linux x86_64, macOS x86_64 | native release builds and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#platform-matrix) | v2.2.3 |
@@ -174,7 +175,7 @@ Binary size grows by about 35 MB per platform. The release workflow, glibc floor
 
 liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). Every release binary now bundles that code: ship the MIT notice and the third-party notices of the library with it.
 
-Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.2.4` in `go.mod`. v2.2.0 or later is required for exact Gemini thinking-token accounting (`module_test.go` pins that floor).
+Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.3.0` in `go.mod`. v2.2.0 or later is required for exact Gemini thinking-token accounting (`module_test.go` pins that floor).
 
 ### Testing
 
@@ -182,7 +183,7 @@ The `internal/llm` tests run the real liter-llm client against local `httptest` 
 
 Verified live on 2026-10-10 against liter-llm v2.2.3: `AI_RULEZ_LIVE_LLM=1` with `GEMINI_API_KEY`, chat model `gemini-2.5-flash-lite` and embedding model `gemini-embedding-001`; `go test ./internal/llm/... ./internal/evals/...` passes. Thinking-token settlement charged the reply's reported `total_tokens` (prompt 35, completion 414). That run also exposed a live-only test bug, since fixed: `TestLiveBudgetMaxCallsAndUnknownPriceWithCostCap` used a priced model for its unknown-price branch, so the branch never exercised an unpriced model.
 
-On 2026-10-16, the statically linked v2.2.4 build passed the full Go suite, race checks and a live OpenAI smoke test.
+On 2026-10-16, the statically linked v2.2.4 build passed the full Go suite, race checks and a live OpenAI smoke test. On 2026-10-20, the statically linked v2.3.0 build passed the `internal/llm` and `internal/evals` tests, race checks on `internal/llm` and `llm doctor` on macOS arm64; the other platforms are verified by the release workflow.
 
 ## Using it from a feature
 
