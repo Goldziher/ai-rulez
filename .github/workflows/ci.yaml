@@ -405,7 +405,7 @@ jobs:
     name: Comprehensive Test Suite - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: [lint]
-    timeout-minutes: 75
+    timeout-minutes: 90
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
