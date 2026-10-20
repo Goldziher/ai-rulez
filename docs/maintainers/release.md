@@ -66,6 +66,21 @@ Moving `v5` does not trigger another publish: the tag trigger only matches full 
 Rerunning a fully published release can repair a missing floating tag without rebuilding or
 republishing packages. Dispatch from that release's tag so the source and provenance checks hold.
 
+GitHub refuses to let the workflow's `GITHUB_TOKEN` move a ref onto commits that change files under
+`.github/workflows/`, and no workflow permission grants that. When a release changes a workflow
+since the commit `v5` points at, `update_action_tag` therefore fails with an error from the
+`PATCH .../git/refs/tags/v5` call after every package has published, and a rerun fails the same
+way. Move the tag by hand with an account that may push workflow changes, as a fast-forward:
+
+```bash
+git merge-base --is-ancestor "$(gh api repos/Goldziher/ai-rulez/git/refs/tags/v5 -q .object.sha)" 'v5.4.0^{commit}'
+printf '{"sha":"%s","force":false}' "$(git rev-parse 'v5.4.0^{commit}')" |
+  gh api --method PATCH repos/Goldziher/ai-rulez/git/refs/tags/v5 --input -
+```
+
+Check first that the release is public and is the newest stable v5 release; `force: false` makes
+GitHub reject anything but a fast-forward.
+
 To run the workflow by hand, use **workflow_dispatch** with the tag, and choose the tag as the ref in "Use workflow
 from". The `meta` job enforces this: when the dispatch did not come from `refs/tags/<tag>` it fails with a clear error
 and publishes nothing. Provenance is signed with the run's ref identity, `ai-rulez verify --self` pins `refs/tags/v...`,
