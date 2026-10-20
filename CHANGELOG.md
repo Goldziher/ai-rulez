@@ -10,10 +10,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **Built with Go 1.27.3 and liter-llm 2.3.0.** The release binaries link the liter-llm 2.3.0 native library, and
-  building from source needs Go 1.27.3 or newer, which carries the standard library security fixes of that point
-  release. The other Go modules (go-python-packaging 0.13.0, oras-go 2.6.4 and their dependencies), the docs site
-  dependencies and the pnpm version the npm package is published with are updated as well.
+- **Built with liter-llm 2.3.0.** The release binaries link the liter-llm 2.3.0 native library. The other Go
+  modules (go-python-packaging 0.13.0, oras-go 2.6.4 and their dependencies), the docs site dependencies and the pnpm
+  version the npm package is published with are updated as well.
 
 ### Fixed
 

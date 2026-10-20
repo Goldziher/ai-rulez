@@ -1,6 +1,6 @@
 module example.com/airulez-consumer
 
-go 1.27.3
+go 1.27.2
 
 require github.com/Goldziher/ai-rulez/v5 v5.0.0
 
