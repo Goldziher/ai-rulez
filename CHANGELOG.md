@@ -6,8 +6,21 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.6.1] - 2026-10-20
+
+### Changed
+
+- **Built with Go 1.27.3 and liter-llm 2.3.0.** The release binaries link the liter-llm 2.3.0 native library, and
+  building from source needs Go 1.27.3 or newer, which carries the standard library security fixes of that point
+  release. The other Go modules (go-python-packaging 0.13.0, oras-go 2.6.4 and their dependencies), the docs site
+  dependencies and the pnpm version the npm package is published with are updated as well.
+
 ### Fixed
 
+- **The AR041 to AR058 checks no longer slow every scan by about half.** In 5.6.0 each rule looked for its trigger
+  words one at a time, and the malware rules read the whole file once per word, so `validate`, `scan` and the MCP
+  skill scan took about 45% longer than in 5.5.3. All of a rule set's words are now found in one pass, which brings
+  the cost of the new rules to about 12%; findings are unchanged.
 - **`validate --path` above the configuration's directory outside git.** In a tree git does not track, the project
   root was the configuration's directory, so `--config sub/.ai-rulez/config.toml --path docs/AGENTS.md` failed with
   "outside the project root" although you named the file. A `--path` above it now widens the root to the nearest
