@@ -296,13 +296,22 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
-	if err := applyTrackedOnly(ctx, cfg, tree, report); err != nil {
+	if err := finishStrictReport(ctx, cfg, tree, report); err != nil {
 		return nil, err
+	}
+	return report, nil
+}
+
+// finishStrictReport applies the steps that follow a lint run: the
+// tracked-only filter and the opt-in MCP user-scope findings.
+func finishStrictReport(ctx context.Context, cfg *config.Config, tree *lint.Tree, report *lint.Report) error {
+	if err := applyTrackedOnly(ctx, cfg, tree, report); err != nil {
+		return err
 	}
 	if validateMCPUserScope {
 		report.Findings = append(report.Findings, mcpUserScopeFindings(cfg)...)
 	}
-	return report, nil
+	return nil
 }
 
 // mcpUserScopeFindings runs the doctor's MCP scope check (--mcp-user-scope) and
@@ -565,7 +574,7 @@ func prepareReports(ctx context.Context, reports []*lint.Report, cfgs []*config.
 // the run ends here (--update-baseline).
 func prepareReportsErr(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, done bool, err error) {
 	if validateUpdateBaseline {
-		if err := updateBaselines(reports, cfgs); err != nil {
+		if err := updateBaselines(ctx, reports, cfgs); err != nil {
 			return nil, true, err
 		}
 		return nil, true, nil

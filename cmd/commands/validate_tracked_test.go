@@ -87,7 +87,7 @@ func TestUpdateBaselineSkipsUntrackedFiles(t *testing.T) {
 	report := lintProject(t, cfg)
 	require.True(t, reportFiles(report)[pycRel], "the untracked file is linted without --tracked-only")
 
-	require.NoError(t, updateBaselines([]*lint.Report{report}, []*config.Config{cfg}))
+	require.NoError(t, updateBaselines(t.Context(), []*lint.Report{report}, []*config.Config{cfg}))
 
 	b, err := lint.LoadBaseline(filepath.Join(root, ".ai-rulez", lint.BaselineFile))
 	require.NoError(t, err)

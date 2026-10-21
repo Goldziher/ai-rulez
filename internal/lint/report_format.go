@@ -192,7 +192,7 @@ func WriteJUnit(w io.Writer, c Combined, failOn string) error {
 		suite := byRoot[root]
 		path := f.RepoPath()
 		tc := junitCase{Name: fmt.Sprintf("%s %s (line %d)", f.Code, f.Name, f.Line), Classname: cmp.Or(path, f.Code), File: path, Line: f.Line}
-		where := "(no file)"
+		where := noFileLabel
 		if path != "" {
 			where = fmt.Sprintf("%s:%d", path, f.Line)
 		}
@@ -263,7 +263,7 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 		fmt.Fprintf(&sb, "### %s (%d)\n\n| Rule | Location | Message |\n| --- | --- | --- |\n", strings.ToUpper(string(sev[:1]))+string(sev[1:])+"s", len(group))
 		for _, f := range group {
 			path := f.RepoPath()
-			where := "(no file)"
+			where := noFileLabel
 			if path != "" {
 				where = fmt.Sprintf("`%s:%d`", strings.ReplaceAll(path, "`", "'"), f.Line)
 			}

@@ -148,6 +148,10 @@ func WriteText(w io.Writer, c Combined) error {
 
 // writeText is WriteText; quiet drops the "validation:" total and the
 // per-code tally.
+// noFileLabel stands for the location of a finding without a file, such as a
+// scanner result that reported no location.
+const noFileLabel = "(no file)"
+
 func writeText(w io.Writer, c Combined, quiet bool) error {
 	var sb strings.Builder
 	if c.Profile != "" {
@@ -159,7 +163,7 @@ func writeText(w io.Writer, c Combined, quiet bool) error {
 		if f.IsAccepted() {
 			continue
 		}
-		where := "(no file)" // a finding about the project as a whole, such as a scanner result without a location
+		where := noFileLabel // a finding about the project as a whole, such as a scanner result without a location
 		if f.File != "" {
 			where = fmt.Sprintf("%s:%d", f.File, f.Line)
 		}
