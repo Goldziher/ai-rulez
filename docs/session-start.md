@@ -14,7 +14,7 @@ It is on by default for a project that generates for Claude Code, and it does no
 # when = "remote"        # "remote": act only when CLAUDE_CODE_REMOTE is set; "always": every session
 # mode = "auto"          # auto | locked | frozen | plain
 # timeout = 120          # seconds the whole run may take before it is killed
-# version = "5.6.1"      # pin npx and uvx to a release; default is the latest published one
+# version = "5.6.2"      # pin npx and uvx to a release; default is the latest published one
 # command = ["ai-rulez"] # replaces the launcher; runs without a shell; excludes version
 # prompt = true          # inject the short briefing
 # prompt_text = "..."    # replaces the briefing; {{server}} is the ai-rulez MCP server's name
