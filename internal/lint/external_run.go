@@ -211,7 +211,7 @@ func (r *runner) execStaged(sc resolvedScanner, st *scannerStage, spec cmdrun.Sp
 		return nil, 0, "", false
 	}
 	r.banner(sc)
-	return r.finishBatch(sc, st, st.skillDirs, usesOut, 0, cmdrun.Run(scanContext(), spec))
+	return r.finishBatch(sc, st, st.skillDirs, false, usesOut, 0, cmdrun.Run(scanContext(), spec))
 }
 
 // prepareBatch readies run idx of a stage: it creates the {out} file the
@@ -242,7 +242,7 @@ func (r *runner) prepareBatch(sc resolvedScanner, st *scannerStage, spec cmdrun.
 // finishBatch turns the outcome of run idx into findings with stage-relative
 // paths: the {out} file replaces stdout, the report is parsed and paths that are
 // not staged files are dropped and counted.
-func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, dirs []string, usesOut bool, idx int, res cmdrun.Result) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
+func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, dirs []string, perSkill, usesOut bool, idx int, res cmdrun.Result) (norm []externalFinding, outOfScope int, firstOut string, ok bool) {
 	if usesOut && (res.Status == cmdrun.StatusOK || res.Status == cmdrun.StatusExit) {
 		data, rerr := st.readOut(idx)
 		if rerr != nil {
@@ -255,7 +255,7 @@ func (r *runner) finishBatch(sc resolvedScanner, st *scannerStage, dirs []string
 	if !good {
 		return nil, 0, "", false
 	}
-	norm, outOfScope, firstOut = st.normalize(found, dirs)
+	norm, outOfScope, firstOut = st.normalize(found, dirs, perSkill)
 	return norm, outOfScope, firstOut, true
 }
 
@@ -546,9 +546,20 @@ func (r *runner) parseRun(sc resolvedScanner, res cmdrun.Result) ([]externalFind
 // slash paths and drops the ones that are not a staged file, counting them
 // (AR9E6). The result no longer depends on where the stage was written, which
 // is what the cache stores.
-func (st *scannerStage) normalize(found []externalFinding, dirs []string) (out []externalFinding, outOfScope int, firstOut string) {
+//
+// A result without a location of a run that was handed exactly one skill
+// (perSkill) belongs to that skill's SKILL.md; in any other run it stays
+// without a file (#474).
+func (st *scannerStage) normalize(found []externalFinding, dirs []string, perSkill bool) (out []externalFinding, outOfScope int, firstOut string) {
 	for i := range found {
 		f := found[i]
+		if f.File == "" && perSkill && len(dirs) == 1 {
+			if rel, err := filepath.Rel(st.root, dirs[0]); err == nil {
+				if skillMD := filepath.ToSlash(filepath.Join(rel, "SKILL.md")); st.source[skillMD] != "" {
+					f.File, f.Line = skillMD, 1
+				}
+			}
+		}
 		if f.File != "" {
 			rel, ok := st.resolveRel(f.File, dirs)
 			if !ok {
@@ -748,6 +759,9 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 		f.Line = min(max(f.Line, 0), maxScannerLine)
 		abs, inside := r.locate(&f, scope)
 		note := ""
+		if f.File == "" {
+			note = " (no location reported by scanner)"
+		}
 		if !inside {
 			if scope.lookup != nil {
 				outOfScope++
@@ -826,13 +840,14 @@ func scannerSeverity(sc resolvedScanner, f externalFinding) Severity {
 }
 
 // locate maps a finding's path to a project file. A result with no location
-// belongs to the configuration that ran the scanner (line 1). inside is false
+// that no earlier step could attribute to a skill has no file: it is reported
+// on the scanner, not on a file the scanner never looked at. inside is false
 // for a path the scope does not contain.
 func (r *runner) locate(f *externalFinding, scope scanScope) (abs string, inside bool) {
 	switch {
 	case f.File == "":
 		f.Line = 1
-		return r.configFilePath(), true
+		return "", true
 	case scope.lookup != nil:
 		return scope.lookup(f.File)
 	}

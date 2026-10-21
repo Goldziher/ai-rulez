@@ -34,6 +34,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`validate --update-baseline` no longer records findings in untracked files.** A teammate's or CI's checkout does
   not have those files, so their baseline entries were dead weight and `lint-baseline.json` differed between machines.
   They are now skipped, and the run logs how many. (#476)
+- **A scanner result without `locations` is no longer reported on `.ai-rulez/config.toml:1`.** The finding looked as
+  if it were about the configuration, and a baseline entry on that file stopped matching once the scanner added a
+  location. A run that was handed exactly one skill (`batch_size = 1`) now attributes such a result to that skill's
+  `SKILL.md`; any other run reports it without a file, with `(no location reported by scanner)` at the end of the
+  message. Cached scanner results from earlier versions are scanned again. (#474)
 
 ## [5.6.1] - 2026-10-20
 

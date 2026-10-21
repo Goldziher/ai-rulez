@@ -14489,6 +14489,11 @@ names a file in more than one of them is ambiguous and dropped. `AR9E6` is an er
 dropped, so a scanner whose paths never resolve cannot pass as clean. A severity set for `AR9E6` in `[lint.severity]` (or
 switched off) is kept as set.
 
+A result with no `locations` is attributed to the `SKILL.md` of the skill when the run was handed exactly one skill
+(`batch_size = 1`, or a single skill). In any other run it has no file: the finding is reported without a path, its
+message ends in `(no location reported by scanner)`, and a baseline entry records no file and keys on the scanner, the
+rule and the message (or the scanner's own fingerprint). In the JSON report `file` is then `""`, the text format prints `(no file)`, and the GitHub and Markdown formats show `.`.
+
 Severity is the first of: `severity_map` (rule id or glob to `critical`, `high`, `medium`, `low`, `info`, or
 `error`, `warning`; exact id first, then the longest glob), SARIF `properties.security-severity` of the result or
 its rule (9.0 and up critical, 7.0 high, 4.0 medium, above 0 low), the result `level` (`error` high, `warning`

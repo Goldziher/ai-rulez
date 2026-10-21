@@ -159,7 +159,11 @@ func writeText(w io.Writer, c Combined, quiet bool) error {
 		if f.IsAccepted() {
 			continue
 		}
-		fmt.Fprintf(&sb, "%s:%d: %s %s %s: %s%s\n", f.File, f.Line, f.Severity, f.Code, f.Name, f.Message, sourceSuffix(f))
+		where := "(no file)" // a finding about the project as a whole, such as a scanner result without a location
+		if f.File != "" {
+			where = fmt.Sprintf("%s:%d", f.File, f.Line)
+		}
+		fmt.Fprintf(&sb, "%s: %s %s %s: %s%s\n", where, f.Severity, f.Code, f.Name, f.Message, sourceSuffix(f))
 		if f.Trap != nil && f.Trap.Hint != "" {
 			fmt.Fprintf(&sb, "      fix: %s\n", f.Trap.Hint)
 		}

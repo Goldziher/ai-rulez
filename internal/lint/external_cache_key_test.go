@@ -113,6 +113,6 @@ func TestScanCacheKeyIgnoresEntriesWrittenUnderMappingOne(t *testing.T) {
 
 	// Assert
 	require.True(t, ok)
-	assert.Equal(t, 2, scanMappingVersion)
+	assert.Equal(t, 3, scanMappingVersion)
 	assert.NotEqual(t, legacy, key, "an entry written under mapping 1 must be a cache miss")
 }
