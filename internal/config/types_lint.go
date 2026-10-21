@@ -50,10 +50,12 @@ type LintConfig struct {
 	// IgnorePaths lists globs, relative to the config directory, of source
 	// files whose findings are dropped.
 	IgnorePaths []string `yaml:"ignore_paths,omitempty" json:"ignore_paths,omitempty" toml:"ignore_paths,omitempty"` //nolint:tagliatelle
-	// TrackedOnly lints only git-tracked files, so the result does not depend on
-	// what a local run left behind (a __pycache__, a build artifact).
-	// `validate --tracked-only` sets it for one invocation; files added by
-	// --changed are still linted, and outside a git work tree it is ignored with a warning.
+	// TrackedOnly reports no findings in git-untracked files, so the result does
+	// not depend on what a local run left behind (a __pycache__, a build
+	// artifact). The files are still walked and linted; their findings are
+	// dropped after the run. `validate --tracked-only` sets it for one
+	// invocation; files named by --changed are kept, and outside a git work tree
+	// it is ignored with a warning.
 	TrackedOnly bool `yaml:"tracked_only,omitempty" json:"tracked_only,omitempty" toml:"tracked_only,omitempty"` //nolint:tagliatelle
 	// IgnoreRules drops findings of the listed rules in the listed files only:
 	// `[[lint.ignore_rules]] rules = ["AR901", "AR9*"] paths = ["playground/**"]`.

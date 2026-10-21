@@ -446,7 +446,7 @@ fail_on = "error"                  # error (default) | warning | none
 analyzers = ["security", "references"]   # run only these analyzers (see Analyzers and scopes); default: all
 ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
-tracked_only = true                # lint only files the repository tracks (same as --tracked-only; see Untracked files)
+tracked_only = true                # report no findings in untracked files (same as --tracked-only; see Untracked files)
 # ignore_rules (below) drops chosen rules in chosen files; it is an array of tables, see Rule-scoped ignores
 skill_roots = [".claude/skills", "plugins/*/skills"]   # directories AR808 treats as harness skill roots (replaces the defaults)
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
@@ -685,7 +685,8 @@ reason = "the skill runs git and gh; narrowing would break step 3"
 - An accepted finding stays in the report, marked accepted, with the reason as `accept_reason` in the JSON output. It
   does not count toward the exit code or a `[lint.ratchet]` limit, like a baseline entry. Unlike `ignore_rules` it is
   not dropped, so it stays visible to a reviewer. (`--show-suppressed` belongs to the external scanners and does not
-  apply: accepted findings are always shown.)
+  apply: accepted findings are always shown.) `validate --update-baseline` does not write these findings to the
+  baseline; a finding the baseline itself accepts is unaffected.
 - An entry that accepted nothing is reported as `AR9I0` (`accept-unused`, a warning) on `config.toml`, so a fixed or
   renamed finding does not leave a stale acceptance behind. It is not reported when this run could not have produced
   the finding: the rule is off or in `[lint] ignore`, its analyzer was not selected (`--analyzer`), or the run
@@ -901,9 +902,10 @@ finding, and a `[lint.ratchet]` count is judged against the full set too; exit s
 
 A run lints the files on disk that are not git-ignored, tracked or not, so an untracked build artifact (a
 `__pycache__/*.pyc` left by `python -m py_compile`, reported as AR051) produces findings that a teammate's or CI's
-checkout does not have. `--tracked-only` (or `[lint] tracked_only = true`) lints only files in the repository index, plus
-the files `--changed` or `--since` names, so the result does not depend on what a local run left behind. Outside a git
-work tree there is no index: the option logs a warning and every file is linted. Independently of the option,
+checkout does not have. `--tracked-only` (or `[lint] tracked_only = true`) reports no findings in files outside the repository index, except
+the files `--changed` or `--since` names, so the result does not depend on what a local run left behind. The files are
+still walked; their findings are dropped after the run. Outside a git work tree there is no index: the option logs a
+warning and every finding is kept. Independently of the option,
 `--update-baseline` skips findings in untracked files and logs how many.
 
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
