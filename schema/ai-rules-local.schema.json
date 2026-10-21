@@ -1535,6 +1535,38 @@
       "additionalProperties": false,
       "description": "Settings for `ai-rulez validate` (deep content validation).",
       "properties": {
+        "accept": {
+          "description": "Accepts single findings with a required reason: the findings of one rule in one file whose message holds match (or that sit on line) stay in the report, marked accepted, and do not fail the run. An entry that matches nothing is reported as AR9I0.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "line": {
+                "description": "The 1-based line the finding must be reported on.",
+                "minimum": 1,
+                "type": "integer"
+              },
+              "match": {
+                "description": "Substring the finding's message must contain (case-sensitive). Set match, line or both.",
+                "type": "string"
+              },
+              "path": {
+                "description": "Glob, relative to the config directory or the repository root, of the source file; an exact path is a glob without wildcards.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Why the finding is acceptable; required.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "rule": {
+                "description": "One finding code (AR007) or name (tool-breadth); no wildcards.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
         "agents_md_only": {
           "description": "Report (AR9Q0) every tracked CLAUDE.md, .claude/CLAUDE.md and CLAUDE.local.md that is not the generated \"@AGENTS.md\" shim, when AGENTS.md is canonical for Claude Code. Off by default.",
           "type": "boolean"

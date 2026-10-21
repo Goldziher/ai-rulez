@@ -426,6 +426,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.unit(unitOf("improve-config", AnalyzerEvals), r.checkImproveConfig)
 	r.unit(unitOf("search-index", AnalyzerSearch, AnalyzerConfig), r.checkSearchIndex)
 	r.dropIgnoredMissing()
+	r.applyAccepts()
 	r.reportSuppressionAttempts()
 	r.checkMaxFindings()
 	r.keepSelected()
@@ -551,6 +552,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 		}
 	}
 	problems = append(problems, validateIgnoreRules(lc.IgnoreRules)...)
+	problems = append(problems, validateAccepts(lc.Accept)...)
 	for kind := range lc.Budgets {
 		if _, ok := defaultBudgets[kind]; !ok {
 			problems = append(problems, fmt.Sprintf("lint.budgets: unknown content kind %q", kind))

@@ -13,6 +13,24 @@ type LintIgnoreRule struct {
 	Reason string `yaml:"reason,omitempty" json:"reason,omitempty" toml:"reason,omitempty"`
 }
 
+// LintAccept accepts the findings of one rule in one file whose message holds
+// Match (or that sit on Line), with a required reason: a hand-written,
+// reviewable alternative to a generated baseline entry.
+type LintAccept struct {
+	// Rule is one finding code (AR007) or name (tool-breadth); no wildcards.
+	Rule string `yaml:"rule" json:"rule" toml:"rule"`
+	// Path is a glob, relative to the config directory or the repository
+	// root, of the source file; an exact path is a glob without wildcards.
+	Path string `yaml:"path" json:"path" toml:"path"`
+	// Match is a substring the finding's message must contain. Set Match,
+	// Line or both; an entry with neither would accept the whole file.
+	Match string `yaml:"match,omitempty" json:"match,omitempty" toml:"match,omitempty"`
+	// Line is the 1-based line the finding must be reported on.
+	Line int `yaml:"line,omitempty" json:"line,omitempty" toml:"line,omitempty"`
+	// Reason says why the finding is acceptable; it is required.
+	Reason string `yaml:"reason" json:"reason" toml:"reason"`
+}
+
 // LintConfig configures `ai-rulez validate`. Every field is optional;
 // the lint package applies defaults for anything left unset.
 type LintConfig struct {
@@ -35,6 +53,11 @@ type LintConfig struct {
 	// IgnoreRules drops findings of the listed rules in the listed files only:
 	// `[[lint.ignore_rules]] rules = ["AR901", "AR9*"] paths = ["playground/**"]`.
 	IgnoreRules []LintIgnoreRule `yaml:"ignore_rules,omitempty" json:"ignore_rules,omitempty" toml:"ignore_rules,omitempty"` //nolint:tagliatelle
+	// Accept accepts single findings with a reason:
+	// `[[lint.accept]] rule = "AR007" path = ".claude/skills/foo/SKILL.md" match = "Bash" reason = "..."`.
+	// Accepted findings stay in the report, marked accepted, and do not fail
+	// the run; an entry that matches nothing is reported (AR9I0).
+	Accept []LintAccept `yaml:"accept,omitempty" json:"accept,omitempty" toml:"accept,omitempty"`
 	// SkillRoots lists globs, relative to the project root, of the directories
 	// that hold skill directories (".claude/skills", "plugins/*/skills") a
 	// harness loads from. AR808 checks a hand-written skill or command only in

@@ -400,9 +400,9 @@ to LF. Exit code 2 when the repository loosens the policy (the same code `genera
 - The MCP servers: `mcp --serve-skills` fails to start on a configuration that loosens the policy, and the
   `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
 - No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and
-  AR740-AR745 themselves), `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, `[[lint.ignore_rules]]`, baseline entries and
+  AR740-AR745 themselves), `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, `[[lint.ignore_rules]]`, `[[lint.accept]]`, baseline entries and
   `[lint.ratchet]` budgets are not applied. The finding stays at its enforced severity and counts toward the exit
-  code, and one AR740 finding per route names the attempt (`[lint] ignore_paths`, `[[lint.ignore_rules]]`,
+  code, and one AR740 finding per route names the attempt (`[lint] ignore_paths`, `[[lint.ignore_rules]]`, `[[lint.accept]]`,
   `ai-rulez-lint-ignore comment`, `baseline`, `[lint.ratchet]`) and the codes it tried to hide.
 - Remote sources a policy refuses are dropped before anything is fetched.
 
