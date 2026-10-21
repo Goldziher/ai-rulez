@@ -413,7 +413,7 @@ func TestExternalLocationlessAndHugeLineResults(t *testing.T) {
 		name, sarif, msg, wantFile string
 		maxLine                    int
 	}{
-		{name: "location-less result is attributed to the config file", sarif: noLoc, msg: "no place", wantFile: "config.toml", maxLine: 1},
+		{name: "location-less result has no file", sarif: noLoc, msg: "no place", wantFile: ".", maxLine: 1},
 		{name: "start line is clamped", sarif: hugeLine, msg: "far away", wantFile: "r.md", maxLine: 10_000_000},
 	}
 	for _, tt := range tests {

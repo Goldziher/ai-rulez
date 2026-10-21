@@ -238,6 +238,20 @@ func TestAcceptedFindingsInEveryFormat(t *testing.T) {
 	assert.Equal(t, 0, s.Failures, "the only error is accepted")
 }
 
+// A finding without a file (a scanner result with no location) is printed without a line number and stays a
+// valid entry in every format (#474).
+func TestFindingWithoutAFileIsRendered(t *testing.T) {
+	c := Combined{Findings: []Finding{{Code: CodeExternalFinding, Name: "external-finding", Severity: SeverityWarning, Line: 1,
+		Message: "[fake] AE1: found (no location reported by scanner)", Root: "."}}, Summary: Summary{Total: 1, Warnings: 1}}
+
+	text := string(render(t, FormatText, c, WriteOptions{}))
+	assert.Contains(t, text, "(no file): warning AR011")
+	assert.NotContains(t, text, ":1:")
+	for _, f := range []string{FormatJSON, FormatSARIF, FormatGitHub, FormatMarkdown, FormatJUnit} {
+		assert.Contains(t, string(render(t, f, c, WriteOptions{})), "no location reported by scanner", f)
+	}
+}
+
 func TestTextQuietDropsOnlyTheSummaryLines(t *testing.T) {
 	var loud, quiet bytes.Buffer
 	require.NoError(t, Write(&loud, FormatText, sampleCombined(), WriteOptions{}))

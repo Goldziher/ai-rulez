@@ -361,6 +361,42 @@ func TestChangedRunReportsTheSameFindingsAsAFullRun(t *testing.T) {
 	}
 }
 
+// A result without a location belongs to the one skill a single-skill run scanned; with
+// several skills in the run it belongs to none, and says so instead of naming the config file (#474).
+func TestLocationlessResultAttribution(t *testing.T) {
+	tests := []struct {
+		name     string
+		keys     string
+		skills   []string
+		wantFile []string
+		wantNote bool
+	}{
+		{"batch_size 1 names the skill", "batch_size = 1\n", []string{"alpha", "beta"},
+			[]string{".ai-rulez/skills/alpha/SKILL.md", ".ai-rulez/skills/beta/SKILL.md"}, false},
+		{"one skill in the run names the skill", "", []string{"alpha"}, []string{".ai-rulez/skills/alpha/SKILL.md"}, false},
+		{"several skills in a run name no file", "", []string{"alpha", "beta"}, []string{""}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p := fakeProject(t, isolationNone, fakeScannerCommand(t, "--only-global", "{skill_dirs}")+"inputs = [\"skills\"]\n"+tt.keys, tt.skills...)
+
+			// Act
+			first := scannerFindings(p.run(Options{}))
+			second := scannerFindings(p.run(Options{}))
+
+			// Assert
+			assert.Equal(t, tt.wantFile, findingFiles(first))
+			for _, f := range first {
+				assert.Equal(t, tt.wantNote, strings.Contains(f.Message, "(no location reported by scanner)"), f.Message)
+				assert.NotContains(t, f.File, "config.toml")
+			}
+			require.Len(t, second, len(first))
+			assert.Equal(t, first[0].Fingerprint(), second[0].Fingerprint(), "the baseline identity is stable across runs")
+		})
+	}
+}
+
 // The "served from the cache" log counts the skills read from the cache, not the
 // ones --changed left out, and says nothing under --no-scan-cache (#461).
 func TestCacheServedLogCountsOnlyCachedSkills(t *testing.T) {

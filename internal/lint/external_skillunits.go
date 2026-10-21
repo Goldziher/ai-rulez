@@ -304,7 +304,7 @@ func (r *runner) prepareUnitBatch(sc resolvedScanner, root, binary string, st *s
 // runPrepared starts a prepared batch and reads its report. It is safe to call
 // from several goroutines for different batches of one stage.
 func (r *runner) runPrepared(sc resolvedScanner, st *scannerStage, p preparedBatch, idx int) batchOutcome {
-	norm, outOfScope, firstOut, ok := r.finishBatch(sc, st, p.dirs, p.usesOut, idx, cmdrun.Run(scanContext(), p.spec))
+	norm, outOfScope, firstOut, ok := r.finishBatch(sc, st, p.dirs, true, p.usesOut, idx, cmdrun.Run(scanContext(), p.spec))
 	return batchOutcome{norm: norm, outOfScope: outOfScope, firstOut: firstOut, ok: ok, ran: true}
 }
 

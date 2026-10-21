@@ -35,6 +35,8 @@ type fakeScan struct {
 	listFiles bool
 	// alsoGlobal adds a result without a location to the per-directory ones.
 	alsoGlobal bool
+	// onlyGlobal reports one result without a location per run and none per directory.
+	onlyGlobal bool
 }
 
 func parseFakeScan(args []string) fakeScan {
@@ -44,6 +46,8 @@ func parseFakeScan(args []string) fakeScan {
 		switch {
 		case a == "--list-files":
 			s.listFiles = true
+		case a == "--only-global":
+			s.onlyGlobal = true
 		case a == "--also-global":
 			s.alsoGlobal = true
 		case strings.HasPrefix(a, "--") && i+1 < len(args):
@@ -122,13 +126,16 @@ func (s fakeScan) results() []map[string]any {
 		results = append(results, r)
 	}
 	for _, d := range s.dirs {
+		if s.onlyGlobal {
+			break
+		}
 		text := msg
 		if s.listFiles {
 			text = "files=" + strings.Join(filesUnder(d), ",")
 		}
 		add(filepath.Join(d, "SKILL.md"), text)
 	}
-	if len(s.dirs) == 0 || s.alsoGlobal {
+	if len(s.dirs) == 0 || s.alsoGlobal || s.onlyGlobal {
 		add("", msg)
 	}
 	return results
@@ -147,6 +154,7 @@ func (s fakeScan) results() []map[string]any {
 //	--print-version V          print "fake-scanner V" (after any --sleep) and exit
 //	--list-files (no value)    the message lists the regular files under each directory argument
 //	--also-global (no value)   one more result, without a location, besides the per-directory ones
+//	--only-global (no value)   only the result without a location, none per directory
 //
 // An argument that is an existing directory gets one finding at its SKILL.md; an
 // existing file is a script whose trimmed content is the message unless --msg

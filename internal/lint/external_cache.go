@@ -36,7 +36,7 @@ const (
 	// scanMappingVersion is bumped when the way a report is parsed into findings
 	// (formats, severity mapping, path normalisation) changes, so an entry written
 	// by older mapping code is not served.
-	scanMappingVersion = 2
+	scanMappingVersion = 3
 	// launcherTTL is how long a result of a launcher scanner (npx, uvx, ...) is
 	// served: the tool it downloads can change without the launcher binary changing.
 	launcherTTL = 24 * time.Hour

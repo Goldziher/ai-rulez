@@ -49,7 +49,7 @@ func TestScannerMessageLimit(t *testing.T) {
 			require.Len(t, findings, 1)
 			f := findings[0]
 			assert.Equal(t, tt.wantKept, strings.Count(f.Message, "x"))
-			assert.Equal(t, tt.wantTrunc, strings.HasSuffix(f.Message, "..."), f.Message)
+			assert.Equal(t, tt.wantTrunc, strings.HasSuffix(strings.TrimSuffix(f.Message, " (no location reported by scanner)"), "..."), f.Message)
 			if !tt.wantTrunc {
 				assert.Empty(t, f.FullMessage())
 				return
