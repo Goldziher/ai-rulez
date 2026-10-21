@@ -125,9 +125,11 @@ func (r *runner) runInRoot(sc resolvedScanner, root string, files []string) (all
 			files: relFiles(r, files), note: fmt.Sprintf("in the project root, %d file path(s) appended in %d run(s)", len(files), len(batches))})
 		return nil, true
 	}
+	progress := r.startProgress(sc, len(batches))
 	for _, argv := range batches {
 		spec.Argv = argv
 		res := cmdrun.Run(scanContext(), spec)
+		progress.finished()
 		found, good := r.parseRun(sc, res)
 		if !good {
 			return all, false
@@ -211,6 +213,7 @@ func (r *runner) execStaged(sc resolvedScanner, st *scannerStage, spec cmdrun.Sp
 		return nil, 0, "", false
 	}
 	r.banner(sc)
+	r.startProgress(sc, 1)
 	return r.finishBatch(sc, st, st.skillDirs, false, usesOut, 0, cmdrun.Run(scanContext(), spec))
 }
 

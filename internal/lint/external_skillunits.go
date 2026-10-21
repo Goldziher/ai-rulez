@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -177,7 +178,7 @@ func (r *runner) scanSkillUnits(sc resolvedScanner, root, binary string, units [
 	defer st.cleanup()
 	batches := splitBatches(units, misses, sc.BatchSize, argvSize(st.expandFor(sc.Command, nil, 0)), argvBudget, len(st.root))
 	r.banner(sc)
-	outcomes := r.runBatches(sc, root, binary, st, units, batches)
+	outcomes := r.runBatches(sc, root, binary, st, units, batches, r.startProgress(sc, len(batches)))
 	version, versionKnown := "", false
 	ok = true
 	for i, out := range outcomes {
@@ -219,7 +220,7 @@ type preparedBatch struct {
 // runBatches runs the batches one after the other, or up to the scanner's
 // parallel at a time. A failed batch stops the ones not yet started; the
 // outcomes are in batch order whatever order the runs finished in.
-func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scannerStage, units []skillUnit, batches []unitBatch) []batchOutcome {
+func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scannerStage, units []skillUnit, batches []unitBatch, progress *batchProgress) []batchOutcome {
 	outcomes := make([]batchOutcome, len(batches))
 	workers := min(max(sc.Parallel, 1), maxScannerParallel)
 	if workers == 1 || len(batches) == 1 {
@@ -230,6 +231,7 @@ func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scanner
 				break
 			}
 			outcomes[i] = r.runPrepared(sc, st, prep, b.idx)
+			progress.finished()
 			if !outcomes[i].ok {
 				break
 			}
@@ -259,6 +261,7 @@ func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scanner
 			defer wg.Done()
 			defer func() { <-slots }()
 			outcomes[i] = r.runPrepared(sc, st, prepared[i], batches[i].idx)
+			progress.finished()
 			if !outcomes[i].ok {
 				failed.Store(true)
 			}
@@ -266,6 +269,41 @@ func (r *runner) runBatches(sc resolvedScanner, root, binary string, st *scanner
 	}
 	wg.Wait()
 	return outcomes
+}
+
+// batchProgress reports a scanner's runs on stderr through the logger: one line
+// when the scanner starts and, with several runs, one as each finishes. A
+// finished run is counted under a lock, so the lines stay in order and none is
+// repeated when parallel runs end together. The lines are information level, so
+// --quiet drops them, and they never reach the report on stdout.
+type batchProgress struct {
+	mu    sync.Mutex
+	log   logger.Logger
+	name  string
+	total int
+	done  int
+}
+
+// startProgress announces a scanner and its number of runs, and returns the
+// counter its runs report to.
+func (r *runner) startProgress(sc resolvedScanner, total int) *batchProgress {
+	noun := "batches"
+	if total == 1 {
+		noun = "batch"
+	}
+	r.log().Info(fmt.Sprintf("%s: %d %s to run", sc.Name, total, noun))
+	return &batchProgress{log: r.log(), name: sc.Name, total: total}
+}
+
+// finished records one finished run. It is safe to call from several goroutines.
+func (p *batchProgress) finished() {
+	if p == nil || p.total < 2 {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.done++
+	p.log.Info(fmt.Sprintf("%s: batch %d/%d", p.name, p.done, p.total))
 }
 
 // batchDirs are the absolute stage paths of the skill directories of a batch.

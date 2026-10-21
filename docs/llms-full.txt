@@ -14647,6 +14647,11 @@ that many batches at once (1 to 16, default 1); each gets its own `{out}` file a
 shared, and results are merged in batch order, so the report does not depend on which batch finished first. A failed
 batch stops the batches that have not started; those that finished keep their results.
 
+A scanner that runs prints `name: N batches to run` on stderr when it starts and, with more than one run,
+`name: batch 4/13` as each run finishes (counted in finish order, so the numbers never repeat with `parallel`). These are
+information lines: `--quiet` drops them and they are never part of the JSON, SARIF or other report on stdout. A run served
+entirely from the cache starts nothing and prints nothing.
+
 The `timeout` of a run stays bounded: the runner never lets one command run longer than 6 hours. Only
 `[lint.scanner_policy] max_timeout` raises the 15 minute default ceiling, so a `timeout` written in an entry (or a
 pull request that edits one) cannot lift its own limit past what the policy allows. `scanners doctor` shows the effective
