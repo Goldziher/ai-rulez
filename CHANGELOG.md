@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **`validate` reports a malformed skill frontmatter once.** A skill whose frontmatter is not valid YAML (for example
+  `description: Args: a, b`) printed a `WARN Ignoring malformed YAML frontmatter` line on stderr in addition to the
+  `AR306` finding, which broke machine-readable output. The lint pass now leaves the warning out, since `AR306` carries
+  it; commands that do not validate, such as `list`, still warn. (#478)
+
 ## [5.6.1] - 2026-10-20
 
 ### Changed

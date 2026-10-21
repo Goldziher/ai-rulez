@@ -965,6 +965,8 @@ func warnMalformedFrontmatter(log logger.Logger, path string) {
 
 const malformedFrontmatterMsg = "Ignoring malformed YAML frontmatter — check for unquoted values containing ': '"
 
+const unclosedFrontmatterMsg = "Ignoring skill frontmatter with no closing '---'"
+
 // quietFrontmatterLog drops the malformed-frontmatter warning (see
 // WithFrontmatterErrors) and forwards everything else.
 type quietFrontmatterLog struct{ logger.Logger }
@@ -973,7 +975,7 @@ type quietFrontmatterLog struct{ logger.Logger }
 func (q quietFrontmatterLog) Unwrap() logger.Logger { return q.Logger }
 
 func (q quietFrontmatterLog) Warn(msg string, args ...any) {
-	if msg != malformedFrontmatterMsg {
+	if msg != malformedFrontmatterMsg && msg != unclosedFrontmatterMsg {
 		q.Logger.Warn(msg, args...)
 	}
 }

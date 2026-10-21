@@ -65,6 +65,21 @@ func TestCLI_ValidateDoesNotContradictItselfOnMalformedFrontmatter(t *testing.T)
 	assert.NotContains(t, out, "AR801", "the description is unreadable, not missing")
 }
 
+func TestCLI_ValidateReportsMalformedSkillFrontmatterOnlyAsAR306(t *testing.T) {
+	dir := testutil.CreateTempDir(t)
+	writeIn(t, dir+"/.ai-rulez", "config.toml", malformedSkillProject)
+	writeIn(t, dir+"/.ai-rulez/skills/bad", "SKILL.md", "---\nname: bad\ndescription: Args: a, b\n---\nBody\n")
+
+	for _, args := range [][]string{{"validate"}, {"validate", "--format", "github"}, {"validate", "--strict"}} {
+		res := testutil.RunCLIWithEnv(t, dir, isolatedEnv(t), args...)
+
+		assert.Equal(t, 2, res.ExitCode, args)
+		out := res.Stdout + res.Stderr
+		assert.Contains(t, out, "AR306", args)
+		assert.NotContains(t, out, "Ignoring malformed YAML frontmatter", args)
+	}
+}
+
 func TestCLI_PresetTypoGetsADidYouMeanFromGenerateAndValidate(t *testing.T) {
 	dir := testutil.CreateTempDir(t)
 	writeIn(t, dir+"/.ai-rulez", "config.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claudee\"]\ngitignore = false\n")

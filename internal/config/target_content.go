@@ -25,7 +25,7 @@ func ContentFileFromText(path, text string) ContentFile {
 func LoadSkillDir(ctx context.Context, root, skillDir string) (skill ContentFile, ok bool) {
 	s := newProjectScanner(ctx, osView(root))
 	s.git = gitutil.New(runner.FromContext(ctx))
-	s.log = logger.FromContext(ctx)
+	s.log = quietFrontmatterLog{logger.FromContext(ctx)} // the lint report carries AR306
 	s.shared = sharedBundleSnapshots(ctx)
 	s.quietUnrecognized = true
 	return s.skillAt(skillDir, filepath.Base(skillDir), nil)
