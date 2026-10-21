@@ -106,7 +106,7 @@ global cmd/commands/usage_prune.go 4
 global cmd/commands/user.go 3
 global cmd/commands/validate.go 3
 global cmd/commands/validate_baseline.go 5
-global cmd/commands/validate_changed.go 4
+global cmd/commands/validate_changed.go 5
 global cmd/commands/validate_explain.go 1
 global cmd/commands/validate_fix.go 3
 global cmd/commands/validate_sbom.go 1
