@@ -13907,6 +13907,7 @@ fail_on = "error"                  # error (default) | warning | none
 analyzers = ["security", "references"]   # run only these analyzers (see Analyzers and scopes); default: all
 ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
+tracked_only = true                # lint only files the repository tracks (same as --tracked-only; see Untracked files)
 # ignore_rules (below) drops chosen rules in chosen files; it is an array of tables, see Rule-scoped ignores
 skill_roots = [".claude/skills", "plugins/*/skills"]   # directories AR808 treats as harness skill roots (replaces the defaults)
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
@@ -14192,6 +14193,8 @@ one entry per accepted finding:
 - **`--update-baseline`** rewrites the file to accept every current finding. Entries that still match keep their
   `reason` and `expires`; entries that match nothing are dropped. New entries get `--baseline-reason`. Accepting a
   security finding (`AR0xx`) requires a reason. It exits 0 and cannot be combined with `--strict-baseline`.
+  Findings in untracked files are never written (a teammate's or CI's checkout does not have those files, so the
+  entry would be dead weight): the run says how many it skipped. Outside a repository work tree nothing is skipped.
 - **Only new findings count.** Accepted findings stay visible (`"accepted": true` in JSON, a SARIF `suppression` with
   the reason, `baselineState` `unchanged` or `new`), but they are left out of the totals and the exit code.
 - **Stale entries.** An entry whose finding is gone is reported (`baseline: N accepted, M stale`). By default that is
@@ -14354,6 +14357,15 @@ The text report ends with a `changed-only since <rev> (depth <n|all>)` line and 
 `dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
 finding, and a `[lint.ratchet]` count is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
+
+##### Untracked files
+
+A run lints the files on disk that are not git-ignored, tracked or not, so an untracked build artifact (a
+`__pycache__/*.pyc` left by `python -m py_compile`, reported as AR051) produces findings that a teammate's or CI's
+checkout does not have. `--tracked-only` (or `[lint] tracked_only = true`) lints only files in the repository index, plus
+the files `--changed` or `--since` names, so the result does not depend on what a local run left behind. Outside a git
+work tree there is no index: the option logs a warning and every file is linted. Independently of the option,
+`--update-baseline` skips findings in untracked files and logs how many.
 
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
 `GIT_CONFIG_*`, ...) removed from its environment, so the command is safe inside a git hook and never addresses the
@@ -33994,6 +34006,7 @@ ai-rulez scan --path vendor/skills
 | `--since-depth` | string | `1` | With --since or --changed, how many reference hops to follow from the changed files: a number or "all" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json) |
 | `--since-max-files` | int | `0` | With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap) |
 | `--strict-baseline` | bool |  | Also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it |
+| `--tracked-only` | bool |  | Lint only git-tracked files plus those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every file is linted, with a warning) |
 | `--update-baseline` | bool |  | Record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0 |
 | `--write-baseline` | bool |  | With --external, accept every current scanner finding in scanner-baseline.json (needs --reason) and exit as if they were clean |
 
@@ -34908,6 +34921,7 @@ ai-rulez validate --outputs
 | `--since-max-files` | int | `0` | With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap) |
 | `--strict` | bool |  | Fail on warnings as well as errors (the same as --fail-on warning) |
 | `--strict-baseline` | bool |  | Also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it |
+| `--tracked-only` | bool |  | Lint only git-tracked files plus those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every file is linted, with a warning) |
 | `--update-baseline` | bool |  | Record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0 |
 | `--verifiers` | bool |  | Also evaluate the verifiers (never a command or a model) and report them as AR9H findings |
 | `--write-baseline` | bool |  | With --external, accept every current scanner finding in scanner-baseline.json (needs --reason) and exit as if they were clean |

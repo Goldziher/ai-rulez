@@ -262,8 +262,8 @@ func lintCLIFlags(withFix bool) []Exclusion {
 	}
 	out := []Exclusion{
 		{Names: writes, Reason: "writes files (autofixes, baselines, report files); a tool is read-only"},
-		{Names: []string{"changed", "since", "since-depth", "since-max-files", "repo-root", "no-scan-cache", "today", "show-suppressed"},
-			Reason: "git-diff scoping, cache and presentation controls of the command line run"},
+		{Names: []string{"changed", "since", "since-depth", "since-max-files", "tracked-only", "repo-root", "no-scan-cache", "today", "show-suppressed"},
+			Reason: "git-diff and git-index scoping (the tool honors [lint] tracked_only), cache and presentation controls of the command line run"},
 		{Names: []string{"external", "allow-egress", "recursive"},
 			Reason: "runs scanner programs, possibly with network egress, or walks other projects"},
 		{Names: []string{"path", "glob", "exclude", "outputs"},

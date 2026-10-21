@@ -2609,6 +2609,10 @@
           "items": { "type": "string" },
           "description": "Globs, relative to the config directory, of source files whose findings are dropped."
         },
+        "tracked_only": {
+          "type": "boolean",
+          "description": "Lint only files tracked in the repository index, so results do not depend on untracked files a local run left behind (a __pycache__, a build artifact). Files named by --changed are still linted; outside a repository work tree it is ignored with a warning. validate --tracked-only sets it for one run."
+        },
         "ignore_rules": {
           "type": "array",
           "description": "Rule-scoped ignores: findings of the listed rules in the listed files are dropped, every other finding in those files is kept.",

@@ -3064,6 +3064,7 @@ ai-rulez scan --path vendor/skills
 | `--since-depth` | string | `1` | With --since or --changed, how many reference hops to follow from the changed files: a number or "all" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json) |
 | `--since-max-files` | int | `0` | With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap) |
 | `--strict-baseline` | bool |  | Also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it |
+| `--tracked-only` | bool |  | Lint only git-tracked files plus those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every file is linted, with a warning) |
 | `--update-baseline` | bool |  | Record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0 |
 | `--write-baseline` | bool |  | With --external, accept every current scanner finding in scanner-baseline.json (needs --reason) and exit as if they were clean |
 
@@ -3978,6 +3979,7 @@ ai-rulez validate --outputs
 | `--since-max-files` | int | `0` | With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap) |
 | `--strict` | bool |  | Fail on warnings as well as errors (the same as --fail-on warning) |
 | `--strict-baseline` | bool |  | Also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it |
+| `--tracked-only` | bool |  | Lint only git-tracked files plus those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every file is linted, with a warning) |
 | `--update-baseline` | bool |  | Record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0 |
 | `--verifiers` | bool |  | Also evaluate the verifiers (never a command or a model) and report them as AR9H findings |
 | `--write-baseline` | bool |  | With --external, accept every current scanner finding in scanner-baseline.json (needs --reason) and exit as if they were clean |
