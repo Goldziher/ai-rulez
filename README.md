@@ -409,7 +409,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v5.6.1
+    rev: v5.6.2
     hooks:
       - id: ai-rulez-recursive   # generate: write outputs for every nested .ai-rulez/ root
       - id: ai-rulez-validate    # validate --recursive: content, security and link checks
@@ -440,7 +440,7 @@ repository needs:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.6.1"
+revision = "v5.6.2"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 
@@ -521,7 +521,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.6.1   # pin the CLI independently of the floating action ref
+          version: 5.6.2   # pin the CLI independently of the floating action ref
       - run: ai-rulez generate --check   # the committed output matches the sources
       - run: ai-rulez validate --strict  # content and security checks, warnings fail
       - run: ai-rulez lock --check        # pins were updated when the sources were

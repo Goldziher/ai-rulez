@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.6.2] - 2026-10-21
+
 ### Added
 
 - **`[[lint.accept]]`: accept one finding with a required reason.** An entry names a `rule`, a `path` glob and a

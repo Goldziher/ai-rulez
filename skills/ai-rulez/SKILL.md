@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "5.6.1"
+  version: "5.6.2"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
@@ -34,10 +34,10 @@ Use this skill when:
 
 ```bash
 # npm (no install)
-pnpm dlx ai-rulez@5.6.1
+pnpm dlx ai-rulez@5.6.2
 
 # Python (no install)
-uvx ai-rulez==5.6.1
+uvx ai-rulez==5.6.2
 
 # Source builds (Go + Task; setup fetches and verifies the pinned native library)
 # Checkout the source revision pinned in this repository's CI, then:
@@ -146,7 +146,7 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 [[mcp_servers]]
 name = "ai-rulez"
 command = "pnpm"
-args = ["dlx", "ai-rulez@5.6.1", "mcp"]
+args = ["dlx", "ai-rulez@5.6.2", "mcp"]
 
 [[scopes]]
 path = "packages/web"
