@@ -239,7 +239,7 @@ func (s *contentScanner) skillAt(skillRoot, name string, bundleExclude []string)
 	// A frontmatter that never closes would be served as body text with no
 	// name or description; treat it as malformed like an unparseable one.
 	if contentFile.Metadata == nil && !contentFile.MalformedFrontmatter && hasUnclosedFrontmatter(contentFile.Content) {
-		s.logger().Warn("Ignoring skill frontmatter with no closing '---'", "skill", name, "path", skillPath)
+		s.logger().Warn(unclosedFrontmatterMsg, "skill", name, "path", skillPath)
 		contentFile.MalformedFrontmatter = true
 	}
 
