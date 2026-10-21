@@ -39,6 +39,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   location. A run that was handed exactly one skill (`batch_size = 1`) now attributes such a result to that skill's
   `SKILL.md`; any other run reports it without a file, with `(no location reported by scanner)` at the end of the
   message. Cached scanner results from earlier versions are scanned again. (#474)
+- **`validate --external` shows progress during a long scanner run.** A scanner with `batch_size = 1` over hundreds of
+  skills ran for minutes without a line of output, so CI and agent shells could not tell it from a hang. Each scanner
+  now prints `name: N batches to run` on stderr when it starts and `name: batch 4/13` as each run finishes, also
+  with `parallel`. The lines are information level: `--quiet` drops them and the report on stdout is unchanged. (#475)
 
 ## [5.6.1] - 2026-10-20
 

@@ -2,6 +2,7 @@ package lint
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -395,6 +396,56 @@ func TestLocationlessResultAttribution(t *testing.T) {
 			assert.Equal(t, first[0].Fingerprint(), second[0].Fingerprint(), "the baseline identity is stable across runs")
 		})
 	}
+}
+
+// Each scanner announces how many runs it has; each finished run logs its place once, in order, even
+// when runs overlap (#475).
+func TestScannerProgressLines(t *testing.T) {
+	tests := []struct {
+		name string
+		keys string
+	}{
+		{"serial", "batch_size = 1\n"},
+		{"parallel", "batch_size = 1\nparallel = 3\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p, _ := skillUnitProject(t, tt.keys, "s1", "s2", "s3", "s4", "s5")
+			rec := &testutil.LogRecorder{}
+
+			// Act
+			p.runWith(Options{}, WithHost(ambient.Host{Log: rec}))
+
+			// Assert
+			var progress []string
+			for _, l := range rec.Lines() {
+				if strings.HasPrefix(l, "INFO fake: ") {
+					progress = append(progress, strings.TrimPrefix(l, "INFO "))
+				}
+			}
+			assert.Equal(t, []string{
+				"fake: 5 batches to run", "fake: batch 1/5", "fake: batch 2/5", "fake: batch 3/5", "fake: batch 4/5", "fake: batch 5/5",
+			}, progress)
+		})
+	}
+}
+
+// A scanner that runs once says so, and a dry run prints no progress (#475).
+func TestScannerProgressForSingleRunAndDryRun(t *testing.T) {
+	// Arrange
+	p, _ := skillUnitProject(t, "", "s1", "s2")
+	rec := &testutil.LogRecorder{}
+
+	// Act
+	p.runWith(Options{}, WithHost(ambient.Host{Log: rec}))
+	dry := &testutil.LogRecorder{}
+	p.runWith(Options{Scanner: ScannerOptions{DryRun: true, Out: io.Discard}}, WithHost(ambient.Host{Log: dry}))
+
+	// Assert
+	assert.Contains(t, rec.Lines(), "INFO fake: 1 batch to run")
+	assert.NotContains(t, strings.Join(rec.Lines(), "\n"), "fake: batch")
+	assert.NotContains(t, strings.Join(dry.Lines(), "\n"), "to run")
 }
 
 // The "served from the cache" log counts the skills read from the cache, not the
