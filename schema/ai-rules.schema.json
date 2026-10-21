@@ -2633,6 +2633,35 @@
             }
           }
         },
+        "accept": {
+          "type": "array",
+          "description": "Accepts single findings with a required reason: the findings of one rule in one file whose message holds match (or that sit on line) stay in the report, marked accepted, and do not fail the run. An entry that matches nothing is reported as AR9I0.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule", "path", "reason"],
+            "properties": {
+              "rule": {
+                "type": "string",
+                "description": "One finding code (AR007) or name (tool-breadth); no wildcards."
+              },
+              "path": {
+                "type": "string",
+                "description": "Glob, relative to the config directory or the repository root, of the source file; an exact path is a glob without wildcards."
+              },
+              "match": {
+                "type": "string",
+                "description": "Substring the finding's message must contain (case-sensitive). Set match, line or both."
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "The 1-based line the finding must be reported on."
+              },
+              "reason": { "type": "string", "minLength": 1, "description": "Why the finding is acceptable; required." }
+            }
+          }
+        },
         "skill_roots": {
           "type": "array",
           "items": { "type": "string" },

@@ -300,6 +300,7 @@ ai-rulez validate --strict --outputs
 | AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
 | AR9U0 | `harness-builtin-name-collision` | error | A skill, command or agent output has the name or alias of a built-in command, bundled skill or built-in agent of a harness that loads it (every preset that writes the output and every harness that reads the directory it lands in, such as `.agents/skills`). The message names the harness, its version, the evidence page and what the harness does (`user_wins`, `builtin_wins`, `both_listed`). Error only where the table records a quoted outcome and the project writes for the harness (a harness that only reads a shared directory is a warning); a built-in with an undocumented outcome is information, listed once per item. Claude Code commands and bundled skills are AR808. Allow with `[lint.builtin_names] allow` or `allow_overrides` (`name` or `preset:name`) |
 | AR9U1 | `harness-reserved-name` | error | A skill, command or agent output has a name the harness refuses to load (Claude Code `synced`, `anthropic-skills`, `anthropic-skills:*`). Not silenced by `allow` or `allow_overrides`: rename the item |
+| AR9I0 | `accept-unused` | warning | A `[[lint.accept]]` entry accepted no finding: the finding was fixed, the `path` or `match` no longer fits, or the rule is not reported there. Remove the entry (see [Accepting one finding](#accepting-one-finding)) |
 | AR9Q0 | `claude-md-shadows-agents-md` | off | `[lint] agents_md_only = true` asserts AGENTS.md is canonical for Claude Code, but a tracked `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is not the generated `@AGENTS.md` shim and shadows the nearest AGENTS.md. Paths matching `agents_md_only_allow` are exempt, and a `--recursive` run lets each nested root report its own files |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
@@ -413,6 +414,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
+| `AR9I0`-`AR9I9` | Lint configuration hygiene ([#479](https://github.com/Goldziher/ai-rulez/issues/479); `AR9I0` used, reported by `validate`, see [Accepting one finding](#accepting-one-finding)) | allocated |
 | `AR9Q0`-`AR9Q9` | Harness instruction files ([#318](https://github.com/Goldziher/ai-rulez/issues/318); `AR9Q0` used, reported by `validate --strict` when `[lint] agents_md_only` is set) | allocated |
 | `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
@@ -466,6 +468,12 @@ anchor-unresolved = "off"
 rules = ["AR901", "AR902"]
 paths = ["playground/**"]
 reason = "scratch projects, not shipped"
+
+[[lint.accept]]                    # one finding in one file, with a reason (see Accepting one finding)
+rule = "AR007"
+path = ".claude/skills/foo/SKILL.md"
+match = "Bash"                     # substring of the message; `line = 12` also works
+reason = "the skill runs git and gh; narrowing would break step 3"
 
 [lint.builtin_names]               # AR9U0, AR9U1: names of harness built-ins (see Built-in names of harnesses)
 enabled = true                     # false turns both off
@@ -647,6 +655,43 @@ paths = ["docs/plugins/**"]    # plugin docs that show `.claude-plugin/plugin.js
   reports the attempt as `AR740`.
 - `validate --explain <code>` lists this route with the code filled in.
 
+## Accepting one finding
+
+`[[lint.ignore_rules]]` drops a rule for a whole file and `--baseline` is a generated, fingerprint-keyed JSON file.
+`[[lint.accept]]` sits between them: a hand-written entry, reviewed in a normal pull request, that accepts the
+findings of one rule in one file that a selector names, with a required reason. Every other finding in the file stays
+reported.
+
+```toml
+[[lint.accept]]
+rule = "AR007"                                  # one code or name, no wildcards
+path = ".claude/skills/foo/SKILL.md"            # a glob; an exact path is a glob without wildcards
+match = "Bash"                                  # substring of the finding's message
+reason = "the skill runs git and gh; narrowing would break step 3"
+```
+
+- `rule`, `path` and `reason` are required, and so is at least one of `match` and `line`: an entry with neither would
+  accept the whole file, which is what `ignore_rules` is for. A blank `reason`, an unknown or wildcard `rule`, a
+  malformed glob or a line below 1 is an error when the configuration loads.
+- A finding is accepted when its rule is `rule`, its file matches `path`, its message contains `match` (a
+  case-sensitive substring; the finding has no separate matched-text field, and the message names what was found,
+  for example the tool of AR007) and, when `line` is set, it is reported on that line. `match` and `line` must both
+  hold when both are set. Pick a `match` specific enough for the one finding: every finding of the rule in the file
+  that contains it is accepted.
+- `path` uses the same globs and the same base as `ignore_paths` (`**` crosses directories, a path relative to the
+  repository root or to `.ai-rulez/`). It names source files, so a finding reported on a generated file is not
+  covered by the path of its source.
+- An accepted finding stays in the report, marked accepted, with the reason as `accept_reason` in the JSON output. It
+  does not count toward the exit code or a `[lint.ratchet]` limit, like a baseline entry. Unlike `ignore_rules` it is
+  not dropped, so it stays visible to a reviewer. (`--show-suppressed` belongs to the external scanners and does not
+  apply: accepted findings are always shown.)
+- An entry that accepted nothing is reported as `AR9I0` (`accept-unused`, a warning) on `config.toml`, so a fixed or
+  renamed finding does not leave a stale acceptance behind. It is not reported when this run could not have produced
+  the finding: the rule is off or in `[lint] ignore`, its analyzer was not selected (`--analyzer`), or the run
+  linted only named files (`--path`, `--glob`) and none matches the entry's `path`.
+- An organization policy that protects a code (see [Policy](policy.md)) refuses this route, keeps the finding
+  reported and reports the attempt as `AR740`.
+
 ## Baseline and tolerated findings
 
 A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
@@ -726,7 +771,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `okf` | `AR9B0`-`AR9B9` |
 | `llmstxt` | `AR9P0`-`AR9P6` |
 | `traps` | `AR9C0`-`AR9CA` |
-| `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables) |
+| `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0`, `AR9I0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables, unused `[[lint.accept]]` entries) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
@@ -3791,6 +3836,16 @@ a verifier has no self-test examples (reported by `verifiers run` and `validate 
 - Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: A spec verifier with a `forbid` regex and no examples
 - Good: Add a passing and a failing example and run `ai-rulez verifiers test`
+
+### AR9I0 accept-unused
+
+a [[lint.accept]] entry accepted no finding: the finding was fixed, the path or match no longer fits, or the rule is not reported there; remove the entry
+
+- Default severity: `warning`
+- Analyzer: `config` (scope `bundle`)
+- Why: An acceptance outlives the finding it was written for when the file is fixed, renamed or reworded. A stale entry would silently accept a different finding that later appears at the same place, so an entry that matches nothing is reported and has to be removed.
+- Bad: `[[lint.accept]] rule = "AR007" path = ".claude/skills/foo/SKILL.md" match = "Bash"` after the skill stopped granting `Bash`
+- Good: Remove the entry, or fix its `path` or `match` so it names the finding it accepts
 
 ### AR9J1 improve-run-stale
 

@@ -95,7 +95,7 @@ var analyzerGroups = []analyzerGroup{
 	// Items named like a built-in or reserved name of a harness (internal/harnessnames).
 	{AnalyzerTraps, ScopeItem, []string{"AR9U0", "AR9U1"}},
 	// Invalid [telemetry] and [llm] tables.
-	{AnalyzerConfig, ScopeBundle, []string{"AR9K0", "AR9L0", "AR9G8"}},
+	{AnalyzerConfig, ScopeBundle, []string{"AR9K0", "AR9L0", "AR9G8", "AR9I0"}},
 	// Review dimensions: reported by `ai-rulez review`, never by validate.
 	{AnalyzerDescriptions, ScopeItem, []string{"AR9G0", "AR9G1", "AR9G2", "AR9G3", "AR9G4", "AR9G5", "AR9G6", "AR9G7", "AR9G9"}},
 	{AnalyzerConvert, ScopeItem, []string{"AR9F0", "AR9F1", "AR9F2", "AR9F3", "AR9F4", "AR9F5"}},

@@ -6,6 +6,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[[lint.accept]]`: accept one finding with a required reason.** An entry names a `rule`, a `path` glob and a
+  `match` substring of the finding's message (or a `line`, or both), plus a `reason` that config validation requires.
+  The matching findings stay in the report, marked accepted with the reason, and do not fail the run; a second finding
+  of the same rule in the file stays reported. An entry that accepted nothing is reported as the new `AR9I0
+  accept-unused` warning, except when the run could not have produced the finding (rule off, analyzer not selected,
+  or the file not linted by `--path`/`--glob`), so stale acceptances do not accumulate. A code the organization policy
+  protects is never accepted (`AR740`). (#479)
+
 ### Fixed
 
 - **The scanner flags no longer fail a run without `--external`.** `validate` and `scan` rejected `--no-scan-cache`,
