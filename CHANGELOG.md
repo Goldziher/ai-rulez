@@ -8,6 +8,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **The scanner flags no longer fail a run without `--external`.** `validate` and `scan` rejected `--no-scan-cache`,
+  `--write-baseline`, `--reason`, `--show-suppressed` and `--scanner-baseline` with "require --external", so a CI
+  command had to branch on whether a scanner was configured. Without `--external` these flags now do nothing and one
+  warning on stderr names the ones that were ignored; `--reason`, `--reason-for`, `--min-severity` and `--rule` still
+  need `--write-baseline`, and `--write-baseline` still needs `--reason`. (#477)
 - **`validate` reports a malformed skill frontmatter once.** A skill whose frontmatter is not valid YAML (for example
   `description: Args: a, b`) printed a `WARN Ignoring malformed YAML frontmatter` line on stderr in addition to the
   `AR306` finding, which broke machine-readable output. The lint pass now leaves the warning out, since `AR306` carries

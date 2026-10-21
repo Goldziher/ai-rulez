@@ -86,7 +86,11 @@ func checkStrictFlags() error {
 	if err := checkFlagValues(); err != nil {
 		return err
 	}
-	return checkFlagCombinations()
+	if err := checkFlagCombinations(); err != nil {
+		return err
+	}
+	warnIgnoredScannerFlags()
+	return nil
 }
 
 // checkFlagValues rejects unknown names and values.

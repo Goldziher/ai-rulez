@@ -2649,6 +2649,8 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 | `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-runs) |
 | `--dry-run` | Print each scanner's command (stage paths as `<stage>`), isolation, environment variable names, staged files and cache state, and start nothing; exit `0` |
 
+Without `--external` these flags have no effect: the run prints one warning on stderr naming them and carries on, so one CI command works whether or not a scanner is configured. The checks between them still apply (`--reason` and the filters need `--write-baseline`, which needs `--reason`).
+
 `[lint.scanner_policy]`, the embedded profiles and presets, process isolation, the result cache and the lock records are described in [Strict validation](strict-validation.md#policy-presets-and-profiles). The `scan` command accepts `--dry-run` only with `--external`.
 
 ### `ai-rulez scanners list|doctor`
