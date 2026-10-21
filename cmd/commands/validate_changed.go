@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -59,7 +60,47 @@ func strictOnly(_ *cobra.Command, text string) string {
 	return strings.ToUpper(text[:1]) + text[1:]
 }
 
+// validateTrackedOnly is --tracked-only: lint only git-tracked files ([lint] tracked_only).
+var validateTrackedOnly bool
+
+// trackedOnly reports whether the run lints tracked files only: the flag or [lint] tracked_only.
+func trackedOnly(cfg *config.Config) bool {
+	return validateTrackedOnly || (cfg != nil && cfg.Lint != nil && cfg.Lint.TrackedOnly)
+}
+
+// applyTrackedOnly drops the findings of untracked files from report, keeping the
+// files --changed / --since names (those are the work under review). Outside a git
+// work tree there is no index to judge by: it warns and leaves the report whole.
+func applyTrackedOnly(ctx context.Context, cfg *config.Config, tree *lint.Tree, report *lint.Report) error {
+	if !trackedOnly(cfg) {
+		return nil
+	}
+	if !tree.Git {
+		logger.Warn("tracked_only needs a git work tree; linting every file", "path", cfg.BaseDir)
+		return nil
+	}
+	keep := map[string]bool{}
+	if rev := changedRev(); rev != "" {
+		changed, err := changedInTree(ctx, tree.Top, rev)
+		if err != nil {
+			return err
+		}
+		for _, c := range changed {
+			keep[filepath.ToSlash(c)] = true
+		}
+	}
+	if n := report.DropUntracked(tree, keep); n > 0 {
+		logger.Debug("tracked_only skipped findings in untracked files", "findings", n)
+	}
+	return nil
+}
+
+func addTrackedOnlyFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&validateTrackedOnly, "tracked-only", false, strictOnly(cmd, "lint only git-tracked files plus those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every file is linted, with a warning)"))
+}
+
 func addChangedFlags(cmd *cobra.Command) {
+	addTrackedOnlyFlag(cmd)
 	f := cmd.Flags()
 	f.StringVar(&validateSince, "since", "", strictOnly(cmd, "report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree"))
 	f.StringVar(&validateSinceDepth, "since-depth", "1", "With --since or --changed, how many reference hops to follow from the changed files: a number or \"all\" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json)")

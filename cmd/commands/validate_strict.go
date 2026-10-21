@@ -296,6 +296,9 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
+	if err := applyTrackedOnly(ctx, cfg, tree, report); err != nil {
+		return nil, err
+	}
 	if validateMCPUserScope {
 		report.Findings = append(report.Findings, mcpUserScopeFindings(cfg)...)
 	}

@@ -15,6 +15,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   accept-unused` warning, except when the run could not have produced the finding (rule off, analyzer not selected,
   or the file not linted by `--path`/`--glob`), so stale acceptances do not accumulate. A code the organization policy
   protects is never accepted (`AR740`). (#479)
+- **`validate --tracked-only` and `[lint] tracked_only = true`.** `validate` and `scan` lint every file that is not
+  git-ignored, tracked or not, so an untracked build artifact such as a `__pycache__/*.pyc` (AR051) made results differ
+  between machines. With the option only files in the git index are linted, plus the files `--changed` or `--since`
+  names. Outside a git work tree it logs a warning and lints every file. (#476)
 
 ### Fixed
 
@@ -27,6 +31,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `description: Args: a, b`) printed a `WARN Ignoring malformed YAML frontmatter` line on stderr in addition to the
   `AR306` finding, which broke machine-readable output. The lint pass now leaves the warning out, since `AR306` carries
   it; commands that do not validate, such as `list`, still warn. (#478)
+- **`validate --update-baseline` no longer records findings in untracked files.** A teammate's or CI's checkout does
+  not have those files, so their baseline entries were dead weight and `lint-baseline.json` differed between machines.
+  They are now skipped, and the run logs how many. (#476)
 
 ## [5.6.1] - 2026-10-20
 

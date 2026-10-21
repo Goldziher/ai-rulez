@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -111,6 +112,9 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 		if err != nil {
 			return oops.Wrapf(err, "load baseline")
 		}
+		if err := skipUntrackedForBaseline(r, cfgAt(cfgs, i)); err != nil {
+			return err
+		}
 		next, err := lint.UpdateBaseline(r, prev, validateBaselineReason)
 		if err != nil {
 			return oops.Wrap(err)
@@ -123,6 +127,24 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 			before = len(prev.Entries)
 		}
 		fmt.Fprintf(os.Stderr, "baseline %s: %d entries (was %d)\n", path, len(next.Entries), before)
+	}
+	return nil
+}
+
+// skipUntrackedForBaseline drops the findings of untracked files from r before a
+// baseline is written, and says how many: a teammate's or CI's checkout does not
+// have those files, so their entries would be dead weight and the file would
+// differ between machines. Outside a git work tree nothing is skipped.
+func skipUntrackedForBaseline(r *lint.Report, cfg *config.Config) error {
+	if cfg == nil {
+		return nil
+	}
+	tree, err := loadStrictTree(cmdContext(), cfg.BaseDir)
+	if err != nil {
+		return oops.Wrapf(err, "index repository files")
+	}
+	if n := r.DropUntracked(tree, nil); n > 0 {
+		logger.Info("Baseline skipped findings in untracked files", "findings", n)
 	}
 	return nil
 }
