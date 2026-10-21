@@ -113,8 +113,8 @@ func TestScannersCLI_ScanBaselineLifecycle(t *testing.T) {
 	require.Equal(t, 1, orphan.ExitCode)
 	orphan.AssertStderrContains(t, "only apply with --write-baseline")
 
-	// The flags mean nothing without --external.
-	bad := testutil.RunCLI(t, dir, "scan", "--write-baseline", "--reason", "x")
-	require.Equal(t, 1, bad.ExitCode)
-	bad.AssertStderrContains(t, "require --external")
+	// The flags mean nothing without --external: they are ignored with a warning.
+	ignored := testutil.RunCLI(t, dir, "scan", "--write-baseline", "--reason", "x")
+	require.Equal(t, 0, ignored.ExitCode, ignored.Stdout+ignored.Stderr)
+	ignored.AssertStderrContains(t, "Ignoring --write-baseline, --reason")
 }

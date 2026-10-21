@@ -36,8 +36,10 @@ func TestScannerOptionsValidatesFlagCombinations(t *testing.T) {
 		{name: "rule without write", extern: true, rules: []string{"A-1"}, wantErr: "only apply with --write-baseline"},
 		{name: "unknown severity", extern: true, write: true, reason: "why", minSev: "loud", wantErr: "--min-severity"},
 		{name: "malformed reason-for", extern: true, write: true, reason: "why", reasons: []string{"nope"}, wantErr: "RULE=text"},
-		{name: "write without external", write: true, reason: "why", wantErr: "require --external"},
-		{name: "show-suppressed without external", show: true, wantErr: "require --external"},
+		{name: "write with reason without external is ignored", write: true, reason: "why", noToday: true},
+		{name: "write without reason or external", write: true, wantErr: "needs --reason"},
+		{name: "reason alone without external", reason: "why", wantErr: "only apply with --write-baseline"},
+		{name: "show-suppressed without external is ignored", show: true, noToday: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,12 +80,18 @@ func TestScannerFlagsNeedExternalAndDryRunIsScoped(t *testing.T) {
 	}
 	t.Cleanup(restore)
 
-	t.Run("--no-scan-cache needs --external", func(t *testing.T) {
+	t.Run("--no-scan-cache without --external is ignored", func(t *testing.T) {
 		restore()
-		scanNoCache = true
-		_, err := scannerOptions()
-		if err == nil || !strings.Contains(err.Error(), "--no-scan-cache require --external") {
-			t.Fatalf("err = %v", err)
+		scanNoCache, validateStrict = true, true
+		opts, err := scannerOptions()
+		if err != nil || opts.NoCache {
+			t.Fatalf("opts = %+v, err = %v", opts, err)
+		}
+		if err := checkStrictFlags(); err != nil {
+			t.Fatal(err)
+		}
+		if got := setScannerFlags(); len(got) != 1 || got[0] != "--no-scan-cache" {
+			t.Errorf("set flags = %v", got)
 		}
 	})
 	t.Run("--no-scan-cache is passed on", func(t *testing.T) {

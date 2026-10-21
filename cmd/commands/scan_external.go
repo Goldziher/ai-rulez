@@ -3,9 +3,11 @@ package commands
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +42,38 @@ func init() {
 // scannerFlagsSet reports whether a flag that only means something with
 // --strict --external was given.
 func scannerFlagsSet() bool {
-	return scanWriteBaseline || scanMinSeverity != "" || len(scanRules) > 0 || len(scanReasonFor) > 0 || scanReason != "" || scanShowSuppressed || scanScannerBaseline != "" || scanNoCache
+	return len(setScannerFlags()) > 0
+}
+
+// setScannerFlags names the scanner-only flags that were given.
+func setScannerFlags() []string {
+	var set []string
+	for _, f := range []struct {
+		name string
+		on   bool
+	}{
+		{"--write-baseline", scanWriteBaseline}, {"--reason", scanReason != ""}, {"--reason-for", len(scanReasonFor) > 0},
+		{"--min-severity", scanMinSeverity != ""}, {"--rule", len(scanRules) > 0},
+		{"--show-suppressed", scanShowSuppressed}, {"--scanner-baseline", scanScannerBaseline != ""},
+		{"--no-scan-cache", scanNoCache},
+	} {
+		if f.on {
+			set = append(set, f.name)
+		}
+	}
+	return set
+}
+
+// warnIgnoredScannerFlags tells the user, once per run, that the scanner flags
+// have no effect without --external, so a CI command can carry them whether or
+// not a scanner is configured instead of branching on it.
+func warnIgnoredScannerFlags() {
+	if validateExtern {
+		return
+	}
+	if set := setScannerFlags(); len(set) > 0 {
+		logger.Warn("Ignoring " + strings.Join(set, ", ") + ": scanner flags only apply with --external")
+	}
 }
 
 // scannerDryRun reports whether this run only prints the scanner plan.
@@ -48,9 +81,6 @@ func scannerDryRun() bool { return validateExtern && validateDryRun && !fixReque
 
 // scannerOptions validates the scanner flags and turns them into lint options.
 func scannerOptions() (lint.ScannerOptions, error) {
-	if scannerFlagsSet() && !validateExtern {
-		return lint.ScannerOptions{}, oops.Errorf("--write-baseline, --reason, --show-suppressed, --scanner-baseline and --no-scan-cache require --external")
-	}
 	if (scanReason != "" || scanMinSeverity != "" || len(scanRules) > 0 || len(scanReasonFor) > 0) && !scanWriteBaseline {
 		return lint.ScannerOptions{}, oops.Errorf("--reason, --reason-for, --min-severity and --rule only apply with --write-baseline")
 	}

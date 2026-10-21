@@ -80,6 +80,25 @@ func TestCLI_ValidateReportsMalformedSkillFrontmatterOnlyAsAR306(t *testing.T) {
 	}
 }
 
+func TestCLI_ValidateIgnoresScannerFlagsWithoutExternal(t *testing.T) {
+	dir := testutil.CreateTempDir(t)
+	writeIn(t, dir+"/.ai-rulez", "config.toml", malformedSkillProject)
+
+	for _, args := range [][]string{
+		{"validate", "--no-scan-cache"},
+		{"validate", "--show-suppressed", "--scanner-baseline", "b.json"},
+		{"validate", "--write-baseline", "--reason", "why"},
+		{"validate", "--external", "--no-scan-cache"},
+	} {
+		res := testutil.RunCLIWithEnv(t, dir, isolatedEnv(t), args...)
+
+		assert.Equal(t, 0, res.ExitCode, "%v: %s", args, res.Stderr)
+		assert.NotContains(t, res.Stderr, "require --external", args)
+	}
+	res := testutil.RunCLIWithEnv(t, dir, isolatedEnv(t), "validate", "--no-scan-cache")
+	assert.Equal(t, 1, strings.Count(res.Stderr, "Ignoring --no-scan-cache"), res.Stderr)
+}
+
 func TestCLI_PresetTypoGetsADidYouMeanFromGenerateAndValidate(t *testing.T) {
 	dir := testutil.CreateTempDir(t)
 	writeIn(t, dir+"/.ai-rulez", "config.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claudee\"]\ngitignore = false\n")
