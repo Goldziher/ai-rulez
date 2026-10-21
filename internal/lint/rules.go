@@ -240,8 +240,11 @@ type FindingMeta struct {
 	// Accepted marks a finding recorded in the baseline: it is reported but
 	// does not count toward the exit code.
 	Accepted bool
-	// AcceptReason is the baseline entry's reason.
+	// AcceptReason is the baseline entry's or [[lint.accept]] entry's reason.
 	AcceptReason string
+	// AcceptedByConfig marks an acceptance that came from [[lint.accept]]: the
+	// baseline neither records nor overrides such a finding.
+	AcceptedByConfig bool
 	// ScannerFailOn is the [lint.scanner_policy] fail_on threshold of a scanner
 	// finding: one at least this severe fails the run even when it is below the
 	// run's own threshold.
@@ -315,6 +318,9 @@ func (f *Finding) FullMessage() string {
 	}
 	return f.Meta.FullMessage
 }
+
+// acceptedByConfig reports whether a [[lint.accept]] entry accepts the finding.
+func (f *Finding) acceptedByConfig() bool { return f.Meta != nil && f.Meta.AcceptedByConfig }
 
 // IsAccepted reports whether the baseline accepts the finding.
 func (f *Finding) IsAccepted() bool { return f.Meta != nil && f.Meta.Accepted }

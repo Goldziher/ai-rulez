@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"cmp"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -121,9 +122,12 @@ func WriteGitHub(w io.Writer, c Combined) error {
 		if f.IsAccepted() {
 			continue
 		}
-		path := f.RepoPath()
-		fmt.Fprintf(&sb, "::%s file=%s,line=%d,title=%s::%s\n",
-			ghLevel(f.Severity), ghEscape(path, true), max(f.Line, 1), ghEscape(f.Code+" "+f.Name, true), ghEscape(f.Message, false))
+		where := ""
+		if path := f.RepoPath(); path != "" { // no file: an annotation without a location
+			where = fmt.Sprintf("file=%s,line=%d,", ghEscape(path, true), max(f.Line, 1))
+		}
+		fmt.Fprintf(&sb, "::%s %stitle=%s::%s\n",
+			ghLevel(f.Severity), where, ghEscape(f.Code+" "+f.Name, true), ghEscape(f.Message, false))
 	}
 	_, err := io.WriteString(w, sb.String())
 	return err //nolint:wrapcheck // writer error
@@ -187,8 +191,12 @@ func WriteJUnit(w io.Writer, c Combined, failOn string) error {
 		}
 		suite := byRoot[root]
 		path := f.RepoPath()
-		tc := junitCase{Name: fmt.Sprintf("%s %s (line %d)", f.Code, f.Name, f.Line), Classname: path, File: path, Line: f.Line}
-		problem := &junitProblem{Message: f.Message, Type: f.Code, Body: fmt.Sprintf("%s:%d: %s %s: %s", path, f.Line, f.Severity, f.Code, f.Message)}
+		tc := junitCase{Name: fmt.Sprintf("%s %s (line %d)", f.Code, f.Name, f.Line), Classname: cmp.Or(path, f.Code), File: path, Line: f.Line}
+		where := "(no file)"
+		if path != "" {
+			where = fmt.Sprintf("%s:%d", path, f.Line)
+		}
+		problem := &junitProblem{Message: f.Message, Type: f.Code, Body: fmt.Sprintf("%s: %s %s: %s", where, f.Severity, f.Code, f.Message)}
 		switch {
 		case f.IsAccepted():
 			problem.Message = "accepted by baseline: " + f.Message
@@ -255,7 +263,11 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 		fmt.Fprintf(&sb, "### %s (%d)\n\n| Rule | Location | Message |\n| --- | --- | --- |\n", strings.ToUpper(string(sev[:1]))+string(sev[1:])+"s", len(group))
 		for _, f := range group {
 			path := f.RepoPath()
-			fmt.Fprintf(&sb, "| `%s` %s | `%s:%d` | %s |\n", f.Code, f.Name, strings.ReplaceAll(path, "`", "'"), f.Line, mdEscape(f.Message))
+			where := "(no file)"
+			if path != "" {
+				where = fmt.Sprintf("`%s:%d`", strings.ReplaceAll(path, "`", "'"), f.Line)
+			}
+			fmt.Fprintf(&sb, "| `%s` %s | %s | %s |\n", f.Code, f.Name, where, mdEscape(f.Message))
 		}
 		sb.WriteString("\n")
 	}

@@ -53,6 +53,12 @@ func assignIdentity(findings []Finding, tree *Tree, cwd string) {
 	seen := map[string]int{}
 	for i := range findings {
 		f := &findings[i]
+		if f.File == "" {
+			// A finding about the project as a whole (a scanner result without a
+			// location) has no path: it must not pick up the working directory.
+			assignFilelessIdentity(f, seen)
+			continue
+		}
 		abs := f.File
 		if !filepath.IsAbs(abs) {
 			abs = filepath.Join(cwd, filepath.FromSlash(abs))
@@ -90,4 +96,20 @@ func assignIdentity(findings []Finding, tree *Tree, cwd string) {
 		}
 		seen[key]++
 	}
+}
+
+// assignFilelessIdentity gives a finding without a file an empty Path and an
+// identity of its code and message alone, the same from every directory.
+func assignFilelessIdentity(f *Finding, seen map[string]int) {
+	f.meta().Path = ""
+	annotateAnalyzer(f)
+	text := f.Message
+	if f.Meta.Metric > 0 {
+		text += "\x00size-bucket:" + strconv.Itoa(metricBucket(f.Meta.Metric))
+	}
+	key := f.Code + "\x00\x00" + normalizeText(text)
+	if f.Meta.Fingerprint == "" {
+		f.Meta.Fingerprint = fingerprintOf(f.Code, "", text, seen[key])
+	}
+	seen[key]++
 }

@@ -88,7 +88,7 @@ func (r *runner) applyAccepts() {
 				continue
 			}
 			m := f.meta()
-			m.Accepted, m.AcceptReason = true, strings.TrimSpace(e.cfg.Reason)
+			m.Accepted, m.AcceptedByConfig, m.AcceptReason = true, true, strings.TrimSpace(e.cfg.Reason)
 		}
 	}
 	for _, e := range entries {

@@ -60,7 +60,7 @@ func strictOnly(_ *cobra.Command, text string) string {
 	return strings.ToUpper(text[:1]) + text[1:]
 }
 
-// validateTrackedOnly is --tracked-only: lint only git-tracked files ([lint] tracked_only).
+// validateTrackedOnly is --tracked-only: report no findings in untracked files ([lint] tracked_only).
 var validateTrackedOnly bool
 
 // trackedOnly reports whether the run lints tracked files only: the flag or [lint] tracked_only.
@@ -76,7 +76,7 @@ func applyTrackedOnly(ctx context.Context, cfg *config.Config, tree *lint.Tree, 
 		return nil
 	}
 	if !tree.Git {
-		logger.Warn("tracked_only needs a git work tree; linting every file", "path", cfg.BaseDir)
+		logger.Warn("tracked_only needs a git work tree; keeping findings in every file", "path", cfg.BaseDir)
 		return nil
 	}
 	keep := map[string]bool{}
@@ -96,7 +96,7 @@ func applyTrackedOnly(ctx context.Context, cfg *config.Config, tree *lint.Tree, 
 }
 
 func addTrackedOnlyFlag(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&validateTrackedOnly, "tracked-only", false, strictOnly(cmd, "lint only git-tracked files plus those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every file is linted, with a warning)"))
+	cmd.Flags().BoolVar(&validateTrackedOnly, "tracked-only", false, strictOnly(cmd, "report no findings in git-untracked files, except those --changed names, so results do not depend on untracked files a local run left behind, such as __pycache__ (same as [lint] tracked_only = true; outside a git work tree every finding is kept, with a warning)"))
 }
 
 func addChangedFlags(cmd *cobra.Command) {

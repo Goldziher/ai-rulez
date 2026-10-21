@@ -1931,7 +1931,7 @@
           "type": "array"
         },
         "tracked_only": {
-          "description": "Lint only files tracked in the repository index, so results do not depend on untracked files a local run left behind (a __pycache__, a build artifact). Files named by --changed are still linted; outside a repository work tree it is ignored with a warning. validate --tracked-only sets it for one run.",
+          "description": "Report no findings in files that are not tracked in the repository index, so results do not depend on untracked files a local run left behind (a __pycache__, a build artifact). The files are still read; findings in them are dropped after the run. Files named by --changed are kept; outside a repository work tree it is ignored with a warning. validate --tracked-only sets it for one run.",
           "type": "boolean"
         },
         "ignore_rules": {

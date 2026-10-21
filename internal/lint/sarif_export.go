@@ -74,7 +74,7 @@ type sarifOutResult struct {
 	RuleIndex           int                `json:"ruleIndex"`
 	Level               string             `json:"level"`
 	Message             sarifOutText       `json:"message"`
-	Locations           []sarifLocation    `json:"locations"`
+	Locations           []sarifLocation    `json:"locations,omitempty"`
 	PartialFingerprints map[string]string  `json:"partialFingerprints,omitempty"`
 	Suppressions        []sarifSuppression `json:"suppressions,omitempty"`
 	BaselineState       string             `json:"baselineState,omitempty"`
@@ -208,15 +208,16 @@ func buildSARIF(c Combined, version string) sarifDocument {
 }
 
 func sarifResultFor(f *Finding, ruleIndex int, baselined bool) sarifOutResult {
-	path := f.RepoPath()
-	uri, base := sarifout.ArtifactURI(path)
 	res := sarifOutResult{
 		RuleID: f.Code, RuleIndex: ruleIndex, Level: sarifLevel(f.Severity),
 		Message: sarifOutText{Text: f.Message},
-		Locations: []sarifLocation{{PhysicalLocation: sarifPhysical{
+	}
+	if path := f.RepoPath(); path != "" { // a finding about the project as a whole has no location
+		uri, base := sarifout.ArtifactURI(path)
+		res.Locations = []sarifLocation{{PhysicalLocation: sarifPhysical{
 			ArtifactLocation: sarifArtifact{URI: uri, URIBaseID: base},
 			Region:           sarifRegion{StartLine: max(f.Line, 1)},
-		}}},
+		}}}
 	}
 	if fp := f.Fingerprint(); fp != "" {
 		res.PartialFingerprints = map[string]string{sarifFingerprint: fp}

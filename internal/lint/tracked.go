@@ -31,7 +31,7 @@ func (r *Report) DropUntracked(tree *Tree, keep map[string]bool) int {
 	for i := range r.Findings {
 		f := r.Findings[i]
 		rel := f.RepoPath()
-		untracked := rel != "" && !filepath.IsAbs(rel) && !safefs.RelEscapes(rel) &&
+		untracked := rel != "" && rel != "." && !filepath.IsAbs(rel) && !safefs.RelEscapes(rel) &&
 			!tree.Tracked(rel) && !keep[rel] && tree.Exists(rel)
 		if untracked {
 			dropped++

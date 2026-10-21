@@ -173,6 +173,9 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 			continue
 		}
 		matched[e.Fingerprint] = true
+		if f.acceptedByConfig() {
+			continue // [[lint.accept]] already accepts it, with its own reason
+		}
 		if e.Expires != "" && today > e.Expires {
 			res.Expired = append(res.Expired, e)
 			continue
@@ -211,7 +214,7 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	for i := range r.Findings {
 		f := &r.Findings[i]
 		fp := f.Fingerprint()
-		if fp == "" || seen[fp] {
+		if fp == "" || seen[fp] || f.acceptedByConfig() { // [[lint.accept]] findings are not baselined
 			continue
 		}
 		seen[fp] = true
