@@ -269,7 +269,7 @@ func TestUpdateBaselineRejectsNarrowedRuns(t *testing.T) {
 	validateAnalyzers = nil
 
 	validateBaseline = "shared.json"
-	err := updateBaselines([]*lint.Report{{}, {}}, []*config.Config{nil, nil})
+	err := updateBaselines(t.Context(), []*lint.Report{{}, {}}, []*config.Config{nil, nil})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "single root")
 }

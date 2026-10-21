@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -99,7 +100,7 @@ func applyBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 }
 
 // updateBaselines rewrites each root's baseline to accept its current findings.
-func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
+func updateBaselines(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) error {
 	if validateBaseline != "" && len(reports) > 1 {
 		return oops.Errorf("--update-baseline with --baseline <file> needs a single root: %d roots would each rewrite the shared file and drop the entries of the others", len(reports))
 	}
@@ -112,7 +113,7 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 		if err != nil {
 			return oops.Wrapf(err, "load baseline")
 		}
-		if err := skipUntrackedForBaseline(r, cfgAt(cfgs, i)); err != nil {
+		if err := skipUntrackedForBaseline(ctx, r, cfgAt(cfgs, i)); err != nil {
 			return err
 		}
 		next, err := lint.UpdateBaseline(r, prev, validateBaselineReason)
@@ -135,11 +136,11 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 // baseline is written, and says how many: a teammate's or CI's checkout does not
 // have those files, so their entries would be dead weight and the file would
 // differ between machines. Outside a git work tree nothing is skipped.
-func skipUntrackedForBaseline(r *lint.Report, cfg *config.Config) error {
+func skipUntrackedForBaseline(ctx context.Context, r *lint.Report, cfg *config.Config) error {
 	if cfg == nil {
 		return nil
 	}
-	tree, err := loadStrictTree(cmdContext(), cfg.BaseDir)
+	tree, err := loadStrictTree(ctx, cfg.BaseDir)
 	if err != nil {
 		return oops.Wrapf(err, "index repository files")
 	}
