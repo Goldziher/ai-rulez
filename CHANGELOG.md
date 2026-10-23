@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`recursive_exclude` and `generate --recursive --exclude`.** `generate --recursive` (and `validate --recursive`)
+  searched every directory, so a repository with deliberately invalid configurations in test fixtures failed the whole
+  run. `testdata` directories are no longer searched, and `recursive_exclude = ["tests/fixtures"]` in the root
+  `config.toml` (or `--exclude`, repeatable) names more.
+
 ### Fixed
 
 - **The live-reload watcher no longer scales its descriptors with the repository.** `mcp --serve-skills` watched every

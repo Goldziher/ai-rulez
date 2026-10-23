@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -71,6 +72,17 @@ func isConventionDir(name string) bool {
 		return true
 	}
 	return false
+}
+
+// underConventionDir reports whether dir is or lies below a directory that
+// holds skills, rules, agents or commands, the directories whose changes are
+// index changes and so are watched before any ordinary source directory.
+func underConventionDir(root, dir string) bool {
+	rel, err := filepath.Rel(root, dir)
+	if err != nil {
+		return false
+	}
+	return slices.ContainsFunc(strings.Split(filepath.ToSlash(rel), "/"), isConventionDir)
 }
 
 // isIgnoredDir reports whether the watcher never enters a directory: build
@@ -194,6 +206,7 @@ func runIndexWatch(ctx context.Context, iw *IndexWatch, log logger.Logger, refre
 		Log:      debug,
 		Warn:     warn,
 		Budget:   indexWatchBudget,
+		Priority: func(dir string) bool { return underConventionDir(root, dir) },
 		Run: func(_ context.Context, triggers []string) error {
 			for _, p := range triggers {
 				rel, err := filepath.Rel(root, p)

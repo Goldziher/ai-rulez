@@ -49,6 +49,7 @@ type Watcher struct {
 	// budget caps the OS descriptors the watcher may hold (0: no cap); costs
 	// holds what each watched directory is charged and used their sum.
 	budget       int
+	priority     func(dir string) bool
 	used         int
 	costs        map[string]int
 	warnedBudget bool
@@ -109,6 +110,15 @@ func dirCost(dir string) int {
 		return 1
 	}
 	return 1 + len(entries)
+}
+
+// SetPriority names the directories that are watched first when a budget runs
+// out, before the rest in breadth-first order (nil: none). The index watch
+// passes the directories that hold skills and instruction files.
+func (w *Watcher) SetPriority(priority func(dir string) bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.priority = priority
 }
 
 // SetBudget caps the descriptors the watcher may hold, so a large tree cannot
@@ -309,14 +319,16 @@ func (w *Watcher) translate(path string) string {
 }
 
 // addTree watches dir and every directory below it, following symlinked
-// directories, breadth first so that a descriptor budget runs out in the
-// deepest directories. A link that leads back to a directory already on the
-// path being walked is skipped, so cycles terminate.
+// directories. The directories are found breadth first and watched priority
+// directories first, so a descriptor budget runs out in the deepest ordinary
+// ones. A link that leads back to a directory already on the path being walked
+// is skipped, so cycles terminate.
 func (w *Watcher) addTree(dir string) {
 	type node struct {
 		dir       string
 		ancestors []string
 	}
+	var found []string
 	queue := []node{{dir: dir}}
 	for len(queue) > 0 {
 		n := queue[0]
@@ -328,7 +340,7 @@ func (w *Watcher) addTree(dir string) {
 		if n.dir != dir && w.isIgnored(n.dir) {
 			continue
 		}
-		w.addDir(n.dir)
+		found = append(found, n.dir)
 
 		entries, err := os.ReadDir(n.dir)
 		if err != nil {
@@ -347,6 +359,24 @@ func (w *Watcher) addTree(dir string) {
 				queue = append(queue, node{dir: child, ancestors: ancestors})
 			}
 		}
+	}
+	w.mu.Lock()
+	priority := w.priority
+	w.mu.Unlock()
+	if priority != nil {
+		slices.SortStableFunc(found, func(a, b string) int {
+			pa, pb := priority(a), priority(b)
+			switch {
+			case pa == pb:
+				return 0
+			case pa:
+				return -1
+			}
+			return 1
+		})
+	}
+	for _, d := range found {
+		w.addDir(d)
 	}
 }
 
