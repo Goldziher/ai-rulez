@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -93,6 +94,12 @@ type discoveredConfigs struct {
 // legacy config files it met, so `generate --recursive` can refuse them by name.
 func discoverConfigFiles() (discoveredConfigs, error) {
 	var found discoveredConfigs
+	if keys, err := config.LoadRecursiveExclude("."); err != nil {
+		logger.Warn("Could not read recursive_exclude; searching every directory", "error", err.Error())
+	} else {
+		recursiveExclude = append(slices.Clone(recursiveExclude), keys...)
+		defer func() { recursiveExclude = recursiveExclude[:len(recursiveExclude)-len(keys)] }()
+	}
 	spinner := progress.NewSpinner("Searching for configuration files...")
 
 	walkErr := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {

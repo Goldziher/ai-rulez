@@ -29,6 +29,8 @@ type Options struct {
 	// Budget caps the OS descriptors the watcher holds (0: no cap); see
 	// Watcher.SetBudget.
 	Budget int
+	// Priority names the directories watched first when the budget runs out.
+	Priority func(dir string) bool
 }
 
 // Watch runs Options.Run once, then again whenever a watched path changes, until
@@ -43,6 +45,7 @@ func Watch(ctx context.Context, o Options) error {
 	defer func() { _ = w.Close() }()
 	w.SetWarn(o.Warn)
 	w.SetBudget(o.Budget)
+	w.SetPriority(o.Priority)
 
 	addTargets := func() {
 		if o.Targets == nil {

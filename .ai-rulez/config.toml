@@ -9,6 +9,9 @@ builtins = ["go", "security", "git-workflow", "code-quality", "testing", "defaul
 
 default_layers = ["plugins"]
 
+# Fixtures are deliberately invalid configurations; a recursive generate must not treat them as roots.
+recursive_exclude = ["tests/fixtures", "tests/review/golden", "bench/judge/corpus"]
+
 [lint]
 # The repository's own /review command intentionally replaces the Claude Code and OpenCode built-in /review (AR808, AR9U0).
 allow_overrides = ["claude:review", "opencode:review"]

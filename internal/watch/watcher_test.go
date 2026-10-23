@@ -472,3 +472,32 @@ func TestWatcher_UnwatchReleasesTheBudget(t *testing.T) {
 		t.Errorf("used = %d after forgetting a directory, was %d", w.used, before)
 	}
 }
+
+func TestWatcher_PriorityDirectoriesAreWatchedBeforeTheBudgetRunsOut(t *testing.T) {
+	// Arrange: a deep convention directory among many shallower ordinary ones.
+	root := resolved(t, t.TempDir())
+	mustWrite(t, filepath.Join(root, "a", "b", "c", "d", ".claude", "skills", "x", "SKILL.md"), "x")
+	for i := range 30 {
+		mustWrite(t, filepath.Join(root, string(rune('a'+i%26))+string(rune('a'+i)), "f.txt"), "x")
+	}
+	w, err := NewWatcher(nil, func(string) {}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = w.Close() })
+	w.add = func(string) error { return nil }
+	w.SetBudget(20)
+	w.SetPriority(func(dir string) bool { return strings.Contains(dir, ".claude") })
+
+	// Act
+	w.Add(Target{Path: root})
+
+	// Assert
+	deep := filepath.Join(root, "a", "b", "c", "d", ".claude", "skills", "x")
+	if !w.isWatched(deep) {
+		t.Error("the deep priority directory was starved by shallower ordinary ones")
+	}
+	if w.used > 20 {
+		t.Errorf("used = %d, over the budget of 20", w.used)
+	}
+}

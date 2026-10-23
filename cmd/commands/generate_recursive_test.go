@@ -233,3 +233,40 @@ name = "example"
 		}
 	}
 }
+
+// Fixture trees are deliberately invalid configurations: `testdata` is never
+// searched, and recursive_exclude in the root config and --exclude name more.
+func TestFindConfigFilesRecursively_SkipsTestdataAndExcludedDirectories(t *testing.T) {
+	root := t.TempDir()
+	cfg := "version = \"5.0\"\nname = \"x\"\n"
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), cfg+"recursive_exclude = [\"tests/fixtures\", \"svc/*/gen\"]\n")
+	writeFile(t, filepath.Join(root, "svc", "api", ".ai-rulez", "config.toml"), cfg)
+	writeFile(t, filepath.Join(root, "svc", "api", "gen", ".ai-rulez", "config.toml"), cfg)
+	writeFile(t, filepath.Join(root, "pkg", "testdata", "bad", ".ai-rulez", "config.toml"), cfg)
+	writeFile(t, filepath.Join(root, "tests", "fixtures", "a", ".ai-rulez", "config.toml"), cfg)
+	writeFile(t, filepath.Join(root, "tests", "other", ".ai-rulez", "config.toml"), cfg)
+	writeFile(t, filepath.Join(root, "extra", ".ai-rulez", "config.toml"), cfg)
+	chdir(t, root)
+	t.Cleanup(func() { recursiveExclude = nil })
+	recursiveExclude = []string{"extra"}
+
+	got := findConfigFilesRecursively()
+
+	sort.Strings(got)
+	want := []string{
+		filepath.Join(".ai-rulez", "config.toml"),
+		filepath.Join("svc", "api", ".ai-rulez", "config.toml"),
+		filepath.Join("tests", "other", ".ai-rulez", "config.toml"),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("[%d] got %q, want %q", i, got[i], want[i])
+		}
+	}
+	if len(recursiveExclude) != 1 {
+		t.Errorf("the keys leaked into the flag value: %v", recursiveExclude)
+	}
+}

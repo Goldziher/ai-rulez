@@ -2023,6 +2023,19 @@ Behavior:
   and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which
   wins.
 - **Per root**: each config root decides independently, including under `generate --recursive`.
+
+##### Keeping directories out of `generate --recursive`
+
+`generate --recursive` (and `validate --recursive`) searches every directory below the working directory for
+configuration, except build output, dependency and hidden directories and `testdata`. A repository that keeps
+deliberately invalid configurations elsewhere (test fixtures, golden corpora) lists them in the root `config.toml`:
+
+```toml
+recursive_exclude = ["tests/fixtures", "svc/*/gen"]   # directories or globs, relative to the project root
+```
+
+`generate --recursive --exclude <dir>` adds to the list for one run.
+
 - The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
 - **Turning it off**: `self_server = false` (or `generate --no-self-mcp`) stops ai-rulez from owning
   the entry but does not delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself.
@@ -28934,6 +28947,7 @@ ai-rulez generate [flags]
 | `--force`                       | boolean | false         | Overwrite an existing file ai-rulez cannot prove it wrote (see [Existing files](#existing-files-generate-will-not-overwrite)). A symlinked output stays refused |
 | `--gitignore`            | boolean | (from config) | Update `.gitignore` with generated output patterns git does not already ignore (a rule or `!` override of yours wins)                                                                                                      |
 | `--recursive`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
+| `--exclude`             | string, repeatable | -  | With `--recursive`, do not search below this directory (a glob such as `svc/*/gen`, or a directory such as `tests/fixtures`, relative to the working directory). Adds to `recursive_exclude` in the root `config.toml`. `testdata` directories are never searched |
 | `--offline`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--verify-tags`                 | boolean | false         | Before generating, ask the remotes whether a tag pinned in `ai-rulez.lock` moved (`AR732`, exit 2) or was deleted (`AR735`); needs the network. Also `[lock] verify_tags = true` |
 | `--refresh-remote`              | boolean | false         | Before generating, re-resolve remote installed skills, includes and skill sources to the newest version their constraint allows and rewrite `ai-rulez.lock`. The security scan of the new trees runs first and a refusal aborts before any output is written. Also `[lock] refresh_on_generate = true`. Needs the network; cannot be combined with `--check`, `--dry-run`, `--emit-plan`, `--locked`, `--frozen`, `--offline`, `--watch`, `--recursive`, `--user` or `--plugin` |

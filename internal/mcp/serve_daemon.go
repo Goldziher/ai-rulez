@@ -208,6 +208,7 @@ func RunDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) error {
 			logger.Or(nil).Warn("MCP daemon: could not leave the repository directory", "error", err.Error())
 		}
 	}
+	pruneStaleDaemonDirsBeside(opts.SocketPath)
 	d, err := StartDaemon(ctx, st, opts)
 	if err != nil {
 		if errors.Is(err, errDaemonAlreadyRunning) {

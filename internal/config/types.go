@@ -22,6 +22,11 @@ type Config struct {
 	Name        string   `yaml:"name" json:"name" toml:"name"`
 	Description string   `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
 	Presets     []Preset `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
+	// RecursiveExclude lists directories, relative to this project root, that
+	// `generate --recursive` run from here never searches for configuration: a
+	// glob such as "svc/*/gen" or a plain directory such as "tests/fixtures". The
+	// --exclude flag adds to it.
+	RecursiveExclude []string `yaml:"recursive_exclude,omitempty" json:"recursive_exclude,omitempty" toml:"recursive_exclude,omitempty"`
 	// DefaultLayers names config.<name>.toml files beside config.toml (in .agents/.ai-rulez/
 	// for an .agents project) that are always
 	// merged over it, in order, before the layers AI_RULEZ_LAYERS names. A listed layer
