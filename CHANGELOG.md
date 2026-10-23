@@ -17,7 +17,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **The shared daemon no longer pins the checkout.** `mcp --daemon-server` changes to its private cache directory after
   start, so a throwaway worktree can be removed, and exits when its repository directory is gone instead of waiting out
   the idle timeout. The new `[mcp] daemon_idle_timeout` (a Go duration such as `"2m"`) sets that timeout, 15 minutes by
-  default ([#481](https://github.com/Goldziher/ai-rulez/issues/481)).
+  default. The daemon's stderr (a watch budget reached, why it exited) now goes to `daemon.log` beside its socket
+  instead of the null device ([#481](https://github.com/Goldziher/ai-rulez/issues/481)).
 - **A read-only skills server registers only the skill tools by default.** `mcp --serve-skills` with `read_only`
   registered 43 tools, about 92 KB of schema sent on every request. It now registers `find_skill`, `load_skill`,
   `search_skills`, `read_skill_file` and `list_skill_resources` (about 4 KB); `[mcp] authoring = true` restores the
