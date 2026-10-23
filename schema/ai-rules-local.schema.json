@@ -3834,6 +3834,14 @@
       },
       "type": "object"
     },
+    "recursive_exclude": {
+      "description": "Directories, relative to this project root, that `generate --recursive` run from here never searches for configuration: a glob such as `svc/*/gen` or a plain directory such as `tests/fixtures`. The --exclude flag adds to it.",
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
     "review": {
       "additionalProperties": false,
       "description": "Settings of `ai-rulez review`: the rubric, what an item sends to a judge, exclusions, spend ceilings, the secret policy and the gate and fix settings. See docs/review.md.",

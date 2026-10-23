@@ -136,6 +136,11 @@ func TestIndexWatch_ExcludedPathsDoNotRefreshTheIndex(t *testing.T) {
 		s.Exclude = []string{"gen/**"}
 		s.afterLoad = func() { rebuilds.Add(1) }
 	})
+	// A relevant change first: once the watcher has delivered it and the rebuild
+	// has settled, events left over from the set-up (late under load) are drained
+	// and cannot be mistaken for a rebuild the excluded change caused.
+	writeFile(t, root, "pkg/web/AGENTS.md", "# Web conventions\n")
+	eventually(t, "the watcher delivers a relevant change", func() bool { return contextCount(t, session, "pkg/web") > 0 })
 	base := settled(t, &rebuilds)
 
 	// Act

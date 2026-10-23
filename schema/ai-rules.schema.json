@@ -639,6 +639,11 @@
         }
       ]
     },
+    "recursive_exclude": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Directories, relative to this project root, that `generate --recursive` run from here never searches for configuration: a glob such as `svc/*/gen` or a plain directory such as `tests/fixtures`. The --exclude flag adds to it."
+    },
     "default_layers": {
       "type": "array",
       "description": "Layer names (config.<name>.toml beside config.toml, or in .agents/.ai-rulez/ for an .agents project; not supported in a root ai-rulez.toml) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
