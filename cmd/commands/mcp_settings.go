@@ -3,7 +3,9 @@ package commands
 import (
 	"context"
 	"strings"
+	"time"
 
+	"github.com/samber/oops"
 	"github.com/spf13/pflag"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -21,7 +23,11 @@ const flagServeSkills = "serve-skills"
 // give. A flag that was given wins over the key; the organization policy's
 // read-only requirement wins over both.
 type mcpSettings struct {
-	readOnly, daemon, noWatch bool
+	readOnly, daemon, noWatch, authoring bool
+	// daemonIdleTimeout is [mcp] daemon_idle_timeout; 0 keeps the default.
+	daemonIdleTimeout time.Duration
+	// daemonIdleErr is the parse error of daemon_idle_timeout, reported by validate.
+	daemonIdleErr error
 	// serveSkills is true when the run serves skills: the flag, else [mcp] serve_skills.
 	serveSkills        bool
 	allow, deny, tools []string
@@ -61,6 +67,13 @@ func resolveMCPSettings(flags *pflag.FlagSet, project mcp.ProjectSettings) mcpSe
 		deny:     listSetting("deny", keys.Deny),
 		tools:    listSetting(flagMCPTools, keys.Tools),
 	}
+	settings.authoring = keys.Authoring != nil && *keys.Authoring
+	if keys.DaemonIdleTimeout != "" {
+		settings.daemonIdleTimeout, settings.daemonIdleErr = time.ParseDuration(keys.DaemonIdleTimeout)
+		if settings.daemonIdleErr == nil && settings.daemonIdleTimeout <= 0 {
+			settings.daemonIdleErr = oops.Errorf("must be positive")
+		}
+	}
 	if !serve {
 		settings.ignoredSkillsKeys = skillsOnlyKeysSet(keys, settings)
 	}
@@ -83,6 +96,8 @@ func skillsOnlyKeysSet(keys config.MCPConfig, resolved mcpSettings) []string {
 	add("exclude", len(keys.Exclude) > 0)
 	add("no_watch", resolved.noWatch)
 	add("daemon", resolved.daemon)
+	add("daemon_idle_timeout", keys.DaemonIdleTimeout != "")
+	add("authoring", resolved.authoring)
 	return set
 }
 
@@ -98,6 +113,9 @@ func ignoredSkillsKeysWarning(keys []string) string {
 
 // validate checks the tool allow-list against the tools the server has.
 func (s mcpSettings) validate() error {
+	if s.daemonIdleErr != nil {
+		return oops.Wrapf(s.daemonIdleErr, "[mcp] daemon_idle_timeout must be a positive duration such as \"5m\"")
+	}
 	return mcp.ValidateToolNames(s.tools) //nolint:wrapcheck // names the tool and the valid ones
 }
 
@@ -117,6 +135,20 @@ func loadMCPSettings(ctx context.Context, flags *pflag.FlagSet) (mcpSettings, er
 	return settings, nil
 }
 
+// toolAllowList is the only list of tools the server registers; nil registers
+// them all. A read-only skills server defaults to the skill-serving tools: a
+// skills client pays for every registered schema on every request, and the
+// authoring tools are most of it. [mcp] authoring = true restores them.
+func (s mcpSettings) toolAllowList() []string {
+	switch {
+	case len(s.tools) > 0:
+		return s.tools
+	case s.serveSkills && s.readOnly && !s.authoring:
+		return mcp.SkillServingTools()
+	}
+	return nil
+}
+
 // options are the server options the settings give: the read-only tool set and
 // the tool allow-list.
 func (s mcpSettings) options() []mcp.Option {
@@ -124,8 +156,8 @@ func (s mcpSettings) options() []mcp.Option {
 	if s.readOnly {
 		opts = append(opts, mcp.WithReadOnly())
 	}
-	if len(s.tools) > 0 {
-		opts = append(opts, mcp.WithTools(s.tools...))
+	if tools := s.toolAllowList(); len(tools) > 0 {
+		opts = append(opts, mcp.WithTools(tools...))
 	}
 	return opts
 }
@@ -141,5 +173,6 @@ func (s mcpSettings) applyTo(setup *mcp.ServeSetup) {
 		setup.DaemonIdentity = daemonIdentity()
 	}
 	setup.Daemon = s.daemon
+	setup.DaemonIdleTimeout = s.daemonIdleTimeout
 	setup.Authoring = append(setup.Authoring, s.options()...)
 }
