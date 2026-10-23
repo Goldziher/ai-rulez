@@ -55,7 +55,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`agents_md_split`**: With the agents source, read `AGENTS.md` as one context item per `##` heading (default `false`); see [Splitting AGENTS.md](agents-source.md#splitting-agentsmd)
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `serve_skills`, `discover_skills`, `index_cache`, `read_only`, `daemon`, `no_watch`, `allow`, `deny`, `tools`, `exclude`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `serve_skills`, `discover_skills`, `index_cache`, `read_only`, `daemon`, `daemon_idle_timeout`, `authoring`, `no_watch`, `allow`, `deny`, `tools`, `exclude`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle

@@ -81,6 +81,9 @@ func ensureSocketDir(dir string) error {
 	if info.Mode().Perm()&0o077 != 0 {
 		return oops.Errorf("the shared daemon directory %s is accessible by group or others", dir)
 	}
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok && int(stat.Uid) != os.Getuid() {
+		return oops.Errorf("the shared daemon directory %s is owned by uid %d, not %d", dir, stat.Uid, os.Getuid())
+	}
 	return nil
 }
 

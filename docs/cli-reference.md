@@ -1131,6 +1131,7 @@ ai-rulez generate --locked
 | `--emit-plan` | string |  | Write the generation plan (every file that would be written, merged or removed, with digests; no secrets) as JSON to FILE ('-' for stdout) and apply nothing; see schema/plan.schema.json |
 | `--env` | string list |  | MCP env override in KEY=VALUE form (repeatable) |
 | `--env-file` | string list |  | Dotenv file for MCP env placeholders (repeatable) |
+| `--exclude` | string list |  | With --recursive, do not look for configuration below this directory (a glob or directory prefix relative to the working directory; repeatable) |
 | `--force` | bool |  | Overwrite an existing file ai-rulez cannot prove it wrote (a hand-written CLAUDE.md); without it generate refuses that file and exits 1 |
 | `--format` | string | `text` | Output format: text, json |
 | `--frozen` | bool |  | Like --locked, and never use the network: resolve only from the local cache, verified against the lock |

@@ -413,3 +413,62 @@ func TestWatcher_MissingDirectoryIsNotAWarning(t *testing.T) {
 		t.Error("a missing directory must not warn")
 	}
 }
+
+func TestWatcher_BudgetStopsAtTheDeepestDirectoriesAndWarnsOnce(t *testing.T) {
+	// Arrange: a shallow convention directory and a deep tree of plain ones.
+	root := resolved(t, t.TempDir())
+	mustWrite(t, filepath.Join(root, ".claude", "skills", "s", "SKILL.md"), "x")
+	for i := range 20 {
+		mustWrite(t, filepath.Join(root, "src", "a", "b", "c", "d", string(rune('a'+i)), "f.go"), "x")
+	}
+	var warnings []string
+	var added []string
+	w, err := NewWatcher(nil, func(string) {}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = w.Close() })
+	w.SetWarn(func(msg string, _ ...any) { warnings = append(warnings, msg) })
+	w.add = func(dir string) error { added = append(added, dir); return nil }
+	w.SetBudget(12)
+
+	// Act
+	w.Add(Target{Path: root})
+
+	// Assert
+	if w.used > 12 {
+		t.Errorf("used = %d descriptors, over the budget of 12", w.used)
+	}
+	if !w.isWatched(filepath.Join(root, ".claude")) {
+		t.Errorf("the shallow .claude directory is not watched; added = %v", added)
+	}
+	if w.isWatched(filepath.Join(root, "src", "a", "b", "c", "d", "t")) {
+		t.Error("a deep directory was watched past the budget")
+	}
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "budget") {
+		t.Errorf("warnings = %v, want exactly one about the budget", warnings)
+	}
+}
+
+func TestWatcher_UnwatchReleasesTheBudget(t *testing.T) {
+	// Arrange
+	root := resolved(t, t.TempDir())
+	mustWrite(t, filepath.Join(root, "a", "f.txt"), "x")
+	w, err := NewWatcher(nil, func(string) {}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = w.Close() })
+	w.add = func(string) error { return nil }
+	w.SetBudget(100)
+	w.Add(Target{Path: root})
+	before := w.used
+
+	// Act
+	w.forget(filepath.Join(root, "a"))
+
+	// Assert
+	if w.used >= before || w.used < 0 {
+		t.Errorf("used = %d after forgetting a directory, was %d", w.used, before)
+	}
+}

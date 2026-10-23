@@ -32,7 +32,7 @@ func ServeViaDaemon(ctx context.Context, st *ServeSetup, in io.Reader, out io.Wr
 	if path == "" {
 		derived, derr := st.daemonSocketPath()
 		if derr != nil {
-			log.Debug("MCP daemon: cannot place a socket; serving skills in-process", "error", derr.Error())
+			log.Warn("MCP daemon: cannot place a socket, so this session serves skills in-process and shares nothing", "error", derr.Error())
 			return false, nil
 		}
 		path = derived

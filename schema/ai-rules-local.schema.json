@@ -1833,6 +1833,10 @@
                 "minimum": 1,
                 "type": "integer"
               },
+              "max_severity": {
+                "description": "Ceiling for this scanner's findings.",
+                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
+              },
               "message_properties": {
                 "description": "SARIF result property paths whose values are appended to the finding message as \"[name: value; ...]\" (counted against max_message). A dotted path reads nested properties; \"location.snippet\" reads locations[0].physicalLocation.region.snippet.text. Values are sanitized like the message (control characters removed, whitespace collapsed, secrets masked). SARIF format only; a profile can set a default (skillspector: evidence, snippet).",
                 "items": {
@@ -1842,10 +1846,6 @@
                 },
                 "maxItems": 16,
                 "type": "array"
-              },
-              "max_severity": {
-                "description": "Ceiling for this scanner's findings.",
-                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
               },
               "name": {
                 "type": "string"
@@ -1929,10 +1929,6 @@
             "type": "string"
           },
           "type": "array"
-        },
-        "tracked_only": {
-          "description": "Report no findings in files that are not tracked in the repository index, so results do not depend on untracked files a local run left behind (a __pycache__, a build artifact). The files are still read; findings in them are dropped after the run. Files named by --changed are kept; outside a repository work tree it is ignored with a warning. validate --tracked-only sets it for one run.",
-          "type": "boolean"
         },
         "ignore_rules": {
           "description": "Rule-scoped ignores: findings of the listed rules in the listed files are dropped, every other finding in those files is kept.",
@@ -2197,6 +2193,10 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "tracked_only": {
+          "description": "Report no findings in files that are not tracked in the repository index, so results do not depend on untracked files a local run left behind (a __pycache__, a build artifact). The files are still read; findings in them are dropped after the run. Files named by --changed are kept; outside a repository work tree it is ignored with a warning. validate --tracked-only sets it for one run.",
+          "type": "boolean"
         },
         "traps": {
           "additionalProperties": false,
@@ -2688,9 +2688,17 @@
           },
           "type": "array"
         },
+        "authoring": {
+          "description": "Keep the authoring tools on a read-only skills server. Without it, `mcp --serve-skills` with `read_only` registers only find_skill, load_skill, search_skills, read_skill_file and list_skill_resources. A `tools` list wins over both.",
+          "type": "boolean"
+        },
         "daemon": {
           "description": "Share one long-lived skills server per repository, as `mcp --serve-skills --daemon` does. The --daemon flag overrides it.",
           "type": "boolean"
+        },
+        "daemon_idle_timeout": {
+          "description": "How long the shared daemon outlives its last client, as a Go duration such as `30s` or `5m`. The default is 15 minutes. The daemon also exits when its repository is removed.",
+          "type": "string"
         },
         "deny": {
           "description": "Never serve the skills whose name matches one of these path.Match globs; wins over allow. The --deny flag overrides it.",

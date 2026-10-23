@@ -10,9 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -62,11 +64,24 @@ const (
 	daemonProtocol = 1
 	// daemonSocketName is the socket file inside the daemon's private directory.
 	daemonSocketName = "daemon.sock"
-	// maxDaemonSocketPath bounds the socket path. A unix socket path is limited
-	// (104 bytes on macOS, 108 on Linux); a path over this is refused so the
-	// caller falls back in-process instead of failing with a raw bind error.
+	// shortSocketName is the socket file when the path has to be kept short.
+	shortSocketName = "d.sock"
+	// maxDaemonSocketPath bounds the socket path on macOS and the BSDs, whose
+	// unix socket paths are limited to 104 bytes; Linux allows 108 (see
+	// socketPathLimit). A longer path is moved to a short runtime directory, and
+	// refused when that is too long too, instead of failing with a raw bind error.
 	maxDaemonSocketPath = 100
+	// maxDaemonSocketPathLinux is the same bound where the limit is 108 bytes.
+	maxDaemonSocketPathLinux = 104
 )
+
+// socketPathLimit is the longest socket path the platform binds, with a margin.
+func socketPathLimit() int {
+	if runtime.GOOS == "linux" {
+		return maxDaemonSocketPathLinux
+	}
+	return maxDaemonSocketPath
+}
 
 // Errors of the daemon transport. A caller treats all of them as "serve
 // in-process"; errDaemonUnsafe is the one a proxy must not answer by starting a
@@ -105,8 +120,10 @@ type ProxyOptions struct {
 // proxies over a private unix socket.
 type Daemon struct {
 	socketPath string
-	listener   net.Listener
-	server     *Server
+	// root is the repository the daemon serves; the daemon exits when it is gone.
+	root     string
+	listener net.Listener
+	server   *Server
 	// view is the serve view the daemon serves (ServeSetup.ViewKey); a client
 	// whose view differs is refused rather than served another view's skills.
 	view string
@@ -157,9 +174,15 @@ func StartDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) (*Daem
 	}
 	idle := opts.IdleTimeout
 	if idle <= 0 {
+		idle = st.DaemonIdleTimeout
+	}
+	if idle <= 0 {
 		idle = DefaultDaemonIdleTimeout
 	}
-	d := &Daemon{socketPath: path, listener: listener, server: server, view: st.ViewKey(), done: make(chan struct{})}
+	d := &Daemon{
+		socketPath: path, listener: listener, server: server, view: st.ViewKey(), done: make(chan struct{}),
+		root: repoTopLevel(st.workDir()),
+	}
 	d.touch()
 	go server.Watch(ctx)
 	go d.serve(ctx, idle)
@@ -170,6 +193,7 @@ func StartDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) (*Daem
 // elapsed with no client, or ctx ended. A start that lost the race to another
 // daemon returns at once, so the spawned child exits cleanly.
 func RunDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) error {
+	st.pinWorkDir()
 	d, err := StartDaemon(ctx, st, opts)
 	if err != nil {
 		if errors.Is(err, errDaemonAlreadyRunning) {
@@ -177,8 +201,33 @@ func RunDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) error {
 		}
 		return err //nolint:wrapcheck // already contextual
 	}
+	// The daemon outlives its client, so it must not keep the checkout (often a
+	// throwaway worktree) as its working directory.
+	if err := os.Chdir(filepath.Dir(d.socketPath)); err != nil {
+		logger.Or(nil).Warn("MCP daemon: could not leave the repository directory", "error", err.Error())
+	}
 	d.Wait()
 	return nil
+}
+
+// pinWorkDir makes the paths the daemon reads later (live reload, the watcher)
+// absolute, so they survive a change of the process's working directory.
+func (st *ServeSetup) pinWorkDir() {
+	abs := func(p string) string {
+		if p == "" {
+			return p
+		}
+		if a, err := filepath.Abs(p); err == nil {
+			return a
+		}
+		return p
+	}
+	st.WorkDir = abs(st.workDir())
+	st.CacheDir = abs(st.CacheDir)
+	st.ServeCacheDir = abs(st.ServeCacheDir)
+	if st.UsageLog != "-" {
+		st.UsageLog = abs(st.UsageLog)
+	}
 }
 
 // Wait blocks until the daemon stops and then releases the server's background
@@ -270,6 +319,11 @@ func (d *Daemon) watchIdle(ctx context.Context, idle time.Duration) {
 			d.Close()
 			return
 		case <-ticker.C:
+			if _, err := os.Stat(d.root); errors.Is(err, fs.ErrNotExist) {
+				logger.Or(nil).Info("MCP daemon: exiting because the repository is gone", "root", d.root)
+				d.Close()
+				return
+			}
 			if d.active.Load() != 0 {
 				continue
 			}
@@ -307,11 +361,28 @@ func (st *ServeSetup) daemonSocketPath() (string, error) {
 		return "", oops.Wrapf(err, "place the shared daemon socket")
 	}
 	path := filepath.Join(dir, daemonSocketName)
-	if len(path) > maxDaemonSocketPath {
-		return "", oops.Hint("Set a shorter home directory, or run without --daemon").
-			Errorf("the shared daemon socket path is %d bytes, over the %d-byte limit", len(path), maxDaemonSocketPath)
+	limit := socketPathLimit()
+	if len(path) <= limit {
+		return path, nil
 	}
-	return path, nil
+	// A long home (a per-session sandbox, a CI workspace) cannot hold the socket;
+	// a per-user directory under the runtime or temp directory, keyed by the same
+	// hash, can. ensureSocketDir refuses it unless this user owns it with mode 0700.
+	short := filepath.Join(shortSocketBase(), fmt.Sprintf("ai-rulez-%d", os.Getuid()), hex.EncodeToString(sum[:6]), shortSocketName)
+	if len(short) <= limit {
+		return short, nil
+	}
+	return "", oops.Hint("Set a shorter home directory or TMPDIR, or run without --daemon").
+		Errorf("the shared daemon socket path is %d bytes (%d under the temp directory), over the %d-byte limit", len(path), len(short), limit)
+}
+
+// shortSocketBase is where a socket goes when the cache path is too long:
+// XDG_RUNTIME_DIR when set (a per-user 0700 directory), else the temp directory.
+func shortSocketBase() string {
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		return dir
+	}
+	return os.TempDir()
 }
 
 // derivedDaemonIdentity hashes the setup fields that change what the daemon

@@ -370,3 +370,10 @@ func rankForRole(ranked []FindHit, role string, scope RoleScope, limit int) []ma
 	}
 	return results
 }
+
+// SkillServingTools are the tools a read-only skills server registers by
+// default: what a client needs to find and load skills, without the authoring
+// introspection tools whose schemas make up most of the tool list.
+func SkillServingTools() []string {
+	return []string{toolFindSkill, toolLoadSkill, toolListSkillResources, toolSearchSkills, toolReadSkillFile}
+}

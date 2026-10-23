@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -44,6 +46,12 @@ type Watcher struct {
 	targets    map[string]Target
 	watched    map[string]bool
 	warnedAdds bool
+	// budget caps the OS descriptors the watcher may hold (0: no cap); costs
+	// holds what each watched directory is charged and used their sum.
+	budget       int
+	used         int
+	costs        map[string]int
+	warnedBudget bool
 	// aliases maps the real path of a symlinked directory to the path it was
 	// reached through. A symlinked directory is watched by its real path (the
 	// backends differ in how they treat a link), so its events carry the real
@@ -75,8 +83,42 @@ func NewWatcher(ignore func(path string) bool, notify func(path string), logf Lo
 		add:     w.Add,
 		targets: map[string]Target{},
 		watched: map[string]bool{},
+		costs:   map[string]int{},
 		aliases: map[string]string{},
 	}, nil
+}
+
+// kqueueBackend reports whether fsnotify watches through kqueue, which needs
+// one open descriptor for the directory and one for every file in it; inotify
+// and the other backends charge one watch per directory.
+func kqueueBackend() bool {
+	switch runtime.GOOS {
+	case "darwin", "freebsd", "netbsd", "openbsd", "dragonfly":
+		return true
+	}
+	return false
+}
+
+// dirCost is what watching dir takes from the budget.
+func dirCost(dir string) int {
+	if !kqueueBackend() {
+		return 1
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 1
+	}
+	return 1 + len(entries)
+}
+
+// SetBudget caps the descriptors the watcher may hold, so a large tree cannot
+// exhaust the system's file table (kqueue holds one per file). Directories
+// beyond the cap are left unwatched, shallowest first, and one warning says so.
+// 0 removes the cap.
+func (w *Watcher) SetBudget(n int) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.budget = n
 }
 
 // SetWarn sets where warnings go (default: the Logf given to NewWatcher). A
@@ -192,6 +234,18 @@ func (w *Watcher) addDir(dir string) {
 	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
 		realPath = resolved
 	}
+	cost := 1
+	if w.budget > 0 {
+		cost = dirCost(realPath)
+		if w.used+cost > w.budget {
+			if !w.warnedBudget {
+				w.warnedBudget = true
+				w.warn("watch: descriptor budget reached, so directories beyond it are not watched and their changes are seen only by the periodic poll",
+					"path", dir, "budget", w.budget)
+			}
+			return
+		}
+	}
 	if err := w.add(realPath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			w.logf("watch: directory does not exist yet", "path", dir)
@@ -206,6 +260,8 @@ func (w *Watcher) addDir(dir string) {
 		return
 	}
 	w.watched[dir] = true
+	w.costs[dir] = cost
+	w.used += cost
 	if realPath != dir {
 		w.aliases[realPath] = dir
 	}
@@ -222,6 +278,8 @@ func (w *Watcher) unwatchLocked(dir string) {
 		}
 	}
 	delete(w.watched, dir)
+	w.used -= w.costs[dir]
+	delete(w.costs, dir)
 	for other := range w.watched {
 		if resolved, err := filepath.EvalSymlinks(other); err == nil && resolved == realPath {
 			w.aliases[realPath] = other
@@ -251,38 +309,43 @@ func (w *Watcher) translate(path string) string {
 }
 
 // addTree watches dir and every directory below it, following symlinked
-// directories. A link that leads back to a directory already on the path being
-// walked is skipped, so cycles terminate.
+// directories, breadth first so that a descriptor budget runs out in the
+// deepest directories. A link that leads back to a directory already on the
+// path being walked is skipped, so cycles terminate.
 func (w *Watcher) addTree(dir string) {
-	w.walk(dir, dir, map[string]bool{})
-}
-
-func (w *Watcher) walk(root, dir string, ancestors map[string]bool) {
-	realPath, err := filepath.EvalSymlinks(dir)
-	if err != nil || ancestors[realPath] {
-		return
+	type node struct {
+		dir       string
+		ancestors []string
 	}
-	if dir != root && w.isIgnored(dir) {
-		return
-	}
-	ancestors[realPath] = true
-	defer delete(ancestors, realPath)
-	w.addDir(dir)
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return // a vanished or unreadable directory is simply not watched further
-	}
-	for _, entry := range entries {
-		child := filepath.Join(dir, entry.Name())
-		isDir := entry.IsDir()
-		if !isDir && entry.Type()&fs.ModeSymlink != 0 {
-			if info, statErr := os.Stat(child); statErr == nil && info.IsDir() {
-				isDir = true
-			}
+	queue := []node{{dir: dir}}
+	for len(queue) > 0 {
+		n := queue[0]
+		queue = queue[1:]
+		realPath, err := filepath.EvalSymlinks(n.dir)
+		if err != nil || slices.Contains(n.ancestors, realPath) {
+			continue
 		}
-		if isDir {
-			w.walk(root, child, ancestors)
+		if n.dir != dir && w.isIgnored(n.dir) {
+			continue
+		}
+		w.addDir(n.dir)
+
+		entries, err := os.ReadDir(n.dir)
+		if err != nil {
+			continue // a vanished or unreadable directory is simply not watched further
+		}
+		ancestors := append(slices.Clone(n.ancestors), realPath)
+		for _, entry := range entries {
+			child := filepath.Join(n.dir, entry.Name())
+			isDir := entry.IsDir()
+			if !isDir && entry.Type()&fs.ModeSymlink != 0 {
+				if info, statErr := os.Stat(child); statErr == nil && info.IsDir() {
+					isDir = true
+				}
+			}
+			if isDir {
+				queue = append(queue, node{dir: child, ancestors: ancestors})
+			}
 		}
 	}
 }

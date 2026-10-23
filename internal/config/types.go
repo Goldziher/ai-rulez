@@ -395,6 +395,17 @@ type MCPConfig struct {
 	// `mcp --serve-skills --daemon` does.
 	Daemon *bool `yaml:"daemon,omitempty" json:"daemon,omitempty" toml:"daemon,omitempty"`
 
+	// DaemonIdleTimeout is how long the shared daemon outlives its last client,
+	// as a Go duration ("30s", "5m"); empty keeps the 15 minute default.
+	DaemonIdleTimeout string `yaml:"daemon_idle_timeout,omitempty" json:"daemon_idle_timeout,omitempty" toml:"daemon_idle_timeout,omitempty"`
+
+	// Authoring keeps the authoring tools on a read-only skills server. Without
+	// it, `mcp --serve-skills` with read_only registers only the skill-serving
+	// tools (find_skill, load_skill, search_skills, read_skill_file,
+	// list_skill_resources) instead of the whole authoring set. A `tools`
+	// list wins over both.
+	Authoring *bool `yaml:"authoring,omitempty" json:"authoring,omitempty" toml:"authoring,omitempty"`
+
 	// NoWatch stops `mcp --serve-skills` reloading when skill files change, as
 	// --no-watch does.
 	NoWatch *bool `yaml:"no_watch,omitempty" json:"no_watch,omitempty" toml:"no_watch,omitempty"`

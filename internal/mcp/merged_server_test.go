@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -130,4 +131,27 @@ func TestJudgeToolIsMissingFromReadOnlyServers(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The default tool list of a read-only skills server is small (#482): the
+// skill-serving tools only, a fraction of the schema of the whole set.
+func TestMergedServer_SkillServingToolsAreASmallSurface(t *testing.T) {
+	t.Parallel()
+	size := func(srv *Server) (names []string, bytes int) {
+		session := connect(t, srv)
+		for tool, err := range session.Tools(context.Background(), nil) {
+			require.NoError(t, err)
+			names = append(names, tool.Name)
+			schema, merr := json.Marshal(tool)
+			require.NoError(t, merr)
+			bytes += len(schema)
+		}
+		return names, bytes
+	}
+
+	allNames, allBytes := size(NewMergedServer("test", loadCatalog(t), ServeOptions{}, WithAnyDirectory(), WithReadOnly()))
+	names, smallBytes := size(NewMergedServer("test", loadCatalog(t), ServeOptions{}, WithAnyDirectory(), WithReadOnly(), WithTools(SkillServingTools()...)))
+
+	assert.ElementsMatch(t, SkillServingTools(), names)
+	assert.Less(t, smallBytes*5, allBytes, "the skills surface (%d tools, %d bytes) is under a fifth of the full one (%d tools, %d bytes)", len(names), smallBytes, len(allNames), allBytes)
 }
