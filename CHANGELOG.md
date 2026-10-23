@@ -11,9 +11,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **The live-reload watcher no longer scales its descriptors with the repository.** `mcp --serve-skills` watched every
   directory of the project; on macOS and the BSDs (kqueue) each watched directory and each file in it costs an open
   descriptor, so one server held 50,000 to 110,000 in a large monorepo and a few servers overflowed the system file
-  table. The watcher now has a budget of 4,096 descriptors, spends it breadth first (shallow convention directories
+  table. The watcher now has a budget of 2,048 descriptors, spends it breadth first (shallow convention directories
   such as `.claude` and `skills` first), and warns once when the budget is reached; the periodic poll covers what is
-  left unwatched. `no_watch = true` still disables the watcher ([#480](https://github.com/Goldziher/ai-rulez/issues/480)).
+  left unwatched; each daemon has its own budget, so many worktrees add up to a few thousand descriptors each, not tens of thousands. `no_watch = true` still disables the watcher ([#480](https://github.com/Goldziher/ai-rulez/issues/480)).
 - **The shared daemon no longer pins the checkout.** `mcp --daemon-server` changes to its private cache directory after
   start, so a throwaway worktree can be removed, and exits when its repository directory is gone instead of waiting out
   the idle timeout. The new `[mcp] daemon_idle_timeout` (a Go duration such as `"2m"`) sets that timeout, 15 minutes by

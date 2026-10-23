@@ -37,7 +37,7 @@ const (
 // BSD) charges one per watched directory and one per file in it, so an uncapped
 // watch over a large monorepo took 50,000 to 110,000 and overflowed the system's
 // file table; the poll covers what the cap leaves unwatched.
-const indexWatchBudget = 4096
+const indexWatchBudget = 2048
 
 // IndexWatch tells Server.Watch to follow the project tree with a file watcher.
 type IndexWatch struct {
