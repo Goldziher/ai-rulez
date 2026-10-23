@@ -145,10 +145,27 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *discoveredConfigs
 		return nil
 	}
 
-	if walkutil.ShouldSkipDir(name) {
+	if walkutil.ShouldSkipDir(name) || excludedFromRecursion(path) {
 		return filepath.SkipDir
 	}
 	return nil
+}
+
+// excludedFromRecursion reports whether path, relative to the working
+// directory, is or lies below a directory matching a --exclude pattern (a
+// [filepath.Match] glob such as "svc/*/gen", or a plain directory such as
+// "tests/fixtures").
+func excludedFromRecursion(path string) bool {
+	path = filepath.ToSlash(path)
+	for _, pattern := range recursiveExclude {
+		pattern = strings.TrimSuffix(filepath.ToSlash(pattern), "/")
+		for dir := path; dir != "." && dir != "/"; dir = filepath.ToSlash(filepath.Dir(dir)) {
+			if ok, _ := filepath.Match(pattern, dir); ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // recordedConfigLocation records the configuration that the directory at path

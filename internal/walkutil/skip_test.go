@@ -21,6 +21,7 @@ func TestShouldSkipDir(t *testing.T) {
 		{".cargo", true},
 		{".rustup", true},
 		{"vendor", true},
+		{"testdata", true},
 		{"dist", true},
 		{"build", true},
 		{"__pycache__", true},

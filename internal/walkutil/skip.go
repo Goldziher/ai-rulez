@@ -39,8 +39,8 @@ var SkipDirs = map[string]struct{}{
 	".pytest_cache": {}, ".mypy_cache": {}, ".ruff_cache": {},
 	".tox": {}, ".nox": {}, ".eggs": {}, ".hypothesis": {},
 
-	// Go
-	"vendor": {},
+	// Go (vendor is third-party code; testdata is fixtures the toolchain itself ignores)
+	"vendor": {}, "testdata": {},
 
 	// Java / JVM / Android
 	".gradle": {}, ".mvn": {}, ".m2": {},
