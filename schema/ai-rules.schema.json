@@ -451,6 +451,14 @@
           "type": "boolean",
           "description": "Share one long-lived skills server per repository, as `mcp --serve-skills --daemon` does. The --daemon flag overrides it."
         },
+        "daemon_idle_timeout": {
+          "type": "string",
+          "description": "How long the shared daemon outlives its last client, as a Go duration such as `30s` or `5m`. The default is 15 minutes. The daemon also exits when its repository is removed."
+        },
+        "authoring": {
+          "type": "boolean",
+          "description": "Keep the authoring tools on a read-only skills server. Without it, `mcp --serve-skills` with `read_only` registers only find_skill, load_skill, search_skills, read_skill_file and list_skill_resources. A `tools` list wins over both."
+        },
         "no_watch": {
           "type": "boolean",
           "description": "Do not reload the served skills when their files change, as `mcp --serve-skills --no-watch` does. The --no-watch flag overrides it."

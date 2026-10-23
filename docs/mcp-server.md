@@ -558,7 +558,20 @@ allow     = ["review-*"]                                          # --allow (--s
 deny      = ["draft-*"]                                           # --deny (--serve-skills)
 daemon    = true                                                  # --daemon (--serve-skills)
 no_watch  = true                                                  # --no-watch (--serve-skills)
+daemon_idle_timeout = "15m"                                       # how long the daemon outlives its last client
+authoring = true                                                  # keep the authoring tools on a read-only skills server
 ```
+
+- **A small default surface.** `serve_skills` with `read_only` registers only `find_skill`, `load_skill`,
+  `search_skills`, `read_skill_file` and `list_skill_resources`: the full tool list is about 92 KB of schema that a
+  client sends on every request. Set `authoring = true` for the read-only authoring tools, or `tools = [...]` for an
+  exact list.
+- **Large repositories.** The live-reload watcher holds at most 4,096 descriptors (kqueue on macOS and the BSDs
+  charges one per directory and per file in it), watching shallow directories first and warning once when the
+  budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.
+- **The daemon.** It outlives its client for `daemon_idle_timeout` (15 minutes by default) and exits at once when its
+  repository is removed; it does not keep the checkout as its working directory. When the cache path is too long for a
+  unix socket, the socket goes under `$XDG_RUNTIME_DIR` or the temp directory.
 
 - **Skills keys without serving.** `allow`, `deny`, `daemon`, `no_watch`, `exclude` and `discover_skills` only apply
   when skills are served (`--serve-skills` or `serve_skills = true`). A server started without serving them logs one

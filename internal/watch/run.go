@@ -26,6 +26,9 @@ type Options struct {
 	// Warn receives problems the user can act on (a watch limit reached). It
 	// defaults to Log.
 	Warn Logf
+	// Budget caps the OS descriptors the watcher holds (0: no cap); see
+	// Watcher.SetBudget.
+	Budget int
 }
 
 // Watch runs Options.Run once, then again whenever a watched path changes, until
@@ -39,6 +42,7 @@ func Watch(ctx context.Context, o Options) error {
 	}
 	defer func() { _ = w.Close() }()
 	w.SetWarn(o.Warn)
+	w.SetBudget(o.Budget)
 
 	addTargets := func() {
 		if o.Targets == nil {

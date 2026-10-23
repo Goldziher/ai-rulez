@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
@@ -288,4 +289,48 @@ func TestIgnoredSkillsKeysWarning(t *testing.T) {
 	assert.Contains(t, got, "discover_skills, allow")
 	assert.Contains(t, got, "--serve-skills")
 	assert.Contains(t, got, "[mcp] serve_skills")
+}
+
+// A read-only skills server registers only the skill-serving tools unless the
+// project asks for the authoring set or names its own list (#482).
+func TestMCPSettings_ReadOnlySkillsServerDefaultsToTheSkillTools(t *testing.T) {
+	skillTools := mcp.SkillServingTools()
+	tests := []struct {
+		name string
+		args []string
+		keys config.MCPConfig
+		want bool
+	}{
+		{name: "read-only skills", keys: config.MCPConfig{ServeSkills: boolPtrOf(true), ReadOnly: boolPtrOf(true)}, want: true},
+		{name: "flags", args: []string{"--serve-skills", "--read-only"}, want: true},
+		{name: "authoring opts out", keys: config.MCPConfig{ServeSkills: boolPtrOf(true), ReadOnly: boolPtrOf(true), Authoring: boolPtrOf(true)}},
+		{name: "skills without read-only keep the full set", keys: config.MCPConfig{ServeSkills: boolPtrOf(true)}},
+		{name: "read-only without skills keeps the full set", keys: config.MCPConfig{ReadOnly: boolPtrOf(true)}},
+		{name: "an explicit list wins", keys: config.MCPConfig{ServeSkills: boolPtrOf(true), ReadOnly: boolPtrOf(true), Tools: []string{"find_skill"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings := resolveMCPSettings(settingsFlags(t, tt.args...), mcp.ProjectSettings{MCP: tt.keys})
+
+			if tt.want {
+				assert.ElementsMatch(t, skillTools, settings.toolAllowList())
+			} else {
+				assert.NotElementsMatch(t, skillTools, settings.toolAllowList())
+			}
+		})
+	}
+}
+
+func TestMCPSettings_DaemonIdleTimeout(t *testing.T) {
+	good := resolveMCPSettings(settingsFlags(t), mcp.ProjectSettings{MCP: config.MCPConfig{DaemonIdleTimeout: "90s"}})
+	require.NoError(t, good.validate())
+	assert.Equal(t, 90*time.Second, good.daemonIdleTimeout)
+	setup := &mcp.ServeSetup{}
+	good.applyTo(setup)
+	assert.Equal(t, 90*time.Second, setup.DaemonIdleTimeout)
+
+	for _, bad := range []string{"soon", "0s", "-5m"} {
+		got := resolveMCPSettings(settingsFlags(t), mcp.ProjectSettings{MCP: config.MCPConfig{DaemonIdleTimeout: bad}})
+		assert.Error(t, got.validate(), bad)
+	}
 }

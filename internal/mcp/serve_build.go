@@ -118,6 +118,9 @@ type ServeSetup struct {
 	// own command line into it. Empty derives an identity from the setup's own
 	// fields, for library callers and tests.
 	DaemonIdentity string
+	// DaemonIdleTimeout is how long the shared daemon outlives its last client
+	// (0 selects DefaultDaemonIdleTimeout).
+	DaemonIdleTimeout time.Duration
 
 	// IndexWatchDebounce is the quiet period of the repository file watcher
 	// before it refreshes the index (0 selects 300 ms).

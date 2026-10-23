@@ -33,6 +33,12 @@ const (
 	metaIndexGeneration = "ai-rulez/index-generation"
 )
 
+// indexWatchBudget caps the descriptors the index watcher holds. kqueue (macOS,
+// BSD) charges one per watched directory and one per file in it, so an uncapped
+// watch over a large monorepo took 50,000 to 110,000 and overflowed the system's
+// file table; the poll covers what the cap leaves unwatched.
+const indexWatchBudget = 4096
+
 // IndexWatch tells Server.Watch to follow the project tree with a file watcher.
 type IndexWatch struct {
 	// Root is the project root to watch.
@@ -187,6 +193,7 @@ func runIndexWatch(ctx context.Context, iw *IndexWatch, log logger.Logger, refre
 		Debounce: iw.Debounce,
 		Log:      debug,
 		Warn:     warn,
+		Budget:   indexWatchBudget,
 		Run: func(_ context.Context, triggers []string) error {
 			for _, p := range triggers {
 				rel, err := filepath.Rel(root, p)
