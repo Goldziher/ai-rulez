@@ -566,7 +566,7 @@ authoring = true                                                  # keep the aut
   `search_skills`, `read_skill_file` and `list_skill_resources`: the full tool list is about 92 KB of schema that a
   client sends on every request. Set `authoring = true` for the read-only authoring tools, or `tools = [...]` for an
   exact list.
-- **Large repositories.** The live-reload watcher holds at most 4,096 descriptors (kqueue on macOS and the BSDs
+- **Large repositories.** The live-reload watcher holds at most 2,048 descriptors (kqueue on macOS and the BSDs
   charges one per directory and per file in it), watching shallow directories first and warning once when the
   budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.
 - **The daemon.** It outlives its client for `daemon_idle_timeout` (15 minutes by default) and exits at once when its

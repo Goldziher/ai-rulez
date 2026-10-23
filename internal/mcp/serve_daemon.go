@@ -194,17 +194,26 @@ func StartDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) (*Daem
 // daemon returns at once, so the spawned child exits cleanly.
 func RunDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) error {
 	st.pinWorkDir()
+	// The daemon outlives its client, so it must not keep the checkout (often a
+	// throwaway worktree) as its working directory, not even while it builds.
+	if opts.SocketPath == "" {
+		path, err := st.daemonSocketPath()
+		if err != nil {
+			return err
+		}
+		opts.SocketPath = path
+	}
+	if dir := filepath.Dir(opts.SocketPath); os.MkdirAll(dir, 0o700) == nil {
+		if err := os.Chdir(dir); err != nil {
+			logger.Or(nil).Warn("MCP daemon: could not leave the repository directory", "error", err.Error())
+		}
+	}
 	d, err := StartDaemon(ctx, st, opts)
 	if err != nil {
 		if errors.Is(err, errDaemonAlreadyRunning) {
 			return nil
 		}
 		return err //nolint:wrapcheck // already contextual
-	}
-	// The daemon outlives its client, so it must not keep the checkout (often a
-	// throwaway worktree) as its working directory.
-	if err := os.Chdir(filepath.Dir(d.socketPath)); err != nil {
-		logger.Or(nil).Warn("MCP daemon: could not leave the repository directory", "error", err.Error())
 	}
 	d.Wait()
 	return nil

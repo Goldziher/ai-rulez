@@ -129,3 +129,33 @@ func TestPinWorkDir_MakesPathsAbsolute(t *testing.T) {
 	assert.Equal(t, filepath.Join(cwd, "usage.jsonl"), st.UsageLog)
 	assert.Empty(t, st.ServeCacheDir)
 }
+
+// The daemon leaves the repository directory as its working directory before it
+// builds anything, so a worktree can be removed while it runs (#481).
+func TestRunDaemon_DoesNotKeepTheRepositoryAsItsWorkingDirectory(t *testing.T) {
+	root := cacheProject(t)
+	socket := daemonSocketForTest(t)
+	t.Chdir(root)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+
+	go func() {
+		done <- RunDaemon(ctx, &ServeSetup{NoWatch: true, ServeCacheDir: t.TempDir()}, DaemonOptions{SocketPath: socket, IdleTimeout: time.Minute})
+	}()
+
+	require.Eventually(t, func() bool {
+		conn, err := dialDaemon(socket)
+		if err != nil {
+			return false
+		}
+		_ = conn.Close()
+		return true
+	}, 30*time.Second, 50*time.Millisecond)
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	resolvedDir, err := filepath.EvalSymlinks(filepath.Dir(socket))
+	require.NoError(t, err)
+	assert.Equal(t, resolvedDir, cwd)
+	cancel()
+	require.NoError(t, <-done)
+}
