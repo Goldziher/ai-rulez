@@ -24,6 +24,7 @@ var (
 	updateGitignore    bool
 	noSelfMCP          bool
 	recursive          bool
+	recursiveExclude   []string
 	noFetch            bool
 	profile            string
 	configDir          string
@@ -67,6 +68,8 @@ func init() {
 	GenerateCmd.Flags().Bool(flagRefreshRemote, false, refreshRemoteUsage)
 	GenerateCmd.Flags().Bool(flagAcceptFindings, false, acceptFindingsUsage)
 	specRecursive.Bool(GenerateCmd.Flags(), &recursive, "Find and process configuration files recursively")
+	GenerateCmd.Flags().StringArrayVar(&recursiveExclude, "exclude", nil,
+		"With --recursive, do not look for configuration below this directory (a glob or directory prefix relative to the working directory; repeatable)")
 	specProfile.String(GenerateCmd.Flags(), &profile, "Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE)")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
 		"Generate the slice of content a role selects instead of a profile, or a comma-separated list to compose several (the union); see 'ai-rulez roles resolve'; mutually exclusive with --profile (or AI_RULEZ_ROLE)")
