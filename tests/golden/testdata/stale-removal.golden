@@ -24,7 +24,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-.ai-rulez/.generated-manifest.local.json file 0644 5116 d1b30778bd4a9ac57796863146dedd9b714cad44bd87a367cdb5cf5dd0b19316
+.ai-rulez/.generated-manifest.local.json file 0644 5116 fd05def248a5b65f91e0f4cad97542ba2d1b13ecd36a4913102483565a3dd033
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -121,7 +121,7 @@ INFO  Generation complete files=16
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1131 07de181dd67437c62d4207a58ade45c79dbba4d31ad6a1fe1a0d818a52da0d6d
-~ .ai-rulez/.generated-manifest.local.json file 0644 2470 bd6ec24691e7057c74e401eb9a40fbded336810e6b04801a31749665130e3974
+~ .ai-rulez/.generated-manifest.local.json file 0644 2470 15bc8b85780fe150e0ab8198ad53fcc02f0c98cc3bf62b3019e1aee6363384be
 ~ .gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
 - .agents/ dir 0755
 - .agents/skills/ dir 0755
@@ -218,7 +218,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2103 b312bf9e4af85e94ca8cd7d20359a547295e605bccc8e394fd318eaa399d51a1
-.ai-rulez/.generated-manifest.local.json file 0644 5116 d1b30778bd4a9ac57796863146dedd9b714cad44bd87a367cdb5cf5dd0b19316
+.ai-rulez/.generated-manifest.local.json file 0644 5116 fd05def248a5b65f91e0f4cad97542ba2d1b13ecd36a4913102483565a3dd033
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
