@@ -563,9 +563,9 @@ authoring = true                                                  # keep the aut
 ```
 
 - **A small default surface.** `serve_skills` with `read_only` registers only `find_skill`, `load_skill`,
-  `search_skills`, `read_skill_file` and `list_skill_resources`: the full tool list is about 92 KB of schema that a
-  client sends on every request. Set `authoring = true` for the read-only authoring tools, or `tools = [...]` for an
-  exact list.
+  `search_skills`, `read_skill_file` and `list_skill_resources`, and no prompts: the full tool list is about 92 KB of
+  schema that a client sends on every request. Set `authoring = true` for the read-only authoring tools and the
+  `review-config` prompt, or `tools = [...]` for an exact list.
 - **Large repositories.** The live-reload watcher holds at most 2,048 descriptors (kqueue on macOS and the BSDs
   charges one per directory and per file in it), watching shallow directories first and warning once when the
   budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.

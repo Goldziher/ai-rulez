@@ -42,19 +42,33 @@ func (p *serveProc) names(method, key string) []string {
 
 func TestServeSkills_ReadOnlyServerDoesNotPointAtWritingToolsOrPrompts(t *testing.T) {
 	skipShort(t)
-	root := serveProject(t, serveBaseConfig, map[string]string{
-		"skills/kit/SKILL.md": serveSkill("kit", "A served kit", "kit body", "delivery: served\n"),
-	})
-	p := startServe(t, root, "--read-only", "--no-watch")
+	cases := []struct {
+		name    string
+		config  string
+		prompts []string
+	}{
+		// The default read-only skills surface registers only the skill tools, so
+		// the review prompt, which needs the authoring read tools, is not offered.
+		{"skill tools only", serveBaseConfig, nil},
+		{"with authoring", serveBaseConfig + "\n[mcp]\nauthoring = true\n", []string{"review-config"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := serveProject(t, tc.config, map[string]string{
+				"skills/kit/SKILL.md": serveSkill("kit", "A served kit", "kit body", "delivery: served\n"),
+			})
+			p := startServe(t, root, "--read-only", "--no-watch")
 
-	init := p.initializeResult()
+			init := p.initializeResult()
 
-	instructions, _ := init["instructions"].(string)
-	assert.Contains(t, instructions, "find_skill")
-	assert.NotContains(t, instructions, "CRUD")
-	assert.NotContains(t, instructions, "generate_outputs")
-	assert.NotContains(t, instructions, "--read-only", "the server is already read-only")
-	assert.Equal(t, []string{"review-config"}, p.names("prompts/list", "prompts"))
+			instructions, _ := init["instructions"].(string)
+			assert.Contains(t, instructions, "find_skill")
+			assert.NotContains(t, instructions, "CRUD")
+			assert.NotContains(t, instructions, "generate_outputs")
+			assert.NotContains(t, instructions, "--read-only", "the server is already read-only")
+			assert.Equal(t, tc.prompts, p.names("prompts/list", "prompts"))
+		})
+	}
 }
 
 func TestServeSkills_WithoutAConfigurationEveryListedResourceCanBeRead(t *testing.T) {

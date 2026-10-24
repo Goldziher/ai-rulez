@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestOpenDaemonLog_CreatesAPrivateLogAndRestartsAnOversizedOne(t *testing.T) {
@@ -46,7 +48,7 @@ func TestOpenDaemonLog_RefusesUnsafeLocations(t *testing.T) {
 			require.NoError(t, os.MkdirAll(dir, 0o700))
 			target := filepath.Join(t.TempDir(), "victim")
 			require.NoError(t, os.WriteFile(target, nil, 0o600))
-			require.NoError(t, os.Symlink(target, filepath.Join(dir, "daemon.log")))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(dir, "daemon.log"))
 			return filepath.Join(dir, daemonSocketName)
 		}},
 		{"a directory open to others", func(t *testing.T) string {
