@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.6.3] - 2026-10-24
+
 ### Added
 
 - **`recursive_exclude` and `generate --recursive --exclude`.** `generate --recursive` (and `validate --recursive`)
@@ -31,8 +33,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   instead of the null device ([#481](https://github.com/Goldziher/ai-rulez/issues/481)).
 - **A read-only skills server registers only the skill tools by default.** `mcp --serve-skills` with `read_only`
   registered 43 tools, about 92 KB of schema sent on every request. It now registers `find_skill`, `load_skill`,
-  `search_skills`, `read_skill_file` and `list_skill_resources` (a few KB); `[mcp] authoring = true` restores the full
-  read-only set and `tools = [...]` still names the list explicitly
+  `search_skills`, `read_skill_file` and `list_skill_resources` (a few KB) and no prompts; `[mcp] authoring = true`
+  restores the full read-only set and the `review-config` prompt, and `tools = [...]` still names the list explicitly
   ([#482](https://github.com/Goldziher/ai-rulez/issues/482)).
 - **A long home directory no longer silently disables the daemon.** When the socket path under the cache is too long
   (104 bytes on Linux, 100 on macOS and the BSDs, with a margin), the socket moves to
