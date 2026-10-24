@@ -22,7 +22,7 @@ func daemonSupported() bool { return true }
 // replacing a stale one. It returns errDaemonAlreadyRunning when a live daemon
 // owns the socket, so the loser of a start race exits quietly.
 func listenDaemon(path string) (net.Listener, error) {
-	if err := ensureSocketDir(filepath.Dir(path)); err != nil {
+	if err := ensureDaemonDir(path); err != nil {
 		return nil, err
 	}
 	if info, err := os.Lstat(path); err == nil {
@@ -66,6 +66,43 @@ func dialDaemon(path string) (net.Conn, error) {
 		return nil, errDaemonMissing
 	}
 	return conn, nil
+}
+
+// ensureDaemonDir prepares the private directory that holds socket. A socket
+// placed under the shared runtime or temp directory (shortSocketName) also needs
+// its per-user parent private: another user who created that parent first could
+// otherwise replace the directory or plant links in it.
+func ensureDaemonDir(socket string) error {
+	dir := filepath.Dir(socket)
+	if filepath.Base(socket) == shortSocketName {
+		if err := ensureSocketDir(filepath.Dir(dir)); err != nil {
+			return err
+		}
+	}
+	return ensureSocketDir(dir)
+}
+
+// maxDaemonLogBytes is the size past which a new daemon starts the log afresh.
+const maxDaemonLogBytes = 1 << 20
+
+// OpenDaemonLog opens daemon.log in the socket's private directory, for the
+// daemon's stderr. It returns nil (stderr stays on the null device) when the
+// directory is not private to this user or the log cannot be opened, and never
+// follows a link at the log's path.
+func OpenDaemonLog(socket string) *os.File {
+	if ensureDaemonDir(socket) != nil {
+		return nil
+	}
+	path := filepath.Join(filepath.Dir(socket), "daemon.log")
+	flags := os.O_WRONLY | os.O_CREATE | os.O_APPEND | syscall.O_NOFOLLOW
+	if info, err := os.Lstat(path); err == nil && info.Size() > maxDaemonLogBytes {
+		flags |= os.O_TRUNC
+	}
+	f, err := os.OpenFile(path, flags, 0o600) //nolint:gosec // a fixed name in the daemon's private directory
+	if err != nil {
+		return nil
+	}
+	return f
 }
 
 // ensureSocketDir creates the socket's directory 0700 and refuses one group or

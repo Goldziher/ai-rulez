@@ -100,6 +100,10 @@ type DaemonOptions struct {
 	IdleTimeout time.Duration
 	// SocketPath overrides the socket derived from the setup (tests).
 	SocketPath string
+	// Chdir moves the process into the socket's private directory before the
+	// daemon builds, so a daemon that outlives its client does not keep the
+	// checkout as its working directory. nil stays put; the CLI passes os.Chdir.
+	Chdir func(dir string) error
 }
 
 // ProxyOptions configures ServeViaDaemon.
@@ -193,9 +197,8 @@ func StartDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) (*Daem
 // elapsed with no client, or ctx ended. A start that lost the race to another
 // daemon returns at once, so the spawned child exits cleanly.
 func RunDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) error {
-	st.pinWorkDir()
-	// The daemon outlives its client, so it must not keep the checkout (often a
-	// throwaway worktree) as its working directory, not even while it builds.
+	// The socket is derived before the paths are pinned: the derived identity
+	// hashes them as the proxy saw them.
 	if opts.SocketPath == "" {
 		path, err := st.daemonSocketPath()
 		if err != nil {
@@ -203,12 +206,15 @@ func RunDaemon(ctx context.Context, st *ServeSetup, opts DaemonOptions) error {
 		}
 		opts.SocketPath = path
 	}
-	if dir := filepath.Dir(opts.SocketPath); os.MkdirAll(dir, 0o700) == nil {
-		if err := os.Chdir(dir); err != nil {
+	st.pinWorkDir()
+	// The daemon outlives its client, so it must not keep the checkout (often a
+	// throwaway worktree) as its working directory, not even while it builds.
+	if opts.Chdir != nil && ensureDaemonDir(opts.SocketPath) == nil {
+		if err := opts.Chdir(filepath.Dir(opts.SocketPath)); err != nil {
 			logger.Or(nil).Warn("MCP daemon: could not leave the repository directory", "error", err.Error())
 		}
 	}
-	pruneStaleDaemonDirsBeside(opts.SocketPath)
+	pruneStaleDaemonDirsBeside(opts.SocketPath, st.Clock.Now())
 	d, err := StartDaemon(ctx, st, opts)
 	if err != nil {
 		if errors.Is(err, errDaemonAlreadyRunning) {
@@ -389,7 +395,7 @@ func (st *ServeSetup) daemonSocketPath() (string, error) {
 // shortSocketBase is where a socket goes when the cache path is too long:
 // XDG_RUNTIME_DIR when set (a per-user 0700 directory), else the temp directory.
 func shortSocketBase() string {
-	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+	if dir := ambient.Getenv(nil, "XDG_RUNTIME_DIR"); dir != "" {
 		return dir
 	}
 	return os.TempDir()

@@ -13,10 +13,10 @@ import (
 const staleDaemonDirAge = 7 * 24 * time.Hour
 
 // pruneStaleDaemonDirsBeside prunes the siblings of the daemon directory that
-// holds socket.
-func pruneStaleDaemonDirsBeside(socket string) {
+// holds socket, judging their age at now.
+func pruneStaleDaemonDirsBeside(socket string, now time.Time) {
 	dir := filepath.Dir(socket)
-	pruneStaleDaemonDirs(filepath.Dir(dir), dir, staleDaemonDirAge, time.Now())
+	pruneStaleDaemonDirs(filepath.Dir(dir), dir, staleDaemonDirAge, now)
 }
 
 // pruneStaleDaemonDirs removes the daemon directories beside keep that nothing

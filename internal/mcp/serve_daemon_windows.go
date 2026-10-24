@@ -17,3 +17,7 @@ func listenDaemon(string) (net.Listener, error) { return nil, errDaemonUnsupport
 // dialDaemon is never reached on Windows; it reports no daemon so a caller falls
 // back in-process.
 func dialDaemon(string) (net.Conn, error) { return nil, errDaemonMissing }
+
+// ensureDaemonDir is never reached on Windows; it refuses so no directory is
+// prepared for a daemon that cannot run.
+func ensureDaemonDir(string) error { return errDaemonUnsupported }

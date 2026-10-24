@@ -2,4 +2,6 @@
 
 package mcp
 
-func pruneStaleDaemonDirsBeside(string) {}
+import "time"
+
+func pruneStaleDaemonDirsBeside(string, time.Time) {}

@@ -1,3 +1,5 @@
+//go:build !windows
+
 package mcp
 
 import (
@@ -6,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -42,9 +43,6 @@ func longHome(t *testing.T) string {
 // A home so long that the cache path cannot hold a socket moves the socket under
 // the temp directory instead of dropping the daemon (#483).
 func TestDaemonSocketPath_LongHomeFallsBackToTheTempDirectory(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("no unix sockets")
-	}
 	longHome(t)
 	short, err := os.MkdirTemp("", "ard-")
 	require.NoError(t, err)
@@ -67,9 +65,6 @@ func TestDaemonSocketPath_LongHomeFallsBackToTheTempDirectory(t *testing.T) {
 // When even the temp directory is too long there is no socket; the session says
 // so at warn level and serves in-process.
 func TestServeViaDaemon_WarnsWhenNoSocketCanBePlaced(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("no unix sockets")
-	}
 	longHome(t)
 	t.Setenv("XDG_RUNTIME_DIR", filepath.Join(t.TempDir(), strings.Repeat("t", 90)))
 	rec := &warnRecorder{}
@@ -86,7 +81,7 @@ func TestServeViaDaemon_WarnsWhenNoSocketCanBePlaced(t *testing.T) {
 
 // A directory under a shared temp directory that another user owns is refused.
 func TestEnsureSocketDir_RefusesADirectoryOfAnotherOwner(t *testing.T) {
-	if runtime.GOOS == "windows" || os.Getuid() == 0 {
+	if os.Getuid() == 0 {
 		t.Skip("needs a unix user other than root")
 	}
 	dir := filepath.Join(t.TempDir(), "d")
@@ -140,7 +135,7 @@ func TestRunDaemon_DoesNotKeepTheRepositoryAsItsWorkingDirectory(t *testing.T) {
 	done := make(chan error, 1)
 
 	go func() {
-		done <- RunDaemon(ctx, &ServeSetup{NoWatch: true, ServeCacheDir: t.TempDir()}, DaemonOptions{SocketPath: socket, IdleTimeout: time.Minute})
+		done <- RunDaemon(ctx, &ServeSetup{NoWatch: true, ServeCacheDir: t.TempDir()}, DaemonOptions{SocketPath: socket, IdleTimeout: time.Minute, Chdir: os.Chdir})
 	}()
 
 	require.Eventually(t, func() bool {
