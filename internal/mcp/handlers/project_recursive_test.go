@@ -57,3 +57,18 @@ func TestFindRecursiveConfigDirs_ExplicitNestedDir(t *testing.T) {
 	sort.Strings(want)
 	assert.Equal(t, want, dirs)
 }
+
+func TestFindRecursiveConfigDirs_Exclude(t *testing.T) {
+	base := t.TempDir()
+	writeRecursiveConfig(t, base, ".ai-rulez/config.toml")
+	writeRecursiveConfig(t, base, "svc/.ai-rulez/config.toml")
+	writeRecursiveConfig(t, base, "tests/fixtures/broken/.ai-rulez/config.toml")
+	writeRecursiveConfig(t, base, "gen/a/out/.ai-rulez/config.toml")
+	writeRecursiveConfig(t, base, "pkg/testdata/case/.ai-rulez/config.toml")
+
+	dirs, err := findRecursiveConfigDirs(base, "", "tests/fixtures", "gen/*/out")
+	require.NoError(t, err)
+	sort.Strings(dirs)
+
+	assert.Equal(t, []string{base, filepath.Join(base, "svc")}, dirs)
+}

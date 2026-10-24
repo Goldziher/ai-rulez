@@ -677,6 +677,7 @@ type tomlConfig struct {
 	Name                  string                       `toml:"name"`
 	Description           string                       `toml:"description"`
 	Presets               []any                        `toml:"presets"`
+	RecursiveExclude      []string                     `toml:"recursive_exclude"`
 	DefaultLayers         []string                     `toml:"default_layers"`
 	Default               string                       `toml:"default"`
 	Profiles              map[string][]string          `toml:"profiles"`
@@ -792,6 +793,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Name:                  raw.Name,
 		Description:           raw.Description,
 		Presets:               presets,
+		RecursiveExclude:      raw.RecursiveExclude,
 		DefaultLayers:         raw.DefaultLayers,
 		Default:               raw.Default,
 		Profiles:              raw.Profiles,

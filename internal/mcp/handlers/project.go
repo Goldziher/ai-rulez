@@ -441,9 +441,10 @@ func dirHasRecursiveConfig(dir string) bool {
 // of every config directory that contains a config file: `.ai-rulez/` by
 // default, the project-level `.config/ai-rulez/` convention as a fallback, and
 // any explicit configDirName. Build outputs, hidden directories, and shared
-// rule libraries (`ai-rulez/` with a root config) are pruned. Errors on
+// rule libraries (`ai-rulez/` with a root config) are pruned, and so are the
+// directories exclude names (see [config.ExcludedFromRecursion]). Errors on
 // individual entries are skipped, not propagated.
-func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
+func findRecursiveConfigDirs(absBase, configDirName string, exclude ...string) ([]string, error) {
 	// An explicit configDirName is honored exactly; only the default triggers
 	// the .config/ convention fallback.
 	useConventionFallback := configDirName == ""
@@ -482,7 +483,7 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 		if path == absBase {
 			return nil
 		}
-		return recursiveWalkDecision(path, name, configDirName)
+		return recursiveWalkDecision(absBase, path, name, configDirName, exclude)
 	})
 	return dirs, err
 }
@@ -540,8 +541,11 @@ func conventionConfigProject(dotConfigPath string) (string, bool) {
 
 // recursiveWalkDecision decides whether the walk descends into a directory
 // that is neither a config directory nor the walk root.
-func recursiveWalkDecision(path, name, configDirName string) error {
+func recursiveWalkDecision(absBase, path, name, configDirName string, exclude []string) error {
 	if name == "ai-rulez" && dirHasRecursiveConfig(path) {
+		return filepath.SkipDir
+	}
+	if rel, err := filepath.Rel(absBase, path); err == nil && config.ExcludedFromRecursion(filepath.ToSlash(rel), exclude) {
 		return filepath.SkipDir
 	}
 	// Descend through a wrapper directory (e.g. .config/) that is an
@@ -573,7 +577,12 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 	}
 
 	configDirName := request.GetString("config_dir", "")
-	dirs, err := findRecursiveConfigDirs(absBase, configDirName)
+	keys, err := config.LoadRecursiveExclude(absBase, configDirName)
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to read recursive_exclude: %w", err))
+	}
+	exclude := append(request.GetStringSlice("exclude", nil), keys...)
+	dirs, err := findRecursiveConfigDirs(absBase, configDirName, exclude...)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to walk directories: %w", err))
 	}

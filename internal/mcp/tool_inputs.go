@@ -31,16 +31,17 @@ type configSelArgs struct {
 // Project tools.
 
 type generateIn struct {
-	ConfigFile string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
-	ConfigDir  string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
-	DryRun     bool   `json:"dry_run,omitempty" jsonschema:"Preview changes without writing files"`
-	Check      bool   `json:"check,omitempty" jsonschema:"Write nothing and report the generated files that differ from what the sources render (generate --check); a difference is an error result"`
-	Offline    bool   `json:"offline,omitempty" jsonschema:"Never use the network; remote includes and installed skills come from the lock and the cache (generate --offline)"`
-	Profile    string `json:"profile,omitempty" jsonschema:"Profile to generate, or a comma-separated list to compose several (default: from config or 'default')"`
-	Role       string `json:"role,omitempty" jsonschema:"Generate the slice of content a role selects instead of a profile (see list_roles); mutually exclusive with profile"`
-	Recursive  bool   `json:"recursive,omitempty" jsonschema:"Generate for all subdirectories containing .ai-rulez/"`
-	NoLocal    bool   `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content (the teammate view)"`
-	NoSelfMCP  bool   `json:"no_self_mcp,omitempty" jsonschema:"Do not add ai-rulez's own MCP server to the generated MCP files (generate --no-self-mcp; the default is to add it)"`
+	ConfigFile string   `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir  string   `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	DryRun     bool     `json:"dry_run,omitempty" jsonschema:"Preview changes without writing files"`
+	Check      bool     `json:"check,omitempty" jsonschema:"Write nothing and report the generated files that differ from what the sources render (generate --check); a difference is an error result"`
+	Offline    bool     `json:"offline,omitempty" jsonschema:"Never use the network; remote includes and installed skills come from the lock and the cache (generate --offline)"`
+	Profile    string   `json:"profile,omitempty" jsonschema:"Profile to generate, or a comma-separated list to compose several (default: from config or 'default')"`
+	Role       string   `json:"role,omitempty" jsonschema:"Generate the slice of content a role selects instead of a profile (see list_roles); mutually exclusive with profile"`
+	Recursive  bool     `json:"recursive,omitempty" jsonschema:"Generate for all subdirectories containing .ai-rulez/"`
+	Exclude    []string `json:"exclude,omitempty" jsonschema:"With recursive: directories never searched for configuration, as globs or paths relative to the working directory (generate --exclude); adds to recursive_exclude"`
+	NoLocal    bool     `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content (the teammate view)"`
+	NoSelfMCP  bool     `json:"no_self_mcp,omitempty" jsonschema:"Do not add ai-rulez's own MCP server to the generated MCP files (generate --no-self-mcp; the default is to add it)"`
 	workDirArg
 }
 

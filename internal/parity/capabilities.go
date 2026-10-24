@@ -177,7 +177,7 @@ func buildCapabilities() []Capability {
 		{
 			ID: "generate", Kind: Paired, CLI: []string{"generate"}, Tool: "generate_outputs",
 			Flags: []FlagPair{{Flag: "profile"}, {Flag: "role"}, {Flag: "check"}, {Flag: "offline"}, {Flag: "dry-run"},
-				{Flag: "recursive"}, {Flag: "no-local"}, {Flag: "no-self-mcp"}},
+				{Flag: "recursive"}, {Flag: "exclude"}, {Flag: "no-local"}, {Flag: "no-self-mcp"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"watch", "if-configured"}, Reason: "process-bound or hook-bound: a tool call returns once"},
 				{Names: []string{"refresh-remote", "accept-findings"}, Reason: "move pins to newer remote versions and accept security findings: network pinning and trust decisions an agent must not make"},
