@@ -324,6 +324,17 @@ func (w *Watcher) translate(path string) string {
 // ones. A link that leads back to a directory already on the path being walked
 // is skipped, so cycles terminate.
 func (w *Watcher) addTree(dir string) {
+	w.mu.Lock()
+	priority := w.priority
+	w.mu.Unlock()
+	for _, d := range prioritized(w.findTree(dir), priority) {
+		w.addDir(d)
+	}
+}
+
+// findTree lists dir and the directories below it that are not ignored,
+// breadth first.
+func (w *Watcher) findTree(dir string) []string {
 	type node struct {
 		dir       string
 		ancestors []string
@@ -348,36 +359,43 @@ func (w *Watcher) addTree(dir string) {
 		}
 		ancestors := append(slices.Clone(n.ancestors), realPath)
 		for _, entry := range entries {
-			child := filepath.Join(n.dir, entry.Name())
-			isDir := entry.IsDir()
-			if !isDir && entry.Type()&fs.ModeSymlink != 0 {
-				if info, statErr := os.Stat(child); statErr == nil && info.IsDir() {
-					isDir = true
-				}
-			}
-			if isDir {
+			if child := filepath.Join(n.dir, entry.Name()); isDirOrLinkToDir(child, entry) {
 				queue = append(queue, node{dir: child, ancestors: ancestors})
 			}
 		}
 	}
-	w.mu.Lock()
-	priority := w.priority
-	w.mu.Unlock()
-	if priority != nil {
-		slices.SortStableFunc(found, func(a, b string) int {
-			pa, pb := priority(a), priority(b)
-			switch {
-			case pa == pb:
-				return 0
-			case pa:
-				return -1
-			}
-			return 1
-		})
+	return found
+}
+
+// isDirOrLinkToDir reports whether entry, found at path, is a directory or a
+// symlink to one.
+func isDirOrLinkToDir(path string, entry fs.DirEntry) bool {
+	if entry.IsDir() {
+		return true
 	}
-	for _, d := range found {
-		w.addDir(d)
+	if entry.Type()&fs.ModeSymlink == 0 {
+		return false
 	}
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+// prioritized puts the directories priority names first and keeps the order
+// otherwise (nil priority: dirs unchanged).
+func prioritized(dirs []string, priority func(dir string) bool) []string {
+	if priority == nil {
+		return dirs
+	}
+	first := make([]string, 0, len(dirs))
+	var rest []string
+	for _, d := range dirs {
+		if priority(d) {
+			first = append(first, d)
+		} else {
+			rest = append(rest, d)
+		}
+	}
+	return append(first, rest...)
 }
 
 // isIgnored applies the custom filter to the full path and DefaultIgnore to the
