@@ -121,7 +121,7 @@ func runMCPDaemon(ctx context.Context, cmd *cobra.Command, settings mcpSettings)
 		return true, err
 	}
 	if asServer {
-		return true, oops.Wrapf(mcp.RunDaemon(ctx, setup, mcp.DaemonOptions{}), "MCP: run the shared daemon")
+		return true, oops.Wrapf(mcp.RunDaemon(ctx, setup, mcp.DaemonOptions{Chdir: os.Chdir}), "MCP: run the shared daemon")
 	}
 	handled, herr := mcp.ServeViaDaemon(ctx, setup, os.Stdin, os.Stdout, mcp.ProxyOptions{StartDaemon: startDaemonProcess})
 	if handled {
