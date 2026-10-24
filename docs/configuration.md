@@ -797,23 +797,23 @@ Behavior:
   and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which
   wins.
 - **Per root**: each config root decides independently, including under `generate --recursive`.
+- The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
+- **Turning it off**: `self_server = false` (or `generate --no-self-mcp`) stops ai-rulez from owning
+  the entry but does not delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself.
+  `ai-rulez clean` likewise leaves a `.mcp.json` that holds hand-authored servers in place.
 
 ### Keeping directories out of `generate --recursive`
 
 `generate --recursive` (and `validate --recursive`) searches every directory below the working directory for
 configuration, except build output, dependency and hidden directories and `testdata`. A repository that keeps
-deliberately invalid configurations elsewhere (test fixtures, golden corpora) lists them in the root `config.toml`:
+deliberately invalid configurations elsewhere (test fixtures, golden corpora) lists them in the configuration of the
+directory the run starts from (`.ai-rulez/config.toml`, `.agents/ai-rulez.toml` or `.config/ai-rulez/config.toml`):
 
 ```toml
 recursive_exclude = ["tests/fixtures", "svc/*/gen"]   # directories or globs, relative to the project root
 ```
 
 `generate --recursive --exclude <dir>` adds to the list for one run.
-
-- The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
-- **Turning it off**: `self_server = false` (or `generate --no-self-mcp`) stops ai-rulez from owning
-  the entry but does not delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself.
-  `ai-rulez clean` likewise leaves a `.mcp.json` that holds hand-authored servers in place.
 
 ### `mcp_servers`
 

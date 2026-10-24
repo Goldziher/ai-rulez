@@ -570,13 +570,15 @@ authoring = true                                                  # keep the aut
   charges one per directory and per file in it), watching shallow directories first and warning once when the
   budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.
 - **The daemon.** It outlives its client for `daemon_idle_timeout` (15 minutes by default) and exits at once when its
-  repository is removed; it does not keep the checkout as its working directory. When the cache path is too long for a
-  unix socket, the socket goes under `$XDG_RUNTIME_DIR` or the temp directory.
+  repository is removed; it does not keep the checkout as its working directory. Its stderr goes to `daemon.log` beside
+  the socket. When the cache path is too long for a unix socket, the socket goes under `$XDG_RUNTIME_DIR` or the temp
+  directory in `ai-rulez-<uid>/`, used only when this user owns that directory and the one inside it with mode 0700.
 
-- **Skills keys without serving.** `allow`, `deny`, `daemon`, `no_watch`, `exclude` and `discover_skills` only apply
-  when skills are served (`--serve-skills` or `serve_skills = true`). A server started without serving them logs one
-  warning on stderr naming the keys that are set and ignored; the same settings as flags stop the server with
-  `requires --serve-skills`, because a key may be shared by launches that do not serve skills.
+- **Skills keys without serving.** `allow`, `deny`, `daemon`, `daemon_idle_timeout`, `authoring`, `no_watch`, `exclude`
+  and `discover_skills` only apply when skills are served (`--serve-skills` or `serve_skills = true`). A server
+  started without serving them logs one warning on stderr naming the keys that are set and ignored; the same settings
+  as flags stop the server with `requires --serve-skills`, because a key may be shared by launches that do not serve
+  skills.
 - **A flag wins.** A flag given on the command line replaces the key, including `--read-only=false` and an empty
   `--tools=`. A flag that is not given leaves the key in charge.
 - **Read at start.** The settings are read when the server starts; change them and restart the server. They are
@@ -1400,6 +1402,7 @@ Generate output files from the current configuration.
 - `profile` (optional, string): Profile to generate, or a comma-separated list to compose several (`--profile`)
 - `role` (optional, string): Generate the slice of content a role selects (`--role`); mutually exclusive with `profile`
 - `recursive` (optional, boolean): Generate for all subdirectories containing `.ai-rulez/`
+- `exclude` (optional, array of strings): With `recursive`, directories never searched for configuration, as globs or paths relative to the working directory (`--exclude`); adds to `recursive_exclude`
 - `no_local` (optional, boolean): Ignore the machine-local `config.local.*` overlay and `local/` content (the view a teammate sees)
 - `no_self_mcp` (optional, boolean): Do not add ai-rulez's own MCP server to the generated MCP files (`--no-self-mcp`; the default is to add it)
 - `working_directory` (optional, string): Directory to operate in
