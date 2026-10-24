@@ -94,7 +94,7 @@ type discoveredConfigs struct {
 // legacy config files it met, so `generate --recursive` can refuse them by name.
 func discoverConfigFiles() (discoveredConfigs, error) {
 	var found discoveredConfigs
-	if keys, err := config.LoadRecursiveExclude("."); err != nil {
+	if keys, err := config.LoadRecursiveExclude(".", targetConfigDirName()); err != nil {
 		logger.Warn("Could not read recursive_exclude; searching every directory", "error", err.Error())
 	} else {
 		recursiveExclude = append(slices.Clone(recursiveExclude), keys...)
@@ -159,20 +159,10 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *discoveredConfigs
 }
 
 // excludedFromRecursion reports whether path, relative to the working
-// directory, is or lies below a directory matching a --exclude pattern (a
-// [filepath.Match] glob such as "svc/*/gen", or a plain directory such as
-// "tests/fixtures").
+// directory, is or lies below a directory matching a --exclude or
+// recursive_exclude pattern.
 func excludedFromRecursion(path string) bool {
-	path = filepath.ToSlash(path)
-	for _, pattern := range recursiveExclude {
-		pattern = strings.TrimSuffix(filepath.ToSlash(pattern), "/")
-		for dir := path; dir != "." && dir != "/"; dir = filepath.ToSlash(filepath.Dir(dir)) {
-			if ok, _ := filepath.Match(pattern, dir); ok {
-				return true
-			}
-		}
-	}
-	return false
+	return config.ExcludedFromRecursion(filepath.ToSlash(path), recursiveExclude)
 }
 
 // recordedConfigLocation records the configuration that the directory at path
