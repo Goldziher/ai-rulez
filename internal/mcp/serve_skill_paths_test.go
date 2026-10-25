@@ -15,15 +15,15 @@ func pathGatedProject(t *testing.T) string {
 	t.Helper()
 	root := project(t, discoverConfig, nil)
 	for rel, body := range map[string]string{
-		".claude/skills/kafka-conventions/SKILL.md": pathGatedSkill("kafka-conventions", "  - \"armis/services/**/kafka*.py\"\n"),
-		".claude/skills/py-conventions/SKILL.md":    pathGatedSkill("py-conventions", "  - \"**/*.py\"\n"),
-		".claude/skills/va-conventions/SKILL.md":    pathGatedSkill("va-conventions", "  - \"products/va/**\"\n"),
-		".claude/skills/plain-conventions/SKILL.md": "---\nname: plain-conventions\ndescription: Kafka consumer conventions without paths\n---\n\n# plain\n",
-		"products/va/.claude/skills/local/SKILL.md": pathGatedSkill("local", "  - \"src/**\"\n"),
+		".claude/skills/kafka-conventions/SKILL.md":  pathGatedSkill("kafka-conventions", "  - \"backend/services/**/kafka*.py\"\n"),
+		".claude/skills/py-conventions/SKILL.md":     pathGatedSkill("py-conventions", "  - \"**/*.py\"\n"),
+		".claude/skills/web-conventions/SKILL.md":    pathGatedSkill("web-conventions", "  - \"products/web/**\"\n"),
+		".claude/skills/plain-conventions/SKILL.md":  "---\nname: plain-conventions\ndescription: Kafka consumer conventions without paths\n---\n\n# plain\n",
+		"products/web/.claude/skills/local/SKILL.md": pathGatedSkill("local", "  - \"src/**\"\n"),
 	} {
 		writeFile(t, root, rel, body)
 	}
-	writeFile(t, root, "products/va/src/x.py", "x = 1\n")
+	writeFile(t, root, "products/web/src/x.py", "x = 1\n")
 	return root
 }
 
@@ -33,13 +33,13 @@ func TestFindSkill_PathGatedSkillsFollowTheQueryPath(t *testing.T) {
 		path string
 		want []string
 	}{
-		{name: "a file the glob names", path: "armis/services/orders/kafka_consumer.py", want: []string{"kafka-conventions", "py-conventions", "plain-conventions"}},
-		{name: "a file in another product", path: "products/va/src/x.py", want: []string{"py-conventions", "va-conventions", "plain-conventions", "local"}},
-		{name: "a product directory drops other products' gated skills", path: "products/va", want: []string{"py-conventions", "va-conventions", "plain-conventions", "local"}},
-		{name: "a directory the glob reaches into", path: "armis/services", want: []string{"kafka-conventions", "py-conventions", "plain-conventions"}},
+		{name: "a file the glob names", path: "backend/services/orders/kafka_consumer.py", want: []string{"kafka-conventions", "py-conventions", "plain-conventions"}},
+		{name: "a file in another product", path: "products/web/src/x.py", want: []string{"py-conventions", "web-conventions", "plain-conventions", "local"}},
+		{name: "a product directory drops other products' gated skills", path: "products/web", want: []string{"py-conventions", "web-conventions", "plain-conventions", "local"}},
+		{name: "a directory the glob reaches into", path: "backend/services", want: []string{"kafka-conventions", "py-conventions", "plain-conventions"}},
 		{name: "a directory no gated skill reaches", path: "docs", want: []string{"py-conventions", "plain-conventions"}},
 		{name: "a file only unrestricted skills match", path: "docs/readme.md", want: []string{"plain-conventions"}},
-		{name: "a nested skill's globs are relative to its scope", path: "products/va/other", want: []string{"py-conventions", "va-conventions", "plain-conventions"}},
+		{name: "a nested skill's globs are relative to its scope", path: "products/web/other", want: []string{"py-conventions", "web-conventions", "plain-conventions"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestFindSkill_PathGatedSkillsAreUnchangedWithoutAPathFilter(t *testing.T) {
 
 			// Assert
 			require.False(t, isErr, "%v", out)
-			assert.Subset(t, resultNames(t, out), []string{"kafka-conventions", "py-conventions", "va-conventions", "plain-conventions"})
+			assert.Subset(t, resultNames(t, out), []string{"kafka-conventions", "py-conventions", "web-conventions", "plain-conventions"})
 		})
 	}
 }
