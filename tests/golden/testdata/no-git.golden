@@ -24,7 +24,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-.ai-rulez/.generated-manifest.local.json file 0644 5116 fd05def248a5b65f91e0f4cad97542ba2d1b13ecd36a4913102483565a3dd033
+.ai-rulez/.generated-manifest.local.json file 0644 5116 7da05a159b794ed233597e89aeaa44c2d7ceb6fadc237d5efb1bf38e6e290c35
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -125,7 +125,7 @@ INFO  Generated files are up to date roots=1
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-.ai-rulez/.generated-manifest.local.json file 0644 5116 fd05def248a5b65f91e0f4cad97542ba2d1b13ecd36a4913102483565a3dd033
+.ai-rulez/.generated-manifest.local.json file 0644 5116 7da05a159b794ed233597e89aeaa44c2d7ceb6fadc237d5efb1bf38e6e290c35
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
