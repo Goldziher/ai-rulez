@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-10-25
+
 ### Added
 
 - **`AR9R2 served-dmi-unreachable`** warns when a `delivery: served` skill sets `disable-model-invocation: true`: a

@@ -20,7 +20,7 @@ These are two independent choices:
   The publish workflow moves it to the commit of each successfully published stable v5 release,
   after GitHub, npm, PyPI and Homebrew publication. Release candidates never move it, and rerunning
   an older release cannot move it backward.
-- `with: version: 5.6.3` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, or `latest`
+- `with: version: 5.7.0` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, or `latest`
   (the default). `version: v5` is unsupported: the floating tag is an action ref, not a binary release.
   Omitting `version` downloads the latest public GitHub release, even when the action ref is pinned.
 
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.6.3
+          version: 5.7.0
       - run: ai-rulez generate --check
       - run: ai-rulez validate --strict
       - run: ai-rulez lock --check
@@ -98,7 +98,7 @@ steps:
       fetch-depth: 2
   - uses: Goldziher/ai-rulez@v5
     with:
-      version: 5.6.3
+      version: 5.7.0
       llm-provider: openai
       llm-model: gpt-4o-mini
       llm-api-key-env: OPENAI_API_KEY
@@ -124,7 +124,7 @@ diagnostic requires a project; `llm estimate` can run without one.
 ```yaml
 - uses: Goldziher/ai-rulez@v5
   with:
-    version: 5.6.3
+    version: 5.7.0
 - name: Inspect LLM configuration without a request
   env:
     AI_RULEZ_LLM_PROVIDER: openai

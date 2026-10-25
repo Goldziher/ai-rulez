@@ -344,7 +344,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14128 797777814b2df77186849d0a58d71426c4c291c04eda09d439c227524b3fe1c2
+.ai-rulez/.generated-manifest.local.json file 0644 14128 eceb7c2dee886c9aaabd1d7de020c3c43ee1d2dcc8d6b2a5f197ee918392dafe
 >>>>
 {
   "version": "1",
@@ -464,8 +464,8 @@ echo review
           "preToolUse"
         ],
         "elementSums": [
-          "82d006187cb3664991aeb27ef11c4372e6f8e25afeb7176fb699d80a5dc8c6cd",
-          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
+          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
+          "c2d9853fa8c5fb519ef210c4e2732e8bcd4606e8860007ccac3864c1c2ea2e9b"
         ]
       },
       {
@@ -500,8 +500,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "4355ba3fd1ba6f5ccc68104f59e551ea140c7eda3c9633e75a31653185bceaa5",
-          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
+          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b",
+          "fe7bc27d4242e8eb17087cd183c2f5279a45d70ca55421d6ba0f0955f7584677"
         ]
       },
       {
@@ -787,9 +787,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "b6f581909bd4384cab6a0e47041463706071ecd84968152e284cfda23b45c20e",
+    ".cursor/hooks.json": "8f6f16741eee7ea238b28d354ca71840e2369c87e5d11e095f2464192dddef8b",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".factory/hooks.json": "0c2c03c22a2c29074b5050a22cb3e52580d23f3ba2aa8eb4ea5f96657b094e5f",
+    ".factory/hooks.json": "7080ca9dd1dc063bc4a05fdc2e36f22f5db1505af52321fffcc6e17fde45047f",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
