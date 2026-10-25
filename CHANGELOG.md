@@ -40,6 +40,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`validate` no longer reports a valid `builtins` list as invalid beside another error.** When a configuration
   failed the schema for any reason, such as an unknown key, the rejected boolean branch of `builtins` (boolean or
   list) was reported too, as `builtins.type: Value is array but should be boolean`. Only the real errors are reported.
+- **MCP tools accept a call without arguments.** A client that sent `arguments: null` (or none) to a tool of a server
+  confined to its project root, such as `list_skills`, made the tool panic. Absent arguments now mean no arguments.
+- **`resolve_role` answers for a role that exists.** Its output schema declared `role` a string while the tool
+  returns the role object, so every successful call failed the schema check of the MCP SDK.
 
 ## [5.6.3] - 2026-10-24
 
