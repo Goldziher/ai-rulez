@@ -42,6 +42,28 @@ func CompileGlob(pattern string) (Glob, error) {
 	return Glob{re: re}, nil
 }
 
+// Alternatives returns the patterns a glob expands to: its brace groups
+// expanded, and each pattern that has no slash prefixed with "**/", which is how
+// Match applies it at any depth. A caller that needs another kind of matching of
+// the same patterns, such as "could match below a directory", starts from these.
+func Alternatives(pattern string) ([]string, error) {
+	p := strings.TrimPrefix(strings.TrimSpace(pattern), "./")
+	p = strings.TrimPrefix(p, "/")
+	if strings.HasSuffix(p, "/") {
+		p += "**"
+	}
+	alts, err := expandBraces(p, MaxBraceAlternatives)
+	if err != nil {
+		return nil, err
+	}
+	for i, a := range alts {
+		if !strings.Contains(a, "/") {
+			alts[i] = "**/" + a
+		}
+	}
+	return alts, nil
+}
+
 // Match reports whether the slash-separated path matches.
 func (g Glob) Match(p string) bool { return g.re.MatchString(p) }
 

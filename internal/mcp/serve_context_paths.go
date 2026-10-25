@@ -3,6 +3,8 @@ package mcp
 import (
 	"os"
 	"path"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/judge"
@@ -38,7 +40,7 @@ func appliesTo(it *repoindex.Item, query string, asDir bool) bool {
 			continue
 		}
 		usable = true
-		if globReaches(g, rel, asDir) {
+		if globReaches(judgeReach(g), rel, asDir) {
 			return true
 		}
 	}
@@ -55,29 +57,55 @@ func appliesTo(it *repoindex.Item, query string, asDir bool) bool {
 	return !usable
 }
 
-// globReaches reports whether a glob matches a file, or could match a path
-// below a directory.
-func globReaches(g judge.Glob, rel string, asDir bool) bool {
-	if asDir {
-		return g.MayMatchBelow(rel)
-	}
-	return g.Match(rel)
+// reachGlob is a glob as an item's restriction uses it: whether it matches a
+// file, and whether it could match a path below a directory.
+type reachGlob struct {
+	match, below func(string) bool
 }
 
-// cursorGlob compiles a Cursor `globs:` entry, which matches at any depth when
-// it has no slash. A negation or a malformed pattern is not usable.
-func cursorGlob(pattern string) (judge.Glob, bool) {
+func judgeReach(g judge.Glob) reachGlob { return reachGlob{match: g.Match, below: g.MayMatchBelow} }
+
+// globReaches reports whether a glob matches a file, or could match a path
+// below a directory.
+func globReaches(g reachGlob, rel string, asDir bool) bool {
+	if asDir {
+		return g.below(rel)
+	}
+	return g.match(rel)
+}
+
+// bracketClass is a [...] run, which Cursor's matcher (vspec) reads literally.
+var bracketClass = regexp.MustCompile(`\[[^\]]*\]`)
+
+// cursorGlob compiles a Cursor `globs:` entry the way the rest of ai-rulez reads
+// it (vspec): braces alternate, an alternative without a slash matches at any
+// depth, and brackets are literal characters. A file is matched exactly so. For a
+// directory, whether a path below could match, each alternative is compared with
+// the judge matcher, with a bracket run widened to `*` so a literal bracket never
+// hides an item (the answer errs on the side of keeping it). A negation or a
+// malformed pattern is not usable.
+func cursorGlob(pattern string) (reachGlob, bool) {
 	p := strings.TrimSpace(pattern)
 	if strings.HasPrefix(p, "!") {
-		return judge.Glob{}, false
+		return reachGlob{}, false
 	}
-	if _, err := vspec.CompileGlob(p); err != nil {
-		return judge.Glob{}, false
+	file, err := vspec.CompileGlob(p)
+	if err != nil {
+		return reachGlob{}, false
 	}
-	if !strings.Contains(p, "/") {
-		p = "**/" + p
+	alts, err := vspec.Alternatives(p)
+	if err != nil {
+		return reachGlob{}, false
 	}
-	return judge.CompileGlob(p)
+	var below []judge.Glob
+	for _, alt := range alts {
+		if g, ok := judge.CompileGlob(bracketClass.ReplaceAllString(alt, "*")); ok {
+			below = append(below, g)
+		}
+	}
+	return reachGlob{match: file.Match, below: func(dir string) bool {
+		return slices.ContainsFunc(below, func(g judge.Glob) bool { return g.MayMatchBelow(dir) })
+	}}, true
 }
 
 // isDir reports whether a query path is a directory: what is on disk decides,
