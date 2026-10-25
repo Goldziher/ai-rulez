@@ -168,8 +168,8 @@ type rolesOut struct {
 }
 
 type resolveRoleOut struct {
-	Role  string `json:"role,omitempty" jsonschema:"Role name"`
-	Items []any  `json:"items,omitempty" jsonschema:"Items the role keeps, capped at limit"`
+	Role  any   `json:"role,omitempty" jsonschema:"The role: name, description and selectors"`
+	Items []any `json:"items,omitempty" jsonschema:"Items the role keeps, capped at limit"`
 }
 
 type lockStatusOut struct {
