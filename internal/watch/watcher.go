@@ -323,12 +323,30 @@ func (w *Watcher) translate(path string) string {
 // directories first, so a descriptor budget runs out in the deepest ordinary
 // ones. A link that leads back to a directory already on the path being walked
 // is skipped, so cycles terminate.
+//
+// The tree is listed before its directories are watched, so a directory created
+// in between is neither listed nor reported (the backends announce only entries
+// created after the watch). The tree is therefore listed again once the watches
+// are in place, until a listing finds no directory the previous ones missed.
 func (w *Watcher) addTree(dir string) {
 	w.mu.Lock()
 	priority := w.priority
 	w.mu.Unlock()
-	for _, d := range prioritized(w.findTree(dir), priority) {
-		w.addDir(d)
+	listed := map[string]bool{}
+	for {
+		var fresh []string
+		for _, d := range w.findTree(dir) {
+			if !listed[d] {
+				listed[d] = true
+				fresh = append(fresh, d)
+			}
+		}
+		if len(fresh) == 0 {
+			return
+		}
+		for _, d := range prioritized(fresh, priority) {
+			w.addDir(d)
+		}
 	}
 }
 

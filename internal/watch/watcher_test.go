@@ -2,6 +2,7 @@ package watch
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -473,12 +474,40 @@ func TestWatcher_UnwatchReleasesTheBudget(t *testing.T) {
 	}
 }
 
+func TestWatcher_DirectoryCreatedWhileTheTreeIsAttachedIsWatched(t *testing.T) {
+	// Arrange: the directory appears after the tree was listed but before the
+	// root's watch is in place, so no backend reports it.
+	root := resolved(t, t.TempDir())
+	late := filepath.Join(root, "late")
+	w, err := NewWatcher(nil, func(string) {}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = w.Close() })
+	w.add = func(dir string) error {
+		if dir == root {
+			return os.MkdirAll(late, 0o755)
+		}
+		return nil
+	}
+
+	// Act
+	w.Add(Target{Path: root})
+
+	// Assert
+	if !w.isWatched(late) {
+		t.Error("a directory created between listing the tree and watching it was not watched")
+	}
+}
+
 func TestWatcher_PriorityDirectoriesAreWatchedBeforeTheBudgetRunsOut(t *testing.T) {
 	// Arrange: a deep convention directory among many shallower ordinary ones.
 	root := resolved(t, t.TempDir())
 	mustWrite(t, filepath.Join(root, "a", "b", "c", "d", ".claude", "skills", "x", "SKILL.md"), "x")
 	for i := range 30 {
-		mustWrite(t, filepath.Join(root, string(rune('a'+i%26))+string(rune('a'+i)), "f.txt"), "x")
+		// Numbered, not 'a'+i: that runs past 'z' into '|', which Windows
+		// rejects in a file name.
+		mustWrite(t, filepath.Join(root, fmt.Sprintf("dir%02d", i), "f.txt"), "x")
 	}
 	w, err := NewWatcher(nil, func(string) {}, nil)
 	if err != nil {
