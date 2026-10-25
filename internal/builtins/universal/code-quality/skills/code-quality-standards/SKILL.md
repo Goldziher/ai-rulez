@@ -1,6 +1,6 @@
 ---
 name: code-quality-standards
-description: "Concrete code-quality thresholds and anti-patterns: 120-char lines, max 20 cyclomatic complexity, max 4 nesting levels, max 50 lines per function, no magic numbers, no global state, composition over inheritance, no bare except, rule-of-three before extracting an abstraction, delete dead code instead of commenting it out, scope suppressions narrowly, and tag TODOs with a tracker key. Load when writing a new function or module, adding a lint suppression or TODO, reviewing a diff for quality, refactoring a long or deeply nested function, or deciding whether to extract shared logic."
+description: "Code-quality limits: 120-char lines, complexity 20, nesting 4, 50-line functions, no magic numbers or global state, rule of three, delete dead code, narrow suppressions, tracked TODOs. Use when writing, reviewing or refactoring code."
 ---
 
 ## Readability

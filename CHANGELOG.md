@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Changed
+
+- **Builtin skill descriptions fit the 250-character listing limit.** 22 builtin skills (`code-quality-standards`,
+  `testing-conventions`, `task-runner`, the binding skills and others) had descriptions of up to 585 characters,
+  listed in every session; harnesses that budget the skill listing truncated them and lost the trigger words. Each is
+  now at most 250 characters, leads with what the skill covers and ends with when to use it. Skill bodies are unchanged.
+
 ## [5.7.0] - 2026-10-25
 
 ### Added

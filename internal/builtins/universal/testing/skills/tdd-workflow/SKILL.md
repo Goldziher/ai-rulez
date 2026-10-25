@@ -1,6 +1,6 @@
 ---
 name: tdd-workflow
-description: "Test-driven development discipline: RED (failing test) → GREEN (minimal code) → REFACTOR, delete-and-restart if production code was written first, and the test-type taxonomy (integration for API surfaces, unit for business logic, property for edge-case-heavy code). Load before starting a feature or bug fix, when reproducing a reported bug, or when deciding which kind of test a change needs."
+description: "Test-driven workflow: red, green, refactor; restart if code came first; reproduce a bug as a failing test; integration, unit or property test by change type. Use before a feature or bug fix or when choosing a test type."
 ---
 
 - Write the test before the code. Update the test when changing behaviour.

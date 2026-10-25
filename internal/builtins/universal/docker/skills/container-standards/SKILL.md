@@ -1,6 +1,6 @@
 ---
 name: container-standards
-description: "Container build and runtime standards: multi-stage builds into a minimal runtime (Alpine/Distroless/Scratch), manifest-before-source layer ordering for cache hits, non-root user, vulnerability scan failing on HIGH/CRITICAL, no secrets in the image, tini/dumb-init as PID 1, HEALTHCHECK, and semver+SHA tags that are never reused. Load when writing or reviewing a Dockerfile, docker-compose file, container build pipeline, or image tagging scheme."
+description: "Container build and runtime: multi-stage builds, minimal base image, cache-friendly layers, non-root user, image scanning, no baked secrets, init process, healthcheck, tagging. Use when writing a Dockerfile or image pipeline."
 ---
 
 - **Multi-stage builds**: full toolchain builder → minimal runtime (Alpine/Distroless/Scratch).

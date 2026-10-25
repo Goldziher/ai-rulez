@@ -15,21 +15,21 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/code-quality-standards/ dir 0755
-.agents/skills/code-quality-standards/SKILL.md file 0644 2682 1b8db43e0d91399fdf50f036c7616b9011c12249beb3bb1d17d0d75b7c2107e7
+.agents/skills/code-quality-standards/SKILL.md file 0644 2330 573b43ddd2b2aae8a1c45d4fe4c7ac31ce589f34c32e1ff0a8b9271993610fa3
 .agents/skills/config-placement/ dir 0755
-.agents/skills/config-placement/SKILL.md file 0644 1188 10121ef7e45388b25591041387efe26b326fbd032c12e6b12f470e4fffd33757
+.agents/skills/config-placement/SKILL.md file 0644 1158 334c815a80a7a02236150429125eb672055c9d2e59a390040a3ed0fa213c9c1d
 .agents/skills/dependency-awareness/ dir 0755
-.agents/skills/dependency-awareness/SKILL.md file 0644 1087 b12dbcf124b6ac6cad2b078a97dc31b1ac61bcdac1aed10e6635beba3df60dbc
+.agents/skills/dependency-awareness/SKILL.md file 0644 963 5e46bcce6256cd289bd836a98368cf7599fbf8b4572db14c18f2c4ebc136c7b9
 .agents/skills/deployer/ dir 0755
 .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/error-handling/ dir 0755
-.agents/skills/error-handling/SKILL.md file 0644 842 ab40b310487cdad0a39985ca157be167e2b27a6ad9cff398842b1104fbda2ddb
+.agents/skills/error-handling/SKILL.md file 0644 677 a613a79f496d2be8ee787b374253165f381675039d8d9d588db8c470df1943c9
 .agents/skills/go-conventions/ dir 0755
 .agents/skills/go-conventions/SKILL.md file 0644 1779 d8123088e73e32ece7baff425eb1f71deb27e944fc3f9c652dc4eade996bf338
 .agents/skills/incremental-approach/ dir 0755
-.agents/skills/incremental-approach/SKILL.md file 0644 938 1d1a8b7eaf4e489e2c9636dbefb84ab37d2d1d0bd03a5e5e9e0f0784e64a3309
+.agents/skills/incremental-approach/SKILL.md file 0644 754 8f3f5dffcfe4f3d1a45a950b64cafc109a9be538456fd0144edeeeb757d9df24
 .agents/skills/owasp-quick-reference/ dir 0755
-.agents/skills/owasp-quick-reference/SKILL.md file 0644 1406 77b3240ec2ad38a7a5886e792c28926308769f539bba47c6ea8492a573fa91fa
+.agents/skills/owasp-quick-reference/SKILL.md file 0644 1294 6a2bae3381033c04ff673ad831dbf87fb37b1a4afc924f717ad9d65975b59241
 .agents/skills/reviewer/ dir 0755
 .agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
@@ -39,11 +39,11 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/skill-authoring/ dir 0755
 .agents/skills/skill-authoring/SKILL.md file 0644 1116 83a29cdc224f00cb9bd8e04addc74392f77f61339e3a08fabc43f19aee18e8db
 .agents/skills/task-runner/ dir 0755
-.agents/skills/task-runner/SKILL.md file 0644 882 cbf90efae18ae23b120aaa7ac6ceb699fb107c932ea5365e94b6183f57faf8a1
+.agents/skills/task-runner/SKILL.md file 0644 738 52ea5a7e34fb700a0e421004883d2632baa482672d46062f4d5b1d76af7107bd
 .agents/skills/tdd-workflow/ dir 0755
-.agents/skills/tdd-workflow/SKILL.md file 0644 1181 f0bd0da2d867dc35690945b9699e4b51119323730e7c3e2bf83cfd47b569752c
+.agents/skills/tdd-workflow/SKILL.md file 0644 1003 ea2f6f7ce0ba3fbfbdd07f8c5be87efd0cbb5a0892c1cbcae67661160acff2b7
 .agents/skills/testing-conventions/ dir 0755
-.agents/skills/testing-conventions/SKILL.md file 0644 2903 30821ae66dc2f73a887657a4af1455365b14a9b254f115b27abe4977144a3b77
+.agents/skills/testing-conventions/SKILL.md file 0644 2604 604681518bb37a7de34a0072ee02652b1cdb74aabd64761fcedf85041e91cfa1
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5400 beede15ba14c6c7531e000253e0862740a4f969ec468d76d701e2db04bc9f6f2
 .ai-rulez/.generated-manifest.local.json file 0644 5116 7da05a159b794ed233597e89aeaa44c2d7ceb6fadc237d5efb1bf38e6e290c35
@@ -114,21 +114,21 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
 .claude/skills/code-quality-standards/ dir 0755
-.claude/skills/code-quality-standards/SKILL.md file 0644 2682 31ba856bd71483c045a3fbcb5700588cbb9b88557fa554ff5e8bae45fbd491d6
+.claude/skills/code-quality-standards/SKILL.md file 0644 2330 58f8904f813ba5166e8d53dd99abd109ec52ca39531a29bfd69fe4a553d5f623
 .claude/skills/config-placement/ dir 0755
-.claude/skills/config-placement/SKILL.md file 0644 1186 6c85a47a4a8fc81c64d0ffa3d45486bfb17afe3ed632d3ee16b928a11a17f307
+.claude/skills/config-placement/SKILL.md file 0644 1158 3a627ceb0a3f6d38a53c8ca82fb8500c049f5fe79d6fdcf9a825b734bc17b177
 .claude/skills/dependency-awareness/ dir 0755
-.claude/skills/dependency-awareness/SKILL.md file 0644 1085 884fa149a4740e5bfa192b7525e1c6ee6dfc0cfdec584d3893ee48586f1020c5
+.claude/skills/dependency-awareness/SKILL.md file 0644 963 dd5aa189754ee0546ac847e304d92d453f0ece3da930d415e255ddb9f4a6d540
 .claude/skills/deployer/ dir 0755
 .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .claude/skills/error-handling/ dir 0755
-.claude/skills/error-handling/SKILL.md file 0644 841 9c8db1c504d64b6d5982c6800a7385b5929a7f12d000c8d7e9c53f1547b02f5e
+.claude/skills/error-handling/SKILL.md file 0644 677 9c95d2dde43358c96718b8464f8fa2d9de89f5a9efc482abdc2416c8988c1cef
 .claude/skills/go-conventions/ dir 0755
 .claude/skills/go-conventions/SKILL.md file 0644 1777 98c2db93b9d796f98e990b17ac37f2f2453a5b5fbdf6663eb80d953771f9b177
 .claude/skills/incremental-approach/ dir 0755
-.claude/skills/incremental-approach/SKILL.md file 0644 938 501dce39ad29ac91f3fb400cf725498d26d3db2726fb4a1775e53f47e5abf42a
+.claude/skills/incremental-approach/SKILL.md file 0644 754 9ec3bc395607f0e3ee3f4859f7511352918308975709180d117f55a26c3e1664
 .claude/skills/owasp-quick-reference/ dir 0755
-.claude/skills/owasp-quick-reference/SKILL.md file 0644 1406 e2db0a69204805129a50ee2f0afc356bc7c08b318681eda3acc36eec716c1b65
+.claude/skills/owasp-quick-reference/SKILL.md file 0644 1294 def823ead997bb0e2ee56532b45f706cc601187ad34fb71c35741d970a6e88e3
 .claude/skills/reviewer/ dir 0755
 .claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .claude/skills/reviewer/references/ dir 0755
@@ -140,11 +140,11 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/skill-authoring/ dir 0755
 .claude/skills/skill-authoring/SKILL.md file 0644 1116 32631db944a74b495cc7eb7f0658ffd01e76dabc02f7723c1bfe7ab7bfecb4a4
 .claude/skills/task-runner/ dir 0755
-.claude/skills/task-runner/SKILL.md file 0644 880 718b68716c94aaac64d583ee23dd0667b15f383aedc5b5a7f360af1f148b0ba0
+.claude/skills/task-runner/SKILL.md file 0644 736 585656798d3913643c47d7d5ba9dd10a8403b2bed1f6dc97a58fbb353a70a4b4
 .claude/skills/tdd-workflow/ dir 0755
-.claude/skills/tdd-workflow/SKILL.md file 0644 1181 244091a2cbf14c45eaefa423d4f45fa66c16125c5fd81e2151b5a8873b943ae7
+.claude/skills/tdd-workflow/SKILL.md file 0644 1003 0953ec8fdaeee297e1f2719e65c10538f4f56b7704798fff7cb362a4a10475d5
 .claude/skills/testing-conventions/ dir 0755
-.claude/skills/testing-conventions/SKILL.md file 0644 2904 43b2f0ce26e2adf99834f2f7481dbd412199eaa5f19a1c17a49efebfda5ee742
+.claude/skills/testing-conventions/SKILL.md file 0644 2604 826c03d80251206d3042c00628366c1cda6799ccded7af57735953642fc8e90a
 .cursor/ dir 0755
 .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 .cursor/agents/ dir 0755
@@ -244,21 +244,21 @@ Universal:
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/code-quality-standards/ dir 0755
-.agents/skills/code-quality-standards/SKILL.md file 0644 2682 1b8db43e0d91399fdf50f036c7616b9011c12249beb3bb1d17d0d75b7c2107e7
+.agents/skills/code-quality-standards/SKILL.md file 0644 2330 573b43ddd2b2aae8a1c45d4fe4c7ac31ce589f34c32e1ff0a8b9271993610fa3
 .agents/skills/config-placement/ dir 0755
-.agents/skills/config-placement/SKILL.md file 0644 1188 10121ef7e45388b25591041387efe26b326fbd032c12e6b12f470e4fffd33757
+.agents/skills/config-placement/SKILL.md file 0644 1158 334c815a80a7a02236150429125eb672055c9d2e59a390040a3ed0fa213c9c1d
 .agents/skills/dependency-awareness/ dir 0755
-.agents/skills/dependency-awareness/SKILL.md file 0644 1087 b12dbcf124b6ac6cad2b078a97dc31b1ac61bcdac1aed10e6635beba3df60dbc
+.agents/skills/dependency-awareness/SKILL.md file 0644 963 5e46bcce6256cd289bd836a98368cf7599fbf8b4572db14c18f2c4ebc136c7b9
 .agents/skills/deployer/ dir 0755
 .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/error-handling/ dir 0755
-.agents/skills/error-handling/SKILL.md file 0644 842 ab40b310487cdad0a39985ca157be167e2b27a6ad9cff398842b1104fbda2ddb
+.agents/skills/error-handling/SKILL.md file 0644 677 a613a79f496d2be8ee787b374253165f381675039d8d9d588db8c470df1943c9
 .agents/skills/go-conventions/ dir 0755
 .agents/skills/go-conventions/SKILL.md file 0644 1779 d8123088e73e32ece7baff425eb1f71deb27e944fc3f9c652dc4eade996bf338
 .agents/skills/incremental-approach/ dir 0755
-.agents/skills/incremental-approach/SKILL.md file 0644 938 1d1a8b7eaf4e489e2c9636dbefb84ab37d2d1d0bd03a5e5e9e0f0784e64a3309
+.agents/skills/incremental-approach/SKILL.md file 0644 754 8f3f5dffcfe4f3d1a45a950b64cafc109a9be538456fd0144edeeeb757d9df24
 .agents/skills/owasp-quick-reference/ dir 0755
-.agents/skills/owasp-quick-reference/SKILL.md file 0644 1406 77b3240ec2ad38a7a5886e792c28926308769f539bba47c6ea8492a573fa91fa
+.agents/skills/owasp-quick-reference/SKILL.md file 0644 1294 6a2bae3381033c04ff673ad831dbf87fb37b1a4afc924f717ad9d65975b59241
 .agents/skills/reviewer/ dir 0755
 .agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
@@ -268,11 +268,11 @@ Universal:
 .agents/skills/skill-authoring/ dir 0755
 .agents/skills/skill-authoring/SKILL.md file 0644 1116 83a29cdc224f00cb9bd8e04addc74392f77f61339e3a08fabc43f19aee18e8db
 .agents/skills/task-runner/ dir 0755
-.agents/skills/task-runner/SKILL.md file 0644 882 cbf90efae18ae23b120aaa7ac6ceb699fb107c932ea5365e94b6183f57faf8a1
+.agents/skills/task-runner/SKILL.md file 0644 738 52ea5a7e34fb700a0e421004883d2632baa482672d46062f4d5b1d76af7107bd
 .agents/skills/tdd-workflow/ dir 0755
-.agents/skills/tdd-workflow/SKILL.md file 0644 1181 f0bd0da2d867dc35690945b9699e4b51119323730e7c3e2bf83cfd47b569752c
+.agents/skills/tdd-workflow/SKILL.md file 0644 1003 ea2f6f7ce0ba3fbfbdd07f8c5be87efd0cbb5a0892c1cbcae67661160acff2b7
 .agents/skills/testing-conventions/ dir 0755
-.agents/skills/testing-conventions/SKILL.md file 0644 2903 30821ae66dc2f73a887657a4af1455365b14a9b254f115b27abe4977144a3b77
+.agents/skills/testing-conventions/SKILL.md file 0644 2604 604681518bb37a7de34a0072ee02652b1cdb74aabd64761fcedf85041e91cfa1
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5400 beede15ba14c6c7531e000253e0862740a4f969ec468d76d701e2db04bc9f6f2
 .ai-rulez/.generated-manifest.local.json file 0644 5116 7da05a159b794ed233597e89aeaa44c2d7ceb6fadc237d5efb1bf38e6e290c35
@@ -343,21 +343,21 @@ Universal:
 .claude/skills/build/ dir 0755
 .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
 .claude/skills/code-quality-standards/ dir 0755
-.claude/skills/code-quality-standards/SKILL.md file 0644 2682 31ba856bd71483c045a3fbcb5700588cbb9b88557fa554ff5e8bae45fbd491d6
+.claude/skills/code-quality-standards/SKILL.md file 0644 2330 58f8904f813ba5166e8d53dd99abd109ec52ca39531a29bfd69fe4a553d5f623
 .claude/skills/config-placement/ dir 0755
-.claude/skills/config-placement/SKILL.md file 0644 1186 6c85a47a4a8fc81c64d0ffa3d45486bfb17afe3ed632d3ee16b928a11a17f307
+.claude/skills/config-placement/SKILL.md file 0644 1158 3a627ceb0a3f6d38a53c8ca82fb8500c049f5fe79d6fdcf9a825b734bc17b177
 .claude/skills/dependency-awareness/ dir 0755
-.claude/skills/dependency-awareness/SKILL.md file 0644 1085 884fa149a4740e5bfa192b7525e1c6ee6dfc0cfdec584d3893ee48586f1020c5
+.claude/skills/dependency-awareness/SKILL.md file 0644 963 dd5aa189754ee0546ac847e304d92d453f0ece3da930d415e255ddb9f4a6d540
 .claude/skills/deployer/ dir 0755
 .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .claude/skills/error-handling/ dir 0755
-.claude/skills/error-handling/SKILL.md file 0644 841 9c8db1c504d64b6d5982c6800a7385b5929a7f12d000c8d7e9c53f1547b02f5e
+.claude/skills/error-handling/SKILL.md file 0644 677 9c95d2dde43358c96718b8464f8fa2d9de89f5a9efc482abdc2416c8988c1cef
 .claude/skills/go-conventions/ dir 0755
 .claude/skills/go-conventions/SKILL.md file 0644 1777 98c2db93b9d796f98e990b17ac37f2f2453a5b5fbdf6663eb80d953771f9b177
 .claude/skills/incremental-approach/ dir 0755
-.claude/skills/incremental-approach/SKILL.md file 0644 938 501dce39ad29ac91f3fb400cf725498d26d3db2726fb4a1775e53f47e5abf42a
+.claude/skills/incremental-approach/SKILL.md file 0644 754 9ec3bc395607f0e3ee3f4859f7511352918308975709180d117f55a26c3e1664
 .claude/skills/owasp-quick-reference/ dir 0755
-.claude/skills/owasp-quick-reference/SKILL.md file 0644 1406 e2db0a69204805129a50ee2f0afc356bc7c08b318681eda3acc36eec716c1b65
+.claude/skills/owasp-quick-reference/SKILL.md file 0644 1294 def823ead997bb0e2ee56532b45f706cc601187ad34fb71c35741d970a6e88e3
 .claude/skills/reviewer/ dir 0755
 .claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .claude/skills/reviewer/references/ dir 0755
@@ -369,11 +369,11 @@ Universal:
 .claude/skills/skill-authoring/ dir 0755
 .claude/skills/skill-authoring/SKILL.md file 0644 1116 32631db944a74b495cc7eb7f0658ffd01e76dabc02f7723c1bfe7ab7bfecb4a4
 .claude/skills/task-runner/ dir 0755
-.claude/skills/task-runner/SKILL.md file 0644 880 718b68716c94aaac64d583ee23dd0667b15f383aedc5b5a7f360af1f148b0ba0
+.claude/skills/task-runner/SKILL.md file 0644 736 585656798d3913643c47d7d5ba9dd10a8403b2bed1f6dc97a58fbb353a70a4b4
 .claude/skills/tdd-workflow/ dir 0755
-.claude/skills/tdd-workflow/SKILL.md file 0644 1181 244091a2cbf14c45eaefa423d4f45fa66c16125c5fd81e2151b5a8873b943ae7
+.claude/skills/tdd-workflow/SKILL.md file 0644 1003 0953ec8fdaeee297e1f2719e65c10538f4f56b7704798fff7cb362a4a10475d5
 .claude/skills/testing-conventions/ dir 0755
-.claude/skills/testing-conventions/SKILL.md file 0644 2904 43b2f0ce26e2adf99834f2f7481dbd412199eaa5f19a1c17a49efebfda5ee742
+.claude/skills/testing-conventions/SKILL.md file 0644 2604 826c03d80251206d3042c00628366c1cda6799ccded7af57735953642fc8e90a
 .cursor/ dir 0755
 .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 .cursor/agents/ dir 0755

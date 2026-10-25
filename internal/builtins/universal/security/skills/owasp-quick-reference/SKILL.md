@@ -1,6 +1,6 @@
 ---
 name: owasp-quick-reference
-description: "OWASP Top 10 quick reference: the ten most critical web application security risks (access control, crypto, injection, insecure design, misconfiguration, vulnerable components, auth, integrity, logging, SSRF) each with a one-line mitigation. Load when reviewing code or designs for security vulnerabilities or threat modeling."
+description: "OWASP Top 10 with one-line mitigations: access control, crypto, injection, insecure design, misconfiguration, vulnerable components, auth, integrity, logging, SSRF. Use when reviewing code or a design for security."
 ---
 
 1. **Broken Access Control** — enforce authorization checks on every request, deny by default.
