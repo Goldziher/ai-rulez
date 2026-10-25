@@ -449,7 +449,7 @@ func scopeSummary(v *repoView) string {
 	}
 	var described []string
 	for _, s := range v.index.Scopes() {
-		if parts := countParts(s.Counts); len(parts) > 0 {
+		if parts := countParts(v.counts(&s)); len(parts) > 0 {
 			described = append(described, fmt.Sprintf("%s (%s)", s.Path, strings.Join(parts, ", ")))
 		}
 	}

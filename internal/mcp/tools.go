@@ -310,7 +310,7 @@ func (s *Server) registerCRUDSkillTools() {
 	addTool[contentRefIn](s, toolSpec{
 		name: "read_skill", title: "Read Skill", description: "Read the content of a skill file",
 		annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
-	}, handlers.ReadSkillHandler)
+	}, s.guardUserInvokedRead(handlers.ReadSkillHandler))
 
 	addTool[skillUpdateIn](s, toolSpec{
 		name: "update_skill", title: "Update Skill",
@@ -326,7 +326,7 @@ func (s *Server) registerCRUDSkillTools() {
 	addTool[contentListIn](s, toolSpec{
 		name: "list_skills", title: "List Skills", description: "List all skill files in the root or a specific domain",
 		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
-	}, handlers.ListSkillsHandler)
+	}, s.hideUserInvokedItems(handlers.ListSkillsHandler, "skills", heldFileInfo))
 }
 
 // registerFlatContentTools adds the agent and command tools: flat markdown files
@@ -492,7 +492,7 @@ func (s *Server) registerGovernanceTools() {
 		description: "List every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and lock status (catalog --format json). Read-only, offline; capped at limit items.",
 		annotations: readOnlyAnnotations(), output: catalogOut{},
 		enums: map[string][]string{"kind": append(append([]string(nil), config.RoleKinds...), contentlock.KindContext)},
-	}, handlers.CatalogHandler(s.version))
+	}, s.hideUserInvokedItems(handlers.CatalogHandler(s.version), "items", heldCatalogItem))
 }
 
 // registerReportTools adds the read-only report tools: the twins of tokens, cost,

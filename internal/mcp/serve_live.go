@@ -204,7 +204,7 @@ func (w *watcher) rebuild(cur string) bool {
 	w.last, w.failures, w.retryAt = cur, 0, time.Time{}
 	w.admittedAt = w.clock.Now()
 	w.s.Replace(next)
-	w.log.Info("Reloaded served skills", "skills", len(next.Skills()))
+	w.log.Info("Reloaded served skills", "skills", len(w.s.cat().Skills()))
 	return true
 }
 

@@ -253,7 +253,10 @@ func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolReques
 }
 
 func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
-	key := req.GetString(keyName, "")
+	key := strings.TrimSpace(req.GetString(keyName, ""))
+	if rest, uri := strings.CutPrefix(key, SkillURIScheme); uri {
+		key, _, _ = strings.Cut(rest, "/")
+	}
 	cat := s.cat()
 	skill, ok := cat.Lookup(key)
 	if !ok {
