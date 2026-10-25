@@ -23,7 +23,7 @@ const flagServeSkills = "serve-skills"
 // give. A flag that was given wins over the key; the organization policy's
 // read-only requirement wins over both.
 type mcpSettings struct {
-	readOnly, daemon, noWatch, authoring bool
+	readOnly, daemon, noWatch, authoring, serveUserInvoked bool
 	// daemonIdleTimeout is [mcp] daemon_idle_timeout; 0 keeps the default.
 	daemonIdleTimeout time.Duration
 	// daemonIdleErr is the parse error of daemon_idle_timeout, reported by validate.
@@ -68,6 +68,7 @@ func resolveMCPSettings(flags *pflag.FlagSet, project mcp.ProjectSettings) mcpSe
 		tools:    listSetting(flagMCPTools, keys.Tools),
 	}
 	settings.authoring = keys.Authoring != nil && *keys.Authoring
+	settings.serveUserInvoked = keys.ServeUserInvokedSkills != nil && *keys.ServeUserInvokedSkills
 	if keys.DaemonIdleTimeout != "" {
 		settings.daemonIdleTimeout, settings.daemonIdleErr = time.ParseDuration(keys.DaemonIdleTimeout)
 		if settings.daemonIdleErr == nil && settings.daemonIdleTimeout <= 0 {
@@ -98,6 +99,7 @@ func skillsOnlyKeysSet(keys config.MCPConfig, resolved mcpSettings) []string {
 	add("daemon", resolved.daemon)
 	add("daemon_idle_timeout", keys.DaemonIdleTimeout != "")
 	add("authoring", resolved.authoring)
+	add("serve_user_invoked_skills", resolved.serveUserInvoked)
 	return set
 }
 
@@ -168,6 +170,7 @@ func (s mcpSettings) options() []mcp.Option {
 func (s mcpSettings) applyTo(setup *mcp.ServeSetup) {
 	setup.Filter.Allow, setup.Filter.Deny = s.allow, s.deny
 	setup.NoWatch = s.noWatch
+	setup.ServeUserInvoked = s.serveUserInvoked
 	if s.daemon && !setup.Daemon {
 		// The key turned the daemon on: its identity is the command line, as for the flag.
 		setup.DaemonIdentity = daemonIdentity()

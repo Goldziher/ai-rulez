@@ -8,6 +8,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`find_skill` and `load_skill` no longer hand a user-only skill to the model.** A skill with
+  `disable-model-invocation: true` (Claude Code's flag for a skill only the user runs, with a slash command) was
+  ranked by `find_skill`, listed by `search_skills` and the `skill://` resources, and served by `load_skill`. The
+  skills server now leaves such a skill out of all of them and `load_skill` answers `<name> is user-invoked only
+  (disable-model-invocation)`. `ai-rulez.lock` is unchanged. `[mcp] serve_user_invoked_skills = true` serves them
+  as before.
 - **A path-scoped `find_skill` no longer returns skills whose `paths:` do not reach the path.** Only rules were
   narrowed by their `paths:` or `globs:`; a skill such as `.claude/skills/kafka-conventions` gated on
   `armis/services/**` still came back for `products/va`, ranked by text alone, although Claude Code hides a
@@ -27,8 +33,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   configuration of the directory the run starts from (`.ai-rulez/config.toml`, `.agents/ai-rulez.toml` or
   `.config/ai-rulez/config.toml`), or `--exclude` (repeatable), names more. The `generate_outputs` MCP tool honours
   both (`recursive` with `exclude`).
-
-### Fixed
 
 - **The live-reload watcher no longer scales its descriptors with the repository.** `mcp --serve-skills` watched every
   directory of the project; on macOS and the BSDs (kqueue) each watched directory and each file in it costs an open

@@ -52,6 +52,8 @@ type ServeSetup struct {
 	// project that uses delivery serves only served/both skills; a project that
 	// sets no delivery anywhere serves every skill, as before.
 	IncludeStatic bool
+	// ServeUserInvoked also serves skills that set disable-model-invocation (see ServeOptions).
+	ServeUserInvoked bool
 	// Frozen requires ai-rulez.lock to cover every remote source and never uses
 	// the network. Offline never uses the network but does not require the lock.
 	Frozen  bool
@@ -181,6 +183,8 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		PollInterval: st.PollInterval,
 		Search:       NewSearchRuntime(holder.get).WithLog(st.Log),
 		Log:          st.Log,
+
+		ServeUserInvoked: st.ServeUserInvoked,
 	}
 	var srv *Server
 	var current atomic.Pointer[built]
