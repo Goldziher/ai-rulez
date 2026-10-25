@@ -273,7 +273,7 @@ func (r *runner) checkBothDMIPointers() {
 	if len(targets) == 0 {
 		return
 	}
-	mcpServes := r.cfg.MCP != nil && r.cfg.MCP.ServeUserInvokedSkills != nil && *r.cfg.MCP.ServeUserInvokedSkills
+	mcpServes := r.servesUserInvokedSkills()
 	for i := range r.items {
 		it := &r.items[i]
 		if !it.owned || it.isDoc || !alwaysLoaded(it) {
@@ -305,13 +305,20 @@ func (r *runner) checkBothDMIPointers() {
 	}
 }
 
+// servesUserInvokedSkills reports [mcp] serve_user_invoked_skills: the skills
+// server then serves a disable-model-invocation skill to the model.
+func (r *runner) servesUserInvokedSkills() bool {
+	m := r.cfg.MCP
+	return m != nil && m.ServeUserInvokedSkills != nil && *m.ServeUserInvokedSkills
+}
+
 // checkServedDMIUnreachable warns (AR9R2) about a delivery: served skill that
 // sets disable-model-invocation: true. A served skill is never written to disk,
 // so the user has no slash command for it, and the skills server keeps a
 // user-only skill from the model; nobody can run it. Silent when
 // [mcp] serve_user_invoked_skills is on, which serves it to the model.
 func (r *runner) checkServedDMIUnreachable() {
-	if r.cfg.MCP != nil && r.cfg.MCP.ServeUserInvokedSkills != nil && *r.cfg.MCP.ServeUserInvokedSkills {
+	if r.servesUserInvokedSkills() {
 		return
 	}
 	for i := range r.items {

@@ -195,7 +195,10 @@ func (s *Server) withoutHeldEntries(text, field string, held func(*Catalog, map[
 	if err := json.Unmarshal([]byte(text), &doc); err != nil || doc == nil {
 		return text
 	}
-	list, _ := doc[field].([]any)
+	list, ok := doc[field].([]any)
+	if !ok {
+		return text
+	}
 	cat := s.cat()
 	kept := make([]any, 0, len(list))
 	for _, e := range list {
@@ -220,13 +223,13 @@ func (s *Server) withoutHeldEntries(text, field string, held func(*Catalog, map[
 
 // heldFileInfo reports whether a list_skills entry is a held skill.
 func heldFileInfo(cat *Catalog, m map[string]any) bool {
-	name, _ := m[keyName].(string)
-	return cat.UserInvokedRef(name)
+	name, ok := m[keyName].(string)
+	return ok && cat.UserInvokedRef(name)
 }
 
 // heldCatalogItem reports whether a catalog item is a held skill.
 func heldCatalogItem(cat *Catalog, m map[string]any) bool {
-	kind, _ := m[keyKind].(string)
-	id, _ := m["id"].(string)
-	return kind == "skill" && cat.UserInvokedRef(id)
+	kind, kindOK := m[keyKind].(string)
+	id, idOK := m["id"].(string)
+	return kindOK && idOK && kind == "skill" && cat.UserInvokedRef(id)
 }

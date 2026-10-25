@@ -30,12 +30,15 @@ const (
 	uriDomainItem   = resourceScheme + "domains/{domain}/{kind}/{name}"
 
 	mimeJSON = "application/json"
+
+	// itemKindSkills is the {kind} of a skill in an item URI.
+	itemKindSkills = "skills"
 )
 
 // itemKinds maps the {kind} of an item URI to the tool that reads it.
 func (s *Server) itemReaders() map[string]handlerFunc {
 	return map[string]handlerFunc{
-		"rules": handlers.ReadRuleHandler, "context": handlers.ReadContextHandler, "skills": handlers.ReadSkillHandler,
+		"rules": handlers.ReadRuleHandler, "context": handlers.ReadContextHandler, itemKindSkills: handlers.ReadSkillHandler,
 		"checks": handlers.ReadCheckHandler, "agents": handlers.ReadAgentHandler, "commands": handlers.ReadCommandHandler,
 	}
 }
@@ -163,7 +166,7 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 	case target.catalog:
 		handler = handlers.CatalogHandler(s.version)
 	default:
-		if target.kind == "skills" {
+		if target.kind == itemKindSkills {
 			if err := s.refuseUserInvoked(target.name); err != nil {
 				return nil, err
 			}
