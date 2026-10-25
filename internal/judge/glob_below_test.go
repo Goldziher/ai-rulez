@@ -30,6 +30,19 @@ func TestGlob_MayMatchBelow(t *testing.T) {
 		{name: "a leading dot slash is dropped", pattern: "./src/**", dir: "src", want: true},
 		{name: "a character class", pattern: "v[0-9]/**", dir: "v2", want: true},
 		{name: "a character class that cannot match", pattern: "v[0-9]/**", dir: "vx", want: false},
+		{name: "a wildcard that only matches the directory's own name", pattern: "docs/*", dir: "docs/api", want: false},
+		{name: "a lone star matches a top-level directory but nothing below it", pattern: "*", dir: "src", want: false},
+		{name: "a lone star below the base directory", pattern: "*", dir: "", want: true},
+		{name: "a wildcard file pattern at the directory's own level", pattern: "docs/*.md", dir: "docs", want: true},
+		{name: "a globstar tail", pattern: "docs/**", dir: "docs", want: true},
+		{name: "a globstar further down", pattern: "docs/api/**", dir: "docs", want: true},
+		{name: "a globstar further down is not for a sibling", pattern: "docs/api/**", dir: "src", want: false},
+		{name: "a segment with a globstar and a prefix that fits", pattern: "x**", dir: "xa", want: true},
+		{name: "a segment with a globstar and a prefix that does not fit", pattern: "x**", dir: "src", want: false},
+		{name: "a segment that starts with a globstar", pattern: "**x", dir: "src", want: true},
+		{name: "a literal segment before a globstar that does not fit", pattern: "lib/**/x.go", dir: "src", want: false},
+		{name: "any depth go files for the base directory", pattern: "**/*.go", dir: "", want: true},
+		{name: "a literal prefix with a globstar", pattern: "src/**/*.go", dir: "src", want: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
