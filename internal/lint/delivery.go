@@ -276,33 +276,53 @@ func (r *runner) checkBothDMIPointers() {
 	mcpServes := r.servesUserInvokedSkills()
 	for i := range r.items {
 		it := &r.items[i]
-		if !it.owned || it.isDoc || !alwaysLoaded(it) {
-			continue
-		}
-		d, ok := r.docs[it.abs]
-		if !ok {
-			continue
-		}
-		reported := map[string]bool{}
-		for _, l := range d.body() {
-			if mcpServes && mcpSkillPointer(l.Text) {
-				continue
-			}
-			for _, ref := range referenceNames(l) {
-				if ref.kind != kindSkill {
-					continue
-				}
-				key := strings.ToLower(ref.name)
-				if !targets[key] || reported[key] || servedPathPointer(l, ref.name) {
-					continue
-				}
-				reported[key] = true
-				r.add(CodeBothDMIPointer, it.abs, l.No,
-					"%s is delivery: both with disable-model-invocation: true, so the Skill tool refuses it; this %s's pointer by name leaves the model declining the workflow. Point at the file path (the file is on disk), or set [mcp] serve_user_invoked_skills = true and use load_skill, or drop disable-model-invocation",
-					ref.name, it.kind)
-			}
+		if it.owned && !it.isDoc && alwaysLoaded(it) {
+			r.checkBothDMIItem(it, targets, mcpServes)
 		}
 	}
+}
+
+// checkBothDMIItem reports the pointers of one always-loaded item. targets maps
+// the lower-case name of each user-only both skill to whether the hyphenated key is set.
+func (r *runner) checkBothDMIItem(it *item, targets map[string]bool, mcpServes bool) {
+	d, ok := r.docs[it.abs]
+	if !ok {
+		return
+	}
+	reported := map[string]bool{}
+	for _, l := range d.body() {
+		viaMCP := mcpSkillPointer(l.Text)
+		for _, ref := range referenceNames(l) {
+			if ref.kind != kindSkill {
+				continue
+			}
+			key := strings.ToLower(ref.name)
+			hyphen, isTarget := targets[key]
+			if !isTarget || reported[key] || servedPathPointer(l, ref.name) {
+				continue
+			}
+			// An MCP pointer works when the skills server serves the skill. It
+			// fails when the server hides it, which it does only for the key
+			// Claude Code honors: the underscore spelling hides nothing there.
+			if viaMCP && (mcpServes || !hyphen) {
+				continue
+			}
+			reported[key] = true
+			r.add(CodeBothDMIPointer, it.abs, l.No, bothDMIMessage, ref.name, it.kind, pointerAdvice(viaMCP))
+		}
+	}
+}
+
+// bothDMIMessage is the AR9R1 text: the skill, the kind of content that points
+// at it, and what the pointer runs into (see pointerAdvice).
+const bothDMIMessage = "%s is delivery: both with disable-model-invocation: true; this %s's %s"
+
+// pointerAdvice says why a pointer to a user-only both skill fails and what to do.
+func pointerAdvice(viaMCP bool) string {
+	if viaMCP {
+		return "load_skill/find_skill pointer fails: the skills server hides it from the model. Point at the file path (the file is on disk), or set [mcp] serve_user_invoked_skills = true, or drop disable-model-invocation"
+	}
+	return "pointer by name leaves the model declining the workflow: the Skill tool refuses it. Point at the file path (the file is on disk), or set [mcp] serve_user_invoked_skills = true and use load_skill, or drop disable-model-invocation"
 }
 
 // servesUserInvokedSkills reports [mcp] serve_user_invoked_skills: the skills
@@ -330,15 +350,12 @@ func (r *runner) checkServedDMIUnreachable() {
 			continue
 		}
 		fm := parseFrontmatterDoc(r.docs[it.abs])
-		if !modelInvocationDisabled(fm) {
+		if !modelInvocationHyphen(fm) {
 			continue
 		}
 		line := 1
-		for _, key := range []string{keyDisableModel, keyDisableModelUnderscore} {
-			if k, found := fm.top(key); found {
-				line = k.Line
-				break
-			}
+		if k, found := fm.top(keyDisableModel); found {
+			line = k.Line
 		}
 		r.add(CodeServedDMIUnreachable, it.abs, line,
 			"%s is delivery: served with disable-model-invocation: true, so nobody can run it: a served skill is never written to disk (no slash command) and the skills server hides it from the model. Set delivery: both, or [mcp] serve_user_invoked_skills = true, or drop disable-model-invocation",
@@ -350,7 +367,7 @@ func (r *runner) checkServedDMIUnreachable() {
 // whose delivery is both and whose frontmatter stops the model from invoking
 // them. A both skill is on disk, so AR990 does not cover it.
 func (r *runner) bothDMISkillNames() map[string]bool {
-	out := map[string]bool{}
+	out := map[string]bool{} // name -> the hyphenated key is the one set
 	for i := range r.items {
 		it := &r.items[i]
 		if it.kind != kindSkill || it.isDoc || !it.owned {
@@ -359,11 +376,13 @@ func (r *runner) bothDMISkillNames() map[string]bool {
 		if r.cfg.EffectiveDelivery(it.cf, it.domain, nil) != config.DeliveryBoth {
 			continue
 		}
-		if !modelInvocationDisabled(parseFrontmatterDoc(r.docs[it.abs])) {
+		fm := parseFrontmatterDoc(r.docs[it.abs])
+		if !modelInvocationDisabled(fm) {
 			continue
 		}
+		hyphen := modelInvocationHyphen(fm)
 		for _, n := range contentNames(kindSkill, it.cf) {
-			out[n] = true
+			out[n] = out[n] || hyphen
 		}
 	}
 	return out
@@ -379,6 +398,13 @@ func modelInvocationDisabled(fm frontmatter) bool {
 		}
 	}
 	return false
+}
+
+// modelInvocationHyphen is modelInvocationDisabled for the hyphenated key alone:
+// the one Claude Code honors, and the one the skills server hides a skill for.
+func modelInvocationHyphen(fm frontmatter) bool {
+	k, ok := fm.top(keyDisableModel)
+	return ok && isTrue(k.Value)
 }
 
 // mcpSkillPointer reports whether a line already routes the agent through the

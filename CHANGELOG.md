@@ -11,7 +11,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`AR9R2 served-dmi-unreachable`** warns when a `delivery: served` skill sets `disable-model-invocation: true`: a
   served skill is never written to disk (no slash command) and the skills server now hides a user-only skill from
   the model, so nobody can run it. Set `delivery: both`, or `[mcp] serve_user_invoked_skills = true`. `AR9R1` now
-  reports a `load_skill`/`find_skill` pointer to a `both` user-only skill too, unless that setting is on.
+  reports a `load_skill`/`find_skill` pointer to a `both` user-only skill too, unless that setting is on. Both
+  honor only the hyphenated `disable-model-invocation`, the spelling Claude Code and the server read.
 
 ### Fixed
 
@@ -30,11 +31,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `disable-model-invocation: true` (Claude Code's flag for a skill only the user runs, with a slash command) was
   ranked by `find_skill`, listed by `search_skills` and the `skill://` resources, and served by `load_skill`. The
   skills server now leaves such a skill out of all of them and `load_skill` answers `<name> is user-invoked only
-  (disable-model-invocation)`. The authoring tools of `mcp --serve-skills` (`read_skill`, `list_skills`, `catalog`
-  and the `ai-rulez://` item and catalog resources, including `skill_discovery.served`) and the per-scope skill
-  counts follow the same rule, as do the read-only report tools (`list_roles`, `token_report`, `cost_report`,
-  `sbom`, `doctor`, `validate_config`, ...); the plain `ai-rulez mcp` server still reads every skill. `get_skill` answers the same
-  message for a `skill://` URI. `ai-rulez.lock` is unchanged. `[mcp] serve_user_invoked_skills = true` serves them
+  (disable-model-invocation)`. The authoring tools of `mcp --serve-skills` (`read_skill`, `list_skills`
+  and the `ai-rulez://skills/<name>` resource, including `skill_discovery.served`) and the per-scope skill
+  counts follow the same rule, and so does `create_skill` (the error for a taken name no longer shows the file path).
+  A skill is held by its own hyphenated `disable-model-invocation` key, whatever the catalog admitted. The
+  governance and audit tools (`catalog`, `list_roles`, `resolve_role`, `token_report`, `cost_report`, `sbom`,
+  `lock_status`, `doctor`, `validate_config`, `scan_content`) still list such a skill by name with its size and lock
+  state, because they audit the whole configuration; they never return its content. The plain `ai-rulez mcp` server
+  still reads every skill. `get_skill` answers the same message for a `skill://` URI. `ai-rulez.lock` is unchanged. `[mcp] serve_user_invoked_skills = true` serves them
   as before (a running `--daemon` reads the setting when it starts).
 - **A path-scoped `find_skill` no longer returns skills whose `paths:` do not reach the path.** Only rules were
   narrowed by their `paths:` or `globs:`; a skill such as `.claude/skills/kafka-conventions` gated on

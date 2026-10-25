@@ -119,14 +119,14 @@ func (s *Server) registerProjectTools() {
 		description: "Validate the configuration and lint its content with the same checks as `ai-rulez validate`: schema, structure, includes, policy, then every lint analyzer. Returns the verdict, warnings, errors and the full findings document. An invalid configuration, or findings at or above fail_on, is an error result. Read-only.",
 		annotations: readOnlyAnnotations(), output: validateOut{},
 		enums: map[string][]string{"fail_on": failOnValues(), "lint_profile": lint.ProfileNames()},
-	}, s.scrubUserInvoked(handlers.ValidateConfigWith(s.validator)))
+	}, handlers.ValidateConfigWith(s.validator))
 
 	addTool[scanIn](s, toolSpec{
 		name: "scan_content", title: "Scan Content",
 		description: "Run the deterministic security checks of `ai-rulez scan` on the configuration: secret patterns, hidden or bidirectional characters, prompt-injection phrases, risky shell, credential access and unpinned remote sources. Nothing is fetched or executed. Returns the findings document of validate_config; findings at or above fail_on are an error result. Read-only.",
 		annotations: readOnlyAnnotations(), output: validateOut{},
 		enums: map[string][]string{"fail_on": failOnValues(), "lint_profile": lint.ProfileNames()},
-	}, s.scrubUserInvoked(handlers.ScanContentWith(s.validator)))
+	}, handlers.ScanContentWith(s.validator))
 
 	addTool[judgeIn](s, toolSpec{
 		name: "judge", title: "Judge Agent Configuration",
@@ -139,7 +139,7 @@ func (s *Server) registerProjectTools() {
 		name: "doctor", title: "Run Diagnostics",
 		description: "Run read-only diagnostics: config validity, preset names, generated-output drift, gitignore coverage, shared settings documents, MCP env placeholders, hook scripts, lock file, and tool binaries. Returns findings by severity (error, warning, info).",
 		annotations: readOnlyAnnotations(), output: doctorOut{},
-	}, s.scrubUserInvoked(handlers.DoctorHandler))
+	}, handlers.DoctorHandler)
 
 	addTool[verifiersIn](s, toolSpec{
 		name: "run_verifiers", title: "Run Verifiers",
@@ -305,7 +305,7 @@ func (s *Server) registerCRUDSkillTools() {
 		name: "create_skill", title: "Create Skill",
 		description: "Create a new skill file with optional YAML frontmatter. With scope (and allow_write) it writes the skill into the repository for a harness working in that directory, <scope>/<harness skills dir>/<name>/SKILL.md, after a security scan; that file is the harness's own, not ai-rulez content.",
 		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
-	}, s.scopedSkillHandler(true, handlers.CreateSkillHandler))
+	}, s.keepExistingPathQuiet(s.scopedSkillHandler(true, handlers.CreateSkillHandler)))
 
 	addTool[contentRefIn](s, toolSpec{
 		name: "read_skill", title: "Read Skill", description: "Read the content of a skill file",
@@ -326,7 +326,7 @@ func (s *Server) registerCRUDSkillTools() {
 	addTool[contentListIn](s, toolSpec{
 		name: "list_skills", title: "List Skills", description: "List all skill files in the root or a specific domain",
 		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
-	}, s.hideUserInvokedItems(handlers.ListSkillsHandler, "skills", heldFileInfo))
+	}, s.hideUserInvokedList(handlers.ListSkillsHandler))
 }
 
 // registerFlatContentTools adds the agent and command tools: flat markdown files
@@ -466,33 +466,33 @@ func (s *Server) registerGovernanceTools() {
 		name: "list_roles", title: "List Roles",
 		description: "List the [[roles]] with their item counts and token estimates: the roles.json manifest (roles list --format json). Read-only, offline.",
 		annotations: readOnlyAnnotations(), output: rolesOut{},
-	}, s.scrubUserInvoked(handlers.ListRolesHandler))
+	}, handlers.ListRolesHandler)
 
 	addTool[resolveRoleIn](s, toolSpec{
 		name: "resolve_role", title: "Resolve Role",
 		description: "Resolve what a person holding a role gets: the items it keeps with sizes, skill modes and delivery (roles resolve <role> --format json). Read-only, offline; the item list is capped at limit.",
 		annotations: readOnlyAnnotations(), output: resolveRoleOut{},
-	}, s.scrubUserInvoked(handlers.ResolveRoleHandler))
+	}, handlers.ResolveRoleHandler)
 
 	addTool[lockStatusIn](s, toolSpec{
 		name: "lock_status", title: "Lock Status",
 		description: "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only. A project with no lock file is an error, as in the CLI.",
 		annotations: readOnlyAnnotations(), output: lockStatusOut{},
 		enums: map[string][]string{keyKind: govview.LockKinds},
-	}, s.scrubUserInvoked(handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
+	}, handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
 		extras := make([]ServeSetup, 0, len(views))
 		for _, v := range views {
 			extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
 		}
 		return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
-	})))
+	}))
 
 	addTool[catalogIn](s, toolSpec{
 		name: "catalog", title: "Catalog",
 		description: "List every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and lock status (catalog --format json). Read-only, offline; capped at limit items.",
 		annotations: readOnlyAnnotations(), output: catalogOut{},
 		enums: map[string][]string{"kind": append(append([]string(nil), config.RoleKinds...), contentlock.KindContext)},
-	}, s.scrubUserInvoked(handlers.CatalogHandler(s.version)))
+	}, handlers.CatalogHandler(s.version))
 }
 
 // registerReportTools adds the read-only report tools: the twins of tokens, cost,
@@ -505,21 +505,21 @@ func (s *Server) registerReportTools() {
 		description: "Report the prompt-token cost of the generated outputs, split by when an agent loads it: always, conditionally or on demand (tokens --format json). Rendered in memory, offline; one target answers with the report, several with {items}. A headline over budget is an error result carrying the report.",
 		annotations: readOnlyAnnotations(), output: tokenReportOut{}, readsConfig: true,
 		enums: map[string][]string{"tokenizer": tokens.Names()},
-	}, s.scrubUserInvoked(handlers.TokenReportHandler))
+	}, handlers.TokenReportHandler)
 
 	addTool[costReportIn](s, toolSpec{
 		name: "cost_report", title: "Cost Report",
 		description: "Report which rules, context, skills, agents and commands cost the most prompt tokens, biggest first (cost --format json). Offline. Exceeding budget or on_demand_budget is an error result carrying the report.",
 		annotations: readOnlyAnnotations(), output: costReportOut{}, readsConfig: true,
 		enums: map[string][]string{"tokenizer": tokens.Names()},
-	}, s.scrubUserInvoked(handlers.CostReportHandler))
+	}, handlers.CostReportHandler)
 
 	addTool[sbomIn](s, toolSpec{
 		name: "sbom", title: "Software Bill of Materials",
 		description: "Return the bill of materials of the AI configuration as CycloneDX 1.6 or SPDX 2.3 JSON (sbom): authored items, remote includes and skill sources with their pins, MCP servers. Reproducible, built from the lock and the cache without the network and without the machine-local overlay. Read-only; writing and signing stay on the command line.",
 		annotations: readOnlyAnnotations(), output: sbomOut{}, readsConfig: true,
 		enums: map[string][]string{"type": {sbom.FormatCycloneDX, sbom.FormatSPDXJSON}, "files": {sbom.FilesNone, sbom.FilesSkills, sbom.FilesAll}},
-	}, s.scrubUserInvoked(handlers.SBOMHandler(s.version)))
+	}, handlers.SBOMHandler(s.version))
 
 	addTool[okfValidateIn](s, toolSpec{
 		name: "okf_validate", title: "Validate OKF Bundle",
