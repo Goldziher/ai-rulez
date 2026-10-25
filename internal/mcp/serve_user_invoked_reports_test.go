@@ -58,3 +58,29 @@ func TestMergedServer_RoleTotalsLeaveUserInvokedSkillsOut(t *testing.T) {
 	assert.EqualValues(t, 1, totals["served_skills"])
 	assert.EqualValues(t, 1, byKind["skill"])
 }
+
+func TestResolveRole_ReturnsTheRoleObject(t *testing.T) {
+	// Arrange
+	session := mergedServerFor(t, userInvokedRolesProject(t), true)
+
+	// Act
+	out, isErr := toolJSON(t, session, "resolve_role", map[string]any{"role": "engineer"})
+
+	// Assert
+	require.False(t, isErr, "%v", out)
+	role, ok := out["role"].(map[string]any)
+	require.True(t, ok, "role is an object: %v", out["role"])
+	assert.Equal(t, "engineer", role["name"])
+}
+
+func TestResolveRole_LeavesUserInvokedSkillsOut(t *testing.T) {
+	// Arrange
+	session := mergedServerFor(t, userInvokedRolesProject(t), false)
+
+	// Act
+	text := firstText(call(t, session, "resolve_role", map[string]any{"role": "engineer"}))
+
+	// Assert
+	assert.Contains(t, text, "engineer")
+	assert.NotContains(t, text, "secret")
+}
