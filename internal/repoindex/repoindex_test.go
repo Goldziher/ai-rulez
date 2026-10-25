@@ -657,3 +657,54 @@ func TestIndex_ScopeSummary(t *testing.T) {
 	_, ok = ix.Scope("pkg/none")
 	assert.False(t, ok)
 }
+
+func TestBuild_SkillPathsAreIndexed(t *testing.T) {
+	tests := []struct {
+		name      string
+		front     string
+		wantPaths []string
+	}{
+		{name: "paths as a list", front: "paths:\n  - \"src/**/*.ts\"\n  - lib/*.go\n", wantPaths: []string{"src/**/*.ts", "lib/*.go"}},
+		{name: "paths as one string", front: "paths: \"src/**\"\n", wantPaths: []string{"src/**"}},
+		{name: "paths as a comma separated string keeps braces whole", front: "paths: \"a/*.{ts,tsx}, b/**\"\n", wantPaths: []string{"a/*.{ts,tsx}", "b/**"}},
+		{name: "cursor globs do not apply to a skill", front: "globs: \"*.tsx\"\n"},
+		{name: "no restriction", front: ""},
+		{name: "empty paths", front: "paths: []\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := layout(t, map[string]string{"pkg/.claude/skills/a/SKILL.md": "---\nname: a\ndescription: A skill\n" + tt.front + "---\n\nBody.\n"})
+
+			// Act
+			ix := build(t, root)
+
+			// Assert
+			items := ix.Items()
+			require.Len(t, items, 1)
+			require.Equal(t, KindSkill, items[0].Kind)
+			if tt.wantPaths == nil {
+				assert.Nil(t, items[0].Only)
+				return
+			}
+			require.NotNil(t, items[0].Only)
+			assert.Equal(t, tt.wantPaths, items[0].Only.Paths)
+			assert.Empty(t, items[0].Only.Globs)
+		})
+	}
+}
+
+func TestBuild_SkillPathsSurviveTheCache(t *testing.T) {
+	root := layout(t, map[string]string{".claude/skills/a/SKILL.md": "---\nname: a\ndescription: A\npaths: [\"src/**\"]\n---\n\nBody.\n"})
+	cache := newFakeCache()
+	_, err := Build(context.Background(), Options{Root: root, Cache: cache})
+	require.NoError(t, err)
+	cache.items = cache.stored
+
+	ix, err := Build(context.Background(), Options{Root: root, Cache: cache})
+
+	require.NoError(t, err)
+	require.Len(t, ix.Items(), 1)
+	require.NotNil(t, ix.Items()[0].Only)
+	assert.Equal(t, []string{"src/**"}, ix.Items()[0].Only.Paths, "a cache hit keeps the paths")
+}

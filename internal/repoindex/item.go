@@ -46,8 +46,11 @@ func newItem(c *candidate, content []byte) Item {
 		desc = firstHeading(block.Body)
 	}
 	it.Description = boundText(desc, maxDescriptionBytes)
-	if c.kind == KindRule {
+	switch c.kind {
+	case KindRule:
 		it.Only = ruleGlobs(front)
+	case KindSkill:
+		it.Only = skillGlobs(front)
 	}
 	return it
 }
@@ -63,6 +66,17 @@ func ruleGlobs(front map[string]any) *PathGlobs {
 		return nil
 	}
 	return g
+}
+
+// skillGlobs reads the path restriction of a skill: Claude Code honors `paths`
+// in SKILL.md and hides the skill until a matching file is read. `globs` is a
+// Cursor rule field; a skill has no Cursor form, so it is not read.
+func skillGlobs(front map[string]any) *PathGlobs {
+	paths := globList(front["paths"])
+	if len(paths) == 0 {
+		return nil
+	}
+	return &PathGlobs{Paths: paths}
 }
 
 // globList reads a frontmatter value that is one string or a list of strings,

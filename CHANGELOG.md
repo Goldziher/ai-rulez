@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **A path-scoped `find_skill` no longer returns skills whose `paths:` do not reach the path.** Only rules were
+  narrowed by their `paths:` or `globs:`; a skill such as `.claude/skills/kafka-conventions` gated on
+  `armis/services/**` still came back for `products/va`, ranked by text alone, although Claude Code hides a
+  path-gated skill until a matching file is read. The skill index now reads `paths:` from `SKILL.md`, and `find_skill`
+  and `find_context`/`load_context` with `path` keep a rule or skill only when its globs match the file, or, for a
+  directory, could match a path below it (a directory used to match no glob and hid every path-gated rule). A skill
+  without `paths:`, a `scope` query and loading by name are unchanged. The monorepo index cache format moves to
+  version 3, so existing caches are rebuilt once.
+
 ## [5.6.3] - 2026-10-24
 
 ### Added

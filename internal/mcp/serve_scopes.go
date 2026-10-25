@@ -147,7 +147,8 @@ type skillSelection struct {
 
 // selectSkills builds the test a served skill must pass for the query. A skill
 // that came from the repository passes when its directory is an effective item
-// of the selection (a path query drops one a nearer scope shadows); a skill
+// of the selection (a path query drops one a nearer scope shadows, and one
+// whose `paths:` do not reach the path); a skill
 // ai-rulez defines or fetches has no scope and applies everywhere, so it passes
 // a path query and the root scope.
 func (v *repoView) selectSkills(q scopeQuery) (skillSelection, error) {
@@ -160,8 +161,9 @@ func (v *repoView) selectSkills(q scopeQuery) (skillSelection, error) {
 			return skillSelection{}, err //nolint:wrapcheck // names the path
 		}
 		scopes = res.Scopes
+		asDir := v.isDir(q.Path)
 		for i := range res.Items {
-			if r := &res.Items[i]; r.Kind == repoindex.KindSkill && r.ShadowedBy == "" {
+			if r := &res.Items[i]; r.Kind == repoindex.KindSkill && r.ShadowedBy == "" && appliesTo(&r.Item, q.Path, asDir) {
 				dirs[r.Path] = true
 			}
 		}

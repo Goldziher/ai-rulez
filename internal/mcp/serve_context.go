@@ -153,8 +153,9 @@ func (v *repoView) contextCandidates(q scopeQuery) (items []repoindex.Item, scop
 	default:
 		all = v.index.Items()
 	}
+	asDir := q.Path != "" && v.isDir(q.Path)
 	for _, it := range all {
-		if servedAsContext(it.Kind) && (q.Path == "" || ruleAppliesTo(&it, q.Path)) {
+		if servedAsContext(it.Kind) && (q.Path == "" || appliesTo(&it, q.Path, asDir)) {
 			items = append(items, it)
 		}
 	}
@@ -196,7 +197,7 @@ func contextSummary(it *repoindex.Item) map[string]any {
 
 type findContextIn struct {
 	Task      string `json:"task,omitempty" jsonschema:"Words to rank the instruction files, rules and agents by (their name, scope, kind and description); omit to list what applies"`
-	Path      string `json:"path,omitempty" jsonschema:"A project-relative path of a file you are working on: the context of its scope and the ancestor scopes, nearest first; a rule with paths or globs in its frontmatter only if the path matches. Not with scope"`
+	Path      string `json:"path,omitempty" jsonschema:"A project-relative path of a file or directory you are working on: the context of its scope and the ancestor scopes, nearest first; a rule or skill with paths or globs in its frontmatter only if the path matches (a directory: if a glob could match below it). Not with scope"`
 	Scope     string `json:"scope,omitempty" jsonschema:"One scope (a directory, '.' for the root). Not with path"`
 	Recursive bool   `json:"recursive,omitempty" jsonschema:"With scope: also the scopes below it"`
 	Kind      string `json:"kind,omitempty" jsonschema:"Only this kind of context"`
