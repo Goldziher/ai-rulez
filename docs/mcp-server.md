@@ -445,7 +445,12 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   `disable-model-invocation: true` hides the skill from the Skill tool, which refuses it and tells the model not
   to reproduce the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) then
   leaves the model declining even though it could read the file; `AR9R1` warns. Point at the file path
-  (`.claude/skills/<id>/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`.
+  (`.claude/skills/<id>/SKILL.md`), or set `[mcp] serve_user_invoked_skills = true` and use `load_skill` (the skills
+  server hides a user-only skill from the model otherwise, so a `load_skill` or `find_skill` pointer fails too), or
+  drop `disable-model-invocation`.
+- **`disable-model-invocation` plus `served` is unreachable.** A `served` skill is never written to disk, so the
+  user has no slash command for it, and the skills server hides it from the model: nobody can run it. `AR9R2`
+  warns. Use `delivery: both`, or `[mcp] serve_user_invoked_skills = true`, or drop `disable-model-invocation`.
 
 ### Choosing the delivery
 
@@ -572,7 +577,20 @@ serve_user_invoked_skills = true                                  # also serve s
   `list_skill_resources` and the `skill://` resources leave such a skill out, and `load_skill` / `get_skill` answer
   `<name> is user-invoked only (disable-model-invocation)`. `serve_user_invoked_skills = true` serves them anyway, for a
   client that has no slash commands and wants the model to reach them. `ai-rulez.lock` still pins them; only what the
-  model sees changes.
+  model sees changes. A server that serves skills and also carries the authoring tools (`mcp --serve-skills`, or
+  `authoring = true`) applies the same rule to them: `read_skill` and `ai-rulez://skills/<name>` (matched by name,
+  `skill://` URI or source path) answer the same error, and `list_skills`, the `catalog` tool and the
+  `ai-rulez://catalog` resource (items and `skill_discovery.served`) leave the skill out, as do the per-scope skill
+  counts in the server instructions and the catalog `scopes`. The plain authoring server (`ai-rulez mcp` without
+  `--serve-skills`) is exempt: it serves no skills to a model, it edits the configuration, and the flag only keeps
+  a skill from the model's own invocation, so it still reads and lists every skill. A user-only skill on a serving
+  server stays editable with `update_skill` and `delete_skill`, which never return its content. The setting is read
+  when a server or daemon starts: restart a running `--daemon` (or let it idle out after `daemon_idle_timeout`)
+  after changing it, because a daemon is keyed by its command line, not by the configuration it read.
+- **Scope shadowing and directories.** A path query drops a skill that a nearer scope shadows by name, even when the
+  nearer skill is itself hidden (user-only) or its `paths:` do not reach the path, so the farther skill of that name
+  is not offered either. A directory query considers the skills whose globs could match a path below it, and does
+  not look into descendant scopes (ask for `scope` with `recursive` for those).
 - **Large repositories.** The live-reload watcher holds at most 2,048 descriptors (kqueue on macOS and the BSDs
   charges one per directory and per file in it), watching shallow directories first and warning once when the
   budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.

@@ -108,7 +108,9 @@ reports each file's `mode`, `executable` and an `interpreter` hint, and `read_sk
 base64 and large files in chunks; see
 [Served files](mcp-server.md#served-files-scripts-and-assets) for the recipe that writes them out. And do not combine `both` with `disable-model-invocation: true` and point at the skill by
 name: the Skill tool refuses a disable-model-invocation skill, so the model declines the workflow (`AR9R1` warns);
-point at the file path or a `load_skill` call instead.
+point at the file path instead (a `load_skill` call works only with `[mcp] serve_user_invoked_skills = true`). A
+`served` skill with `disable-model-invocation: true` is written nowhere and hidden from the model, so nobody can
+run it (`AR9R2` warns).
 
 ## Size limits
 

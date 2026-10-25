@@ -2005,7 +2005,7 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 | `allow`, `deny`            | Glob patterns on the served skill names (`mcp --serve-skills --allow` and `--deny`); `deny` wins. The flags override them. |
 | `daemon_idle_timeout`      | How long the shared daemon outlives its last client, as a Go duration (`"2m"`); default 15 minutes. The daemon also exits when its repository directory is removed. |
 | `authoring`                | `true` keeps the authoring tools on a read-only skills server. Without it, `read_only` with `serve_skills` registers only `find_skill`, `load_skill`, `search_skills`, `read_skill_file` and `list_skill_resources`, a few KB of schema instead of about 92 KB. `tools` wins over both. |
-| `serve_user_invoked_skills` | `true` serves skills that set `disable-model-invocation: true` to the model too. By default `find_skill`, `search_skills` and the `skill://` resources leave them out and `load_skill` refuses them (`<name> is user-invoked only`). |
+| `serve_user_invoked_skills` | `true` serves skills that set `disable-model-invocation: true` to the model too. By default `find_skill`, `search_skills` and the `skill://` resources leave them out and `load_skill` refuses them (`<name> is user-invoked only`); on a server that also carries the authoring tools, `read_skill`, `list_skills`, `catalog` and the `ai-rulez://` resources leave them out too. The plain `ai-rulez mcp` server is not affected. A running `--daemon` reads the setting when it starts. |
 | `daemon`, `no_watch`       | `mcp --serve-skills --daemon` (one shared server per repository) and `--no-watch` (no live reload). The flags override them. |
 
 The `mcp` serve keys are read when the server starts. See [Settings in the configuration](mcp-server.md#settings-in-the-configuration).
@@ -4470,7 +4470,9 @@ reports each file's `mode`, `executable` and an `interpreter` hint, and `read_sk
 base64 and large files in chunks; see
 [Served files](mcp-server.md#served-files-scripts-and-assets) for the recipe that writes them out. And do not combine `both` with `disable-model-invocation: true` and point at the skill by
 name: the Skill tool refuses a disable-model-invocation skill, so the model declines the workflow (`AR9R1` warns);
-point at the file path or a `load_skill` call instead.
+point at the file path instead (a `load_skill` call works only with `[mcp] serve_user_invoked_skills = true`). A
+`served` skill with `disable-model-invocation: true` is written nowhere and hidden from the model, so nobody can
+run it (`AR9R2` warns).
 
 #### Size limits
 
@@ -13737,7 +13739,8 @@ ai-rulez validate --strict --outputs
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
 | AR989 | `served-file-unscannable` | warning / error | A served skill file (authored skills included) is binary (a NUL byte, invalid UTF-8) or larger than 512 KiB, so the security scan cannot read it. For a remote source (`trust = "error"`) the file is not served; a `SKILL.md` that cannot be scanned is an error and the skill is refused |
 | AR9R0 | `served-skill-bundled-files` | warning | A served skill ships files under `scripts/` or `assets/`, which are not written to the skill tree of a harness that can call MCP (the shared `.agents/skills` tree included); a relative path into them (the form SKILL.md usually uses) resolves to nothing. `references/` are exempt (readable over MCP with `list_skill_resources`/`load_skill`). Set `delivery: both` to keep the files on disk, or fetch them over MCP and write them out yourself (see [Served files](mcp-server.md#served-files-scripts-and-assets) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
-| AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a skill whose `delivery` is `both` and whose frontmatter sets `disable-model-invocation: true` (or `disable_model_invocation`), by a bare name or `Skill(...)`; the Skill tool refuses a DMI skill, so the model then declines the workflow. A file-path pointer and a `load_skill`/`find_skill` pointer are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a skill whose `delivery` is `both` and whose frontmatter sets `disable-model-invocation: true` (or `disable_model_invocation`), by a bare name or `Skill(...)`; the Skill tool refuses a DMI skill, so the model then declines the workflow. A file-path pointer is not reported. A `load_skill`/`find_skill` pointer is reported too, unless `[mcp] serve_user_invoked_skills = true` (the skills server hides a user-only skill from the model otherwise; see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR9R2 | `served-dmi-unreachable` | warning | A skill whose `delivery` is `served` sets `disable-model-invocation: true` (or `disable_model_invocation`): a served skill is never written to disk, so the user has no slash command for it, and the skills server hides it from the model, so nobody can run it. Set `delivery: both`, or `[mcp] serve_user_invoked_skills = true`, or drop the flag. Not reported when `serve_user_invoked_skills` is on |
 | AR971 | `role-reference-unknown` | error | A `[[roles]]` entry lists a domain that does not exist, or an include, exclude or `skill_mode` entry that matches no item (or matches only in a domain the role does not select). See [Roles](roles.md) |
 | AR972 | `role-extends-invalid` | error | A role extends an unknown role, itself, or takes part in a cycle, or extends a role that itself extends another (inheritance is one level deep) |
 | AR973 | `role-unreachable-dependency` | warning | An item a role keeps lists a skill in its `skills:` frontmatter that the role drops, or hides from the model with `skill_mode` `off` or `user-invocable-only` |
@@ -13896,7 +13899,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
 | `AR9I0`-`AR9I9` | Lint configuration hygiene ([#479](https://github.com/Goldziher/ai-rulez/issues/479); `AR9I0` used, reported by `validate`, see [Accepting one finding](#accepting-one-finding)) | allocated |
 | `AR9Q0`-`AR9Q9` | Harness instruction files ([#318](https://github.com/Goldziher/ai-rulez/issues/318); `AR9Q0` used, reported by `validate --strict` when `[lint] agents_md_only` is set) | allocated |
-| `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
+| `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`-`AR9R2` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
@@ -14250,7 +14253,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `plugin` | `AR961`-`AR964` |
 | `roles` | `AR971`-`AR973` |
 | `lock` | `AR730`, `AR732`, `AR733`, `AR734`, `AR735`, `AR981`, `AR982`, `AR995` |
-| `delivery` | `AR989`-`AR994`, `AR9R0`, `AR9R1` |
+| `delivery` | `AR989`-`AR994`, `AR9R0`-`AR9R2` |
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `llmstxt` | `AR9P0`-`AR9P6` |
@@ -17739,7 +17742,17 @@ always-loaded content points at a delivery: both skill whose frontmatter sets di
 - Analyzer: `delivery` (scope `item`)
 - Why: A `both` skill is on disk, but `disable-model-invocation: true` hides it from the Skill tool, which refuses it and tells the model not to replicate the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) leaves the model declining, even though it could read the file.
 - Bad: A rule saying "run the `deploy` skill" for a `both` skill with `disable-model-invocation: true`
-- Good: Point at the file path (`.claude/skills/deploy/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`
+- Good: Point at the file path (`.claude/skills/deploy/SKILL.md`), or set `[mcp] serve_user_invoked_skills = true` and use `load_skill`, or drop `disable-model-invocation`
+
+##### AR9R2 served-dmi-unreachable
+
+a delivery: served skill sets disable-model-invocation: true, so nobody can run it: it is not written to disk (no slash command) and the skills server hides it from the model; set delivery: both, or [mcp] serve_user_invoked_skills = true
+
+- Default severity: `warning`
+- Analyzer: `delivery` (scope `item`)
+- Why: A `served` skill is never written to disk, so the user has no slash command for it, and the skills server keeps a `disable-model-invocation: true` skill from the model. Nobody can run it.
+- Bad: A `delivery: served` skill with `disable-model-invocation: true`
+- Good: Set `delivery: both` (the file is on disk for the slash command), or `[mcp] serve_user_invoked_skills = true`, or drop `disable-model-invocation`
 
 ##### AR9S0 ard-manifest-invalid
 
@@ -21579,7 +21592,12 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   `disable-model-invocation: true` hides the skill from the Skill tool, which refuses it and tells the model not
   to reproduce the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) then
   leaves the model declining even though it could read the file; `AR9R1` warns. Point at the file path
-  (`.claude/skills/<id>/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`.
+  (`.claude/skills/<id>/SKILL.md`), or set `[mcp] serve_user_invoked_skills = true` and use `load_skill` (the skills
+  server hides a user-only skill from the model otherwise, so a `load_skill` or `find_skill` pointer fails too), or
+  drop `disable-model-invocation`.
+- **`disable-model-invocation` plus `served` is unreachable.** A `served` skill is never written to disk, so the
+  user has no slash command for it, and the skills server hides it from the model: nobody can run it. `AR9R2`
+  warns. Use `delivery: both`, or `[mcp] serve_user_invoked_skills = true`, or drop `disable-model-invocation`.
 
 ##### Choosing the delivery
 
@@ -21706,7 +21724,20 @@ serve_user_invoked_skills = true                                  # also serve s
   `list_skill_resources` and the `skill://` resources leave such a skill out, and `load_skill` / `get_skill` answer
   `<name> is user-invoked only (disable-model-invocation)`. `serve_user_invoked_skills = true` serves them anyway, for a
   client that has no slash commands and wants the model to reach them. `ai-rulez.lock` still pins them; only what the
-  model sees changes.
+  model sees changes. A server that serves skills and also carries the authoring tools (`mcp --serve-skills`, or
+  `authoring = true`) applies the same rule to them: `read_skill` and `ai-rulez://skills/<name>` (matched by name,
+  `skill://` URI or source path) answer the same error, and `list_skills`, the `catalog` tool and the
+  `ai-rulez://catalog` resource (items and `skill_discovery.served`) leave the skill out, as do the per-scope skill
+  counts in the server instructions and the catalog `scopes`. The plain authoring server (`ai-rulez mcp` without
+  `--serve-skills`) is exempt: it serves no skills to a model, it edits the configuration, and the flag only keeps
+  a skill from the model's own invocation, so it still reads and lists every skill. A user-only skill on a serving
+  server stays editable with `update_skill` and `delete_skill`, which never return its content. The setting is read
+  when a server or daemon starts: restart a running `--daemon` (or let it idle out after `daemon_idle_timeout`)
+  after changing it, because a daemon is keyed by its command line, not by the configuration it read.
+- **Scope shadowing and directories.** A path query drops a skill that a nearer scope shadows by name, even when the
+  nearer skill is itself hidden (user-only) or its `paths:` do not reach the path, so the farther skill of that name
+  is not offered either. A directory query considers the skills whose globs could match a path below it, and does
+  not look into descendant scopes (ask for `scope` with `recursive` for those).
 - **Large repositories.** The live-reload watcher holds at most 2,048 descriptors (kqueue on macOS and the BSDs
   charges one per directory and per file in it), watching shallow directories first and warning once when the
   budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.
