@@ -228,7 +228,12 @@ func registerRuledocsAdded(s *ruleSet) {
 		CodeBothDMIPointer: {
 			Why:  "A `both` skill is on disk, but `disable-model-invocation: true` hides it from the Skill tool, which refuses it and tells the model not to replicate the workflow another way. A rule that points at it by name (\"run the `x` skill\", `Skill(x)`) leaves the model declining, even though it could read the file.",
 			Bad:  "A rule saying \"run the `deploy` skill\" for a `both` skill with `disable-model-invocation: true`",
-			Good: "Point at the file path (`.claude/skills/deploy/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`",
+			Good: "Point at the file path (`.claude/skills/deploy/SKILL.md`), or set `[mcp] serve_user_invoked_skills = true` and use `load_skill`, or drop `disable-model-invocation`",
+		},
+		CodeServedDMIUnreachable: {
+			Why:  "A `served` skill is never written to disk, so the user has no slash command for it, and the skills server keeps a `disable-model-invocation: true` skill from the model. Nobody can run it.",
+			Bad:  "A `delivery: served` skill with `disable-model-invocation: true`",
+			Good: "Set `delivery: both` (the file is on disk for the slash command), or `[mcp] serve_user_invoked_skills = true`, or drop `disable-model-invocation`",
 		},
 		CodeEvalCaseInvalid: {
 			Why:  "A malformed eval case cannot be run, so the skill it guards is effectively untested.",

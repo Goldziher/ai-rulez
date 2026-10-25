@@ -16,7 +16,7 @@ import (
 )
 
 // Dynamic skill loading rules. AR990 to AR995 are the first delivery block; the
-// roles work uses AR971 to AR973 and AR981 to AR982. AR9R0 and AR9R1 are the
+// roles work uses AR971 to AR973 and AR981 to AR982. AR9R0 to AR9R2 are the
 // on-disk and invocation traps that serving a skill introduces (docs/strict-validation.md).
 const (
 	CodeServedReferencedStatically = "AR990"
@@ -33,6 +33,10 @@ const (
 	// both skill whose frontmatter sets disable-model-invocation: true; the Skill
 	// tool refuses it, so a bare pointer leaves the model declining the workflow.
 	CodeBothDMIPointer = "AR9R1"
+	// CodeServedDMIUnreachable warns that a delivery: served skill sets
+	// disable-model-invocation: true: it is never written to disk, so the user has
+	// no slash command for it, and the skills server hides it from the model.
+	CodeServedDMIUnreachable = "AR9R2"
 )
 
 func registerDelivery(s *ruleSet) {
@@ -45,6 +49,7 @@ func registerDelivery(s *ruleSet) {
 		RuleInfo{CodeServedLockMismatch, "served-lock-mismatch", SeverityError, "[lock] enforce is on and a served skill is not pinned in ai-rulez.lock with its current digest"},
 		RuleInfo{CodeServedBundledFiles, "served-skill-bundled-files", SeverityWarning, "a served skill ships scripts/ or assets/ that are not written to disk, so a relative path into them does not resolve; set delivery: both to keep them"},
 		RuleInfo{CodeBothDMIPointer, "both-dmi-pointer", SeverityWarning, "always-loaded content points at a delivery: both skill whose frontmatter sets disable-model-invocation: true, by a bare name or Skill(...); the Skill tool refuses it and the model then declines the workflow"},
+		RuleInfo{CodeServedDMIUnreachable, "served-dmi-unreachable", SeverityWarning, "a delivery: served skill sets disable-model-invocation: true, so nobody can run it: it is not written to disk (no slash command) and the skills server hides it from the model; set delivery: both, or [mcp] serve_user_invoked_skills = true"},
 	)
 }
 
@@ -71,6 +76,7 @@ func (r *runner) checkDelivery() {
 	r.checkServedReferences(served)
 	r.checkServedBundledFiles(served)
 	r.checkBothDMIPointers()
+	r.checkServedDMIUnreachable()
 	r.checkUnpinnedSources()
 	path := r.configFilePath()
 	if path == "" {
@@ -259,13 +265,15 @@ func (r *runner) deliveryLine(it *item) int {
 // skill that is delivery: both and sets disable-model-invocation: true. Such a
 // skill is on disk but hidden from the Skill tool, which refuses it; a bare
 // pointer ("run the `x` skill", Skill(x)) then leaves the model declining the
-// workflow. A file-path pointer and a load_skill/find_skill pointer still work,
-// so neither is reported.
+// workflow. A file-path pointer still works, so it is not reported. A
+// load_skill/find_skill pointer works only when [mcp] serve_user_invoked_skills
+// is on: otherwise the skills server hides a user-only skill from the model too.
 func (r *runner) checkBothDMIPointers() {
 	targets := r.bothDMISkillNames()
 	if len(targets) == 0 {
 		return
 	}
+	mcpServes := r.cfg.MCP != nil && r.cfg.MCP.ServeUserInvokedSkills != nil && *r.cfg.MCP.ServeUserInvokedSkills
 	for i := range r.items {
 		it := &r.items[i]
 		if !it.owned || it.isDoc || !alwaysLoaded(it) {
@@ -277,7 +285,7 @@ func (r *runner) checkBothDMIPointers() {
 		}
 		reported := map[string]bool{}
 		for _, l := range d.body() {
-			if mcpSkillPointer(l.Text) {
+			if mcpServes && mcpSkillPointer(l.Text) {
 				continue
 			}
 			for _, ref := range referenceNames(l) {
@@ -290,10 +298,44 @@ func (r *runner) checkBothDMIPointers() {
 				}
 				reported[key] = true
 				r.add(CodeBothDMIPointer, it.abs, l.No,
-					"%s is delivery: both with disable-model-invocation: true, so the Skill tool refuses it; this %s's pointer by name leaves the model declining the workflow. Point at the file path (the file is on disk) or a load_skill call, or drop disable-model-invocation",
+					"%s is delivery: both with disable-model-invocation: true, so the Skill tool refuses it; this %s's pointer by name leaves the model declining the workflow. Point at the file path (the file is on disk), or set [mcp] serve_user_invoked_skills = true and use load_skill, or drop disable-model-invocation",
 					ref.name, it.kind)
 			}
 		}
+	}
+}
+
+// checkServedDMIUnreachable warns (AR9R2) about a delivery: served skill that
+// sets disable-model-invocation: true. A served skill is never written to disk,
+// so the user has no slash command for it, and the skills server keeps a
+// user-only skill from the model; nobody can run it. Silent when
+// [mcp] serve_user_invoked_skills is on, which serves it to the model.
+func (r *runner) checkServedDMIUnreachable() {
+	if r.cfg.MCP != nil && r.cfg.MCP.ServeUserInvokedSkills != nil && *r.cfg.MCP.ServeUserInvokedSkills {
+		return
+	}
+	for i := range r.items {
+		it := &r.items[i]
+		if it.kind != kindSkill || it.isDoc || !it.owned {
+			continue
+		}
+		if r.cfg.EffectiveDelivery(it.cf, it.domain, nil) != config.DeliveryServed {
+			continue
+		}
+		fm := parseFrontmatterDoc(r.docs[it.abs])
+		if !modelInvocationDisabled(fm) {
+			continue
+		}
+		line := 1
+		for _, key := range []string{keyDisableModel, keyDisableModelUnderscore} {
+			if k, found := fm.top(key); found {
+				line = k.Line
+				break
+			}
+		}
+		r.add(CodeServedDMIUnreachable, it.abs, line,
+			"%s is delivery: served with disable-model-invocation: true, so nobody can run it: a served skill is never written to disk (no slash command) and the skills server hides it from the model. Set delivery: both, or [mcp] serve_user_invoked_skills = true, or drop disable-model-invocation",
+			itemID(kindSkill, it.cf))
 	}
 }
 
