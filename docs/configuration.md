@@ -758,6 +758,7 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 # no_watch = true                            # mcp --serve-skills does not reload on file changes (--no-watch)
 # daemon_idle_timeout = "15m"                # the shared daemon exits this long after its last client
 # authoring = true                           # keep the authoring tools on a read-only skills server
+# serve_user_invoked_skills = true           # also serve skills that set disable-model-invocation (left out by default)
 # exclude = ["third_party/**"]               # globs of paths repository discovery never reads (--exclude adds to them)
 ```
 
@@ -778,6 +779,7 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 | `allow`, `deny`            | Glob patterns on the served skill names (`mcp --serve-skills --allow` and `--deny`); `deny` wins. The flags override them. |
 | `daemon_idle_timeout`      | How long the shared daemon outlives its last client, as a Go duration (`"2m"`); default 15 minutes. The daemon also exits when its repository directory is removed. |
 | `authoring`                | `true` keeps the authoring tools on a read-only skills server. Without it, `read_only` with `serve_skills` registers only `find_skill`, `load_skill`, `search_skills`, `read_skill_file` and `list_skill_resources`, a few KB of schema instead of about 92 KB. `tools` wins over both. |
+| `serve_user_invoked_skills` | `true` serves skills that set `disable-model-invocation: true` to the model too. By default `find_skill`, `search_skills` and the `skill://` resources leave them out and `load_skill` refuses them (`<name> is user-invoked only`). |
 | `daemon`, `no_watch`       | `mcp --serve-skills --daemon` (one shared server per repository) and `--no-watch` (no live reload). The flags override them. |
 
 The `mcp` serve keys are read when the server starts. See [Settings in the configuration](mcp-server.md#settings-in-the-configuration).

@@ -560,12 +560,19 @@ daemon    = true                                                  # --daemon (--
 no_watch  = true                                                  # --no-watch (--serve-skills)
 daemon_idle_timeout = "15m"                                       # how long the daemon outlives its last client
 authoring = true                                                  # keep the authoring tools on a read-only skills server
+serve_user_invoked_skills = true                                  # also serve skills that set disable-model-invocation
 ```
 
 - **A small default surface.** `serve_skills` with `read_only` registers only `find_skill`, `load_skill`,
   `search_skills`, `read_skill_file` and `list_skill_resources`, and no prompts: the full tool list is about 92 KB of
   schema that a client sends on every request. Set `authoring = true` for the read-only authoring tools and the
   `review-config` prompt, or `tools = [...]` for an exact list.
+- **User-only skills.** A skill that sets `disable-model-invocation: true` is Claude Code's user-only flag: the model
+  must not see or invoke it, only the user, with a slash command. The server honours it. `find_skill`, `search_skills`,
+  `list_skill_resources` and the `skill://` resources leave such a skill out, and `load_skill` / `get_skill` answer
+  `<name> is user-invoked only (disable-model-invocation)`. `serve_user_invoked_skills = true` serves them anyway, for a
+  client that has no slash commands and wants the model to reach them. `ai-rulez.lock` still pins them; only what the
+  model sees changes.
 - **Large repositories.** The live-reload watcher holds at most 2,048 descriptors (kqueue on macOS and the BSDs
   charges one per directory and per file in it), watching shallow directories first and warning once when the
   budget is reached; the poll covers the rest. `no_watch = true` turns the watcher off.
@@ -574,7 +581,7 @@ authoring = true                                                  # keep the aut
   the socket. When the cache path is too long for a unix socket, the socket goes under `$XDG_RUNTIME_DIR` or the temp
   directory in `ai-rulez-<uid>/`, used only when this user owns that directory and the one inside it with mode 0700.
 
-- **Skills keys without serving.** `allow`, `deny`, `daemon`, `daemon_idle_timeout`, `authoring`, `no_watch`, `exclude`
+- **Skills keys without serving.** `allow`, `deny`, `daemon`, `daemon_idle_timeout`, `authoring`, `serve_user_invoked_skills`, `no_watch`, `exclude`
   and `discover_skills` only apply when skills are served (`--serve-skills` or `serve_skills = true`). A server
   started without serving them logs one warning on stderr naming the keys that are set and ignored; the same settings
   as flags stop the server with `requires --serve-skills`, because a key may be shared by launches that do not serve

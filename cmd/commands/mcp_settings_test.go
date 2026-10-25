@@ -334,3 +334,28 @@ func TestMCPSettings_DaemonIdleTimeout(t *testing.T) {
 		assert.Error(t, got.validate(), bad)
 	}
 }
+
+func TestMCPSettings_ServeUserInvokedSkills(t *testing.T) {
+	tests := []struct {
+		name string
+		keys config.MCPConfig
+		want bool
+	}{
+		{name: "off by default"},
+		{name: "explicitly off", keys: config.MCPConfig{ServeUserInvokedSkills: boolPtrOf(false)}},
+		{name: "on", keys: config.MCPConfig{ServeUserInvokedSkills: boolPtrOf(true)}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			settings := resolveMCPSettings(settingsFlags(t), mcp.ProjectSettings{MCP: tt.keys})
+			setup := &mcp.ServeSetup{}
+
+			// Act
+			settings.applyTo(setup)
+
+			// Assert
+			assert.Equal(t, tt.want, setup.ServeUserInvoked)
+		})
+	}
+}

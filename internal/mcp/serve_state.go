@@ -116,6 +116,10 @@ type ServeOptions struct {
 	Search *SearchRuntime
 	// Log receives the server's reports (live reload); nil is the CLI's logger.
 	Log logger.Logger
+	// ServeUserInvoked serves the skills that set disable-model-invocation to the
+	// model too; by default they are left out of find_skill, search_skills, the
+	// skill:// resources and load_skill.
+	ServeUserInvoked bool
 }
 
 func (o ServeOptions) budget() int {

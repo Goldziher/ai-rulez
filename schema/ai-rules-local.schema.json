@@ -2728,6 +2728,10 @@
           "enum": ["user", "repo", "off"],
           "type": "string"
         },
+        "serve_user_invoked_skills": {
+          "type": "boolean",
+          "description": "Serve the skills that set `disable-model-invocation: true` (Claude Code's user-only flag) to the model too. Off by default: find_skill, search_skills and the skill:// resources leave them out and load_skill refuses them."
+        },
         "no_watch": {
           "description": "Do not reload the served skills when their files change, as `mcp --serve-skills --no-watch` does. The --no-watch flag overrides it.",
           "type": "boolean"

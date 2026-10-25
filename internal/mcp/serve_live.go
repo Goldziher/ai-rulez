@@ -23,6 +23,7 @@ const (
 // (re-)registered. The SDK debounces the resulting changes into one
 // notifications/resources/list_changed per connected client.
 func (s *Server) Replace(next *Catalog) {
+	next = s.served(next)
 	s.catMu.Lock()
 	prev := s.catalog
 	s.catalog = next
@@ -223,6 +224,7 @@ func (s *Server) revalidate(next *Catalog, log logger.Logger) {
 	if next == nil {
 		return
 	}
+	next = s.served(next)
 	prev := s.cat()
 	changed := false
 	for _, skill := range prev.Skills() {

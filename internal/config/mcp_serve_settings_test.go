@@ -19,6 +19,7 @@ serve_skills = true
 read_only = true
 daemon = true
 no_watch = true
+serve_user_invoked_skills = true
 allow = ["review-*"]
 deny = ["draft-*"]
 tools = ["find_skill", "load_skill"]
@@ -57,6 +58,8 @@ func TestMCPServeSettings_LoadFromEachLayout(t *testing.T) {
 			assert.True(t, *cfg.MCP.Daemon)
 			require.NotNil(t, cfg.MCP.NoWatch)
 			assert.True(t, *cfg.MCP.NoWatch)
+			require.NotNil(t, cfg.MCP.ServeUserInvokedSkills)
+			assert.True(t, *cfg.MCP.ServeUserInvokedSkills)
 			assert.Equal(t, []string{"review-*"}, cfg.MCP.Allow)
 			assert.Equal(t, []string{"draft-*"}, cfg.MCP.Deny)
 			assert.Equal(t, []string{"find_skill", "load_skill"}, cfg.MCP.Tools)

@@ -411,6 +411,12 @@ type MCPConfig struct {
 	// list wins over both.
 	Authoring *bool `yaml:"authoring,omitempty" json:"authoring,omitempty" toml:"authoring,omitempty"`
 
+	// ServeUserInvokedSkills serves the skills that set `disable-model-invocation:
+	// true` (Claude Code's user-only flag) to the model as well. Off by default:
+	// find_skill, search_skills and the skill:// resources leave them out and
+	// load_skill refuses them, as the Skill tool does.
+	ServeUserInvokedSkills *bool `yaml:"serve_user_invoked_skills,omitempty" json:"serve_user_invoked_skills,omitempty" toml:"serve_user_invoked_skills,omitempty"`
+
 	// NoWatch stops `mcp --serve-skills` reloading when skill files change, as
 	// --no-watch does.
 	NoWatch *bool `yaml:"no_watch,omitempty" json:"no_watch,omitempty" toml:"no_watch,omitempty"`
