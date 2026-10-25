@@ -46,8 +46,10 @@ func (g Glob) Match(p string) bool {
 
 // MayMatchBelow reports whether some path strictly below the slash directory dir (relative to the
 // glob's base directory; "" is the base directory itself) could match. It compares the pattern with
-// dir one segment at a time: `**` reaches everything below, a pattern that continues past dir may
-// match deeper, and a pattern that stops at dir names the directory itself, which still counts.
+// dir one segment at a time: `**` reaches everything below, and a pattern that continues past dir
+// may match deeper. A pattern that stops at dir counts only when it names the directory literally;
+// a wildcard that merely matches the directory's name (`docs/*` for `docs/api`) matches the
+// directory itself, not a path below it.
 func (g Glob) MayMatchBelow(dir string) bool {
 	if g.re == nil {
 		return false
@@ -70,14 +72,23 @@ func altMayMatchBelow(pattern, dir []string) bool {
 			return false
 		}
 		seg := pattern[i]
-		if strings.Contains(seg, "**") {
-			return true
+		if before, _, crosses := strings.Cut(seg, "**"); crosses {
+			// `**` crosses slashes, so what follows it reaches anything below; only
+			// the text before it has to fit the directory name.
+			return segmentMatches(before+"**", d)
 		}
 		if !segmentMatches(seg, d) {
 			return false
 		}
 	}
-	return true
+	// The pattern ran out at the directory. A path strictly below needs it to go
+	// on; one that names the directory literally still counts (a directory
+	// pattern may cover what it holds), a wildcard that merely matched the
+	// directory's own name (`docs/*` for `docs/api`) does not.
+	if len(pattern) > len(dir) {
+		return true
+	}
+	return len(dir) > 0 && !strings.ContainsAny(pattern[len(dir)-1], "*?[")
 }
 
 func segmentMatches(seg, name string) bool {
