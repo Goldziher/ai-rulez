@@ -708,7 +708,7 @@ add up, so none of them is shadowed. A skill name that two scopes share is serve
  "results": [{"name": "pkg.api.claude.skills.lint", "scope": "pkg/api", "score": 1.4, "description": "Lint the api package"}]}
 ```
 
-The root's own `lint` is shadowed for that path; for `pkg/web/index.ts` it is the one returned. `scope` lists one exact
+The root's own `lint` is shadowed for that path; for `pkg/web/index.ts` it is the one returned. A skill whose `paths:` frontmatter does not reach the path is left out (see [Rules and skills with `paths`](#rules-and-skills-with-paths)). `scope` lists one exact
 scope, `"."` being the root; `recursive: true` adds the scopes below it. `path` and `scope` are mutually exclusive, and
 `recursive` needs `scope`. A skill that ai-rulez defines or fetches belongs to no scope and applies everywhere. Each
 result of a discovered skill names its `scope`. Without `path` and `scope` the call behaves as before.
@@ -735,15 +735,22 @@ description (an item with no matching word is left out), `kind` (`instruction`, 
    "description": "Code style for the whole repository", "uri": "context://./style", "hash": "sha256:..."}]}
 ```
 
-**Rules with `paths`.** A rule can name the files it applies to. With `path`, `find_context` returns such a rule only
-when the path matches one of its globs: `paths:` in the frontmatter of a Claude Code rule, and `globs:` of a Cursor
-`.mdc` rule that is not `alwaysApply`. The globs are relative to the scope directory, the one that holds `.claude`
-(or `.cursor`), as in `ai-rulez validate`: `pkg/api/.claude/rules/handlers.md` with `paths: "handlers/**"` applies to
-`pkg/api/handlers/user.go`, not to `pkg/api/other/handlers/user.go`. `paths` globs are anchored at that directory
-(`*.py` is a file directly in it, `**/*.py` any depth); Cursor `globs` also match a bare pattern such as `*.tsx` at any
-depth. A rule without either applies everywhere in its scope, and instruction files and agents are never narrowed. A
-`scope` query (no `path`) lists every rule of the scope whatever its globs. A rule's result carries its `paths` or
-`globs`, so you can see what narrows it. Pass a file as `path`: a directory matches no glob.
+**Rules and skills with `paths`.** A rule or a skill can name the files it applies to. With `path`, `find_context`
+returns such a rule, and `find_skill` such a skill, only when the path matches one of its globs: `paths:` in the
+frontmatter of a Claude Code rule or `SKILL.md` (Claude Code hides a path-gated skill until a matching file is read),
+and `globs:` of a Cursor `.mdc` rule that is not `alwaysApply`. Cursor has no skills, so a skill's `globs:` is not read.
+The globs are relative to the scope directory, the one that holds `.claude` (or `.cursor`), as in `ai-rulez validate`:
+`pkg/api/.claude/rules/handlers.md` with `paths: "handlers/**"` applies to `pkg/api/handlers/user.go`, not to
+`pkg/api/other/handlers/user.go`. `paths` globs are anchored at that directory (`*.py` is a file directly in it,
+`**/*.py` any depth); Cursor `globs` also match a bare pattern such as `*.tsx` at any depth. A rule or skill without
+either applies everywhere in its scope, and instruction files and agents are never narrowed. A `scope` query (no
+`path`) lists every rule and skill of the scope whatever its globs, and loading one by name is unchanged. A rule's
+result carries its `paths` or `globs`, so you can see what narrows it.
+
+`path` may be a file or a directory. A directory keeps a rule or skill when some glob could match a path below it:
+`armis/services/**/kafka*.py` is kept for `armis/services` and dropped for `products/va`, and `**/*.py` is kept for any
+directory. A path that exists is a directory if the filesystem says so; one that does not exist is a file when its last
+element has an extension. A restriction none of whose globs can be read does not hide the item.
 
 `load_context` reads one, by `scope` and `name` or by `uri`, with an optional `budget_bytes`:
 

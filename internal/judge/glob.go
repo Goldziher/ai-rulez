@@ -11,8 +11,9 @@ import (
 // matches only a file directly in it, `**/*.py` matches at any depth. There is no negation: a pattern
 // starting with `!` matches nothing.
 type Glob struct {
-	re  *regexp.Regexp
-	src string
+	re   *regexp.Regexp
+	src  string
+	alts []string
 }
 
 // CompileGlob compiles a pattern; ok is false for an empty, negated or malformed one.
@@ -35,12 +36,56 @@ func CompileGlob(pattern string) (Glob, bool) {
 	if err != nil {
 		return Glob{}, false
 	}
-	return Glob{re: re, src: pattern}, true
+	return Glob{re: re, src: pattern, alts: alts}, true
 }
 
 // Match reports whether the slash path (relative to the glob's base directory) matches.
 func (g Glob) Match(p string) bool {
 	return g.re != nil && g.re.MatchString(strings.TrimPrefix(p, "./"))
+}
+
+// MayMatchBelow reports whether some path strictly below the slash directory dir (relative to the
+// glob's base directory; "" is the base directory itself) could match. It compares the pattern with
+// dir one segment at a time: `**` reaches everything below, a pattern that continues past dir may
+// match deeper, and a pattern that stops at dir names the directory itself, which still counts.
+func (g Glob) MayMatchBelow(dir string) bool {
+	if g.re == nil {
+		return false
+	}
+	var dirSegs []string
+	if dir != "" {
+		dirSegs = strings.Split(dir, "/")
+	}
+	for _, alt := range g.alts {
+		if altMayMatchBelow(strings.Split(alt, "/"), dirSegs) {
+			return true
+		}
+	}
+	return false
+}
+
+func altMayMatchBelow(pattern, dir []string) bool {
+	for i, d := range dir {
+		if i >= len(pattern) {
+			return false
+		}
+		seg := pattern[i]
+		if strings.Contains(seg, "**") {
+			return true
+		}
+		if !segmentMatches(seg, d) {
+			return false
+		}
+	}
+	return true
+}
+
+func segmentMatches(seg, name string) bool {
+	if !strings.ContainsAny(seg, "*?[") {
+		return seg == name
+	}
+	re, err := regexp.Compile("^" + globRegexp(seg) + "$")
+	return err != nil || re.MatchString(name)
 }
 
 // String returns the source pattern.

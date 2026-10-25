@@ -44,14 +44,14 @@ type Item struct {
 	Description string `json:"description,omitempty"`
 	Hash        string `json:"hash"`
 	Path        string `json:"path"`
-	// Only, when set, restricts a rule to the files that match it; nil means the
-	// rule applies everywhere in its scope.
+	// Only, when set, restricts a rule or a skill to the files that match it; nil
+	// means it applies everywhere in its scope.
 	Only *PathGlobs `json:"only,omitempty"`
 }
 
-// PathGlobs are the globs a rule names the files it applies to by, relative to
-// the rule's scope: `paths:` in the Claude Code form, `globs:` in a Cursor rule
-// that is not always applied.
+// PathGlobs are the globs a rule or skill names the files it applies to by,
+// relative to its scope: `paths:` in the Claude Code form (rules and skills),
+// `globs:` in a Cursor rule that is not always applied.
 type PathGlobs struct {
 	Paths []string `json:"paths,omitempty"`
 	Globs []string `json:"globs,omitempty"`

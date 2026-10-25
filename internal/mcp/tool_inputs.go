@@ -344,7 +344,7 @@ type findSkillIn struct {
 	Limit int    `json:"limit,omitempty" jsonschema:"Maximum results (default 5, max 20)"`
 	Role  string `json:"role,omitempty" jsonschema:"Rank the skills of this role first (default: the server's role)"`
 	// Path and Scope narrow the search in a repository served with discovery.
-	Path      string `json:"path,omitempty" jsonschema:"A project-relative path you are working on: only the skills that apply there are ranked, from its scope and the ancestor scopes, the nearest scope winning a name. Needs repository discovery. Not with scope"`
+	Path      string `json:"path,omitempty" jsonschema:"A project-relative file or directory you are working on: only the skills that apply there are ranked, from its scope and the ancestor scopes, the nearest scope winning a name; a skill with paths in its frontmatter only if they match the file (a directory: could match below it). Needs repository discovery. Not with scope"`
 	Scope     string `json:"scope,omitempty" jsonschema:"One scope (a directory, '.' for the root): only its skills are ranked. Needs repository discovery. Not with path"`
 	Recursive bool   `json:"recursive,omitempty" jsonschema:"With scope: also the skills of the scopes below it"`
 }
