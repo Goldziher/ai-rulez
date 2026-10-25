@@ -2,6 +2,7 @@ package lint
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -279,7 +280,7 @@ func TestDeliveryRulesAreRegistered(t *testing.T) {
 	want := map[string]Severity{
 		CodeServedReferencedStatically: SeverityWarning, CodeDeliveryStubMissing: SeverityError, CodeDeliveryStaticFallback: SeverityWarning,
 		CodeServedNoServer: SeverityWarning, CodeDeliveryInvalid: SeverityError, CodeServedLockMismatch: SeverityError,
-		CodeServedBundledFiles: SeverityWarning, CodeBothDMIPointer: SeverityWarning,
+		CodeServedBundledFiles: SeverityWarning, CodeBothDMIPointer: SeverityWarning, CodeServedDMIUnreachable: SeverityWarning,
 	}
 	for code, sev := range want {
 		rule, ok := lookupRule(code)
@@ -369,32 +370,36 @@ func TestStrict_ServedSkillReferencedByFilePath(t *testing.T) {
 }
 
 // AR9R1: a bare pointer to a both + disable-model-invocation skill is refused by
-// the Skill tool; a file path and a load_skill pointer still work, so neither is
-// reported.
+// the Skill tool; a file path still works, and a load_skill pointer works only
+// when [mcp] serve_user_invoked_skills serves the skill to the model.
 func TestStrict_BothDMIPointer(t *testing.T) {
 	const dmi = "---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: both\ndisable-model-invocation: true\n---\nDeploy body.\n"
 	tests := []struct {
-		name  string
-		body  string
-		skill string
-		want  bool
+		name   string
+		body   string
+		skill  string
+		config string
+		want   bool
 	}{
-		{"backticked name then kind", "Run the `deploy` skill.", dmi, true},
-		{"skill call", "Run Skill(deploy).", dmi, true},
-		{"labeled pointer", "Procedure/reference: skill deploy", dmi, true},
-		{"file path pointer", "Edit .claude/skills/deploy/SKILL.md by hand.", dmi, false},
-		{"skills directory pointer", "Read skills/deploy for the steps.", dmi, false},
-		{"load_skill pointer", "Run the `deploy` skill via load_skill.", dmi, false},
-		{"underscore spelling still fires", "Run the `deploy` skill.", strings.Replace(dmi, "disable-model-invocation", "disable_model_invocation", 1), true},
+		{"backticked name then kind", "Run the `deploy` skill.", dmi, "", true},
+		{"skill call", "Run Skill(deploy).", dmi, "", true},
+		{"labeled pointer", "Procedure/reference: skill deploy", dmi, "", true},
+		{"file path pointer", "Edit .claude/skills/deploy/SKILL.md by hand.", dmi, "", false},
+		{"skills directory pointer", "Read skills/deploy for the steps.", dmi, "", false},
+		{"load_skill pointer fires while the server hides user-only skills", "Run the `deploy` skill via load_skill.", dmi, "", true},
+		{"find_skill pointer fires while the server hides user-only skills", "Run the `deploy` skill via find_skill.", dmi, "", true},
+		{"load_skill pointer when user-invoked skills are served", "Run the `deploy` skill via load_skill.", dmi, "\n[mcp]\nserve_user_invoked_skills = true\n", false},
+		{"a bare pointer still fires when user-invoked skills are served", "Run the `deploy` skill.", dmi, "\n[mcp]\nserve_user_invoked_skills = true\n", true},
+		{"underscore spelling still fires", "Run the `deploy` skill.", strings.Replace(dmi, "disable-model-invocation", "disable_model_invocation", 1), "", true},
 		{"a both skill without dmi does not fire", "Run the `deploy` skill.",
-			"---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: both\n---\nDeploy body.\n", false},
+			"---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: both\n---\nDeploy body.\n", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			root := t.TempDir()
 			writeFiles(t, root, map[string]string{
-				".ai-rulez/config.toml":            baseConfig,
+				".ai-rulez/config.toml":            baseConfig + tt.config,
 				".ai-rulez/skills/deploy/SKILL.md": tt.skill,
 				".ai-rulez/rules/use.md":           "# Use\n\n" + tt.body + "\n",
 			})
@@ -423,4 +428,41 @@ func TestStrict_ServedDMIIsNotABothPointer(t *testing.T) {
 
 	assert.Zero(t, countCode(fs, CodeBothDMIPointer), "a served skill is AR990's case: %v", fs)
 	assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "AR990 still fires: %v", fs)
+}
+
+// AR9R2: a served skill with disable-model-invocation is written nowhere (no slash
+// command) and hidden from the model; opting in to serve user-only skills quiets it.
+func TestStrict_ServedDMIUnreachable(t *testing.T) {
+	const front = "---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\n%sdisable-model-invocation: %s\n---\nDeploy body.\n"
+	tests := []struct {
+		name   string
+		skill  string
+		config string
+		want   bool
+	}{
+		{"served", fmt.Sprintf(front, "delivery: served\n", "true"), "", true},
+		{"served, underscore spelling", strings.Replace(fmt.Sprintf(front, "delivery: served\n", "true"), "disable-model-invocation", "disable_model_invocation", 1), "", true},
+		{"served, flag off", fmt.Sprintf(front, "delivery: served\n", "false"), "", false},
+		{"both is on disk for the slash command", fmt.Sprintf(front, "delivery: both\n", "true"), "", false},
+		{"static is on disk for the slash command", fmt.Sprintf(front, "delivery: static\n", "true"), "", false},
+		{"served by the skills default", fmt.Sprintf(front, "", "true"), "\n[skills]\ndelivery = \"served\"\n", true},
+		{"served, user-invoked skills are served", fmt.Sprintf(front, "delivery: served\n", "true"), "\n[mcp]\nserve_user_invoked_skills = true\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":            baseConfig + tt.config,
+				".ai-rulez/skills/deploy/SKILL.md": tt.skill,
+			})
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, root)
+
+			// Assert
+			assert.Equal(t, tt.want, countCode(fs, CodeServedDMIUnreachable) > 0, dump(fs))
+		})
+	}
 }
