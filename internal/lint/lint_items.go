@@ -285,7 +285,9 @@ func (r *runner) descriptionEntries() []descEntry {
 }
 
 // checkDuplicates compares descriptions across skills, agents and commands and
-// reports each owned item once, against the first earlier item it duplicates.
+// reports each owned item once, against the first earlier item it duplicates. A
+// verified generated alias whose definition is listed is not reported, and not
+// reported against: the definition stands for it (see sameDefinition).
 func (r *runner) checkDuplicates() {
 	threshold := defaultNearDup
 	if r.lc.Description != nil && r.lc.Description.NearDuplicateThreshold > 0 {
@@ -303,6 +305,14 @@ func (r *runner) checkDuplicates() {
 				continue
 			}
 			a := entries[i]
+			// A verified generated alias repeats its definition by design, and the
+			// definition carries any finding the alias would repeat (#485).
+			if r.sameDefinition(a.it, b.it) || r.definitionListed(a.it, entries) {
+				continue
+			}
+			if r.definitionListed(b.it, entries) {
+				break
+			}
 			line := r.docs[b.it.abs].lineOf("description", 1)
 			r.dep(b.it.abs, a.it.abs) // the finding sits on b but exists because of a
 			r.add(code, b.it.abs, line, "description is %s %s %q (%s)", map[string]string{CodeDescriptionDup: "identical to", CodeDescriptionNearDup: "near-identical to"}[code], a.it.kind, itemID(a.it.kind, a.it.cf), r.display(a.it.abs))

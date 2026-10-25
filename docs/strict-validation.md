@@ -371,6 +371,19 @@ ai-rulez validate --strict --outputs
 | AR9J8 | `improve-pr-refused` | error | `improve pr` refused: unsigned or unaccepted run, a different skill at the base, an existing branch, or unusable git |
 | AR9J9 | `improve-adapter-refused` | error | A bundled adapter (`builtin:review-fix`) could not run: no model, no network opt-in or no declared egress |
 
+### Generated copies and the duplicate rules
+
+A skill, agent or command file that a plugin bundle of the configuration generates from a definition, or a
+byte-identical copy of one anywhere in the repository (a public export of the bundle's skills), is that definition under
+another path, not a second one: `AR701`, `AR702` and `AR703` do not compare it with the definition. `validate` renders
+the bundles of the configuration's `[plugin]` and of its `[marketplace]` members in memory, the way `verify --plugin`
+does, when it has a duplicate to judge, and a copy counts as the same item only when its bytes equal what the generator
+renders from that definition now; CRLF line endings are read as LF, and nothing else is normalized. A generated header
+or an `.ai-rulez-generated.json` sidecar proves nothing on its own. An edited copy, a copy the definition has moved away
+from since it was generated (run `generate --plugin`), the bundle of a configuration the run does not load (a nested
+plugin that is not a `[marketplace]` member), domain plugins and `[[plugins_authoring]]` bundles are judged as
+definitions of their own. Every other rule, the security rules first, still reads the generated copies.
+
 ### Code ranges
 
 Codes are allocated in blocks, one block per feature. This table is the single allocation list: a registered code

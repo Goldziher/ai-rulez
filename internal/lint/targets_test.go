@@ -12,7 +12,7 @@ import (
 )
 
 // lintWithTargets lints the project at root with the targets spec resolves to.
-func lintWithTargets(t *testing.T, root string, spec TargetSpec) ([]Finding, *Targets) {
+func lintWithTargets(t *testing.T, root string, spec TargetSpec, opts ...Option) ([]Finding, *Targets) {
 	t.Helper()
 	cfg, err := loadWithResolvers(context.Background(), root)
 	if err != nil {
@@ -27,7 +27,7 @@ func lintWithTargets(t *testing.T, root string, spec TargetSpec) ([]Finding, *Ta
 	if err != nil {
 		t.Fatalf("resolve targets: %v", err)
 	}
-	rep, err := Run(cfg, tree, WithTargets(targets), WithCwd(root))
+	rep, err := Run(cfg, tree, append([]Option{WithTargets(targets), WithCwd(root)}, opts...)...)
 	if err != nil {
 		t.Fatal(err)
 	}

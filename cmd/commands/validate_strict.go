@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -398,6 +399,9 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 		planned := generator.NewPlannedFiles(cfg)
 		opts = append(opts, lint.WithPlanned(planned), lint.WithHarnessReach(generator.NewHarnessReach(cfg, planned)))
 	}
+	if lint.AnalyzerSelected(sel, lint.AnalyzerDuplicates) && (cfg.Plugin != nil || cfg.Marketplace != nil) {
+		opts = append(opts, lint.WithGeneratedCopies(func() []lint.GeneratedCopy { return generatedCopies(ctx, cfg) }))
+	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
 		opts = append(opts, okfLintOptions(cfg)...)
 	}
@@ -410,6 +414,31 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(config.WithPolicyContext(ctx, activePolicy), cfg)))
 	}
 	return opts
+}
+
+// generatedCopies renders, in memory and without a word on the log, what
+// `generate --plugin` writes for cfg: a byte-identical copy of a rendered skill,
+// agent or command is its definition to the duplicate rules (#485). Lint asks
+// for it only when it finds a duplicate to judge. The rendering runs on a copy
+// of cfg with its own discarding logger and diagnostics, and its own MCP server
+// records (rendering resolves their placeholders in place), so it changes
+// nothing the rest of the run reads or reports.
+func generatedCopies(ctx context.Context, cfg *config.Config) []lint.GeneratedCopy {
+	quiet := *cfg
+	quiet.Host.Log = logger.Discard()
+	quiet.Diag = diag.New(func(string, ...any) {})
+	if cfg.MCPServers != nil {
+		quiet.MCPServers = make(map[string]*config.MCPServer, len(cfg.MCPServers))
+		for name, server := range cfg.MCPServers {
+			clone := *server
+			clone.Args = slices.Clone(server.Args)
+			quiet.MCPServers[name] = &clone
+		}
+	}
+	gen := generator.NewGenerator(&quiet)
+	gen.SetHost(quiet.Host)
+	gen.SetContext(ctx)
+	return gen.GeneratedCopies(cfg.Log())
 }
 
 // okfLintOptions feeds the OKF findings into the lint run, next to the other
