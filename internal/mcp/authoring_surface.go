@@ -38,7 +38,7 @@ const (
 // itemKinds maps the {kind} of an item URI to the tool that reads it.
 func (s *Server) itemReaders() map[string]handlerFunc {
 	return map[string]handlerFunc{
-		"rules": handlers.ReadRuleHandler, "context": handlers.ReadContextHandler, itemKindSkills: handlers.ReadSkillHandler,
+		"rules": handlers.ReadRuleHandler, "context": handlers.ReadContextHandler, itemKindSkills: s.guardUserInvokedRead(handlers.ReadSkillHandler),
 		"checks": handlers.ReadCheckHandler, "agents": handlers.ReadAgentHandler, "commands": handlers.ReadCommandHandler,
 	}
 }
@@ -166,11 +166,6 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 	case target.catalog:
 		handler = handlers.CatalogHandler(s.version)
 	default:
-		if target.kind == itemKindSkills {
-			if err := s.refuseUserInvoked(target.name); err != nil {
-				return nil, err
-			}
-		}
 		handler, mime = s.itemReaders()[target.kind], mimeMarkdown
 		args["name"] = target.name
 		if target.domain != "" {
@@ -191,7 +186,6 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 		text = content
 	}
 	if target.catalog {
-		text = s.scrubText(text)
 		if text, err = s.decorateCatalog(text, target.query); err != nil {
 			return nil, err
 		}

@@ -390,6 +390,7 @@ func TestStrict_BothDMIPointer(t *testing.T) {
 		{"find_skill pointer fires while the server hides user-only skills", "Run the `deploy` skill via find_skill.", dmi, "", true},
 		{"load_skill pointer when user-invoked skills are served", "Run the `deploy` skill via load_skill.", dmi, "\n[mcp]\nserve_user_invoked_skills = true\n", false},
 		{"a bare pointer still fires when user-invoked skills are served", "Run the `deploy` skill.", dmi, "\n[mcp]\nserve_user_invoked_skills = true\n", true},
+		{"underscore spelling with a load_skill pointer is not hidden by the server", "Run the `deploy` skill via load_skill.", strings.Replace(dmi, "disable-model-invocation", "disable_model_invocation", 1), "", false},
 		{"underscore spelling still fires", "Run the `deploy` skill.", strings.Replace(dmi, "disable-model-invocation", "disable_model_invocation", 1), "", true},
 		{"a both skill without dmi does not fire", "Run the `deploy` skill.",
 			"---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: both\n---\nDeploy body.\n", "", false},
@@ -441,7 +442,7 @@ func TestStrict_ServedDMIUnreachable(t *testing.T) {
 		want   bool
 	}{
 		{"served", fmt.Sprintf(front, "delivery: served\n", "true"), "", true},
-		{"served, underscore spelling", strings.Replace(fmt.Sprintf(front, "delivery: served\n", "true"), "disable-model-invocation", "disable_model_invocation", 1), "", true},
+		{"served, underscore spelling", strings.Replace(fmt.Sprintf(front, "delivery: served\n", "true"), "disable-model-invocation", "disable_model_invocation", 1), "", false}, // only the hyphenated key is honored
 		{"served, flag off", fmt.Sprintf(front, "delivery: served\n", "false"), "", false},
 		{"both is on disk for the slash command", fmt.Sprintf(front, "delivery: both\n", "true"), "", false},
 		{"static is on disk for the slash command", fmt.Sprintf(front, "delivery: static\n", "true"), "", false},

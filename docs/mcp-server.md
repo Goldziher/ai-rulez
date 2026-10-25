@@ -578,12 +578,18 @@ serve_user_invoked_skills = true                                  # also serve s
   `<name> is user-invoked only (disable-model-invocation)`. `serve_user_invoked_skills = true` serves them anyway, for a
   client that has no slash commands and wants the model to reach them. `ai-rulez.lock` still pins them; only what the
   model sees changes. A server that serves skills and also carries the authoring tools (`mcp --serve-skills`, or
-  `authoring = true`) applies the same rule to them: `read_skill` and `ai-rulez://skills/<name>` (matched by name,
-  `skill://` URI or source path) answer the same error, and `list_skills`, the `catalog` tool and the
-  `ai-rulez://catalog` resource (items and `skill_discovery.served`) leave the skill out, and so do `list_roles`
-  (with the role totals), `resolve_role`, `token_report`, `cost_report`, `sbom`, `lock_status`, `doctor`,
-  `validate_config` and `scan_content` (the objects and notes that name it; the headline token totals still count it), as do the per-scope skill
-  counts in the server instructions and the catalog `scopes`. The plain authoring server (`ai-rulez mcp` without
+  `authoring = true`) applies the same rule to the tools that return or list skill content. A skill is held when its
+  own `SKILL.md` sets the hyphenated key (the only spelling Claude Code honors), read from the file, so what the
+  catalog admitted or filtered out does not matter. `read_skill` and `ai-rulez://skills/<name>` answer the same
+  error, and `list_skills` leaves the skill out, as do the per-scope skill counts in the server instructions and the
+  catalog `scopes` and `skill_discovery.served`. `create_skill` on a held name answers that the name is taken,
+  without the file path. A user-only skill that skill discovery found in the repository is held by the directory the
+  catalog recorded.
+  The governance and audit tools (`catalog` and the `ai-rulez://catalog` resource, `list_roles`, `resolve_role`,
+  `token_report`, `cost_report`, `sbom`, `lock_status`, `doctor`, `validate_config`, `scan_content`) still list a
+  user-only skill by name, with its size, token count and lock state. They audit the whole configuration, and the
+  lock pins every skill; a report that left one out would show a locked project as out of sync. They carry no
+  content the model could invoke. The plain authoring server (`ai-rulez mcp` without
   `--serve-skills`) is exempt: it serves no skills to a model, it edits the configuration, and the flag only keeps
   a skill from the model's own invocation, so it still reads and lists every skill. A user-only skill on a serving
   server stays editable with `update_skill` and `delete_skill`, which never return its content. The setting is read
