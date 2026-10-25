@@ -45,9 +45,6 @@ type Server struct {
 	// surface records the tools registered; the instructions and the prompts
 	// follow it (surface.go).
 	surface toolSurface
-	// scopeNote is the instruction sentence about the nested scopes of an
-	// indexed repository (serve_context.go); empty when there is none.
-	scopeNote string
 	// scopedMu serializes the scoped skill writes of this server.
 	scopedMu sync.Mutex
 	// indexGen counts the announcements of the repository index (serve_indexwatch.go).

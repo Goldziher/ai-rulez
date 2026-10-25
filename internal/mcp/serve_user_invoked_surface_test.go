@@ -62,7 +62,7 @@ func TestMergedServer_AuthoringSurfaceKeepsUserInvokedSkillsFromTheModel(t *test
 			readOpen := call(t, session, "read_skill", map[string]any{"name": "open"})
 			_, readResource := readURI(t, session, "ai-rulez://skills/secret")
 			_, readOpenResource := readURI(t, session, "ai-rulez://skills/open")
-			listed, listErr := toolJSON(t, session, "list_skills", map[string]any{})
+			listed, listErr := toolJSON(t, session, "list_skills", nil)
 			catalogTool, catalogErr := toolJSON(t, session, "catalog", map[string]any{"kind": "skill"})
 			catalogText, err := readURI(t, session, "ai-rulez://catalog")
 
@@ -106,7 +106,7 @@ func TestAuthoringServer_StillReadsUserInvokedSkills(t *testing.T) {
 
 	// Act
 	read := call(t, session, "read_skill", map[string]any{"name": "secret"})
-	listed, _ := toolJSON(t, session, "list_skills", map[string]any{})
+	listed, _ := toolJSON(t, session, "list_skills", nil)
 	_, resourceErr := readURI(t, session, "ai-rulez://skills/secret")
 
 	// Assert
@@ -257,4 +257,28 @@ func itemIDs(out map[string]any) []string {
 		}
 	}
 	return ids
+}
+
+func TestRawArguments_NullAndAbsentArgumentsAreEmpty(t *testing.T) {
+	for name, raw := range map[string]json.RawMessage{"absent": nil, "null": json.RawMessage("null"), "empty object": json.RawMessage("{}")} {
+		t.Run(name, func(t *testing.T) {
+			req := &sdkmcp.CallToolRequest{Params: &sdkmcp.CallToolParamsRaw{Name: "list_skills", Arguments: raw}}
+
+			args, err := rawArguments(req)
+
+			require.NoError(t, err)
+			assert.NotNil(t, args)
+		})
+	}
+}
+
+func TestTools_AcceptNilArguments(t *testing.T) {
+	// Arrange: a confined server writes working_directory into the arguments.
+	session := connect(t, NewServer("test", WithRoot(authoredUserInvokedProject(t))))
+
+	// Act
+	res := call(t, session, "list_skills", nil)
+
+	// Assert
+	assert.False(t, res.IsError, firstText(res))
 }

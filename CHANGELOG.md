@@ -21,7 +21,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   skills server now leaves such a skill out of all of them and `load_skill` answers `<name> is user-invoked only
   (disable-model-invocation)`. The authoring tools of `mcp --serve-skills` (`read_skill`, `list_skills`, `catalog`
   and the `ai-rulez://` item and catalog resources, including `skill_discovery.served`) and the per-scope skill
-  counts follow the same rule; the plain `ai-rulez mcp` server still reads every skill. `get_skill` answers the same
+  counts follow the same rule, as do the read-only report tools (`list_roles`, `token_report`, `cost_report`,
+  `sbom`, `doctor`, `validate_config`, ...); the plain `ai-rulez mcp` server still reads every skill. `get_skill` answers the same
   message for a `skill://` URI. `ai-rulez.lock` is unchanged. `[mcp] serve_user_invoked_skills = true` serves them
   as before (a running `--daemon` reads the setting when it starts).
 - **A path-scoped `find_skill` no longer returns skills whose `paths:` do not reach the path.** Only rules were

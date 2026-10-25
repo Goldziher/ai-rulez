@@ -191,7 +191,7 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 		text = content
 	}
 	if target.catalog {
-		text = s.withoutHeldEntries(text, "items", heldCatalogItem)
+		text = s.scrubText(text)
 		if text, err = s.decorateCatalog(text, target.query); err != nil {
 			return nil, err
 		}
