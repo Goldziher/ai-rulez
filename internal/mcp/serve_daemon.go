@@ -406,8 +406,8 @@ func shortSocketBase() string {
 // authoring options are not visible here, so the CLI always names one.
 func (st *ServeSetup) derivedDaemonIdentity() string {
 	h := sha256.New()
-	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%t\x00%t\x00%t\x00%d\x00%d\x00%q\x00%q\x00", //nolint:errcheck,gosec // hash writes never fail
-		st.Profile, st.Preset, st.Role, st.IncludeStatic, st.Frozen, st.Offline,
+	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%t\x00%t\x00%t\x00%t\x00%d\x00%d\x00%q\x00%q\x00", //nolint:errcheck,gosec // hash writes never fail
+		st.Profile, st.Preset, st.Role, st.IncludeStatic, st.Frozen, st.Offline, st.ServeUserInvoked,
 		st.MaxCloneBytes, st.BudgetBytes, st.UsageLog, st.UsageSink)
 	writeKeyStrings(h, st.Filter.Domains)
 	writeKeyStrings(h, st.Filter.Allow)

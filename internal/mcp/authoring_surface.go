@@ -163,6 +163,11 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 	case target.catalog:
 		handler = handlers.CatalogHandler(s.version)
 	default:
+		if target.kind == "skills" {
+			if err := s.refuseUserInvoked(target.name); err != nil {
+				return nil, err
+			}
+		}
 		handler, mime = s.itemReaders()[target.kind], mimeMarkdown
 		args["name"] = target.name
 		if target.domain != "" {
@@ -183,6 +188,7 @@ func (s *Server) readAuthoringResource(ctx context.Context, req *sdkmcp.ReadReso
 		text = content
 	}
 	if target.catalog {
+		text = s.withoutHeldEntries(text, "items", heldCatalogItem)
 		if text, err = s.decorateCatalog(text, target.query); err != nil {
 			return nil, err
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"path/filepath"
 
@@ -102,6 +103,20 @@ type repoView struct {
 	generated func(path string, content []byte) bool
 	// refused maps a scope and name to why the scan refused the item at start-up.
 	refused map[string]string
+	// held names the skills withheld from the model (disable-model-invocation);
+	// the scope counts leave them out.
+	held map[string]bool
+}
+
+// counts is the per-kind count of a scope without the skills held back from the model.
+func (v *repoView) counts(s *repoindex.Scope) map[repoindex.Kind]int {
+	out := maps.Clone(s.Counts)
+	for name := range v.held {
+		if v.skillScope[name] == s.Path && out[repoindex.KindSkill] > 0 {
+			out[repoindex.KindSkill]--
+		}
+	}
+	return out
 }
 
 func refusedKey(scope, name string) string { return scope + "\x00" + name }
@@ -242,7 +257,7 @@ func (v *repoView) scopeEntries(q scopeQuery) ([]scopeEntry, error) {
 	out := make([]scopeEntry, 0, len(paths))
 	for _, p := range paths {
 		s, _ := v.index.Scope(p) //nolint:errcheck // every path came from the index
-		out = append(out, scopeEntry{Scope: s.Path, Sources: s.Sources, Counts: s.Counts})
+		out = append(out, scopeEntry{Scope: s.Path, Sources: s.Sources, Counts: v.counts(&s)})
 	}
 	return out, nil
 }
