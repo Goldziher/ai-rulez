@@ -21889,7 +21889,7 @@ either applies everywhere in its scope, and instruction files and agents are nev
 result carries its `paths` or `globs`, so you can see what narrows it.
 
 `path` may be a file or a directory. A directory keeps a rule or skill when some glob could match a path below it:
-`armis/services/**/kafka*.py` is kept for `armis/services` and dropped for `products/va`, and `**/*.py` is kept for any
+`backend/services/**/kafka*.py` is kept for `backend/services` and dropped for `products/web`, and `**/*.py` is kept for any
 directory. A path that exists is a directory if the filesystem says so; one that does not exist is a file when its last
 element has an extension. A restriction none of whose globs can be read does not hide the item.
 
