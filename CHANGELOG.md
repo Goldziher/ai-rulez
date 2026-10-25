@@ -22,6 +22,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   directory, could match a path below it (a directory used to match no glob and hid every path-gated rule). A skill
   without `paths:`, a `scope` query and loading by name are unchanged. The monorepo index cache format moves to
   version 3, so existing caches are rebuilt once.
+- **The watcher no longer misses a directory created while it attaches a tree.** Since 5.6.3 the tree was listed
+  before any of its directories were watched, so a directory created in between (for example right after a watched
+  `.ai-rulez/` was deleted and re-created) was never watched and edits inside it triggered no regeneration or index
+  refresh. The tree is now listed again once the watches are in place.
+- **`validate` no longer reports a valid `builtins` list as invalid beside another error.** When a configuration
+  failed the schema for any reason, such as an unknown key, the rejected boolean branch of `builtins` (boolean or
+  list) was reported too, as `builtins.type: Value is array but should be boolean`. Only the real errors are reported.
 
 ## [5.6.3] - 2026-10-24
 
