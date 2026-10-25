@@ -93,7 +93,6 @@ func newServingServer(version string, catalog *Catalog, opts ServeOptions, autho
 		version: version, serve: newServeState(opts), authoring: merged,
 	}
 	srv.catalog = srv.served(catalog)
-	srv.scopeNote = scopeSummary(srv.catalog.repository())
 	for _, opt := range authoring {
 		opt(srv)
 	}

@@ -580,7 +580,9 @@ serve_user_invoked_skills = true                                  # also serve s
   model sees changes. A server that serves skills and also carries the authoring tools (`mcp --serve-skills`, or
   `authoring = true`) applies the same rule to them: `read_skill` and `ai-rulez://skills/<name>` (matched by name,
   `skill://` URI or source path) answer the same error, and `list_skills`, the `catalog` tool and the
-  `ai-rulez://catalog` resource (items and `skill_discovery.served`) leave the skill out, as do the per-scope skill
+  `ai-rulez://catalog` resource (items and `skill_discovery.served`) leave the skill out, and so do `list_roles`
+  (with the role totals), `resolve_role`, `token_report`, `cost_report`, `sbom`, `lock_status`, `doctor`,
+  `validate_config` and `scan_content` (the objects and notes that name it; the headline token totals still count it), as do the per-scope skill
   counts in the server instructions and the catalog `scopes`. The plain authoring server (`ai-rulez mcp` without
   `--serve-skills`) is exempt: it serves no skills to a model, it edits the configuration, and the flag only keeps
   a skill from the model's own invocation, so it still reads and lists every skill. A user-only skill on a serving

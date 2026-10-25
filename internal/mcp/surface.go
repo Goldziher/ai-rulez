@@ -204,7 +204,7 @@ func (s *Server) composeInstructions() string {
 		parts = append(parts, s.serveInstructions())
 	}
 	if s.has(toolFindContext) {
-		parts = append(parts, strings.TrimSpace(s.scopeNote))
+		parts = append(parts, strings.TrimSpace(scopeSummary(s.cat().repository())))
 	}
 	return strings.TrimSpace(strings.Join(slices.DeleteFunc(parts, func(p string) bool { return p == "" }), " "))
 }

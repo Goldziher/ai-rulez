@@ -121,6 +121,10 @@ func rawArguments(req *sdkmcp.CallToolRequest) (map[string]any, error) {
 	if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
 		return nil, fmt.Errorf("decoding arguments: %w", err)
 	}
+	if args == nil {
+		// A JSON null decodes to a nil map, which the handlers would write to.
+		args = map[string]any{}
+	}
 	return args, nil
 }
 
