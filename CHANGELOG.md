@@ -38,8 +38,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   governance and audit tools (`catalog`, `list_roles`, `resolve_role`, `token_report`, `cost_report`, `sbom`,
   `lock_status`, `doctor`, `validate_config`, `scan_content`) still list such a skill by name with its size and lock
   state, because they audit the whole configuration; they never return its content. The plain `ai-rulez mcp` server
-  still reads every skill. `get_skill` answers the same message for a `skill://` URI. `ai-rulez.lock` is unchanged. `[mcp] serve_user_invoked_skills = true` serves them
-  as before (a running `--daemon` reads the setting when it starts).
+  still reads every skill. `get_skill` answers the same message for a `skill://` URI. `ai-rulez.lock` is unchanged.
+  `[mcp] serve_user_invoked_skills = true` serves them as before (a running `--daemon` reads the setting when it
+  starts).
 - **A path-scoped `find_skill` no longer returns skills whose `paths:` do not reach the path.** Only rules were
   narrowed by their `paths:` or `globs:`; a skill such as `.claude/skills/kafka-conventions` gated on
   `backend/services/**` still came back for `products/web`, ranked by text alone, although Claude Code hides a
