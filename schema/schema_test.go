@@ -386,6 +386,33 @@ func TestValidateFile_UnknownKeyNamesTheKey(t *testing.T) {
 	}
 }
 
+func TestValidateFile_UnknownKeyDoesNotReportTheFailedBranchOfAValidOneOf(t *testing.T) {
+	// builtins is oneOf boolean or array: an array fails the boolean branch but
+	// the oneOf as a whole holds, so only the unknown key may be reported.
+	body := "version = \"5.0\"\nname = \"x\"\nbuiltins = [\"go\", \"security\"]\nbogus_key = 1\n"
+
+	err := schema.ValidateFile(writeTOML(t, body))
+
+	require.Error(t, err)
+	oe, ok := err.(interface{ Context() map[string]any }) //nolint:errorlint // oops error carries context
+	require.True(t, ok)
+	lines := toStrings(oe.Context()["errors"])
+	joined := strings.Join(lines, "\n")
+	assert.Contains(t, joined, "bogus_key")
+	assert.NotContains(t, joined, "builtins", "a valid oneOf leaked its failed branch: %v", lines)
+}
+
+func TestValidateFile_InvalidOneOfIsStillReported(t *testing.T) {
+	body := "version = \"5.0\"\nname = \"x\"\nbuiltins = \"go\"\n"
+
+	err := schema.ValidateFile(writeTOML(t, body))
+
+	require.Error(t, err)
+	oe, ok := err.(interface{ Context() map[string]any }) //nolint:errorlint // oops error carries context
+	require.True(t, ok)
+	assert.Contains(t, strings.Join(toStrings(oe.Context()["errors"]), "\n"), "builtins")
+}
+
 func toStrings(v any) []string {
 	out, _ := v.([]string)
 	return out
