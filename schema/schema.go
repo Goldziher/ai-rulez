@@ -202,6 +202,13 @@ func extractNestedErrors(list *jsonschema.List, parentPath string) []string {
 	}
 
 	for _, detail := range list.Details {
+		// A subtree that holds as a whole reports nothing, though it may carry
+		// the errors of the branches a oneOf or anyOf rejected (an array under
+		// "boolean or array" fails the boolean branch). Those surface only once
+		// another part of the document is invalid, as noise beside the real error.
+		if detail.Valid {
+			continue
+		}
 		path := parentPath
 		if detail.InstanceLocation != "" {
 			if path != "" {
