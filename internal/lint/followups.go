@@ -270,7 +270,9 @@ func (r *runner) checkCollapsed() {
 // skill such as .claude/skills/<name>) that has the name of a skill the
 // configuration defines. Serving keeps one: the repository skill beats a
 // builtin, the configured skill beats the repository skill. The same
-// lint.allow_overrides entries silence it as for any other duplicate.
+// lint.allow_overrides entries silence it as for any other duplicate. A verified
+// generated alias of the configured skill (see sameDefinition) is no second
+// definition and is not reported.
 func (r *runner) checkRepoSkillCollapsed(allow map[string]bool, configDir, authored string) {
 	defined := r.definedSkills()
 	for i := range r.items {
@@ -280,8 +282,8 @@ func (r *runner) checkRepoSkillCollapsed(allow map[string]bool, configDir, autho
 		}
 		name := strings.ToLower(itemID(repo.kind, repo.cf))
 		other, ok := defined[name]
-		if !ok || allow[name] {
-			continue
+		if !ok || allow[name] || r.sameDefinition(repo, other) {
+			continue // a verified generated alias of the configured skill is that skill (#485)
 		}
 		winner, loser := repo.abs, other.cf.Path
 		if !isBuiltinItem(other) {

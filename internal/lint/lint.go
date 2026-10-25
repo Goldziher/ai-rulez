@@ -165,6 +165,7 @@ type runner struct {
 	missing      []missingPath   // AR401 findings, see dropIgnoredMissing
 	skillFiles   sync.Map        // skill directory -> every file below it, see stageSkillFiles
 	skillTrees   sync.Map        // skill directory -> []*dirFile, see skillTree
+	copyIdx      copyIndex       // the plugin renderings of WithGeneratedCopies, see aliasSource
 	runMu        sync.Mutex      // guards addRun and the AR9E7 flag: scanner batches may report concurrently
 	injRes       []gatedRe
 	relaxedRes   []gatedRe
@@ -175,8 +176,9 @@ type runner struct {
 	baseRel      string
 	cwd          string
 	host         ambient.Host
-	planned      PlannedFiles // what a run would write, for the traps (WithPlanned)
-	reach        HarnessReach // the harnesses that load each output (WithHarnessReach)
+	planned      PlannedFiles           // what a run would write, for the traps (WithPlanned)
+	renderCopies func() []GeneratedCopy // the plugin renderings of the definitions (WithGeneratedCopies)
+	reach        HarnessReach           // the harnesses that load each output (WithHarnessReach)
 	namesOnce    sync.Once
 	namesMu      sync.Mutex
 	harnessNames nameTables

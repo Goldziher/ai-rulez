@@ -10,7 +10,10 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 )
 
-const kindSkill = "skill"
+const (
+	kindSkill = "skill"
+	kindAgent = "agent"
+)
 
 // perItemContent returns a copy of a content tree that keeps only the content
 // written as one file per item: skills, agents, commands and checks, at the root
@@ -92,10 +95,10 @@ func checkLocalCollisions(cfg *config.Config, shared, local *config.ContentTree)
 			byKey[kindSkill+":"+f.Name] = source{kindSkill, f.Name, f.Path}
 		}
 		for _, f := range contentRefs(presets.AllCommands(t)) {
-			byKey[kindSkill+":"+f.Name] = source{"command", f.Name, f.Path}
+			byKey[kindSkill+":"+f.Name] = source{placementKindCommand, f.Name, f.Path}
 		}
 		for _, f := range contentRefs(presets.AllAgents(t)) {
-			byKey["agent:"+f.Name] = source{"agent", f.Name, f.Path}
+			byKey[kindAgent+":"+f.Name] = source{kindAgent, f.Name, f.Path}
 		}
 		for _, f := range contentRefs(presets.AllChecks(cfg, t)) {
 			byKey["check:"+strings.ToLower(f.Name)] = source{"check", f.Name, f.Path}

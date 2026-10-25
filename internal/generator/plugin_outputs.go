@@ -911,6 +911,25 @@ func (g *Generator) withCatalogSkill(tree *config.ContentTree) (*config.ContentT
 // collectMemberOutputs renders one monorepo member and returns its marketplace
 // entry.
 func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, plugin.MemberEntry, error) {
+	manifest, memberCfg, err := g.memberManifest(member)
+	if err != nil {
+		return nil, plugin.MemberEntry{}, err
+	}
+	memberOutputs, err := plugin.GenerateMember(manifest, memberCfg.BaseDir)
+	if err != nil {
+		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "generate member bundle")
+	}
+	return memberOutputs, plugin.MemberEntry{
+		Name:        manifest.Name,
+		Description: manifest.Description,
+		Source:      "./" + filepath.ToSlash(member),
+		Category:    manifest.Category,
+	}, nil
+}
+
+// memberManifest loads one monorepo member's configuration and builds the
+// manifest of its plugin bundle.
+func (g *Generator) memberManifest(member string) (*plugin.Manifest, *config.Config, error) {
 	memberDir := filepath.Join(g.config.BaseDir, member)
 	// The member is read the way the root was: through its workspace, host and
 	// registry, within the run's context.
@@ -927,38 +946,29 @@ func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, pl
 	}
 	memberCfg, err := config.LoadConfig(g.ctx, memberDir, loadOpts...)
 	if err != nil {
-		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "load monorepo member config")
+		return nil, nil, oops.With("member", member).Wrapf(err, "load monorepo member config")
 	}
 	if err := g.nestedPolicy(memberCfg, true); err != nil {
-		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "monorepo member config")
+		return nil, nil, oops.With("member", member).Wrapf(err, "monorepo member config")
 	}
 	memberCfg.Diag = g.config.Diag
 	if memberCfg.Plugin == nil {
-		return nil, plugin.MemberEntry{}, oops.
+		return nil, nil, oops.
 			With("member", member).
 			Hint("Each monorepo member must define its own [plugin] block").
 			Errorf("monorepo member %q has no [plugin] block", member)
 	}
 	if len(g.memberRuntimes) > 0 {
 		if err := limitMemberRuntimes(memberCfg, member, g.memberRuntimes); err != nil {
-			return nil, plugin.MemberEntry{}, err
+			return nil, nil, err
 		}
 	}
 
 	manifest, err := NewGenerator(memberCfg).buildPluginManifest("")
 	if err != nil {
-		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "build member manifest")
+		return nil, nil, oops.With("member", member).Wrapf(err, "build member manifest")
 	}
-	memberOutputs, err := plugin.GenerateMember(manifest, memberCfg.BaseDir)
-	if err != nil {
-		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "generate member bundle")
-	}
-	return memberOutputs, plugin.MemberEntry{
-		Name:        manifest.Name,
-		Description: manifest.Description,
-		Source:      "./" + filepath.ToSlash(member),
-		Category:    manifest.Category,
-	}, nil
+	return manifest, memberCfg, nil
 }
 
 // MemberRuntimeError is returned when a [marketplace] member ships none of the runtimes a bundle was limited to

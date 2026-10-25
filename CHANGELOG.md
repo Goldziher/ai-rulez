@@ -15,6 +15,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`AR701`, `AR702` and `AR703` no longer treat a generated copy of a skill as a second definition.** A plugin
+  bundle's generated `skills/<name>/SKILL.md` (and a byte-identical public export of it) repeats the description and
+  the name of the skill it was generated from, so `validate` reported each copy as a duplicate description of its own
+  source and, run from the plugin's configuration, as a collapsed duplicate, and `--strict` failed. `validate` now
+  renders the plugin bundles of the configuration in memory, as `verify --plugin` does (a `[marketplace]` member the
+  way its producer renders it), and a skill, agent or command file counts as the same item as a definition only when
+  its bytes equal what the generator renders from that definition now (CRLF line endings aside). Generated headers and
+  `.ai-rulez-generated.json` grant nothing: a hand-written file with a copied header and sidecar, an edited copy, a copy
+  left stale by a later edit of its definition and an independently written skill with the same name or description
+  are still reported, and every other rule, the security rules first, still reads the generated copies
+  ([#485](https://github.com/Goldziher/ai-rulez/issues/485)).
 - **`find_skill` and `load_skill` no longer hand a user-only skill to the model.** A skill with
   `disable-model-invocation: true` (Claude Code's flag for a skill only the user runs, with a slash command) was
   ranked by `find_skill`, listed by `search_skills` and the `skill://` resources, and served by `load_skill`. The

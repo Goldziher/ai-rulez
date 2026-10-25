@@ -225,18 +225,28 @@ func (g *Generator) sharedPluginView() (*Generator, error) {
 // ~keep Members omit local indexes because their registered producer owns the marketplace.
 func (g *Generator) pluginDriftOutputs(profile, top string) ([]config.OutputFile, error) {
 	if g.config.Plugin != nil && !g.config.HasPluginSet() {
-		top = resolveThroughLinks(top)
-		for dir := filepath.Dir(resolveThroughLinks(g.config.BaseDir)); isUnderBaseDir(top, dir); dir = filepath.Dir(dir) {
-			outputs, found, err := g.registeredMemberDriftOutputs(dir)
-			if err != nil || found {
-				return outputs, err
-			}
-			if samePath(dir, top) {
-				break
-			}
+		if outputs, found, err := g.producerMemberOutputs(top); err != nil || found {
+			return outputs, err
 		}
 	}
 	return g.collectPluginOutputs(profile)
+}
+
+// producerMemberOutputs renders this configuration the way the nearest producer
+// above it that lists it as a [marketplace] member does, walking up to top (the
+// repository root). found is false when no producer lists it.
+func (g *Generator) producerMemberOutputs(top string) (outputs []config.OutputFile, found bool, err error) {
+	top = resolveThroughLinks(top)
+	for dir := filepath.Dir(resolveThroughLinks(g.config.BaseDir)); isUnderBaseDir(top, dir); dir = filepath.Dir(dir) {
+		outputs, found, err := g.registeredMemberDriftOutputs(dir)
+		if err != nil || found {
+			return outputs, found, err
+		}
+		if samePath(dir, top) {
+			break
+		}
+	}
+	return nil, false, nil
 }
 
 func (g *Generator) registeredMemberDriftOutputs(dir string) ([]config.OutputFile, bool, error) {
