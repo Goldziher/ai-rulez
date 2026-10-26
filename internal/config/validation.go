@@ -237,19 +237,17 @@ func (c *Config) validateRules() error {
 	if err := validateBazScoped(c.Rules.BazScoped); err != nil {
 		return err
 	}
+	if err := validateScopedFallback(c.Rules.ScopedFallback); err != nil {
+		return err
+	}
 	if err := validateBazDefault(c.Rules.BazDefault); err != nil {
 		return err
 	}
 	if err := validateBazUnscoped(c.Rules.BazUnscoped); err != nil {
 		return err
 	}
-	if v := c.Rules.BazRest; v != "" && v != BazRestRoot && v != BazRestSkip {
-		return oops.
-			With("field", "rules.baz_rest").
-			With("actual_value", v).
-			With("valid_values", []string{BazRestRoot, BazRestSkip}).
-			Hint("Use \"root\" to keep unselected path-scoped items in the root AGENTS.md or \"skip\" to leave them out.").
-			Errorf("invalid baz_rest value %q at rules.baz_rest", v)
+	if err := validateBazRest(c.Rules.BazRest); err != nil {
+		return err
 	}
 	if c.Rules.BazDedupeMax < 0 {
 		return oops.
@@ -286,6 +284,30 @@ func (c *Config) validateRules() error {
 		}
 	}
 	return nil
+}
+
+func validateBazRest(value string) error {
+	if value == "" || value == BazRestRoot || value == BazRestSkip {
+		return nil
+	}
+	return oops.
+		With("field", "rules.baz_rest").
+		With("actual_value", value).
+		With("valid_values", []string{BazRestRoot, BazRestSkip}).
+		Hint("Use \"root\" to keep unselected path-scoped items in the root AGENTS.md or \"skip\" to leave them out.").
+		Errorf("invalid baz_rest value %q at rules.baz_rest", value)
+}
+
+func validateScopedFallback(value string) error {
+	if value == "" || value == ScopedFallbackInline || value == ScopedFallbackSkill {
+		return nil
+	}
+	return oops.
+		With("field", "rules.scoped_fallback").
+		With("actual_value", value).
+		With("valid_values", []string{ScopedFallbackInline, ScopedFallbackSkill}).
+		Hint("Use \"inline\" to inline glob-scoped items into AGENTS.md or \"skill\" to serve them as path-gated skills.").
+		Errorf("invalid scoped_fallback value %q at rules.scoped_fallback", value)
 }
 
 func validateBazScoped(value string) error {

@@ -1,6 +1,6 @@
 ---
 name: extendr-bindings
-description: "extendr conventions for exposing a Rust core to R: extendr macros and module registration, Robj type mapping, NA handling, rextendr builds, R package scaffolding, and CRAN compliance. Load when generating or reviewing extendr R bindings for a Rust library."
+description: "extendr R packages from a Rust core: extendr macros and module registration, R type mapping, NA handling, rextendr builds, CRAN checks. Use when writing or reviewing extendr bindings."
 ---
 
 - Use `extendr` crate for Rust-R interop. `#[extendr]` macro on functions, `extendr_module!` for registration.

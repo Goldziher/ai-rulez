@@ -60,10 +60,16 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	if wantAgentsMD && !cfg.SkipsRootFiles() && (!content.IsEmpty() || !cfg.HasPluginAuthoring()) {
 		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, owners, inlining))
 	}
+	var fallback []config.ContentFile
+	if inlining.ScopedAsSkills {
+		fallback = scopedFallbackSkills(cfg, content, owners)
+	} else if inlining.Scoped {
+		warnScopedInlinedTwice(cfg, content, owners)
+	}
 	if wantSkills {
 		// The tree is rendered once for all readers, so delivery is resolved for
 		// them together (served skills out and the stub in, as for claude).
-		shared = append(shared, sharedSkillOutputs(cfg, content, skillReaders)...)
+		shared = append(shared, sharedSkillOutputs(cfg, content, skillReaders, fallback)...)
 	}
 	for i := range shared {
 		if !shared[i].IsDir && shared[i].RawContent == nil {
@@ -72,6 +78,59 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	}
 	dropShadowedByShared(allOutputs, cfg.BaseDir, wantAgentsMD, wantSkills, targeted)
 	allOutputs[sharedOutputsKey] = shared
+}
+
+// scopedFallbackSkills is the skills rules.scoped_fallback = "skill" adds to the
+// shared tree. A generated skill whose id an authored skill or a command already
+// uses is left out with a warning: the authored item keeps its directory.
+func scopedFallbackSkills(cfg *config.Config, content *config.ContentTree, owners []string) []config.ContentFile {
+	taken := map[string]bool{}
+	for _, items := range [][]config.ContentFile{presets.AllSkills(content), presets.AllCommands(content)} {
+		for idx := range items {
+			taken[config.SkillID(items[idx])] = true
+		}
+	}
+	var kept []config.ContentFile
+	generated := presets.ScopedFallbackSkills(content, cfg, owners)
+	for idx := range generated {
+		skill := &generated[idx]
+		if taken[skill.ID] {
+			cfg.Diag.Warn("a skill or command already uses the name of a glob-scoped item's fallback skill, so the item "+
+				"is not served to presets without a rules folder; rename one of them", "skill", skill.ID, "source", skill.Path)
+			continue
+		}
+		taken[skill.ID] = true
+		kept = append(kept, *skill)
+	}
+	return kept
+}
+
+// warnScopedInlinedTwice reports, once per run, that the shared AGENTS.md
+// inlines glob-scoped items for a preset without a rules folder while a preset
+// with one also reads (or, for claude, imports) the file: that preset then loads
+// every such item at the start of each session, beside its own path-scoped copy.
+func warnScopedInlinedTwice(cfg *config.Config, content *config.ContentTree, owners []string) {
+	var folderReaders []string
+	for _, preset := range cfg.Presets {
+		if !preset.IsBuiltIn() {
+			continue
+		}
+		consumer, ok := config.SharedOutputConsumerFor(preset.BuiltIn)
+		if ok && consumer.NeedsAgentsMD() && consumer.Folder != config.RulesFolderNone {
+			folderReaders = append(folderReaders, preset.BuiltIn)
+		}
+	}
+	if len(folderReaders) == 0 {
+		return
+	}
+	scoped := presets.ScopedFallbackSkills(content, cfg, owners)
+	if len(scoped) == 0 {
+		return
+	}
+	cfg.Diag.OnceWarn("agents_md", "scoped-inlined-twice",
+		"AGENTS.md inlines glob-scoped rules and context for presets without a rules folder; presets with one also read it, "+
+			"so those items load in every session. Set [rules] scoped_fallback = \"skill\" to serve them as path-gated skills",
+		"items", len(scoped), "presets", strings.Join(folderReaders, ","))
 }
 
 // sharedSkillTargets is the frontmatter targets of the skills and of the commands
@@ -87,7 +146,9 @@ func sharedSkillTargets(content *config.ContentTree) skillTargets {
 // sharedSkillOutputs renders the shared .agents/skills tree for readers: the
 // skills, plus the commands (and Codex's invocation policy for them) when a
 // reader runs a command as a skill.
-func sharedSkillOutputs(cfg *config.Config, content *config.ContentTree, readers []string) []config.OutputFile {
+func sharedSkillOutputs(cfg *config.Config, content *config.ContentTree, readers []string,
+	fallback []config.ContentFile,
+) []config.OutputFile {
 	var commands []config.ContentFile
 	if slices.ContainsFunc(readers, func(preset string) bool {
 		consumer, ok := config.SharedOutputConsumerFor(preset)
@@ -95,7 +156,8 @@ func sharedSkillOutputs(cfg *config.Config, content *config.ContentTree, readers
 	}) {
 		commands = presets.SharedCommandSkills(cfg.Diag, content)
 	}
-	outputs := presets.SharedAgentSkills(sharedSkillsContent(cfg, content, readers), cfg.BaseDir, commands...)
+	outputs := presets.SharedAgentSkills(sharedSkillsContent(cfg, content, readers), cfg.BaseDir,
+		append(commands, fallback...)...)
 	if slices.Contains(readers, string(config.PresetCodex)) {
 		outputs = append(outputs, presets.SharedCodexCommandPolicy(commands, cfg.BaseDir)...)
 	}

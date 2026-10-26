@@ -244,6 +244,10 @@ func (c *Config) ReadsSharedAgentsMD(preset string) bool {
 type AgentsMDInlining struct {
 	Scoped     bool
 	AutoManual bool
+	// ScopedAsSkills replaces the inlined glob-scoped items: rules.scoped_fallback
+	// is "skill" and every reader without a rules folder also reads the shared
+	// .agents/skills tree, which then carries each of them as a path-gated skill.
+	ScopedAsSkills bool
 }
 
 // SharedAgentsMDInlining decides what AGENTS.md carries beyond always-on rules
@@ -252,6 +256,9 @@ type AgentsMDInlining struct {
 // auto and manual ones when a folder cannot hold those.
 func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 	var inlining AgentsMDInlining
+	// skillReachable stays true while every preset that needs the scoped items
+	// inlined can read the shared skills tree instead.
+	skillReachable := true
 	for _, preset := range cfg.Presets {
 		if !preset.IsBuiltIn() {
 			continue
@@ -260,23 +267,44 @@ func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 		if !ok || !consumer.NeedsAgentsMD() {
 			continue
 		}
-		split := cfg.RulesModeFor(preset.BuiltIn) == RulesModeSplit
-		switch consumer.Folder {
-		case RulesFolderNone:
-			inlining.Scoped = true
-		case RulesFolderSplitOnly:
-			// No files in inline mode: the glob-scoped items go to AGENTS.md.
-			inlining.Scoped = inlining.Scoped || !split
-		case RulesFolderScopedInInline:
-			// Inline mode still writes the glob-scoped files; auto and manual
-			// items have none.
-			inlining.AutoManual = inlining.AutoManual || !split
-		case RulesFolderScopedOnly:
-			inlining.AutoManual = true
-		case RulesFolderAlways:
-		}
+		reachable := inlining.add(consumer, cfg.RulesModeFor(preset.BuiltIn) == RulesModeSplit)
+		skillReachable = skillReachable && reachable
 	}
 	// Scoped covers auto and manual items, so equal output means equal values.
 	inlining.AutoManual = inlining.AutoManual || inlining.Scoped
+	if inlining.Scoped && skillReachable && scopedAsSkills(cfg) {
+		inlining.Scoped, inlining.ScopedAsSkills = false, true
+	}
 	return inlining
+}
+
+// add records what one reader of the shared AGENTS.md needs inlined, given
+// whether its rules mode is split. It reports whether a preset that needs the
+// glob-scoped items inlined could read them from the shared skills tree instead
+// (true when the preset does not need them inlined at all).
+func (i *AgentsMDInlining) add(consumer SharedOutputConsumer, split bool) bool {
+	switch consumer.Folder {
+	case RulesFolderNone:
+		i.Scoped = true
+		return consumer.Reads(SharedAgentSkills)
+	case RulesFolderSplitOnly:
+		// No files in inline mode: the glob-scoped items go to AGENTS.md.
+		i.Scoped = i.Scoped || !split
+		return split || consumer.Reads(SharedAgentSkills)
+	case RulesFolderScopedInInline:
+		// Inline mode still writes the glob-scoped files; auto and manual items
+		// have none.
+		i.AutoManual = i.AutoManual || !split
+	case RulesFolderScopedOnly:
+		i.AutoManual = true
+	case RulesFolderAlways:
+	}
+	return true
+}
+
+// scopedAsSkills reports whether rules.scoped_fallback asks for skills in this
+// run. A scope run nests AGENTS.md per scope with no skills tree of its own, so
+// the scoped items stay inline there.
+func scopedAsSkills(cfg *Config) bool {
+	return cfg.ScopedFallbackRules() == ScopedFallbackSkill && (cfg.Run == nil || cfg.Run.Scope == nil)
 }
