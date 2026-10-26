@@ -64,7 +64,7 @@ jobs:
           version: ${{ env.BATS_VERSION }}
 
       - name: Run the shell script suites
-        uses: xberg-io/actions/run-bats@cc89740654cef67b752113ddd87d4f0d23dda3f5 # v1
+        uses: xberg-io/actions/run-bats@793d3a4d37a17009d91cce29f2825eda570d2abd # v1
         with:
           path: tests/bats
           # bats_load_library searches BATS_LIB_PATH only; scripts/bats/run.sh sets the same path.
