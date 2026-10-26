@@ -85,21 +85,22 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 // uses is left out with a warning: the authored item keeps its directory.
 func scopedFallbackSkills(cfg *config.Config, content *config.ContentTree, owners []string) []config.ContentFile {
 	taken := map[string]bool{}
-	for _, skill := range presets.AllSkills(content) {
-		taken[config.SkillID(skill)] = true
-	}
-	for _, command := range presets.AllCommands(content) {
-		taken[config.SkillID(command)] = true
+	for _, items := range [][]config.ContentFile{presets.AllSkills(content), presets.AllCommands(content)} {
+		for idx := range items {
+			taken[config.SkillID(items[idx])] = true
+		}
 	}
 	var kept []config.ContentFile
-	for _, skill := range presets.ScopedFallbackSkills(content, cfg, owners) {
+	generated := presets.ScopedFallbackSkills(content, cfg, owners)
+	for idx := range generated {
+		skill := &generated[idx]
 		if taken[skill.ID] {
 			cfg.Diag.Warn("a skill or command already uses the name of a glob-scoped item's fallback skill, so the item "+
 				"is not served to presets without a rules folder; rename one of them", "skill", skill.ID, "source", skill.Path)
 			continue
 		}
 		taken[skill.ID] = true
-		kept = append(kept, skill)
+		kept = append(kept, *skill)
 	}
 	return kept
 }
