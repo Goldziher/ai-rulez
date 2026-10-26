@@ -1,6 +1,6 @@
 ---
 name: observability-standards
-description: "Observability standards: JSON structured logging with key=value fields and never string interpolation, the ERROR/WARN/INFO/DEBUG/TRACE level taxonomy, a /health endpoint with per-component status wired to orchestrator probes, counter/gauge/histogram metric choice with no high-cardinality labels, and correlation-ID propagation across service boundaries. Load when adding logging, metrics, tracing or a health endpoint to a service, or reviewing what a service emits."
+description: "Service observability: structured JSON logs, log levels, health endpoint wired to probes, counter/gauge/histogram choice, label cardinality, correlation IDs. Use when adding logs, metrics or health checks."
 ---
 
 - **Structured logging**: JSON output, `key=value` pairs — never string interpolation in log messages.

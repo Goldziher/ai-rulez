@@ -1,6 +1,6 @@
 ---
 name: ext-php-rs-bindings
-description: "ext-php-rs conventions for building PHP 8.2+ native extensions from a Rust core: php_class/php_function macros, Zval conversion, PhpException mapping, php.ini loading, and PHPUnit testing. Load when generating or reviewing ext-php-rs PHP bindings for a Rust library."
+description: "ext-php-rs PHP 8.2+ extensions from a Rust core: php_class/php_function, Zval conversion, PhpException mapping, loading, PHPUnit. Use when writing or reviewing ext-php-rs bindings."
 ---
 
 - Use `ext-php-rs` for PHP 8.2+ native extensions. Use `#[php_class]` and `#[php_function]` macros.

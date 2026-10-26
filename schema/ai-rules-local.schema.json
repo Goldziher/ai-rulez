@@ -4180,6 +4180,11 @@
           },
           "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
           "type": "object"
+        },
+        "scoped_fallback": {
+          "description": "How the shared AGENTS.md serves glob-scoped rules and context to presets without a rules folder (codex, opencode, pi, ...). inline (default) inlines them with an Applies to line, so every reader of AGENTS.md, including claude through its import, loads them at start; skill writes each one to .agents/skills as a skill gated by its paths, when every such preset reads that tree.",
+          "enum": ["inline", "skill"],
+          "type": "string"
         }
       },
       "type": "object"

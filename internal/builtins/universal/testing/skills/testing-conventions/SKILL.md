@@ -1,6 +1,6 @@
 ---
 name: testing-conventions
-description: "How to write a good test: behaviour-describing names (`should_return_error_when_input_is_empty`, `given_when_then`), exact-value assertions over truthiness, snapshot and property-based testing, order-independent and idempotent tests with no shared mutable state, and the anti-patterns (testing mocks, test-only production methods, mocking what you don't own, asserting implementation details). Load when writing or reviewing a test file, naming test cases, choosing assertions, or diagnosing a flaky or always-passing test."
+description: "Writing tests: behavior-describing names, exact-value assertions, snapshot and property tests, independent idempotent tests, anti-patterns such as testing mocks. Use when writing or reviewing tests or diagnosing a flaky one."
 ---
 
 ## Naming

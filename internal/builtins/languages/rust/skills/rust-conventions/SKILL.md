@@ -1,6 +1,6 @@
 ---
 name: rust-conventions
-description: Rust code conventions covering edition 2024, cargo fmt/clippy, Result-based error handling, unsafe discipline, async with tokio, API-guideline naming, trait implementations, benchmarking, and security scanning. Load when writing or reviewing Rust code.
+description: "Rust conventions: edition, fmt and clippy, error crates and propagation, unsafe documentation, API naming guidelines, traits, testing, benchmarks, tokio, cargo audit. Use when writing or reviewing Rust code."
 ---
 
 - Rust 2024 edition, `cargo fmt` + `clippy -D warnings`, zero warnings policy.

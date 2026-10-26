@@ -1,6 +1,6 @@
 ---
 name: dependency-awareness
-description: Per-language dependency vulnerability audit tool reference (cargo audit/deny, pip-audit, npm/pnpm audit, govulncheck, bundler-audit, composer audit, OWASP dependency-check, dotnet vulnerable, mix_audit). Load when adding, updating, or auditing project dependencies, wiring up CI supply-chain checks, or triaging CVEs in a lock file.
+description: "Dependency vulnerability audits per language: cargo audit/deny, pip-audit, pnpm audit, govulncheck, bundler-audit, composer audit, dotnet, mix_audit. Use when adding or updating dependencies or triaging CVEs."
 ---
 
 Audit dependencies before adding them. Prefer well-maintained, widely-used packages with active maintenance. Pin versions and commit lock files. Use language-specific audit tools in CI:

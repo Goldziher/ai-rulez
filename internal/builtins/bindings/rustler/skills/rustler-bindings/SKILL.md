@@ -1,6 +1,6 @@
 ---
 name: rustler-bindings
-description: "Rustler conventions for building Elixir NIFs from a Rust core: nif macros, tagged {:ok,_}/{:error,_} tuples, dirty schedulers, ResourceArc state, NifStruct derives, and mix compile. Load when generating or reviewing Rustler Elixir NIF bindings for a Rust library."
+description: "Rustler NIFs for Elixir: rustler::nif, tagged tuples, dirty schedulers for long work, ResourceArc state, NifStruct types, no panics. Use when writing or reviewing Rustler bindings."
 ---
 
 - Use `#[rustler::nif]` for Elixir NIF functions. Use `#[module = "Elixir.ModuleName"]` for module naming.

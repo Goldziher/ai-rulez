@@ -739,6 +739,14 @@ type RulesConfig struct {
 	// disables the warning.
 	BazBudget int `yaml:"baz_budget,omitempty" json:"baz_budget,omitempty" toml:"baz_budget,omitempty"` //nolint:tagliatelle
 
+	// ScopedFallback says what the shared AGENTS.md does with glob-scoped rules
+	// and context for the presets that read it without a rules folder of their
+	// own (codex, opencode, pi, ...): "inline" (the default) inlines them with an
+	// "Applies to" line, which every reader of AGENTS.md then loads at start;
+	// "skill" writes each one as a skill gated by its paths in .agents/skills
+	// instead, so they load on demand. See ScopedFallbackRules.
+	ScopedFallback string `yaml:"scoped_fallback,omitempty" json:"scoped_fallback,omitempty" toml:"scoped_fallback,omitempty"` //nolint:tagliatelle
+
 	// Baz holds per-rule controls for the baz preset ([rules.baz]).
 	Baz *BazRulesConfig `yaml:"baz,omitempty" json:"baz,omitempty" toml:"baz,omitempty"`
 }
@@ -781,6 +789,22 @@ func (c *Config) BazScopedRules() string {
 		return c.Rules.BazScoped
 	}
 	return BazScopedNested
+}
+
+// Values of rules.scoped_fallback.
+const (
+	ScopedFallbackInline = "inline"
+	ScopedFallbackSkill  = "skill"
+)
+
+// ScopedFallbackRules returns how the shared AGENTS.md serves glob-scoped items
+// to presets without a rules folder: ScopedFallbackInline unless
+// rules.scoped_fallback says ScopedFallbackSkill.
+func (c *Config) ScopedFallbackRules() string {
+	if c != nil && c.Rules != nil && c.Rules.ScopedFallback != "" {
+		return c.Rules.ScopedFallback
+	}
+	return ScopedFallbackInline
 }
 
 // Values of rules.baz_unscoped.

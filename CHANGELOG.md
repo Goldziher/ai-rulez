@@ -10,11 +10,30 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added
 
+- **`[rules] scoped_fallback = "skill"` serves glob-scoped rules as path-gated skills instead of inlining them into
+  the shared `AGENTS.md`.** With `agents_md = true` and a preset that has no rules folder (`codex`, `opencode`, `pi`,
+  ...), `AGENTS.md` inlined every glob-scoped rule and context file, so every preset that reads it loaded them at the
+  start of each session: Cursor, Copilot and Junie directly, and Claude through the `CLAUDE.md` import shim, beside its
+  own path-scoped copy in `.claude/rules`. In one measured repository this put 17 language rules into every session and
+  pushed `AGENTS.md` past Codex's 32 KiB read limit. With `skill`, `AGENTS.md` keeps the always-on items, and each
+  glob-scoped item becomes `.agents/skills/rule-<id>` (or `context-<id>`) with the item's positive globs as `paths`, so
+  Claude Code and Cursor gate it by file and Codex loads it on demand. It applies when every folderless reader of
+  `AGENTS.md` also reads `.agents/skills`, and not in a scope run. The default, `inline`, leaves output unchanged.
+  See [Glob-scoped rules and AGENTS.md](https://goldziher.github.io/ai-rulez/rules/#glob-scoped-rules-and-agentsmd).
+- **`generate` warns when the shared `AGENTS.md` inlines glob-scoped items that a preset with a rules folder also
+  loads**, naming the presets and pointing to `scoped_fallback = "skill"`.
 - **`AR9R2 served-dmi-unreachable`** warns when a `delivery: served` skill sets `disable-model-invocation: true`: a
   served skill is never written to disk (no slash command) and the skills server now hides a user-only skill from
   the model, so nobody can run it. Set `delivery: both`, or `[mcp] serve_user_invoked_skills = true`. `AR9R1` now
   reports a `load_skill`/`find_skill` pointer to a `both` user-only skill too, unless that setting is on. Both
   honor only the hyphenated `disable-model-invocation`, the spelling Claude Code and the server read.
+
+### Changed
+
+- **Builtin skill descriptions fit the 250-character listing limit.** 22 builtin skills (`code-quality-standards`,
+  `testing-conventions`, `task-runner`, the binding skills and others) had descriptions of up to 585 characters,
+  listed in every session; harnesses that budget the skill listing truncated them and lost the trigger words. Each is
+  now at most 250 characters, leads with what the skill covers and ends with when to use it. Skill bodies are unchanged.
 
 ### Fixed
 

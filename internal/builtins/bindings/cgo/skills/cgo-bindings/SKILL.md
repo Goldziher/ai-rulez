@@ -1,6 +1,6 @@
 ---
 name: cgo-bindings
-description: "cgo conventions for linking Go to a C or Rust static library: import \"C\" directives, type/string conversion, CString memory management, thread safety, and Go pointer pinning. Load when generating or reviewing cgo bindings that call a C or Rust core from Go."
+description: "cgo linking Go to a C or Rust library: import \"C\" directives, string conversion, C.free discipline, pointer pinning, thread safety. Use when writing or reviewing cgo bindings."
 ---
 
 - Use `import "C"` with `// #cgo LDFLAGS:` and `// #cgo CFLAGS:` directives for linking.

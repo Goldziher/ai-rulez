@@ -2747,6 +2747,7 @@ claude = "inline"
 
 - **`rules.mode`**: `split` (the default) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
+- **`rules.scoped_fallback`**: how the shared `AGENTS.md` (`agents_md = true`) serves glob-scoped rules and context to presets without a rules folder (`codex`, `opencode`, `pi`, ...). `inline` (the default) inlines them with an `_Applies to:_` line, so every preset that reads or imports `AGENTS.md` loads them at start; `skill` writes each one to `.agents/skills` as a skill gated by its `paths`. See [Rules](rules.md#glob-scoped-rules-and-agentsmd).
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 - **`rules.baz_default`**: `all` (the default) nests every path-scoped item into the Baz directory files; `none` nests only items whose `targets` select `baz`, leaving the rest in the root `AGENTS.md`.
 - **`rules.baz.include`**: with `baz_default = "none"`, the rule and context names (list) that are nested for Baz in addition to the items whose `targets` select `baz`; `baz: true` in an item's frontmatter does the same. A `!baz` entry in `targets` always keeps an item out of the Baz nested files. See [Baz](baz.md#per-rule-opt-in-and-opt-out).
@@ -4264,6 +4265,35 @@ Root files always keep context (unscoped context in both modes) and the delegati
 ##### Context
 
 Context stays in the root file. Only path-scoped context moves to the rules folder (`context-<id>`), where the tool loads it for matching files.
+
+##### Glob-scoped rules and AGENTS.md
+
+With `agents_md = true` the presets share one `AGENTS.md`. When one of them has no rules folder (`codex`, `opencode`,
+`pi`, `amp`, ...), the file inlines every glob-scoped rule and glob-scoped context file with an `_Applies to:_` line,
+because that preset has no other place to find them. Every other preset that reads the file then loads those items at
+the start of each session too: Cursor, Copilot and Junie read `AGENTS.md` directly, and Claude imports it from the
+`CLAUDE.md` shim, beside its own path-scoped copy in `.claude/rules`. `generate` warns when this happens.
+
+```toml
+[rules]
+scoped_fallback = "skill"   # inline (default) | skill
+```
+
+With `skill`, the shared `AGENTS.md` keeps only the always-on items (and the auto and manual ones a folderless preset
+needs), and each glob-scoped item becomes a skill in `.agents/skills`:
+
+- named `rule-<id>` or `context-<id>`;
+- its description is the item's `description`, or `<name>: conventions for files matching <globs>. Use when reading
+  or editing those files.` (cut to 250 characters);
+- its `paths` are the item's positive globs, so Claude Code and Cursor load it only for matching files, and Codex and
+  the other folderless presets list it and load it on demand;
+- its body is the item's content under an `_Applies to:_` line.
+
+Presets with a rules folder keep their path-scoped files as before; Claude reads `.claude/skills`, not
+`.agents/skills`, so it does not see the generated skills. The fallback applies only when every folderless preset that
+reads `AGENTS.md` also reads `.agents/skills` (for example not with `zcode`, which reads only `AGENTS.md`), and not in
+a [scope](monorepo.md#scoped-rule-files) run. An authored skill or command whose id is already `rule-<id>` keeps it,
+and the item is left out with a warning.
 
 ##### Antigravity and Gemini
 
@@ -35328,7 +35358,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
 - **`schema`**: URL of the JSON Schema, for editor support
-- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
+- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `scoped_fallback`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge
