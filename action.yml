@@ -1,5 +1,5 @@
 name: Set up ai-rulez
-description: Install a sha256-verified, cached ai-rulez binary and optionally configure LLM access for later steps. No Go, Node or Python needed.
+description: Install a sha256-verified, cached ai-rulez binary and optionally set up LLM access. No Go, Node or Python needed.
 branding:
   icon: check-square
   color: blue
