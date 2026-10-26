@@ -244,6 +244,10 @@ func (c *Config) ReadsSharedAgentsMD(preset string) bool {
 type AgentsMDInlining struct {
 	Scoped     bool
 	AutoManual bool
+	// ScopedAsSkills replaces the inlined glob-scoped items: rules.scoped_fallback
+	// is "skill" and every reader without a rules folder also reads the shared
+	// .agents/skills tree, which then carries each of them as a path-gated skill.
+	ScopedAsSkills bool
 }
 
 // SharedAgentsMDInlining decides what AGENTS.md carries beyond always-on rules
@@ -252,6 +256,9 @@ type AgentsMDInlining struct {
 // auto and manual ones when a folder cannot hold those.
 func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 	var inlining AgentsMDInlining
+	// skillReachable stays true while every preset that needs the scoped items
+	// inlined can read the shared skills tree instead.
+	skillReachable := true
 	for _, preset := range cfg.Presets {
 		if !preset.IsBuiltIn() {
 			continue
@@ -264,9 +271,11 @@ func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 		switch consumer.Folder {
 		case RulesFolderNone:
 			inlining.Scoped = true
+			skillReachable = skillReachable && consumer.Reads(SharedAgentSkills)
 		case RulesFolderSplitOnly:
 			// No files in inline mode: the glob-scoped items go to AGENTS.md.
 			inlining.Scoped = inlining.Scoped || !split
+			skillReachable = skillReachable && (split || consumer.Reads(SharedAgentSkills))
 		case RulesFolderScopedInInline:
 			// Inline mode still writes the glob-scoped files; auto and manual
 			// items have none.
@@ -278,5 +287,10 @@ func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 	}
 	// Scoped covers auto and manual items, so equal output means equal values.
 	inlining.AutoManual = inlining.AutoManual || inlining.Scoped
+	// A scope run nests AGENTS.md per scope with no skills tree of its own, so
+	// the scoped items stay inline there.
+	if inlining.Scoped && skillReachable && cfg.ScopedFallbackRules() == ScopedFallbackSkill && (cfg.Run == nil || cfg.Run.Scope == nil) {
+		inlining.Scoped, inlining.ScopedAsSkills = false, true
+	}
 	return inlining
 }

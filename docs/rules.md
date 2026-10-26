@@ -138,6 +138,35 @@ Root files always keep context (unscoped context in both modes) and the delegati
 
 Context stays in the root file. Only path-scoped context moves to the rules folder (`context-<id>`), where the tool loads it for matching files.
 
+### Glob-scoped rules and AGENTS.md
+
+With `agents_md = true` the presets share one `AGENTS.md`. When one of them has no rules folder (`codex`, `opencode`,
+`pi`, `amp`, ...), the file inlines every glob-scoped rule and glob-scoped context file with an `_Applies to:_` line,
+because that preset has no other place to find them. Every other preset that reads the file then loads those items at
+the start of each session too: Cursor, Copilot and Junie read `AGENTS.md` directly, and Claude imports it from the
+`CLAUDE.md` shim, beside its own path-scoped copy in `.claude/rules`. `generate` warns when this happens.
+
+```toml
+[rules]
+scoped_fallback = "skill"   # inline (default) | skill
+```
+
+With `skill`, the shared `AGENTS.md` keeps only the always-on items (and the auto and manual ones a folderless preset
+needs), and each glob-scoped item becomes a skill in `.agents/skills`:
+
+- named `rule-<id>` or `context-<id>`;
+- its description is the item's `description`, or `<name>: conventions for files matching <globs>. Use when reading
+  or editing those files.` (cut to 250 characters);
+- its `paths` are the item's positive globs, so Claude Code and Cursor load it only for matching files, and Codex and
+  the other folderless presets list it and load it on demand;
+- its body is the item's content under an `_Applies to:_` line.
+
+Presets with a rules folder keep their path-scoped files as before; Claude reads `.claude/skills`, not
+`.agents/skills`, so it does not see the generated skills. The fallback applies only when every folderless preset that
+reads `AGENTS.md` also reads `.agents/skills` (for example not with `zcode`, which reads only `AGENTS.md`), and not in
+a [scope](monorepo.md#scoped-rule-files) run. An authored skill or command whose id is already `rule-<id>` keeps it,
+and the item is left out with a warning.
+
 ### Antigravity and Gemini
 
 Both presets write `GEMINI.md`, and the last writer wins. When both are enabled, Antigravity keeps all rules inline so `GEMINI.md` stays complete. Set `rules.mode_by_preset.antigravity` explicitly to override; ai-rulez then warns that rules may load twice or be missing from `GEMINI.md`.

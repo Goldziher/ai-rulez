@@ -237,6 +237,14 @@ func (c *Config) validateRules() error {
 	if err := validateBazScoped(c.Rules.BazScoped); err != nil {
 		return err
 	}
+	if v := c.Rules.ScopedFallback; v != "" && v != ScopedFallbackInline && v != ScopedFallbackSkill {
+		return oops.
+			With("field", "rules.scoped_fallback").
+			With("actual_value", v).
+			With("valid_values", []string{ScopedFallbackInline, ScopedFallbackSkill}).
+			Hint("Use \"inline\" to inline glob-scoped items into AGENTS.md or \"skill\" to serve them as path-gated skills.").
+			Errorf("invalid scoped_fallback value %q at rules.scoped_fallback", v)
+	}
 	if err := validateBazDefault(c.Rules.BazDefault); err != nil {
 		return err
 	}

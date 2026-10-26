@@ -136,6 +136,9 @@ func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, in
 	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
 	b.WriteString("shared=agents_md\n")
 	b.Printf("inline_scoped=%t,inline_auto_manual=%t\n", inlining.Scoped, inlining.AutoManual)
+	if inlining.ScopedAsSkills {
+		b.WriteString("scoped_fallback=skill\n")
+	}
 	if hasTargetedRulesOrContext(content) {
 		b.WriteString("agents_md_owners=" + strings.Join(slices.Sorted(slices.Values(owners)), ",") + "\n")
 	}
