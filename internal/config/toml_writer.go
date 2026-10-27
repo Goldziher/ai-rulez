@@ -53,6 +53,7 @@ type tomlOutput struct {
 	InstalledSkills       []InstalledSkillConfig       `toml:"installed_skills,omitempty"`       //nolint:tagliatelle
 	InstalledMarketplaces []InstalledMarketplaceConfig `toml:"installed_marketplaces,omitempty"` //nolint:tagliatelle
 	InstalledPlugins      []InstalledPluginConfig      `toml:"installed_plugins,omitempty"`      //nolint:tagliatelle
+	EnabledPlugins        []EnabledPlugin              `toml:"enabled_plugins,omitempty"`        //nolint:tagliatelle
 	Defaults              *DefaultsConfig              `toml:"defaults,omitempty"`
 	Rules                 *RulesConfig                 `toml:"rules,omitempty"`
 	Lint                  *LintConfig                  `toml:"lint,omitempty"`
@@ -169,6 +170,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		InstalledSkills:       cfg.InstalledSkills,
 		InstalledMarketplaces: cfg.InstalledMarketplaces,
 		InstalledPlugins:      cfg.InstalledPlugins,
+		EnabledPlugins:        cfg.EnabledPlugins,
 		Defaults:              cfg.Defaults,
 		Rules:                 cfg.Rules,
 		Lint:                  cfg.Lint,

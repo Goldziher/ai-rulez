@@ -962,6 +962,47 @@ main checkout. `extraKnownMarketplaces` takes effect only after the user trusts 
 Relative-path plugins listed in `enabledPlugins` load from the marketplace without an install
 step; the key cannot force an install of a plugin from an external source.
 
+`enable_plugins` and `disable_plugins` take either a bare plugin name, qualified with the `[marketplace]`
+name as above, or a fully qualified `name@marketplace` id, which is written as given. A block that lists
+only qualified ids needs no `[marketplace]` and registers no local marketplace; set
+`register_marketplace = true` explicitly to require one. To enable a plugin from another marketplace for
+more than Claude Code, use `[[enabled_plugins]]`.
+
+### Enable a plugin from another marketplace
+
+`[[enabled_plugins]]` switches on a plugin this project does not author, for the Claude Code, Codex and
+OpenCode presets, from one declaration:
+
+```toml
+[[enabled_plugins]]
+id = "basemind@basemind"                    # <name>@<marketplace>, required
+marketplace = { name = "basemind", source = "Goldziher/basemind", type = "github" }   # optional
+opencode = "basemind-opencode"              # optional npm package for OpenCode
+```
+
+| Preset | File | Written |
+| ------ | ---- | ------- |
+| `claude` | `.claude/settings.json` | `enabledPlugins."<id>": true`, and with `marketplace` `extraKnownMarketplaces.<name>` with the source in Claude Code's own shape (`{"source": "github", "repo": "Goldziher/basemind"}`) |
+| `codex` | `.codex/config.toml` | `[plugins."<id>"]` with `enabled = true` |
+| `opencode` | `opencode.json` | the `opencode` package appended to `plugin`, only when `opencode` is set |
+
+`marketplace.type` is `github` (`source` is `owner/repo`), `git` (an `https://` or `ssh://` URL, or
+`git@host:path`), `url` (an `https://` URL) or `directory` (a project-relative path); `ref` pins a branch or
+tag of a `github` or `git` source. `marketplace.name` must equal the marketplace part of `id`, and two
+entries that name the same marketplace must agree on its source. Leave `marketplace` out when the harness
+already knows it. `id`, the marketplace fields and the npm package are validated at load against allowlisted
+formats; `http://` and `git://` sources are rejected. `generate` lists the marketplace registration, the
+plugin and the npm package as commands to acknowledge, like hooks.
+
+Only the entries written here are owned, with the machinery of the other settings files: every other key,
+marketplace, plugin and `plugin` element in the files survives, an entry dropped from the config is removed
+on the next `generate`, `clean` removes what was written, and a value you already had stays yours. The
+declaration needs no `[claude.settings] manage`. With `generate --user` the same entries land in the user's
+`~/.claude/settings.json`, `~/.codex/config.toml` and OpenCode config. Presets other than these three have no
+equivalent and skip the declaration; `generate` warns when none of the three is active. Claude Code still asks
+the user to trust the marketplace folder, and `enabledPlugins` cannot install a plugin Claude Code has not
+fetched.
+
 ### Catalog skill
 
 ```toml

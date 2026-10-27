@@ -38,6 +38,7 @@ func (c *Config) Validate() error {
 		c.validateLLMsTxt,
 		c.validateInstalledSkills,
 		c.validateInstalledPlugins,
+		c.validateEnabledPlugins,
 		c.validateDefaults,
 		c.validateMCP,
 		c.validateGuard,

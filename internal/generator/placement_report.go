@@ -3,6 +3,7 @@ package generator
 import (
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
@@ -128,7 +129,20 @@ func (g *Generator) enabledPluginNames() []string {
 	if !g.config.ManagesClaudeSettings() {
 		return nil
 	}
-	return g.config.Claude.Settings.EnablePlugins
+	market := ""
+	if g.config.Marketplace != nil {
+		market = g.config.Marketplace.Name
+	}
+	var names []string
+	for _, name := range g.config.Claude.Settings.EnablePlugins {
+		// A name@marketplace id of another marketplace is not one of this project's plugins.
+		if plugin, owner, qualified := strings.Cut(name, "@"); !qualified {
+			names = append(names, name)
+		} else if owner == market {
+			names = append(names, plugin)
+		}
+	}
+	return names
 }
 
 // skillOwnerDomain returns the domain an item was loaded from ("" for root).

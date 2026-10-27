@@ -253,10 +253,9 @@ func (c *Config) validateClaudeSettings() error {
 		return nil
 	}
 	market := c.Marketplace
-	needsMarket := s.RegistersMarketplace() || len(s.EnablePlugins) > 0 || len(s.DisablePlugins) > 0
-	if needsMarket && (market == nil || market.Name == "") {
+	if s.needsLocalMarketplace() && (market == nil || market.Name == "") {
 		return oops.With("field", "claude.settings").
-			Hint("Add a [marketplace] block with a name, or set register_marketplace = false and list no plugins").
+			Hint("Add a [marketplace] block with a name, list only fully qualified name@marketplace ids, or set register_marketplace = false").
 			Errorf("claude.settings needs a [marketplace] name to build plugin ids")
 	}
 	if err := validatePluginNames("claude.settings.enable_plugins", s.EnablePlugins); err != nil {
@@ -265,8 +264,12 @@ func (c *Config) validateClaudeSettings() error {
 	if err := validatePluginNames("claude.settings.disable_plugins", s.DisablePlugins); err != nil {
 		return err
 	}
+	enabled := make([]string, 0, len(s.EnablePlugins))
+	for _, name := range s.EnablePlugins {
+		enabled = append(enabled, c.QualifiedPluginID(name))
+	}
 	for _, name := range s.DisablePlugins {
-		if slices.Contains(s.EnablePlugins, name) {
+		if slices.Contains(enabled, c.QualifiedPluginID(name)) {
 			return oops.With("field", "claude.settings").With("value", name).
 				Errorf("plugin %q is both enabled and disabled in claude.settings", name)
 		}
@@ -303,10 +306,24 @@ func (c *Config) validateOutputOptions() error {
 	return c.validateSettingsBlocks()
 }
 
+// validatePluginNames accepts a bare plugin name or a fully qualified
+// name@marketplace id.
 func validatePluginNames(field string, names []string) error {
 	for _, name := range names {
-		if !pluginName.MatchString(name) || strings.Contains(name, "..") {
-			return oops.With("field", field).With("value", name).Errorf("%q is not a valid plugin name", name)
+		parts := []string{name}
+		if strings.Contains(name, "@") {
+			plugin, market, ok := pluginIDParts(name)
+			if !ok {
+				return oops.With("field", field).With("value", name).
+					Hint("Use a plugin name or a fully qualified name@marketplace id").
+					Errorf("%q is not a valid plugin name", name)
+			}
+			parts = []string{plugin, market}
+		}
+		for _, part := range parts {
+			if !pluginName.MatchString(part) || strings.Contains(part, "..") {
+				return oops.With("field", field).With("value", name).Errorf("%q is not a valid plugin name", name)
+			}
 		}
 	}
 	return nil

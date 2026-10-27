@@ -46,9 +46,12 @@ type Config struct {
 	// or straight from a repository (see docs/installed-plugins.md).
 	InstalledMarketplaces []InstalledMarketplaceConfig `yaml:"installed_marketplaces,omitempty" json:"installed_marketplaces,omitempty" toml:"installed_marketplaces,omitempty"` //nolint:tagliatelle
 	InstalledPlugins      []InstalledPluginConfig      `yaml:"installed_plugins,omitempty" json:"installed_plugins,omitempty" toml:"installed_plugins,omitempty"`                //nolint:tagliatelle
-	Header                *HeaderConfig                `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
-	Defaults              *DefaultsConfig              `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
-	Builtins              *BuiltinsConfig              `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
+	// EnabledPlugins switches on plugins from other marketplaces for the Claude
+	// Code, Codex and OpenCode presets (see docs/plugins.md).
+	EnabledPlugins []EnabledPlugin `yaml:"enabled_plugins,omitempty" json:"enabled_plugins,omitempty" toml:"enabled_plugins,omitempty"` //nolint:tagliatelle
+	Header         *HeaderConfig   `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
+	Defaults       *DefaultsConfig `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
+	Builtins       *BuiltinsConfig `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	// SkipOutputs lists output kinds ai-rulez never writes, overwrites or deletes
 	// ("instructions", "agents_md", "claude_md", "rules", "skills", "agents",
 	// "commands"); see skip_outputs.go.

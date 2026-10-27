@@ -72,11 +72,11 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 var configPredicates = map[string]func(cfg *config.Config) bool{
 	PredicateHasMCPServers: func(cfg *config.Config) bool { return len(cfg.MCPServers) > 0 },
 	PredicateHasMCPServersOrPluginSettings: func(cfg *config.Config) bool {
-		return len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings()
+		return len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings() || cfg.RendersEnabledPlugins()
 	},
 	// MCP servers are not a reason: Claude Code reads them from .mcp.json.
 	PredicateHasClaudeSettings: func(cfg *config.Config) bool {
-		return cfg.ManagesClaudeSettings() || cfg.HasClaudeSettingsContent()
+		return cfg.ManagesClaudeSettings() || cfg.HasClaudeSettingsContent() || cfg.RendersEnabledPlugins()
 	},
 	PredicateHasHooks:       func(cfg *config.Config) bool { return cfg.HasSettingsHooks() },
 	PredicateHasPermissions: func(cfg *config.Config) bool { return !cfg.Permissions.IsEmpty() },
@@ -301,27 +301,33 @@ func claudeSettingsOwnedKeys(cfg *config.Config, outputPath string) ([]jsonmerge
 		return nil, fmt.Errorf("render .claude/settings.json settings: %w", err)
 	}
 	owned = append(owned, extra...)
-	if !cfg.ManagesClaudeSettings() || cfg.UserScope {
-		return owned, nil
+	markets, plugins := map[string]any{}, map[string]any{}
+	if cfg.ManagesClaudeSettings() && !cfg.UserScope {
+		s := cfg.Claude.Settings
+		if cfg.RegistersLocalMarketplace() {
+			markets[cfg.Marketplace.Name] = marketplaceSettingsEntry(cfg, s)
+		}
+		for _, name := range s.EnablePlugins {
+			plugins[cfg.QualifiedPluginID(name)] = true
+		}
+		for _, name := range s.DisablePlugins {
+			plugins[cfg.QualifiedPluginID(name)] = false
+		}
 	}
-	s := cfg.Claude.Settings
-	market := ""
-	if cfg.Marketplace != nil {
-		market = cfg.Marketplace.Name
+	// [[enabled_plugins]] is the declaration's own opt-in: it needs no manage
+	// flag and applies to the user's settings as well.
+	for i := range cfg.EnabledPlugins {
+		if !cfg.RendersEnabledPlugins() {
+			break
+		}
+		p := &cfg.EnabledPlugins[i]
+		plugins[p.ID] = true
+		if p.Marketplace != nil {
+			markets[p.Marketplace.Name] = map[string]any{sourceKey: marketplaceSourceObject(p.Marketplace.ClaudeSource())}
+		}
 	}
-	if s.RegistersMarketplace() {
-		owned = append(owned, jsonmerge.OwnedKey{
-			Name:    settingsKeyExtraKnownMarketplaces,
-			Value:   map[string]any{market: marketplaceSettingsEntry(cfg, s)},
-			Members: true,
-		})
-	}
-	plugins := map[string]any{}
-	for _, name := range s.EnablePlugins {
-		plugins[name+"@"+market] = true
-	}
-	for _, name := range s.DisablePlugins {
-		plugins[name+"@"+market] = false
+	if len(markets) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyExtraKnownMarketplaces, Value: markets, Members: true})
 	}
 	if len(plugins) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyEnabledPlugins, Value: plugins, Members: true})
@@ -336,18 +342,24 @@ func claudeSettingsOwnedKeys(cfg *config.Config, outputPath string) ([]jsonmerge
 func marketplaceSettingsEntry(cfg *config.Config, s *config.ClaudeSettings) map[string]any {
 	source := map[string]any{sourceKey: "directory", "path": marketplaceDirPath(cfg)}
 	if src := s.MarketplaceSource; src != nil {
-		source = map[string]any{sourceKey: src.Source}
-		for key, value := range map[string]string{"path": src.Path, "repo": src.Repo, "url": src.URL, "ref": src.Ref} {
-			if value != "" {
-				source[key] = value
-			}
-		}
+		source = marketplaceSourceObject(src)
 	}
 	entry := map[string]any{sourceKey: source}
 	if s.AutoUpdate != nil {
 		entry["autoUpdate"] = *s.AutoUpdate
 	}
 	return entry
+}
+
+// marketplaceSourceObject is a marketplace source in Claude Code's native shape.
+func marketplaceSourceObject(src *config.MarketplaceSource) map[string]any {
+	source := map[string]any{sourceKey: src.Source}
+	for key, value := range map[string]string{"path": src.Path, "repo": src.Repo, "url": src.URL, "ref": src.Ref} {
+		if value != "" {
+			source[key] = value
+		}
+	}
+	return source
 }
 
 // marketplaceDirPath is the marketplace root as a repository-relative path.

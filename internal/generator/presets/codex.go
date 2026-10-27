@@ -16,7 +16,21 @@ const (
 	codexPresetName         = "codex"
 	codexKeyReasoningEffort = "model_reasoning_effort"
 	codexKeyMCPServers      = "mcp_servers"
+	codexKeyPlugins         = "plugins"
 )
+
+// codexPluginTables renders [[enabled_plugins]] as the [plugins."<id>"] tables of
+// .codex/config.toml, one member per plugin.
+func codexPluginTables(cfg *config.Config) map[string]any {
+	if !cfg.RendersEnabledPlugins() {
+		return nil
+	}
+	tables := make(map[string]any, len(cfg.EnabledPlugins))
+	for i := range cfg.EnabledPlugins {
+		tables[cfg.EnabledPlugins[i].ID] = map[string]any{"enabled": true}
+	}
+	return tables
+}
 
 // CodexPresetGenerator generates Codex preset files (AGENTS.md)
 type CodexPresetGenerator struct{}
@@ -160,7 +174,8 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 }
 
 // renderConfigTOML merges what ai-rulez owns into the Codex config.toml at path.
-// ok is false when the config owns nothing there (no effort, no MCP servers).
+// ok is false when the config owns nothing there (no effort, no MCP servers, no
+// enabled plugins).
 func (g *CodexPresetGenerator) renderConfigTOML(path string, cfg *config.Config) (config.OutputFile, bool, error) {
 	var owned []jsonmerge.OwnedKey
 	if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {
@@ -168,6 +183,9 @@ func (g *CodexPresetGenerator) renderConfigTOML(path string, cfg *config.Config)
 	}
 	if servers := mcpEntries(cfg, CodexMCPEntry); len(servers) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{Name: codexKeyMCPServers, Value: servers, Members: true})
+	}
+	if plugins := codexPluginTables(cfg); len(plugins) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Name: codexKeyPlugins, Value: plugins, Members: true})
 	}
 	if len(owned) == 0 {
 		return config.OutputFile{}, false, nil

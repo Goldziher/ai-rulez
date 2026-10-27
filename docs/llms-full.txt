@@ -2361,7 +2361,22 @@ in `.claude/settings.json`, merged like `mcpServers` (see
 ```toml
 [claude.settings]
 manage = true
-enable_plugins = ["acme-essentials"]
+enable_plugins = ["acme-essentials"]    # or a qualified "name@marketplace" of another marketplace
+```
+
+##### `enabled_plugins`
+
+Enables a plugin from another marketplace for the `claude`, `codex` and `opencode` presets from one entry:
+`.claude/settings.json` gets `enabledPlugins` (and `extraKnownMarketplaces` with `marketplace`), `.codex/config.toml`
+a `[plugins."<id>"]` table and `opencode.json` the `opencode` npm package in `plugin`. Merged like the other
+settings documents (see [Settings document merge behavior](#settings-document-merge-behavior)). See
+[Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace).
+
+```toml
+[[enabled_plugins]]
+id = "basemind@basemind"
+marketplace = { name = "basemind", source = "Goldziher/basemind", type = "github" }
+opencode = "basemind-opencode"
 ```
 
 ##### `claude.skills`
@@ -9074,6 +9089,10 @@ user-level table is in [User-level configuration](user-scope.md#where-things-go)
   `.codex/config.toml`, `.qwen/settings.json`, ...) are merged, not replaced. ai-rulez owns the keys, array
   elements and map members it writes, and comments in JSONC, TOML and YAML survive. See
   [Settings document merge behavior](configuration.md#settings-document-merge-behavior).
+- **External plugins.** `[[enabled_plugins]]` enables one plugin from another marketplace for `claude`
+  (`enabledPlugins`, `extraKnownMarketplaces`), `codex` (`[plugins."<id>"]`) and `opencode` (the `plugin` npm
+  array). The other presets have no equivalent and skip it. See
+  [Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace).
 - **Native MCP environment references.** Where the harness expands `${VAR}`-style references itself, the
   reference is written instead of the secret. See
   [Environment references](configuration.md#mcp_servers).
@@ -10166,6 +10185,7 @@ A [role](roles.md)'s `skill_mode` is rendered through the same ownership: `gener
 | File | Written when | On `clean` |
 | ---- | ------------ | ---------- |
 | `.claude/settings.json` | plugin keys, `[[hooks]]`, `[permissions]` or managed keys are declared (MCP servers are not: Claude Code reads them from `.mcp.json`) | only the entries ai-rulez wrote are removed; the file is deleted only if nothing else is left |
+| `.claude/settings.json`, `.codex/config.toml`, `opencode.json` | `[[enabled_plugins]]` are declared: `enabledPlugins` and `extraKnownMarketplaces`, `[plugins."<id>"]` tables, and the `plugin` array (see [Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace)) | same; only the entries ai-rulez wrote are removed |
 | `.codex/hooks.json`, `.cursor/hooks.json`, `.gemini/settings.json` | `[[hooks]]` apply to the harness | same |
 | `.opencode/plugins/ai-rulez-hooks.js`, `.kilo/plugins/ai-rulez-hooks.js`, `.mimocode/plugins/ai-rulez-hooks.js`, `.pi/extensions/ai-rulez-hooks.ts`, `.amp/plugins/ai-rulez-hooks.ts` | `[[hooks]]` apply to the harness | deleted (ai-rulez owns the whole module; the directory also holds hand-written plugins, which are left alone) |
 | `.factory/hooks.json`, `.agents/hooks.json`, `.devin/hooks.v1.json`, `.gitlab/duo/hooks.json`, `.grok/hooks/ai-rulez.json`, `.kiro/hooks/ai-rulez.json`, `.deepagents/hooks.json`, `.agents/plugins/ai-rulez/hooks/hooks.json`, `.vibe/hooks.toml` | `[[hooks]]` apply to the harness | only the hooks ai-rulez wrote are removed; the file goes when nothing else is in it |
@@ -12572,6 +12592,47 @@ root relative to the repository (`"./tools/acme-marketplace"`); Claude Code reso
 main checkout. `extraKnownMarketplaces` takes effect only after the user trusts the folder.
 Relative-path plugins listed in `enabledPlugins` load from the marketplace without an install
 step; the key cannot force an install of a plugin from an external source.
+
+`enable_plugins` and `disable_plugins` take either a bare plugin name, qualified with the `[marketplace]`
+name as above, or a fully qualified `name@marketplace` id, which is written as given. A block that lists
+only qualified ids needs no `[marketplace]` and registers no local marketplace; set
+`register_marketplace = true` explicitly to require one. To enable a plugin from another marketplace for
+more than Claude Code, use `[[enabled_plugins]]`.
+
+##### Enable a plugin from another marketplace
+
+`[[enabled_plugins]]` switches on a plugin this project does not author, for the Claude Code, Codex and
+OpenCode presets, from one declaration:
+
+```toml
+[[enabled_plugins]]
+id = "basemind@basemind"                    # <name>@<marketplace>, required
+marketplace = { name = "basemind", source = "Goldziher/basemind", type = "github" }   # optional
+opencode = "basemind-opencode"              # optional npm package for OpenCode
+```
+
+| Preset | File | Written |
+| ------ | ---- | ------- |
+| `claude` | `.claude/settings.json` | `enabledPlugins."<id>": true`, and with `marketplace` `extraKnownMarketplaces.<name>` with the source in Claude Code's own shape (`{"source": "github", "repo": "Goldziher/basemind"}`) |
+| `codex` | `.codex/config.toml` | `[plugins."<id>"]` with `enabled = true` |
+| `opencode` | `opencode.json` | the `opencode` package appended to `plugin`, only when `opencode` is set |
+
+`marketplace.type` is `github` (`source` is `owner/repo`), `git` (an `https://` or `ssh://` URL, or
+`git@host:path`), `url` (an `https://` URL) or `directory` (a project-relative path); `ref` pins a branch or
+tag of a `github` or `git` source. `marketplace.name` must equal the marketplace part of `id`, and two
+entries that name the same marketplace must agree on its source. Leave `marketplace` out when the harness
+already knows it. `id`, the marketplace fields and the npm package are validated at load against allowlisted
+formats; `http://` and `git://` sources are rejected. `generate` lists the marketplace registration, the
+plugin and the npm package as commands to acknowledge, like hooks.
+
+Only the entries written here are owned, with the machinery of the other settings files: every other key,
+marketplace, plugin and `plugin` element in the files survives, an entry dropped from the config is removed
+on the next `generate`, `clean` removes what was written, and a value you already had stays yours. The
+declaration needs no `[claude.settings] manage`. With `generate --user` the same entries land in the user's
+`~/.claude/settings.json`, `~/.codex/config.toml` and OpenCode config. Presets other than these three have no
+equivalent and skip the declaration; `generate` warns when none of the three is active. Claude Code still asks
+the user to trust the marketplace folder, and `enabledPlugins` cannot install a plugin Claude Code has not
+fetched.
 
 ##### Catalog skill
 
