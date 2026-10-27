@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 const driftIgnoring = `version = "5.0"
@@ -205,7 +206,7 @@ func TestEscapeGitPattern_GitAgrees(t *testing.T) {
 	}, ignored)
 }
 
-func TestBaselineFailure_FailsClosedUnlessDriftIsAllowed(t *testing.T) {
+func TestBaselineFailure_FailsClosedEvenWhenDriftIsAllowed(t *testing.T) {
 	// Arrange: a profile that exists only in the overlay cannot be rendered as the
 	// shared baseline.
 	p := newDriftProject(t, driftIgnoring)
@@ -224,9 +225,55 @@ func TestBaselineFailure_FailsClosedUnlessDriftIsAllowed(t *testing.T) {
 	require.Error(t, withoutFlag)
 	assert.Contains(t, withoutFlag.Error(), "shared baseline")
 	assert.Contains(t, withoutFlag.Error(), "--allow-local-drift")
-	// With the flag the drift check is waived, so a baseline that cannot be
-	// rendered is a warning, not a failure (#507).
-	require.NoError(t, withFlag)
+	// The flag waives the drift check, not the classification the baseline
+	// provides: without it overlay outputs would be written as shared (#507).
+	require.Error(t, withFlag)
+	assert.Contains(t, withFlag.Error(), "shared baseline")
+	assert.Contains(t, withFlag.Error(), "--no-local")
+	assert.NoFileExists(t, filepath.Join(p.base, ".git", "info", "exclude"))
+}
+
+func replacing(name string) map[string]any {
+	return map[string]any{"includes": []any{map[string]any{"name": name, "source": "./x"}}}
+}
+
+func TestBaselineLockPolicy_WaivesOnlyReplacedIncludes(t *testing.T) {
+	tests := []struct {
+		name         string
+		allow        bool
+		overlay      map[string]any
+		wantWaived   []string
+		wantInclude  string
+		wantUnwaived string
+	}{
+		{name: "flag off waives nothing", allow: false, overlay: replacing("core")},
+		{name: "no replaced include waives nothing", allow: true, overlay: map[string]any{"presets": []any{"codex"}}},
+		{
+			name: "replaced include is waived", allow: true,
+			overlay:    replacing("core"),
+			wantWaived: []string{"core"}, wantInclude: "core", wantUnwaived: "other",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			gen := NewGenerator(&config.Config{LocalOverlay: &config.LocalOverlay{Doc: tt.overlay}})
+			gen.SetAllowLocalDrift(tt.allow)
+
+			// Act
+			policy, waived := gen.baselineLockPolicy()
+
+			// Assert
+			assert.Equal(t, tt.wantWaived, waived)
+			if tt.wantInclude == "" {
+				assert.Nil(t, policy.Unenforced)
+				return
+			}
+			assert.True(t, policy.Waives(lockfile.KindInclude, tt.wantInclude))
+			assert.False(t, policy.Waives(lockfile.KindInclude, tt.wantUnwaived))
+			assert.False(t, policy.Waives(lockfile.KindSkill, tt.wantInclude))
+		})
+	}
 }
 
 func TestRedactCredentials(t *testing.T) {
