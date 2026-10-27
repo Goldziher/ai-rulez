@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,8 +61,8 @@ func okfTreeFindings(cfg *config.Config) (*okf.Bundle, []okf.Finding, bool) {
 // directory that lists an old title or description (or lacks an entry), which is
 // what `migrate okf --check` reports and `generate` rewrites. An index that
 // already carries an AR9B0 finding in seen is not reported twice.
-func staleOKFIndexFindings(cfg *config.Config, seen []okf.Finding) []okf.Finding {
-	stale, err := staleOKFIndexes(cmdContext(), cfg)
+func staleOKFIndexFindings(ctx context.Context, cfg *config.Config, seen []okf.Finding) []okf.Finding {
+	stale, err := staleOKFIndexes(ctx, cfg)
 	if err != nil {
 		logger.Warn("Skipped the OKF index freshness check", "error", err)
 		return nil

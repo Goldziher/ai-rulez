@@ -70,12 +70,12 @@ func LoadBudgetDefault(id string) int {
 	return 0
 }
 
-func (b loadBudget) applies(presets map[string]bool) bool {
+func (b loadBudget) applies(configured map[string]bool) bool {
 	if b.CoveredBy != "" {
 		return false
 	}
 	for _, p := range b.Presets {
-		if presets[p] {
+		if configured[p] {
 			return true
 		}
 	}
@@ -93,13 +93,13 @@ func measure(unit, text string) int {
 }
 
 func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
-	presets := r.presetNames()
+	configured := r.presetNames()
 	cfgPath := r.configFilePath()
 	cfgLines := r.fileLines(cfgPath)
 	for i := range loadBudgets {
 		own := loadBudgets[i]
 		b := &own
-		if !b.applies(presets) {
+		if !b.applies(configured) {
 			continue
 		}
 		if v := r.lc.LoadBudgets[b.ID]; v > 0 {
@@ -204,8 +204,9 @@ func (r *runner) scopedFallbackSkills() []config.ContentFile {
 // fallbackListing is the size, in unit, of the skill listing entries of the
 // scoped-fallback skills and how many there are.
 func (r *runner) fallbackListing(unit string) (size, count int) {
-	for _, skill := range r.scopedFallbackSkills() {
-		size += measure(unit, skill.ID+" "+config.SkillDescription(skill.Metadata))
+	skills := r.scopedFallbackSkills()
+	for i := range skills {
+		size += measure(unit, skills[i].ID+" "+config.SkillDescription(skills[i].Metadata))
 		count++
 	}
 	return size, count

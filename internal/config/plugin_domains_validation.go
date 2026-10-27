@@ -24,10 +24,10 @@ const (
 
 // marketplaceSourceKinds maps each supported source kind to its required field.
 var marketplaceSourceKinds = map[string]string{
-	"directory": fieldPath,
-	"github":    fieldRepo,
-	"git":       fieldURL,
-	"url":       fieldURL,
+	MarketplaceTypeDirectory: fieldPath,
+	MarketplaceTypeGitHub:    fieldRepo,
+	MarketplaceTypeGit:       fieldURL,
+	MarketplaceTypeURL:       fieldURL,
 }
 
 // validateDomainPlugins checks the domain-plugin additions of [marketplace].

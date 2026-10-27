@@ -136,10 +136,10 @@ func (g *Generator) enabledPluginNames() []string {
 	var names []string
 	for _, name := range g.config.Claude.Settings.EnablePlugins {
 		// A name@marketplace id of another marketplace is not one of this project's plugins.
-		if plugin, owner, qualified := strings.Cut(name, "@"); !qualified {
+		if id, owner, qualified := strings.Cut(name, "@"); !qualified {
 			names = append(names, name)
 		} else if owner == market {
-			names = append(names, plugin)
+			names = append(names, id)
 		}
 	}
 	return names

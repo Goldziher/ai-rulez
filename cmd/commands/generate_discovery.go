@@ -336,6 +336,28 @@ func processConfigFilesCounting(configFiles []string, sink *generator.GitignoreS
 	return int(totalGenerated), failed, drifted
 }
 
+// recursiveRootGates runs the checks every root of a recursive run passes before
+// it renders: policy, validation, the lock, moved tags, overrides and imports.
+func recursiveRootGates(ctx context.Context, cfg *config.Config) error {
+	// The organization policy applies to every root, not only a single one.
+	if err := policyGate(ctx, cfg); err != nil {
+		return err
+	}
+	if err := cfg.Validate(); err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	if err := enforceLockedContent(cfg); err != nil { //nolint:contextcheck // the lock check reads the policy and the lock from disk; it takes no context
+		return err
+	}
+	if err := movedTagsErr(ctx, cfg); err != nil { // --verify-tags or [lock] verify_tags, per root
+		return err
+	}
+	if err := applyGenerateOverrides(ctx, cfg); err != nil {
+		return err
+	}
+	return importGate(ctx, cfg)
+}
+
 // processConfigFile generates from one config. A non-nil error means the config
 // failed (and was already reported through fileCounter). sink is the recursive
 // run's shared .gitignore block, or nil outside a recursive run.
@@ -350,32 +372,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 	}
 	warnLegacyLayout(cfg.ConfigDir)
 
-	// The organization policy applies to every root, not only a single one.
-	if err := policyGate(ctx, cfg); err != nil {
-		fileCounter.ErrorFor(configPath, err)
-		return 0, err
-	}
-
-	// Validate configuration
-	if err := cfg.Validate(); err != nil {
-		fileCounter.ErrorFor(configPath, err)
-		return 0, err
-	}
-
-	if err := enforceLockedContent(cfg); err != nil {
-		fileCounter.ErrorFor(configPath, err)
-		return 0, err
-	}
-	if err := movedTagsErr(ctx, cfg); err != nil { // --verify-tags or [lock] verify_tags, per root
-		fileCounter.ErrorFor(configPath, err)
-		return 0, err
-	}
-
-	if err := applyGenerateOverrides(ctx, cfg); err != nil {
-		fileCounter.ErrorFor(configPath, err)
-		return 0, err
-	}
-	if err := importGate(ctx, cfg); err != nil {
+	if err := recursiveRootGates(ctx, cfg); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}

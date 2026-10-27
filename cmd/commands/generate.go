@@ -158,28 +158,14 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 		return fail(emitPlan(ctx, cfg, generateEmitPlan))
 	}
 
-	// Create generator
-	gen := generator.NewGenerator(cfg)
-	gen.SetAllowLocalDrift(allowLocalDrift)
-	gen.SetOverwriteUnowned(generateForce)
-	gen.SetContext(ctx)
-	if err := applyRole(gen); err != nil {
-		return fail(err)
-	}
-	if err := generatePreflight(cfg, gen); err != nil {
+	gen, err := newRunGenerator(ctx, cfg)
+	if err != nil {
 		return fail(err)
 	}
 
 	out := outFor(cmd)
 	if pluginMode {
-		selection, err := pluginSelectionOf(cmd)
-		if err == nil {
-			err = selection.check(pluginMode, recursive)
-		}
-		if err != nil {
-			return fail(err)
-		}
-		return runPluginGenerate(out, selection.limit(gen))
+		return generatePlugins(cmd, out, gen)
 	}
 
 	if dryRun {
@@ -199,6 +185,34 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 		return fail(writeGenerateDocument(out, generateDocument{Status: "generated", FilesWritten: written}))
 	}
 	return nil
+}
+
+// newRunGenerator builds the generator of a generate run, with the role and the
+// command preflight applied.
+func newRunGenerator(ctx context.Context, cfg *config.Config) (*generator.Generator, error) {
+	gen := generator.NewGenerator(cfg)
+	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetOverwriteUnowned(generateForce)
+	gen.SetContext(ctx)
+	if err := applyRole(gen); err != nil {
+		return nil, err
+	}
+	if err := generatePreflight(cfg, gen); err != nil {
+		return nil, err
+	}
+	return gen, nil
+}
+
+// generatePlugins is the --plugin half of a single-project run.
+func generatePlugins(cmd *cobra.Command, out render.Out, gen *generator.Generator) error {
+	selection, err := pluginSelectionOf(cmd)
+	if err == nil {
+		err = selection.check(pluginMode, recursive)
+	}
+	if err != nil {
+		return fail(err)
+	}
+	return runPluginGenerate(out, selection.limit(gen))
 }
 
 // statusDryRun is the status of a generate --dry-run document.

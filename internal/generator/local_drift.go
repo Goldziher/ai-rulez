@@ -144,7 +144,10 @@ func (g *Generator) overlayIncludeNames() []string {
 	if g.config.LocalOverlay == nil {
 		return nil
 	}
-	list, _ := g.config.LocalOverlay.Doc["includes"].([]any)
+	list, ok := g.config.LocalOverlay.Doc["includes"].([]any)
+	if !ok {
+		return nil
+	}
 	var names []string
 	for _, item := range list {
 		if entry, ok := item.(map[string]any); ok {
@@ -162,8 +165,8 @@ func (g *Generator) overlayIncludeNames() []string {
 // shared source (a lock that is stale until the shared module is pushed) must not
 // stop the baseline from classifying everything else. It returns the includes
 // waived, nil when the policy is unchanged.
-func (g *Generator) baselineLockPolicy() (config.LockPolicy, []string) {
-	policy := g.config.LockPolicy
+func (g *Generator) baselineLockPolicy() (policy config.LockPolicy, waived []string) {
+	policy = g.config.LockPolicy
 	if !g.allowLocalDrift {
 		return policy, nil
 	}
@@ -571,29 +574,38 @@ func (g *Generator) machineExcludePatterns(plan *localPlan) (exclude string, pat
 		}
 	}
 	if plan != nil {
-		for rel := range plan.machineLocal {
-			repoRel := gitutil.RepoRelative(top, filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
-			if repoRel == "" || strings.ContainsAny(repoRel, "\r\n") {
-				// Never leave a local path unignored: the managed .gitignore takes it.
-				plan.inGitignore[rel] = true
-				continue
-			}
-			if plan.machineLocalDirs[rel] {
-				patterns = append(patterns, "/"+escapeGitPattern(repoRel)+"/")
-				continue
-			}
-			// Local rule files share a folder with committed rules: one pattern
-			// per folder also covers the ones added later.
-			if stableLocalName(rel) && localGitignorePattern(g.config.RulesDirs, rel) != rel {
-				patterns = append(patterns, "/"+escapeGitPattern(path.Dir(repoRel))+"/*.local.*")
-				continue
-			}
-			patterns = append(patterns, "/"+escapeGitPattern(repoRel))
-		}
+		patterns = append(patterns, g.machineLocalPatterns(top, plan)...)
 	}
 	sort.Strings(patterns)
 	patterns = slices.Compact(patterns)
 	return exclude, patterns
+}
+
+// machineLocalPatterns returns the exclude patterns of the plan's machine-local
+// outputs, relative to the repository top. A path git's exclude file cannot take
+// is marked in plan.inGitignore instead.
+func (g *Generator) machineLocalPatterns(top string, plan *localPlan) []string {
+	var patterns []string
+	for rel := range plan.machineLocal {
+		repoRel := gitutil.RepoRelative(top, filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
+		if repoRel == "" || strings.ContainsAny(repoRel, "\r\n") {
+			// Never leave a local path unignored: the managed .gitignore takes it.
+			plan.inGitignore[rel] = true
+			continue
+		}
+		if plan.machineLocalDirs[rel] {
+			patterns = append(patterns, "/"+escapeGitPattern(repoRel)+"/")
+			continue
+		}
+		// Local rule files share a folder with committed rules: one pattern
+		// per folder also covers the ones added later.
+		if stableLocalName(rel) && localGitignorePattern(g.config.RulesDirs, rel) != rel {
+			patterns = append(patterns, "/"+escapeGitPattern(path.Dir(repoRel))+"/*.local.*")
+			continue
+		}
+		patterns = append(patterns, "/"+escapeGitPattern(repoRel))
+	}
+	return patterns
 }
 
 // syncMachineExcludes makes .git/info/exclude hold exactly this project's

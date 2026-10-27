@@ -31,6 +31,8 @@ const (
 	// maxScriptBytes bounds the hook script read to digest its content.
 	maxScriptBytes = 4 << 20
 	digestChars    = 12
+	// kindPlugin is the Item kind of a marketplace registration or plugin enablement.
+	kindPlugin = "plugin"
 )
 
 // AckedByEnv reports whether AI_RULEZ_ACK_COMMANDS silences the summary.
@@ -122,10 +124,10 @@ func claudeSettingsItems(cfg *config.Config, presets []string) []Item {
 	}
 	s := cfg.Claude.Settings
 	if cfg.RegistersLocalMarketplace() {
-		items = append(items, Item{Kind: "plugin", Command: "register marketplace " + marketplaceSource(s), Where: where})
+		items = append(items, Item{Kind: kindPlugin, Command: "register marketplace " + marketplaceSource(s), Where: where})
 	}
 	for _, name := range s.EnablePlugins {
-		items = append(items, Item{Kind: "plugin", Command: "enable " + cfg.QualifiedPluginID(name), Where: where})
+		items = append(items, Item{Kind: kindPlugin, Command: "enable " + cfg.QualifiedPluginID(name), Where: where})
 	}
 	return items
 }
@@ -142,12 +144,12 @@ func enabledPluginItems(cfg *config.Config, presets []string) []Item {
 			}
 			where := []string{harness}
 			if m := p.Marketplace; m != nil && harness == config.HarnessClaude {
-				items = append(items, Item{Kind: "plugin", Command: "register marketplace " + m.Type + " " + m.Source, Where: where})
+				items = append(items, Item{Kind: kindPlugin, Command: "register marketplace " + m.Type + " " + m.Source, Where: where})
 			}
-			items = append(items, Item{Kind: "plugin", Command: "enable " + p.ID, Where: where})
+			items = append(items, Item{Kind: kindPlugin, Command: "enable " + p.ID, Where: where})
 		}
 		if p.OpenCode != "" && slices.Contains(presets, config.HarnessOpencode) {
-			items = append(items, Item{Kind: "plugin", Command: "npm plugin " + p.OpenCode, Where: []string{config.HarnessOpencode}})
+			items = append(items, Item{Kind: kindPlugin, Command: "npm plugin " + p.OpenCode, Where: []string{config.HarnessOpencode}})
 		}
 	}
 	return items
