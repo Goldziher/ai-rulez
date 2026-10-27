@@ -89,6 +89,13 @@ func collectConfigDrift(ctx context.Context, cfg *config.Config, sink *generator
 		}
 		items = append(items, driftItem{Kind: string(d.Kind), Path: displayDriftPath(cfg, d.Path), Note: d.Note})
 	}
+	// The OKF index.md files of a migrated configuration directory are rewritten by
+	// generate too, so a stale one is drift (it is what `migrate okf --check` reports).
+	staleIndexes, err := staleOKFIndexDrift(ctx, cfg)
+	if err != nil {
+		return nil, 0, err
+	}
+	items = append(items, staleIndexes...)
 	return items, blocked, nil
 }
 

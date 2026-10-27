@@ -422,6 +422,11 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 		return 0, nil
 	}
 
+	if err := refreshOKFIndexes(ctx, cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+
 	// Generate files
 	written, err := gen.GenerateFiles(profile)
 	if err != nil {

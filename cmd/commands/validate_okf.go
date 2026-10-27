@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
@@ -52,6 +53,32 @@ func okfTreeFindings(cfg *config.Config) (*okf.Bundle, []okf.Finding, bool) {
 		}
 	}
 	return b, out, true
+}
+
+// staleOKFIndexFindings reports, as AR9B0, every index.md of an OKF configuration
+// directory that lists an old title or description (or lacks an entry), which is
+// what `migrate okf --check` reports and `generate` rewrites. An index that
+// already carries an AR9B0 finding in seen is not reported twice.
+func staleOKFIndexFindings(cfg *config.Config, seen []okf.Finding) []okf.Finding {
+	stale, err := staleOKFIndexes(cmdContext(), cfg)
+	if err != nil {
+		logger.Warn("Skipped the OKF index freshness check", "error", err)
+		return nil
+	}
+	listed := map[string]bool{}
+	for _, f := range seen {
+		if f.Code == okf.CodeIndexMismatch {
+			listed[f.Path] = true
+		}
+	}
+	var out []okf.Finding
+	for _, rel := range stale {
+		if !listed[rel] {
+			out = append(out, okf.NewFinding(okf.CodeIndexMismatch, rel, 1,
+				"the index lists a title or description that differs from its concepts; run `ai-rulez generate` to refresh it"))
+		}
+	}
+	return out
 }
 
 // okfNoFrontmatterPrefix starts the message okf.Validate gives a concept that has

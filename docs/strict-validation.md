@@ -1434,7 +1434,7 @@ linted by `validate --strict` and `doctor`. The same checks run on any third-par
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
-| AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list |
+| AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list; in a migrated configuration directory also an index that lists a title or description its concept no longer has (`ai-rulez generate` refreshes it) |
 | AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2) |
 | AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
 | AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2`, and info when the root index uses the frontmatter style (the scheme OKF 0.2 does not describe); error from `okf validate` alone when the directory has no root `index.md` naming `okf_version` (it is not a bundle, and `import okf` refuses it too) |
@@ -3317,13 +3317,13 @@ fields of an imported eval scenario that have no counterpart in the case format 
 
 ### AR9B0 okf-index-mismatch
 
-an OKF index.md lists a file that does not exist, or omits a concept or subdirectory of its directory
+an OKF index.md lists a file that does not exist, omits a concept or subdirectory of its directory, or (in a migrated configuration directory) lists a title or description its concept no longer has
 
 - Default severity: `warning`
 - Analyzer: `okf` (scope `item`)
 - Why: An OKF index that lists missing files, or omits existing ones, misleads every reader that navigates by it.
-- Bad: An index.md entry for a deleted concept
-- Good: Regenerate with `ai-rulez export okf`
+- Bad: An index.md entry for a deleted concept, or one still showing a skill's old description
+- Good: Run `ai-rulez generate` (the configuration directory) or `ai-rulez export okf` (an exported bundle)
 
 ### AR9B1 okf-type-invalid
 

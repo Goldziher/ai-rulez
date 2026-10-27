@@ -88,6 +88,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   and makes `/rename-session` and `/title` aliases of `/rename`. The Claude Code extractor reads the built-in
   subagents from bold headings as well as tabs, since the page dropped its tabs, and a `/design consent` subcommand row
   no longer turns the bundled `/design` skill into a command ([#496](https://github.com/Goldziher/ai-rulez/issues/496)).
+- **A stale OKF `index.md` after a skill `description` edit is refreshed by `generate` and reported by `validate`
+  and `generate --check`.** The indexes of a migrated configuration directory were rewritten only by `add`,
+  `remove` and the MCP tools, so `migrate okf --check` alone went red on a commit every other check accepted.
+  `generate` now refreshes them, `validate` reports a stale one as `AR9B0` at its `index.md`, and
+  `generate --check` lists it as stale, all through the comparison `migrate okf --check` uses
+  ([#501](https://github.com/Goldziher/ai-rulez/issues/501)).
+- **`validate` no longer reads the `.ai-rulez.bak-okf-<timestamp>/` backup that `migrate okf` leaves.** Its copies
+  of the skills were reported as `AR701` and `AR703` duplicates of the real ones; any `.<name>.bak-*` directory is
+  now skipped ([#501](https://github.com/Goldziher/ai-rulez/issues/501)).
 
 ## [5.7.0] - 2026-10-25
 
