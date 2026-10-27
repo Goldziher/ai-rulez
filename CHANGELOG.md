@@ -53,6 +53,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   with `version: latest` keeps a workflow on the newest 5.x action and CLI with no per-release edits
   ([#504](https://github.com/Goldziher/ai-rulez/issues/504)).
 
+### Removed
+
+- **The `skillspector` scanner profile.** `profile = "skillspector"` in `[[lint.external]]` is no longer accepted: the configuration fails to load with `Value skillspector should be one of the allowed values: agnix, claude-plugin-validate, cisco-skill-scanner, snyk-agent-scan`. To keep running NVIDIA SkillSpector, declare the command in the entry yourself (`command = ["skillspector", "scan", "--no-llm", "--format", "sarif", "{skill_dirs}"]`, `format = "sarif"`, `inputs = ["skills"]`, `egress = false`, `batch_size = 1`, `version = ">=2, <3"`, `message_properties = ["evidence", "snippet"]`). The profile's `--no-llm` requirement, its `--transitive`, `--mcp-registry` and `--mcp-registry-compare` deny-list and its dropping of the `SC4` "OSV.dev unreachable" notice are not applied to such an entry, so keep `--no-llm` in the command yourself. The profile keys `required_flags` and `offline_notices`, and a profile-level default for `message_properties`, are gone with it; no other profile used them, and an entry's own `message_properties` still works. The `--competitors` run of `bench/judge` no longer compares against SkillSpector (`-skillspector-bin` is removed), and the SkillSpector test transcoder under `scripts/` is deleted. The checks and judge prompts derived from SkillSpector stay, with their Apache-2.0 notices.
+
 ### Fixed
 
 - **`generate --recursive` builds a plugin-authoring root as a plugin bundle, and the default self MCP server is never

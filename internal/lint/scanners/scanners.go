@@ -39,21 +39,13 @@ type Profile struct {
 	Layout      string   `toml:"layout"`
 	Inputs      []string `toml:"inputs"`
 	EgressFlags []string `toml:"egress_flags"`
-	// RequiredFlags must stay in the command of an egress = false entry: they are the
-	// switch that keeps the scanner deterministic (its absence enables a network feature).
-	RequiredFlags []string `toml:"required_flags"`
 	// BatchSize and Version fill the entry's batch_size and version when unset: a
 	// scanner that takes one input path needs batch_size = 1; Version is the range
 	// its version output must satisfy.
-	BatchSize int    `toml:"batch_size"`
-	Version   string `toml:"version"`
-	// MessageProperties fills the entry's message_properties when unset: the SARIF
-	// result properties the scanner puts its evidence in.
-	MessageProperties []string          `toml:"message_properties"`
-	SeverityMap       map[string]string `toml:"severity_map"`
-	MaxSeverity       string            `toml:"max_severity"`
-	// OfflineNotices lists the "lookup unreachable" results an egress = false entry drops.
-	OfflineNotices []OfflineNotice `toml:"offline_notices"`
+	BatchSize   int               `toml:"batch_size"`
+	Version     string            `toml:"version"`
+	SeverityMap map[string]string `toml:"severity_map"`
+	MaxSeverity string            `toml:"max_severity"`
 	// When limits a preset member to projects with that configuration (WhenPlugin).
 	When        string   `toml:"when"`
 	RequiresEnv []string `toml:"requires_env"`
@@ -62,15 +54,6 @@ type Profile struct {
 	Source         string   `toml:"source"`
 	VerifiedOn     string   `toml:"verified_on"`
 	TestedVersions []string `toml:"tested_versions"`
-}
-
-// OfflineNotice identifies a result a scanner emits only when its own network
-// lookup fails. Both fields must match, so a real finding of the same rule stays.
-type OfflineNotice struct {
-	// Rule is the exact rule id of the result.
-	Rule string `toml:"rule"`
-	// Contains is a fragment of the result message.
-	Contains string `toml:"contains"`
 }
 
 // Preset is a named list of profiles.

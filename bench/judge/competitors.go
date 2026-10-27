@@ -9,20 +9,18 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 )
 
-// The competitor adapters run two open-source scanners in their offline modes over the same corpus
-// and turn what they print into a judge Report, so the same labels score them. Neither is told about
-// the labels, neither calls a model (no cost), and both are read as a security scanner is read: a
-// finding of medium severity or above counts, after its category is mapped onto the nearest JR-S code.
+// The competitor adapter runs an open-source scanner in its offline mode over the same corpus and
+// turns what it prints into a judge Report, so the same labels score it. The scanner is not told about
+// the labels, does not call a model (no cost), and is read as a security scanner is read: a finding of
+// medium severity or above counts, after its category is mapped onto the nearest JR-S code.
 //
 //   - Cisco AI Defense skill-scanner (Apache-2.0, Copyright 2026 Cisco Systems, Inc. and its affiliates)
-//   - SkillSpector (Apache-2.0, Copyright 2026 NVIDIA CORPORATION & AFFILIATES)
 //
-// Both scan skill directories only, so units of another kind (agents, commands, rules, CLAUDE.md,
+// It scans skill directories only, so units of another kind (agents, commands, rules, CLAUDE.md,
 // MCP and settings files) have no report unit and count as missed; SkillUnits narrows a comparison
-// to the units they can see.
+// to the units it can see.
 
 // The security codes the other scanners' categories map onto.
 const (
@@ -54,34 +52,6 @@ var ciscoCodes = map[string]string{
 	"supply_chain_attack":   "JR-S10",
 	"hardcoded_secrets":     "JR-S14",
 	"resource_abuse":        "JR-S15",
-}
-
-// skillSpectorCodes maps a SkillSpector category to the nearest security code.
-var skillSpectorCodes = map[string]string{
-	"prompt injection":       codeInjection,
-	"anti-refusal":           codeInjection,
-	"data exfiltration":      codeExfiltration,
-	"credential access":      "JR-S04",
-	"dangerous code":         codeDangerousCode,
-	"output handling":        codeDangerousCode,
-	"tool misuse":            codeDangerousCode,
-	"privilege escalation":   codePrivilege,
-	"excessive agency":       codePrivilege,
-	"mcp least privilege":    codePrivilege,
-	"mcp tool poisoning":     "JR-S07",
-	"taint tracking":         "JR-S08",
-	"memory poisoning":       codePersistence,
-	"rogue agent":            codePersistence,
-	"supply chain":           "JR-S10",
-	"trigger abuse":          "JR-S13",
-	"hardcoded secrets":      "JR-S14",
-	"yara signatures":        codeDangerousCode,
-	"system prompt leakage":  codeExfiltration,
-	"resource abuse":         "JR-S15",
-	"obfuscation":            codeObfuscation,
-	"hidden content":         codeObfuscation,
-	"social engineering":     codeInjection,
-	"malicious code pattern": codeDangerousCode,
 }
 
 // atLeastMedium reports whether a severity name is medium or above.
@@ -210,79 +180,3 @@ func RunCisco(ctx context.Context, bin, corpus, outDir string) (*Report, error) 
 }
 
 func path(dir, file string) string { return filepath.ToSlash(filepath.Join(dir, file)) }
-
-// RunSkillSpector runs `skillspector scan --no-llm` on every skill of the corpus, a few at a time. The
-// scanner looks vulnerable dependencies up on a public service even without a model; the environment
-// points its HTTPS proxy at a closed port so nothing leaves the machine.
-func RunSkillSpector(ctx context.Context, bin, corpus, outDir string) (*Report, error) {
-	corpus, err := filepath.Abs(corpus)
-	if err != nil {
-		return nil, fmt.Errorf("resolve the corpus: %w", err)
-	}
-	dirs, err := SkillDirs(corpus)
-	if err != nil {
-		return nil, err
-	}
-	rep := &Report{Units: make([]ReportUnit, len(dirs))}
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, 6)
-	var mu sync.Mutex
-	var firstErr error
-	for i, d := range dirs {
-		wg.Add(1)
-		sem <- struct{}{}
-		go func() {
-			defer wg.Done()
-			defer func() { <-sem }()
-			ru, rerr := skillSpectorOne(ctx, bin, corpus, outDir, i, d)
-			mu.Lock()
-			defer mu.Unlock()
-			if rerr != nil && firstErr == nil {
-				firstErr = rerr
-			}
-			rep.Units[i] = ru
-		}()
-	}
-	wg.Wait()
-	return rep, firstErr
-}
-
-func skillSpectorOne(ctx context.Context, bin, corpus, outDir string, i int, dir string) (ReportUnit, error) {
-	ru := ReportUnit{Path: dir, Status: statusPass, Complete: true}
-	out := filepath.Join(outDir, fmt.Sprintf("skillspector-%03d.json", i))
-	cmd := exec.CommandContext(ctx, bin, "scan", filepath.Join(corpus, filepath.FromSlash(dir)), "--no-llm", "--format", "json", "--output", out) //nolint:gosec // the benchmark runs the scanner it was given
-	cmd.Env = append(os.Environ(), "HTTPS_PROXY=http://127.0.0.1:9", "HTTP_PROXY=http://127.0.0.1:9")
-	// SkillSpector exits non-zero for a risky skill; only a missing report is a failure.
-	b, runErr := cmd.CombinedOutput()
-	data, err := os.ReadFile(out) //nolint:gosec // the file the scanner just wrote
-	if err != nil {
-		return ru, fmt.Errorf("skillspector wrote no report for %s: %w (%s)\n%s", dir, err, fmt.Sprint(runErr), b)
-	}
-	var doc struct {
-		Issues []struct {
-			Category string `json:"category"`
-			Severity string `json:"severity"`
-			Finding  string `json:"finding"`
-			Snippet  string `json:"code_snippet"`
-			Location struct {
-				File string `json:"file"`
-				Line int    `json:"start_line"`
-			} `json:"location"`
-		} `json:"issues"`
-	}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return ru, fmt.Errorf("parse the scanner report of %s: %w", dir, err)
-	}
-	for _, is := range doc.Issues {
-		code, ok := skillSpectorCodes[strings.ToLower(is.Category)]
-		if !ok || !atLeastMedium(is.Severity) {
-			continue
-		}
-		quote := is.Finding
-		if quote == "" {
-			quote = is.Snippet
-		}
-		ru.Findings = append(ru.Findings, newFinding(code, is.Severity, path(dir, is.Location.File), quote, is.Location.Line))
-	}
-	return ru, nil
-}

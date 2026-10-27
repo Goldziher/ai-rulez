@@ -44,5 +44,5 @@ twins found, findings on clean units, false positives per 100 units, the adjudic
 (the share of candidates the verifier had to drop), and cost. It uses `AWS_PROFILE=default` and `AWS_REGION=eu-north-1`
 (Bedrock) unless told otherwise. Run it when the prompt version changes.
 
-`cmd/judgebench --competitors` runs the offline modes of Cisco skill-scanner and SkillSpector over the same corpus and scores
-them with the same labels, after mapping their categories onto the `JR-S` codes (`competitors.go`).
+`cmd/judgebench --competitors` runs the offline mode of Cisco skill-scanner over the same corpus and scores
+it with the same labels, after mapping its categories onto the `JR-S` codes (`competitors.go`).

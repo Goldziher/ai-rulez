@@ -47,9 +47,6 @@ jobs:
           version: v2.15.0
           args: --timeout=10m
 
-      - name: Test the SkillSpector test transcoder
-        run: python3 -I -m unittest discover -s scripts -p 'test_transcode_skillspector_tests.py' -v
-
   tidy:
     name: go mod tidy
     runs-on: ubuntu-latest

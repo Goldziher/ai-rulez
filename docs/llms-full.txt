@@ -14280,7 +14280,7 @@ env_pass = []                      # extra environment variable names for an egr
 # fail_on = "error"                # lowest severity of this scanner's findings that fails the run
 # cache_files = ["tools/**/*.py"]  # files the scanner reads; part of the result cache key (a script run through python3, node, sh... is hashed anyway)
 # max_message = 1000               # characters of a finding message kept in text output (default 500)
-# message_properties = ["evidence", "snippet"]   # SARIF result properties appended to the message (skillspector sets these)
+# message_properties = ["evidence", "snippet"]   # SARIF result properties appended to the message
 
 [lint.scanner_policy]
 preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
@@ -14840,18 +14840,12 @@ installed; a scanner that is not on `PATH` is an `AR9E2` notice.
 | `agnix` | no | SARIF | baseline, strict | `agnix --format sarif <stage>`; not yet checked against a real binary |
 | `claude-plugin-validate` | no | `adapter:claude-validate-json` | baseline, strict (only with `[plugin]` or `[marketplace]`) | `claude plugin validate --json <stage>`; staged in the plugin layout (`skills/<name>/SKILL.md`, `agents/`, `commands/`); output shape checked against claude 2.1.285 |
 | `cisco-skill-scanner` | no | SARIF | strict | deterministic mode; its LLM, VirusTotal, AI Defense and OSV flags are deny-listed; not yet checked against a real binary |
-| `skillspector` | no | SARIF | none (opt-in) | NVIDIA SkillSpector in `--no-llm` mode, one skill per run (`batch_size = 1`); `--no-llm` is required in the command (`AR9E0` without it) and `--transitive`, `--mcp-registry` and `--mcp-registry-compare` are deny-listed; version range `>=2, <3`; output checked against SkillSpector 2.12.0 |
 | `snyk-agent-scan` | **yes** | `adapter:snyk-json` | none | needs `SNYK_TOKEN` (passed through to it); never part of a preset; the vendor documents receiving skill content, MCP server configuration and tool descriptions, and agent application details |
 
 A preset member is replaced by an entry with the same name or the same `profile`. `[[lint.external]]` with
 `profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
-less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size`, `message_properties` and `version` range; keys set on
-the entry win. A profile can also name `required_flags`: a flag of its command (`--no-llm` for `skillspector`) that
-an egress = false entry must keep when it writes its own `command`, because dropping it switches on a network feature
-(`AR9E0`). A profile can also list the results its scanner reports only because a lookup was unreachable: with
-`egress = false` the `skillspector` profile drops SkillSpector's `SC4` "OSV.dev unreachable" notice, one per
-`requirements*.txt`, and keeps real `SC4` vulnerability findings. SkillSpector has no offline switch, so it still
-attempts that lookup, sending the package names, unless the network is blocked around it.
+less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size` and `version` range; keys set on
+the entry win. An unknown `profile` fails the configuration load, and the error lists the valid names.
 `ai-rulez scanners list` shows the preset of each scanner.
 
 ##### Long messages
@@ -14870,9 +14864,11 @@ entry lists the property paths to append, in order:
 
 ```toml
 [[lint.external]]
-name = "skillspector"
-profile = "skillspector"
-message_properties = ["evidence", "snippet"]   # the profile's default
+name = "my-scanner"
+command = ["my-scanner", "--format", "sarif", "{skill_dirs}"]
+format = "sarif"
+inputs = ["skills"]
+message_properties = ["evidence", "snippet"]
 ```
 
 The message becomes `PE3: Credential Access [evidence: cat ~/.aws/credentials; snippet: ...]`. A path is dotted
@@ -14881,7 +14877,7 @@ The message becomes `PE3: Credential Access [evidence: cat ~/.aws/credentials; s
 missing, empty or object-valued property is skipped. Values are sanitized like the message itself (escape and control
 characters removed, whitespace collapsed to single spaces, secret-shaped text masked) and the whole message stays
 within `max_message`, so a long snippet cuts the end. Paths are letters, digits, `_` and `-` joined by dots, at most
-16 per entry (`AR9E0` otherwise). The `skillspector` profile sets `["evidence", "snippet"]`; an entry's own list wins.
+16 per entry (`AR9E0` otherwise).
 A profile or entry with the JSON or adapter formats ignores the key.
 
 ```toml
@@ -14930,52 +14926,6 @@ The `timeout` of a run stays bounded: the runner never lets one command run long
 `[lint.scanner_policy] max_timeout` raises the 15 minute default ceiling, so a `timeout` written in an entry (or a
 pull request that edits one) cannot lift its own limit past what the policy allows. `scanners doctor` shows the effective
 timeout.
-
-##### Recipe: single-path scanners (SkillSpector)
-
-Some scanners take exactly one input path: `skillspector scan INPUT_PATH` rejects a second argument. Pass
-`{skill_dirs}` with `batch_size = 1` so every run holds one skill. That also gives each skill its own timeout and
-cache entry, and a finding path such as `SKILL.md` or `references/x.md` resolves to the skill of its own run.
-The embedded profile does this for [NVIDIA SkillSpector](https://github.com/NVIDIA/skillspector) (install it with
-`uv tool install skillspector`):
-
-```toml
-[[lint.external]]
-name = "skillspector"
-profile = "skillspector"
-# command, format, inputs, batch_size = 1 and version = ">=2, <3" come from the profile
-# severity_map = { "YR*" = "warning" }   # optional: demote the YARA rule matches
-```
-
-- **Egress.** Without `--no-llm` SkillSpector calls an LLM provider with skill content, so the profile declares
-  `egress = false`, keeps `--no-llm` in the command, and denies `--transitive` (follows external references),
-  `--mcp-registry` and `--mcp-registry-compare`. A `command` of your own that drops `--no-llm` is `AR9E0`, one that
-  adds a denied option is `AR9E4`. The scrubbed environment also hides provider credentials from it.
-- **OSV.dev lookups.** SkillSpector's `SC4` check queries OSV.dev for the dependencies of a `requirements*.txt` even
-  with `--no-llm`, and has no option to turn that off. It sends package names and versions, not file content. When
-  the lookup fails, as it does under network isolation, SkillSpector reports one low `SC4` result per file saying
-  "OSV.dev unreachable, using static fallback". Because the entry declares `egress = false`, ai-rulez drops exactly
-  those results (rule `SC4` and that message) and logs the count under `--debug`; an `SC4` finding about a
-  vulnerable package is never dropped. Setting `egress = true` on the entry keeps the notices.
-- **Exit codes.** SkillSpector exits 1 when it reports findings, 0 when clean and 2 on a usage error. With SARIF
-  output on stdout, ai-rulez reads the report whatever the exit code, so findings are results; a run that prints no
-  report is `AR9E3`. Use stdout, not `--output`: the file form adds a `Report saved to:` line to stdout.
-- **Severity.** The SARIF `level` is used as is. Static rules such as `P1`, `PE3`, `SC2` and `TM2` are `error`, so
-  `validate --external` exits 2 for them; `E1` is `warning`. Use `severity_map` (rule id glob to severity) or
-  `max_severity` to lower a noisy rule, and `fail_on` to choose what fails the run.
-- **Overlap.** The built-in checks (`AR004`, `AR005`, `AR036`) and SkillSpector can report the same line; both are
-  kept, each with its own code, and the scanner's carry `[skillspector]` and its rule id (`AR011`).
-- **Cost.** `batch_size = 1` starts one SkillSpector process per skill, and each start costs about 2 to 4 s of its own
-  CPU before it analyses a file, so a 400-skill repository takes many minutes on a cold run. Keep CI fast with the
-  [scan cache](#result-cache-and-dry-runs) (an unchanged skill is not scanned again) and `--changed` or `--since`
-  (only skills with a changed file run). Runs go one at a time by default; set `parallel = 4` on the entry (at most 16)
-  to run several skills at once. `--no-scan-cache` scans every selected skill again.
-- **Not in a preset.** The profile is opt-in. `strict` fails on warnings, and SkillSpector's regex and YARA
-  heuristics are noisier than the structural checks in `baseline` and `strict`, need a separate tool install, and
-  run once per skill; a project chooses that cost by adding the entry.
-
-The same shape fits any scanner with one path argument: `batch_size = 1`, `{skill_dirs}`, SARIF on stdout, and an
-`egress_flags` / `required_flags` pair in a profile for the options that reach the network.
 
 ##### Failing on scanner findings
 
@@ -27003,9 +26953,9 @@ No trap unit (a benign lookalike of a known false-positive shape) produced a sec
 twins were found. No candidate was dropped as ungrounded (one needed the repair round); the adjudicator raised security precision from 0.94 to 1.00. Three malicious samples (an exfiltration of `~/.ssh`, a
 disk-filling loop, a vendor health probe with a hidden upload) were still declined by the provider's content filter after
 one retry: judge reports those units as partly reviewed (the run is `incomplete`, exit 1), never as a pass. On the 46
-sampled units that hold a skill, the offline modes of two open-source scanners, with their categories mapped onto the
-security codes and medium severity or above counted, scored F1 0.47 (Cisco skill-scanner: precision 1.00, recall 0.31) and
-0.40 (SkillSpector: precision 0.42, recall 0.38) against 0.87 for judge (precision 1.00, recall 0.77). The corpus is small and
+sampled units that hold a skill, the offline mode of an open-source scanner (Cisco skill-scanner), with its categories
+mapped onto the security codes and medium severity or above counted, scored F1 0.47 (precision 1.00, recall 0.31) against
+0.87 for judge (precision 1.00, recall 0.77). The corpus is small and
 written by the same effort that wrote the prompts; read the numbers as a regression baseline, not as a field measurement.
 
 #### What is sent

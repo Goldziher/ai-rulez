@@ -341,9 +341,9 @@ No trap unit (a benign lookalike of a known false-positive shape) produced a sec
 twins were found. No candidate was dropped as ungrounded (one needed the repair round); the adjudicator raised security precision from 0.94 to 1.00. Three malicious samples (an exfiltration of `~/.ssh`, a
 disk-filling loop, a vendor health probe with a hidden upload) were still declined by the provider's content filter after
 one retry: judge reports those units as partly reviewed (the run is `incomplete`, exit 1), never as a pass. On the 46
-sampled units that hold a skill, the offline modes of two open-source scanners, with their categories mapped onto the
-security codes and medium severity or above counted, scored F1 0.47 (Cisco skill-scanner: precision 1.00, recall 0.31) and
-0.40 (SkillSpector: precision 0.42, recall 0.38) against 0.87 for judge (precision 1.00, recall 0.77). The corpus is small and
+sampled units that hold a skill, the offline mode of an open-source scanner (Cisco skill-scanner), with its categories
+mapped onto the security codes and medium severity or above counted, scored F1 0.47 (precision 1.00, recall 0.31) against
+0.87 for judge (precision 1.00, recall 0.77). The corpus is small and
 written by the same effort that wrote the prompts; read the numbers as a regression baseline, not as a field measurement.
 
 ## What is sent

@@ -64,26 +64,6 @@ func TestPresetsOfAndLookups(t *testing.T) {
 	assert.Equal(t, "warning", strict.FailOn)
 }
 
-func TestSkillspectorProfileIsOptInAndSingleBatch(t *testing.T) {
-	p, ok := Lookup("skillspector")
-	require.True(t, ok)
-	assert.False(t, p.Egress)
-	assert.Equal(t, 1, p.BatchSize, "skillspector scan takes exactly one input path")
-	assert.Equal(t, []string{"--no-llm"}, p.RequiredFlags)
-	assert.Contains(t, p.Command, "--no-llm")
-	assert.Contains(t, p.Command, "{skill_dirs}")
-	assert.NotEmpty(t, p.Version)
-	assert.Empty(t, PresetsOf("skillspector"), "a heuristic scanner stays out of the presets")
-}
-
-func TestRequiredFlagsAreInTheirOwnCommand(t *testing.T) {
-	for _, p := range Profiles() {
-		for _, f := range p.RequiredFlags {
-			assert.Contains(t, p.Command, f, "%s: required flag %s", p.Name, f)
-		}
-	}
-}
-
 // profileEnums collects the "enum" of every scanner "profile" property (described as
 // an embedded scanner profile) in a decoded JSON schema.
 func profileEnums(node any, out *[][]string) {

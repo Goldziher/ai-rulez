@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/lint/scanners"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -720,38 +719,10 @@ func sortExternalFindings(found []externalFinding) {
 	})
 }
 
-// dropOfflineNotices removes the results a scanner emits only because its own
-// network lookup failed, for an entry that declares egress = false: the denial is
-// intended, so the notice only repeats per file. A result is dropped only when
-// its rule id equals the profile's and its message holds the profile's fragment;
-// any other result of that rule (a real finding) is kept. It returns the count dropped.
-func dropOfflineNotices(sc resolvedScanner, found []externalFinding) (kept []externalFinding, dropped int) {
-	if len(sc.OfflineNotices) == 0 || sc.Egress == nil || *sc.Egress {
-		return found, 0
-	}
-	kept = make([]externalFinding, 0, len(found))
-	for i := range found {
-		f := found[i]
-		if slices.ContainsFunc(sc.OfflineNotices, func(n scanners.OfflineNotice) bool {
-			return n.Rule != "" && n.Contains != "" && f.Rule == n.Rule && strings.Contains(f.Message, n.Contains)
-		}) {
-			dropped++
-			continue
-		}
-		kept = append(kept, f)
-	}
-	return kept, dropped
-}
-
 // convertFindings turns parsed findings into AR011 findings: path mapping,
 // severity bands, fingerprints. outOfScope and firstOut carry the results a
 // staged run already dropped (AR9E6).
 func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []externalFinding, outOfScope int, firstOut string) []scannerFinding {
-	found, offline := dropOfflineNotices(sc, found)
-	if offline > 0 {
-		r.log().Debug("Dropped scanner lookup-unreachable notices: egress is denied for this scanner",
-			"scanner", sc.Name, "dropped", offline)
-	}
 	sortExternalFindings(found)
 	var out []scannerFinding
 	occurrence := map[string]int{}

@@ -27,10 +27,10 @@ func main() {
 
 // options are the parsed command line.
 type options struct {
-	root, bin, profile, region, out, score, extra, ciscoBin, specBin string
-	maxCost                                                          float64
-	only                                                             map[string]bool
-	compete, estimate                                                bool
+	root, bin, profile, region, out, score, extra, ciscoBin string
+	maxCost                                                 float64
+	only                                                    map[string]bool
+	compete, estimate                                       bool
 }
 
 func parseFlags() options {
@@ -46,9 +46,8 @@ func parseFlags() options {
 	flag.StringVar(&o.out, "out", "", "directory for the raw reports (default: a temporary one)")
 	flag.StringVar(&o.score, "score", "", "score an existing merged report instead of running")
 	flag.StringVar(&o.extra, "judge-args", "", "extra arguments for ai-rulez judge, space separated (for example --model bedrock/...)")
-	flag.BoolVar(&o.compete, "competitors", false, "also run Cisco skill-scanner and SkillSpector offline (free) over the same corpus and compare the skills they can see")
+	flag.BoolVar(&o.compete, "competitors", false, "also run Cisco skill-scanner offline (free) over the same corpus and compare the skills they can see")
 	flag.StringVar(&o.ciscoBin, "cisco-bin", "skill-scanner", "the Cisco skill-scanner binary")
-	flag.StringVar(&o.specBin, "skillspector-bin", "skillspector", "the SkillSpector binary")
 	flag.BoolVar(&o.estimate, "estimate", false, "run ai-rulez judge --estimate over the corpus and print the worst-case cost; sends nothing")
 	flag.Parse()
 	if *only != "" {
@@ -97,7 +96,7 @@ func scoreExisting(m judgebench.Manifest, o options) error {
 		return err
 	}
 	if o.compete {
-		return compareCompetitors(m, rep, o.only, o.ciscoBin, o.specBin, os.TempDir())
+		return compareCompetitors(m, rep, o.only, o.ciscoBin, os.TempDir())
 	}
 	return nil
 }
@@ -151,14 +150,14 @@ func runLive(m judgebench.Manifest, o options, binary, outDir string) error {
 	}
 	fmt.Fprintf(os.Stderr, "raw reports: %s\n", outDir)
 	if o.compete {
-		return compareCompetitors(m, rep, o.only, o.ciscoBin, o.specBin, outDir)
+		return compareCompetitors(m, rep, o.only, o.ciscoBin, outDir)
 	}
 	return nil
 }
 
-// compareCompetitors scores ai-rulez, Cisco skill-scanner and SkillSpector on the units that hold a
-// skill, the only ones the other two read.
-func compareCompetitors(m judgebench.Manifest, ours *judgebench.Report, only map[string]bool, ciscoBin, specBin, outDir string) error {
+// compareCompetitors scores ai-rulez and Cisco skill-scanner on the units that hold a
+// skill, the only ones the other reads.
+func compareCompetitors(m judgebench.Manifest, ours *judgebench.Report, only map[string]bool, ciscoBin, outDir string) error {
 	skills, err := judgebench.SkillUnits(m)
 	if err != nil {
 		return err
@@ -172,7 +171,6 @@ func compareCompetitors(m judgebench.Manifest, ours *judgebench.Report, only map
 	}
 	ctx := context.Background()
 	cisco, cerr := judgebench.RunCisco(ctx, ciscoBin, m.CorpusDir(), outDir)
-	spec, serr := judgebench.RunSkillSpector(ctx, specBin, m.CorpusDir(), outDir)
 	fmt.Printf("\nhead to head on the %d units that hold a skill (security category; medium and above for the others, offline, no model):\n", len(skills))
 	fmt.Println(judgebench.CompareHeader)
 	fmt.Println(judgebench.Score(m, ours, skills).Row("ai-rulez judge"))
@@ -180,11 +178,6 @@ func compareCompetitors(m judgebench.Manifest, ours *judgebench.Report, only map
 		fmt.Println(judgebench.Score(m, cisco, skills).Row("Cisco (static)"))
 	} else {
 		fmt.Fprintln(os.Stderr, "judgebench: cisco:", cerr)
-	}
-	if serr == nil {
-		fmt.Println(judgebench.Score(m, spec, skills).Row("SkillSpector"))
-	} else {
-		fmt.Fprintln(os.Stderr, "judgebench: skillspector:", serr)
 	}
 	return nil
 }
