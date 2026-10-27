@@ -27,6 +27,8 @@ type Server struct {
 	validator handlers.Validator
 	// judger runs the review behind the judge tool; the CLI supplies the engine of `ai-rulez judge`.
 	judger handlers.Judger
+	// pins runs the lock-moving tools (lock_outdated, update_plan, update); the CLI supplies internal/pinupdate.
+	pins handlers.PinEngine
 	// policyViewer builds the report of policy_show; the CLI supplies the policy
 	// discovery of `validate --show-policy`.
 	policyViewer handlers.PolicyViewer
@@ -63,6 +65,12 @@ func WithValidator(v handlers.Validator) Option {
 // WithJudger sets the engine the judge tool runs. Without it the tool reports that it cannot judge.
 func WithJudger(j handlers.Judger) Option {
 	return func(s *Server) { s.judger = j }
+}
+
+// WithPinEngine sets the engine behind lock_outdated, update_plan and update.
+// Without it those tools report that the engine is not available.
+func WithPinEngine(e handlers.PinEngine) Option {
+	return func(s *Server) { s.pins = e }
 }
 
 // WithPolicyViewer sets the policy discovery policy_show reports from. Without it

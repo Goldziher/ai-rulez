@@ -23,6 +23,7 @@ func engineOptions() []mcp.Option {
 	return []mcp.Option{
 		mcp.WithValidator((&mcpValidator{}).validate),
 		mcp.WithJudger(judgeForTool),
+		mcp.WithPinEngine(pinEngine{}),
 		mcp.WithPolicyViewer(func(_ context.Context, _ string, cfg *config.Config) (policy.Report, error) {
 			return policyReportFor(cfg)
 		}),

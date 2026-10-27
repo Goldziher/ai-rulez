@@ -117,6 +117,7 @@ func TestReaderToolsFailOnMalformedConfig(t *testing.T) {
 		"doctor":                {},
 		"validate_config":       {},
 		"lock_status":           {},
+		"lock_diff":             {},
 		"run_verifiers":         {},
 		"generate_outputs":      {},
 		"list_agents":           {},

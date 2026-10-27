@@ -282,7 +282,7 @@ Do not generate output files until I say so.`, a["name"], a["purpose"], a["name"
 				}
 				return fmt.Sprintf(`Add the rule %q: %s
 
-1. Call list_rules and read_rule for any rule that already covers this; if one does, update it with update_rule instead of adding another.
+1. Call list_rules and read_rule for any rule that already covers this; if one does, change it with update_rule instead of adding another.
 2. Otherwise call create_rule with name %q, priority %q and content that states the guideline as an instruction, in the imperative, with the reason in one sentence.
 3. Call validate_config and fix anything it reports about the rule.`, a["name"], a["guideline"], a["name"], priority)
 			},

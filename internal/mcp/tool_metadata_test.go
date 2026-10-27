@@ -21,13 +21,17 @@ var readOnlyTools = map[string]bool{
 	"read_skill": true, "list_skills": true,
 	"list_includes": true, "list_installed_skills": true,
 	"read_config": true, "list_profiles": true,
-	"list_roles": true, "resolve_role": true, "lock_status": true, "catalog": true,
+	"list_roles": true, "resolve_role": true, "lock_status": true, "lock_diff": true, "catalog": true,
+	"lock_outdated": true, "update_plan": true,
 	"find_skill": true, "load_skill": true, "list_skill_resources": true,
 	"search_skills": true, "get_skill": true, "read_skill_file": true,
 	"scan_content": true, "judge": true, "list_builtins": true, "token_report": true, "cost_report": true, "sbom": true,
 	"okf_validate": true, "approvals_status": true, "policy_show": true, "list_verifiers": true,
 	"read_agent": true, "list_agents": true, "read_command": true, "list_commands": true,
 }
+
+// reachesOutside are the tools that talk to parties outside the project.
+var reachesOutside = map[string]bool{"judge": true, "lock_outdated": true, "update_plan": true, "update": true}
 
 func listAllTools(t *testing.T, srv *Server) []*sdkmcp.Tool {
 	t.Helper()
@@ -45,7 +49,7 @@ func TestEveryToolCarriesMetadata(t *testing.T) {
 	authoring := listAllTools(t, NewServer("test"))
 	serving := listAllTools(t, NewSkillServerWith("test", loadCatalog(t), ServeOptions{}))
 	tools := append(append([]*sdkmcp.Tool{}, authoring...), serving...)
-	require.Len(t, tools, 73, "tool count changed: update the metadata expectations deliberately")
+	require.Len(t, tools, 77, "tool count changed: update the metadata expectations deliberately")
 
 	for _, tool := range tools {
 		t.Run(tool.Name, func(t *testing.T) {
@@ -57,8 +61,9 @@ func TestEveryToolCarriesMetadata(t *testing.T) {
 			a := tool.Annotations
 			require.NotNil(t, a.DestructiveHint, "destructiveHint is set explicitly")
 			require.NotNil(t, a.OpenWorldHint, "openWorldHint is set explicitly")
-			// judge is the one tool that reaches outside: it sends file content to the user's model provider.
-			assert.Equal(t, tool.Name == "judge", *a.OpenWorldHint, "ai-rulez tools act on the local project tree only, except judge, which reaches the user's model provider")
+			// judge sends file content to the user's model provider; the pin tools read the tags of the
+			// remotes the project already declares. Every other tool acts on the local project tree only.
+			assert.Equal(t, reachesOutside[tool.Name], *a.OpenWorldHint, "ai-rulez tools act on the local project tree only, except %v", reachesOutside)
 
 			assert.NotNil(t, tool.InputSchema, "input schema")
 			schema, ok := tool.OutputSchema.(map[string]any)

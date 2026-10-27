@@ -35,6 +35,9 @@ type toolSpec struct {
 	// initializes marks a tool that creates a project in the given directory:
 	// it must not walk up to an enclosing project's root.
 	initializes bool
+	// remote marks a tool that reads the network (the tags of a source) but changes
+	// nothing in the project: a read-only server still lists it, although it is open-world.
+	remote bool
 }
 
 // opensWorld reports whether a tool talks to parties outside the project.

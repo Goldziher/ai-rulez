@@ -222,6 +222,8 @@ rewrites them), and the test fails when they are stale.
 | `skill remove` | `uninstall_skill` | authoring |  |
 | `judge` | `judge` | authoring |  |
 | `lock --check` | `lock_status` | authoring | yes |
+| `lock --diff` | `lock_diff` | authoring |  |
+| `lock --outdated` | `lock_outdated` | authoring |  |
 | `okf validate` | `okf_validate` | authoring | yes |
 | `validate --show-policy` | `policy_show` | authoring | yes |
 | `profile add` | `add_profile` | authoring |  |
@@ -242,6 +244,8 @@ rewrites them), and the test fails when they are stale.
 | `show skill` | `read_skill` | authoring |  |
 | `remove skill` | `delete_skill` | authoring |  |
 | `tokens` | `token_report` | authoring | yes |
+| `update` | `update` | authoring |  |
+| `update --dry-run` | `update_plan` | authoring |  |
 | `validate` | `validate_config` | authoring | yes |
 | `verifiers list` | `list_verifiers` | authoring |  |
 | `verifiers run` | `run_verifiers` | authoring |  |
@@ -262,6 +266,7 @@ rewrites them), and the test fails when they are stale.
 | `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
 | `guard` | a hook entry point the harness calls on tool use |
+| `skill update` | re-pins installed skills over the network and rewrites the lock |
 | `list` | prints where skills and commands land per harness; generate_outputs dry_run returns the same plan |
 | `llm *` | model credentials and cost estimates for network calls |
 | `local *` | the machine-local overlay is per developer; tools reach it through the local argument of the item tools and update_config |
@@ -279,7 +284,6 @@ rewrites them), and the test fails when they are stale.
 | `sign`, `trust update` | signs with a key, an OIDC identity or a transparency log: credentials and egress |
 | `edit skill` | partial field edits and stdin input; update_skill is the whole-item replacement for a tool client |
 | `telemetry *` | consent and network egress of usage data |
-| `skill update`, `update` | moves pinned remote sources to newer tags over the network and rewrites the lock |
 | `verifiers calibrate`, `verifiers explain`, `verifiers suggest`, `verifiers test` | calibrate, suggest and test run models or programs; explain prints the help text of a verifier |
 | `verify` | verifies signatures, attestations and downloaded artifacts with the signing backend; the drift half is generate_outputs check and doctor |
 
@@ -332,7 +336,7 @@ ai-rulez mcp --serve-skills --read-only          # serve skills and inspect, nev
 | `--targets` | Preset whose rendering is served (its frontmatter dialect and placement rules). Default: the first configured preset that produces skills. |
 | `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
-| `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. The `judge` tool is not registered either: it sends file content to a model provider and spends money. |
+| `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools, and the lock tools `lock_status`, `lock_diff`, `lock_outdated` and `update_plan`). The server can inspect a project but never change it. The `update` tool is not registered. The `judge` tool is not registered either: it sends file content to a model provider and spends money. |
 | `--tools` | Register only these tools (repeatable or comma separated), for example `--tools find_skill,load_skill,find_context,load_context` for a server that can only read skills and context. Applies to `mcp` and to `mcp --serve-skills`. An unknown name is an error that lists the valid tools; a valid name the server would not register anyway (a writing tool under `--read-only`, a context tool without discovery) is simply absent. |
 | `--root` / `--allow-any-dir` | Confine the authoring tools to a directory, as for plain `mcp`. |
 
@@ -1360,7 +1364,7 @@ The server provides Claude with access to read and modify your configuration, wh
 
 ## MCP Tools Reference
 
-The ai-rulez MCP server exposes 66 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
+The ai-rulez MCP server exposes 71 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
 
 Every tool below accepts an optional `working_directory` parameter (the directory to operate in),
 except the two utility tools `get_version` and `show_builtin`. The per-tool parameter lists below
@@ -2186,14 +2190,15 @@ resource-not-found error.
 
 ### Governance Tools
 
-Four read-only tools expose the roles, lock and catalog surface of the CLI. They never write a file and never use
+Five read-only tools expose the roles, lock and catalog surface of the CLI. They never write a file and never use
 the network: remote includes and installed skills resolve from the local cache only, and one that is not cached is
 left out (the result then carries a second text block saying so). Each returns the JSON of the matching CLI command
 with `--format json`, compacted onto one line, so a client can parse either source the same way. They are annotated
-read-only and registered on the authoring server only (not on `--serve-skills`). Mutating lock operations
-(`lock`, `update`) stay CLI-only.
+read-only and registered on the authoring server only (not on `--serve-skills`). Writing the lock (`lock`) stays
+CLI-only; the tools that read the remotes' tags and move pins are described under
+[Pin Tools](#pin-tools-lock_outdated-update_plan-update).
 
-All four take the common parameters `config_file`, `config_dir`, `no_local` and `working_directory`
+All five take the common parameters `config_file`, `config_dir`, `no_local` and `working_directory`
 (`lock_status` always ignores the machine-local overlay, as `lock --check` does).
 
 | Tool | CLI equivalent | Parameters |
@@ -2201,6 +2206,7 @@ All four take the common parameters `config_file`, `config_dir`, `no_local` and 
 | `list_roles` | `roles list --format json` | common only |
 | `resolve_role` | `roles resolve <role> --format json` | `role` (required), `limit` |
 | `lock_status` | `lock --check --format json` | `kind`, `profile`, `role`, `targets`, `include_static`, `sources` |
+| `lock_diff` | `lock --diff --format json` | `profile`, `role`, `targets`, `include_static`, `sources` |
 | `catalog` | `catalog --format json` | `kind`, `role`, `limit` |
 
 **Output limits.** `resolve_role` and `catalog` list at most `limit` items (default 200, maximum 1000; a smaller
@@ -2233,6 +2239,13 @@ is an error result ("nothing to check", with the hint to run `ai-rulez lock`), a
 | `include_static` | boolean | Also check the view that serves static skills too (`lock --include-static`) |
 | `sources` | string[] | Also check the view with these extra skill sources (`lock --source`) |
 
+#### `lock_diff`
+
+How the sources and outputs differ from `ai-rulez.lock`, for pull request review ([`lock --diff`](lockfile.md)),
+following `schema/lock-diff.schema.json`. It takes the selectors of `lock_status` except `kind`, lists the per-file
+digests of a changed role, and never fails for a missing lock: a project that was never locked has nothing to
+compare, as with the command, which exits 0 whatever it finds.
+
 #### `catalog`
 
 Every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and the lock status
@@ -2243,6 +2256,43 @@ Every rule, skill, agent, command and context file with owner, version, tokens, 
 | `kind` | string | Only items of this kind: `rule`, `skill`, `agent`, `command`, `check` or `context` |
 | `role` | string | Only the items this role keeps; `roles` shrinks to that role |
 | `limit` | number | Maximum items returned |
+
+### Pin Tools (`lock_outdated`, `update_plan`, `update`)
+
+Three tools run the code of `ai-rulez lock --outdated`, `ai-rulez update --dry-run` and `ai-rulez update`
+(`internal/pinupdate`), so the defenses are the same as on the command line. Unlike the governance tools above they
+read the network: they ask the remotes the project already declares for their tags, and annotate themselves
+open-world. They send nothing of the project, and `config.toml` is never edited.
+
+| Tool | CLI equivalent | Writes | Listed when `read_only = true` |
+| --- | --- | --- | --- |
+| `lock_outdated` | `lock --outdated --format json` | nothing | yes |
+| `update_plan` | `update --dry-run --format json` | nothing (the local cache is refreshed) | yes |
+| `update` | `update [name...] --format json` | `ai-rulez.lock` | no |
+
+All three take the common parameters plus `kind` (`include`, `skill`, `source`, `marketplace` or `plugin`) and
+`names`, the sources to limit the run to (default: every source that uses a `version` constraint). A name that
+matches no such source is an error, as on the command line.
+
+**Documents.** `lock_outdated` returns `schema/lock-outdated.schema.json` and `update_plan` and `update` return
+`schema/update.schema.json`: the same JSON as the commands, compacted onto one line. A successful `update` adds a
+second text block with the next step (`ai-rulez generate`, then `ai-rulez lock`, which refreshes the output and
+served-skill pins).
+
+**Refusals.** `update_plan` and `update` run the pre-pin security scan (`AR001`-`AR009`) over every new tree and the
+checks of the command: a tag that moved since it was pinned (`AR732`), an unsatisfiable constraint (`AR730`), an
+invalid one (`AR731`), a tag held back by `min_release_age` (`AR733`). A refused source makes the result an error
+(`isError`) whose text and `structuredContent` are the update document, with the refused sources under `blocked` or the
+rejected scan under `updates[].scan` (`"refused": true`), followed by a text block saying nothing was written. No
+partial update is written.
+
+**Consent stays on the command line.** The tools take no `accept_findings`, `accept_moved_tag` or `allow_downgrade`
+argument, and not `--major` or `--write-config`: an agent cannot override a refusal. A person reviews it and runs
+`ai-rulez update --accept-moved-tag` or `--accept-findings`.
+
+With `--read-only` (or `[mcp] read_only = true`) `lock_outdated`, `update_plan` and `lock_diff` stay listed, since they
+change nothing in the project, and `update` is not registered. They are the only open-world tools a read-only server
+lists; `judge` is not.
 
 ---
 

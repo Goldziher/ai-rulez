@@ -33,6 +33,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `--force-with-lease`, and the token reaches git and `gh` only through the environment. Inputs: `version`, `names`,
   `kind`, `direct`, `branch`, `token` and `working-directory`; `min_release_age` stays a per-source configuration
   setting because `update` has no flag for it ([#506](https://github.com/Goldziher/ai-rulez/issues/506)).
+- **MCP tools `lock_outdated`, `update_plan`, `update` and `lock_diff` mirror `lock --outdated`, `update --dry-run`,
+  `update` and `lock --diff`.** An agent maintaining an organization's governance could see that a lock was stale
+  (`lock_status`) but not which sources had newer tags, or move them, without the CLI. The tools run the same code as
+  the commands (now `internal/pinupdate`), so `update` keeps the pre-pin security scan and the refusals (`AR730`,
+  `AR731`, `AR732`, scan findings), returned as an error result that carries the update document and writes nothing.
+  The consents that override a refusal (`--accept-moved-tag`, `--accept-findings`, `--allow-downgrade`) are not tool
+  arguments. With `[mcp] read_only = true` only `lock_outdated`, `update_plan` and `lock_diff` are listed. The first
+  three read the remotes' tags over the network. See [Pin Tools](https://goldziher.github.io/ai-rulez/mcp-server/#pin-tools-lock_outdated-update_plan-update)
+  ([#502](https://github.com/Goldziher/ai-rulez/issues/502)).
 
 ### Changed
 

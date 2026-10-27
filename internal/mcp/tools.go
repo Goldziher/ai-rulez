@@ -43,6 +43,28 @@ func openWorldAnnotations() *sdkmcp.ToolAnnotations {
 	}
 }
 
+// remoteReadAnnotations marks a read-only tool that reads the network (the tags of the
+// sources a project pins) and sends nothing of the project: open-world, yet listed by a
+// read-only server (toolSpec.remote).
+func remoteReadAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		ReadOnlyHint:    true,
+		DestructiveHint: boolPtr(false),
+		IdempotentHint:  true,
+		OpenWorldHint:   boolPtr(true),
+	}
+}
+
+// remoteWriteAnnotations marks a tool that reads the network and overwrites the pins
+// of ai-rulez.lock in place.
+func remoteWriteAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		DestructiveHint: boolPtr(true),
+		IdempotentHint:  true,
+		OpenWorldHint:   boolPtr(true),
+	}
+}
+
 // destructiveAnnotations returns tool annotations marking a tool as destructive.
 func destructiveAnnotations() *sdkmcp.ToolAnnotations {
 	return &sdkmcp.ToolAnnotations{
@@ -460,7 +482,8 @@ func (s *Server) registerCRUDProfileTools() {
 
 // registerGovernanceTools adds the read-only roles, lock and catalog tools. They
 // never write and never use the network: remote includes resolve from the local
-// cache only. Mutating lock operations (lock, update) stay CLI-only.
+// cache only. Writing the lock (lock) and consenting to a refusal stay CLI-only;
+// registerPinTools adds the tools that read the network and move pins.
 func (s *Server) registerGovernanceTools() {
 	addTool[listRolesIn](s, toolSpec{
 		name: "list_roles", title: "List Roles",
@@ -479,13 +502,15 @@ func (s *Server) registerGovernanceTools() {
 		description: "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only. A project with no lock file is an error, as in the CLI.",
 		annotations: readOnlyAnnotations(), output: lockStatusOut{},
 		enums: map[string][]string{keyKind: govview.LockKinds},
-	}, handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
-		extras := make([]ServeSetup, 0, len(views))
-		for _, v := range views {
-			extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
-		}
-		return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
-	}))
+	}, handlers.LockStatusHandler(s.version, s.dynamicLockChanges))
+
+	addTool[lockDiffIn](s, toolSpec{
+		name: "lock_diff", title: "Lock Diff",
+		description: "Show how the sources and outputs differ from ai-rulez.lock, with per-file digests of a changed role, for pull request review (lock --diff --format json). Read-only, offline. Unlike lock_status, a project with no lock file is not an error.",
+		annotations: readOnlyAnnotations(), output: lockDiffOut{},
+	}, handlers.LockDiffHandler(s.version, s.dynamicLockChanges))
+
+	s.registerPinTools()
 
 	addTool[catalogIn](s, toolSpec{
 		name: "catalog", title: "Catalog",
@@ -493,6 +518,41 @@ func (s *Server) registerGovernanceTools() {
 		annotations: readOnlyAnnotations(), output: catalogOut{},
 		enums: map[string][]string{"kind": append(append([]string(nil), config.RoleKinds...), contentlock.KindContext)},
 	}, handlers.CatalogHandler(s.version))
+}
+
+// dynamicLockChanges reports the source and served pin changes of the serve views
+// a lock tool selects, from the local cache only.
+func (s *Server) dynamicLockChanges(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
+	extras := make([]ServeSetup, 0, len(views))
+	for _, v := range views {
+		extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
+	}
+	return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
+}
+
+// registerPinTools adds the tools that move pins. They read the tags of the
+// sources the project already declares (open-world); update additionally rewrites
+// ai-rulez.lock and is not listed by a read-only server. The consents that
+// override a refusal are not arguments: they stay on the command line.
+func (s *Server) registerPinTools() {
+	kinds := map[string][]string{keyKind: handlers.PinKinds()}
+	addTool[lockOutdatedIn](s, toolSpec{
+		name: "lock_outdated", title: "Lock Outdated",
+		description: "List the sources whose version constraint allows a newer tag than the pinned one, and the newest tag of each (lock --outdated --format json). Read-only: reads the tags of the declared remotes over the network and writes nothing.",
+		annotations: remoteReadAnnotations(), output: lockOutdatedOut{}, remote: true, enums: kinds,
+	}, handlers.LockOutdatedHandler(s.pins))
+
+	addTool[updatePlanIn](s, toolSpec{
+		name: "update_plan", title: "Update Plan",
+		description: "Show which pins update would move, with the files that change and the security scan of each new tree (update --dry-run --format json). Reads the remotes over the network and refreshes the local cache; writes neither the lock nor the configuration. A refused source (AR730, AR731, AR732, scan findings) is an error result carrying the document.",
+		annotations: remoteReadAnnotations(), output: updateOut{}, remote: true, enums: kinds,
+	}, handlers.UpdatePlanHandler(s.pins))
+
+	addTool[updateIn](s, toolSpec{
+		name: "update", title: "Update Pins",
+		description: "Move the pins of sources that use a version constraint to the newest allowed tag and write ai-rulez.lock (update [name...]). Runs the same defenses as the command: the pre-pin security scan, a moved tag (AR732), an unsatisfiable (AR730) or invalid (AR731) constraint and min_release_age. A refusal is an error result carrying the update document, and nothing is written; consent to it (--accept-moved-tag, --accept-findings, --allow-downgrade) is given on the command line only. Not listed by a read-only server.",
+		annotations: remoteWriteAnnotations(), output: updateOut{}, enums: kinds,
+	}, handlers.UpdateHandler(s.pins))
 }
 
 // registerReportTools adds the read-only report tools: the twins of tokens, cost,

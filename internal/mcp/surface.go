@@ -81,7 +81,7 @@ func (s *Server) noteKnown(names ...string) {
 // admitTool records spec as known and reports whether this server registers it.
 func (s *Server) admitTool(spec *toolSpec) bool {
 	s.noteKnown(spec.name)
-	if s.readOnly && (!spec.annotations.ReadOnlyHint || opensWorld(spec.annotations)) {
+	if s.readOnly && (!spec.annotations.ReadOnlyHint || (opensWorld(spec.annotations) && !spec.remote)) {
 		return false
 	}
 	if s.noProject && !projectlessTool(spec.name) {
