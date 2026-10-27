@@ -158,6 +158,8 @@ type runner struct {
 	injOnce      sync.Once
 	relaxedOnce  sync.Once
 	secOnce      sync.Once
+	fallbackOnce sync.Once
+	fallbackMemo []config.ContentFile // the scoped-fallback skills, built once per run, see scopedFallbackSkills
 	secRes       []secretPattern
 	relMemo      sync.Map        // absolute path -> tree-relative path, see rel
 	ctx          context.Context // bounds the git probes, see WithContext

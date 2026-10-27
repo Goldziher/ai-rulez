@@ -190,11 +190,15 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 // scopedFallbackSkills is the skills rules.scoped_fallback = "skill" would write
 // for the project, minus the ones an authored skill or command already names;
 // they count toward the skill listing of the harnesses that read .agents/skills.
+// The skills are built once per run: each skill-listing budget asks for them.
 func (r *runner) scopedFallbackSkills() []config.ContentFile {
-	if r.cfg == nil || r.cfg.Content == nil || !config.SharedAgentsMDInlining(r.cfg).ScopedAsSkills {
-		return nil
-	}
-	return presets.ScopedFallbackSkillsUnclaimed(r.cfg.Content, r.cfg, r.cfg.AgentsMDOwners(), nil)
+	r.fallbackOnce.Do(func() {
+		if r.cfg == nil || r.cfg.Content == nil || !config.SharedAgentsMDInlining(r.cfg).ScopedAsSkills {
+			return
+		}
+		r.fallbackMemo = presets.ScopedFallbackSkillsUnclaimed(r.cfg.Content, r.cfg, r.cfg.AgentsMDOwners(), nil)
+	})
+	return r.fallbackMemo
 }
 
 // fallbackListing is the size, in unit, of the skill listing entries of the

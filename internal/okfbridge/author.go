@@ -96,7 +96,15 @@ func applyKeepingIdentity(it *sourceItem, md, prev *config.Metadata) {
 // before it is overwritten. It is what the source writers (add, remove, init,
 // the MCP tools) call after a change.
 func RefreshIndexes(ctx context.Context, configDir string) error {
-	idx, items, err := indexInputs(ctx, configDir)
+	return RefreshIndexesFrom(ctx, configDir, nil)
+}
+
+// RefreshIndexesFrom is RefreshIndexes for a caller that has already loaded the
+// content: tree is the project's loaded content tree, from which the items read
+// from configDir are listed (items merged in from includes and builtins are left
+// out), so the tree is not scanned and parsed a second time. A nil tree is scanned.
+func RefreshIndexesFrom(ctx context.Context, configDir string, tree *config.ContentTree) error {
+	idx, items, err := indexInputs(ctx, configDir, tree)
 	if err != nil {
 		return err
 	}
@@ -119,7 +127,14 @@ func IsBundleDir(configDir string) bool {
 // its concept, or an entry is missing. It is the index check "migrate okf
 // --check" runs, without writing anything.
 func StaleIndexes(ctx context.Context, configDir string) ([]string, error) {
-	idx, items, err := indexInputs(ctx, configDir)
+	return StaleIndexesFrom(ctx, configDir, nil)
+}
+
+// StaleIndexesFrom is StaleIndexes over an already loaded content tree, see
+// RefreshIndexesFrom. The index.md files themselves are still read from disk:
+// they are not content items.
+func StaleIndexesFrom(ctx context.Context, configDir string, tree *config.ContentTree) ([]string, error) {
+	idx, items, err := indexInputs(ctx, configDir, tree)
 	if err != nil {
 		return nil, err
 	}
@@ -136,12 +151,16 @@ func StaleIndexes(ctx context.Context, configDir string) ([]string, error) {
 	return stale, nil
 }
 
-// indexInputs reads the content tree of configDir and returns what its index.md
-// files list, with the items they were derived from.
-func indexInputs(ctx context.Context, configDir string) ([]okf.IndexInput, []sourceItem, error) {
-	tree, err := config.ScanContentTreeContext(ctx, configDir)
-	if err != nil {
-		return nil, nil, oops.Wrapf(err, "read %s", configDir)
+// indexInputs returns what the index.md files of configDir list, with the items
+// they were derived from. It lists the loaded tree when given one and scans
+// configDir otherwise.
+func indexInputs(ctx context.Context, configDir string, tree *config.ContentTree) ([]okf.IndexInput, []sourceItem, error) {
+	if tree == nil {
+		scanned, err := config.ScanContentTreeContext(ctx, configDir)
+		if err != nil {
+			return nil, nil, oops.Wrapf(err, "read %s", configDir)
+		}
+		tree = scanned
 	}
 	res := &ExportResult{Counts: map[Kind]int{}}
 	items := collectItems(tree, allKindSet(), configDir, res)
