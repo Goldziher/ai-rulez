@@ -105,10 +105,12 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 		if v := r.lc.LoadBudgets[b.ID]; v > 0 {
 			b.Limit = v
 		}
-		total, name := 0, 0
+		total, name, imported := 0, 0, 0
 		for i := range r.items {
 			it := &r.items[i]
-			if !it.owned || it.isDoc || (it.targetOnly && r.pathIgnored(it.abs)) {
+			// Sums measure what the harness loads, so included and installed items
+			// count; a finding on a single file is only raised for files the user owns.
+			if it.isDoc || (it.targetOnly && r.pathIgnored(it.abs)) {
 				continue
 			}
 			switch b.Scope {
@@ -120,11 +122,18 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 				if it.cf.Metadata != nil {
 					desc += it.cf.Metadata.Extra["when_to_use"]
 				}
-				if n := measure(b.Unit, desc); n > b.Limit {
+				n := measure(b.Unit, desc)
+				if n > b.Limit && !it.owned && cfgPath != "" {
+					r.add(CodeLoadBudget, cfgPath, 1,
+						"the %s skill from an include or installed skill has a description and when_to_use of %d %s, past the %d-%s cap of the %s skill listing (%s); the rest is cut off", itemID(it.kind, it.cf), n, b.Unit, b.Limit, b.Unit, b.presetLabel(), b.Source)
+				} else if n > b.Limit && it.owned {
 					r.add(CodeLoadBudget, it.abs, r.docs[it.abs].lineOf(keyDescription, 1),
 						"description and when_to_use are %d %s, past the %d-%s cap of the %s skill listing (%s); the rest is cut off", n, b.Unit, b.Limit, b.Unit, b.presetLabel(), b.Source)
 				}
 			case scopeFile:
+				if !it.owned {
+					continue
+				}
 				if it.kind != kindRule && it.kind != kindContext {
 					continue
 				}
@@ -139,6 +148,9 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 				if it.kind == kindSkill {
 					total += measure(b.Unit, skillListingName(it)+r.description(it))
 					name++
+					if !it.owned {
+						imported++
+					}
 				}
 			}
 		}
@@ -149,6 +161,7 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 			total += extra
 			name += fallback
 		}
+		note := fallbackNote(fallback) + importedNote(imported)
 		if b.Scope != scopeChain && b.Scope != keySkills || cfgPath == "" {
 			continue
 		}
@@ -166,7 +179,7 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 			r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "rules and context add up to %d of %d %s, within 10%% of the AGENTS.md chain limit of %s (%s)", total, b.Limit, b.Unit, b.presetLabel(), b.Source)
 		case total > b.Limit && b.Scope == keySkills:
 			r.add(CodeLoadBudget, cfgPath, at, "the %d skill names and descriptions%s add up to %d %s, past the %d-%s listing budget %s gives skills (about 2%% of the context window, %s); skills past it are cut from the listing%s",
-				name, fallbackNote(fallback), total, b.Unit, b.Limit, b.Unit, b.presetLabel(), b.Source, fallbackAdvice(fallback))
+				name, note, total, b.Unit, b.Limit, b.Unit, b.presetLabel(), b.Source, fallbackAdvice(fallback))
 		case total*10 >= b.Limit*9 && b.Scope == keySkills:
 			r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "the %d skill names and descriptions%s add up to %d of %d %s, within 10%% of the skill listing budget of %s (%s)",
 				name, fallbackNote(fallback), total, b.Limit, b.Unit, b.presetLabel(), b.Source)
@@ -212,6 +225,13 @@ func fallbackNote(n int) string {
 		return ""
 	}
 	return fmt.Sprintf(" (%d of them scoped-fallback skills for glob-scoped rules and context)", n)
+}
+
+func importedNote(n int) string {
+	if n == 0 {
+		return ""
+	}
+	return fmt.Sprintf(" (%d of them from includes or installed skills)", n)
 }
 
 func fallbackAdvice(n int) string {
