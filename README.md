@@ -536,6 +536,9 @@ configuration root: `migrate okf --check`, `validate --strict --no-local`, `lock
 `generate --check`, optionally `verify --plugin` and `tokens --budget`, then a clean `git diff HEAD` with no new
 untracked files. `expected-config-count` fails a run that finds a different number of roots, and a job summary lists
 every command. See [the check sub-action](docs/github-actions.md#governance-gate-check).
+`uses: Goldziher/ai-rulez/update@v5` on a schedule runs `ai-rulez update` when `lock --outdated` reports an allowed
+update, regenerates, re-pins the content and opens a pull request with the outdated table (or pushes directly with
+`direct: true`). See [scheduled pin updates](docs/github-actions.md#scheduled-pin-updates-update).
 
 For model-backed reviews, configure `llm-model`, `llm-allow-network: 'true'` and spend limits,
 pass provider credentials through `env:` on the command step or job, and run `ai-rulez judge

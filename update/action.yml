@@ -1,0 +1,105 @@
+name: Update ai-rulez pins
+description: Install ai-rulez, move version-range pins with ai-rulez update, regenerate, and open a pull request or push the commit.
+branding:
+  icon: refresh-cw
+  color: blue
+
+inputs:
+  version:
+    description: "ai-rulez version to install: X.Y.Z, vX.Y.Z, X.Y.Z-rc.N, or latest"
+    required: false
+    default: latest
+  names:
+    description: "Sources to update, separated by spaces or newlines. Empty updates every source with an allowed update."
+    required: false
+    default: ""
+  kind:
+    description: "Limit the update to include, skill, source, marketplace or plugin. Empty means every kind."
+    required: false
+    default: ""
+  direct:
+    description: "true pushes the commit to the checked-out branch; false opens or refreshes a pull request: true or false"
+    required: false
+    default: "false"
+  branch:
+    description: "Branch the pull request is opened from; this action owns it and replaces it on each run"
+    required: false
+    default: ai-rulez/update
+  token:
+    description: "Token for git push and gh. A pull request opened with the default GITHUB_TOKEN does not trigger other workflows."
+    required: false
+    default: ${{ github.token }}
+  working-directory:
+    description: "Project root holding the ai-rulez configuration, relative to the workspace"
+    required: false
+    default: "."
+
+outputs:
+  version:
+    description: "The installed ai-rulez version, without the leading v"
+    value: ${{ steps.setup.outputs.version }}
+  updated:
+    description: "true when a commit was pushed, false when nothing was updatable"
+    value: ${{ steps.update.outputs.updated }}
+  commit:
+    description: "SHA of the pushed commit"
+    value: ${{ steps.update.outputs.commit }}
+  pull-request-url:
+    description: "URL of the opened or refreshed pull request (pull request mode only)"
+    value: ${{ steps.update.outputs.pull-request-url }}
+
+runs:
+  using: composite
+  steps:
+    # A sub-action cannot `uses:` its parent action, so it runs the same install scripts the root
+    # action.yml runs, from this action's own checkout one directory up.
+    - name: Resolve the requested version
+      id: resolve
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/../scripts/action/resolve-version.sh"
+
+    - name: Cache the ai-rulez download
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ runner.temp }}/ai-rulez-setup
+        key: ai-rulez-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.tag }}
+
+    - name: Install ai-rulez and add it to PATH
+      id: setup
+      shell: bash
+      env:
+        AI_RULEZ_VERSION: ${{ steps.resolve.outputs.tag }}
+        AI_RULEZ_RESOLVE_ONLY: "1"
+        AI_RULEZ_USE_PATH: "0"
+        AI_RULEZ_BINARY: ""
+        AI_RULEZ_CACHE_DIR: ${{ runner.temp }}/ai-rulez-setup
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/../scripts/action/install.sh"
+
+    - name: Update pins and publish the result
+      id: update
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_NAMES: ${{ inputs.names }}
+        INPUT_KIND: ${{ inputs.kind }}
+        INPUT_DIRECT: ${{ inputs.direct }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/../scripts/action/update.sh"

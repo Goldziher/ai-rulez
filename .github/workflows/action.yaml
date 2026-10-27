@@ -6,6 +6,7 @@ on:
     paths: &action-paths
       - "action.yml"
       - "check/**"
+      - "update/**"
       - "scripts/action/**"
       - "scripts/pre-commit/run-ai-rulez.sh"
       - "scripts/update-action-tag*"
@@ -143,3 +144,41 @@ jobs:
         env:
           OUTCOME: ${{ steps.drift.outcome }}
         run: test "$OUTCOME" = failure
+
+  update:
+    name: Update sub-action without updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: action-src
+      # A project with no version-range source: the sub-action must stop with a notice and commit
+      # nothing. The fixture has no remote, so a push attempt would fail the job.
+      - name: Create a fixture with nothing to update
+        run: |
+          set -euo pipefail
+          git init -q -b main
+          git config user.name fixture
+          git config user.email fixture@example.com
+          mkdir -p .ai-rulez
+          printf 'version = "5.0"\nname = "fixture"\nbuiltins = false\npresets = ["claude"]\n' >.ai-rulez/config.toml
+          printf 'action-src/\n' >.gitignore
+          git add -A
+          git commit -q -m fixture
+      - name: Run the update sub-action
+        id: update
+        uses: ./action-src/update
+        with:
+          version: 5.7.0
+      - name: Require the no-update outcome
+        env:
+          UPDATED: ${{ steps.update.outputs.updated }}
+        run: |
+          set -euo pipefail
+          test "$UPDATED" = false
+          test "$(git rev-list --count HEAD)" = 1
+          test -z "$(git status --porcelain)"
