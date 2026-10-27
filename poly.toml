@@ -131,5 +131,5 @@ enabled = true
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "291b11fa381c0ff49b0f9065b386281d63c90b17"
+revision = "290cf2ca7cd84abada7f6e64190acdedbf22f566"
 hooks = ["ai-rulez-validate"]
