@@ -52,6 +52,10 @@ type ContentFile struct {
 	Domain string `yaml:"-" json:"-"`
 	Trust  string `yaml:"-" json:"-"`
 
+	// Include names the include (or builtin pack) the item came from; empty for
+	// the project's own content. Runtime-only; not serialized.
+	Include string `yaml:"-" json:"-"`
+
 	// ID is the output id of a skill when it is not the name of the directory
 	// holding SKILL.md: an installed skill entry's name_prefix prefixes the id as
 	// well as the name. Empty means the directory name. Runtime-only.

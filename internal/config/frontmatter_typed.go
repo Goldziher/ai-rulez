@@ -163,6 +163,18 @@ func (m *Metadata) ExtraBool(key string) (value, set bool) {
 	return false, false
 }
 
+// FrontmatterFallback is the frontmatter key of a rule or context item that
+// keeps it out of the skills and AGENTS.md text served to presets without path
+// scoping (fallback: false).
+const FrontmatterFallback = "fallback"
+
+// FallbackOptOut reports whether the item sets fallback: false, which keeps a
+// glob-scoped item for the harnesses that scope it by path only.
+func (m *Metadata) FallbackOptOut() bool {
+	value, set := m.ExtraBool(FrontmatterFallback)
+	return set && !value
+}
+
 // flowText renders a value node as compact single-line flow YAML
 // ({a: 1, b: [x, y]}): a readable, valid-YAML string form for collections in
 // Metadata.Extra, instead of Go's map[...] syntax. Empty on failure.

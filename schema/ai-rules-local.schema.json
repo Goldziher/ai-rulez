@@ -4230,6 +4230,11 @@
           "description": "How the shared AGENTS.md serves glob-scoped rules and context to presets without a rules folder (codex, opencode, pi, ...). inline (default) inlines them with an Applies to line, so every reader of AGENTS.md, including claude through its import, loads them at start; skill writes each one to .agents/skills as a skill gated by its paths, when every such preset reads that tree.",
           "enum": ["inline", "skill"],
           "type": "string"
+        },
+        "scoped_fallback_group": {
+          "description": "How scoped_fallback = skill folds its skills, to keep the skill listing short. none (default) writes one rule-<id> or context-<id> skill per item; include writes one scoped-<include> skill per include or builtin pack; directory writes one scoped-<dir> skill per directory the item's globs point into. A grouped skill holds each item under a heading with its globs, and its paths are the union of theirs.",
+          "enum": ["none", "include", "directory"],
+          "type": "string"
         }
       },
       "type": "object"

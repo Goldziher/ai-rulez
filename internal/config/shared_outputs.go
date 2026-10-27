@@ -308,3 +308,18 @@ func (i *AgentsMDInlining) add(consumer SharedOutputConsumer, split bool) bool {
 func scopedAsSkills(cfg *Config) bool {
 	return cfg.ScopedFallbackRules() == ScopedFallbackSkill && (cfg.Run == nil || cfg.Run.Scope == nil)
 }
+
+// AgentsMDOwners lists the configured built-in presets that rely on the shared
+// AGENTS.md, so frontmatter targets naming any of them select an item for it.
+func (c *Config) AgentsMDOwners() []string {
+	var owners []string
+	for _, preset := range c.Presets {
+		if !preset.IsBuiltIn() {
+			continue
+		}
+		if consumer, ok := SharedOutputConsumerFor(preset.BuiltIn); ok && consumer.NeedsAgentsMD() {
+			owners = append(owners, preset.BuiltIn)
+		}
+	}
+	return owners
+}

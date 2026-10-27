@@ -165,6 +165,8 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 		return oops.Wrapf(err, "failed to fetch include '%s'", includeConf.Name)
 	}
 
+	includedContent = taggedWithInclude(includedContent, includeConf.Name)
+
 	// Merge content
 	merged, err := r.mergeContent(*mergedContent, includedContent, includeConf.MergeStrategy, includeConf.InstallTo)
 	if err != nil {
@@ -566,4 +568,30 @@ func (r *Resolver) host() ambient.Host {
 		return ambient.Host{}
 	}
 	return r.cfg.Host
+}
+
+// taggedWithInclude returns a copy of the tree whose rules and context name the
+// include they came from, so generation can group them by origin. The fetched
+// tree may be shared through the run's memo, so it is not modified.
+func taggedWithInclude(tree *config.ContentTree, name string) *config.ContentTree {
+	tagged := *tree
+	tagged.Rules = tagFiles(tree.Rules, name)
+	tagged.Context = tagFiles(tree.Context, name)
+	tagged.Domains = make(map[string]*config.Domain, len(tree.Domains))
+	for domainName, domain := range tree.Domains {
+		copied := *domain
+		copied.Rules = tagFiles(domain.Rules, name)
+		copied.Context = tagFiles(domain.Context, name)
+		tagged.Domains[domainName] = &copied
+	}
+	return &tagged
+}
+
+func tagFiles(files []config.ContentFile, name string) []config.ContentFile {
+	out := make([]config.ContentFile, len(files))
+	copy(out, files)
+	for idx := range out {
+		out[idx].Include = name
+	}
+	return out
 }

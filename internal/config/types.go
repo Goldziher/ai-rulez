@@ -760,6 +760,13 @@ type RulesConfig struct {
 	// instead, so they load on demand. See ScopedFallbackRules.
 	ScopedFallback string `yaml:"scoped_fallback,omitempty" json:"scoped_fallback,omitempty" toml:"scoped_fallback,omitempty"` //nolint:tagliatelle
 
+	// ScopedFallbackGroup folds the skills scoped_fallback = "skill" writes into
+	// fewer ones, so the skill listing a harness budgets stays short: "none" (the
+	// default) writes one skill per item, "include" one per include or builtin
+	// pack, "directory" one per directory the item's globs point into. See
+	// ScopedFallbackGrouping.
+	ScopedFallbackGroup string `yaml:"scoped_fallback_group,omitempty" json:"scoped_fallback_group,omitempty" toml:"scoped_fallback_group,omitempty"` //nolint:tagliatelle
+
 	// Baz holds per-rule controls for the baz preset ([rules.baz]).
 	Baz *BazRulesConfig `yaml:"baz,omitempty" json:"baz,omitempty" toml:"baz,omitempty"`
 }
@@ -809,6 +816,23 @@ const (
 	ScopedFallbackInline = "inline"
 	ScopedFallbackSkill  = "skill"
 )
+
+// Values of rules.scoped_fallback_group.
+const (
+	ScopedFallbackGroupNone      = "none"
+	ScopedFallbackGroupInclude   = "include"
+	ScopedFallbackGroupDirectory = "directory"
+)
+
+// ScopedFallbackGrouping returns how scoped_fallback = "skill" groups its
+// skills: ScopedFallbackGroupNone unless rules.scoped_fallback_group says
+// otherwise.
+func (c *Config) ScopedFallbackGrouping() string {
+	if c != nil && c.Rules != nil && c.Rules.ScopedFallbackGroup != "" {
+		return c.Rules.ScopedFallbackGroup
+	}
+	return ScopedFallbackGroupNone
+}
 
 // ScopedFallbackRules returns how the shared AGENTS.md serves glob-scoped items
 // to presets without a rules folder: ScopedFallbackInline unless

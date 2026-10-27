@@ -42,7 +42,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
 - **`schema`**: URL of the JSON Schema, for editor support
-- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `scoped_fallback`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
+- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `scoped_fallback`, `scoped_fallback_group`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge

@@ -123,14 +123,14 @@ func warnScopedInlinedTwice(cfg *config.Config, content *config.ContentTree, own
 	if len(folderReaders) == 0 {
 		return
 	}
-	scoped := presets.ScopedFallbackSkills(content, cfg, owners)
-	if len(scoped) == 0 {
+	scoped := presets.ScopedFallbackItemCount(content, cfg, owners)
+	if scoped == 0 {
 		return
 	}
 	cfg.Diag.OnceWarn("agents_md", "scoped-inlined-twice",
 		"AGENTS.md inlines glob-scoped rules and context for presets without a rules folder; presets with one also read it, "+
 			"so those items load in every session. Set [rules] scoped_fallback = \"skill\" to serve them as path-gated skills",
-		"items", len(scoped), "presets", strings.Join(folderReaders, ","))
+		"items", scoped, "presets", strings.Join(folderReaders, ","))
 }
 
 // sharedSkillTargets is the frontmatter targets of the skills and of the commands
@@ -202,18 +202,7 @@ func dropShadowedByShared(allOutputs map[string][]config.OutputFile, baseDir str
 
 // agentsMDOwners lists the configured built-in presets that rely on the shared
 // AGENTS.md, so frontmatter targets naming any of them select an item for it.
-func agentsMDOwners(cfg *config.Config) []string {
-	var owners []string
-	for _, preset := range cfg.Presets {
-		if !preset.IsBuiltIn() {
-			continue
-		}
-		if consumer, ok := config.SharedOutputConsumerFor(preset.BuiltIn); ok && consumer.NeedsAgentsMD() {
-			owners = append(owners, preset.BuiltIn)
-		}
-	}
-	return owners
-}
+func agentsMDOwners(cfg *config.Config) []string { return cfg.AgentsMDOwners() }
 
 // dropOwnSharedOutputs removes the outputs the shared ones replace: the root
 // AGENTS.md, the preset's own skills directory and .agents/skills itself. A

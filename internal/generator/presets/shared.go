@@ -11,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 )
 
 // SharedAgentsMD renders the shared AGENTS.md written once when agents_md is on.
@@ -48,82 +47,6 @@ func sharedAgentsMDOwners(owners []string) (all, aliases []string) {
 		}
 	}
 	return all, aliases
-}
-
-// scopedSkillDescriptionLimit is the listing budget harnesses give a skill
-// description; a generated one is cut to fit.
-const scopedSkillDescriptionLimit = 250
-
-// ScopedFallbackSkills is what rules.scoped_fallback = "skill" puts in the shared
-// .agents/skills tree in place of the glob-scoped rules and context the shared
-// AGENTS.md no longer inlines: one skill per item, named rule-<id> or
-// context-<id>, carrying the item's positive globs as paths (Claude Code and
-// Cursor load such a skill only for matching files; other readers list it and
-// load it on demand). The items are exactly the ones SharedAgentsMD leaves out:
-// selected for AGENTS.md by their targets, glob-activated with at least one
-// positive glob, and not moved into a nested AGENTS.md by the baz preset.
-func ScopedFallbackSkills(content *config.ContentTree, cfg *config.Config, owners []string) []config.ContentFile {
-	root := rulefiles.RootTarget(codexPresetName, agentsMDFile)
-	root.Owners, root.RootAliases = sharedAgentsMDOwners(owners)
-	var skills []config.ContentFile
-	for _, group := range []struct {
-		prefix string
-		items  []config.ContentFile
-	}{
-		{"rule-", withoutBazNested(rulefiles.FilterInline(allInlineRules(content), root), cfg)},
-		{"context-", withoutBazNested(rulefiles.FilterInline(allInlineContext(content), root), cfg)},
-	} {
-		for idx := range group.items {
-			if skill, ok := scopedFallbackSkill(group.items[idx], group.prefix); ok {
-				skills = append(skills, skill)
-			}
-		}
-	}
-	return skills
-}
-
-// scopedFallbackSkill renders one glob-scoped item as a skill; false when the
-// item is not glob-scoped by at least one positive glob.
-func scopedFallbackSkill(cf config.ContentFile, prefix string) (config.ContentFile, bool) {
-	act := cf.Metadata.ResolveActivation()
-	if act.Mode != config.ActivationGlob || rulefiles.EffectiveModeOf(cf) != config.ActivationGlob {
-		return config.ContentFile{}, false
-	}
-	var globs []string
-	for _, g := range act.Globs {
-		if !strings.HasPrefix(g, "!") {
-			globs = append(globs, g)
-		}
-	}
-	if len(globs) == 0 {
-		return config.ContentFile{}, false
-	}
-	id := prefix + rulefiles.ItemID(cf.Name)
-	title := cf.Name
-	if cf.Metadata != nil && cf.Metadata.OKFTitle != "" {
-		title = cf.Metadata.OKFTitle
-	}
-	description := strings.Join(strings.Fields(act.Description), " ")
-	if description == "" {
-		description = title + ": conventions for files matching " + strings.Join(globs, ", ") +
-			". Use when reading or editing those files."
-	}
-	if len(description) > scopedSkillDescriptionLimit {
-		description = strings.TrimSpace(description[:scopedSkillDescriptionLimit-3]) + "..."
-	}
-	spans := make([]string, len(globs))
-	for i, g := range globs {
-		spans[i] = "`" + g + "`"
-	}
-	body := "# " + title + "\n\n_Applies to: " + strings.Join(spans, ", ") + "_\n\n" +
-		strings.TrimSpace(markdown.ProcessEmbeddedContent(cf.Content)) + "\n"
-	return config.ContentFile{
-		Name:     id,
-		ID:       id,
-		Path:     cf.Path,
-		Content:  body,
-		Metadata: &config.Metadata{Paths: globs, Extra: map[string]string{"description": description}},
-	}, true
 }
 
 // SkillTargets maps the id of every skill that restricts itself with frontmatter
@@ -303,7 +226,11 @@ func typedAgentField(meta *config.Metadata, key string) (any, bool) {
 // ones, which include a glob rule without globs). Other context stays unless it
 // is glob-scoped.
 func inlinedInAgentsMD(items []config.ContentFile, shared *sharedAgentsMDOpts, context bool) []config.ContentFile {
-	if shared == nil || shared.inlining.Scoped {
+	if shared == nil {
+		return items
+	}
+	items = withoutFallbackOptOuts(items)
+	if shared.inlining.Scoped {
 		return items
 	}
 	kept := make([]config.ContentFile, 0, len(items))
@@ -392,4 +319,16 @@ func mergeShortDescription(existing any, shortDesc string) any {
 		return m
 	}
 	return existing
+}
+
+// withoutFallbackOptOuts drops the glob-scoped items that opt out of the
+// shared AGENTS.md with fallback: false: only path-aware harnesses render them.
+func withoutFallbackOptOuts(items []config.ContentFile) []config.ContentFile {
+	kept := make([]config.ContentFile, 0, len(items))
+	for idx := range items {
+		if !scopedFallbackOptedOut(items[idx]) {
+			kept = append(kept, items[idx])
+		}
+	}
+	return kept
 }
