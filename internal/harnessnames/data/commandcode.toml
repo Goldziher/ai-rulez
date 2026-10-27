@@ -1,7 +1,7 @@
 schema = 1
 preset = "commandcode"
 harness_version = "docs-only"
-verified_on = "2026-10-18"
+verified_on = "2026-10-27"
 completeness = "complete"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://commandcode.ai/docs/reference/slash-commands"
-verified_on = "2026-10-18"
+verified_on = "2026-10-27"
 
 [[source]]
 id = "s2"
@@ -49,6 +49,7 @@ match = "exact"
 names = [
   "add-dir",
   "agents",
+  "btw",
   "changelog",
   "clear",
   "clone",

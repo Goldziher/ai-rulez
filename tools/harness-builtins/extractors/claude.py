@@ -18,19 +18,24 @@ def _slashed(text: str) -> list[str]:
 
 
 def _rows(text: str) -> list[tuple[str, str]]:
-    """(name, purpose) of every row of the `Command | Purpose` table."""
+    """(name, purpose) of every row of the `Command | Purpose` table.
+
+    A row of subcommands (`/x consent`, `/x revoke`) of a command that has its own row is dropped,
+    so it cannot change what that row says x is.
+    """
     rows = []
     for line in text.splitlines():
         if not line.startswith("| `/"):
             continue
         cells = _cells(line)
-        m = re.match(r"`/([a-z][a-z0-9-]*)", cells[0])
+        m = re.match(r"`/([a-z][a-z0-9-]*)( [a-z])?", cells[0])
         if not m or len(cells) < 2:
             raise ValueError(f"cannot read the command of {line[:80]!r}")
-        rows.append((m.group(1), " | ".join(cells[1:])))
+        rows.append((m.group(1), " | ".join(cells[1:]), m.group(2) is not None))
     if not rows:
         raise ValueError("no command rows found")
-    return rows
+    own = {name for name, _, sub in rows if not sub}
+    return [(name, purpose) for name, purpose, sub in rows if not (sub and name in own)]
 
 
 def parse_commands(text: str) -> dict:
@@ -72,17 +77,18 @@ def parse_commands(text: str) -> dict:
 
 
 def parse_subagents(text: str) -> dict:
-    """The built-in subagents: one per tab of the section, plus the rows of the Other tab's table.
+    """The built-in subagents: one per tab (or bold heading line) of the section, plus the rows of the Other table.
 
     "agent_override" holds those the page says a user or project subagent of the same name
-    overrides ("named `X` overrides the built-in"); "agent" holds the rest. A tab title is
-    the name as written there (the pin spells `general-purpose` in lower case).
+    overrides ("named `X` overrides the built-in"); "agent" holds the rest. A tab title or
+    heading is the name as written there (the pin spells `general-purpose` in lower case).
     """
     m = re.search(r"(?ms)^## Built-in subagents\s*$(.*?)(?=^## |\Z)", text)
     if not m:
         raise ValueError("section 'Built-in subagents' not found")
     section = m.group(1)
-    names = [t for t in re.findall(r'<Tab title="([^"]+)">', section) if t != "Other"]
+    titles = re.findall(r'<Tab title="([^"]+)">', section) or re.findall(r"(?m)^\*\*([^*\n]+)\*\*[ \t]*$", section)
+    names = [t for t in titles if t != "Other"]
     table = re.search(r"(?m)^[ \t]*\| Agent \|.*\n[ \t]*\|[ :|-]+\n((?:[ \t]*\|.*\n?)+)", section)
     if table:
         names += [_cells(line.strip())[0] for line in table.group(1).splitlines() if line.strip().startswith("|")]

@@ -1,7 +1,7 @@
 schema = 1
 preset = "devin"
 harness_version = "Devin CLI stable v3000.11.92 (changelog dated 2026-10-14)"
-verified_on = "2026-10-18"
+verified_on = "2026-10-27"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.devin.ai/cli/reference/commands.md#slash-commands"
-verified_on = "2026-10-18"
+verified_on = "2026-10-27"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,7 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://docs.devin.ai/cli/subagents.md"
-verified_on = "2026-10-18"
+verified_on = "2026-10-27"
 
 [[source]]
 id = "s4"
@@ -60,7 +60,6 @@ names = [
   "login",
   "login-status",
   "logout",
-  "loop",
   "ls",
   "mcp",
   "mode",
@@ -74,7 +73,6 @@ names = [
   "platform",
   "remove-dir",
   "rename",
-  "rename-session",
   "repo",
   "resume",
   "revert",
@@ -86,7 +84,6 @@ names = [
   "status",
   "steps",
   "theme",
-  "title",
   "undo-add-dir",
   "update",
   "upgrade",
@@ -102,6 +99,9 @@ aliases = { "bypass" = [
   "quit",
 ], "ls" = [
   "list-sessions",
+], "rename" = [
+  "rename-session",
+  "title",
 ], "session-stats" = [
   "stats",
 ], "undo-add-dir" = [

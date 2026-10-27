@@ -47,6 +47,19 @@ class ClaudeTest(unittest.TestCase):
         # Assert
         self.assertEqual(got["command"]["aliases"], {"bug": ["share"]})
 
+    def test_a_subcommand_row_does_not_change_the_kind_of_its_command(self):
+        # Arrange
+        text = (
+            "| `/design [brief]` | **[Skill](/x).** Draft mockups |\n"
+            "| `/design consent`, `/design revoke` | Grant access, or withdraw it |\n"
+            "| `/a` | Plain |\n"
+        )
+        # Act
+        got = self.ex.parse_commands(text)
+        # Assert
+        self.assertEqual(got["skill"]["names"], ["design"])
+        self.assertEqual(got["command"]["names"], ["a"])
+
     def test_an_alias_of_a_row_that_does_not_exist_is_an_error(self):
         # Arrange
         text = "| `/a` | Plain |\n| `/b` | **[Skill](/x).** s |\n| `/c` | Alias for `/missing` |\n"
@@ -62,6 +75,21 @@ class ClaudeTest(unittest.TestCase):
         # Assert
         self.assertEqual(got["agent_override"], ["Explore"])
         self.assertEqual(got["agent"], ["Plan", "General-purpose", "claude", "statusline-setup", "claude-code-guide"])
+
+    def test_parse_subagents_reads_the_earlier_tab_layout(self):
+        # Arrange
+        text = (
+            '## Built-in subagents\n\n<Tabs>\n  <Tab title="Explore">\n'
+            "    A [project subagent](#x) named `Explore` overrides the built-in.\n  </Tab>\n"
+            '  <Tab title="Plan">\n    Research.\n  </Tab>\n  <Tab title="Other">\n'
+            "    | Agent | Model | When Claude uses it |\n    | :- | :- | :- |\n"
+            "    | statusline-setup | Sonnet | When you run `/statusline` |\n  </Tab>\n</Tabs>\n"
+        )
+        # Act
+        got = self.ex.parse_subagents(text)
+        # Assert
+        self.assertEqual(got["agent_override"], ["Explore"])
+        self.assertEqual(got["agent"], ["Plan", "statusline-setup"])
 
     def test_extract_fetches_the_two_pages(self):
         # Arrange

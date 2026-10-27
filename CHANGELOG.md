@@ -46,6 +46,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   its own managed block holding the roots inside it, a nested directory with its own `.git` gets its own block, and a
   repository whose roots all set `gitignore = false` is left alone. `generate --check --recursive` judges each block.
   Fixes #497.
+- **Built-in name tables match their upstream docs again.** Antigravity lists `/codesearch`, `/plan` and `/grill-me`
+  in its CLI reference table and no longer lists `/fast` or `/planning`, so the hand-kept groups for the first three
+  are folded into the generated one. Command Code adds `/btw`, Kimi Code `/import-sessions`, and Devin drops `/loop`
+  and makes `/rename-session` and `/title` aliases of `/rename`. The Claude Code extractor reads the built-in
+  subagents from bold headings as well as tabs, since the page dropped its tabs, and a `/design consent` subcommand row
+  no longer turns the bundled `/design` skill into a command ([#496](https://github.com/Goldziher/ai-rulez/issues/496)).
 
 ## [5.7.0] - 2026-10-25
 
