@@ -891,6 +891,32 @@ func (s *ClaudeSettings) RegistersMarketplace() bool {
 	return s != nil && s.Manage && (s.RegisterMarketplace == nil || *s.RegisterMarketplace)
 }
 
+// needsLocalMarketplace reports whether the block needs the [marketplace] name:
+// a bare plugin name is qualified with it, and the default is to register it.
+// A block that lists only fully qualified ids and does not ask to register the
+// local marketplace needs none.
+func (s *ClaudeSettings) needsLocalMarketplace() bool {
+	bare, listed := false, false
+	for _, names := range [][]string{s.EnablePlugins, s.DisablePlugins} {
+		for _, name := range names {
+			listed = true
+			bare = bare || !strings.Contains(name, "@")
+		}
+	}
+	explicit := s.RegisterMarketplace != nil && *s.RegisterMarketplace
+	return bare || (s.RegistersMarketplace() && (!listed || explicit))
+}
+
+// RegistersLocalMarketplace reports whether extraKnownMarketplaces gets the
+// entry of this project's own [marketplace].
+func (c *Config) RegistersLocalMarketplace() bool {
+	if !c.ManagesClaudeSettings() || !c.Claude.Settings.RegistersMarketplace() {
+		return false
+	}
+	// A validated block without a [marketplace] name lists only qualified ids.
+	return (c.Marketplace != nil && c.Marketplace.Name != "") || c.Claude.Settings.needsLocalMarketplace()
+}
+
 // RelativeDirectoryMarketplace reports whether the managed
 // extraKnownMarketplaces entry points at a directory given as a relative path,
 // which is the default when no marketplace_source is set. It returns the path.
@@ -899,7 +925,7 @@ func (c *Config) RelativeDirectoryMarketplace() (path string, ok bool) {
 		return "", false
 	}
 	s := c.Claude.Settings
-	if !s.RegistersMarketplace() {
+	if !c.RegistersLocalMarketplace() {
 		return "", false
 	}
 	if src := s.MarketplaceSource; src != nil {

@@ -27,8 +27,17 @@ const (
 func mergedPermissionsOutput(cfg *config.Config, dialect, baseDir, relPath string, format docmerge.Format) ([]config.OutputFile, error) {
 	docPath := filepath.Join(baseDir, filepath.FromSlash(relPath))
 	keys, err := settings.PermissionKeys(cfg, dialect, docPath)
-	if err != nil || len(keys) == 0 {
+	if err != nil {
 		return nil, err
+	}
+	return mergedKeysOutput(cfg, docPath, format, keys)
+}
+
+// mergedKeysOutput merges the owned keys into the document at docPath; no keys
+// write nothing.
+func mergedKeysOutput(cfg *config.Config, docPath string, format docmerge.Format, keys []jsonmerge.OwnedKey) ([]config.OutputFile, error) {
+	if len(keys) == 0 {
+		return nil, nil
 	}
 	result, err := applyMergedDocumentAs(cfg, docPath, format, keys)
 	if err != nil {

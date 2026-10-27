@@ -1135,7 +1135,22 @@ in `.claude/settings.json`, merged like `mcpServers` (see
 ```toml
 [claude.settings]
 manage = true
-enable_plugins = ["acme-essentials"]
+enable_plugins = ["acme-essentials"]    # or a qualified "name@marketplace" of another marketplace
+```
+
+### `enabled_plugins`
+
+Enables a plugin from another marketplace for the `claude`, `codex` and `opencode` presets from one entry:
+`.claude/settings.json` gets `enabledPlugins` (and `extraKnownMarketplaces` with `marketplace`), `.codex/config.toml`
+a `[plugins."<id>"]` table and `opencode.json` the `opencode` npm package in `plugin`. Merged like the other
+settings documents (see [Settings document merge behavior](#settings-document-merge-behavior)). See
+[Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace).
+
+```toml
+[[enabled_plugins]]
+id = "basemind@basemind"
+marketplace = { name = "basemind", source = "Goldziher/basemind", type = "github" }
+opencode = "basemind-opencode"
 ```
 
 ### `claude.skills`

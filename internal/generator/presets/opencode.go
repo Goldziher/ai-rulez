@@ -193,13 +193,13 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		})
 	}
 
-	// The user-scope document holds [permissions] only.
+	// The user-scope document holds [permissions] and the plugins of [[enabled_plugins]] only.
 	if cfg.UserScope {
-		permissionOutputs, err := mergedPermissionsOutput(cfg, config.HarnessOpencode, baseDir, MergedDocOpencodeConfig, docmerge.FormatJSONC)
+		userOutputs, err := g.userScopeDocument(cfg, baseDir)
 		if err != nil {
-			return nil, fmt.Errorf("render opencode permissions: %w", err)
+			return nil, fmt.Errorf("render opencode user config: %w", err)
 		}
-		outputs = append(outputs, permissionOutputs...)
+		outputs = append(outputs, userOutputs...)
 	}
 
 	// [[hooks]] become a plugin module, since OpenCode's hooks are code.
@@ -212,6 +212,18 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	}
 
 	return outputs, nil
+}
+
+// userScopeDocument renders the opencode.json of the user scope: [permissions] and
+// the plugins of [[enabled_plugins]].
+func (g *OpencodePresetGenerator) userScopeDocument(cfg *config.Config, baseDir string) ([]config.OutputFile, error) {
+	docPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocOpencodeConfig))
+	keys, err := settings.PermissionKeys(cfg, config.HarnessOpencode, docPath)
+	if err != nil {
+		return nil, err
+	}
+	keys = append(keys, settings.OpencodePluginKeys(cfg, docPath)...)
+	return mergedKeysOutput(cfg, docPath, docmerge.FormatJSONC, keys)
 }
 
 // renderMCPConfig renders the merged opencode.json body.
@@ -250,6 +262,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 	if len(cfg.MCPServers) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeMCPKey}, Value: g.mcpServersValue(cfg), Members: true})
 	}
+	owned = append(owned, settings.OpencodePluginKeys(cfg, mcpPath)...)
 	owned = append(owned, g.opencodeLegacyServers(cfg, mcpPath)...)
 	perms, err := settings.PermissionKeys(cfg, config.HarnessOpencode, mcpPath)
 	if err != nil {

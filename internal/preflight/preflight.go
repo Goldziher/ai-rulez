@@ -78,6 +78,7 @@ func Collect(cfg *config.Config) []Item {
 	items = append(items, mcpItems(cfg, presets)...)
 	items = append(items, permissionItems(cfg, presets)...)
 	items = append(items, claudeSettingsItems(cfg, presets)...)
+	items = append(items, enabledPluginItems(cfg, presets)...)
 	items = append(items, automationItems(cfg)...)
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Kind != items[j].Kind {
@@ -120,11 +121,34 @@ func claudeSettingsItems(cfg *config.Config, presets []string) []Item {
 		return items
 	}
 	s := cfg.Claude.Settings
-	if s.RegistersMarketplace() {
+	if cfg.RegistersLocalMarketplace() {
 		items = append(items, Item{Kind: "plugin", Command: "register marketplace " + marketplaceSource(s), Where: where})
 	}
 	for _, name := range s.EnablePlugins {
-		items = append(items, Item{Kind: "plugin", Command: "enable " + name, Where: where})
+		items = append(items, Item{Kind: "plugin", Command: "enable " + cfg.QualifiedPluginID(name), Where: where})
+	}
+	return items
+}
+
+// enabledPluginItems covers [[enabled_plugins]]: each entry pulls code from a
+// marketplace or npm package the project does not author, per harness.
+func enabledPluginItems(cfg *config.Config, presets []string) []Item {
+	var items []Item
+	for i := range cfg.EnabledPlugins {
+		p := &cfg.EnabledPlugins[i]
+		for _, harness := range []string{config.HarnessClaude, config.HarnessCodex} {
+			if !slices.Contains(presets, harness) {
+				continue
+			}
+			where := []string{harness}
+			if m := p.Marketplace; m != nil && harness == config.HarnessClaude {
+				items = append(items, Item{Kind: "plugin", Command: "register marketplace " + m.Type + " " + m.Source, Where: where})
+			}
+			items = append(items, Item{Kind: "plugin", Command: "enable " + p.ID, Where: where})
+		}
+		if p.OpenCode != "" && slices.Contains(presets, config.HarnessOpencode) {
+			items = append(items, Item{Kind: "plugin", Command: "npm plugin " + p.OpenCode, Where: []string{config.HarnessOpencode}})
+		}
 	}
 	return items
 }

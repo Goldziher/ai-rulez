@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[[enabled_plugins]]` enables a plugin from another marketplace for Claude Code, Codex and OpenCode from one
+  declaration.** `id = "basemind@basemind"` with an optional `marketplace = { name, source, type }` writes
+  `enabledPlugins` and `extraKnownMarketplaces` in `.claude/settings.json`, a `[plugins."<id>"]` table with
+  `enabled = true` in `.codex/config.toml`, and, with `opencode = "<npm package>"`, the package in the `plugin` array
+  of `opencode.json`. ai-rulez owns only the entries it writes, and `generate --user` writes the same entries to the
+  user's files. Ids, marketplace sources (`github`, `git`, `url`, `directory`; no `http://` or `git://`) and npm
+  packages are validated at load. See `docs/plugins.md`
+  ([#500](https://github.com/Goldziher/ai-rulez/issues/500)).
+
 ### Fixed
 
 - **`generate --recursive` builds a plugin-authoring root as a plugin bundle, and the default self MCP server is never
@@ -15,6 +26,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   The recursive run now generates such a root as `generate --plugin` does, `generate --check --recursive` skips it with
   an info line (`verify --plugin` covers it), and a plugin-authoring root gets no self server whatever the mode
   ([#498](https://github.com/Goldziher/ai-rulez/issues/498)).
+- **`[claude.settings] enable_plugins` and `disable_plugins` accept `name@marketplace` ids and no longer need a
+  `[marketplace]` for them.** A qualified id was rejected as "not a valid plugin name", and any `manage = true` block
+  failed with "needs a [marketplace] name" even when it listed only ids of another marketplace. Qualified ids are
+  written as given; bare names are still qualified with the local marketplace, which is registered only when one is
+  declared.
 
 ## [5.7.0] - 2026-10-25
 

@@ -369,7 +369,7 @@
             },
             "enable_plugins": {
               "$ref": "#/$defs/patternList",
-              "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": true."
+              "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": true. A bare name is qualified with the [marketplace] name; a name@marketplace id is written as given and needs no [marketplace]."
             },
             "manage": {
               "description": "Default false.",
@@ -668,6 +668,51 @@
       },
       "description": "Per-domain settings, keyed by domain name.",
       "type": "object"
+    },
+    "enabled_plugins": {
+      "description": "Plugins from marketplaces this project does not author, enabled for the Claude Code, Codex and OpenCode presets from one declaration: Claude Code gets extraKnownMarketplaces and enabledPlugins in .claude/settings.json, Codex a [plugins.\"<id>\"] table in .codex/config.toml, OpenCode its npm package in opencode.json. Only the entries written here are owned; the rest of each settings file is kept. See docs/plugins.md.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Fully qualified plugin id, <name>@<marketplace>.",
+            "pattern": "^[a-z0-9][a-z0-9._-]*@[a-z0-9][a-z0-9._-]*$",
+            "type": "string"
+          },
+          "marketplace": {
+            "additionalProperties": false,
+            "description": "The marketplace the plugin comes from, registered for Claude Code as extraKnownMarketplaces.<name>. Leave it out when the harness already knows the marketplace.",
+            "properties": {
+              "name": {
+                "description": "Marketplace name; must match the marketplace of the id.",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$",
+                "type": "string"
+              },
+              "ref": {
+                "description": "Branch or tag for a github or repository source.",
+                "type": "string"
+              },
+              "source": {
+                "description": "owner/repo for a github source, an https:// or ssh:// URL or user@host:path for a repository, an https:// URL for url, a project-relative directory for directory.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": {
+                "description": "Kind of source.",
+                "enum": ["github", "git", "url", "directory"],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "opencode": {
+            "description": "npm package of the plugin for OpenCode, written to the plugin array of opencode.json. Without it OpenCode is left alone.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
     },
     "gitignore": {
       "default": false,
@@ -2728,10 +2773,6 @@
           "enum": ["user", "repo", "off"],
           "type": "string"
         },
-        "serve_user_invoked_skills": {
-          "type": "boolean",
-          "description": "Serve the skills that set `disable-model-invocation: true` (Claude Code's user-only flag) to the model too. Off by default: find_skill, search_skills and the skill:// resources leave them out and load_skill refuses them."
-        },
         "no_watch": {
           "description": "Do not reload the served skills when their files change, as `mcp --serve-skills --no-watch` does. The --no-watch flag overrides it.",
           "type": "boolean"
@@ -2766,6 +2807,10 @@
         "serve_skills": {
           "default": false,
           "description": "Make a bare `ai-rulez mcp` serve skills, as `mcp --serve-skills` does, so a client entry needs no flag. The --serve-skills flag overrides it, and --serve-skills=false turns it off.",
+          "type": "boolean"
+        },
+        "serve_user_invoked_skills": {
+          "description": "Serve the skills that set `disable-model-invocation: true` (Claude Code's user-only flag) to the model too. Off by default: find_skill, search_skills and the skill:// resources leave them out and load_skill refuses them.",
           "type": "boolean"
         },
         "skills_instructions": {

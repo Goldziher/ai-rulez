@@ -1,0 +1,232 @@
+# scenario enabled-plugins-dropped
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  Generating with configuration profile=default
+INFO  Generation complete files=6
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 230 aff9f3d19efdd9d95819f02b3cfded23d6602d4af8508caf9f2d93a0802b65bc
+.ai-rulez/.generated-manifest.local.json file 0644 1568 78d9f9f9d98fc05a901669d5ec8d938a6e243d9800d28297feafc75549c28c3e
+.ai-rulez/config.toml file 0644 269 3bb03f7fb80afd94ea204e6b2508396aaa3ab5e6484de94b5087749eccf812e2
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
+.claude/ dir 0755
+.claude/settings.json file 0644 1270 75b2c29f6eff539da1f5100be71315f1c02ea931561f68ffcc89b36647ad24a3
+.codex/ dir 0755
+.codex/config.toml file 0644 121 c0eb7669ad6f82dff61664d7b65362eb9a2a271a29cc6d083b101ba5aa84b1e6
+.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
+.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
+AGENTS.md file 0644 464 b6a2875597ff271c9e5c9192e66771bbf4df3440864cb92e83b0e7fc29e71b7e
+CLAUDE.md file 0644 393 8390d8224793730200b94db85fdbf4dca65ce454a4efcbc0bd6485f2cdcc2472
+opencode.json file 0644 130 aa3187c93a53573fb1d02661d846e1bd2279d26401b05a9fe6d4f8733634fc2c
+--- home tree
+(no change)
+
+## step 2: write .ai-rulez/config.toml
+--- project tree
+~ .ai-rulez/config.toml file 0644 108 5db0005b0ddb3f6b5b063cbc84a344448f5b4ecca7bc1c77d733fab907c03dda
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  Generating with configuration profile=default
+INFO  Generation complete files=5
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 230 aff9f3d19efdd9d95819f02b3cfded23d6602d4af8508caf9f2d93a0802b65bc
+>>>>
+{
+  "version": "1",
+  "files": [
+    ".mcp.json",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "merged": {
+    ".mcp.json": []
+  },
+  "servers": {
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ]
+    ]
+  }
+}
+<<<<
+.ai-rulez/.generated-manifest.local.json file 0644 807 2c12452b18e63cf3841375b38df8d35df2b5516d15ced493ac0f995513221dc6
+>>>>
+{
+  "version": "1",
+  "files": [],
+  "merged": {
+    ".claude/settings.json": [
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "7d27dd6f414248f8eb315dbf0293f3ca0ce793752c360e49ba8605d987e15a10"
+        ]
+      }
+    ],
+    ".mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9"
+      }
+    ],
+    "opencode.json": [
+      {
+        "path": [
+          "instructions"
+        ],
+        "elementSums": [
+          "59744dbf84a2973dbb56fbcd87da54df692a39176f2935c18835ed8e6daa1d9a"
+        ]
+      }
+    ]
+  },
+  "digests": {
+    ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0"
+  }
+}
+<<<<
+.ai-rulez/config.toml file 0644 108 5db0005b0ddb3f6b5b063cbc84a344448f5b4ecca7bc1c77d733fab907c03dda
+>>>>
+version = "5.0"
+name = "golden-enabled-plugins"
+presets = ["claude", "codex", "opencode"]
+gitignore = false
+<<<<
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
+>>>>
+---
+priority: high
+---
+# Base
+
+Keep it simple.
+<<<<
+.claude/ dir 0755
+.claude/settings.json file 0644 1173 0b37b3e1dfac66bb4d4eaafe71a867ac49de6278c0d6bd6fcd5420e6d1235243
+>>>>
+{
+  "model": "mine",
+  "extraKnownMarketplaces": {"theirs": {"source": {"source": "github", "repo": "o/r"}}},
+  "enabledPlugins": {"theirs-plugin@theirs": true},
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"${CLAUDE_CODE_REMOTE:-}\" in 1|[Tt][Rr][Uu][Ee]) ;; *) exit 0;; esac; export CLAUDE_PROJECT_DIR=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; n() { d=$(mktemp -d \"${TMPDIR:-/tmp}/ai-rulez.XXXXXX\" 2\u003e/dev/null) || d=/; (cd \"$d\" 2\u003e/dev/null || exit 1; \"$@\"); r=$?; if [ \"$d\" != / ]; then rmdir \"$d\" 2\u003e/dev/null; fi; return $r; }; if command -v ai-rulez \u003e/dev/null 2\u003e\u00261 \u0026\u0026 ai-rulez session-start; then exit 0; fi; if command -v npx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n npx -y ai-rulez@latest session-start; then exit 0; fi; if command -v uvx \u003e/dev/null 2\u003e\u00261 \u0026\u0026 n uvx --from ai-rulez@latest ai-rulez session-start; then exit 0; fi; echo \"ai-rulez session-start: no ai-rulez, npx or uvx could run; skipped\" \u003e\u00262; exit 0'",
+            "timeout": 150
+          }
+        ]
+      }
+    ]
+  }
+}
+<<<<
+.codex/ dir 0755
+.codex/config.toml file 0644 75 f8afd71c563dab0f444685cda85fb55d0434aba1024ed9fcea65cb7003d88f97
+>>>>
+# my codex config
+model = "mine"
+
+[plugins."theirs@theirs"]
+enabled = true
+<<<<
+.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
+>>>>
+# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.ai-rulez/.generated-manifest.local.json
+# END ai-rulez
+<<<<
+.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
+>>>>
+{
+  "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    }
+  }
+}
+<<<<
+AGENTS.md file 0644 464 b6a2875597ff271c9e5c9192e66771bbf4df3440864cb92e83b0e7fc29e71b7e
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden-enabled-plugins
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:22b8ffd70b9440d5a283a563ff8e3ace5867b50b7e28a4eda108d4c085aeb672
+-->
+
+# golden-enabled-plugins
+
+## Rules
+
+### base
+
+**Priority:** high
+
+Keep it simple.
+<<<<
+CLAUDE.md file 0644 393 8390d8224793730200b94db85fdbf4dca65ce454a4efcbc0bd6485f2cdcc2472
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden-enabled-plugins
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:eb5f48bc10e0c22ebc0d90b72401142f812ff998d8107c18dc572adc562fde08
+-->
+
+@AGENTS.md
+<<<<
+opencode.json file 0644 110 caf8d9c10666b8a455a12e4dd308ab4f08e31306bc541b933468b8e3c8bc0fdf
+>>>>
+{
+  // mine
+  "model": "mine",
+  "plugin": ["theirs-plugin"],
+  "instructions": [
+    "AGENTS.local.md"
+  ]
+}
+<<<<
+--- home tree
+(no change)

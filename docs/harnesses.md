@@ -92,6 +92,10 @@ user-level table is in [User-level configuration](user-scope.md#where-things-go)
   `.codex/config.toml`, `.qwen/settings.json`, ...) are merged, not replaced. ai-rulez owns the keys, array
   elements and map members it writes, and comments in JSONC, TOML and YAML survive. See
   [Settings document merge behavior](configuration.md#settings-document-merge-behavior).
+- **External plugins.** `[[enabled_plugins]]` enables one plugin from another marketplace for `claude`
+  (`enabledPlugins`, `extraKnownMarketplaces`), `codex` (`[plugins."<id>"]`) and `opencode` (the `plugin` npm
+  array). The other presets have no equivalent and skip it. See
+  [Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace).
 - **Native MCP environment references.** Where the harness expands `${VAR}`-style references itself, the
   reference is written instead of the secret. See
   [Environment references](configuration.md#mcp_servers).

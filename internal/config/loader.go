@@ -692,6 +692,7 @@ type tomlConfig struct {
 	InstalledSkills       []InstalledSkillConfig       `toml:"installed_skills"`
 	InstalledMarketplaces []InstalledMarketplaceConfig `toml:"installed_marketplaces"`
 	InstalledPlugins      []InstalledPluginConfig      `toml:"installed_plugins"`
+	EnabledPlugins        []EnabledPlugin              `toml:"enabled_plugins"`
 	MCPServers            []MCPServer                  `toml:"mcp_servers"`
 	Header                *HeaderConfig                `toml:"header"`
 	Builtins              interface{}                  `toml:"builtins"`
@@ -808,6 +809,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		InstalledSkills:       raw.InstalledSkills,
 		InstalledMarketplaces: raw.InstalledMarketplaces,
 		InstalledPlugins:      raw.InstalledPlugins,
+		EnabledPlugins:        raw.EnabledPlugins,
 		MCPServersRaw:         raw.MCPServers,
 		Header:                raw.Header,
 		Builtins:              builtinsCfg,

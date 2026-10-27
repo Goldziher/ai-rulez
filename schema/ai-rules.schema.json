@@ -821,6 +821,50 @@
         "additionalProperties": false
       }
     },
+    "enabled_plugins": {
+      "type": "array",
+      "description": "Plugins from marketplaces this project does not author, enabled for the Claude Code, Codex and OpenCode presets from one declaration: Claude Code gets extraKnownMarketplaces and enabledPlugins in .claude/settings.json, Codex a [plugins.\"<id>\"] table in .codex/config.toml, OpenCode its npm package in opencode.json. Only the entries written here are owned; the rest of each settings file is kept. See docs/plugins.md.",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*@[a-z0-9][a-z0-9._-]*$",
+            "description": "Fully qualified plugin id, <name>@<marketplace>."
+          },
+          "marketplace": {
+            "type": "object",
+            "description": "The marketplace the plugin comes from, registered for Claude Code as extraKnownMarketplaces.<name>. Leave it out when the harness already knows the marketplace.",
+            "required": ["name", "source", "type"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$",
+                "description": "Marketplace name; must match the marketplace of the id."
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "owner/repo for a github source, an https:// or ssh:// URL or user@host:path for a repository, an https:// URL for url, a project-relative directory for directory."
+              },
+              "type": {
+                "type": "string",
+                "enum": ["github", "git", "url", "directory"],
+                "description": "Kind of source."
+              },
+              "ref": { "type": "string", "description": "Branch or tag for a github or repository source." }
+            },
+            "additionalProperties": false
+          },
+          "opencode": {
+            "type": "string",
+            "description": "npm package of the plugin for OpenCode, written to the plugin array of opencode.json. Without it OpenCode is left alone."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "installed_plugins": {
       "type": "array",
       "description": "Plugins whose skills, agents, commands, hooks and MCP servers the project imports, read through an installed marketplace or straight from a plugin repository or directory. Hooks stay off unless enable_hooks is set. See docs/installed-plugins.md.",
@@ -3648,7 +3692,7 @@
             "auto_update": { "type": "boolean" },
             "enable_plugins": {
               "$ref": "#/$defs/patternList",
-              "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": true."
+              "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": true. A bare name is qualified with the [marketplace] name; a name@marketplace id is written as given and needs no [marketplace]."
             },
             "disable_plugins": {
               "$ref": "#/$defs/patternList",
