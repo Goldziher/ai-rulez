@@ -205,7 +205,7 @@ func TestEscapeGitPattern_GitAgrees(t *testing.T) {
 	}, ignored)
 }
 
-func TestBaselineFailure_FailsClosedWithAndWithoutTheFlag(t *testing.T) {
+func TestBaselineFailure_FailsClosedUnlessDriftIsAllowed(t *testing.T) {
 	// Arrange: a profile that exists only in the overlay cannot be rendered as the
 	// shared baseline.
 	p := newDriftProject(t, driftIgnoring)
@@ -223,11 +223,10 @@ func TestBaselineFailure_FailsClosedWithAndWithoutTheFlag(t *testing.T) {
 	// Assert
 	require.Error(t, withoutFlag)
 	assert.Contains(t, withoutFlag.Error(), "shared baseline")
-	// The flag does not bypass a failed baseline: overlay-derived outputs could
-	// otherwise land in tracked files unmarked.
-	require.Error(t, withFlag)
-	assert.Contains(t, withFlag.Error(), "shared baseline")
-	assert.Contains(t, withFlag.Error(), "--no-local")
+	assert.Contains(t, withoutFlag.Error(), "--allow-local-drift")
+	// With the flag the drift check is waived, so a baseline that cannot be
+	// rendered is a warning, not a failure (#507).
+	require.NoError(t, withFlag)
 }
 
 func TestRedactCredentials(t *testing.T) {

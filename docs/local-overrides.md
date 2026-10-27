@@ -315,7 +315,13 @@ A run is **blocked** and exits non-zero, writing nothing, when:
 - a local-only file is tracked by git, or
 - git cannot answer which files are tracked (every candidate then counts as tracked).
 
-The error names paths only, never content. If the shared render itself fails, the run fails closed.
+The error names paths only, never content. If the shared render itself fails, the run fails closed (the error
+hint names `--allow-local-drift` and `--no-local`). The shared render fails, for example, when an overlay replaces a
+remote include with a local path while the shared config has a pending change for that include and `ai-rulez.lock`
+is stale. With `--allow-local-drift` that failure is a warning naming the overlay's includes ("the drift check did
+not run") and generation continues, so you can try an include bump from a local checkout before the shared module is
+pushed and the lock updated. The run then treats its outputs as shared: nothing is classified as machine-local from
+the baseline.
 
 Ways forward:
 

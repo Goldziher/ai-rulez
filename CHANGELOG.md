@@ -147,6 +147,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   a `path` that climbs out of the source with `..`. `validate`, the local-include pin in `ai-rulez.lock` (its path and
   digest cover only the subdirectory) and `include add --path` follow the same rule
   ([#510](https://github.com/Goldziher/ai-rulez/issues/510)).
+- **`generate --allow-local-drift` no longer fails when the shared baseline cannot be rendered.** An overlay that
+  replaced a remote include with a local path could not be used while the shared config had a pending change for that
+  include (a new `ref` or `version` range), because the baseline render ran against the stale lock and aborted. The
+  baseline also classifies machine-local outputs, so it is not skipped; with `--allow-local-drift` a failure now logs
+  a warning naming the overlay's includes and that the drift check did not run, and generation continues. Without the
+  flag the error stays and its hint now mentions `--allow-local-drift`
+  ([#507](https://github.com/Goldziher/ai-rulez/issues/507)).
 
 ## [5.7.0] - 2026-10-25
 
