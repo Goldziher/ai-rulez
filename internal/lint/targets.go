@@ -403,7 +403,8 @@ func (p picks) sorted(under string) []string {
 func (c *candidates) list() []string { return c.rels }
 
 func (c *candidates) add(rel string) {
-	if rel == "" || c.set[rel] {
+	// A backup directory (.ai-rulez.bak-okf-<time>) holds old copies, not content.
+	if rel == "" || c.set[rel] || walkutil.InBackupDir(rel) {
 		return
 	}
 	c.set[rel] = true

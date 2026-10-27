@@ -9,6 +9,32 @@
 // build-artifact symlinks.
 package walkutil
 
+import "strings"
+
+// backupMarker is what a directory name carries when a command copied the
+// originals it replaced there: .<dir>.bak-<timestamp>, .<dir>.bak-okf-<timestamp>.
+const backupMarker = ".bak-"
+
+// IsBackupDir reports whether a directory base name is a backup copy that a
+// command left next to the project's content (see "migrate okf", "init --force").
+// A backup holds old versions of files, so it is not content: reading it would
+// count every skill in it a second time.
+func IsBackupDir(name string) bool {
+	return strings.HasPrefix(name, ".") && strings.Index(name, backupMarker) > 1
+}
+
+// InBackupDir reports whether the slash-separated relative path of a file lies
+// below a backup directory.
+func InBackupDir(rel string) bool {
+	parts := strings.Split(rel, "/")
+	for _, part := range parts[:len(parts)-1] {
+		if IsBackupDir(part) {
+			return true
+		}
+	}
+	return false
+}
+
 // SkipDirs is the set of directory base names that should never be descended
 // into during recursive operations. Matching is by base name and applies at
 // any depth in the tree.
