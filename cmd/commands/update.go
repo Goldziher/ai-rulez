@@ -1,23 +1,22 @@
 package commands
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"slices"
-	"sort"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/forge"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
+	"github.com/Goldziher/ai-rulez/v5/internal/pinupdate"
 )
 
 // UpdateSchemaVersion versions the JSON of `update --format json`.
-const UpdateSchemaVersion = 1
+const UpdateSchemaVersion = pinupdate.SchemaVersion
 
 // Literals shared by the update, skill, plugin and marketplace commands.
 const (
@@ -100,44 +99,14 @@ func init() {
 	RootCmd.AddCommand(UpdateCmd)
 }
 
-// updateItem is one pin that moves.
-type updateItem struct {
-	Kind      string                  `json:"kind"`
-	Name      string                  `json:"name"`
-	From      *tagresolve.TagRef      `json:"from,omitempty"`
-	To        *tagresolve.TagRef      `json:"to"`
-	DigestOld string                  `json:"digest_old,omitempty"`
-	DigestNew string                  `json:"digest_new,omitempty"`
-	Files     []tagresolve.FileChange `json:"files,omitempty"`
-	Reason    string                  `json:"reason,omitempty"`
-	// Held lists the newer tags min_release_age held back (AR733).
-	Held []tagresolve.Held `json:"held_back,omitempty"`
-	// Released and ReleasedFrom are the recorded release time of the new tag.
-	Released     string `json:"released,omitempty"`
-	ReleasedFrom string `json:"released_from,omitempty"`
-	// Scan is the security scan of the new tree.
-	Scan *scanSummary `json:"scan,omitempty"`
-}
-
-// scanSummary is the security scan (AR001-AR009) of a tree about to be pinned.
-type scanSummary = lockrun.ScanSummary
-
-// updateReport is the JSON document of `update --format json`.
-type updateReport struct {
-	SchemaVersion int                `json:"schema_version"`
-	DryRun        bool               `json:"dry_run"`
-	Updates       []updateItem       `json:"updates"`
-	Blocked       []tagresolve.Row   `json:"blocked,omitempty"`
-	Notes         []string           `json:"notes,omitempty"`
-	Unchanged     []tagresolve.Row   `json:"unchanged,omitempty"`
-	Major         []majorItem        `json:"major,omitempty"`
-	moves         map[string]*moveTo `json:"-"`
-}
-
-type moveTo struct {
-	row tagresolve.Row
-	src versionSrc
-}
+// The report types live in internal/pinupdate, which `lock --outdated`, `update`
+// and the MCP tools share.
+type (
+	updateItem   = pinupdate.Item
+	updateReport = pinupdate.Report
+	majorItem    = pinupdate.MajorItem
+	versionSrc   = pinupdate.Source
+)
 
 func runUpdate(names []string) error {
 	if updateKind != "" && !slices.Contains(updatableKinds(), updateKind) {
@@ -162,249 +131,56 @@ func updatableKinds() []string {
 	return []string{lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindMarketplace, lockfile.KindPlugin}
 }
 
-func moveKey(kind, name string) string { return kind + "\x00" + name }
+// updateEnv is the command line as the host of an update or outdated run over
+// the root at path.
+func updateEnv(path string) pinupdate.Env {
+	policy := cliLockPolicy
+	policy.Offline = policy.Offline || lockOffline
+	return pinupdate.Env{
+		Version: Version,
+		Policy:  policy,
+		Load: func(ctx context.Context, p config.LockPolicy, opts ...config.LoadOption) (*config.Config, error) {
+			return loadForLockContext(ctx, path, append(opts, config.WithLockPolicy(p))...)
+		},
+		GitToken:  GetGitToken(),
+		NewForge:  func(cfg *config.Config, offline bool) forge.Client { return newForgeClient(cfg, offline) },
+		Collector: lockWarnings,
+		Cwd:       workingDir(),
+	}
+}
 
-// updateRefreshFilter limits the remote refresh of an update to the sources
-// that move, matched by kind and name (the name alone also matched a same-named
-// include, skill or source of another kind).
-func updateRefreshFilter(moves map[string]*moveTo) func(kind, name string) bool {
-	return func(kind, name string) bool { return moves[moveKey(kind, name)] != nil }
+// updateOptions are the consents the flags give.
+func updateOptions() pinupdate.Options {
+	return pinupdate.Options{DryRun: updateDryRun, AllowDowngrade: updateAllowDowngrade, AcceptMoved: updateAcceptMoved, AcceptFindings: updateAcceptFindings}
 }
 
 func updateAt(path, kind string, names []string) error {
 	ctx := cmdContext()
-	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
+	env := updateEnv(path)
+	p, err := pinupdate.Prepare(ctx, env, kind, names)
 	if err != nil {
 		return fail(err)
 	}
-	defer installReleaseGateFor(cfg)()
-	current, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil {
-		return fail(err)
-	}
-	wanted := map[string]bool{}
-	for _, n := range names {
-		wanted[n] = true
-	}
-	srcs := versionSources(cfg, kind, wanted)
-	if err := checkNamesMatched(srcs, wanted); err != nil {
-		return fail(err)
-	}
-	rows, err := evaluateSources(ctx, srcs, current)
-	if err != nil {
-		return fail(err)
-	}
-	report := &updateReport{SchemaVersion: UpdateSchemaVersion, DryRun: updateDryRun, Updates: []updateItem{}, moves: map[string]*moveTo{}}
+	report := pinupdate.NewReport(updateDryRun)
 	if updateMajor {
-		return majorUpdate(path, cfg, current, srcs, rows, report)
+		return majorUpdate(ctx, path, env, p, report)
 	}
-	return finishUpdate(report, planAndApply(path, cfg, current, srcs, rows, report))
+	return finishUpdate(report, runPrepared(ctx, env, p, report))
 }
 
-// planAndApply sorts the evaluated sources into moves, refusals and no-ops, then
-// writes the moves unless something is refused or this is a dry run. It returns
-// nil, an exitFindings ExitError for a refusal, or the failure; printing the
-// report is left to the caller.
-func planAndApply(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) error {
-	planUpdates(report, srcs, rows)
-	if len(report.Blocked) > 0 {
-		return exitStatus(exitFindings)
+// runPrepared plans the update of p and writes the moves unless something is
+// refused or this is a dry run. It returns nil, an exitFindings ExitError for a
+// refusal, or the failure; printing the report is left to the caller.
+func runPrepared(ctx context.Context, env pinupdate.Env, p *pinupdate.Prepared, report *updateReport) error {
+	err := p.Run(ctx, env, updateOptions(), report)
+	if report.LockPath != "" {
+		logger.Success("Wrote lock file", "path", report.LockPath)
 	}
-	if len(report.moves) == 0 {
+	switch {
+	case err == nil:
 		return nil
-	}
-	refused, err := applyUpdates(path, cfg, current, srcs, report)
-	if err != nil {
-		return fail(err)
-	}
-	if refused {
+	case errors.Is(err, pinupdate.ErrRefused):
 		return exitStatus(exitFindings)
 	}
-	return nil
-}
-
-func checkNamesMatched(srcs []versionSrc, wanted map[string]bool) error {
-	found := map[string]bool{}
-	for i := range srcs {
-		s := &srcs[i]
-		found[s.name] = true
-	}
-	var missing []string
-	for n := range wanted {
-		if !found[n] {
-			missing = append(missing, n)
-		}
-	}
-	sort.Strings(missing)
-	if len(missing) > 0 {
-		return oops.Hint("`ai-rulez lock --outdated` lists the sources that use a version constraint").
-			Errorf("%v: not a remote include, installed skill or skill source with a version constraint", missing)
-	}
-	return nil
-}
-
-// planUpdates sorts the evaluated sources into moves, refusals and no-ops.
-func planUpdates(rep *updateReport, srcs []versionSrc, rows []tagresolve.Row) {
-	for i := range rows {
-		row := &rows[i]
-		src := srcs[i]
-		// A moved tag is a finding before it is a downgrade: it must never land in Unchanged.
-		if row.Downgrade && !updateAllowDowngrade && row.Status != tagresolve.StatusTagMoved {
-			rep.Unchanged = append(rep.Unchanged, *row)
-			continue
-		}
-		switch row.Status {
-		case tagresolve.StatusUpdatable, tagresolve.StatusNotLocked, tagresolve.StatusTagMissing:
-			rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
-		case tagresolve.StatusTagMoved:
-			switch {
-			case !updateAcceptMoved:
-				rep.Blocked = append(rep.Blocked, *row)
-			case row.Downgrade && !updateAllowDowngrade:
-				rep.Unchanged = append(rep.Unchanged, *row)
-			default:
-				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
-				rep.Notes = append(rep.Notes, fmt.Sprintf("%s %s: accepted the moved tag %s", row.Kind, row.Name, row.Locked.Tag))
-			}
-		case tagresolve.StatusLockedNonVersion:
-			// Moving off a pin that is not a version has no ordering to protect: ask for the same consent as a downgrade.
-			if updateAllowDowngrade {
-				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
-			} else {
-				rep.Unchanged = append(rep.Unchanged, *row)
-			}
-		case tagresolve.StatusUnsatisfied, tagresolve.StatusInvalid:
-			rep.Blocked = append(rep.Blocked, *row)
-		case tagresolve.StatusLowerOnly:
-			if updateAllowDowngrade {
-				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
-			} else {
-				rep.Unchanged = append(rep.Unchanged, *row)
-			}
-		default:
-			rep.Unchanged = append(rep.Unchanged, *row)
-		}
-	}
-}
-
-// applyUpdates re-resolves the moving sources the way `lock <names>` does,
-// advancing them to their allowed tag, and writes the lock unless --dry-run.
-//
-// It returns refused = true (and writes nothing) when the security scan of a new
-// tree has error findings and --accept-findings was not given.
-func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rep *updateReport) (refused bool, err error) {
-	// Make sure the cache holds the pinned trees (a dry run, or another project,
-	// may have left a newer one), so the before/after comparison is accurate.
-	if _, err := loadForLock(path, config.WithoutLocal()); err != nil {
-		return false, err
-	}
-	before := map[string]map[string]string{}
-	wanted := map[string]bool{}
-	for key, m := range rep.moves {
-		wanted[m.row.Name] = true
-		before[key] = hashTree(m.src.treeDir, entryCommit(current, m.row))
-	}
-	cliLockPolicy.Advance = func(kind, name string) bool { return rep.moves[moveKey(kind, name)] != nil }
-	cliLockPolicy.AllowDowngrade, cliLockPolicy.AcceptMovedTag = updateAllowDowngrade, updateAcceptMoved
-	defer func() {
-		cliLockPolicy.Advance, cliLockPolicy.AllowDowngrade, cliLockPolicy.AcceptMovedTag = nil, false, false
-	}()
-	defer prepareLockRun(true, "", wanted)()
-	cliLockPolicy.Refresh = updateRefreshFilter(rep.moves) // by kind and name: a same-named source of another kind stays put
-
-	fresh, err := loadForLock(path, config.WithoutLocal())
-	if err != nil {
-		return false, err
-	}
-	if err := fresh.Validate(); err != nil {
-		return false, err //nolint:wrapcheck // already contextual
-	}
-	next, err := nextLock(cmdContext(), fresh, current, "", wanted, true)
-	if err != nil {
-		return false, err
-	}
-	if err := pinContent(fresh, current, next, "", wanted); err != nil {
-		return false, err
-	}
-	for _, key := range sortedKeys(rep.moves) {
-		item, err := updateItemFor(fresh, current, next, rep.moves[key], before[key])
-		if err != nil {
-			return false, err
-		}
-		refused = refused || item.Scan.Refused
-		rep.Updates = append(rep.Updates, item)
-	}
-	if refused || updateDryRun {
-		return refused, nil
-	}
-	carryApprovals(current, next, false) // update moves some pins; the approvals of every item stay
-	if err := lockfile.Save(fresh.ConfigDir, next); err != nil {
-		return false, err //nolint:wrapcheck // already contextual
-	}
-	logger.Success("Wrote lock file", "path", lockfile.Path(fresh.ConfigDir))
-	return false, nil
-}
-
-// updateItemFor describes one move from the current lock to next: the tags, the
-// digests, the files that changed (against before, the hashes of the old tree)
-// and the security scan of the new tree.
-func updateItemFor(fresh *config.Config, current, next *lockfile.File, m *moveTo, before map[string]string) (updateItem, error) {
-	entry := next.Find(m.row.Kind, m.row.Name)
-	if entry == nil || entry.Tag == "" {
-		return updateItem{}, oops.Errorf("%s %q was not resolved to a tag", m.row.Kind, m.row.Name)
-	}
-	item := updateItem{Kind: m.row.Kind, Name: m.row.Name, To: &tagresolve.TagRef{Tag: entry.Tag, Commit: entry.Commit}, DigestNew: entry.Digest,
-		Held: m.row.Held, Released: entry.Released, ReleasedFrom: entry.ReleasedFrom}
-	if old := current.Find(m.row.Kind, m.row.Name); old != nil {
-		item.DigestOld = old.Digest
-		if old.Tag != "" {
-			item.From = &tagresolve.TagRef{Tag: old.Tag, Commit: old.Commit}
-		}
-	}
-	if len(before) > 0 { // an uncached old tree has nothing to compare with
-		item.Files = tagresolve.DiffFiles(before, hashTree(m.src.treeDir, entry.Commit))
-	}
-	item.Scan = scanNewTree(fresh, m, entry.Commit)
-	return item, nil
-}
-
-// scanNewTree runs the security scan (AR001-AR009, the one skill installs and
-// approvals use) over the tree a pin is about to point to. Error findings refuse
-// the pin unless --accept-findings.
-func scanNewTree(cfg *config.Config, m *moveTo, commit string) *scanSummary {
-	return scanTreeDir(cfg, m.row.Name, m.src.treeDir(commit), updateAcceptFindings)
-}
-
-// scanTreeDir scans the cached tree in dir (see lockrun.ScanTree).
-func scanTreeDir(cfg *config.Config, name, dir string, accept bool) *scanSummary {
-	return lockrun.ScanTree(cfg, name, dir, accept)
-}
-
-func entryCommit(lock *lockfile.File, row tagresolve.Row) string {
-	if e := lock.Find(row.Kind, row.Name); e != nil {
-		return e.Commit
-	}
-	return ""
-}
-
-func sortedKeys(m map[string]*moveTo) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-// hashTree hashes the cached tree of a source; an uncached tree has no files.
-func hashTree(dirOf func(string) string, commit string) map[string]string {
-	dir := dirOf(commit)
-	if dir == "" {
-		return map[string]string{}
-	}
-	hashes, err := includes.FileHashes(dir)
-	if err != nil {
-		return map[string]string{}
-	}
-	return hashes
+	return fail(err)
 }

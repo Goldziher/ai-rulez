@@ -3,19 +3,13 @@ package commands
 import (
 	"fmt"
 	"os"
-	"sort"
 
 	"github.com/samber/oops"
 )
 
 // finishUpdate prints the report and returns outcome, the result of the update.
 func finishUpdate(rep *updateReport, outcome error) error {
-	sort.Slice(rep.Updates, func(i, j int) bool {
-		if rep.Updates[i].Kind != rep.Updates[j].Kind {
-			return rep.Updates[i].Kind < rep.Updates[j].Kind
-		}
-		return rep.Updates[i].Name < rep.Updates[j].Name
-	})
+	rep.Sort()
 	if updateFormat == formatJSON {
 		if err := writeRawJSON(os.Stdout, rep); err != nil {
 			return fail(oops.Wrapf(err, "write the report"))

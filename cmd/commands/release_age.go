@@ -23,13 +23,3 @@ func newAgeGates(cfg *config.Config) ageGates {
 
 // gateFor returns the gate of w, or nil when w has no minimum age.
 func (g ageGates) gateFor(w lockfile.Want) *tagresolve.AgeGate { return g.GateFor(w) }
-
-// installReleaseGateFor makes `update` and `lock --outdated` hold back tags
-// younger than the configured minimum age of cfg while they resolve ranges: the
-// gate goes into the command line's lock policy, so every later load of the run
-// gets it. The returned function removes it.
-func installReleaseGateFor(cfg *config.Config) (restore func()) {
-	gates := newAgeGates(cfg)
-	cliLockPolicy.ReleaseGate = gates.gateFor // handed to every later load of the run (withCLILockPolicy)
-	return func() { cliLockPolicy.ReleaseGate = nil }
-}

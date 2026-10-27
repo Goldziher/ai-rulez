@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/pinupdate"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/samber/oops"
 )
@@ -44,25 +45,25 @@ func verifyPinnedTags(ctx context.Context, cfg *config.Config, lock *lockfile.Fi
 	if lock == nil {
 		return nil, nil
 	}
-	var lister tagLister
+	var lister pinupdate.TagLister
 	var out []tagFinding
 	sources := versionSources(cfg, "", nil)
 	for i := range sources {
 		s := &sources[i]
-		entry := lock.Find(s.kind, s.name)
+		entry := lock.Find(s.Kind, s.Name)
 		if entry == nil || entry.Tag == "" {
 			continue
 		}
-		tags, err := lister.of(ctx, *s)
+		tags, err := lister.Of(ctx, *s)
 		if err != nil {
 			return nil, err
 		}
 		switch status, now := tagresolve.Check(tags, entry.Tag, entry.Commit); status {
 		case tagresolve.StatusMoved:
-			out = append(out, tagFinding{s.kind, s.name, tagresolve.CodeTagMoved,
+			out = append(out, tagFinding{s.Kind, s.Name, tagresolve.CodeTagMoved,
 				fmt.Sprintf("tag %s was pinned at %s but now points to %s (review the new commit, then `ai-rulez update --accept-moved-tag`)", entry.Tag, shortSHA(entry.Commit), shortSHA(now.Commit)), true})
 		case tagresolve.StatusMissing:
-			out = append(out, tagFinding{s.kind, s.name, tagresolve.CodeLockedTagMissed,
+			out = append(out, tagFinding{s.Kind, s.Name, tagresolve.CodeLockedTagMissed,
 				fmt.Sprintf("tag %s no longer exists on the remote; the pinned commit %s is still used", entry.Tag, shortSHA(entry.Commit)), false})
 		case tagresolve.StatusOK:
 		}
