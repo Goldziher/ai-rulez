@@ -2763,6 +2763,7 @@ claude = "inline"
 - **`rules.mode`**: `split` (the default) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 - **`rules.scoped_fallback`**: how the shared `AGENTS.md` (`agents_md = true`) serves glob-scoped rules and context to presets without a rules folder (`codex`, `opencode`, `pi`, ...). `inline` (the default) inlines them with an `_Applies to:_` line, so every preset that reads or imports `AGENTS.md` loads them at start; `skill` writes each one to `.agents/skills` as a skill gated by its `paths`. See [Rules](rules.md#glob-scoped-rules-and-agentsmd).
+- **`rules.scoped_fallback_group`**: with `scoped_fallback = "skill"`, folds the fallback skills so the skill listing stays short. `none` (the default) writes one skill per item; `include` writes one `scoped-<include>` skill per include or builtin pack; `directory` writes one `scoped-<dir>` skill per directory the globs point into. A grouped skill's `paths` are the union of its items' globs. A rule or context item with `fallback: false` in its frontmatter stays out of the fallback. See [Keeping the skill listing short](rules.md#keeping-the-skill-listing-short).
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 - **`rules.baz_default`**: `all` (the default) nests every path-scoped item into the Baz directory files; `none` nests only items whose `targets` select `baz`, leaving the rest in the root `AGENTS.md`.
 - **`rules.baz.include`**: with `baz_default = "none"`, the rule and context names (list) that are nested for Baz in addition to the items whose `targets` select `baz`; `baz: true` in an item's frontmatter does the same. A `!baz` entry in `targets` always keeps an item out of the Baz nested files. See [Baz](baz.md#per-rule-opt-in-and-opt-out).
@@ -4171,6 +4172,7 @@ activation: glob
 | `paths`       | list or string   | Files the rule applies to. `globs` is a synonym.                              |
 | `activation`  | string           | `always`, `glob`, `auto` or `manual`. Optional; derived when absent.          |
 | `description` | string           | What the rule is for. Required for `auto`; used by the model to decide.       |
+| `fallback`    | boolean          | `false` keeps a glob-scoped item out of the folderless-preset fallback (see [Glob-scoped rules and AGENTS.md](#glob-scoped-rules-and-agentsmd)). Default `true`. |
 
 `paths` and `globs` accept a YAML list or a comma-separated string (`"a/**, b/**"`). Commas inside braces (`*.{ts,tsx}`) or brackets do not split, and a backslash-escaped comma is kept. Entries are trimmed and deduplicated.
 
@@ -4309,6 +4311,33 @@ Presets with a rules folder keep their path-scoped files as before; Claude reads
 reads `AGENTS.md` also reads `.agents/skills` (for example not with `zcode`, which reads only `AGENTS.md`), and not in
 a [scope](monorepo.md#scoped-rule-files) run. An authored skill or command whose id is already `rule-<id>` keeps it,
 and the item is left out with a warning.
+
+###### Keeping the skill listing short
+
+Codex budgets the listing of all skill names and descriptions (about 8,000 characters when the context window is
+unknown), and a repository with many scoped rules can write dozens of `rule-<id>` skills. Two controls cut the count:
+
+```toml
+[rules]
+scoped_fallback = "skill"
+scoped_fallback_group = "directory"   # none (default) | include | directory
+```
+
+- `include` writes one `scoped-<include>` skill per include (or builtin pack, `scoped-builtin-<name>`) that
+  contributes scoped items. The project's own items keep one skill each.
+- `directory` writes one `scoped-<dir>` skill per directory the items' globs point into: the longest directory every
+  glob of an item starts below (`pkg/api/**/*.go` is `pkg/api`, `**/*.go` is the repository root, `scoped-root`).
+- A grouped skill holds each item under a `##` heading with its `_Applies to:_` globs, its `paths` are the union of
+  their globs, and its description is a short list of the item names (160 characters at most). A group with one item
+  keeps its own `rule-<id>` skill. Because `paths` is a union, any matching file loads the whole group; group by
+  `directory` when the items share a directory, and leave `none` when each rule should load alone.
+
+`fallback: false` in the frontmatter of a rule or context item keeps it out of the fallback altogether: it is neither
+inlined into the shared `AGENTS.md` nor written as a skill, so only presets with path scoping (`.claude/rules`,
+`.cursor/rules`, ...) render it. `validate` reports a value that is not a YAML boolean (`AR304`).
+
+`validate` (`AR964`) counts the fallback skills in the Codex skill listing, names how many of the skills they are, and
+warns when the listing exceeds the limit (`[lint.load_budgets] codex-skill-listing`), so `validate --strict` catches it.
 
 ##### Antigravity and Gemini
 
@@ -15231,7 +15260,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR015 | `secret-in-env-or-header` | error | A literal credential (not a `${VAR}` reference or placeholder) in an MCP server `env` value whose key names a secret, in an `Authorization`/`X-Api-Key`-style header, in a `--token`/`--api-key` argument or a URL query/userinfo, in the top-level `env` of `.claude/settings.json`, or in the headers of an `http` hook. A value shaped like a known credential is reported under any key. The finding names the key and never prints the value; the same checks apply to inline `mcpServers` in agent and skill frontmatter |
 | AR602 | `mcp-config-invalid` | error | A malformed MCP server definition in `config.toml`, the inline `mcpServers` of agent and skill frontmatter, `.mcp.json`, `.cursor/mcp.json` or `.vscode/mcp.json`: an empty server, a stdio server without `command`, an `http`/`sse` server without an absolute `url`, an unknown transport, `args`/`env`/`headers` of the wrong type, or a name defined twice in one file (case-insensitively). The deprecated SSE transport is a warning and a name outside letters, digits, `_` and `-` is info (Claude Code rewrites it in the `mcp__<server>__<tool>` names). A server in `.mcp.json`, `.cursor/mcp.json` or `.vscode/mcp.json` that `config.toml` also defines is a generated copy and is checked once, at its source. A non-loopback `http://` URL is reported by AR024 |
 | AR013 | `auto-invocation-danger` | warning | A skill or command the model can invoke by itself (no `disable-model-invocation: true`) that is allowed unrestricted `Bash` (`Bash`, `Bash(*)`; entries in `lint.security.allowed_tools` pass) and ships `scripts/`, or a subagent with `permissionMode: bypassPermissions`. Text the model reads could start such an item without a request from the user |
-| AR964 | `load-budget-exceeded` | warning | Content past a documented load limit of a configured harness, so the excess never reaches the model: a skill's `description` plus `when_to_use` over 1,536 characters (Claude Code skill listing), rules and context over 32 KiB together (Codex `AGENTS.md` chain, `project_doc_max_bytes`; info from 90%), a rule or context file over 12,000 characters (Windsurf/Devin workspace rules) or 500 lines (Cursor), and skill names and descriptions over 8,000 characters in total (Codex skill listing, info, since the real cap is about 2% of the context window). The limits live in one versioned table (`loadBudgets` in `internal/lint/ar_budget.go`) with the source URL and the date each figure was checked; the Codex skill-listing figure is not yet compared with the vendor page. The Agent Skills 500 lines and 5,000 tokens are enforced by AR901 and AR902 |
+| AR964 | `load-budget-exceeded` | warning | Content past a documented load limit of a configured harness, so the excess never reaches the model: a skill's `description` plus `when_to_use` over 1,536 characters (Claude Code skill listing), rules and context over 32 KiB together (Codex `AGENTS.md` chain, `project_doc_max_bytes`; info from 90%), a rule or context file over 12,000 characters (Windsurf/Devin workspace rules) or 500 lines (Cursor), and skill names and descriptions over 8,000 characters in total (Codex skill listing: warning past the limit, info from 90%; the skills `scoped_fallback = "skill"` would write count too and the message says how many of them there are, since the real cap is about 2% of the context window). The limits live in one versioned table (`loadBudgets` in `internal/lint/ar_budget.go`) with the source URL and the date each figure was checked; the Codex skill-listing figure is not yet compared with the vendor page. The Agent Skills 500 lines and 5,000 tokens are enforced by AR901 and AR902 |
 | AR210 | `import-invalid` | error | A Claude Code memory import (`@path/to/file.md`, `@./rel.md`) in a rule, context file, skill, agent or command whose file does not exist (looked up next to the file, in the skill directory, at the root and at the repository top). A circular chain and a chain of more than five hops (the depth Claude Code follows) are reported as warnings. Imports inside code spans and fenced blocks, `@~/...` and absolute paths (machine-dependent), e-mail addresses, `@scope/package` names and `@mentions` are ignored |
 | AR963 | `plugin-manifest-invalid` | error | A tracked `.claude-plugin/plugin.json` or `marketplace.json` that breaks the documented manifest schema: invalid JSON, a marketplace entry whose local `source` directory does not exist (relative to the marketplace root, or under `metadata.pluginRoot`), a missing or non-kebab-case `name`, a `version` that is not semver, `author`/`keywords` of the wrong type, component paths (`commands`, `agents`, `skills`, `hooks`, `mcpServers`, ...) that do not start with `./` or leave the plugin, a marketplace without `owner`, with a reserved name (`claude-code-marketplace`, `claude-plugins-official`, ...), with duplicate plugins or a bad `source`; unknown fields are warnings. `${CLAUDE_PLUGIN_ROOT}` left unquoted in a shell-form plugin hook command (a plugin path with a space splits it) is a warning. With `--external`, and when the `claude` binary is on `PATH`, `claude plugin validate <dir> --json` is also run for each plugin directory and its errors and warnings are merged (prefixed `claude plugin validate:`); without the binary this step is skipped silently |
 | AR014 | `exfil-command` | error | A network command (`curl`, `wget`, `nc`, `scp`, `rsync`, httpie, `iwr`) that sends a secret environment variable (`$API_KEY`, `$GITHUB_TOKEN`, `$DATABASE_URL`, names ending in `SECRET`, `TOKEN`, `PASSWORD`, ...), the environment (`env \| curl`, `$(printenv)`) or a credential file off the machine, and DNS exfiltration (`dig $(...)`). Read in prose, fenced shell and scripts, continuation lines joined. A secret used only in an authentication header is a warning (`-H "Authorization: Bearer $TOKEN"`); a line whose URLs are all in `lint.security.allowed_hosts` passes. Fenced shell and scripts are never suppressed by surrounding "never do this" text; an inline code span in prose is not reported when the line is a guardrail ("never run `env \| curl ...`") or a reviewer names it ("flag any skill that contains `printenv \| nc ...`") |
@@ -35584,7 +35613,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
 - **`schema`**: URL of the JSON Schema, for editor support
-- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `scoped_fallback`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
+- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `scoped_fallback`, `scoped_fallback_group`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge

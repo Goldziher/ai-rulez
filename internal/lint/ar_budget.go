@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 )
 
 // CodeLoadBudget reports content that a harness truncates or drops when it loads
@@ -139,6 +142,13 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 				}
 			}
 		}
+		fallback := 0
+		if b.Scope == keySkills {
+			var extra int
+			extra, fallback = r.fallbackListing(b.Unit)
+			total += extra
+			name += fallback
+		}
 		if b.Scope != scopeChain && b.Scope != keySkills || cfgPath == "" {
 			continue
 		}
@@ -155,9 +165,60 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 		case total*10 >= b.Limit*9 && b.Scope == scopeChain:
 			r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "rules and context add up to %d of %d %s, within 10%% of the AGENTS.md chain limit of %s (%s)", total, b.Limit, b.Unit, b.presetLabel(), b.Source)
 		case total > b.Limit && b.Scope == keySkills:
-			r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "the %d skill names and descriptions add up to %d %s; %s lists skills within about 2%% of the context window (%d %s when the window is unknown, %s)", name, total, b.Unit, b.presetLabel(), b.Limit, b.Unit, b.Source)
+			r.add(CodeLoadBudget, cfgPath, at, "the %d skill names and descriptions%s add up to %d %s, past the %d-%s listing budget %s gives skills (about 2%% of the context window, %s); skills past it are cut from the listing%s",
+				name, fallbackNote(fallback), total, b.Unit, b.Limit, b.Unit, b.presetLabel(), b.Source, fallbackAdvice(fallback))
+		case total*10 >= b.Limit*9 && b.Scope == keySkills:
+			r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "the %d skill names and descriptions%s add up to %d of %d %s, within 10%% of the skill listing budget of %s (%s)",
+				name, fallbackNote(fallback), total, b.Limit, b.Unit, b.presetLabel(), b.Source)
 		}
 	}
+}
+
+// scopedFallbackSkills is the skills rules.scoped_fallback = "skill" would write
+// for the project, minus the ones an authored skill or command already names;
+// they count toward the skill listing of the harnesses that read .agents/skills.
+func (r *runner) scopedFallbackSkills() []config.ContentFile {
+	if r.cfg == nil || r.cfg.Content == nil || !config.SharedAgentsMDInlining(r.cfg).ScopedAsSkills {
+		return nil
+	}
+	taken := map[string]bool{}
+	for _, items := range [][]config.ContentFile{presets.AllSkills(r.cfg.Content), presets.AllCommands(r.cfg.Content)} {
+		for idx := range items {
+			taken[config.SkillID(items[idx])] = true
+		}
+	}
+	var kept []config.ContentFile
+	for _, skill := range presets.ScopedFallbackSkills(r.cfg.Content, r.cfg, r.cfg.AgentsMDOwners()) {
+		if !taken[skill.ID] {
+			taken[skill.ID] = true
+			kept = append(kept, skill)
+		}
+	}
+	return kept
+}
+
+// fallbackListing is the size, in unit, of the skill listing entries of the
+// scoped-fallback skills and how many there are.
+func (r *runner) fallbackListing(unit string) (size, count int) {
+	for _, skill := range r.scopedFallbackSkills() {
+		size += measure(unit, skill.ID+" "+config.SkillDescription(skill.Metadata))
+		count++
+	}
+	return size, count
+}
+
+func fallbackNote(n int) string {
+	if n == 0 {
+		return ""
+	}
+	return fmt.Sprintf(" (%d of them scoped-fallback skills for glob-scoped rules and context)", n)
+}
+
+func fallbackAdvice(n int) string {
+	if n == 0 {
+		return ""
+	}
+	return "; set [rules] scoped_fallback_group to fold them into fewer skills, or fallback: false on an item to keep it out"
 }
 
 func skillListingName(it *item) string { return itemID(it.kind, it.cf) + " " }
