@@ -9,7 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
-var version = "5.7.0"
+var version = "5.8.0"
 
 func main() {
 	commands.Version = version
