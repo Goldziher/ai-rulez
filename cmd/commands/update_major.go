@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/pinupdate"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
@@ -15,31 +17,20 @@ import (
 	"github.com/samber/oops"
 )
 
-// majorItem is one source with a newer major version than its constraint allows.
-type majorItem struct {
-	Kind   string `json:"kind"`
-	Name   string `json:"name"`
-	From   string `json:"from"`
-	To     string `json:"to"`
-	Latest string `json:"latest"`
-	// Written is true when --write-config rewrote the version line.
-	Written bool `json:"written,omitempty"`
-}
-
 // majorUpdate is `update --major`: it lists the sources that have a newer major
 // version than their constraint allows and, with --write-config, takes it.
-func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) error {
-	report.Major = append(report.Major, majorItems(srcs, rows)...)
+func majorUpdate(ctx context.Context, _ string, env pinupdate.Env, p *pinupdate.Prepared, report *updateReport) error {
+	report.Major = append(report.Major, majorItems(p.Srcs, p.Rows)...)
 	sortMajor(report.Major)
 	if len(report.Major) == 0 || !updateWriteConfig || updateDryRun {
 		return finishUpdate(report, nil)
 	}
-	original, mode, err := patchMajor(cfg, report.Major)
+	original, mode, err := patchMajor(p.Cfg, report.Major)
 	if err != nil {
 		return fail(err)
 	}
 	rollback := func() {
-		if rerr := safefs.WriteFileAtomicMode(cfg.ConfigPath(), original, mode); rerr != nil {
+		if rerr := safefs.WriteFileAtomicMode(p.Cfg.ConfigPath(), original, mode); rerr != nil {
 			renderStderr(oops.Wrapf(rerr, "restore the config file; it still holds the new version constraints"))
 		}
 		for i := range report.Major {
@@ -47,22 +38,16 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 		}
 	}
 	// The pins follow the new constraints: evaluate again against the patched config.
-	fresh, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
-	if err != nil {
-		rollback()
-		return fail(err)
-	}
-	names := map[string]bool{}
+	names := make([]string, 0, len(report.Major))
 	for _, m := range report.Major {
-		names[m.Name] = true
+		names = append(names, m.Name)
 	}
-	srcs2 := versionSources(fresh, updateKind, names)
-	rows2, err := evaluateSources(cmdContext(), srcs2, current)
+	fresh, err := pinupdate.Prepare(ctx, env, updateKind, names)
 	if err != nil {
 		rollback()
 		return fail(err)
 	}
-	applied := planAndApply(path, fresh, current, srcs2, rows2, report)
+	applied := runPrepared(ctx, env, fresh, report)
 	if applied != nil {
 		rollback() // before the report is printed, so it never claims a write that was undone
 	}
@@ -78,7 +63,7 @@ func majorItems(srcs []versionSrc, rows []tagresolve.Row) []majorItem {
 		if !row.MajorAvailable || row.Latest == nil || blockedStatus(row.Status) {
 			continue
 		}
-		if to, ok := majorConstraint(row.Latest.Tag, srcs[i].want.TagPrefix); ok {
+		if to, ok := majorConstraint(row.Latest.Tag, srcs[i].Want.TagPrefix); ok {
 			out = append(out, majorItem{Kind: row.Kind, Name: row.Name, From: row.Constraint, To: to, Latest: row.Latest.Tag})
 		}
 	}
