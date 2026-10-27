@@ -36,7 +36,7 @@ func WriteFileAtomic(targetPath string, data []byte, perm os.FileMode) (err erro
 	if err = f.Close(); err != nil {
 		return oops.With("path", tmpPath).Wrapf(err, "close temporary config file")
 	}
-	if err = os.Rename(tmpPath, targetPath); err != nil {
+	if err = replaceFile(tmpPath, targetPath); err != nil {
 		return oops.With("src", tmpPath).With("dst", targetPath).Wrapf(err, "rename config file")
 	}
 	return nil
