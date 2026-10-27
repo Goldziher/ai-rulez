@@ -115,7 +115,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `.config.local.*` lock files), `local/` and the machine-local manifest, and never lists a path that only this
   machine's local inputs add: those go to `.git/info/exclude`. With `gitignore = false`, a machine-local manifest that
   is the only local file is excluded through `.git/info/exclude` too instead of creating a tracked `.gitignore`.
-  Fixes #499.
+  Directory outputs only the overlay adds (`.gemini/agents/` from an overlay `gemini` preset) are excluded as
+  `/dir/` patterns too; a directory the shared render also writes stays shared. Fixes #499.
 - **`generate --recursive` writes each root's patterns only to the `.gitignore` of its own git repository.** It put
   every nested root's patterns into the `.gitignore` of the directory it ran in, even for a root with
   `gitignore = false` and for a nested repository whose own `.gitignore` was never written. Each repository now gets

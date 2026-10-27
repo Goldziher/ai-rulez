@@ -55,11 +55,12 @@ func TestLocalOverlayWithStaleLock(t *testing.T) {
 				assert.Contains(t, res.Stdout+res.Stderr, "lock is stale")
 				exclude := testutil.ReadFile(t, filepath.Join(dir, ".git", "info", "exclude"))
 				assert.Contains(t, exclude, "/.gemini/settings.json")
+				assert.Contains(t, exclude, "\n/.gemini/agents/\n")
 				status, err := exec.Command("git", "-C", dir, "status", "--porcelain", "--untracked-files=all").Output()
 				require.NoError(t, err)
 				assert.NotContains(t, string(status), ".gemini")
 				if gitignore {
-					assert.NotContains(t, testutil.ReadFile(t, filepath.Join(dir, ".gitignore")), ".gemini/settings.json")
+					assert.NotContains(t, testutil.ReadFile(t, filepath.Join(dir, ".gitignore")), ".gemini")
 				}
 			})
 	}
