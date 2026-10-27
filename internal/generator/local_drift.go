@@ -107,11 +107,22 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 	baseline, baselineHash, err := g.renderBaseline(profile)
 	if err != nil {
 		err = redactCredentials(err)
-		// Fail closed even with --allow-local-drift: without the baseline,
-		// overlay-derived outputs cannot be told apart from shared ones.
+		if g.allowLocalDrift {
+			// The baseline also classifies machine-local outputs and stamps source
+			// hashes, so it cannot be skipped up front; but a failure to render it
+			// (typically a lock that is stale for an include the overlay replaces)
+			// must not block a run that waived the drift check it serves. The run
+			// then treats its outputs as shared.
+			g.log().Warn("Could not render the shared baseline; the local drift check did not run (--allow-local-drift)",
+				"includes", g.overlayIncludeNames(), "error", err.Error())
+			return nil, nil
+		}
+		// Fail closed: without the baseline, overlay-derived outputs cannot be
+		// told apart from shared ones.
 		return nil, oops.
-			Hint("Fix the shared config, or run with --no-local to generate the shared view").
-			Wrapf(err, "render the shared baseline to detect local drift (fix the shared config or use --no-local)")
+			Hint("Fix the shared config (run `ai-rulez lock` if the lock is stale), run with --allow-local-drift to "+
+				"skip the drift check, or run with --no-local to generate the shared view").
+			Wrapf(err, "render the shared baseline to detect local drift (fix the shared config, use --allow-local-drift or --no-local)")
 	}
 
 	localHash, err := g.localSourceHash(baselineHash)
@@ -129,6 +140,24 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 	g.plan = plan
 	plan.violations = g.findViolations(plan, merged)
 	return plan, nil
+}
+
+// overlayIncludeNames lists the includes the machine-local overlay declares or
+// replaces, for messages about a baseline that could not be rendered.
+func (g *Generator) overlayIncludeNames() []string {
+	if g.config.LocalOverlay == nil {
+		return nil
+	}
+	list, _ := g.config.LocalOverlay.Doc["includes"].([]any)
+	var names []string
+	for _, item := range list {
+		if entry, ok := item.(map[string]any); ok {
+			if name, ok := entry["name"].(string); ok && name != "" {
+				names = append(names, name)
+			}
+		}
+	}
+	return names
 }
 
 // renderBaseline renders the shared view (no overlay, no local content) from a
