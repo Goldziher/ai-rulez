@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 const (
@@ -225,9 +226,23 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err := checkInsideProject(r.cfg, r.baseDir, "source", includeConf.Name, includeConf.Source); err != nil {
 			return nil, err
 		}
+		dir, err := safefs.SubPath(includeConf.Source, includeConf.Path)
+		if err != nil {
+			return nil, oops.With("include", includeConf.Name).With("path", includeConf.Path).
+				Hint("`path` is a subdirectory of `source`; it cannot contain `..`").
+				Wrapf(err, "include %q", includeConf.Name)
+		}
+		if dir != includeConf.Source {
+			if err := checkInsideProject(r.cfg, r.baseDir, "source", includeConf.Name, dir); err != nil {
+				return nil, err
+			}
+			if err := r.requireLocalDir(includeConf, dir); err != nil {
+				return nil, err
+			}
+		}
 		return NewLocalSource(
 			includeConf.Name,
-			includeConf.Source,
+			dir,
 			r.baseDir,
 			includeConf.Include,
 		).In(viewFor(r.cfg, r.baseDir)), nil
@@ -594,4 +609,21 @@ func tagFiles(files []config.ContentFile, name string) []config.ContentFile {
 		out[idx].Include = name
 	}
 	return out
+}
+
+// requireLocalDir fails when the sub-path dir of a local include's source does
+// not exist or is not a directory, as a git include fails on a missing path.
+func (r *Resolver) requireLocalDir(inc *config.IncludeConfig, dir string) error {
+	abs := dir
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(r.baseDir, abs)
+	}
+	abs = filepath.Clean(abs)
+	info, err := viewFor(r.cfg, r.baseDir).For(abs).Stat(abs)
+	if err != nil || !info.IsDir() {
+		return oops.With("include", inc.Name).With("source", inc.Source).With("path", inc.Path).
+			Hint("Set `path` to an existing subdirectory of `source`, or remove it").
+			Errorf("include %q: path %q does not exist in local source %q", inc.Name, inc.Path, inc.Source)
+	}
+	return nil
 }

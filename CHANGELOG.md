@@ -140,6 +140,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `skill-resource`) and a known kind that names another
   directory, such as `kind: skill` under `context/`, as an `AR9B1` warning, which fails `--strict`
   ([#509](https://github.com/Goldziher/ai-rulez/issues/509)).
+- **A local include honors `path`, and fails when it does not exist.** `path` was silently ignored for an include whose
+  `source` is a directory, so the source root was loaded instead of the subdirectory, also when `path` named a
+  directory that does not exist. The include now resolves `<source>/<path>` under the same containment and symlink
+  rules as `source`, fails with an error naming the include and the missing path (as a git include does), and refuses
+  a `path` that climbs out of the source with `..`. `validate`, the local-include pin in `ai-rulez.lock` (its path and
+  digest cover only the subdirectory) and `include add --path` follow the same rule
+  ([#510](https://github.com/Goldziher/ai-rulez/issues/510)).
 
 ## [5.7.0] - 2026-10-25
 

@@ -109,6 +109,41 @@ func TestCompute_LocalIncludeWithASymlinkIsPinnedByLinkTarget(t *testing.T) {
 	assert.NotEqual(t, before.Items[0].Digest, after.Items[0].Digest)
 }
 
+func TestCompute_LocalIncludePinsOnlyItsPath(t *testing.T) {
+	// Arrange: two modules under one source; the include names one of them
+	f := newFixture(t)
+	shared := filepath.Join(f.root, "vendor", "shared")
+	writeAt(t, shared, "modules/x/rules/a.md", "# a\n")
+	writeAt(t, shared, "modules/y/rules/b.md", "# b\n")
+	f.cfg.Includes = []config.IncludeConfig{{Name: "x", Source: "vendor/shared", Path: "modules/x"}}
+
+	// Act
+	before := localIncludeSnapshot(t, f)
+	writeAt(t, shared, "modules/y/rules/b.md", "# changed\n")
+	sibling := localIncludeSnapshot(t, f)
+	writeAt(t, shared, "modules/x/rules/a.md", "# changed\n")
+	own := localIncludeSnapshot(t, f)
+
+	// Assert
+	require.Empty(t, before.Problems)
+	require.Len(t, before.Items, 1)
+	assert.Equal(t, "vendor/shared/modules/x", before.Items[0].Path)
+	assert.Equal(t, before.Items[0].Digest, sibling.Items[0].Digest, "a sibling module is not pinned")
+	assert.NotEqual(t, before.Items[0].Digest, own.Items[0].Digest)
+}
+
+func TestCompute_LocalIncludeMissingPathIsAProblem(t *testing.T) {
+	f := newFixture(t)
+	writeAt(t, f.root, "vendor/shared/rules/a.md", "# a\n")
+	f.cfg.Includes = []config.IncludeConfig{{Name: "x", Source: "vendor/shared", Path: "modules/nope"}}
+
+	snap := localIncludeSnapshot(t, f)
+
+	require.Len(t, snap.Problems, 1)
+	assert.Contains(t, snap.Problems[0], "modules/nope")
+	assert.Empty(t, snap.Items)
+}
+
 func TestCompute_RemoteIncludesAreNotPinnedAsLocal(t *testing.T) {
 	f := newFixture(t)
 	f.cfg.Includes = []config.IncludeConfig{

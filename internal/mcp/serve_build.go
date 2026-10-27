@@ -981,7 +981,11 @@ func localIncludeDirs(cfg *config.Config) []string {
 			}
 		}
 		if inc.Source != "" && includes.IsLocalPath(inc.Source) {
-			dirs = append(dirs, resolve(inc.Source))
+			src, err := safefs.SubPath(inc.Source, inc.Path)
+			if err != nil {
+				src = inc.Source // the resolver reports the bad path; watch the source
+			}
+			dirs = append(dirs, resolve(src))
 		}
 	}
 	return dirs

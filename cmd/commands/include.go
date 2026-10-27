@@ -71,7 +71,7 @@ func init() {
 	specLocal.Bool(includeRemoveCmd.Flags(), &includeLocal, localFlagUsage)
 
 	// Add flags for include add
-	includeAddCmd.Flags().StringVar(&includePath, "path", "", "Subdirectory within git repository (git only)")
+	includeAddCmd.Flags().StringVar(&includePath, "path", "", "Subdirectory of the git repository or local source directory")
 	includeAddCmd.Flags().StringVar(&includeRef, "ref", "", "Branch, tag, or commit to use (git only)")
 	includeAddCmd.Flags().StringVar(&includeTypes, "include", "rules,context,skills", "Content types to include (comma-separated)")
 	includeAddCmd.Flags().StringVar(&includeMergeStrat, "merge-strategy", "", "Merge strategy: local-override (default), include-override, or error")

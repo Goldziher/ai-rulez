@@ -1438,7 +1438,7 @@ ai-rulez include add mine ../my-rules --local
 | `--install-to` | string |  | Installation path (optional) |
 | `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
 | `--merge-strategy` | string |  | Merge strategy: local-override (default), include-override, or error |
-| `--path` | string |  | Subdirectory within git repository (git only) |
+| `--path` | string |  | Subdirectory of the git repository or local source directory |
 | `--ref` | string |  | Branch, tag, or commit to use (git only) |
 
 ## `ai-rulez include list`
