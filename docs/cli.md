@@ -282,7 +282,7 @@ text mode.
 `list` and `show` print their own documents. A failure under `--format json` is the standard error document.
 
 The global `--config-dir <name>` (a directory below the working directory, or an absolute path) and `-C <dir>`
-(a config directory, or a file inside one) select the project these commands act on, exactly as for `generate`.
+(a config directory such as `.ai-rulez` or `.agents`, or a file inside one such as `.agents/ai-rulez.toml`) select the project these commands act on, exactly as for `generate`.
 Without them the directory is discovered: `.ai-rulez/`, then `.config/ai-rulez/`.
 
 `ai-rulez add`, `remove`, `list`, `show`, `edit`, `domain`, `profile`, `include`, `skill` and `builtins` without a
@@ -2818,7 +2818,7 @@ These flags work with all commands:
 
 | Flag               | Type    | Description                                                                     |
 | ------------------ | ------- | ------------------------------------------------------------------------------- |
-| `--config` / `-C`  | string  | The project to use: a configuration directory (such as `.ai-rulez`) or a config file. Auto-discovered if not specified. This is the only way to name it: no command takes a config path as an argument |
+| `--config` / `-C`  | string  | The project to use: a configuration directory (such as `.ai-rulez` or `.agents`) or a config file. Auto-discovered if not specified. This is the only way to name it: no command takes a config path as an argument |
 | `--config-dir`     | string  | Configuration directory name below the working directory (default `.ai-rulez`, then `.config/ai-rulez`); no command declares its own copy |
 | `--token` / `-T`   | string  | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 | `--debug` / `-D`   | boolean | Enable debug output (or `AI_RULEZ_DEBUG=1`)                                     |
