@@ -180,3 +180,11 @@ func RunCisco(ctx context.Context, bin, corpus, outDir string) (*Report, error) 
 }
 
 func path(dir, file string) string { return filepath.ToSlash(filepath.Join(dir, file)) }
+
+// RunSkillSpector no longer runs anything: SkillSpector support was removed in 5.8.0. It stays so
+// the module's exported API does not shrink inside v5.
+//
+// Deprecated: SkillSpector is not a competitor any more; use RunCisco.
+func RunSkillSpector(_ context.Context, _, _, _ string) (*Report, error) {
+	return nil, fmt.Errorf("SkillSpector support was removed in ai-rulez 5.8.0")
+}
