@@ -119,7 +119,21 @@ jobs:
           exec "$GORELEASE_REAL_GO" "${args[@]}"
           SHIM
           chmod +x "$shim/go"
-          PATH="$shim:$PATH" gorelease -base="$base"
+          out="$RUNNER_TEMP/gorelease.txt"
+          status=0
+          PATH="$shim:$PATH" gorelease -base="$base" > "$out" 2>&1 || status=$?
+          cat "$out"
+          [ "$status" -eq 0 ] && exit 0
+          # A retracted module that only a dependency's go.mod requires (no package
+          # imports it, so go.mod cannot move it) is not an API change: warn on it,
+          # and fail on incompatible changes or any other diagnostic.
+          grep 'retracted by module author' "$out" | sed 's/^/::warning::/' || true
+          grep -q '^# summary' "$out" || exit 1
+          grep -q '^## incompatible changes' "$out" && exit 1
+          if sed -n '/^# diagnostics/,/^# summary/p' "$out" |
+            grep -v -e '^#' -e '^$' -e 'retracted by module author' | grep -q .; then
+            exit 1
+          fi
 
   npm-wrapper:
     name: npm wrapper (Node 24)
