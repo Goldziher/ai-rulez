@@ -77,6 +77,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **The `update` sub-action also acts on sources that were never locked or whose locked tag is gone.** It counted only
+  `updatable` rows from `lock --outdated`, so a run with only `not-locked` or `tag-missing` sources reported nothing
+  to do although `ai-rulez update` pins them. Those rows now count, and the pull request body, job summary and commit
+  message list them with a Status column.
 - **`scoped_fallback` skill descriptions no longer split a multi-byte character.** Descriptions are cut at 160 or 250
   bytes, and the cut could land inside a Cyrillic letter or an emoji in an item title, leaving invalid UTF-8 in the
   `SKILL.md` frontmatter. The cut now falls on a character boundary.
