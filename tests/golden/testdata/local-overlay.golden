@@ -207,7 +207,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .github/skills/scratch/ dir 0755
 .github/skills/scratch/SKILL.md file 0644 150 840b60e9b2cd7374a669c0a76336256af88013efba44cd33f201a9c29dda5ec6
-.gitignore file 0644 1399 28724b7f60d7216b53038f01349cde1b24ca480cf1778012f91080cdc13ff7db
+.gitignore file 0644 1276 c94ff22e01499173778856afe3e1376c9753f796781c4950c712d0f6419a32e1
 .kilo/ dir 0755
 .kilo/agents/ dir 0755
 .kilo/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
@@ -427,7 +427,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
 ~ .ai-rulez/.generated-manifest.local.json file 0644 18869 ac06b94393c1fbb9c5d12423bde431bae5b51bc92faca310ff01d2c4b357df66
-~ .gitignore file 0644 1355 dab9a0bd97bffaf4e0847a13d4f646fe18f1ad0a3e7031e99fb2b453d4add6ee
+~ .gitignore file 0644 1232 35a2d8c0ed05d23a1e6fe47fe91eea8527cf5b31cabf5ac4e9acb5fcfee301db
 --- home tree
 (no change)
 

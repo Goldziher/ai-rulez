@@ -122,7 +122,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1389 a8976a9ca2d5045d4f36f46d7a275f5de5d705dd36e159471aafb5b9df38fe54
-.gitignore file 0644 691 2abf45009a57b00585749c8bc5d2ab3a6ce1d8ca2c420028612dbc11162c1ba0
+.gitignore file 0644 742 fad2f7f880d9cca191e8ea6489bac61e5ae9ab2a29db5355ad59af00cc1cbfe1
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
@@ -1658,12 +1658,14 @@ Test first.
   }
 }
 <<<<
-.gitignore file 0644 895 c17add65cf5797096bbc7a472b52b0d7a7f1043c3c9b2ae62fdab7cfe02e2aa2
+.gitignore file 0644 946 4f2188814c0b078ffb9fadef3d7375be37ddcef7889c90a1cf827174b29fc2e7
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
+.ai-rulez/.config.local.*
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
+.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/always.md

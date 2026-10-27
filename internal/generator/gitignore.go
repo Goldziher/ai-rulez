@@ -85,6 +85,23 @@ func (g *Generator) localInputPatterns() []string {
 	return append(patterns, g.localGitignorePatternsOnDisk()...)
 }
 
+// fixedLocalPatterns lists the machine-local ignore patterns a managed block
+// always carries: the local/ content tree, the overlay and its lock and temp
+// files, and the machine-local manifest. They depend on the layout alone.
+func (g *Generator) fixedLocalPatterns() []string {
+	var patterns []string
+	if g.config.Contentless() {
+		patterns = []string{g.localOverlayGlob(), g.localLockGlob()}
+	} else {
+		dir := g.configDirName()
+		patterns = []string{dir + "/" + localSourceDirName + "/", dir + "/" + g.localOverlayGlob(), g.localLockGlob()}
+	}
+	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
+		patterns = append(patterns, rel)
+	}
+	return patterns
+}
+
 // hasLocalGitignoreTargets reports whether machine-local content exists and so
 // requires unconditional gitignore entries (the ".local" outputs plus the
 // .ai-rulez/local/ source subtree). The local manifest counts: besides local
@@ -99,12 +116,26 @@ func (g *Generator) hasLocalInputTargets() bool {
 	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0
 }
 
+// manifestExcluded reports whether the machine-local manifest is the only
+// machine-local thing to ignore and the project does not manage a .gitignore
+// block: it then goes to .git/info/exclude, so a project that sets
+// gitignore = false never has its tracked .gitignore written (#497).
+func (g *Generator) manifestExcluded() bool {
+	return !g.userMode && !g.config.ShouldUpdateGitignore() && !g.hasLocalInputTargets() &&
+		g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir) != ""
+}
+
 // localManifestIgnorable reports whether the machine-local manifest is written
-// this run or already on disk. Either way it holds this machine's claims and
-// digests and is ignored, whatever `gitignore` says. A manifest that only sits
-// on disk is ignored inside a repository only: elsewhere there is nothing to
-// stage, and a .gitignore would be noise.
+// this run or already on disk and so needs a .gitignore entry. Either way it
+// holds this machine's claims and digests and is ignored, whatever `gitignore`
+// says; with gitignore off and nothing else local, .git/info/exclude holds it
+// instead (see manifestExcluded). A manifest that only sits on disk is ignored
+// inside a repository only: elsewhere there is nothing to stage, and a
+// .gitignore would be noise.
 func (g *Generator) localManifestIgnorable() bool {
+	if g.manifestExcluded() {
+		return false
+	}
 	return g.localManifestPending ||
 		(pathIsFile(g.localManifestPath()) && g.git().IsRepoContext(g.ctx, g.config.BaseDir))
 }
@@ -218,11 +249,15 @@ func (g *Generator) addLocalSourcePatterns(paths map[string]bool, includeCommitt
 	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" && g.localManifestIgnorable() {
 		paths[rel] = true
 	}
-	// With managed ignores on, the directory is covered even before it exists:
-	// `telemetry record` creates files in it between two generates, and they
-	// must not show up as untracked.
-	if includeCommitted && !g.userMode && !g.config.Contentless() {
-		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
+	// With managed ignores on, the machine-local inputs are listed whether or not
+	// they exist: the committed block must not depend on which local files one
+	// machine has, or on whether this run loaded them (--no-local). The local
+	// directory is covered before it exists too: `telemetry record` creates
+	// files in it between two generates.
+	if includeCommitted && !g.userMode {
+		for _, p := range g.fixedLocalPatterns() {
+			paths[p] = true
+		}
 	}
 
 	// A run that skipped the local inputs on purpose (--no-local) writes no
@@ -278,7 +313,7 @@ func coversCommitted(dirPattern string, committed []string) bool {
 // named after local content are excluded per clone and stay in .git/info/exclude,
 // which such a run leaves alone; only outside a repository do they need the block.
 func (g *Generator) skippedLocalPattern(rel string) string {
-	if stableLocalName(rel) || g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir) == "" {
+	if g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir) == "" {
 		return localGitignorePattern(g.config.RulesDirs, rel)
 	}
 	return ""

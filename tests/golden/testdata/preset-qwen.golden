@@ -41,7 +41,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 333 b27af872a924fbc2cc2c5bb9d3e2dd3f21d542d59d52dc6aa9d84519241297b9
+.gitignore file 0644 384 700ffa06b59b5caeca04c0cff4ba08835b3fea3692c60f38c2b642f393650739
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .qwen/ dir 0755
 .qwen/agents/ dir 0755

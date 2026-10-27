@@ -188,7 +188,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/test-alongside-code.mdc file 0644 460 62a1e5f4eded9f46202b6683109c1e312d7ce36d7af3556ba6ebe0895a562eb1
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .cursor/rules/verification-before-completion.mdc file 0644 690 04aa18a6311ab3ee18b58c4f1357ccfb24a0669a8b43949b30faa59346686d28
-.gitignore file 0644 2103 44bc4f15e91eede9bda6ab8a657f55d45bd06e44e9c5e627727e464a86e3d453
+.gitignore file 0644 2154 851feeda3018ca9f9dddfe00a03601aac803af2db0b87ad11e12f80988968f24
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 1107 b0abf916438c8a44d260c2e53cfc04a8ca445957e9e58a6c3eea9e58a018b2d1
 scripts/ dir 0755
@@ -417,7 +417,7 @@ Universal:
 .cursor/rules/test-alongside-code.mdc file 0644 460 62a1e5f4eded9f46202b6683109c1e312d7ce36d7af3556ba6ebe0895a562eb1
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .cursor/rules/verification-before-completion.mdc file 0644 690 04aa18a6311ab3ee18b58c4f1357ccfb24a0669a8b43949b30faa59346686d28
-.gitignore file 0644 2103 44bc4f15e91eede9bda6ab8a657f55d45bd06e44e9c5e627727e464a86e3d453
+.gitignore file 0644 2154 851feeda3018ca9f9dddfe00a03601aac803af2db0b87ad11e12f80988968f24
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 1107 b0abf916438c8a44d260c2e53cfc04a8ca445957e9e58a6c3eea9e58a018b2d1
 scripts/ dir 0755

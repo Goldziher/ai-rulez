@@ -166,7 +166,8 @@ func TestLocalRuleFiles_NoLocalContentChangesNothing(t *testing.T) {
 	// Assert
 	assert.NoFileExists(t, filepath.Join(dir, ".claude", "rules", "x.local.md"))
 	assert.NoFileExists(t, filepath.Join(dir, "CLAUDE.local.md"))
-	assert.NotContains(t, readRel(t, dir, ".gitignore"), ".local")
+	assert.NotContains(t, readRel(t, dir, ".gitignore"), "*.local.*", "no local output pattern without local content")
+	assert.NotContains(t, readRel(t, dir, ".gitignore"), "CLAUDE.local")
 }
 
 func TestLocalRuleFiles_OnlyLocalRulesSkipsEmptyRoot(t *testing.T) {

@@ -199,7 +199,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 665 bfd5c18eab8afa93ed9bcda7f54f51c3d2f16465fad135caf0af97348df88c84
+.gitignore file 0644 716 2fa91e963e09f8585c1fcc165da2e04189bcc4da95f28ae0b127e9df5ec2a5ac
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755

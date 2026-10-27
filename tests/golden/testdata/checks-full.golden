@@ -1937,13 +1937,15 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-.gitignore file 0644 1410 46c18abfaab654701ed5c208689bc3c1817344aae4418eefaaed096ec5d5ceeb
+.gitignore file 0644 1461 0420c53ef065ec6743a1f2e9379d5b2daa4f10c0f1dffc2532aa325a1829b633
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/commands/
 .agents/skills/
+.ai-rulez/.config.local.*
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
+.ai-rulez/config.local.*
 .ai-rulez/local/
 .amp/plugins/ai-rulez-hooks.ts
 .amp/settings.json

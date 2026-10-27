@@ -53,7 +53,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .crush/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .crush/skills/reviewer/scripts/ dir 0755
 .crush/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 206 1f74bad093e95ddfe7ace7b3d5ba42bd1ca7cc0d4129a8d3cff584c0bedeba6f
+.gitignore file 0644 257 a6eca4b1bf80d69c59d60957c2d36aa805691593ba4c6226fe47a11d69a14f1d
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CRUSH.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 crush.json file 0600 562 02190224e0f472fceba5930fdad8bb8d77240ccc0d958389191c6a5b88b6157d

@@ -69,7 +69,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .augment/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .augment/skills/reviewer/scripts/ dir 0755
 .augment/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 359 2e4b48d4982436ae0d0245c75076609a79f34741475922dfcaf478bba4b3ed5e
+.gitignore file 0644 410 c42cea9b0879957ecd23fc453f2a95e6da15f1058df999adb765ad5f006f536c
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755

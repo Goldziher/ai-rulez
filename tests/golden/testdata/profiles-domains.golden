@@ -171,7 +171,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 1181 2d77b4f6f0d335b3530fa04d2069b4e6ae18f4d90fe8cb3dde3217dc7459cdb9
+.gitignore file 0644 1232 35a2d8c0ed05d23a1e6fe47fe91eea8527cf5b31cabf5ac4e9acb5fcfee301db
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
@@ -247,7 +247,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .github/instructions/go.instructions.md file 0644 255 03d743dbb6d95a26fce2ce9d5d75fa06f29e3260a3a09143e6639dd7f14ca6b4
 + .github/skills/migrator/ dir 0755
 + .github/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
-~ .gitignore file 0644 1292 784f089714141e2e1b1e9b503ad80dd60f7f6455874bef7bc3c278e144f7a5c1
+~ .gitignore file 0644 1343 a196372f123b2a0e9f5c3c39bd2a833ddd2e844f9df0b60750f892d85a742a2f
 + .opencode/agents/dba.md file 0644 141 9dfce1bd9757568a1f2cb8a62551dc7ac81097085587808134c9e3b4418e79c8
 + .opencode/skills/migrator/ dir 0755
 + .opencode/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
@@ -297,7 +297,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .cursor/rules/react.mdc file 0644 266 a31aadc455037e470011b2db33779b7665a1759edd5c45aafa1cb65f004b319f
 + .github/instructions/react.instructions.md file 0644 249 81b9a8fbb7fde7981c2d6c24d3b44585f5d6cdba9164375a8efefd78fb0c5650
 + .github/prompts/storybook.prompt.md file 0644 141 98ff12386550a2c7ad1594211160cb6619b69c12a631314c0fe2bf47bbf86acb
-~ .gitignore file 0644 1418 ecdcf2037fd5afc1d7b8553cc1a893d8a701f2b6df67f93b01602e81a8e364ca
+~ .gitignore file 0644 1469 37b12be443146aec5b4d44a152d5b2f371eeabcd81f8a343dffb9595f2d80cec
 + .opencode/commands/storybook.md file 0644 141 98ff12386550a2c7ad1594211160cb6619b69c12a631314c0fe2bf47bbf86acb
 ~ AGENTS.md file 0644 913 d438e0dad7b8ca93ce84866dee604c7f9528c48b79ab1ed8d8e986dcfffc0f39
 ~ GEMINI.md file 0644 913 d438e0dad7b8ca93ce84866dee604c7f9528c48b79ab1ed8d8e986dcfffc0f39
@@ -686,7 +686,7 @@ Profiles:
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 1418 ecdcf2037fd5afc1d7b8553cc1a893d8a701f2b6df67f93b01602e81a8e364ca
+.gitignore file 0644 1469 37b12be443146aec5b4d44a152d5b2f371eeabcd81f8a343dffb9595f2d80cec
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .opencode/ dir 0755
 .opencode/agents/ dir 0755

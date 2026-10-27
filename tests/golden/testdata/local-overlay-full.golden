@@ -2388,16 +2388,16 @@ description: "Scratch skill"
 
 # Scratch
 <<<<
-.gitignore file 0644 1063 aca60dc06d150b4e21b844f32f2f2160f166fd3694eca472365a9ff041a23cd9
+.gitignore file 0644 940 a4b8f6a8ea2ec5ee3f164f9d91fc1bdacede989d4e07fc49914e58b520126e76
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
+.ai-rulez/.config.local.*
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
 .ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
-.claude/rules/*.local.*
 .claude/rules/always.md
 .claude/rules/auto.md
 .claude/rules/manual.md
@@ -2414,7 +2414,6 @@ description: "Scratch skill"
 .cursor/commands/
 .cursor/hooks.json
 .cursor/mcp.json
-.cursor/rules/*.local.*
 .cursor/rules/always.mdc
 .cursor/rules/auto.mdc
 .cursor/rules/context-architecture.mdc
@@ -2424,21 +2423,16 @@ description: "Scratch skill"
 .cursor/rules/typescript.mdc
 .gemini/agents/
 .github/agents/
-.github/instructions/*.local.*
 .github/skills/
 .kilo/agents/
 .kilo/commands/
-.kilo/rules/*.local.*
 .kilo/skills/
 .mcp.json
 .opencode/agents/
 .opencode/commands/
 .opencode/skills/
-AGENTS.local.md
 AGENTS.md
-CLAUDE.local.md
 CLAUDE.md
-GEMINI.local.md
 # END ai-rulez
 <<<<
 .kilo/ dir 0755

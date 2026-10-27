@@ -49,17 +49,18 @@ func TestGenerate_LocalManifestIgnoredWithoutManagedIgnores(t *testing.T) {
 
 			// Act
 			generateRepo(t, root)
-			first, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+			first, err := os.ReadFile(filepath.Join(root, ".git", "info", "exclude"))
 			require.NoError(t, err)
 			generateRepo(t, root)
-			second, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+			second, err := os.ReadFile(filepath.Join(root, ".git", "info", "exclude"))
 			require.NoError(t, err)
 
-			// Assert
-			assert.Contains(t, string(first), ".ai-rulez/.generated-manifest.local.json")
+			// Assert: with gitignore off the manifest is excluded per clone, and no
+			// tracked .gitignore is written for it.
+			assert.Contains(t, string(first), "/.ai-rulez/.generated-manifest.local.json")
 			assert.NotContains(t, string(first), ".ai-rulez/local/", "the manifest does not imply the local content tree")
-			assert.NotContains(t, string(first), ".ai-rulez/.generated-manifest.json\n", "the shared manifest stays committed")
-			assert.Equal(t, string(first), string(second), "run 1 and run 2 write the same .gitignore")
+			assert.NoFileExists(t, filepath.Join(root, ".gitignore"))
+			assert.Equal(t, string(first), string(second), "run 1 and run 2 write the same exclude block")
 		})
 	}
 }
@@ -73,22 +74,25 @@ func withoutManagedIgnores(t *testing.T, root string) {
 }
 
 // A manifest that is already on disk in a repository is ignored by a run that
-// writes nothing new: the .gitignore it lacked is rebuilt with the entry.
+// writes nothing new: with gitignore off the exclude block it lacked is rebuilt
+// with the entry, and no .gitignore is written.
 func TestGenerate_LocalManifestOnDiskInARepoGetsIgnored(t *testing.T) {
 	// Arrange
 	root := newSecretMCPRepo(t, `["claude"]`)
 	withoutManagedIgnores(t, root)
 	generateRepo(t, root)
-	require.NoError(t, os.Remove(filepath.Join(root, ".gitignore")))
+	excludePath := filepath.Join(root, ".git", "info", "exclude")
+	require.NoError(t, os.WriteFile(excludePath, nil, 0o644))
 
 	// Act
 	g := generateRepo(t, root)
 
 	// Assert
-	assert.True(t, g.localManifestIgnorable())
-	got, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	assert.True(t, g.manifestExcluded())
+	got, err := os.ReadFile(excludePath)
 	require.NoError(t, err)
-	assert.Contains(t, string(got), ".ai-rulez/.generated-manifest.local.json")
+	assert.Contains(t, string(got), "/.ai-rulez/.generated-manifest.local.json")
+	assert.NoFileExists(t, filepath.Join(root, ".gitignore"))
 }
 
 // Outside a git repository there is nothing to stage, so a manifest that only
@@ -101,7 +105,7 @@ func TestLocalManifestIgnorable_OutsideARepo(t *testing.T) {
 		inRepo  bool
 		want    bool
 	}{
-		{name: "on disk in a repository", onDisk: true, inRepo: true, want: true},
+		{name: "on disk in a repository, held by .git/info/exclude", onDisk: true, inRepo: true, want: false},
 		{name: "on disk outside a repository", onDisk: true, want: false},
 		{name: "absent in a repository", inRepo: true, want: false},
 		{name: "written this run, anywhere", pending: true, want: true},
@@ -146,8 +150,10 @@ func TestGenerate_LocalManifestCreatedByTheFirstRunIsIgnoredAfterTheEarlyPass(t 
 	// Assert
 	got, err := os.ReadFile(filepath.Join(root, ".gitignore"))
 	require.NoError(t, err)
-	assert.Contains(t, string(got), "node_modules/", "the user's lines stay")
-	assert.Contains(t, string(got), ".ai-rulez/.generated-manifest.local.json")
+	assert.Equal(t, "node_modules/\n", string(got), "the user's file is not touched with gitignore off")
+	exclude, err := os.ReadFile(filepath.Join(root, ".git", "info", "exclude"))
+	require.NoError(t, err)
+	assert.Contains(t, string(exclude), "/.ai-rulez/.generated-manifest.local.json")
 	assert.FileExists(t, filepath.Join(root, ".ai-rulez", ".generated-manifest.local.json"))
 }
 

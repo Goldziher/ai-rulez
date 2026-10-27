@@ -75,6 +75,7 @@ type Generator struct {
 	localManifestPending bool
 	renderedMerged       map[string]bool // merged documents this run's outputs write, by manifest path
 	localSkipped         bool            // local files exist on disk but were not loaded (--no-local)
+	dropExcludes         bool            // clean: .git/info/exclude keeps nothing of this project
 
 	manifests map[string]generatedManifest // manifests read this run, by path
 

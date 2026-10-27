@@ -185,3 +185,82 @@ func (g *Generator) managedGitignorePath() string {
 func (g *Generator) SetGitignoreSink(sink *GitignoreSink, prefix string) {
 	g.gitignoreSink, g.gitignorePrefix = sink, prefix
 }
+
+// GitignoreSinks holds one GitignoreSink per git repository a recursive run
+// touches. A root's patterns go to the .gitignore of its own repository, never
+// to the one of the directory the run started in: a nested repository gets its
+// own block and a parent that sets gitignore = false is left alone (#497).
+type GitignoreSinks struct {
+	mu    sync.Mutex
+	sinks map[string]*GitignoreSink
+}
+
+// NewGitignoreSinks returns an empty set; sinks are created as roots attach.
+func NewGitignoreSinks() *GitignoreSinks {
+	return &GitignoreSinks{sinks: map[string]*GitignoreSink{}}
+}
+
+// For returns the sink managing toplevel/.gitignore, creating it on first use.
+// It returns nil for a nil set or an empty toplevel.
+func (s *GitignoreSinks) For(toplevel string) *GitignoreSink {
+	if s == nil || toplevel == "" {
+		return nil
+	}
+	key := filepath.Clean(toplevel)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sink, ok := s.sinks[key]
+	if !ok {
+		sink = NewGitignoreSink(key)
+		s.sinks[key] = sink
+	}
+	return sink
+}
+
+// sorted lists the sinks by toplevel, so reports come out in a stable order.
+func (s *GitignoreSinks) sorted() []*GitignoreSink {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	keys := make([]string, 0, len(s.sinks))
+	for k := range s.sinks {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]*GitignoreSink, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, s.sinks[k])
+	}
+	return out
+}
+
+// Write rewrites every repository's managed block (see GitignoreSink.Write) and
+// returns the first error after trying them all.
+func (s *GitignoreSinks) Write(ctx context.Context, git gitutil.Git) error {
+	var first error
+	for _, sink := range s.sorted() {
+		if err := sink.Write(ctx, git); err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
+}
+
+// SinkDrift is the drift of one repository's managed block.
+type SinkDrift struct {
+	TopLevel string
+	Drift    Drift
+}
+
+// Drift reports, per repository, whether Write would change its block.
+func (s *GitignoreSinks) Drift(log logger.Logger) []SinkDrift {
+	var out []SinkDrift
+	for _, sink := range s.sorted() {
+		if d, ok := sink.Drift(log); ok {
+			out = append(out, SinkDrift{TopLevel: sink.TopLevel(), Drift: d})
+		}
+	}
+	return out
+}

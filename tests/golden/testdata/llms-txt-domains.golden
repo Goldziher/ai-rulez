@@ -84,7 +84,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/skills/ship/ dir 0755
 .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
-.gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
+.gitignore file 0644 410 6a16035384fa0ddf08ab95f3aa773a53c43bb176ab6cea313631727ff95b4d67
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 docs/ dir 0755
@@ -768,11 +768,13 @@ user-invocable: true
 
 Cut a release.
 <<<<
-.gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
+.gitignore file 0644 410 6a16035384fa0ddf08ab95f3aa773a53c43bb176ab6cea313631727ff95b4d67
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.ai-rulez/.config.local.*
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
+.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/always.md

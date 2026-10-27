@@ -54,7 +54,7 @@ INFO  Generation complete files=10
 .commands/ dir 0755
 .commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 .commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
-.gitignore file 0644 260 a1f10d0d0a632650ffd2b2c20860cedf61cacbe30f8c98826eb79ee7ce854684
+.gitignore file 0644 311 f1d05bf9a59bb23c116b136ddfea2510076ea82231617ba76b9dba79241e2c25
 .letta/ dir 0755
 .letta/agents/ dir 0755
 .letta/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218

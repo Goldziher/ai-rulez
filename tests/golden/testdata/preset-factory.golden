@@ -62,7 +62,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .factory/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .factory/skills/reviewer/scripts/ dir 0755
 .factory/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 412 4e199a3e4ad17a574685b395716f10302407ed4f3e3de69019c32c7e1b99f333
+.gitignore file 0644 463 6869dc387ea918eaab66ee334ad13bc47c3d0354d0ee6badf7f7cffb8b3bf8da
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755

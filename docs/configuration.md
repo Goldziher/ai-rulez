@@ -541,17 +541,17 @@ directory entry (`!.claude/skills/`, `!/.claude/skills/`) is honored the same wa
 way, since `generate` leaves it alone; it still reports a machine-local or secret output a rule un-ignores, and says
 that `generate` will not re-ignore it.
 
-The machine-local manifest, `.ai-rulez/.generated-manifest.local.json`, is the one entry that is always written: it
-is ignored whenever it exists in a repository (and whenever a run writes it), even with `gitignore = false`, without
-adding `.ai-rulez/local/` or the overlay patterns.
+With `gitignore = true` the block is the same on every machine, whether or not `config.local.*` or `.ai-rulez/local/`
+exist and with or without `generate --no-local`: it always lists `.ai-rulez/config.local.*` with its
+`.config.local.*` lock and temp files, `.ai-rulez/local/` and `.ai-rulez/.generated-manifest.local.json`. A path that
+exists only because this machine's local inputs add it (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`,
+`AGENTS.override.md`, `<rulesdir>/*.local.*`, a `.claude/settings.json` that only the overlay's hooks create, local
+skills) is never listed: it is excluded through `.git/info/exclude`, which is not committed.
 
-Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
-when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
-no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
-`<rulesdir>/*.local.*` including `ai-rulez.local.*`), the `.ai-rulez/local/` source tree, the
-`config.local.*` overlay with its `.config.local.*` lock and temp files, and
-`.ai-rulez/.generated-manifest.local.json`. Overlay-derived outputs whose names differ per machine are
-excluded through `.git/info/exclude` instead. See [Local Configuration](local-overrides.md).
+With `gitignore = false` the machine-local inputs that exist (the `config.local.*` overlay, the `.ai-rulez/local/`
+tree) are still gitignored in the project's `.gitignore`. The machine-local manifest alone does not make `generate`
+write a tracked `.gitignore`: it is excluded through `.git/info/exclude` instead. See
+[Local Configuration](local-overrides.md).
 
 `gitignore` defaults to `false`, so generated files are normally committed; set it to `true` when the team
 keeps generated output out of git and regenerates it locally.

@@ -88,20 +88,21 @@ instead of the local content. If local content exists but no `AGENTS.md` is prod
 
 ### Bookkeeping
 
-- **Gitignore.** Local rule files share a folder with committed rules, so one pattern per folder is
-  written (for example `.claude/rules/*.local.*`) before the files themselves. The managed block also
-  lists `.ai-rulez/local/`, `.ai-rulez/config.local.*`, `.ai-rulez/.config.local.*` (lock and temp
-  files) and `.ai-rulez/.generated-manifest.local.json`.
+- **Gitignore.** With `gitignore = true` the managed block always lists `.ai-rulez/local/`,
+  `.ai-rulez/config.local.*`, `.ai-rulez/.config.local.*` (lock and temp files) and
+  `.ai-rulez/.generated-manifest.local.json`, whether or not they exist and with or without `--no-local`, so the
+  committed block is the same on every machine. The local outputs themselves are not in it (see below).
 - **Symlinked `.gitignore`.** Git does not read a `.gitignore` that is a symbolic link, and ai-rulez never
   writes through it: every ignore entry goes to a per-project block in `.git/info/exclude` instead.
 - **Fail closed.** `generate` stops, listing the paths, when a machine-local or secret-bearing output, the
   `config.local.*` overlay or the `local/` tree would not be git-ignored after the entries are written (for
   example because a `.gitignore` line such as `!.ai-rulez/local/` un-ignores it). Narrow the rule, or use
   `--no-local`.
-- **Per-clone excludes.** Local-only outputs whose names do not contain `.local.` (a local skill's
-  `SKILL.md`, `AGENTS.override.md`, an output of an overlay-defined preset) differ per machine. They are listed in a block of
+- **Per-clone excludes.** Every output the local inputs add (`CLAUDE.local.md`, `<rulesdir>/*.local.*`, a local skill's
+  `SKILL.md`, `AGENTS.override.md`, a `.claude/settings.json` only the overlay's hooks create, an output of an
+  overlay-defined preset) exists only on this machine. They are listed in a block of
   this project's `.git/info/exclude`, keyed by the project's config directory, so they stay out of the
-  shared `.gitignore`. Outside a git repository they fall back to the managed `.gitignore` block.
+  shared `.gitignore`, which would otherwise change with each contributor's local files. Outside a git repository they fall back to the managed `.gitignore` block.
   `clean`, or a run with no local inputs left, removes the block.
 - **Local manifest.** Local outputs are tracked in `.ai-rulez/.generated-manifest.local.json`, not in
   the committed manifest. A teammate's `generate` never deletes your local files; `clean` removes them

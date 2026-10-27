@@ -45,7 +45,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 230 d539c889d0ee0fe6133955d435ad8e931f66a80dfb24160af23c1ad78b51a7b5
+.gitignore file 0644 281 a6a8aaf25faa0b9db6cf59be9759f85ee46eb0d8e372a0592349303f91add60f
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .vibe/ dir 0755
 .vibe/config.toml file 0600 420 26a8d7daa9da7c768542be85dfdfa39582e529d4e6f46ebb9e652025d64053e2
