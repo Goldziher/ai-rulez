@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestCheckLocalDir(t *testing.T) {
@@ -16,7 +17,7 @@ func TestCheckLocalDir(t *testing.T) {
 	outside := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "shared", "sub"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "shared", "file.txt"), []byte("x"), 0o644))
-	require.NoError(t, os.Symlink(outside, filepath.Join(root, "shared", "escape")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(root, "shared", "escape"))
 	tests := []struct {
 		name    string
 		source  string
