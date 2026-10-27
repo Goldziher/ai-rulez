@@ -16,13 +16,25 @@ Windows archives that need `liter_llm_ffi.dll` retain it beside the executable.
 
 These are two independent choices:
 
-- `uses: Goldziher/ai-rulez@v5` selects the action implementation from the floating **v5 tag**.
-  The publish workflow moves it to the commit of each successfully published stable v5 release,
-  after GitHub, npm, PyPI and Homebrew publication. Release candidates never move it, and rerunning
-  an older release cannot move it backward.
-- `with: version: 5.7.0` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, or `latest`
-  (the default). `version: v5` is unsupported: the floating tag is an action ref, not a binary release.
-  Omitting `version` downloads the latest public GitHub release, even when the action ref is pinned.
+- `uses: Goldziher/ai-rulez@v5` selects the action implementation from the floating **v5 tag**,
+  an annotated tag that the publish workflow moves to the commit of each successfully published
+  stable 5.x release, after GitHub, npm, PyPI and Homebrew publication. The tag is derived from
+  the release's major version. Release candidates never move it, and rerunning an older release
+  cannot move it backward.
+- `with: version: 5.7.0` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, a release
+  candidate `X.Y.Z-rc.N`, or `latest` (the default). `latest` follows GitHub's
+  `releases/latest` redirect, which names the newest published stable release (never a draft or a
+  release candidate), and the download is then checked against that release's `checksums.txt`.
+  `version: v5` is unsupported: the floating tag is an action ref, not a binary release. Omitting
+  `version` downloads the latest release, even when the action ref is pinned.
+
+To follow every 5.x release with no per-release edits, combine the two floating choices:
+
+```yaml
+- uses: Goldziher/ai-rulez@v5
+  with:
+    version: latest
+```
 
 Pin a reviewed full release tag or commit SHA for reproducible action code, and set `version` too
 for a reproducible binary. `@v5` intentionally receives compatible action updates; `latest` may

@@ -493,14 +493,16 @@ the release's `checksums.txt`, caches it (keyed by OS, arch and the resolved ver
 toolchain, Node or Python needed in the job. It reuses the same `scripts/pre-commit/run-ai-rulez.sh`
 download-and-verify logic the pre-commit hooks above use, so the two stay in sync.
 
-Use `Goldziher/ai-rulez@v5` for compatible action updates: publishing a stable v5 release advances
-this floating tag after all distribution jobs succeed. Pin a full release tag or commit SHA to fix
-the action code. The action ref and installed CLI version are independent: set `version` as well
-to pin the binary; its default `latest` can eventually select a newer major release.
+Use `Goldziher/ai-rulez@v5` for compatible action updates: publishing a stable v5 release moves
+this annotated floating tag after all distribution jobs succeed. `uses: Goldziher/ai-rulez@v5` with
+`version: latest` keeps a workflow on the newest 5.x action and the newest released CLI with no
+per-release edits. Pin a full release tag or commit SHA to fix the action code. The action ref and
+installed CLI version are independent: set `version` as well to pin the binary; its default
+`latest` can eventually select a newer major release.
 
 | | |
 | --- | --- |
-| **Input** `version` | `X.Y.Z`, `vX.Y.Z`, or `latest` (default). Optional — omit it to always use the newest release. |
+| **Input** `version` | `X.Y.Z`, `vX.Y.Z`, `X.Y.Z-rc.N` or `latest` (default: the newest stable GitHub release). Optional — omit it to always use the newest release. |
 | **Inputs** `llm-*` | Optional provider, model, gateway, credential variable name, network opt-in, budgets and other LLM settings exported to later steps. [Full reference](docs/github-actions.md#llm-configuration-inputs). |
 | **Output** `version` | The resolved version, without the leading `v`. |
 | **Output** `path` | Absolute path to the installed `ai-rulez` binary. |
