@@ -12,7 +12,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
-	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Include merge strategies accepted by the include resolver. Kept in sync with
@@ -64,8 +63,11 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 		if err := incl.CheckLocalInsideProject(op.baseDir, req.Name, req.Source); err != nil {
 			return err //nolint:wrapcheck // already contextual
 		}
-		if err := checkLocalIncludePath(op.baseDir, req); err != nil {
-			return err
+		if req.Path != "" {
+			probe := config.IncludeConfig{Name: req.Name, Source: req.Source, Path: req.Path}
+			if err := incl.CheckLocalDir(nil, op.baseDir, &probe); err != nil {
+				return err //nolint:wrapcheck // already contextual
+			}
 		}
 	}
 
@@ -329,31 +331,6 @@ func validateGitURL(gitURL string) error {
 }
 
 // validateLocalPath validates a local filesystem path
-// checkLocalIncludePath refuses a path for a local include that climbs out of
-// the source or names no directory below it, so "include add" cannot write an
-// entry the loader fails on.
-func checkLocalIncludePath(baseDir string, req *AddIncludeRequest) error {
-	if req.Path == "" {
-		return nil
-	}
-	sub, err := safefs.SubPath(req.Source, req.Path)
-	if err != nil {
-		return oops.With("name", req.Name).With("path", req.Path).
-			Hint("--path is a subdirectory of the source; it cannot contain '..'").
-			Wrapf(err, "include %q", req.Name)
-	}
-	abs := sub
-	if !filepath.IsAbs(abs) {
-		abs = filepath.Join(baseDir, abs)
-	}
-	if info, statErr := os.Stat(filepath.Clean(abs)); statErr != nil || !info.IsDir() {
-		return oops.With("name", req.Name).With("path", req.Path).
-			Hint("Set --path to an existing subdirectory of the source, or omit it").
-			Errorf("path %q does not exist in local source %q", req.Path, req.Source)
-	}
-	return nil
-}
-
 func validateLocalPath(env ambient.Env, path string) error {
 	// Expand ~ and environment variables
 	expandedPath := ambient.Expand(env, path)

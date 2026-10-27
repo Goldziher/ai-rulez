@@ -301,3 +301,32 @@ func truncateDescription(description string, limit int) string {
 	}
 	return strings.TrimSpace(description[:cut]) + "..."
 }
+
+// ScopedFallbackSkillsUnclaimed is ScopedFallbackSkills minus the skills whose id
+// an authored skill, a command or an earlier generated skill already uses: the
+// authored item keeps its directory. onClaimed, when not nil, is called for each
+// skill left out.
+func ScopedFallbackSkillsUnclaimed(
+	content *config.ContentTree, cfg *config.Config, owners []string, onClaimed func(skill *config.ContentFile),
+) []config.ContentFile {
+	taken := map[string]bool{}
+	for _, items := range [][]config.ContentFile{allSkills(content), allCommands(content)} {
+		for idx := range items {
+			taken[config.SkillID(items[idx])] = true
+		}
+	}
+	var kept []config.ContentFile
+	generated := ScopedFallbackSkills(content, cfg, owners)
+	for idx := range generated {
+		skill := &generated[idx]
+		if taken[skill.ID] {
+			if onClaimed != nil {
+				onClaimed(skill)
+			}
+			continue
+		}
+		taken[skill.ID] = true
+		kept = append(kept, *skill)
+	}
+	return kept
+}

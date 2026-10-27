@@ -194,20 +194,7 @@ func (r *runner) scopedFallbackSkills() []config.ContentFile {
 	if r.cfg == nil || r.cfg.Content == nil || !config.SharedAgentsMDInlining(r.cfg).ScopedAsSkills {
 		return nil
 	}
-	taken := map[string]bool{}
-	for _, items := range [][]config.ContentFile{presets.AllSkills(r.cfg.Content), presets.AllCommands(r.cfg.Content)} {
-		for idx := range items {
-			taken[config.SkillID(items[idx])] = true
-		}
-	}
-	var kept []config.ContentFile
-	for _, skill := range presets.ScopedFallbackSkills(r.cfg.Content, r.cfg, r.cfg.AgentsMDOwners()) {
-		if !taken[skill.ID] {
-			taken[skill.ID] = true
-			kept = append(kept, skill)
-		}
-	}
-	return kept
+	return presets.ScopedFallbackSkillsUnclaimed(r.cfg.Content, r.cfg, r.cfg.AgentsMDOwners(), nil)
 }
 
 // fallbackListing is the size, in unit, of the skill listing entries of the

@@ -126,7 +126,7 @@ func TestCheckLocalIncludes(t *testing.T) {
 		wantErr string
 	}{
 		{"existing directory", config.IncludeConfig{Name: "ok", Source: "shared"}, ""},
-		{"missing path", config.IncludeConfig{Name: "gone", Source: "nope"}, "not found"},
+		{"missing path", config.IncludeConfig{Name: "gone", Source: "nope"}, "does not exist"},
 		{"a file", config.IncludeConfig{Name: "f", Source: "file.txt"}, "not a directory"},
 		{"git source", config.IncludeConfig{Name: "g", Source: "https://github.com/o/r"}, ""},
 		{"local override", config.IncludeConfig{Name: "o", Source: "nope", LocalOverride: "../dev"}, ""},

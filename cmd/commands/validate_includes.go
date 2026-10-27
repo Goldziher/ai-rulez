@@ -1,15 +1,13 @@
 package commands
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // checkLocalIncludes reports every include whose local path is missing or is not
@@ -24,21 +22,8 @@ func checkLocalIncludes(cfg *config.Config) error {
 		if inc.Source == "" || inc.LocalOverride != "" || lockfile.IsGitSource(inc.Source) {
 			continue
 		}
-		shown, err := safefs.SubPath(inc.Source, inc.Path)
-		if err != nil {
-			problems = append(problems, "include "+inc.Name+": "+err.Error())
-			continue
-		}
-		src := shown
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(cfg.BaseDir, src)
-		}
-		info, err := os.Stat(filepath.Clean(src))
-		switch {
-		case err != nil:
-			problems = append(problems, "include "+inc.Name+": path "+filepath.ToSlash(shown)+" not found")
-		case !info.IsDir():
-			problems = append(problems, "include "+inc.Name+": path "+filepath.ToSlash(shown)+" is not a directory")
+		if err := includes.CheckLocalDir(cfg, cfg.BaseDir, inc); err != nil {
+			problems = append(problems, err.Error())
 		}
 	}
 	if len(problems) == 0 {

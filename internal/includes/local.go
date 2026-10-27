@@ -230,6 +230,43 @@ func CheckLocalInsideProject(baseDir, name, source string) error {
 	return checkInsideProject(nil, baseDir, "source", name, source)
 }
 
+// CheckLocalDir is the rule for the directory a local include reads: the
+// include's `path` stays below its `source`, the resolved directory stays inside
+// the project (symlinks resolved, see checkInsideProject) and exists as a
+// directory, as a remote include fails on a missing path. cfg may be nil, which
+// applies the rule of a committed config. The resolver, "include add" and
+// "validate" all go through it.
+func CheckLocalDir(cfg *config.Config, baseDir string, inc *config.IncludeConfig) error {
+	dir, err := safefs.SubPath(inc.Source, inc.Path)
+	if err != nil {
+		return oops.With("include", inc.Name).With("path", inc.Path).
+			Hint("`path` is a subdirectory of `source`; it cannot contain `..`").
+			Wrapf(err, "include %q", inc.Name)
+	}
+	if dir != inc.Source {
+		if err := checkInsideProject(cfg, baseDir, "source", inc.Name, dir); err != nil {
+			return err
+		}
+	}
+	abs := dir
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(baseDir, abs)
+	}
+	abs = filepath.Clean(abs)
+	info, err := viewFor(cfg, baseDir).For(abs).Stat(abs)
+	switch {
+	case err != nil:
+		return oops.With("include", inc.Name).With("source", inc.Source).With("path", inc.Path).
+			Hint("Set `path` to an existing subdirectory of `source`, or remove it").
+			Errorf("include %q: local path %q does not exist", inc.Name, filepath.ToSlash(dir))
+	case !info.IsDir():
+		return oops.With("include", inc.Name).With("source", inc.Source).With("path", inc.Path).
+			Hint("An include reads a directory; point `source` and `path` at one").
+			Errorf("include %q: local path %q is not a directory", inc.Name, filepath.ToSlash(dir))
+	}
+	return nil
+}
+
 // viewFor is the view the project of cfg is read through; without a config it is
 // the real directory dir.
 func viewFor(cfg *config.Config, dir string) workspace.View {
