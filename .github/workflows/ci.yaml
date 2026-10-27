@@ -16,17 +16,17 @@ permissions:
 
 jobs:
   validate:
-    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@cc89740654cef67b752113ddd87d4f0d23dda3f5 # v1
+    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -36,12 +36,12 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        uses: arduino/setup-task@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        uses: golangci/golangci-lint-action@v9
         with:
           # Pinned, so a local run with the same version matches CI; bump on purpose.
           version: v2.15.0
@@ -55,10 +55,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -74,12 +74,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -129,10 +129,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -148,11 +148,11 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -173,7 +173,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        uses: arduino/setup-task@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -210,7 +210,7 @@ jobs:
       # a test failure too, using the key of the pinned setup-go v7 action.
       - name: Preserve Windows Go cache after failure
         if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.go-cache-paths.outcome == 'success'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ steps.go-cache-paths.outputs.modules }}
@@ -219,7 +219,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
           path: |
@@ -240,10 +240,10 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -256,7 +256,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        uses: arduino/setup-task@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -270,7 +270,7 @@ jobs:
           echo "::endgroup::"
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
           path: tests/e2e/*.log
@@ -284,10 +284,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -317,10 +317,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -336,13 +336,13 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
         with:
           # The regression check builds the base revision next to HEAD, so it needs the history.
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -355,7 +355,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        uses: arduino/setup-task@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -369,7 +369,7 @@ jobs:
         run: task test:benchmark:smoke | tee benchmark-results.txt
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: benchmark-results.txt
@@ -395,7 +395,7 @@ jobs:
 
       - name: Upload benchmark subset
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-subset
           path: bench-subset.txt
@@ -412,11 +412,11 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -437,7 +437,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        uses: arduino/setup-task@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -454,7 +454,7 @@ jobs:
       # a test failure too, using the key of the pinned setup-go v7 action.
       - name: Preserve Windows Go cache after failure
         if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.go-cache-paths.outcome == 'success'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ steps.go-cache-paths.outputs.modules }}
@@ -463,7 +463,7 @@ jobs:
 
       - name: Upload comprehensive test results
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        uses: actions/upload-artifact@v7
         with:
           name: comprehensive-test-results-${{ matrix.os }}
           path: |
@@ -479,10 +479,10 @@ jobs:
     needs: [lint, test, e2e-test, comprehensive-test]
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -495,7 +495,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        uses: arduino/setup-task@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -503,7 +503,7 @@ jobs:
         run: task build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        uses: actions/upload-artifact@v7
         with:
           name: binaries
           path: bin/

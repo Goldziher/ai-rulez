@@ -44,10 +44,10 @@ jobs:
         # system bins, which differ between the two images.
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
 
@@ -59,12 +59,12 @@ jobs:
           echo "AI_RULEZ_BATS_BIN=$RUNNER_TEMP/ai-rulez" >>"$GITHUB_ENV"
 
       - name: Install Bats
-        uses: xberg-io/actions/install-bats@cc89740654cef67b752113ddd87d4f0d23dda3f5 # v1
+        uses: xberg-io/actions/install-bats@v1
         with:
           version: ${{ env.BATS_VERSION }}
 
       - name: Run the shell script suites
-        uses: xberg-io/actions/run-bats@cc89740654cef67b752113ddd87d4f0d23dda3f5 # v1
+        uses: xberg-io/actions/run-bats@v1
         with:
           path: tests/bats
           # bats_load_library searches BATS_LIB_PATH only; scripts/bats/run.sh sets the same path.
@@ -77,13 +77,13 @@ jobs:
     name: Vendored xberg-bats and Bats lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v7
 
       - name: Check tests/lib/xberg-bats against the pinned xberg-io/actions commit
         run: scripts/bats/sync-xberg-bats.sh --check
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@v7
         with:
           go-version: "1.27"
 

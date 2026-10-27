@@ -766,7 +766,7 @@ jobs:
   outdated:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: npm install -g ai-rulez            # or: uvx ai-rulez
       - name: Report outdated sources
         env:
@@ -776,7 +776,7 @@ jobs:
       - name: Verify pinned tags did not move
         run: ai-rulez lock --check --verify-tags
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: outdated
           path: outdated.json
