@@ -8,6 +8,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
 
 // isOKFContentDir reports whether a top-level directory of a configuration
@@ -47,7 +48,7 @@ func okfTreeFindings(cfg *config.Config) (*okf.Bundle, []okf.Finding, bool) {
 		return nil, nil, false
 	}
 	var out []okf.Finding
-	for _, f := range append(b.CheckRoot(), b.Validate()...) {
+	for _, f := range append(append(b.CheckRoot(), b.Validate()...), okfbridge.KindFindings(b)...) {
 		if okfTreePath(f.Path) && !okfResourceDirFinding(f) {
 			out = append(out, demoteFrontmatterless(f))
 		}

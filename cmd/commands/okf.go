@@ -204,7 +204,7 @@ func runOKFValidate(ctx context.Context, spec string, out io.Writer) int {
 		return exitOKFCannotRun
 	}
 	defer cleanup()
-	findings := okf.Check(b)
+	findings := okfbridge.Check(b)
 	if err := writeOKFFindings(out, spec, b, findings, okfFormat == formatJSON); err != nil {
 		renderStderr(err)
 		return exitOKFCannotRun

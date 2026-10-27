@@ -261,9 +261,9 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Run `ai-rulez generate` (the configuration directory) or `ai-rulez export okf` (an exported bundle)",
 		},
 		CodeOKFTypeInvalid: {
-			Why:  "An OKF concept without a parseable type cannot be classified.",
-			Bad:  "A concept whose frontmatter has no `type`",
-			Good: "Give every concept a non-empty `type`",
+			Why:  "An OKF concept without a parseable type, or with an x-ai-rulez kind that is not a content kind, cannot be classified; a kind that disagrees with the directory is ignored by the loader.",
+			Bad:  "A concept whose frontmatter has no `type`, or `x-ai-rulez: {kind: bogus}`",
+			Good: "Give every concept a non-empty `type` and a kind from rules, context, skills, agents, commands, checks or skill-resource that matches its directory",
 		},
 		CodeOKFLinkBroken: {
 			Why:  "A link that does not resolve inside the bundle leaves the reader at a dead end.",

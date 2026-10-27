@@ -1385,7 +1385,7 @@ linted by `validate --strict` and `doctor`. The same checks run on any third-par
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
 | AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list; in a migrated configuration directory also an index that lists a title or description its concept no longer has (`ai-rulez generate` refreshes it) |
-| AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2) |
+| AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2); also an `x-ai-rulez` `kind` that is not `rules`, `context`, `skills`, `agents`, `commands`, `checks` or `skill-resource` (error, the message lists them), and, as a warning, a known `kind` that disagrees with the directory the concept sits in (a configuration directory classifies by directory and ignores the value) |
 | AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
 | AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2`, and info when the root index uses the frontmatter style (the scheme OKF 0.2 does not describe); error from `okf validate` alone when the directory has no root `index.md` naming `okf_version` (it is not a bundle, and `import okf` refuses it too) |
 | AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
@@ -3277,13 +3277,13 @@ an OKF index.md lists a file that does not exist, omits a concept or subdirector
 
 ### AR9B1 okf-type-invalid
 
-an OKF concept has unparseable frontmatter or a missing or empty type
+an OKF concept has unparseable frontmatter or a missing or empty type, or an x-ai-rulez kind that is unknown (error) or disagrees with its directory (warning)
 
 - Default severity: `error`
 - Analyzer: `okf` (scope `item`)
-- Why: An OKF concept without a parseable type cannot be classified.
-- Bad: A concept whose frontmatter has no `type`
-- Good: Give every concept a non-empty `type`
+- Why: An OKF concept without a parseable type, or with an x-ai-rulez kind that is not a content kind, cannot be classified; a kind that disagrees with the directory is ignored by the loader.
+- Bad: A concept whose frontmatter has no `type`, or `x-ai-rulez: {kind: bogus}`
+- Good: Give every concept a non-empty `type` and a kind from rules, context, skills, agents, commands, checks or skill-resource that matches its directory
 
 ### AR9B2 okf-link-broken
 

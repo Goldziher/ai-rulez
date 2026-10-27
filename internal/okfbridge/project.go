@@ -114,7 +114,7 @@ func driftFindings(cfg *config.Config, tree *config.ContentTree, dir string) ([]
 // projectFindings validates the bundle. The AR9B3 note that an index uses the
 // frontmatter style is dropped when okf.index_style asks for it.
 func projectFindings(cfg *config.Config, b *okf.Bundle) []okf.Finding {
-	all := b.Validate()
+	all := withKindFindings(b.Validate(), b)
 	if cfg.OKFIndexStyle() != okf.StyleFrontmatter {
 		return all
 	}
