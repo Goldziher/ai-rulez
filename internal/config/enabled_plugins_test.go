@@ -165,3 +165,53 @@ func TestEnabledPluginMarketplaceClaudeSource(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateEnabledPluginsAgainstClaudeSettings(t *testing.T) {
+	yes := true
+	local := &MarketplaceAuthoring{Name: "m"}
+	settings := func(s ClaudeSettings) *ClaudeConfig {
+		s.Manage = true
+		return &ClaudeConfig{Settings: &s}
+	}
+	dir := &EnabledPluginMarketplace{Name: "b", Source: "./plugins", Type: "directory"}
+	gh := &EnabledPluginMarketplace{Name: "m", Source: "o/r", Type: "github"}
+	tests := []struct {
+		name    string
+		cfg     *Config
+		wantErr string
+	}{
+		{name: "listed in disable_plugins", cfg: &Config{Claude: settings(ClaudeSettings{DisablePlugins: []string{"a@b"}}),
+			EnabledPlugins: []EnabledPlugin{{ID: "a@b"}}}, wantErr: `plugin "a@b" is enabled in enabled_plugins and disabled in claude.settings.disable_plugins`},
+		{name: "bare disable name qualified with the local marketplace", cfg: &Config{Marketplace: local,
+			Claude: settings(ClaudeSettings{DisablePlugins: []string{"own"}}), EnabledPlugins: []EnabledPlugin{{ID: "own@m"}}},
+			wantErr: "disabled in claude.settings.disable_plugins"},
+		{name: "different ids do not conflict", cfg: &Config{Marketplace: local,
+			Claude: settings(ClaudeSettings{DisablePlugins: []string{"own"}}), EnabledPlugins: []EnabledPlugin{{ID: "own@other"}}}},
+		{name: "also in enable_plugins is only redundant", cfg: &Config{Marketplace: local,
+			Claude: settings(ClaudeSettings{EnablePlugins: []string{"own"}}), EnabledPlugins: []EnabledPlugin{{ID: "own@m"}}}},
+		{name: "marketplace named like the registered local one", cfg: &Config{Marketplace: local,
+			Claude: settings(ClaudeSettings{RegisterMarketplace: &yes}), EnabledPlugins: []EnabledPlugin{{ID: "a@m", Marketplace: gh}}},
+			wantErr: `marketplace "m" is the marketplace of this project`},
+		{name: "same name but the local marketplace is not registered", cfg: &Config{Marketplace: local,
+			EnabledPlugins: []EnabledPlugin{{ID: "a@m", Marketplace: gh}}}},
+		{name: "directory marketplace in project scope", cfg: &Config{EnabledPlugins: []EnabledPlugin{{ID: "a@b", Marketplace: dir}}}},
+		{name: "directory marketplace in user scope", cfg: &Config{UserScope: true, EnabledPlugins: []EnabledPlugin{{ID: "a@b", Marketplace: dir}}},
+			wantErr: "cannot use a directory marketplace in the user config"},
+		{name: "github marketplace in user scope", cfg: &Config{UserScope: true, EnabledPlugins: []EnabledPlugin{
+			{ID: "a@m", Marketplace: gh}}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := tt.cfg.validateEnabledPlugins()
+
+			// Assert
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}

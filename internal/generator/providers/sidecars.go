@@ -321,8 +321,15 @@ func claudeSettingsOwnedKeys(cfg *config.Config, outputPath string) ([]jsonmerge
 			break
 		}
 		p := &cfg.EnabledPlugins[i]
-		plugins[p.ID] = true
-		if p.Marketplace != nil {
+		// Validation rejects a conflict with [claude.settings]; the explicit
+		// [claude.settings] value still wins here rather than being overridden.
+		if _, set := plugins[p.ID]; !set {
+			plugins[p.ID] = true
+		}
+		if p.Marketplace == nil {
+			continue
+		}
+		if _, set := markets[p.Marketplace.Name]; !set {
 			markets[p.Marketplace.Name] = map[string]any{sourceKey: marketplaceSourceObject(p.Marketplace.ClaudeSource())}
 		}
 	}
