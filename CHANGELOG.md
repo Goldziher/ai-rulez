@@ -75,6 +75,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`schema/lock-outdated.schema.json` and `schema/update.schema.json` accept the `marketplace` and `plugin` kinds.**
+  `lock --outdated` and `update` report installed marketplaces and plugins that use a `version` constraint, but the
+  schemas listed only `include`, `skill` and `source`, so a validator rejected that output. The enums now match the
+  kinds `--kind` accepts.
+
 - **`--config .agents` loads a `source = "agents"` project.** Naming the `.agents` folder (or `.agents/.ai-rulez`)
   failed with "path is outside the workspace" because the load workspace was rooted at `.agents` while the project
   directory is its parent; it is now rooted at the project, as `--config .agents/ai-rulez.toml` and `--config

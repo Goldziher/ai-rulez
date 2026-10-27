@@ -15,7 +15,7 @@
         "required": ["kind", "name", "source", "constraint", "status"],
         "additionalProperties": false,
         "properties": {
-          "kind": { "enum": ["include", "skill", "source"] },
+          "kind": { "enum": ["include", "skill", "source", "marketplace", "plugin"] },
           "name": { "type": "string" },
           "source": { "type": "string", "description": "The source URL, credentials redacted." },
           "constraint": { "type": "string" },

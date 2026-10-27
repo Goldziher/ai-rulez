@@ -16,7 +16,7 @@
         "required": ["kind", "name", "to"],
         "additionalProperties": false,
         "properties": {
-          "kind": { "enum": ["include", "skill", "source"] },
+          "kind": { "enum": ["include", "skill", "source", "marketplace", "plugin"] },
           "name": { "type": "string" },
           "from": { "$ref": "#/definitions/tagRef" },
           "to": { "$ref": "#/definitions/tagRef" },
@@ -86,7 +86,7 @@
         "required": ["kind", "name", "from", "to", "latest"],
         "additionalProperties": false,
         "properties": {
-          "kind": { "enum": ["include", "skill", "source"] },
+          "kind": { "enum": ["include", "skill", "source", "marketplace", "plugin"] },
           "name": { "type": "string" },
           "from": { "type": "string", "description": "The constraint now in config.toml." },
           "to": { "type": "string", "description": "The constraint that takes the newest major." },
@@ -114,7 +114,7 @@
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": ["include", "skill", "source"]
+          "enum": ["include", "skill", "source", "marketplace", "plugin"]
         },
         "name": {
           "type": "string"
