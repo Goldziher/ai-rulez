@@ -5,11 +5,12 @@ on:
     branches: [main, develop]
     paths: &action-paths
       - "action.yml"
+      - "check/**"
       - "scripts/action/**"
       - "scripts/pre-commit/run-ai-rulez.sh"
       - "scripts/update-action-tag*"
       - "scripts/test_update_action_tag.py"
-      - "tests/bats/scripts/action-llm.bats"
+      - "tests/bats/scripts/action-*.bats"
       - ".github/workflows/action.yaml"
       - ".github/workflows/publish.yaml"
   pull_request:
@@ -73,3 +74,72 @@ jobs:
           printf 'version = "5.0"\nname = "Action smoke test"\nbuiltins = false\n' >"$project/.ai-rulez/config.toml"
           cd "$project"
           ai-rulez llm doctor
+
+  check:
+    name: Check sub-action on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The action source goes to a subdirectory; the workspace root becomes a fixture repository,
+      # which the check sub-action inspects as it would a consumer's checkout.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: action-src
+      - name: Install the CLI to build the fixture
+        uses: ./action-src
+        with:
+          version: 5.7.0
+      - name: Create a fixture with a root and a module configuration
+        env:
+          AI_RULEZ_ACK_COMMANDS: "1"
+        run: |
+          set -euo pipefail
+          git init -q
+          git config user.name fixture
+          git config user.email fixture@example.com
+          for dir in . module; do
+            mkdir -p "$dir/.ai-rulez/rules"
+            printf 'version = "5.0"\nname = "fixture"\nbuiltins = false\npresets = ["claude", "cursor"]\n' \
+              >"$dir/.ai-rulez/config.toml"
+            printf -- '---\npriority: high\n---\n# Fixture\n\nKeep the fixture small.\n' \
+              >"$dir/.ai-rulez/rules/fixture.md"
+            (cd "$dir" && ai-rulez migrate okf --quiet && rm -rf .ai-rulez.bak-okf-* &&
+              ai-rulez generate --no-local --quiet && ai-rulez lock --content-only --quiet)
+          done
+          git add -A -- . ':(exclude)action-src'
+          git commit -q -m fixture
+      - name: Run the check sub-action
+        id: check
+        uses: ./action-src/check
+        with:
+          version: 5.7.0
+          expected-config-count: "2"
+      - name: Verify the outputs
+        env:
+          ROOTS: ${{ steps.check.outputs.roots }}
+          FILES: ${{ steps.check.outputs.files-examined }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$ROOTS" = 2
+          test "$FILES" -gt 0
+          test "$VERSION" = 5.7.0
+      - name: Break a generated file
+        run: printf 'hand edit\n' >>CLAUDE.md && git commit -q -am 'hand edit'
+      - name: Run the check sub-action against drift
+        id: drift
+        continue-on-error: true
+        uses: ./action-src/check
+        with:
+          version: 5.7.0
+      - name: Require the drift to fail the gate
+        env:
+          OUTCOME: ${{ steps.drift.outcome }}
+        run: test "$OUTCOME" = failure

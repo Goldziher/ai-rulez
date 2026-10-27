@@ -65,6 +65,62 @@ See [lock checks in CI](lockfile.md#ci-usage) for the distinction between lock d
 output drift. Command arguments, including `--config`, `--profile`, `--format` and judge-specific
 flags, belong on the following `run:` command. The action does not interpret or execute an argument string.
 
+## Governance gate: `check`
+
+`Goldziher/ai-rulez/check@v5` installs the CLI the same way as the root action (the same
+resolve, cache and checksum-verified download scripts) and runs the full gate, so a workflow does
+not have to assemble it from single commands:
+
+```yaml
+name: ai-rulez
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Goldziher/ai-rulez/check@v5
+        with:
+          version: 5.7.0
+          expected-config-count: "2" # the root and one module
+```
+
+For every configuration root, in order, it runs:
+
+1. `ai-rulez migrate okf --check` (skipped for a `source = "agents"` project, which has no
+   `.ai-rulez` content tree to convert);
+2. `ai-rulez validate --strict --no-local`;
+3. `ai-rulez lock --check`, when the root has an `ai-rulez.lock`;
+4. `ai-rulez generate --strict-config --no-local`, then `ai-rulez generate --check --strict-config --no-local`;
+5. `ai-rulez verify --plugin` with `plugin: true`, and `ai-rulez tokens --budget N --no-local` with
+   `token-budget: N`.
+
+Then `git diff --exit-code HEAD` must be clean and generation must have left no new untracked file.
+The gate fails when the checkout has no tracked files, so an empty or wrong checkout cannot pass. It
+stops at the first failing command and writes a job summary listing every command with its result,
+the number of roots checked and the number of tracked files examined.
+
+| Input | Default | Meaning |
+| --- | --- | --- |
+| `version` | `latest` | CLI version, as for the root action |
+| `config-directories` | discover | Newline-separated configuration directories (`.ai-rulez`, `.agents`, `.config/ai-rulez`, or the project root holding one), relative to the workspace. Empty discovers every **tracked** `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml` and `.agents/ai-rulez.toml` |
+| `expected-config-count` | none | Fail unless exactly this many roots are checked, so a renamed or deleted module fails instead of silently checking fewer roots |
+| `plugin` | `false` | Also run `verify --plugin` |
+| `strict` | `true` | `false` drops `--strict` from `validate` and `--strict-config` from `generate` |
+| `local` | `false` | `true` reads the machine-local overlay; `false` passes `--no-local` |
+| `token-budget` | none | Run `tokens --budget N`: fail when the always-loaded token count exceeds `N` |
+
+Booleans accept only `true` or `false`, counts only positive integers, and directories only
+relative paths without `..`. Outputs: `version`, `roots` (the number checked) and
+`files-examined`. Each command runs in its project root with configuration discovery, as a local
+run there would. `tokens --budget` is a single ceiling on the headline always-loaded count; a
+per-harness budget (`claude=N,codex=N`) and the MCP tool-schema cost are not measured.
+
 ## LLM configuration inputs
 
 All LLM inputs are optional and default to an empty string. A nonempty input sets its corresponding

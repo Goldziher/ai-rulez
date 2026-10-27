@@ -16,6 +16,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   user's files. Ids, marketplace sources (`github`, `git`, `url`, `directory`; no `http://` or `git://`) and npm
   packages are validated at load. See `docs/plugins.md`
   ([#500](https://github.com/Goldziher/ai-rulez/issues/500)).
+- **`Goldziher/ai-rulez/check@v5` runs the full governance gate in one step.** The sub-action installs the CLI with
+  the root action's resolve, cache and checksum-verified download scripts, then for every configuration root runs
+  `migrate okf --check`, `validate --strict --no-local`, `lock --check` (when a lock exists), `generate` and
+  `generate --check` with `--strict-config --no-local`, and optionally `verify --plugin` and `tokens --budget`.
+  Afterwards `git diff --exit-code HEAD` must be clean, no new untracked file may appear, and at least one tracked file
+  must be examined. Roots come from `config-directories` or from every tracked configuration;
+  `expected-config-count` fails a run that finds a different number. A job summary lists every command, the roots
+  checked and the files examined. Inputs: `version`, `config-directories`, `expected-config-count`, `plugin`,
+  `strict`, `local` and `token-budget` ([#505](https://github.com/Goldziher/ai-rulez/issues/505)).
 
 ### Changed
 
