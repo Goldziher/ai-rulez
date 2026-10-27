@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/pluginimport/plugintest"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
@@ -253,4 +254,38 @@ func TestLockOutdated_UnknownNameIsAnError(t *testing.T) {
 
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "not a remote include")
+}
+
+func TestUpdate_OutdatedReportsMarketplaceAndPluginKinds(t *testing.T) {
+	// Arrange: a marketplace and a plugin, each a tagged repository pinned by a version constraint
+	testutil.IsolateHome(t)
+	resetUpdateFlags(t)
+	resetLockViewFlags(t)
+	plug := plugintest.NewRepo(t, plugintest.ClaudePlugin("tools"))
+	plug.Tag("v1.0.0")
+	market := plugintest.NewRepo(t, plugintest.ClaudeMarketplace("acme"))
+	market.Tag("v1.0.0")
+	lockProject(t, "\n[[installed_marketplaces]]\nname = \"acme\"\nsource = \""+tomlEscape(market.URL())+"\"\nversion = \"^1\"\n"+
+		"\n[[installed_plugins]]\nname = \"tools\"\nsource = \""+tomlEscape(plug.URL())+"\"\nversion = \"^1\"\ninclude = [\"skills\"]\n")
+	require.Equal(t, 0, writeLockAt("", "", nil), "lock")
+	plug.Commit(map[string]string{"README.md": "# one point one\n"}, "release")
+	plug.Tag("v1.1.0")
+	market.Commit(map[string]string{"README.md": "# one point one\n"}, "release")
+	market.Tag("v1.1.0")
+	lockOutdated, lockFormat = true, formatJSON
+
+	// Act
+	var code int
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
+
+	// Assert
+	assert.Equal(t, 0, code)
+	validateAgainst(t, "../../schema/lock-outdated.schema.json", []byte(stdout))
+	var rep tagresolve.Report
+	require.NoError(t, json.Unmarshal([]byte(stdout), &rep), stdout)
+	kinds := map[string]string{}
+	for _, row := range rep.Sources {
+		kinds[row.Kind] = row.Name
+	}
+	assert.Equal(t, map[string]string{lockfile.KindMarketplace: "acme", lockfile.KindPlugin: "tools"}, kinds, stdout)
 }
