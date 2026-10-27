@@ -127,6 +127,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`validate` no longer reads the `.ai-rulez.bak-okf-<timestamp>/` backup that `migrate okf` leaves.** Its copies
   of the skills were reported as `AR701` and `AR703` duplicates of the real ones; any `.<name>.bak-*` directory is
   now skipped ([#501](https://github.com/Goldziher/ai-rulez/issues/501)).
+- **`AR964` counts skills and rules from includes and installed skills in the load budgets.** The Codex
+  skill-listing and `AGENTS.md` chain totals summed only content authored under the config directory, so a project
+  whose skills come from `[[includes]]` (remote, local or a `config.local.toml` overlay) or from installed skills got
+  a figure far below what `generate` writes and Codex lists, or no finding. The totals now cover every item the
+  preset emits, the message says how many skills come from includes, and an included skill over the Claude listing
+  cap is reported on `config.toml` ([#508](https://github.com/Goldziher/ai-rulez/issues/508)).
 
 ## [5.7.0] - 2026-10-25
 
