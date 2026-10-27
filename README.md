@@ -531,6 +531,12 @@ jobs:
 
 </details>
 
+`uses: Goldziher/ai-rulez/check@v5` installs the CLI the same way and runs the whole governance gate per
+configuration root: `migrate okf --check`, `validate --strict --no-local`, `lock --check`, `generate` then
+`generate --check`, optionally `verify --plugin` and `tokens --budget`, then a clean `git diff HEAD` with no new
+untracked files. `expected-config-count` fails a run that finds a different number of roots, and a job summary lists
+every command. See [the check sub-action](docs/github-actions.md#governance-gate-check).
+
 For model-backed reviews, configure `llm-model`, `llm-allow-network: 'true'` and spend limits,
 pass provider credentials through `env:` on the command step or job, and run `ai-rulez judge
 --allow-llm`. Installation itself makes no model requests. See the [action guide](docs/github-actions.md)

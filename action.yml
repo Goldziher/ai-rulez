@@ -75,28 +75,12 @@ runs:
       shell: bash
       env:
         INPUT_VERSION: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
         set -euo pipefail
-        tag="$INPUT_VERSION"
-        if [ -z "$tag" ] || [ "$tag" = "latest" ]; then
-          resolved="$(curl -fsSL -o /dev/null -w '%{url_effective}' \
-            https://github.com/Goldziher/ai-rulez/releases/latest 2>/dev/null || true)"
-          tag="${resolved##*/}"
-          case "$tag" in
-          v*) ;;
-          *)
-            echo "::error::could not resolve the latest ai-rulez release" >&2
-            exit 1
-            ;;
-          esac
-        else
-          case "$tag" in v*) ;; *) tag="v$tag" ;; esac
-        fi
-        if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
-          echo "::error::version must be X.Y.Z, vX.Y.Z, a release candidate, or latest" >&2
-          exit 1
-        fi
-        echo "tag=$tag" >>"$GITHUB_OUTPUT"
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/scripts/action/resolve-version.sh"
 
     - name: Cache the ai-rulez download
       uses: actions/cache@v6
@@ -118,21 +102,8 @@ runs:
         set -euo pipefail
         # This action lives at the repository root, so action_path is the checkout root itself.
         action_path="$ACTION_PATH"
-        cache_dir="$AI_RULEZ_CACHE_DIR"
-        if command -v cygpath >/dev/null 2>&1; then
-          action_path="$(cygpath -u "$ACTION_PATH")"
-          cache_dir="$(cygpath -u "$AI_RULEZ_CACHE_DIR")"
-        fi
-        export AI_RULEZ_CACHE_DIR="$cache_dir"
-        script="$(cd "$action_path/scripts/pre-commit" && pwd)/run-ai-rulez.sh"
-        binary_path="$(bash "$script")"
-        dir="$(dirname "$binary_path")"
-        native_dir="$dir"
-        if command -v cygpath >/dev/null 2>&1; then native_dir="$(cygpath -w "$dir")"; fi
-        echo "$native_dir" >>"$GITHUB_PATH"
-        echo "version=${AI_RULEZ_VERSION#v}" >>"$GITHUB_OUTPUT"
-        echo "path=$binary_path" >>"$GITHUB_OUTPUT"
-        echo "ai-rulez ${AI_RULEZ_VERSION} installed at $binary_path" >&2
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/scripts/action/install.sh"
 
     - name: Configure LLM environment for subsequent steps
       shell: bash

@@ -30,7 +30,7 @@ ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-r
 - **CRUD operations** – Manage configuration programmatically via CLI or MCP
 - **Lint without a config** – `ai-rulez validate --strict` checks `AGENTS.md`, `SKILL.md`, `.claude/`, `.agents/`, plugin manifests, hooks and MCP files in any repository; `--path`, `--glob` and `--outputs` widen the scope
 - **Judge** – `ai-rulez judge` reviews agent configuration for security, quality and governance with verified evidence and optional rubric skills; no project config is required. `--estimate` sends nothing; a real run needs `--allow-llm` or standing consent in your user config.
-- **GitHub Action** – `uses: Goldziher/ai-rulez@v5` installs a sha256-verified binary in CI and accepts optional LLM configuration inputs. The floating `v5` action ref advances after stable v5 publication; set `version` separately to pin the CLI. [Action guide](https://goldziher.github.io/ai-rulez/github-actions/).
+- **GitHub Action** – `uses: Goldziher/ai-rulez@v5` installs a sha256-verified binary in CI and accepts optional LLM configuration inputs. The floating `v5` action ref advances after stable v5 publication; set `version` separately to pin the CLI. `Goldziher/ai-rulez/check@v5` runs the full governance gate (validate, lock, generated-output drift, clean checkout). [Action guide](https://goldziher.github.io/ai-rulez/github-actions/).
 
 ---
 

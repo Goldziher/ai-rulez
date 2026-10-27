@@ -1,0 +1,102 @@
+name: Check ai-rulez governance
+description: Install ai-rulez and run the full governance gate - OKF layout, strict validation, lock, generated-output drift and a clean checkout.
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  version:
+    description: "ai-rulez version to install: X.Y.Z, vX.Y.Z, X.Y.Z-rc.N, or latest"
+    required: false
+    default: latest
+  config-directories:
+    description: "Newline-separated configuration directories (.ai-rulez, .agents, .config/ai-rulez, or the project root holding one), relative to the workspace. Empty discovers every tracked configuration."
+    required: false
+    default: ""
+  expected-config-count:
+    description: "Fail unless exactly this many configuration directories are checked. Empty skips the assertion."
+    required: false
+    default: ""
+  plugin:
+    description: "Also run ai-rulez verify --plugin in each root: true or false"
+    required: false
+    default: "false"
+  strict:
+    description: "Run validate --strict and generate --strict-config: true or false"
+    required: false
+    default: "true"
+  local:
+    description: "Read the machine-local overlay (config.local.*, local/); false passes --no-local: true or false"
+    required: false
+    default: "false"
+  token-budget:
+    description: "Run ai-rulez tokens --budget N in each root, failing when the always-loaded count exceeds N. Empty skips it."
+    required: false
+    default: ""
+
+outputs:
+  version:
+    description: "The installed ai-rulez version, without the leading v"
+    value: ${{ steps.setup.outputs.version }}
+  roots:
+    description: "Number of configuration directories checked"
+    value: ${{ steps.check.outputs.roots }}
+  files-examined:
+    description: "Number of tracked files the clean-checkout check examined"
+    value: ${{ steps.check.outputs.files-examined }}
+
+runs:
+  using: composite
+  steps:
+    # A sub-action cannot `uses:` its parent action, so it runs the same install scripts the root
+    # action.yml runs, from this action's own checkout one directory up.
+    - name: Resolve the requested version
+      id: resolve
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/../scripts/action/resolve-version.sh"
+
+    - name: Cache the ai-rulez download
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ runner.temp }}/ai-rulez-setup
+        key: ai-rulez-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.tag }}
+
+    - name: Install ai-rulez and add it to PATH
+      id: setup
+      shell: bash
+      env:
+        AI_RULEZ_VERSION: ${{ steps.resolve.outputs.tag }}
+        AI_RULEZ_RESOLVE_ONLY: "1"
+        AI_RULEZ_USE_PATH: "0"
+        AI_RULEZ_BINARY: ""
+        AI_RULEZ_CACHE_DIR: ${{ runner.temp }}/ai-rulez-setup
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/../scripts/action/install.sh"
+
+    - name: Run the governance gate
+      id: check
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_CONFIG_DIRECTORIES: ${{ inputs.config-directories }}
+        INPUT_EXPECTED_CONFIG_COUNT: ${{ inputs.expected-config-count }}
+        INPUT_PLUGIN: ${{ inputs.plugin }}
+        INPUT_STRICT: ${{ inputs.strict }}
+        INPUT_LOCAL: ${{ inputs.local }}
+        INPUT_TOKEN_BUDGET: ${{ inputs.token-budget }}
+      run: |
+        set -euo pipefail
+        action_path="$ACTION_PATH"
+        if command -v cygpath >/dev/null 2>&1; then action_path="$(cygpath -u "$action_path")"; fi
+        bash "$action_path/../scripts/action/check.sh"
