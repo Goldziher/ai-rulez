@@ -34,8 +34,6 @@ type resolvedScanner struct {
 	DataSent []string
 	// RequiresEnv names the variables the scanner needs (egress profiles).
 	RequiresEnv []string
-	// OfflineNotices are the profile's "lookup unreachable" results, dropped when egress is denied.
-	OfflineNotices []scanners.OfflineNotice
 	// Problems are profile-level configuration errors (AR9E0).
 	Problems []string
 	// timeoutCeiling is the longest timeout the policy allows (0: the default maximum).
@@ -239,9 +237,6 @@ func fillProfileDefaults(rs *resolvedScanner, p scanners.Profile) {
 	if rs.Version == "" {
 		rs.Version = p.Version
 	}
-	if len(rs.MessageProperties) == 0 {
-		rs.MessageProperties = append([]string(nil), p.MessageProperties...)
-	}
 }
 
 // fromProfile fills ex from its profile: command, format, inputs and egress
@@ -268,15 +263,7 @@ func fromProfile(ex config.LintExternal) resolvedScanner {
 	if len(p.SeverityMap) > 0 {
 		rs.SeverityMap = mergeSeverityMaps(p.SeverityMap, ex.SeverityMap)
 	}
-	if rs.Egress != nil && !*rs.Egress {
-		for _, flag := range p.RequiredFlags {
-			if !slices.Contains(rs.Command, flag) {
-				rs.Problems = append(rs.Problems, fmt.Sprintf("profile %q requires %s in its command: without it the scanner can send content off the machine", p.Name, flag))
-			}
-		}
-	}
 	rs.Layout, rs.EgressFlags, rs.DataSent, rs.RequiresEnv = p.Layout, p.EgressFlags, p.DataSent, p.RequiresEnv
-	rs.OfflineNotices = p.OfflineNotices
 	if rs.Egress != nil && *rs.Egress {
 		// An egress scanner needs its credential; names the profile lists reach it.
 		for _, name := range p.RequiresEnv {

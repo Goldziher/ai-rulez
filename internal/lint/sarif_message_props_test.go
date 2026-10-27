@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/lint/scanners"
 )
 
 const propsSARIF = `{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"t"}},"results":[{
@@ -107,17 +106,4 @@ func TestExternalProblemsRejectsBadMessageProperties(t *testing.T) {
 	problems := externalProblems(config.LintExternal{MessageProperties: []string{"bad path"}}, 0)
 	require.NotEmpty(t, problems)
 	assert.Contains(t, strings.Join(problems, "\n"), "message_properties")
-}
-
-func TestSkillspectorProfileAppendsEvidenceAndSnippet(t *testing.T) {
-	// Arrange
-	p, ok := scanners.Lookup("skillspector")
-	require.True(t, ok)
-
-	// Act
-	rs := fromProfile(config.LintExternal{Name: "skillspector", Profile: "skillspector"})
-
-	// Assert
-	assert.Equal(t, []string{"evidence", "snippet"}, p.MessageProperties)
-	assert.Equal(t, []string{"evidence", "snippet"}, rs.MessageProperties)
 }

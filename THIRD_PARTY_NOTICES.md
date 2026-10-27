@@ -47,9 +47,6 @@ after it, and describe the changes on the second line.
 // See THIRD_PARTY_NOTICES.md.
 ```
 
-`scripts/transcode-skillspector-tests.py` writes this header for the tables it generates; the output is a fragment to
-merge into a file that already carries the header once.
-
 ## Neo23x0 signature-base
 
 SkillSpector's YARA rules state that they are based on [Neo23x0/signature-base](https://github.com/Neo23x0/signature-base),

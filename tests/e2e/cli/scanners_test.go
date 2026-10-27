@@ -118,3 +118,29 @@ func TestScannersCLI_ScanBaselineLifecycle(t *testing.T) {
 	require.Equal(t, 0, ignored.ExitCode, ignored.Stdout+ignored.Stderr)
 	ignored.AssertStderrContains(t, "Ignoring --write-baseline, --reason")
 }
+
+func TestScannersCLI_RemovedProfileIsRefused(t *testing.T) {
+	t.Cleanup(testutil.CleanupTestBinary)
+	tests := []struct {
+		name    string
+		profile string
+	}{
+		{"the removed skillspector profile", "skillspector"},
+		{"a made-up profile", "nope"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := testutil.CreateTempDir(t)
+			putFile(t, filepath.Join(dir, ".ai-rulez"), "config.toml", "version = \"5.0\"\nname = \"s\"\npresets = [\"claude\"]\n\n"+
+				"[[lint.external]]\nname = \"x\"\nprofile = \""+tt.profile+"\"\n")
+
+			// Act
+			res := testutil.RunCLI(t, dir, "validate", "--external")
+
+			// Assert
+			require.NotEqual(t, 0, res.ExitCode, res.Stdout+res.Stderr)
+			res.AssertStderrContains(t, "Value "+tt.profile+" should be one of the allowed values: agnix, claude-plugin-validate, cisco-skill-scanner, snyk-agent-scan")
+		})
+	}
+}

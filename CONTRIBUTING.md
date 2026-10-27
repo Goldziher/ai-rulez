@@ -170,13 +170,6 @@ ai-rulez is MIT licensed. A rule, pattern or test derived from a project under a
    file that only takes the idea and shares no pattern or fixture needs no header. Start from negative fixtures, and do
    not carry over an upstream heuristic without checking it against a real corpus for false positives.
 
-5. **Transcode tests with the script.** `scripts/transcode-skillspector-tests.py` turns SkillSpector pattern tests into
-   candidate `ruleCase` rows (`--rule` selects rule ids, `--map SSID=ARNNN` maps them to ai-rulez codes). The output is
-   a fragment that starts with the header: merge it into the target file and keep a single copy of the header. `--tests`
-   must be the `tests` directory of a SkillSpector git checkout, or pass the full 40-character commit with `--upstream`;
-   the script exits with an error rather than stamp an unknown commit. Review every generated row. Its tests are in `scripts/test_transcode_skillspector_tests.py` and
-   run with `python3 -m unittest discover -s scripts -p 'test_transcode_skillspector_tests.py'`.
-
 Contributions that go the other way, from ai-rulez to an upstream project, follow that project's terms; SkillSpector
 requires a DCO sign-off (`git commit -s`). This does not apply to commits in this repository.
 
