@@ -238,7 +238,7 @@ func (p *Prepared) apply(ctx context.Context, env Env, opt Options, rep *Report)
 	if err != nil {
 		return false, err //nolint:wrapcheck // already contextual
 	}
-	if err := lockrun.PinContent(fresh, p.Current, next, &req, env.Version); err != nil {
+	if err := lockrun.PinContent(fresh, p.Current, next, &req, env.Version); err != nil { //nolint:contextcheck // the generator renders without a context (as in lockrun.Write)
 		return false, err //nolint:wrapcheck // already contextual
 	}
 	for _, key := range sortedKeys(rep.Moves) {

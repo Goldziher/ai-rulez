@@ -9,6 +9,15 @@ import (
 	"github.com/samber/oops"
 )
 
+// Claude Code marketplace source types, as [[enabled_plugins]] marketplace.type
+// and [marketplace] sources name them.
+const (
+	MarketplaceTypeGitHub    = "github"
+	MarketplaceTypeGit       = "git"
+	MarketplaceTypeURL       = "url"
+	MarketplaceTypeDirectory = "directory"
+)
+
 // EnabledPlugin is one [[enabled_plugins]] entry: a plugin from a marketplace
 // the project does not author, switched on for every harness that can express
 // it. Claude Code gets enabledPlugins (and the marketplace registration), Codex
@@ -72,13 +81,13 @@ func (c *Config) RendersEnabledPlugins() bool {
 func (m *EnabledPluginMarketplace) ClaudeSource() *MarketplaceSource {
 	src := &MarketplaceSource{Source: m.Type}
 	switch m.Type {
-	case "github":
+	case MarketplaceTypeGitHub:
 		src.Repo = m.Source
 		src.Ref = m.Ref
-	case "git":
+	case MarketplaceTypeGit:
 		src.URL = m.Source
 		src.Ref = m.Ref
-	case "url":
+	case MarketplaceTypeURL:
 		src.URL = m.Source
 	default:
 		src.Path = m.Source
@@ -138,7 +147,7 @@ func (c *Config) validateEnabledPluginScope(field string, p *EnabledPlugin) erro
 	if m == nil {
 		return nil
 	}
-	if c.UserScope && m.Type == "directory" {
+	if c.UserScope && m.Type == MarketplaceTypeDirectory {
 		return oops.With("field", field+".marketplace.type").With("value", m.Source).
 			Hint("Use a github, git or url marketplace in the user config, or declare the plugin in the project config").
 			Errorf("%s cannot use a directory marketplace in the user config: %q is relative to a project", field, m.Source)
@@ -221,7 +230,7 @@ func validateEnabledPluginMarketplace(field string, p *EnabledPlugin, markets ma
 	if err := validateEnabledMarketplaceSource(where, m); err != nil {
 		return err
 	}
-	if m.Ref != "" && (m.Type == "url" || m.Type == "directory" || !gitRefName.MatchString(m.Ref) || strings.Contains(m.Ref, "..")) {
+	if m.Ref != "" && (m.Type == MarketplaceTypeURL || m.Type == MarketplaceTypeDirectory || !gitRefName.MatchString(m.Ref) || strings.Contains(m.Ref, "..")) {
 		return oops.With("field", where+".ref").With("value", m.Ref).
 			Hint("ref is a branch or tag of a github or git source").Errorf("marketplace %q has an invalid ref %q", m.Name, m.Ref)
 	}
@@ -242,15 +251,15 @@ func validateEnabledMarketplaceSource(where string, m *EnabledPluginMarketplace)
 		return oops.With("field", where+".source").Errorf("marketplace %q needs a source", m.Name)
 	}
 	switch m.Type {
-	case "github":
+	case MarketplaceTypeGitHub:
 		if !githubRepoSource.MatchString(m.Source) {
 			return bad("Use owner/repo")
 		}
-	case "git":
+	case MarketplaceTypeGit:
 		if !strings.HasPrefix(m.Source, "https://") && !strings.HasPrefix(m.Source, "ssh://") && !scpGitSource.MatchString(m.Source) {
 			return bad("Use an https:// or ssh:// URL, or git@host:path; http:// and git:// are rejected")
 		}
-	case "url":
+	case MarketplaceTypeURL:
 		if !strings.HasPrefix(m.Source, "https://") {
 			return bad("Use an https:// URL; http:// and git:// are rejected")
 		}

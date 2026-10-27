@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"sync"
 
 	"github.com/samber/oops"
@@ -343,39 +342,6 @@ func printLockWritten(next *lockfile.File) {
 			fmt.Printf("pinned outputs of role %s %s\n", r.Role, r.Digest)
 		}
 	}
-}
-
-// prepareLockRun sets the include policy of a run that refreshes the lock
-// through the command line's loads (`update`): refresh the remotes, or stay
-// offline, and returns the function that restores it.
-func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (restore func()) {
-	prev := cliLockPolicy
-	cliLockPolicy = lockrun.RunPolicy(cliLockPolicy, remoteRefresh, kind, wanted)
-	return func() { cliLockPolicy = prev }
-}
-
-// nextLock builds the remote, source and served entries of the new lock (see
-// lockrun.Next) with the serve-view flags.
-func nextLock(ctx context.Context, cfg *config.Config, current *lockfile.File, kind string, wanted map[string]bool, remoteRefresh bool) (*lockfile.File, error) {
-	req, env := lockRequest(kind, wantedNames(wanted)), lockEnv("")
-	next, dyn, err := lockrun.Next(ctx, cfg, current, &req, &env, remoteRefresh)
-	lockUnpinned = append(lockUnpinned, dyn.Unpinned...)
-	return next, err //nolint:wrapcheck // already contextual
-}
-
-// pinContent adds the content pins to next (see lockrun.PinContent).
-func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) error {
-	req := lockRequest(kind, wantedNames(wanted))
-	return lockrun.PinContent(cfg, current, next, &req, Version) //nolint:wrapcheck // already contextual
-}
-
-func wantedNames(wanted map[string]bool) []string {
-	names := make([]string, 0, len(wanted))
-	for n := range wanted {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	return names
 }
 
 // lockProfileFor picks the profile a check renders: --profile, else the one the

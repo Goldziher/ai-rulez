@@ -12,14 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
-
-// carryApprovals keeps the approvals of the lock being replaced (see
-// lockrun.CarryApprovals).
-func carryApprovals(current, next *lockfile.File, full bool) {
-	lockrun.CarryApprovals(logger.Std(), current, next, full)
-}
 
 // approvalFindingsFor returns the AR710 to AR715 findings for strict validation,
 // and AR716 when --approvals-base names a revision.

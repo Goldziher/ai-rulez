@@ -403,7 +403,7 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 		opts = append(opts, lint.WithGeneratedCopies(func() []lint.GeneratedCopy { return generatedCopies(ctx, cfg) }))
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
-		opts = append(opts, okfLintOptions(cfg)...)
+		opts = append(opts, okfLintOptions(ctx, cfg)...)
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerLLMsTxt) {
 		if files := llmsTxtLintFiles(cfg); len(files) > 0 {
@@ -444,7 +444,7 @@ func generatedCopies(ctx context.Context, cfg *config.Config) []lint.GeneratedCo
 // okfLintOptions feeds the OKF findings into the lint run, next to the other
 // analyzers: the configured [okf] bundle, and the configuration directory itself
 // when it is a bundle (a root index.md). A directory that is both is reported once.
-func okfLintOptions(cfg *config.Config) []lint.Option {
+func okfLintOptions(ctx context.Context, cfg *config.Config) []lint.Option {
 	var opts []lint.Option
 	projectDir := ""
 	if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
@@ -457,7 +457,7 @@ func okfLintOptions(cfg *config.Config) []lint.Option {
 		return opts
 	}
 	if _, findings, ok := okfTreeFindings(cfg); ok {
-		findings = append(findings, staleOKFIndexFindings(cfg, findings)...)
+		findings = append(findings, staleOKFIndexFindings(ctx, cfg, findings)...)
 		opts = append(opts, lint.WithOKF(cfg.ConfigDir, findings))
 	}
 	return opts
