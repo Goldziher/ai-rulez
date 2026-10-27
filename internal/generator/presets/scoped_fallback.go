@@ -3,6 +3,7 @@ package presets
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
@@ -294,5 +295,9 @@ func truncateDescription(description string, limit int) string {
 	if len(description) <= limit {
 		return description
 	}
-	return strings.TrimSpace(description[:limit-3]) + "..."
+	cut := limit - 3
+	for cut > 0 && !utf8.RuneStart(description[cut]) {
+		cut--
+	}
+	return strings.TrimSpace(description[:cut]) + "..."
 }
