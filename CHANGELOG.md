@@ -42,6 +42,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   arguments. With `[mcp] read_only = true` only `lock_outdated`, `update_plan` and `lock_diff` are listed. The first
   three read the remotes' tags over the network. See [Pin Tools](https://goldziher.github.io/ai-rulez/mcp-server/#pin-tools-lock_outdated-update_plan-update)
   ([#502](https://github.com/Goldziher/ai-rulez/issues/502)).
+- **`[rules] scoped_fallback_group` folds the `scoped_fallback = "skill"` skills into fewer ones.** The fallback wrote
+  one `rule-<id>` skill per glob-scoped item, which pushed the Codex skill listing to 15,000-18,000 characters against
+  a budget of about 8,000 in repositories with shared modules. `include` writes one `scoped-<include>` skill per include
+  or builtin pack, `directory` one `scoped-<dir>` skill per directory the globs point into; a grouped skill holds each
+  item under a heading with its globs, its `paths` are their union and its description stays under 160 characters. The
+  default, `none`, leaves output unchanged
+  ([#503](https://github.com/Goldziher/ai-rulez/issues/503)).
+- **`fallback: false` in a rule or context frontmatter keeps a glob-scoped item out of the folderless-preset fallback.**
+  It is neither inlined into the shared `AGENTS.md` nor written as a skill, so only presets with path scoping render it.
+  `validate` rejects a value that is not a boolean (`AR304`)
+  ([#503](https://github.com/Goldziher/ai-rulez/issues/503)).
 
 ### Changed
 
@@ -52,6 +63,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   Release candidates still never move it, and the no-rollback checks are unchanged. `uses: Goldziher/ai-rulez@v5`
   with `version: latest` keeps a workflow on the newest 5.x action and CLI with no per-release edits
   ([#504](https://github.com/Goldziher/ai-rulez/issues/504)).
+- **`AR964` counts the `scoped_fallback` skills in the Codex skill listing and warns past the limit.** The listing
+  total included only authored skills and was reported as info; it now adds the generated `rule-*`, `context-*` and
+  `scoped-*` skills, says how many of the listed skills they are, warns when the total exceeds the limit (so
+  `validate --strict` fails) and reports info from 90% of it
+  ([#503](https://github.com/Goldziher/ai-rulez/issues/503)).
 
 ### Removed
 

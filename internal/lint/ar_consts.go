@@ -11,6 +11,7 @@ const (
 	keyAgents          = "agents"
 	keyAllowedTools    = "allowed-tools"
 	keyAlwaysApply     = "alwaysApply"
+	keyFallback        = "fallback"
 	keyArgumentHint    = "argument-hint"
 	keyBackground      = "background"
 	keyCategory        = "category"

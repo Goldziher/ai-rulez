@@ -49,8 +49,8 @@ var boolKeys = map[string][]string{
 	kindSkill:   {keyDisableModel, keyUserInvocable, keyBackground},
 	kindCommand: {keyDisableModel, keyUserInvocable, keyBackground},
 	kindAgent:   {keyBackground, "omitClaudeMd"},
-	kindRule:    {keyAlwaysApply},
-	kindContext: {keyAlwaysApply},
+	kindRule:    {keyAlwaysApply, keyFallback},
+	kindContext: {keyAlwaysApply, keyFallback},
 }
 
 // vendorModelRe accepts the model IDs other harnesses use, so a subagent written

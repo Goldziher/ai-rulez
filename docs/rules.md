@@ -28,6 +28,7 @@ activation: glob
 | `paths`       | list or string   | Files the rule applies to. `globs` is a synonym.                              |
 | `activation`  | string           | `always`, `glob`, `auto` or `manual`. Optional; derived when absent.          |
 | `description` | string           | What the rule is for. Required for `auto`; used by the model to decide.       |
+| `fallback`    | boolean          | `false` keeps a glob-scoped item out of the folderless-preset fallback (see [Glob-scoped rules and AGENTS.md](#glob-scoped-rules-and-agentsmd)). Default `true`. |
 
 `paths` and `globs` accept a YAML list or a comma-separated string (`"a/**, b/**"`). Commas inside braces (`*.{ts,tsx}`) or brackets do not split, and a backslash-escaped comma is kept. Entries are trimmed and deduplicated.
 
@@ -166,6 +167,33 @@ Presets with a rules folder keep their path-scoped files as before; Claude reads
 reads `AGENTS.md` also reads `.agents/skills` (for example not with `zcode`, which reads only `AGENTS.md`), and not in
 a [scope](monorepo.md#scoped-rule-files) run. An authored skill or command whose id is already `rule-<id>` keeps it,
 and the item is left out with a warning.
+
+#### Keeping the skill listing short
+
+Codex budgets the listing of all skill names and descriptions (about 8,000 characters when the context window is
+unknown), and a repository with many scoped rules can write dozens of `rule-<id>` skills. Two controls cut the count:
+
+```toml
+[rules]
+scoped_fallback = "skill"
+scoped_fallback_group = "directory"   # none (default) | include | directory
+```
+
+- `include` writes one `scoped-<include>` skill per include (or builtin pack, `scoped-builtin-<name>`) that
+  contributes scoped items. The project's own items keep one skill each.
+- `directory` writes one `scoped-<dir>` skill per directory the items' globs point into: the longest directory every
+  glob of an item starts below (`pkg/api/**/*.go` is `pkg/api`, `**/*.go` is the repository root, `scoped-root`).
+- A grouped skill holds each item under a `##` heading with its `_Applies to:_` globs, its `paths` are the union of
+  their globs, and its description is a short list of the item names (160 characters at most). A group with one item
+  keeps its own `rule-<id>` skill. Because `paths` is a union, any matching file loads the whole group; group by
+  `directory` when the items share a directory, and leave `none` when each rule should load alone.
+
+`fallback: false` in the frontmatter of a rule or context item keeps it out of the fallback altogether: it is neither
+inlined into the shared `AGENTS.md` nor written as a skill, so only presets with path scoping (`.claude/rules`,
+`.cursor/rules`, ...) render it. `validate` reports a value that is not a YAML boolean (`AR304`).
+
+`validate` (`AR964`) counts the fallback skills in the Codex skill listing, names how many of the skills they are, and
+warns when the listing exceeds the limit (`[lint.load_budgets] codex-skill-listing`), so `validate --strict` catches it.
 
 ### Antigravity and Gemini
 

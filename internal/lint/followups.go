@@ -49,7 +49,7 @@ var (
 	}
 	// ruleKeys are the keys rules and context files understand, including the
 	// Cursor and Windsurf spellings ai-rulez maps.
-	ruleKeys = []string{keyGlobs, keyPaths, "glob", "alwaysApply", "trigger", "activation", keyDescription, "name"}
+	ruleKeys = []string{keyGlobs, keyPaths, "glob", "alwaysApply", keyFallback, "trigger", "activation", keyDescription, "name"}
 	// checkKeys are the frontmatter keys of a code-review check (docs/checks.md).
 	checkKeys = []string{keyDescription, "severity", "tools", keyTargets}
 	// ownKeys are the ai-rulez keys valid on every kind.
