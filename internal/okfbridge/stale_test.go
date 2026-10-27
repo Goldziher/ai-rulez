@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func TestStaleIndexesFollowFrontmatterEdits(t *testing.T) {
@@ -65,6 +67,52 @@ func TestStaleIndexesFollowFrontmatterEdits(t *testing.T) {
 				t.Fatalf("after a refresh: %v, %v", after, err)
 			}
 		})
+	}
+}
+
+// A caller that has loaded the content passes its tree: the index check lists
+// the same files as a scan of the directory, and an item merged in from an
+// include (a path outside the directory) is not listed.
+func TestIndexesFromLoadedTreeMatchTheScan(t *testing.T) {
+	// Arrange
+	ctx := context.Background()
+	dir := writeTree(t, map[string]string{"skills/demo/SKILL.md": "---\nname: demo\ndescription: Old.\n---\n\nBody.\n"})
+	if _, err := MigrateDir(ctx, dir, MigrateOptions{Write: true}); err != nil {
+		t.Fatal(err)
+	}
+	putStaleFile(t, dir, "skills/demo/SKILL.md", "---\nname: demo\ndescription: New.\n---\n\nBody.\n")
+	putStaleFile(t, dir, "rules/extra.md", "# Extra\n\nText.\n")
+	tree, err := config.ScanContentTreeContext(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree.Rules = append(tree.Rules, config.ContentFile{
+		Name: "shared", Path: filepath.Join(t.TempDir(), "rules", "shared.md"), Include: "shared", Content: "# Shared\n",
+	})
+
+	// Act
+	scanned, err := StaleIndexes(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := StaleIndexesFrom(ctx, dir, tree)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Assert
+	if len(scanned) == 0 || strings.Join(loaded, ",") != strings.Join(scanned, ",") {
+		t.Fatalf("stale from the loaded tree = %v, from the scan = %v", loaded, scanned)
+	}
+	if err := RefreshIndexesFrom(ctx, dir, tree); err != nil {
+		t.Fatal(err)
+	}
+	after, err := StaleIndexes(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after) != 0 {
+		t.Fatalf("indexes still stale after a refresh from the loaded tree: %v", after)
 	}
 }
 

@@ -27,7 +27,7 @@ func refreshOKFIndexes(ctx context.Context, cfg *config.Config) error {
 	if !keepsOKFIndexes(cfg) {
 		return nil
 	}
-	if err := okfbridge.RefreshIndexes(ctx, cfg.ConfigDir); err != nil {
+	if err := okfbridge.RefreshIndexesFrom(ctx, cfg.ConfigDir, cfg.Content); err != nil {
 		return oops.Hint("Run 'ai-rulez migrate okf' to rebuild the index.md files.").Wrapf(err, "refresh the OKF index.md files")
 	}
 	return nil
@@ -40,7 +40,7 @@ func staleOKFIndexes(ctx context.Context, cfg *config.Config) ([]string, error) 
 	if !keepsOKFIndexes(cfg) {
 		return nil, nil
 	}
-	stale, err := okfbridge.StaleIndexes(ctx, cfg.ConfigDir)
+	stale, err := okfbridge.StaleIndexesFrom(ctx, cfg.ConfigDir, cfg.Content)
 	if err != nil {
 		return nil, oops.Wrapf(err, "check the OKF index.md files")
 	}
