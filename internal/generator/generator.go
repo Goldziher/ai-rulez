@@ -131,6 +131,9 @@ type Generator struct {
 
 	gitignoreSink   *GitignoreSink
 	gitignorePrefix string
+	// excludeLocks, when set, serializes .git/info/exclude rewrites with the
+	// other generators of a recursive run.
+	excludeLocks *ExcludeLocks
 }
 
 type generatedManifest struct {

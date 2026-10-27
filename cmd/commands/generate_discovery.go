@@ -395,6 +395,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
+	gen.SetExcludeLocks(sink.ExcludeLocks())
 	if !plugin {
 		attachRecursiveGitignoreSink(ctx, gen, cfg, sink)
 	}
