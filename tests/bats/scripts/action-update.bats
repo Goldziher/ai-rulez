@@ -71,6 +71,18 @@ outdated() {
 EOF
 }
 
+# A source that was never locked has no locked tag; `update` still pins it.
+outdated_not_locked() {
+  cat >"$STUB_OUTDATED" <<EOF
+{"schema_version": 1,
+ "sources": [
+  {"kind": "skill", "name": "fresh", "source": "https://github.com/acme/skills", "constraint": "^2.0",
+   "allowed": {"tag": "v2.1.0"}, "status": "not-locked"}
+ ],
+ "summary": {"total": 1, "updatable": 0, "major_available": 0, "held_back": 0, "tag_moved": 0, "errors": 0}}
+EOF
+}
+
 run_update() {
   cd "$WORK" || return 1
   run bash "$SCRIPT"
@@ -123,12 +135,28 @@ UPDATE_STEPS=(
     'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>|github-actions[bot]' ]
   [ "$(git -C "$REMOTE" log --format=%B -1 "$commit")" = "$(printf '%s\n\n%s\n\n%s' \
     'chore(ai-rulez): update pinned sources' 'ai-rulez update moved 1 source(s):' \
-    '- include shared: v1.0.0 -> v1.2.0')" ]
-  grep -qxF '| include | shared | https://github.com/acme/rules | v1.0.0 | v1.2.0 |' "$BATS_TEST_TMPDIR/body.md"
+    '- include shared (updatable): v1.0.0 -> v1.2.0')" ]
+  grep -qxF '| include | shared | https://github.com/acme/rules | updatable | v1.0.0 | v1.2.0 |' "$BATS_TEST_TMPDIR/body.md"
   refute grep -q current "$BATS_TEST_TMPDIR/body.md"
-  grep -qxF '| include | shared | https://github.com/acme/rules | v1.0.0 | v1.2.0 |' "$GITHUB_STEP_SUMMARY"
+  grep -qxF '| include | shared | https://github.com/acme/rules | updatable | v1.0.0 | v1.2.0 |' "$GITHUB_STEP_SUMMARY"
   xberg_assert_github_output "$(printf 'updated=true\ncommit=%s\npull-request-url=%s' \
     "$commit" https://github.com/owner/repo/pull/7)"
+}
+
+@test "a source that was never locked is updated and listed" {
+  outdated_not_locked
+
+  run_update
+
+  xberg_assert_status 0
+  xberg_assert_trace "${UPDATE_STEPS[@]}" \
+    "$PR_LIST token=" \
+    "$PR_CREATE --body-file BODY token="
+  commit="$(git -C "$REMOTE" rev-parse refs/heads/ai-rulez/update)"
+  [ "$(git -C "$REMOTE" log --format=%B -1 "$commit")" = "$(printf '%s\n\n%s\n\n%s' \
+    'chore(ai-rulez): update pinned sources' 'ai-rulez update moved 1 source(s):' \
+    '- skill fresh (not-locked): - -> v2.1.0')" ]
+  grep -qxF '| skill | fresh | https://github.com/acme/skills | not-locked | - | v2.1.0 |' "$BATS_TEST_TMPDIR/body.md"
 }
 
 @test "a rerun replaces the update branch and refreshes the open pull request" {

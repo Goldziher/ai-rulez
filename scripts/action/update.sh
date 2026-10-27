@@ -69,7 +69,9 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 ai-rulez lock --outdated --format json ${filters[@]+"${filters[@]}"} >"$work/outdated.json"
-updatable="$(jq '[.sources[] | select(.status == "updatable")] | length' "$work/outdated.json")"
+# The statuses `ai-rulez update` moves (pinupdate.Plan): an allowed update, a source never locked, a locked tag gone.
+movable='def movable: select(.status == "updatable" or .status == "not-locked" or .status == "tag-missing");'
+updatable="$(jq "$movable [.sources[] | movable] | length" "$work/outdated.json")"
 if [[ "$updatable" -eq 0 ]]; then
   echo "::notice::No ai-rulez source has an update its version constraint allows; nothing to do."
   printf '## ai-rulez update\n\nNo source has an allowed update.\n' >>"$summary_file"
@@ -78,15 +80,15 @@ if [[ "$updatable" -eq 0 ]]; then
 fi
 
 # The table for the PR body and the job summary, and a plain list for the commit message.
-jq -r '
+jq -r "$movable"'
   def cell: tostring | gsub("[|]"; "\\|") | gsub("[\r\n]"; " ");
-  "| Kind | Name | Source | Locked | New |",
-  "| --- | --- | --- | --- | --- |",
-  (.sources[] | select(.status == "updatable")
-    | "| \(.kind | cell) | \(.name | cell) | \(.source | cell) | \(.locked.tag // "-" | cell) | \(.allowed.tag // "-" | cell) |")
+  "| Kind | Name | Source | Status | Locked | New |",
+  "| --- | --- | --- | --- | --- | --- |",
+  (.sources[] | movable
+    | "| \(.kind | cell) | \(.name | cell) | \(.source | cell) | \(.status | cell) | \(.locked.tag // "-" | cell) | \(.allowed.tag // "-" | cell) |")
 ' "$work/outdated.json" >"$work/table.md"
-jq -r '.sources[] | select(.status == "updatable")
-  | "- \(.kind) \(.name): \(.locked.tag // "-") -> \(.allowed.tag // "-")"' "$work/outdated.json" >"$work/list.txt"
+jq -r "$movable"'.sources[] | movable
+  | "- \(.kind) \(.name) (\(.status)): \(.locked.tag // "-") -> \(.allowed.tag // "-")"' "$work/outdated.json" >"$work/list.txt"
 
 ai-rulez update ${filters[@]+"${filters[@]}"}
 ai-rulez generate --no-local
