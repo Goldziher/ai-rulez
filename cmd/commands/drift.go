@@ -284,6 +284,11 @@ func checkDriftRoot(ctx context.Context, path string, gate func(*config.Config) 
 		return r
 	}
 	r.configDir = cfg.ConfigDir
+	if cfg.IsPluginAuthoringRoot() {
+		// generate --check never covers bundles; verify --plugin does.
+		logger.Info("Skipping a plugin-authoring root: check its bundle with `ai-rulez verify --plugin`", "config", path)
+		return r
+	}
 	gateDrift, gateFailed, gateErr := evalGate(gate, cfg)
 	if gateErr != nil {
 		r.errs = append(r.errs, gateErr)

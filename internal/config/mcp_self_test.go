@@ -223,3 +223,28 @@ self_server_version = "4.19.0"
 	require.NoError(t, err)
 	assert.Contains(t, string(out), "self_server = true")
 }
+
+func TestHasSelfServer_PluginAuthoringRoot(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want bool
+	}{
+		{"project root", &Config{Presets: []Preset{{BuiltIn: "claude"}}}, true},
+		{"project root that also authors a plugin", &Config{Presets: []Preset{{BuiltIn: "claude"}}, Plugin: &PluginAuthoring{}}, true},
+		{"plugin-only root", &Config{Plugin: &PluginAuthoring{}}, false},
+		{"plugin-only root, self_server forced on", &Config{Plugin: &PluginAuthoring{}, MCP: &MCPConfig{SelfServer: boolPtr(true)}}, false},
+		{"plugin definitions only", &Config{PluginsAuthoring: []MarketplacePlugin{{}}}, false},
+		{"lint-only root", &Config{}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := tt.cfg.HasSelfServer()
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, !tt.want && tt.cfg.HasPluginAuthoring(), tt.cfg.IsPluginAuthoringRoot())
+		})
+	}
+}

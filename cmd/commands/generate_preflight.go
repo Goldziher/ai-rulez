@@ -39,10 +39,16 @@ func envTrue(name string) bool {
 // (not --dry-run) also records the commands it announced and restores skill
 // overrides a role released.
 func generatePreflight(cfg *config.Config, gen *generator.Generator) error {
+	return generatePreflightFor(cfg, gen, pluginMode)
+}
+
+// generatePreflightFor is generatePreflight for a root generated in plugin mode
+// (plugin) or normal mode; a recursive run decides this per root.
+func generatePreflightFor(cfg *config.Config, gen *generator.Generator, plugin bool) error {
 	if err := planPreflight(cfg); err != nil {
 		return err
 	}
-	if pluginMode {
+	if plugin {
 		return nil // bundles carry the [plugin] hooks, not the project's
 	}
 	warnNewCommands(cfg, os.Stderr, !dryRun)

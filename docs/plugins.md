@@ -493,6 +493,14 @@ parallel. Standalone `[plugin]` producers are still processed individually.
 Consumer-only `[[plugins]]` and `[[marketplaces]]` declarations are skipped.
 `--if-configured` does not suppress generation or verification errors.
 
+A plugin-authoring root is one that authors a plugin or marketplace (a `[plugin]` block, `[[plugins_authoring]]`,
+`[[marketplaces_authoring]]` or a marketplace with members, inline or from a `config.<name>.toml` layer) and configures
+no preset. It exists to build a bundle, so a plain `generate --recursive` builds it in plugin mode, the same output as
+`generate --plugin` in that root, instead of writing harness files and `.gitignore` entries into the shipped tree.
+`generate --check --recursive` skips such a root with an info line; check its bundle with `verify --plugin`. The
+`ai-rulez` MCP server that generation adds by default is never added to a plugin-authoring root, whatever the mode. A
+root that keeps a preset generates normally, and builds its bundle with `generate --plugin`.
+
 See [Poly Hooks](poly-hooks.md) to add non-mutating plugin verification to a
 repository's pre-commit stage.
 

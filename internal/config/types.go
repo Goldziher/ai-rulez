@@ -318,6 +318,15 @@ func (c *Config) HasPluginAuthoring() bool {
 	return c.Plugin != nil || c.HasPluginSet()
 }
 
+// IsPluginAuthoringRoot reports whether the root exists to build plugin
+// bundles: it authors a plugin or marketplace (HasPluginAuthoring, the same
+// test `generate --plugin` uses to decide it has something to build) and
+// configures no preset. A root that keeps a preset also generates harness
+// files for its own project, so a normal generate stays correct there.
+func (c *Config) IsPluginAuthoringRoot() bool {
+	return c != nil && len(c.Presets) == 0 && c.HasPluginAuthoring()
+}
+
 // LintOnly reports whether the configuration declares no preset and authors no
 // plugin: ai-rulez is used only to validate, scan and run [[lint.external]], and
 // generate has nothing to render.
@@ -438,9 +447,10 @@ type MCPConfig struct {
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.
 // It is on by default: only an explicit self_server = false (or --no-self-mcp)
-// turns it off.
+// turns it off. A plugin-authoring root (IsPluginAuthoringRoot) never gets it:
+// its .mcp.json belongs to the shipped bundle, which declares its own servers.
 func (c *Config) HasSelfServer() bool {
-	if c == nil {
+	if c == nil || c.IsPluginAuthoringRoot() {
 		return false
 	}
 	if c.MCP == nil || c.MCP.SelfServer == nil {
