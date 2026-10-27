@@ -227,7 +227,9 @@ func (lo loadOptions) fileView(ctx context.Context, absPath string) (workspace.V
 
 // bootstrapBase guesses the project directory of a config path before any
 // workspace exists to read through: a config file or a directory holding a
-// config.toml belongs to the directory that contains the config directory.
+// config.toml belongs to the directory that contains the config directory, and
+// the .agents folder (or its .ai-rulez state directory) belongs to the directory
+// that contains .agents.
 func bootstrapBase(absPath string) string {
 	info, err := os.Stat(absPath)
 	if err != nil {
@@ -238,6 +240,9 @@ func bootstrapBase(absPath string) string {
 			return filepath.Dir(absPath)
 		}
 		return ProjectBaseDir(filepath.Dir(absPath))
+	}
+	if base, ok := agentsLayoutBase(absPath); ok {
+		return base
 	}
 	if st, err := os.Stat(filepath.Join(absPath, configTOMLFilename)); err == nil && !st.IsDir() {
 		return ProjectBaseDir(absPath)

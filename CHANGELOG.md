@@ -75,6 +75,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`--config .agents` loads a `source = "agents"` project.** Naming the `.agents` folder (or `.agents/.ai-rulez`)
+  failed with "path is outside the workspace" because the load workspace was rooted at `.agents` while the project
+  directory is its parent; it is now rooted at the project, as `--config .agents/ai-rulez.toml` and `--config
+  .ai-rulez` already were. The workspace still ends at the project, so a committed config cannot point outside it.
+
 - **`generate --recursive` builds a plugin-authoring root as a plugin bundle, and the default self MCP server is never
   added to one.** A nested root such as `plugin/.ai-rulez/` that authors a plugin or marketplace and configures no
   preset got a normal generate, which wrote `npx -y ai-rulez@latest mcp` into the shipped `.mcp.json` and

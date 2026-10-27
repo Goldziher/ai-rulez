@@ -10,6 +10,8 @@ import (
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 const agentsTestConfig = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
@@ -171,6 +173,10 @@ func TestLoadAgentsLayoutPlacesStateBesideTheConfig(t *testing.T) {
 			assert.True(t, cfg.AgentsLayout)
 			assert.True(t, cfg.UsesAgentsSource())
 			assert.Equal(t, evalDir(t, root), evalDir(t, cfg.BaseDir))
+			if cfg.Workspace != nil {
+				_, relErr := workspace.Rel(cfg.Workspace, cfg.BaseDir)
+				assert.NoError(t, relErr, "the workspace must contain the project directory")
+			}
 			assert.Equal(t, filepath.Join(evalDir(t, root), ".agents", ".ai-rulez"), filepath.Join(evalDir(t, filepath.Dir(cfg.ConfigDir)), filepath.Base(cfg.ConfigDir)))
 			assert.Equal(t, ".agents/.ai-rulez", cfg.ConfigDirName)
 			assert.Equal(t, AgentsConfigFilename, cfg.ConfigFile)
