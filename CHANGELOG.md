@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.8.0] - 2026-10-27
+
 ### Added
 
 - **`[[enabled_plugins]]` enables a plugin from another marketplace for Claude Code, Codex and OpenCode from one
@@ -58,6 +60,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- **Dependencies are upgraded and the GitHub Actions are pinned to major tags.** Go modules include oras-go
+  2.7.0, liter-llm 2.4.0 and tiktoken-go/tokenizer 0.10.0; the docs lockfile, pnpm 12.15.0 and golangci-lint
+  v2.15.0 are current. Workflow and action references use `@vN` (`actions/checkout@v7`), and setup-uv keeps a full
+  tag because it publishes no major tag.
 - **The floating `v5` action tag is now an annotated tag pushed with `--force-with-lease`.** After a stable
   release publishes, the release workflow derives the tag from the release's major version (`v5.8.0` moves `v5`),
   writes an annotated tag and pushes it with `--force-with-lease=refs/tags/v5:<previous>`, so a tag moved by anyone
