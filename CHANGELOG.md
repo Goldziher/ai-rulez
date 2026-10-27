@@ -129,6 +129,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   its own managed block holding the roots inside it, a nested directory with its own `.git` gets its own block, and a
   repository whose roots all set `gitignore = false` is left alone. `generate --check --recursive` judges each block.
   Fixes #497.
+- **Roots of one repository no longer drop each other's `.git/info/exclude` block in `generate --recursive`.** The
+  roots rewrote the shared exclude file concurrently, so one root's rewrite could remove another root's block (on
+  Windows the rename failed with "Access is denied"). The rewrites are now serialized.
 - **Built-in name tables match their upstream docs again.** Antigravity lists `/codesearch`, `/plan` and `/grill-me`
   in its CLI reference table and no longer lists `/fast` or `/planning`, so the hand-kept groups for the first three
   are folded into the generated one. Command Code adds `/btw`, Kimi Code `/import-sessions`, and Devin drops `/loop`

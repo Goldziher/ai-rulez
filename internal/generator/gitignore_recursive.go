@@ -191,13 +191,23 @@ func (g *Generator) SetGitignoreSink(sink *GitignoreSink, prefix string) {
 // to the one of the directory the run started in: a nested repository gets its
 // own block and a parent that sets gitignore = false is left alone (#497).
 type GitignoreSinks struct {
-	mu    sync.Mutex
-	sinks map[string]*GitignoreSink
+	mu       sync.Mutex
+	sinks    map[string]*GitignoreSink
+	excludes *ExcludeLocks
 }
 
 // NewGitignoreSinks returns an empty set; sinks are created as roots attach.
 func NewGitignoreSinks() *GitignoreSinks {
-	return &GitignoreSinks{sinks: map[string]*GitignoreSink{}}
+	return &GitignoreSinks{sinks: map[string]*GitignoreSink{}, excludes: NewExcludeLocks()}
+}
+
+// ExcludeLocks returns the .git/info/exclude locks the run's roots share, or nil
+// for a nil set.
+func (s *GitignoreSinks) ExcludeLocks() *ExcludeLocks {
+	if s == nil {
+		return nil
+	}
+	return s.excludes
 }
 
 // For returns the sink managing toplevel/.gitignore, creating it on first use.

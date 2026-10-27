@@ -14,6 +14,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/samber/oops"
 
@@ -618,6 +619,8 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 	if exclude == "" {
 		return nil
 	}
+	unlock := g.excludeLocks.lock(exclude)
+	defer unlock()
 
 	data, err := gitutil.ReadIgnoreFile(exclude)
 	if err != nil && !os.IsNotExist(err) {
@@ -643,6 +646,41 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 	}
 	return nil
 }
+
+// ExcludeLocks serializes the read-modify-write of each .git/info/exclude file
+// among the generators that share it: the roots of a recursive run share their
+// repository's exclude file and sync their blocks concurrently, and an
+// unserialized rewrite drops another root's block (or, on Windows, fails the
+// rename). A nil *ExcludeLocks locks nothing.
+type ExcludeLocks struct {
+	mu    sync.Mutex
+	locks map[string]*sync.Mutex
+}
+
+// NewExcludeLocks returns an empty set of per-file locks.
+func NewExcludeLocks() *ExcludeLocks {
+	return &ExcludeLocks{locks: map[string]*sync.Mutex{}}
+}
+
+func (l *ExcludeLocks) lock(exclude string) (unlock func()) {
+	if l == nil {
+		return func() {}
+	}
+	key := filepath.Clean(exclude)
+	l.mu.Lock()
+	mu, ok := l.locks[key]
+	if !ok {
+		mu = &sync.Mutex{}
+		l.locks[key] = mu
+	}
+	l.mu.Unlock()
+	mu.Lock()
+	return mu.Unlock
+}
+
+// SetExcludeLocks makes this generator take locks's lock before it rewrites the
+// repository's .git/info/exclude file.
+func (g *Generator) SetExcludeLocks(locks *ExcludeLocks) { g.excludeLocks = locks }
 
 // escapeGitPattern escapes a literal path for use in a gitignore pattern:
 // wildcard and bracket characters, a leading '#' or '!', and trailing spaces

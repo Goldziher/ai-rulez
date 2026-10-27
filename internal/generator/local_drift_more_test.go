@@ -516,3 +516,42 @@ func TestPlanLocal_PendingPatternsAreComputedFromThePlan(t *testing.T) {
 	require.True(t, plan.machineLocal["AGENTS.md"])
 	assert.NotContains(t, g.pendingIgnorePatterns(merged), "AGENTS.md")
 }
+
+func TestExclude_ConcurrentSubProjectsKeepEveryBlock(t *testing.T) {
+	// Arrange: one repository, several projects generating at once, as the roots
+	// of a recursive run do.
+	const projects = 8
+	repo := t.TempDir()
+	top := &driftProject{base: repo}
+	top.git(t, "init", "-q")
+	cfgs := make([]*config.Config, projects)
+	for i := range projects {
+		p := subProject(t, repo, filepath.Join("pkg", string(rune('a'+i))), driftIgnoring)
+		p.overlay(t, "presets = [\"codex\"]\n")
+		cfgs[i] = p.load(t)
+	}
+
+	// Act
+	locks := NewExcludeLocks()
+	errs := make(chan error, projects)
+	start := make(chan struct{})
+	for _, cfg := range cfgs {
+		go func() {
+			<-start
+			gen := NewGenerator(cfg)
+			gen.SetExcludeLocks(locks)
+			errs <- gen.Generate("")
+		}()
+	}
+	close(start)
+	for range projects {
+		require.NoError(t, <-errs)
+	}
+
+	// Assert: no project's read-modify-write dropped another project's block.
+	exclude := readExclude(t, top)
+	assert.Equal(t, projects, strings.Count(exclude, "# BEGIN ai-rulez local: "), exclude)
+	for i := range projects {
+		assert.Contains(t, exclude, "/pkg/"+string(rune('a'+i))+"/AGENTS.md")
+	}
+}
