@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -379,21 +380,36 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 		return 0, err
 	}
 
+	// A plugin-authoring root is built as a bundle, as `generate --plugin` does in
+	// it, instead of rendering harness files into the shipped tree. It is
+	// reloaded the way plugin mode loads (without the machine-local overlay).
+	plugin := pluginMode
+	if !plugin && cfg.IsPluginAuthoringRoot() {
+		plugin = true
+		logger.Info("Generating a plugin-authoring root in plugin mode", "config", configPath)
+		if cfg, err = reloadForPlugin(ctx, configPath); err != nil {
+			fileCounter.ErrorFor(configPath, err)
+			return 0, err
+		}
+	}
+
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
-	attachRecursiveGitignoreSink(gen, cfg, sink)
+	if !plugin {
+		attachRecursiveGitignoreSink(gen, cfg, sink)
+	}
 	if err := applyRole(gen); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
-	if err := generatePreflight(cfg, gen); err != nil {
+	if err := generatePreflightFor(cfg, gen, plugin); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
-	if pluginMode {
+	if plugin {
 		return processPluginConfig(configPath, cfg, gen, fileCounter)
 	}
 
@@ -416,6 +432,22 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 	fileCounter.FinishFile()
 
 	return written, nil
+}
+
+// reloadForPlugin loads a root the way `generate --plugin` does and applies the
+// checks and overrides processConfigFile ran on the first load.
+func reloadForPlugin(ctx context.Context, configPath string) (*config.Config, error) {
+	cfg, err := loadProjectFile(ctx, configPath, append(pluginLoadOptions(true), config.WithFrontmatterErrors())...)
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	if err := applyGenerateOverrides(ctx, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // processPluginConfig is processConfigFile for `generate --plugin`.

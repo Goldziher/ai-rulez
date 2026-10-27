@@ -6,6 +6,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **`generate --recursive` builds a plugin-authoring root as a plugin bundle, and the default self MCP server is never
+  added to one.** A nested root such as `plugin/.ai-rulez/` that authors a plugin or marketplace and configures no
+  preset got a normal generate, which wrote `npx -y ai-rulez@latest mcp` into the shipped `.mcp.json` and
+  `.ai-rulez/.generated-manifest.local.json` and `.ai-rulez/local/` into its `.gitignore`, so `verify --plugin` failed.
+  The recursive run now generates such a root as `generate --plugin` does, `generate --check --recursive` skips it with
+  an info line (`verify --plugin` covers it), and a plugin-authoring root gets no self server whatever the mode
+  ([#498](https://github.com/Goldziher/ai-rulez/issues/498)).
+
 ## [5.7.0] - 2026-10-25
 
 ### Added

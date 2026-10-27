@@ -8511,6 +8511,12 @@ backend = ["api", "database"]
 
 By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.
 
+##### Plugin-authoring roots
+
+A nested root that only builds a plugin (it declares `[plugin]` or plugin definitions and no preset, for example
+`plugin/.ai-rulez/`) is built as a bundle by `generate --recursive`, as `generate --plugin` would in that root, and is
+skipped by `generate --check --recursive`; use `verify --plugin` for it. See [Plugins](plugins.md).
+
 ##### The shared `.gitignore` block
 
 With `gitignore = true`, a recursive run writes one managed block at the git toplevel holding every root's patterns
@@ -12097,6 +12103,14 @@ its members and aggregate indexes; member configs are not processed again in
 parallel. Standalone `[plugin]` producers are still processed individually.
 Consumer-only `[[plugins]]` and `[[marketplaces]]` declarations are skipped.
 `--if-configured` does not suppress generation or verification errors.
+
+A plugin-authoring root is one that authors a plugin or marketplace (a `[plugin]` block, `[[plugins_authoring]]`,
+`[[marketplaces_authoring]]` or a marketplace with members, inline or from a `config.<name>.toml` layer) and configures
+no preset. It exists to build a bundle, so a plain `generate --recursive` builds it in plugin mode, the same output as
+`generate --plugin` in that root, instead of writing harness files and `.gitignore` entries into the shipped tree.
+`generate --check --recursive` skips such a root with an info line; check its bundle with `verify --plugin`. The
+`ai-rulez` MCP server that generation adds by default is never added to a plugin-authoring root, whatever the mode. A
+root that keeps a preset generates normally, and builds its bundle with `generate --plugin`.
 
 See [Poly Hooks](poly-hooks.md) to add non-mutating plugin verification to a
 repository's pre-commit stage.

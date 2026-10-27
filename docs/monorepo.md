@@ -289,6 +289,12 @@ backend = ["api", "database"]
 
 By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.
 
+### Plugin-authoring roots
+
+A nested root that only builds a plugin (it declares `[plugin]` or plugin definitions and no preset, for example
+`plugin/.ai-rulez/`) is built as a bundle by `generate --recursive`, as `generate --plugin` would in that root, and is
+skipped by `generate --check --recursive`; use `verify --plugin` for it. See [Plugins](plugins.md).
+
 ### The shared `.gitignore` block
 
 With `gitignore = true`, a recursive run writes one managed block at the git toplevel holding every root's patterns
