@@ -670,7 +670,7 @@
       "type": "object"
     },
     "enabled_plugins": {
-      "description": "Plugins from marketplaces this project does not author, enabled for the Claude Code, Codex and OpenCode presets from one declaration: Claude Code gets extraKnownMarketplaces and enabledPlugins in .claude/settings.json, Codex a [plugins.\"<id>\"] table in .codex/config.toml, OpenCode its npm package in opencode.json. Only the entries written here are owned; the rest of each settings file is kept. See docs/plugins.md.",
+      "description": "Plugins from marketplaces this project does not author, enabled for the Claude Code, Codex and OpenCode presets from one declaration: Claude Code gets extraKnownMarketplaces and enabledPlugins in .claude/settings.json, Codex a [plugins.\"<id>\"] table in .codex/config.toml, OpenCode its npm package in opencode.json. Only the entries written here are owned; the rest of each settings file is kept. An id also listed in claude.settings.disable_plugins, a marketplace named like the project's registered own [marketplace], and a directory marketplace in the user config are errors. See docs/plugins.md.",
       "items": {
         "additionalProperties": false,
         "properties": {

@@ -113,13 +113,73 @@ func (c *Config) validateEnabledPlugins() error {
 		if err := validateEnabledPluginMarketplace(field, p, markets); err != nil {
 			return err
 		}
+		if err := c.validateEnabledPluginScope(field, p); err != nil {
+			return err
+		}
 		if p.OpenCode != "" && !npmPackageSpec.MatchString(p.OpenCode) {
 			return oops.With("field", field+".opencode").With("value", p.OpenCode).
 				Hint("Use an npm package name, optionally with @version, such as basemind-opencode or @scope/pkg@1.2.3").
 				Errorf("%q is not an npm package", p.OpenCode)
 		}
 	}
+	if err := c.validateEnabledPluginsVsClaudeSettings(); err != nil {
+		return err
+	}
 	c.warnEnabledPluginsUnrendered()
+	return nil
+}
+
+// validateEnabledPluginScope rejects what cannot be written where the entry
+// renders: the user settings file is read from any working directory, so a
+// project-relative directory marketplace would resolve against the wrong place,
+// and a marketplace named like the project's registered own one would replace it.
+func (c *Config) validateEnabledPluginScope(field string, p *EnabledPlugin) error {
+	m := p.Marketplace
+	if m == nil {
+		return nil
+	}
+	if c.UserScope && m.Type == "directory" {
+		return oops.With("field", field+".marketplace.type").With("value", m.Source).
+			Hint("Use a github, git or url marketplace in the user config, or declare the plugin in the project config").
+			Errorf("%s cannot use a directory marketplace in the user config: %q is relative to a project", field, m.Source)
+	}
+	if c.RegistersLocalMarketplace() && c.Marketplace != nil && m.Name == c.Marketplace.Name {
+		return oops.With("field", field+".marketplace.name").With("value", m.Name).
+			Hint("Leave out marketplace in this entry: the marketplace of this project is already registered").
+			Errorf("marketplace %q is the marketplace of this project and would replace its registration", m.Name)
+	}
+	return nil
+}
+
+// validateEnabledPluginsVsClaudeSettings compares [[enabled_plugins]] with the
+// [claude.settings] plugin lists, after qualifying bare names with the local
+// marketplace. Enabling and disabling one id is a conflict; listing it in both
+// enable lists is redundant and only warned about.
+func (c *Config) validateEnabledPluginsVsClaudeSettings() error {
+	if !c.ManagesClaudeSettings() {
+		return nil
+	}
+	s := c.Claude.Settings
+	disabled := map[string]bool{}
+	for _, name := range s.DisablePlugins {
+		disabled[c.QualifiedPluginID(name)] = true
+	}
+	enabled := map[string]bool{}
+	for _, name := range s.EnablePlugins {
+		enabled[c.QualifiedPluginID(name)] = true
+	}
+	for i := range c.EnabledPlugins {
+		id := c.EnabledPlugins[i].ID
+		if disabled[id] {
+			return oops.With("field", fmt.Sprintf("enabled_plugins[%d].id", i)).With("value", id).
+				Hint("Remove the id from one of the two lists").
+				Errorf("plugin %q is enabled in enabled_plugins and disabled in claude.settings.disable_plugins", id)
+		}
+		if enabled[id] {
+			c.Warn(fmt.Sprintf("plugin %q is listed in enabled_plugins and in claude.settings.enable_plugins; list it once", id),
+				"field", "enabled_plugins")
+		}
+	}
 	return nil
 }
 

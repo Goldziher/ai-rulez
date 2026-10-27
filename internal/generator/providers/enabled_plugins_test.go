@@ -91,6 +91,37 @@ func TestClaudeSettingsEnabledPlugins(t *testing.T) {
 			},
 		},
 		{
+			name: "an entry never overrides disable_plugins",
+			cfg: func(baseDir string) *config.Config {
+				return &config.Config{
+					Name: "test", BaseDir: baseDir,
+					Claude:         &config.ClaudeConfig{Settings: &config.ClaudeSettings{Manage: true, DisablePlugins: []string{"basemind@basemind"}}},
+					EnabledPlugins: []config.EnabledPlugin{basemindPlugin()},
+				}
+			},
+			assertFn: func(t *testing.T, got enabledSettings) {
+				assert.Equal(t, map[string]bool{"basemind@basemind": false}, got.EnabledPlugins)
+			},
+		},
+		{
+			name: "an entry never replaces the local marketplace registration",
+			cfg: func(baseDir string) *config.Config {
+				plugin := config.EnabledPlugin{
+					ID:          "x@mk",
+					Marketplace: &config.EnabledPluginMarketplace{Name: "mk", Source: "o/r", Type: "github"},
+				}
+				return &config.Config{
+					Name: "test", BaseDir: baseDir,
+					Marketplace:    &config.MarketplaceAuthoring{Name: "mk", OutputDir: "tools/mkt"},
+					Claude:         &config.ClaudeConfig{Settings: &config.ClaudeSettings{Manage: true, EnablePlugins: []string{"own"}}},
+					EnabledPlugins: []config.EnabledPlugin{plugin},
+				}
+			},
+			assertFn: func(t *testing.T, got enabledSettings) {
+				assert.Equal(t, map[string]any{"source": "directory", "path": "./tools/mkt"}, got.Marketplaces["mk"]["source"])
+			},
+		},
+		{
 			name: "manage with only qualified ids and no local marketplace",
 			cfg: func(baseDir string) *config.Config {
 				return &config.Config{

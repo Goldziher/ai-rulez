@@ -14,7 +14,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `enabled = true` in `.codex/config.toml`, and, with `opencode = "<npm package>"`, the package in the `plugin` array
   of `opencode.json`. ai-rulez owns only the entries it writes, and `generate --user` writes the same entries to the
   user's files. Ids, marketplace sources (`github`, `git`, `url`, `directory`; no `http://` or `git://`) and npm
-  packages are validated at load. See `docs/plugins.md`
+  packages are validated at load. An id that is also in `[claude.settings] disable_plugins`, a marketplace named
+  like the project's registered own `[marketplace]`, and a `directory` marketplace in the user config are errors;
+  an id also in `enable_plugins` is a warning. See `docs/plugins.md`
   ([#500](https://github.com/Goldziher/ai-rulez/issues/500)).
 - **`Goldziher/ai-rulez/check@v5` runs the full governance gate in one step.** The sub-action installs the CLI with
   the root action's resolve, cache and checksum-verified download scripts, then for every configuration root runs

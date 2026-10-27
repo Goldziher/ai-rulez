@@ -12679,6 +12679,13 @@ equivalent and skip the declaration; `generate` warns when none of the three is 
 the user to trust the marketplace folder, and `enabledPlugins` cannot install a plugin Claude Code has not
 fetched.
 
+Conflicts are rejected at load. An id in `[[enabled_plugins]]` and in `[claude.settings] disable_plugins` is an
+error (bare names are compared as `<name>@<marketplace>` with the project's own `[marketplace]`); an id also in
+`enable_plugins` is redundant and warned about. A `marketplace` whose `name` is the project's own
+`[marketplace].name`, while `[claude.settings]` registers it, is an error because it would replace that
+registration: leave `marketplace` out of the entry. In the user config (`generate --user`) a `directory`
+marketplace is an error, since its path is relative to a project; use `github`, `git` or `url`.
+
 ##### Catalog skill
 
 ```toml
