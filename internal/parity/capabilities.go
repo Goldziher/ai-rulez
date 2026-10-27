@@ -351,6 +351,40 @@ func governanceCapabilities() []Capability {
 				{Flag: "source", Arg: "sources"}},
 		},
 		{
+			ID: "lock-diff", Kind: Paired, CLI: []string{"lock"}, Mode: "diff", Tool: "lock_diff",
+			ToolArgs: []Exclusion{noLocalToolArg()},
+			Flags:    []FlagPair{{Flag: "profile"}, {Flag: "role"}, {Flag: "targets"}, {Flag: "include-static"}, {Flag: "source", Arg: "sources"}},
+		},
+		{
+			ID: "lock-outdated", Kind: Paired, CLI: []string{"lock"}, Mode: "outdated", Tool: "lock_outdated",
+			ToolArgs: []Exclusion{
+				noLocalToolArg(),
+				{Names: []string{"names"}, Reason: "the CLI takes the sources as positional arguments"},
+			},
+			Flags: []FlagPair{{Flag: "kind", EnumNote: "the usage text of --kind lists the refresh kinds of lock; the tool takes the kinds of a version constraint"}},
+			CLIFlags: []Exclusion{
+				{Names: []string{"fail-on-outdated", "offline"}, Reason: "the verdict is the exit code, and the tool reads the network by design (a read-only server lists it)"},
+			},
+		},
+		{
+			ID: "update-plan", Kind: Paired, CLI: []string{"update"}, Mode: "dry-run", Tool: "update_plan",
+			ToolArgs: []Exclusion{
+				noLocalToolArg(),
+				{Names: []string{"names"}, Reason: "the CLI takes the sources as positional arguments"},
+			},
+			Flags:    []FlagPair{{Flag: "kind", EnumNote: "the tool takes the kinds of a version constraint"}},
+			CLIFlags: updateConsentFlags(),
+		},
+		{
+			ID: "update", Kind: Paired, CLI: []string{"update"}, Tool: "update",
+			ToolArgs: []Exclusion{
+				noLocalToolArg(),
+				{Names: []string{"names"}, Reason: "the CLI takes the sources as positional arguments"},
+			},
+			Flags:    []FlagPair{{Flag: "kind", EnumNote: "the tool takes the kinds of a version constraint"}},
+			CLIFlags: append(updateConsentFlags(), Exclusion{Names: []string{"dry-run"}, Reason: "update_plan is the dry run"}),
+		},
+		{
 			ID: "approvals-status", Kind: Paired, CLI: []string{"approve"}, Mode: "list", Tool: "approvals_status", Behavior: "approvals",
 			Flags: []FlagPair{{Flag: "all"}},
 		},
@@ -405,7 +439,7 @@ func cliOnlyCapabilities() []Capability {
 			"verify"),
 		only("marketplace", "adds, removes and updates installed marketplaces: network fetches that rewrite the configuration and the lock", "marketplace *"),
 		only("plugin", "installs, removes and updates plugins imported from marketplaces: network fetches, hook and MCP imports that run code", "plugin *"),
-		only("update", "moves pinned remote sources to newer tags over the network and rewrites the lock", "update", "skill update"),
+		only("installed-skill-update", "re-pins installed skills over the network and rewrites the lock", "skill update"),
 		only("convert-migrate", "one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview",
 			"convert", "migrate *"),
 		only("okf-export-import", "write a whole bundle or import a foreign one into the tree", "export okf", "import okf"),
@@ -426,6 +460,18 @@ func cliOnlyCapabilities() []Capability {
 		only("mcp", "starts the MCP server itself", "mcp"),
 		only("guard", "a hook entry point the harness calls on tool use", "guard"),
 		only("session-start", "a hook entry point the harness calls when a session starts; it runs generate", "session-start"),
+	}
+}
+
+// updateConsentFlags are the flags of update that give consent to a refusal or
+// widen what it touches. A tool call cannot carry them: a person decides on the
+// command line, after reading the refusal the tool returned.
+func updateConsentFlags() []Exclusion {
+	return []Exclusion{
+		{Names: []string{"accept-findings", "accept-moved-tag", "allow-downgrade"},
+			Reason: "consent to a refusal (scan findings, AR732, a downgrade) stays with a person on the command line; the tool returns the refusal"},
+		{Names: []string{"major", "write-config"}, Reason: "taking a new major version rewrites config.toml; that stays with a person on the command line"},
+		{Names: []string{"offline"}, Reason: "update reads the remote's tags; the tool has no offline mode"},
 	}
 }
 

@@ -177,6 +177,27 @@ type lockStatusOut struct {
 	Changes []any `json:"changes,omitempty" jsonschema:"Differences between the lock and the working tree"`
 }
 
+type lockDiffOut struct {
+	InSync  bool  `json:"in_sync" jsonschema:"True when ai-rulez.lock matches the sources and outputs"`
+	Changes []any `json:"changes,omitempty" jsonschema:"Differences between the lock and the working tree, with per-file digests of a changed role"`
+}
+
+type lockOutdatedOut struct {
+	SchemaVersion int   `json:"schema_version" jsonschema:"Version of this document (schema/lock-outdated.schema.json)"`
+	Sources       []any `json:"sources,omitempty" jsonschema:"Every source that uses a version constraint: its pinned tag, the newest allowed tag, the newest tag, and its status"`
+	Summary       any   `json:"summary,omitempty" jsonschema:"Counts per status"`
+}
+
+// updateOut is the update document (schema/update.schema.json); a refused update returns it as an error result.
+type updateOut struct {
+	SchemaVersion int   `json:"schema_version" jsonschema:"Version of this document (schema/update.schema.json)"`
+	DryRun        bool  `json:"dry_run" jsonschema:"True when nothing was written (update_plan, or a refused update)"`
+	Updates       []any `json:"updates" jsonschema:"The pins that move, with tags, digests, changed files and the security scan of the new tree"`
+	Blocked       []any `json:"blocked,omitempty" jsonschema:"Sources refused with a rule code: a moved tag (AR732), an unsatisfiable (AR730) or invalid (AR731) constraint"`
+	Notes         []any `json:"notes,omitempty" jsonschema:"Remarks such as an accepted moved tag"`
+	Unchanged     []any `json:"unchanged,omitempty" jsonschema:"Sources left alone that need consent to move, or tags held back by min_release_age"`
+}
+
 type catalogOut struct {
 	Items      []any `json:"items,omitempty" jsonschema:"Catalog items, capped at limit"`
 	TotalItems int   `json:"total_items,omitempty" jsonschema:"Number of items before the cap"`

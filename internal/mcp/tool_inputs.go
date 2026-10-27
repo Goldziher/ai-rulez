@@ -330,6 +330,28 @@ type lockStatusIn struct {
 	configSelArgs
 }
 
+type lockDiffIn struct {
+	Profile       string   `json:"profile,omitempty" jsonschema:"Profile whose outputs are compared (default: the profile recorded in the lock); also selects the serve view"`
+	Role          string   `json:"role,omitempty" jsonschema:"Compare only this role's outputs and also check the skills it serves, as a view of their own (lock --role)"`
+	Targets       string   `json:"targets,omitempty" jsonschema:"Also check the view that serves this preset's rendering of the skills (lock --targets)"`
+	IncludeStatic bool     `json:"include_static,omitempty" jsonschema:"Also check the view that serves static skills too (lock --include-static)"`
+	Sources       []string `json:"sources,omitempty" jsonschema:"Also check the view with these extra skill sources (lock --source)"`
+	configSelArgs
+}
+
+// pinSourceArgs select the sources lock_outdated, update_plan and update act on.
+type pinSourceArgs struct {
+	Kind  string   `json:"kind,omitempty" jsonschema:"Limit to one kind of source: include, skill, source, marketplace or plugin"`
+	Names []string `json:"names,omitempty" jsonschema:"Limit to these sources (default: every source that uses a version constraint)"`
+	configSelArgs
+}
+
+type lockOutdatedIn struct{ pinSourceArgs }
+
+type updatePlanIn struct{ pinSourceArgs }
+
+type updateIn struct{ pinSourceArgs }
+
 type catalogIn struct {
 	Kind  string `json:"kind,omitempty" jsonschema:"Only items of this kind (default: all)"`
 	Role  string `json:"role,omitempty" jsonschema:"Only items this role keeps (see list_roles)"`

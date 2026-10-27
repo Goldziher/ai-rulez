@@ -135,17 +135,8 @@ func ResolveRoleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 func LockStatusHandler(version string, dynamic DynamicLockChanges) func(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
 	return func(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
 		kind := request.GetString("kind", "")
+		_, views, only := lockViews(request)
 		profile := request.GetString("profile", "")
-		role := request.GetString("role", "")
-		view := LockView{Role: role, Profile: profile, Targets: request.GetString("targets", ""), IncludeStatic: request.GetBool("include_static", false), Sources: request.GetStringSlice("sources", nil)}
-		var views []LockView
-		if view.Role != "" || view.Profile != "" || view.Targets != "" || view.IncludeStatic || len(view.Sources) > 0 {
-			views = []LockView{view}
-		}
-		var only []string
-		if role != "" {
-			only = []string{role}
-		}
 		if err := govview.CheckKind(kind); err != nil {
 			return ToolError(err)
 		}

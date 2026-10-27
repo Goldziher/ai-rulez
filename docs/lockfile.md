@@ -391,6 +391,15 @@ pins and content pins of other items are not recomputed (as with `lock <name>`):
   `ai-rulez lock` runs the same scan over every remote tree it pins to something new (a new entry, or a changed
   commit or digest; unchanged pins were scanned when pinned) and takes the same `--accept-findings`.
 
+#### From an MCP client
+
+The MCP server has a tool for each read of this section: `lock_outdated` (`lock --outdated`), `update_plan`
+(`update --dry-run`) and `lock_diff` (`lock --diff`), and one that moves pins, `update`. They run the same code, so
+the scan before pinning and the refusals above apply, and a refusal comes back as an error result carrying the update
+document with nothing written. Consent (`--accept-moved-tag`, `--accept-findings`, `--allow-downgrade`, `--major`) is
+not a tool argument: it stays on the command line. A read-only server lists all but `update`. See
+[Pin Tools](mcp-server.md#pin-tools-lock_outdated-update_plan-update).
+
 #### Taking a new major version
 
 `update --major` looks at the sources that have a newer major version than their constraint allows, and prints the
