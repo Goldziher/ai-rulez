@@ -291,14 +291,15 @@ func TestLocalContent_IgnoredPerClone(t *testing.T) {
 	// Act
 	generateLocalIn(t, dir, "")
 
-	// Assert: the machine-specific skill is excluded in this clone only; the stable
-	// ".local." names are covered by the shared pattern.
+	// Assert: every output the local content adds is excluded in this clone only;
+	// the committed block lists none of them.
 	exclude := readRel(t, dir, ".git/info/exclude")
 	assert.Contains(t, exclude, "/.claude/skills/mine-skill/SKILL.md")
 	assert.Contains(t, exclude, "/.claude/agents/mine-agent.md")
+	assert.Contains(t, exclude, "/.claude/rules/*.local.*")
 	ignore := readRel(t, dir, ".gitignore")
 	assert.NotContains(t, ignore, "mine-skill")
-	assert.Contains(t, ignore, ".claude/rules/*.local.*")
+	assert.NotContains(t, ignore, ".claude/rules/*.local.*")
 }
 
 func TestLocalContent_CleanRemovesLocalOutputs(t *testing.T) {

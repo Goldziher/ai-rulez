@@ -62,7 +62,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .codewhale/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .codewhale/skills/reviewer/scripts/ dir 0755
 .codewhale/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 351 9eb83902154bcff8dc22176c92b40a1e07123c2328c798671cddbb90539c945d
+.gitignore file 0644 402 b788fe5da618156cf9d82825460b9ecbcfdf15d70660ad8229ee655d369def5a
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755

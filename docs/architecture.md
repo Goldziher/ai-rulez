@@ -88,8 +88,10 @@ one). Two properties keep the result deterministic:
   `cmd/commands`) and the run prints them with that root's result. The writing `generate --recursive` shows a progress
   counter and logs a root's load warnings as they happen.
 
-A recursive run with `gitignore = true` writes one managed block at the repository toplevel, holding every root's
-patterns, and `--check` verifies that block once after the last root. See [Monorepo](monorepo.md).
+A recursive run with `gitignore = true` writes one managed block per git repository, at that repository's toplevel,
+holding the patterns of the roots inside it, and `--check` verifies each block once after the last root. A root's
+patterns never reach the `.gitignore` of another repository or of a root with `gitignore = false`. See
+[Monorepo](monorepo.md).
 
 ## The managed `.gitignore` block
 
@@ -101,8 +103,14 @@ With `gitignore = true` (or `generate --gitignore`) ai-rulez maintains a `# BEGI
   block left out. An entry already ignored by your rules, or re-included by a negation of yours, is left out of the block.
 - `gitignore_exclude` lists generated outputs you commit on purpose; they stay out of the block while every other entry stays
   managed. Machine-local and secret outputs are never excluded.
-- Machine-local outputs (`*.local.*`, `config.local.*`, `.ai-rulez/local/`, the local manifest) are ignored even when
-  `gitignore = false`, and an MCP config holding secrets is refused unless git ignores it.
+- The block is the same on every machine and with or without `--no-local`. It always lists `.ai-rulez/config.local.*`
+  (and the overlay's `.config.local.*` lock and temp files), `.ai-rulez/local/` and the machine-local manifest, whether
+  or not those exist. It never lists a path only because this machine's local inputs add it: outputs the overlay or
+  `local/` content creates (`CLAUDE.local.md`, a hook-only `.claude/settings.json`, local skills) are kept in
+  `.git/info/exclude`, which is not committed.
+- With `gitignore = false` the machine-local inputs that exist (`config.local.*`, `local/`) are still ignored, and an
+  MCP config holding secrets is refused unless git ignores it. A machine-local manifest that is the only local file goes
+  to `.git/info/exclude`, so `generate` does not write a tracked `.gitignore` for a project that turned it off.
 - `generate --check` reports a block that differs from what a run would write as drift, and `generate` warns when a tracked
   file matches a line of the block.
 

@@ -106,7 +106,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1254 3131805941dbd2899345d317fd9e153d003454ffcc05a69028d8e7fd40f7e167
-.gitignore file 0644 550 3b8f2a6f8262a7f566ccc6849157be135a55b50e952c9945970ed6eb67a134ba
+.gitignore file 0644 601 63e973bbb7afad9b4ea7aed2015acc51db0923fb126c04ed1ea501d22699ddd3
 .mcp.json file 0644 408 3bbf66951efc9c6bbc15d7d3e886eeb834ff61675b16e999912049d2a5055d72
 .opencode/ dir 0755
 .opencode/agents/ dir 0755

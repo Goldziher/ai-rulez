@@ -683,6 +683,8 @@ func (g *Generator) cleanGitignore(opts CleanOptions, plan *CleanPlan) {
 	if !opts.KeepGitignore {
 		// This project's block in .git/info/exclude names machine-local outputs
 		// that were just removed; no paths means the block is dropped.
+		g.dropExcludes = true
+		defer func() { g.dropExcludes = false }()
 		if err := g.syncMachineExcludes(nil); err != nil {
 			g.log().Warn("Failed to remove .git/info/exclude block", "error", err)
 		}

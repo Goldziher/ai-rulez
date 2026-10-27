@@ -5,7 +5,6 @@ exit: 0
 --- stdout
 --- stderr
 --- project tree
-.gitignore file 0644 156 5a478ab90c3c140c63afb7a2962a56a039453cbcc30d7cafbc30e47644694c82
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745
@@ -40,7 +39,6 @@ exit: 0
 --- stdout
 --- stderr
 --- project tree
-.gitignore file 0644 156 5a478ab90c3c140c63afb7a2962a56a039453cbcc30d7cafbc30e47644694c82
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 301 51c300ff9a5bce2d8cf96e1f034bbe7d1b2554100e8f650f137adb21f3dc9745

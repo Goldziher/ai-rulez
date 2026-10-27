@@ -109,7 +109,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1254 9ee3eef9a9bac3c249ff6988dc8c32f80c26c0a8d55a9186deb7e9eacf6ef9d1
-.gitignore file 0644 527 0f750a62a5c44b9a4a33df8d1c71d540c6c252ba6cc1189e09112f20b8f593dc
+.gitignore file 0644 578 dd238cc20c5a80bbdd4074cc3c6313080508f0ea07a32863a046bdb749006a40
 .mcp.json file 0644 273 ca2c94a13387068c05ab32f8da58ea5d1e6639d3b66ec21429fbf7256053c37a
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
@@ -161,7 +161,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 ~ .ai-rulez/.generated-manifest.local.json file 0644 4361 829ec7fb832eef5a9ef0b0317553a45778bd7b40536efed327f32e7dd0b9c844
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
-~ .gitignore file 0644 438 ef528ffd692e72b91fc17e7504861120fe1aceedc4d1397d75ae2731546cb49f
+~ .gitignore file 0644 489 2615233d61516fda0ff97d1f2d0fe871103e53db4c1697490e03392d6200ab33
 - .agents/ dir 0755
 - .agents/skills/ dir 0755
 - .agents/skills/build/ dir 0755
@@ -911,11 +911,13 @@ model = "mine"
 >>>>
 {"mine": true}
 <<<<
-.gitignore file 0644 438 ef528ffd692e72b91fc17e7504861120fe1aceedc4d1397d75ae2731546cb49f
+.gitignore file 0644 489 2615233d61516fda0ff97d1f2d0fe871103e53db4c1697490e03392d6200ab33
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.ai-rulez/.config.local.*
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
+.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/always.ai-rulez.md

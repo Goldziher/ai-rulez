@@ -97,9 +97,8 @@ func TestCheckDrift_ManagedGitignoreBlock(t *testing.T) {
 			mutate: func(*testing.T, string) {},
 		},
 		{
-			name: "gitignore off, local manifest entry deleted", gitignoreOn: false,
-			mutate: func(t *testing.T, path string) { require.NoError(t, os.Remove(path)) },
-			want:   []Drift{{Path: ".gitignore", Kind: DriftMissing, Note: "managed block"}},
+			name: "gitignore off writes no .gitignore for the local manifest", gitignoreOn: false,
+			mutate: func(t *testing.T, path string) { require.NoFileExists(t, path) },
 		},
 	}
 	for _, tt := range tests {

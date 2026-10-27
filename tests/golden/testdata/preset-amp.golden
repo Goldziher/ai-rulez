@@ -59,7 +59,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .amp/plugins/ dir 0755
 .amp/plugins/ai-rulez-hooks.ts file 0644 8243 c14ddcd6244acd28ff9cc61ff97fd77a829c57850268ad0d2060eafdd731ec52
 .amp/settings.json file 0644 351 acc758db585fd9572b20353ffef1bcc1f33bf6e2ca3462854a91b8a5bf145b4b
-.gitignore file 0644 247 18a7abba5164f6b92e4a3605c3b50486fa669aafb84db99a31e1af3a9d3c5dd5
+.gitignore file 0644 298 7dbb02cd7a2ffa88a7e930290203940013f76396334807f615fa3ac7e6d57513
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755

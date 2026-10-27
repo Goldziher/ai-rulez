@@ -31,6 +31,21 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   failed with "needs a [marketplace] name" even when it listed only ids of another marketplace. Qualified ids are
   written as given; bare names are still qualified with the local marketplace, which is registered only when one is
   declared.
+- **The managed `.gitignore` block is the same on every machine and with or without `--no-local`.** It listed
+  `.ai-rulez/config.local.*` only while a `config.local.*` file existed, and the local manifest, the overlay-created
+  outputs (`CLAUDE.local.md`, a hook-only `.claude/settings.json`) and their `*.local.*` patterns only when the run
+  loaded local inputs, so each contributor's regeneration rewrote the committed file and `generate --check --no-local`
+  in CI reported drift that was not real. With `gitignore = true` the block now always lists `config.local.*` (and its
+  `.config.local.*` lock files), `local/` and the machine-local manifest, and never lists a path that only this
+  machine's local inputs add: those go to `.git/info/exclude`. With `gitignore = false`, a machine-local manifest that
+  is the only local file is excluded through `.git/info/exclude` too instead of creating a tracked `.gitignore`.
+  Fixes #499.
+- **`generate --recursive` writes each root's patterns only to the `.gitignore` of its own git repository.** It put
+  every nested root's patterns into the `.gitignore` of the directory it ran in, even for a root with
+  `gitignore = false` and for a nested repository whose own `.gitignore` was never written. Each repository now gets
+  its own managed block holding the roots inside it, a nested directory with its own `.git` gets its own block, and a
+  repository whose roots all set `gitignore = false` is left alone. `generate --check --recursive` judges each block.
+  Fixes #497.
 
 ## [5.7.0] - 2026-10-25
 

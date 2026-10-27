@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -205,13 +206,11 @@ func (g *Generator) classify(plan *localPlan, baseline, merged []config.OutputFi
 		switch {
 		case !inBase:
 			plan.localOnly = append(plan.localOnly, rel)
-			// A ".local." file name (CLAUDE.local.md, <rulesdir>/x.local.md) is
-			// covered by a stable pattern in the shared .gitignore. Anything else
-			// (a local skill's SKILL.md, an overlay preset's output) is named after
-			// machine-local content, so it is excluded per clone instead.
-			if !o.LocalOnly || !stableLocalName(rel) {
-				plan.machineLocal[rel] = true
-			}
+			// Every output the local inputs add is excluded per clone, a stable
+			// ".local." name (CLAUDE.local.md) included: the shared .gitignore
+			// block is committed, so it must not list a path only because this
+			// machine has local content.
+			plan.machineLocal[rel] = true
 			o.LocalOnly = true
 		case !sameOutput(b, *o):
 			plan.drift = append(plan.drift, rel)
@@ -485,6 +484,11 @@ func (g *Generator) machineExcludePatterns(plan *localPlan) (exclude string, pat
 	}
 
 	top := g.git().TopLevelContext(g.ctx, g.config.BaseDir)
+	if !g.dropExcludes && g.manifestExcluded() {
+		if repoRel := gitutil.RepoRelative(top, g.localManifestPath()); repoRel != "" && !strings.ContainsAny(repoRel, "\r\n") {
+			patterns = append(patterns, "/"+escapeGitPattern(repoRel))
+		}
+	}
 	if plan != nil {
 		for rel := range plan.machineLocal {
 			repoRel := gitutil.RepoRelative(top, filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
@@ -493,10 +497,17 @@ func (g *Generator) machineExcludePatterns(plan *localPlan) (exclude string, pat
 				plan.inGitignore[rel] = true
 				continue
 			}
+			// Local rule files share a folder with committed rules: one pattern
+			// per folder also covers the ones added later.
+			if stableLocalName(rel) && localGitignorePattern(g.config.RulesDirs, rel) != rel {
+				patterns = append(patterns, "/"+escapeGitPattern(path.Dir(repoRel))+"/*.local.*")
+				continue
+			}
 			patterns = append(patterns, "/"+escapeGitPattern(repoRel))
 		}
 	}
 	sort.Strings(patterns)
+	patterns = slices.Compact(patterns)
 	return exclude, patterns
 }
 
@@ -621,7 +632,7 @@ func (g *Generator) guardLocal(profile string, outputs []config.OutputFile) erro
 			return err
 		}
 	}
-	if plan != nil || (!g.localSkipped && pathIsFile(g.localManifestPath())) {
+	if plan != nil || (!g.localSkipped && pathIsFile(g.localManifestPath())) || g.manifestExcluded() {
 		return g.syncMachineExcludes(plan)
 	}
 	return nil

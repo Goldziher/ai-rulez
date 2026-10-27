@@ -129,18 +129,15 @@ func TestGenerate_NoLocalKeepsTheLocalIgnoreEntries(t *testing.T) {
 	p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
 	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
 	withLocal := p.read(t, ".gitignore")
-	require.Contains(t, withLocal, ".claude/rules/*.local.*")
+	require.Contains(t, withLocal, ".ai-rulez/config.local.*")
+	require.NotContains(t, withLocal, ".claude/rules/*.local.*", "local outputs are not in the committed block")
 
 	// Act
 	require.NoError(t, NewGenerator(p.load(t, config.WithoutLocal())).Generate(""))
 
-	// Assert
-	after := p.read(t, ".gitignore")
-	for _, line := range []string{".claude/rules/*.local.*", ".cursor/rules/*.local.*", ".ai-rulez/local/", ".ai-rulez/config.local.*"} {
-		if strings.Contains(withLocal, line) {
-			assert.Contains(t, after, line, "--no-local keeps the entry for existing local files")
-		}
-	}
+	// Assert: the committed block is the same, and the local output stays ignored
+	// through .git/info/exclude, which a run that skipped local inputs leaves alone.
+	assert.Equal(t, withLocal, p.read(t, ".gitignore"))
 	assert.True(t, p.checkIgnored(t, ".claude/rules/mine.local.md"))
 }
 

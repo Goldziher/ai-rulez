@@ -55,7 +55,7 @@ func driftLoadOptions() []config.LoadOption {
 
 // checkConfigDrift runs the drift check for one loaded config and prints the
 // differing files. It returns how many differ.
-func checkConfigDrift(cfg *config.Config, rep *driftReport, sink *generator.GitignoreSink) (differing, blocked int, err error) {
+func checkConfigDrift(cfg *config.Config, rep *driftReport, sink *generator.GitignoreSinks) (differing, blocked int, err error) {
 	items, blocked, err := collectConfigDrift(gitutil.WithMemo(cmdContext()), cfg, sink)
 	if err != nil {
 		return 0, 0, err
@@ -70,9 +70,9 @@ func checkConfigDrift(cfg *config.Config, rep *driftReport, sink *generator.Giti
 // so recursive runs can do it on several roots at once and report in order. The
 // shared sink only collects patterns (under a mutex, into a set), so the block it
 // judges afterwards does not depend on the order the roots finish in.
-func collectConfigDrift(ctx context.Context, cfg *config.Config, sink *generator.GitignoreSink) (items []driftItem, blocked int, err error) {
+func collectConfigDrift(ctx context.Context, cfg *config.Config, sink *generator.GitignoreSinks) (items []driftItem, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
-	attachRecursiveGitignoreSink(gen, cfg, sink)
+	attachRecursiveGitignoreSink(ctx, gen, cfg, sink)
 	gen.SetContext(ctx)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
@@ -267,7 +267,7 @@ type driftRoot struct {
 }
 
 // checkDriftRoot loads one root, runs the gate and compares its generated files.
-func checkDriftRoot(ctx context.Context, path string, gate func(*config.Config) error, sink *generator.GitignoreSink) driftRoot {
+func checkDriftRoot(ctx context.Context, path string, gate func(*config.Config) error, sink *generator.GitignoreSinks) driftRoot {
 	var r driftRoot
 	ctx, r.notes = withRootNotes(ctx)
 	cfg, err := loadProjectFile(ctx, path, driftLoadOptions()...)
@@ -323,7 +323,7 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 	total, totalBlocked, failed, gateDrift := 0, 0, 0, 0
 	// The roots share one managed block at the repository toplevel; each adds its
 	// patterns here and the block is judged once, after the last root.
-	sink := openRecursiveGitignoreSink()
+	sink := generator.NewGitignoreSinks()
 	forEachRoot(ctx, paths, func(path string) driftRoot { return checkDriftRoot(ctx, path, gate, sink) },
 		func(i int, path string, r driftRoot, elapsed time.Duration) {
 			r.notes.flush(logger.Std(), os.Stderr)
@@ -355,8 +355,9 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 	}
 	// A root that failed left its patterns out, so the block is only judged when
 	// every root was read (generate rewrites it under the same condition).
-	if d, ok := sink.Drift(logger.Std()); ok {
-		rep.add(d.Kind, displayDriftAbs(filepath.Join(sink.TopLevel(), filepath.FromSlash(d.Path)), d.Path), d.Note)
+	for _, sd := range sink.Drift(logger.Std()) {
+		d := sd.Drift
+		rep.add(d.Kind, displayDriftAbs(filepath.Join(sd.TopLevel, filepath.FromSlash(d.Path)), d.Path), d.Note)
 		total++
 	}
 	if total == 0 && gateDrift > 0 {

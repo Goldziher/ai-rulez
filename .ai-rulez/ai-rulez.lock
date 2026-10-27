@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.7.0'
 scope = 'all'
-tree = 'sha256:32daa1b5a50c6d81b41d985cf267b6874f2bf95ed0c32057a9db4050626da38e'
+tree = 'sha256:560ccdf83e5a97fd913e2a5fcbf1158bd960be557c0bf769023aad4576c9062f'
 
 [[served]]
 name = 'build'
@@ -226,7 +226,7 @@ digest = 'sha256:2444977f0c39c311ede777ee13e62e89528a21c518b7210a4e8aa68b6bbcd9d
 kind = 'context'
 id = 'generation-pipeline'
 path = 'context/generation-pipeline.md'
-digest = 'sha256:bd6540d0307a56a146ce0f92ef60668dcb1a06670946b0e3aa0263db99d2f5ae'
+digest = 'sha256:52e9f3fa818e6d2dd52d692e26a60cb99c8310ef6a59af9e36e99ac059c8609f'
 
 [[item]]
 kind = 'context'

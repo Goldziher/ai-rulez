@@ -18,7 +18,6 @@ INFO  Generation complete files=6
 .claude/settings.json file 0644 1270 75b2c29f6eff539da1f5100be71315f1c02ea931561f68ffcc89b36647ad24a3
 .codex/ dir 0755
 .codex/config.toml file 0644 121 c0eb7669ad6f82dff61664d7b65362eb9a2a271a29cc6d083b101ba5aa84b1e6
-.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 AGENTS.md file 0644 464 b6a2875597ff271c9e5c9192e66771bbf4df3440864cb92e83b0e7fc29e71b7e
 CLAUDE.md file 0644 393 8390d8224793730200b94db85fdbf4dca65ce454a4efcbc0bd6485f2cdcc2472
@@ -184,12 +183,6 @@ enabled = true
 
 [plugins."basemind@basemind"]
 enabled = true
-<<<<
-.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
->>>>
-# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
-.ai-rulez/.generated-manifest.local.json
-# END ai-rulez
 <<<<
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 >>>>

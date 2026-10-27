@@ -44,7 +44,6 @@ INFO  Generation complete files=12
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 261 ea2db04491e6b2b5acd1e1e4df5214568bee267a56b020a1c1ef1aa4ea315120
 .cursor/rules/go-style.mdc file 0644 281 b0341f7e89046d96c132bc2681da2918d9a40df12bfd63489bf838a00a8b8a1d
-.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 AGENTS.md file 0644 51 45bba3fb38bfbd7ecb5707e748f0df06a9cb0d9ff766ae4b628ef7382f266138
 CLAUDE.md file 0644 437 bc0b9a44bac228e74def7780099a57fc1802d5d8d4862bef3fb769ea0fd59c07
@@ -103,7 +102,6 @@ Clean plan (profile default)
   remove dir (if empty): .claude
   remove manifest: .ai-rulez/.generated-manifest.json
   remove local manifest: .ai-rulez/.generated-manifest.local.json
-  strip ai-rulez block from .gitignore
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
 Removed generated files: 12 files, 11 directories

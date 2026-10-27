@@ -1767,17 +1767,17 @@ directory entry (`!.claude/skills/`, `!/.claude/skills/`) is honored the same wa
 way, since `generate` leaves it alone; it still reports a machine-local or secret output a rule un-ignores, and says
 that `generate` will not re-ignore it.
 
-The machine-local manifest, `.ai-rulez/.generated-manifest.local.json`, is the one entry that is always written: it
-is ignored whenever it exists in a repository (and whenever a run writes it), even with `gitignore = false`, without
-adding `.ai-rulez/local/` or the overlay patterns.
+With `gitignore = true` the block is the same on every machine, whether or not `config.local.*` or `.ai-rulez/local/`
+exist and with or without `generate --no-local`: it always lists `.ai-rulez/config.local.*` with its
+`.config.local.*` lock and temp files, `.ai-rulez/local/` and `.ai-rulez/.generated-manifest.local.json`. A path that
+exists only because this machine's local inputs add it (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`,
+`AGENTS.override.md`, `<rulesdir>/*.local.*`, a `.claude/settings.json` that only the overlay's hooks create, local
+skills) is never listed: it is excluded through `.git/info/exclude`, which is not committed.
 
-Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
-when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
-no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
-`<rulesdir>/*.local.*` including `ai-rulez.local.*`), the `.ai-rulez/local/` source tree, the
-`config.local.*` overlay with its `.config.local.*` lock and temp files, and
-`.ai-rulez/.generated-manifest.local.json`. Overlay-derived outputs whose names differ per machine are
-excluded through `.git/info/exclude` instead. See [Local Configuration](local-overrides.md).
+With `gitignore = false` the machine-local inputs that exist (the `config.local.*` overlay, the `.ai-rulez/local/`
+tree) are still gitignored in the project's `.gitignore`. The machine-local manifest alone does not make `generate`
+write a tracked `.gitignore`: it is excluded through `.git/info/exclude` instead. See
+[Local Configuration](local-overrides.md).
 
 `gitignore` defaults to `false`, so generated files are normally committed; set it to `true` when the team
 keeps generated output out of git and regenerates it locally.
@@ -7714,20 +7714,21 @@ instead of the local content. If local content exists but no `AGENTS.md` is prod
 
 ##### Bookkeeping
 
-- **Gitignore.** Local rule files share a folder with committed rules, so one pattern per folder is
-  written (for example `.claude/rules/*.local.*`) before the files themselves. The managed block also
-  lists `.ai-rulez/local/`, `.ai-rulez/config.local.*`, `.ai-rulez/.config.local.*` (lock and temp
-  files) and `.ai-rulez/.generated-manifest.local.json`.
+- **Gitignore.** With `gitignore = true` the managed block always lists `.ai-rulez/local/`,
+  `.ai-rulez/config.local.*`, `.ai-rulez/.config.local.*` (lock and temp files) and
+  `.ai-rulez/.generated-manifest.local.json`, whether or not they exist and with or without `--no-local`, so the
+  committed block is the same on every machine. The local outputs themselves are not in it (see below).
 - **Symlinked `.gitignore`.** Git does not read a `.gitignore` that is a symbolic link, and ai-rulez never
   writes through it: every ignore entry goes to a per-project block in `.git/info/exclude` instead.
 - **Fail closed.** `generate` stops, listing the paths, when a machine-local or secret-bearing output, the
   `config.local.*` overlay or the `local/` tree would not be git-ignored after the entries are written (for
   example because a `.gitignore` line such as `!.ai-rulez/local/` un-ignores it). Narrow the rule, or use
   `--no-local`.
-- **Per-clone excludes.** Local-only outputs whose names do not contain `.local.` (a local skill's
-  `SKILL.md`, `AGENTS.override.md`, an output of an overlay-defined preset) differ per machine. They are listed in a block of
+- **Per-clone excludes.** Every output the local inputs add (`CLAUDE.local.md`, `<rulesdir>/*.local.*`, a local skill's
+  `SKILL.md`, `AGENTS.override.md`, a `.claude/settings.json` only the overlay's hooks create, an output of an
+  overlay-defined preset) exists only on this machine. They are listed in a block of
   this project's `.git/info/exclude`, keyed by the project's config directory, so they stay out of the
-  shared `.gitignore`. Outside a git repository they fall back to the managed `.gitignore` block.
+  shared `.gitignore`, which would otherwise change with each contributor's local files. Outside a git repository they fall back to the managed `.gitignore` block.
   `clean`, or a run with no local inputs left, removes the block.
 - **Local manifest.** Local outputs are tracked in `.ai-rulez/.generated-manifest.local.json`, not in
   the committed manifest. A teammate's `generate` never deletes your local files; `clean` removes them
@@ -8534,9 +8535,11 @@ skipped by `generate --check --recursive`; use `verify --plugin` for it. See [Pl
 
 ##### The shared `.gitignore` block
 
-With `gitignore = true`, a recursive run writes one managed block at the git toplevel holding every root's patterns
-(`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check` verifies that block once after the
-last root. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
+With `gitignore = true`, a recursive run writes one managed block at the toplevel of each git repository, holding the
+patterns of the roots inside it (`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check`
+verifies each block once after the last root. A root's patterns go only to the `.gitignore` of its own repository: a
+nested directory with its own `.git` gets its own block, and a repository whose root sets `gitignore = false` never has
+its `.gitignore` written for other roots, which matters for a parent checkout holding several independent repositories. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
 root. To commit generated files instead, list them in each root's [`gitignore_exclude`](configuration.md#gitignore_exclude);
 a root applies its list to its own outputs, so a project that commits everything repeats
 `gitignore_exclude = ["**/AGENTS.md", "**/CLAUDE.md", ".claude/"]` in each config. When the block hides a file git
@@ -27520,8 +27523,10 @@ one). Two properties keep the result deterministic:
   `cmd/commands`) and the run prints them with that root's result. The writing `generate --recursive` shows a progress
   counter and logs a root's load warnings as they happen.
 
-A recursive run with `gitignore = true` writes one managed block at the repository toplevel, holding every root's
-patterns, and `--check` verifies that block once after the last root. See [Monorepo](monorepo.md).
+A recursive run with `gitignore = true` writes one managed block per git repository, at that repository's toplevel,
+holding the patterns of the roots inside it, and `--check` verifies each block once after the last root. A root's
+patterns never reach the `.gitignore` of another repository or of a root with `gitignore = false`. See
+[Monorepo](monorepo.md).
 
 #### The managed `.gitignore` block
 
@@ -27533,8 +27538,14 @@ With `gitignore = true` (or `generate --gitignore`) ai-rulez maintains a `# BEGI
   block left out. An entry already ignored by your rules, or re-included by a negation of yours, is left out of the block.
 - `gitignore_exclude` lists generated outputs you commit on purpose; they stay out of the block while every other entry stays
   managed. Machine-local and secret outputs are never excluded.
-- Machine-local outputs (`*.local.*`, `config.local.*`, `.ai-rulez/local/`, the local manifest) are ignored even when
-  `gitignore = false`, and an MCP config holding secrets is refused unless git ignores it.
+- The block is the same on every machine and with or without `--no-local`. It always lists `.ai-rulez/config.local.*`
+  (and the overlay's `.config.local.*` lock and temp files), `.ai-rulez/local/` and the machine-local manifest, whether
+  or not those exist. It never lists a path only because this machine's local inputs add it: outputs the overlay or
+  `local/` content creates (`CLAUDE.local.md`, a hook-only `.claude/settings.json`, local skills) are kept in
+  `.git/info/exclude`, which is not committed.
+- With `gitignore = false` the machine-local inputs that exist (`config.local.*`, `local/`) are still ignored, and an
+  MCP config holding secrets is refused unless git ignores it. A machine-local manifest that is the only local file goes
+  to `.git/info/exclude`, so `generate` does not write a tracked `.gitignore` for a project that turned it off.
 - `generate --check` reports a block that differs from what a run would write as drift, and `generate` warns when a tracked
   file matches a line of the block.
 
@@ -29163,7 +29174,7 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
 | `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit; `generate` overwrites it, so the edit is lost |
 | `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it. Without a manifest (CI, a fresh checkout) a generated file whose source was removed is still reported: a file under an output directory that carries a `Content-Hash` header and that no output emits is an orphan |
-| `missing: .gitignore (managed block)` / `stale: .gitignore (managed block)` | The managed `.gitignore` block (see [`gitignore`](configuration.md#gitignore)) is absent, or does not hold exactly the entries `generate` would write (a missing entry, or a line inside the block that `generate` would remove, is drift), or `generate` would remove it. Lines outside the block are never judged. When `.gitignore` is a symlink, git does not read it and `generate` keeps the entries in `.git/info/exclude`; `--check` judges that file's `ai-rulez` block the same way and names it as `.git/info/exclude`. A recursive run checks the one shared block at the repository toplevel, once every root is read; in `--format json` the item is `{"kind", "path": ".gitignore", "note": "managed block"}` |
+| `missing: .gitignore (managed block)` / `stale: .gitignore (managed block)` | The managed `.gitignore` block (see [`gitignore`](configuration.md#gitignore)) is absent, or does not hold exactly the entries `generate` would write (a missing entry, or a line inside the block that `generate` would remove, is drift), or `generate` would remove it. Lines outside the block are never judged. When `.gitignore` is a symlink, git does not read it and `generate` keeps the entries in `.git/info/exclude`; `--check` judges that file's `ai-rulez` block the same way and names it as `.git/info/exclude`. A recursive run checks the shared block of each git repository at its toplevel, once every root is read; in `--format json` the item is `{"kind", "path": ".gitignore", "note": "managed block"}` |
 | `blocked: <path>` | A machine-local input (overlay or `local/` tree) would change this file and `generate` refuses to write it because it is tracked or not git-ignored; the same refusal `generate` and `generate --dry-run` report. `--allow-local-drift` lifts it |
 
 With a machine-local overlay or `local/` content, `--check` classifies the outputs like `generate` does, so files that `generate` keeps for the local inputs and that are in sync are not reported. `--check` does not print the summary of rules whose activation a tool cannot express; `generate` prints it.

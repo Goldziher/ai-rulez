@@ -297,9 +297,11 @@ skipped by `generate --check --recursive`; use `verify --plugin` for it. See [Pl
 
 ### The shared `.gitignore` block
 
-With `gitignore = true`, a recursive run writes one managed block at the git toplevel holding every root's patterns
-(`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check` verifies that block once after the
-last root. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
+With `gitignore = true`, a recursive run writes one managed block at the toplevel of each git repository, holding the
+patterns of the roots inside it (`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check`
+verifies each block once after the last root. A root's patterns go only to the `.gitignore` of its own repository: a
+nested directory with its own `.git` gets its own block, and a repository whose root sets `gitignore = false` never has
+its `.gitignore` written for other roots, which matters for a parent checkout holding several independent repositories. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
 root. To commit generated files instead, list them in each root's [`gitignore_exclude`](configuration.md#gitignore_exclude);
 a root applies its list to its own outputs, so a project that commits everything repeats
 `gitignore_exclude = ["**/AGENTS.md", "**/CLAUDE.md", ".claude/"]` in each config. When the block hides a file git

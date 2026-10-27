@@ -33,7 +33,7 @@ func TestCollectGitignorePaths_KeepsLocalPatternsWhenLocalWasNotLoaded(t *testin
 		want      bool
 	}{
 		{"overlay and local tree on disk", true, true},
-		{"nothing local on disk", false, false},
+		{"nothing local on disk", false, true}, // listed anyway: the block must not depend on local files
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

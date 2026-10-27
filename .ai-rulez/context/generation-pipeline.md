@@ -26,7 +26,7 @@ Pipeline: load -> merge -> validate -> render -> write. The full description is 
 - Two presets writing the same path must render identical bytes; `generate` fails and names them otherwise.
 - Write: the managed `.gitignore` block is maintained only when `gitignore = true` is set (or `generate --gitignore` is passed); `gitignore_exclude` keeps outputs you commit out of it. Machine-local outputs are always excluded. `generate --check` compares the plan with the disk (and the block) and exits 2 on drift; `--dry-run` previews; `--emit-plan` writes the plan as JSON.
 - `agents_md` defaults to true: `AGENTS.md` is canonical and `CLAUDE.md` imports `@AGENTS.md`. Headers carry only the per-file `Content-Hash` unless `[header] hashes = "full"`.
-- Recursive runs: `generate --recursive`, `generate --check --recursive` and `validate --recursive` process the roots concurrently on at most one worker per CPU. The check and validate paths emit results in root order, with a `[n/N] path (elapsed)` line on stderr and each root's collected warnings printed with its result. A recursive run with `gitignore = true` writes one managed block at the repository toplevel. A plugin-authoring root (`[plugin]` or plugin definitions, no preset) is built in plugin mode by `generate --recursive` and skipped by `generate --check --recursive` (use `verify --plugin`); it never gets the default self MCP server.
+- Recursive runs: `generate --recursive`, `generate --check --recursive` and `validate --recursive` process the roots concurrently, one worker per CPU at most; check and validate print results in root order with a `[n/N] path (elapsed)` line. With `gitignore = true` each git repository gets one managed block for its own roots; the block never depends on local files or `--no-local` (overlay outputs go to `.git/info/exclude`). A plugin-authoring root (plugin definitions, no preset) is built in plugin mode, skipped by `--check` (use `verify --plugin`) and never gets the self MCP server.
 - Plugins: `generate --plugin` builds plugin bundles and marketplace indexes from `[plugin]` / `[marketplace]` or from `[[plugins_authoring]]` / `[[marketplaces_authoring]]` (inline or in `plugins/<name>.toml` and `marketplaces/<name>.toml`); `verify --plugin` checks them and `publish` packages them. Agent Plugins packages (`internal/agentplugins`), ARD manifests (`internal/ard`) and MCP Server Cards (`internal/mcpcard`) are emitted by `publish --emit`.
 
 Rendering flow:
@@ -36,10 +36,4 @@ Rendering flow:
 3. Generate preset outputs (plus MCP output when servers exist).
 4. Write files (and update the managed gitignore block when enabled).
 
-Profile notes:
-
-- `default` profile resolution order:
-  1. If `profiles["default"]` is explicitly defined in config, use it like any named profile.
-  2. If no profiles are defined at all, include root content and all domains (including included domains).
-  3. If other profiles exist but `"default"` is not defined, include root content, builtin domains, and `FromInclude` domains.
-- `ai-rulez generate --profile <name>` builds root content plus the named profile's domains, along with builtin and `FromInclude` domains.
+Profile resolution, including the `default` profile, is described under Profiles and Domains.

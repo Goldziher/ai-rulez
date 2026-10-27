@@ -96,7 +96,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 665 bfd5c18eab8afa93ed9bcda7f54f51c3d2f16465fad135caf0af97348df88c84
+.gitignore file 0644 716 2fa91e963e09f8585c1fcc165da2e04189bcc4da95f28ae0b127e9df5ec2a5ac
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
@@ -122,7 +122,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1131 07de181dd67437c62d4207a58ade45c79dbba4d31ad6a1fe1a0d818a52da0d6d
 ~ .ai-rulez/.generated-manifest.local.json file 0644 2470 6b322dc9388c8b711ad20e31b930e7bfab0c4e55606e2b9c4ec7a9c28bdec1df
-~ .gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
+~ .gitignore file 0644 410 6a16035384fa0ddf08ab95f3aa773a53c43bb176ab6cea313631727ff95b4d67
 - .agents/ dir 0755
 - .agents/skills/ dir 0755
 - .agents/skills/deployer/ dir 0755
@@ -180,7 +180,7 @@ INFO  Generation complete files=13
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1033 a89b8afc99f04e0b0be65103122059554cd3b8ed932a2c53973d47fb729ae41a
-~ .gitignore file 0644 335 35e9c6ccd145e8b153ab05ca7ca069b79fbb6f27c209b793f21dde8e161710ed
+~ .gitignore file 0644 386 e91a05857c6fbc3da519975dcabf9cbba6814c9d132351c440dcd851b6de6e1d
 - .claude/agents/ dir 0755
 - .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 - .claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
@@ -278,7 +278,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 616 f3cb293186badc29a315110268bc60678f5fb0851569d99c413ae0b8b45c940c
+.gitignore file 0644 667 e9264db082a37288bf4550a4f2616f1e05ecce0f1d3434afa052e872756cce7c
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755

@@ -49,7 +49,6 @@ INFO  Generation complete files=19
 .cursor/commands/ dir 0755
 .cursor/commands/ship.md file 0644 52 932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab
 .cursor/mcp.json file 0644 207 b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09
-.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
 .mcp.json file 0644 403 449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a
 AGENTS.md file 0644 448 005e0df39648f70646b036b45784dd02573aa4bc3f29b6be2f259e817ec38f93
 CLAUDE.md file 0644 385 a5339d809644df61225e26f170d180f3c38c12076884484abd15cfc9198aba1b
@@ -687,12 +686,6 @@ Ship $ARGUMENTS.
     }
   }
 }
-<<<<
-.gitignore file 0644 109 45bb9d8ba86f5fd6ac1036262437b0b013d80825f83ada83448087fd6dc9d54b
->>>>
-# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
-.ai-rulez/.generated-manifest.local.json
-# END ai-rulez
 <<<<
 .mcp.json file 0644 403 449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a
 >>>>

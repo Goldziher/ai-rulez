@@ -48,7 +48,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 259 401eff7487bd88cd30d793a5152a368e6284701ed31dfdd64183a3797f07fe5e
+.gitignore file 0644 310 e6b2fbadfdf8ab205bc9e45888a5074ddf1a160d0289cb9455222534e699c1fe
 .gitlab/ dir 0755
 .gitlab/duo/ dir 0755
 .gitlab/duo/chat-rules.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
