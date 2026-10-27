@@ -84,25 +84,10 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 // shared tree. A generated skill whose id an authored skill or a command already
 // uses is left out with a warning: the authored item keeps its directory.
 func scopedFallbackSkills(cfg *config.Config, content *config.ContentTree, owners []string) []config.ContentFile {
-	taken := map[string]bool{}
-	for _, items := range [][]config.ContentFile{presets.AllSkills(content), presets.AllCommands(content)} {
-		for idx := range items {
-			taken[config.SkillID(items[idx])] = true
-		}
-	}
-	var kept []config.ContentFile
-	generated := presets.ScopedFallbackSkills(content, cfg, owners)
-	for idx := range generated {
-		skill := &generated[idx]
-		if taken[skill.ID] {
-			cfg.Diag.Warn("a skill or command already uses the name of a glob-scoped item's fallback skill, so the item "+
-				"is not served to presets without a rules folder; rename one of them", "skill", skill.ID, "source", skill.Path)
-			continue
-		}
-		taken[skill.ID] = true
-		kept = append(kept, *skill)
-	}
-	return kept
+	return presets.ScopedFallbackSkillsUnclaimed(content, cfg, owners, func(skill *config.ContentFile) {
+		cfg.Diag.Warn("a skill or command already uses the name of a glob-scoped item's fallback skill, so the item "+
+			"is not served to presets without a rules folder; rename one of them", "skill", skill.ID, "source", skill.Path)
+	})
 }
 
 // warnScopedInlinedTwice reports, once per run, that the shared AGENTS.md
