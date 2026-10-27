@@ -46,7 +46,7 @@ The workflow does the rest:
 | `provenance`      | SLSA provenance over every binary and archive; uploads one `<archive>.sigstore.json` per archive.         |
 | `finalize_release`| Promotes the draft only when archives, `checksums.txt` and provenance are all attached.                   |
 | `publish_npm` / `publish_pypi` / `publish_homebrew` | Publish after the release is public. Homebrew is skipped for `-rc.N`.            |
-| `update_action_tag` | After all distribution jobs succeed or intentionally skip, move the floating `v5` action tag to the published stable v5 release commit. |
+| `update_action_tag` | After all distribution jobs succeed or intentionally skip, move the floating major action tag (`v5` for a 5.x release) to the published stable release commit. |
 
 A failed platform build therefore leaves a hidden draft, never a live release with missing binaries.
 
@@ -56,30 +56,40 @@ The root `action.yml` is published as `uses: Goldziher/ai-rulez@v5`. The `v5` ta
 action implementation; its `version` input independently selects the CLI binary (default `latest`).
 See the [action guide](../github-actions.md) for input and environment examples.
 
-Only stable `v5.X.Y` releases advance `v5`. The final `update_action_tag` job has `contents: write`
-and serializes tag updates. It verifies the release is public, resolves an annotated release tag
-to its commit, and checks the workflow's source commit. A newer published stable v5 release or
-an existing `v5` commit ahead of the candidate prevents rollback. Release candidates, failed
-publication jobs and cancelled runs never move it. The full release tag is never rewritten.
-Moving `v5` does not trigger another publish: the tag trigger only matches full version tags.
+Only stable `vX.Y.Z` releases move a floating tag, and the tag is the release's major: `v5.8.0`
+moves `v5`, a future `v6.0.0` would create `v6`. The final `update_action_tag` job has
+`contents: write` and serializes tag updates. It verifies the release is public, resolves an
+annotated release tag to its commit, and checks the workflow's source commit. A newer published
+stable release of the same major or an existing major-tag commit ahead of the candidate prevents
+rollback. Release candidates, failed publication jobs and cancelled runs never move it. The full
+release tag is never rewritten. Moving the major tag does not trigger another publish: the tag
+trigger only matches full version tags.
+
+The job writes an annotated tag (`v5: v5.8.0`, tagged by `github-actions[bot]`) and pushes it with
+`git push --force-with-lease=refs/tags/v5:<previous>`, where `<previous>` is the value the tag had
+when the job read it (empty the first time, so the push succeeds only while the tag does not
+exist). A tag moved by anyone else in between makes the push fail instead of being overwritten.
+The token reaches git through the environment; the checkout keeps no credentials.
 
 Rerunning a fully published release can repair a missing floating tag without rebuilding or
 republishing packages. Dispatch from that release's tag so the source and provenance checks hold.
 
 GitHub refuses to let the workflow's `GITHUB_TOKEN` move a ref onto commits that change files under
 `.github/workflows/`, and no workflow permission grants that. When a release changes a workflow
-since the commit `v5` points at, `update_action_tag` therefore fails with an error from the
-`PATCH .../git/refs/tags/v5` call after every package has published, and a rerun fails the same
-way. Move the tag by hand with an account that may push workflow changes, as a fast-forward:
+since the commit `v5` points at, `update_action_tag` therefore fails at the `git push` after every
+package has published, and a rerun fails the same way. Move the tag by hand with an account that may
+push workflow changes, as a fast-forward:
 
 ```bash
-git merge-base --is-ancestor "$(gh api repos/Goldziher/ai-rulez/git/refs/tags/v5 -q .object.sha)" 'v5.4.0^{commit}'
-printf '{"sha":"%s","force":false}' "$(git rev-parse 'v5.4.0^{commit}')" |
-  gh api --method PATCH repos/Goldziher/ai-rulez/git/refs/tags/v5 --input -
+git fetch origin --tags --force
+previous="$(git ls-remote origin refs/tags/v5 | cut -f1)"
+git merge-base --is-ancestor 'v5^{commit}' 'v5.4.0^{commit}'
+git tag --annotate --force --message 'v5: v5.4.0' v5 'v5.4.0^{commit}'
+git push --force-with-lease="refs/tags/v5:${previous}" origin refs/tags/v5:refs/tags/v5
 ```
 
-Check first that the release is public and is the newest stable v5 release; `force: false` makes
-GitHub reject anything but a fast-forward.
+Check first that the release is public and is the newest stable v5 release; the `merge-base` check
+refuses anything but a fast-forward, and the lease refuses a tag that moved since you read it.
 
 To run the workflow by hand, use **workflow_dispatch** with the tag, and choose the tag as the ref in "Use workflow
 from". The `meta` job enforces this: when the dispatch did not come from `refs/tags/<tag>` it fails with a clear error

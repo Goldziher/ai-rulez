@@ -17,6 +17,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   packages are validated at load. See `docs/plugins.md`
   ([#500](https://github.com/Goldziher/ai-rulez/issues/500)).
 
+### Changed
+
+- **The floating `v5` action tag is now an annotated tag pushed with `--force-with-lease`.** After a stable
+  release publishes, the release workflow derives the tag from the release's major version (`v5.8.0` moves `v5`),
+  writes an annotated tag and pushes it with `--force-with-lease=refs/tags/v5:<previous>`, so a tag moved by anyone
+  else in between fails the push instead of being overwritten; the first push requires that the tag not exist.
+  Release candidates still never move it, and the no-rollback checks are unchanged. `uses: Goldziher/ai-rulez@v5`
+  with `version: latest` keeps a workflow on the newest 5.x action and CLI with no per-release edits
+  ([#504](https://github.com/Goldziher/ai-rulez/issues/504)).
+
 ### Fixed
 
 - **`generate --recursive` builds a plugin-authoring root as a plugin bundle, and the default self MCP server is never
