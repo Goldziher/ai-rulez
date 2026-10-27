@@ -963,12 +963,14 @@ prefix_rule(
     decision = "forbidden",
 )
 <<<<
-.gitignore file 0644 471 a5081454049d1d4c1ad7ccc4a9e36374c403b6edbd00958d22df7292c133cfd2
+.gitignore file 0644 522 6b24fcebd4c3293bedeb043dd2774b124c3d3811b007b3480ff4cb5b3b9054e9
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
+.ai-rulez/.config.local.*
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
+.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/api.md
