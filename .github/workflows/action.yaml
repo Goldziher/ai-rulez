@@ -90,7 +90,7 @@ jobs:
     steps:
       # The action source goes to a subdirectory; the workspace root becomes a fixture repository,
       # which the check sub-action inspects as it would a consumer's checkout.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v7
         with:
           path: action-src
       - name: Install the CLI to build the fixture
@@ -153,7 +153,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v7
         with:
           path: action-src
       # A project with no version-range source: the sub-action must stop with a notice and commit
