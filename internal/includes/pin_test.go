@@ -179,6 +179,41 @@ func TestLock_RequireFailsWhenUncovered(t *testing.T) {
 	}
 }
 
+func TestLock_UnenforcedSourceIgnoresAStaleEntry(t *testing.T) {
+	tests := []struct {
+		name    string
+		waived  string
+		wantErr bool
+	}{
+		{name: "waived include loads past a stale entry", waived: "shared"},
+		{name: "another include stays enforced", waived: "other", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			f := newLockFixture(t)
+			f.writeLock(t)
+			path := filepath.Join(f.project, ".ai-rulez", "config.toml")
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(path, []byte(strings.Replace(string(data), `name = "shared"`, "name = \"shared\"\nref = \"main\"", 1)), 0o644))
+			lockPolicy.Mode = LockRequire
+			lockPolicy.Unenforced = func(kind, name string) bool { return kind == lockfile.KindInclude && name == tt.waived }
+			t.Cleanup(func() { lockPolicy.Unenforced = nil })
+
+			// Act
+			_, err = f.load(t)
+
+			// Assert
+			if tt.wantErr {
+				require.ErrorIs(t, err, config.ErrLockViolation)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestLock_TamperedCacheFailsDigestVerification(t *testing.T) {
 	f := newLockFixture(t)
 	f.writeLock(t)

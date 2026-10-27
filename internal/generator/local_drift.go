@@ -21,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -107,22 +108,14 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 	baseline, baselineHash, err := g.renderBaseline(profile)
 	if err != nil {
 		err = redactCredentials(err)
-		if g.allowLocalDrift {
-			// The baseline also classifies machine-local outputs and stamps source
-			// hashes, so it cannot be skipped up front; but a failure to render it
-			// (typically a lock that is stale for an include the overlay replaces)
-			// must not block a run that waived the drift check it serves. The run
-			// then treats its outputs as shared.
-			g.log().Warn("Could not render the shared baseline; the local drift check did not run (--allow-local-drift)",
-				"includes", g.overlayIncludeNames(), "error", err.Error())
-			return nil, nil
-		}
-		// Fail closed: without the baseline, overlay-derived outputs cannot be
-		// told apart from shared ones.
+		// Fail closed, also with --allow-local-drift: without the baseline,
+		// overlay-derived outputs cannot be told apart from shared ones and would
+		// be written as shared (and committed).
 		return nil, oops.
-			Hint("Fix the shared config (run `ai-rulez lock` if the lock is stale), run with --allow-local-drift to "+
-				"skip the drift check, or run with --no-local to generate the shared view").
-			Wrapf(err, "render the shared baseline to detect local drift (fix the shared config, use --allow-local-drift or --no-local)")
+			Hint("Fix the shared config (run `ai-rulez lock` if the lock is stale; --allow-local-drift tolerates a "+
+				"stale lock for the includes the overlay replaces), or run with --no-local to generate the shared view").
+			Wrapf(err, "render the shared baseline to detect local drift (fix the shared config, use --allow-local-drift "+
+				"for a stale lock on a replaced include, or use --no-local)")
 	}
 
 	localHash, err := g.localSourceHash(baselineHash)
@@ -160,6 +153,27 @@ func (g *Generator) overlayIncludeNames() []string {
 	return names
 }
 
+// baselineLockPolicy is the lock policy for the shared baseline. With
+// --allow-local-drift the includes the overlay replaces are not held to their
+// lock entry: their content is replaced anyway, and a pending change to their
+// shared source (a lock that is stale until the shared module is pushed) must not
+// stop the baseline from classifying everything else. It returns the includes
+// waived, nil when the policy is unchanged.
+func (g *Generator) baselineLockPolicy() (config.LockPolicy, []string) {
+	policy := g.config.LockPolicy
+	if !g.allowLocalDrift {
+		return policy, nil
+	}
+	names := g.overlayIncludeNames()
+	if len(names) == 0 {
+		return policy, nil
+	}
+	policy.Unenforced = func(kind, name string) bool {
+		return kind == lockfile.KindInclude && slices.Contains(names, name)
+	}
+	return policy, names
+}
+
 // renderBaseline renders the shared view (no overlay, no local content) from a
 // separately decoded config: MCP resolution mutates servers in place, so a copy
 // of the merged config would be wrong. Include fetches are shared through the
@@ -170,8 +184,14 @@ func (g *Generator) renderBaseline(profile string) ([]config.OutputFile, string,
 		return nil, "", oops.Errorf("the config file location is unknown")
 	}
 	cfgPath := g.config.ConfigPath()
-	cfg, err := config.LoadConfigFromFile(g.ctx, cfgPath,
-		g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
+	opts := g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))
+	if policy, waived := g.baselineLockPolicy(); waived != nil {
+		g.log().Warn("ai-rulez.lock is not enforced for includes the local overlay replaces; "+
+			"the lock is stale for them if their shared source changed (run `ai-rulez lock`)",
+			"includes", waived)
+		opts = append(opts, config.WithLockPolicy(policy))
+	}
+	cfg, err := config.LoadConfigFromFile(g.ctx, cfgPath, opts...)
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // wrapped by planLocal
 	}

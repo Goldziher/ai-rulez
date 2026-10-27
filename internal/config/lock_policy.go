@@ -43,6 +43,11 @@ type LockPolicy struct {
 	// writer of outputs sets it (generate, the MCP generate_outputs tool, the
 	// pkg/airulez facade); commands that only read or report leave it off.
 	RequireWhenEnforced bool
+	// Unenforced names the sources whose lock entry is not enforced: a missing or
+	// stale entry fetches the source unpinned instead of failing. The shared
+	// baseline of a machine-local overlay sets it for the includes the overlay
+	// replaces, whose content is replaced anyway. nil enforces every source.
+	Unenforced func(kind, name string) bool
 	// VersionPolicy is how a refresh moves the sources that ask for a version
 	// range (`ai-rulez update`, and the release age gate of `lock`).
 	VersionPolicy
@@ -107,4 +112,9 @@ func WithNoFetch(ctx context.Context) context.Context {
 func NoFetchRequested(ctx context.Context) bool {
 	v, _ := ctx.Value(noFetchKey{}).(bool) //nolint:errcheck // absent key reads as false
 	return v
+}
+
+// Waives reports whether the lock entry of the source is not enforced.
+func (p LockPolicy) Waives(kind, name string) bool {
+	return p.Unenforced != nil && p.Unenforced(kind, name)
 }

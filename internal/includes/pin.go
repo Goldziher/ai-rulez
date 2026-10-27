@@ -129,7 +129,7 @@ func pinFor(cfg *config.Config, lock *lockfile.File, w lockfile.Want) (*pin, err
 			return nil, violation(w, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", w.Ref, entry.Commit)
 		}
 		return &pin{entry: *entry, kind: w.Kind, name: w.Name, state: stateFor(cfg)}, nil
-	case strictLock(cfg):
+	case strictLock(cfg) && !cfg.LockPolicy.Waives(w.Kind, w.Name):
 		if lock == nil {
 			return nil, violation(w, "%s not found in %s; run `ai-rulez lock` and commit it", lockfile.FileName, cfg.ConfigDir)
 		}
