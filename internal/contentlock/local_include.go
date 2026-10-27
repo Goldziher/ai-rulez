@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // localIncludeDirs are the top-level directories of an include tree that become
@@ -47,7 +48,7 @@ func (c *collector) collectLocalIncludes() error {
 			continue
 		}
 		c.items = append(c.items, lockfile.Item{
-			Kind: KindLocalInclude, ID: inc.Name, Path: filepath.ToSlash(inc.Source), Digest: digest,
+			Kind: KindLocalInclude, ID: inc.Name, Path: localIncludePath(inc), Digest: digest,
 		})
 	}
 	return nil
@@ -60,16 +61,19 @@ func (c *collector) collectLocalIncludes() error {
 // is followed, since the configuration chose it; symlinks inside the tree are
 // refused by the digest.
 func (c *collector) localIncludeDir(inc *config.IncludeConfig) (string, error) {
-	src := inc.Source
+	src, err := safefs.SubPath(inc.Source, inc.Path)
+	if err != nil {
+		return "", oops.Errorf("path %q: %s", inc.Path, err)
+	}
 	if !filepath.IsAbs(src) {
 		src = filepath.Join(c.cfg.BaseDir, src)
 	}
 	resolved, err := filepath.EvalSymlinks(filepath.Clean(src))
 	if err != nil {
-		return "", oops.Errorf("path %q not found", inc.Source)
+		return "", oops.Errorf("path %q not found", localIncludePath(inc))
 	}
 	if info, statErr := os.Stat(resolved); statErr != nil || !info.IsDir() {
-		return "", oops.Errorf("path %q is not a directory", inc.Source)
+		return "", oops.Errorf("path %q is not a directory", localIncludePath(inc))
 	}
 	if filepath.Base(resolved) == aiRulezDirName {
 		return resolved, nil
@@ -78,6 +82,17 @@ func (c *collector) localIncludeDir(inc *config.IncludeConfig) (string, error) {
 		return sub, nil
 	}
 	return resolved, nil
+}
+
+// localIncludePath is the include's source joined with its sub-path, slash-form:
+// what the lock item records as the pinned path. An unusable sub-path leaves the
+// source alone (localIncludeDir reports it).
+func localIncludePath(inc *config.IncludeConfig) string {
+	p, err := safefs.SubPath(inc.Source, inc.Path)
+	if err != nil {
+		p = inc.Source
+	}
+	return filepath.ToSlash(p)
 }
 
 func isDir(p string) bool {

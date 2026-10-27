@@ -1,6 +1,7 @@
 package safefs
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -20,4 +21,20 @@ func RelEscapes(rel string) bool {
 func Within(root, target string) bool {
 	rel, err := filepath.Rel(root, target)
 	return err == nil && !RelEscapes(rel)
+}
+
+// SubPath joins a slash-form sub-path (an include's `path`) onto root. An empty
+// sub-path or "/" is root itself. A sub-path that climbs out of root ("..",
+// "a/../..") is refused; a leading slash is trimmed, as the git include does, so
+// the result always stays below root lexically.
+func SubPath(root, sub string) (string, error) {
+	sub = strings.Trim(filepath.ToSlash(sub), "/")
+	clean := filepath.Clean(filepath.FromSlash(sub))
+	if sub == "" || clean == "." {
+		return root, nil
+	}
+	if RelEscapes(clean) || filepath.IsAbs(clean) || filepath.VolumeName(clean) != "" {
+		return "", fmt.Errorf("path %q leaves the include source", sub)
+	}
+	return filepath.Join(root, clean), nil
 }
