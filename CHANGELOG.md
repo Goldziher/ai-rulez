@@ -61,7 +61,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Changed
 
 - **Dependencies are upgraded and the GitHub Actions are pinned to major tags.** Go modules include oras-go
-  2.7.0, liter-llm 2.4.0 and tiktoken-go/tokenizer 0.10.0; the docs lockfile, pnpm 12.15.0 and golangci-lint
+  2.7.0, liter-llm 2.4.1 and tiktoken-go/tokenizer 0.10.0; the docs lockfile, pnpm 12.15.0 and golangci-lint
   v2.15.0 are current. Workflow and action references use `@vN` (`actions/checkout@v7`), and setup-uv keeps a full
   tag because it publishes no major tag.
 - **The floating `v5` action tag is now an annotated tag pushed with `--force-with-lease`.** After a stable
