@@ -176,3 +176,11 @@ url = "https://mcp.example.com/public"
 ` + cfg[end:]
 	return out
 }
+
+// withFiles returns base with the extra files added.
+func withFiles(base, extra map[string]string) map[string]string {
+	for path, data := range extra {
+		base[path] = data
+	}
+	return base
+}

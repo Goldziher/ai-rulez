@@ -241,6 +241,9 @@ func (c *Config) validateRules() error {
 	if err := validateScopedFallback(c.Rules.ScopedFallback); err != nil {
 		return err
 	}
+	if err := validateScopedFallbackGroup(c.Rules.ScopedFallbackGroup); err != nil {
+		return err
+	}
 	if err := validateBazDefault(c.Rules.BazDefault); err != nil {
 		return err
 	}
@@ -309,6 +312,19 @@ func validateScopedFallback(value string) error {
 		With("valid_values", []string{ScopedFallbackInline, ScopedFallbackSkill}).
 		Hint("Use \"inline\" to inline glob-scoped items into AGENTS.md or \"skill\" to serve them as path-gated skills.").
 		Errorf("invalid scoped_fallback value %q at rules.scoped_fallback", value)
+}
+
+func validateScopedFallbackGroup(value string) error {
+	valid := []string{ScopedFallbackGroupNone, ScopedFallbackGroupInclude, ScopedFallbackGroupDirectory}
+	if value == "" || slices.Contains(valid, value) {
+		return nil
+	}
+	return oops.
+		With("field", "rules.scoped_fallback_group").
+		With("actual_value", value).
+		With("valid_values", valid).
+		Hint("Use \"none\" for one skill per item, \"include\" for one per include, or \"directory\" for one per directory of globs.").
+		Errorf("invalid scoped_fallback_group value %q at rules.scoped_fallback_group", value)
 }
 
 func validateBazScoped(value string) error {

@@ -90,6 +90,21 @@ func otherScenarios() []scenario {
 			},
 		},
 		scenario{
+			name: "scoped-fallback-grouped",
+			files: withFiles(
+				richFilesTop([]string{"codex", "claude"}, "agents_md = true",
+					"\n[rules]\nscoped_fallback = \"skill\"\nscoped_fallback_group = \"directory\"\n"),
+				map[string]string{
+					".ai-rulez/rules/go.md":          "---\nglobs: [\"**/*.go\"]\n---\n# Go\n\nWrap errors.\n",
+					".ai-rulez/rules/api.md":         "---\nglobs: [\"api/**\"]\n---\n# API\n\nVersion every route.\n",
+					".ai-rulez/rules/claude-only.md": "---\nglobs: [\"web/**\"]\nfallback: false\n---\n# Claude only\n\nKept for path-aware harnesses.\n",
+				}),
+			exec:  scriptExec(),
+			git:   true,
+			full:  true,
+			steps: []step{runEnv(goldenEnv, "generate", "--yes")},
+		},
+		scenario{
 			name:  "rules-inline-compact",
 			files: richFilesTop([]string{"claude", "cursor", "copilot", "junie"}, "compact = true", "\n[rules]\nmode = \"inline\"\n"),
 			exec:  scriptExec(),
