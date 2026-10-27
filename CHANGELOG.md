@@ -25,6 +25,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `expected-config-count` fails a run that finds a different number. A job summary lists every command, the roots
   checked and the files examined. Inputs: `version`, `config-directories`, `expected-config-count`, `plugin`,
   `strict`, `local` and `token-budget` ([#505](https://github.com/Goldziher/ai-rulez/issues/505)).
+- **`Goldziher/ai-rulez/update@v5` keeps version-range pins current on a schedule.** It runs
+  `ai-rulez lock --outdated --format json` and stops with a notice when nothing is updatable; otherwise it runs
+  `ai-rulez update` (a pin the pre-pin scan refuses fails the job), `generate --no-local` and `lock --content-only`,
+  commits the result as `github-actions[bot]` and opens or refreshes a pull request from `ai-rulez/update` with the
+  outdated table in its body, or pushes to the checked-out branch with `direct: true`. The branch is replaced with
+  `--force-with-lease`, and the token reaches git and `gh` only through the environment. Inputs: `version`, `names`,
+  `kind`, `direct`, `branch`, `token` and `working-directory`; `min_release_age` stays a per-source configuration
+  setting because `update` has no flag for it ([#506](https://github.com/Goldziher/ai-rulez/issues/506)).
 
 ### Changed
 

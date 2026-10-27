@@ -783,7 +783,9 @@ jobs:
 ```
 
 `--fail-on-outdated` exits `2` when any source has an allowed update, so the job turns red until someone runs
-`ai-rulez update` and merges the lock; a moved or deleted tag and an unsatisfiable constraint fail it too. To report
+`ai-rulez update` and merges the lock; a moved or deleted tag and an unsatisfiable constraint fail it too. To have CI
+run the update and open the pull request itself, use the
+[`Goldziher/ai-rulez/update@v5` sub-action](github-actions.md#scheduled-pin-updates-update). To report
 without failing, drop the flag and read `summary.updatable` and `summary.held_back` from the JSON. To make "outdated"
 a finding instead, turn on `AR734` and let the exit code gate:
 

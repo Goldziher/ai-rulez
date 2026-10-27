@@ -121,6 +121,61 @@ relative paths without `..`. Outputs: `version`, `roots` (the number checked) an
 run there would. `tokens --budget` is a single ceiling on the headline always-loaded count; a
 per-harness budget (`claude=N,codex=N`) and the MCP tool-schema cost are not measured.
 
+## Scheduled pin updates: `update`
+
+`ai-rulez update` moves version-range pins (`version = "^1.2"`) of includes, installed skills,
+skill sources, marketplaces and plugins, and nothing runs it on its own; Dependabot and Renovate do
+not read `ai-rulez.lock`. `Goldziher/ai-rulez/update@v5` runs it on a schedule:
+
+```yaml
+name: ai-rulez update
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Goldziher/ai-rulez/update@v5
+        with:
+          version: 5.7.0
+```
+
+In order, it:
+
+1. runs `ai-rulez lock --outdated --format json` and stops with a notice (`updated: false`) when no
+   source has an update its constraint allows;
+2. runs `ai-rulez update`. The pre-pin security scan applies: a refused source fails the job with
+   its `AR` code and nothing is committed;
+3. runs `ai-rulez generate --no-local`, then `ai-rulez lock --content-only`;
+4. commits every change in the project as `github-actions[bot]` and, by default, pushes it to
+   `branch` and opens a pull request into the checked-out branch, or refreshes the open one. The
+   PR body holds the outdated table (kind, name, source, locked tag, new tag). With `direct: true`
+   it pushes the commit to the checked-out branch instead, with the same list in the commit message.
+
+| Input | Default | Meaning |
+| --- | --- | --- |
+| `version` | `latest` | CLI version, as for the root action |
+| `names` | all | Sources to update, separated by spaces or newlines (passed to `lock --outdated` and `update`) |
+| `kind` | all | `include`, `skill`, `source`, `marketplace` or `plugin` |
+| `direct` | `false` | `true` pushes to the checked-out branch instead of opening a pull request |
+| `branch` | `ai-rulez/update` | Pull request branch. The action owns it: each run replaces it with `--force-with-lease` from the value it read, so a push by someone else in between fails the run instead of being lost |
+| `token` | `github.token` | Token for `git push` and `gh`. It reaches git through `GIT_CONFIG_*` environment variables and `gh` through `GH_TOKEN`, never the command line or a file. When `GITHUB_TOKEN` is unset it is also exported as `GITHUB_TOKEN`, which `ai-rulez` uses only for github.com release dates (`min_release_age`) |
+| `working-directory` | `.` | Project root holding the configuration, relative to the workspace |
+
+Outputs: `version`, `updated` (`true` when a commit was pushed), `commit` and
+`pull-request-url`. The job needs `contents: write`, and `pull-requests: write` for the pull
+request mode. The checkout must be on a branch (not detached) with no uncommitted changes. A
+pull request opened with the default `GITHUB_TOKEN` does not start other workflows; pass a GitHub
+App or fine-grained token as `token` when the pull request must run CI. There is no
+`min-release-age` input: `ai-rulez update` has no such flag, and each source's `min_release_age`
+in the configuration already holds back tags that are too new (`AR733`).
+
 ## LLM configuration inputs
 
 All LLM inputs are optional and default to an empty string. A nonempty input sets its corresponding

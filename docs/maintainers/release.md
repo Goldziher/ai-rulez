@@ -53,7 +53,8 @@ A failed platform build therefore leaves a hidden draft, never a live release wi
 ### Floating action tag
 
 The root `action.yml` is published as `uses: Goldziher/ai-rulez@v5`, and the `check/action.yml`
-sub-action as `Goldziher/ai-rulez/check@v5` from the same tag. The `v5` tag selects the action
+and `update/action.yml` sub-actions as `Goldziher/ai-rulez/check@v5` and
+`Goldziher/ai-rulez/update@v5` from the same tag. The `v5` tag selects the action
 implementation; its `version` input independently selects the CLI binary (default `latest`).
 See the [action guide](../github-actions.md) for input and environment examples.
 
