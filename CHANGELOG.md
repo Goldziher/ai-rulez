@@ -77,6 +77,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`scoped_fallback` skill descriptions no longer split a multi-byte character.** Descriptions are cut at 160 or 250
+  bytes, and the cut could land inside a Cyrillic letter or an emoji in an item title, leaving invalid UTF-8 in the
+  `SKILL.md` frontmatter. The cut now falls on a character boundary.
+
 - **`schema/lock-outdated.schema.json` and `schema/update.schema.json` accept the `marketplace` and `plugin` kinds.**
   `lock --outdated` and `update` report installed marketplaces and plugins that use a `version` constraint, but the
   schemas listed only `include`, `skill` and `source`, so a validator rejected that output. The enums now match the
