@@ -257,8 +257,8 @@ func registerRuledocsAdded(s *ruleSet) {
 		},
 		CodeOKFIndexMismatch: {
 			Why:  "An OKF index that lists missing files, or omits existing ones, misleads every reader that navigates by it.",
-			Bad:  "An index.md entry for a deleted concept",
-			Good: "Regenerate with `ai-rulez export okf`",
+			Bad:  "An index.md entry for a deleted concept, or one still showing a skill's old description",
+			Good: "Run `ai-rulez generate` (the configuration directory) or `ai-rulez export okf` (an exported bundle)",
 		},
 		CodeOKFTypeInvalid: {
 			Why:  "An OKF concept without a parseable type cannot be classified.",

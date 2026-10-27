@@ -457,6 +457,7 @@ func okfLintOptions(cfg *config.Config) []lint.Option {
 		return opts
 	}
 	if _, findings, ok := okfTreeFindings(cfg); ok {
+		findings = append(findings, staleOKFIndexFindings(cfg, findings)...)
 		opts = append(opts, lint.WithOKF(cfg.ConfigDir, findings))
 	}
 	return opts

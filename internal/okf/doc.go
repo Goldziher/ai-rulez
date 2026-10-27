@@ -70,7 +70,7 @@ type Rule struct {
 // Rules lists every OKF check, sorted by code.
 func Rules() []Rule {
 	return []Rule{
-		{CodeIndexMismatch, "okf-index-mismatch", SeverityWarning, "an OKF index.md lists a file that does not exist, or omits a concept or subdirectory of its directory"},
+		{CodeIndexMismatch, "okf-index-mismatch", SeverityWarning, "an OKF index.md lists a file that does not exist, omits a concept or subdirectory of its directory, or (in a migrated configuration directory) lists a title or description its concept no longer has"},
 		{CodeTypeInvalid, "okf-type-invalid", SeverityError, "an OKF concept has unparseable frontmatter or a missing or empty type"},
 		{CodeLinkBroken, "okf-link-broken", SeverityWarning, "a markdown link in an OKF bundle does not resolve to a file in the bundle"},
 		{CodeVersionInvalid, "okf-version-invalid", SeverityWarning, "the root okf_version is not MAJOR.MINOR, names a version other than the one ai-rulez implements, or the root index uses the frontmatter style OKF 0.2 does not describe; okf validate also reports an error when there is no root index.md naming okf_version"},
