@@ -133,6 +133,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   a figure far below what `generate` writes and Codex lists, or no finding. The totals now cover every item the
   preset emits, the message says how many skills come from includes, and an included skill over the Claude listing
   cap is reported on `config.toml` ([#508](https://github.com/Goldziher/ai-rulez/issues/508)).
+- **An unknown `x-ai-rulez.kind` in OKF frontmatter, or a kind that disagrees with the concept's directory, is now
+  reported.** `kind: bogus` in a `context/` concept passed `validate --strict` and `okf validate` with no findings and
+  was rendered as context, because a configuration directory classifies by directory and ignored the value. Both
+  commands (and the `okf_validate` tool) now report an unknown kind as an `AR9B1` error naming the allowed values
+  (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `skill-resource`) and a known kind that names another
+  directory, such as `kind: skill` under `context/`, as an `AR9B1` warning, which fails `--strict`
+  ([#509](https://github.com/Goldziher/ai-rulez/issues/509)).
 
 ## [5.7.0] - 2026-10-25
 

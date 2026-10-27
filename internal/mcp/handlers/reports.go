@@ -21,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/Goldziher/ai-rulez/v5/internal/policy"
 	"github.com/Goldziher/ai-rulez/v5/internal/sbom"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
@@ -250,7 +251,7 @@ func OKFValidateHandler(_ context.Context, request *ToolRequest) (*sdkmcp.CallTo
 	if err != nil {
 		return ToolError(err)
 	}
-	findings := okf.Check(b)
+	findings := okfbridge.Check(b)
 	return reportResult(okf.ValidationDocument(spec, b, findings), !none && okf.Fails(findings, threshold))
 }
 
