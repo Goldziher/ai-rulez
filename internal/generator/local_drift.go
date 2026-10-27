@@ -39,6 +39,9 @@ type localPlan struct {
 	// local/ content tree); they are ignored through .git/info/exclude because
 	// the set differs per machine.
 	machineLocal map[string]bool
+	// machineLocalDirs: the machineLocal entries that are directory outputs,
+	// ignored with a trailing slash.
+	machineLocalDirs map[string]bool
 	// inGitignore: machineLocal files that must go to the managed .gitignore
 	// block instead, because no exclude file can hold them (not a repository, or
 	// a path outside the work tree).
@@ -124,7 +127,7 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 	}
 	plan := &localPlan{
 		baselineHash: baselineHash, localHash: localHash,
-		machineLocal: map[string]bool{}, inGitignore: map[string]bool{},
+		machineLocal: map[string]bool{}, machineLocalDirs: map[string]bool{}, inGitignore: map[string]bool{},
 	}
 	g.classify(plan, baseline, merged)
 	g.stampSourceHashes(plan, merged)
@@ -247,10 +250,18 @@ func (g *Generator) classify(plan *localPlan, baseline, merged []config.OutputFi
 	}
 	for i := range merged {
 		o := &merged[i]
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
 		if o.IsDir {
+			// A directory is machine-local when the shared render writes nothing at or
+			// under it. A directory both renders produce stays shared. It is not a local-only file: it is neither checked against git's
+			// tracked set nor listed in the manifest.
+			if !g.baselineHasPath(baseline, base, rel) {
+				plan.machineLocal[rel] = true
+				plan.machineLocalDirs[rel] = true
+				o.LocalOnly = true
+			}
 			continue
 		}
-		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
 		b, inBase := base[rel]
 		switch {
 		case !inBase:
@@ -268,6 +279,27 @@ func (g *Generator) classify(plan *localPlan, baseline, merged []config.OutputFi
 	for _, list := range [][]string{plan.baselineFiles, plan.localOnly, plan.drift, plan.suppressed} {
 		sort.Strings(list)
 	}
+}
+
+// baselineHasPath reports whether the shared render produces the directory rel
+// itself or any file under it.
+func (g *Generator) baselineHasPath(baseline []config.OutputFile, files map[string]config.OutputFile, rel string) bool {
+	prefix := strings.TrimSuffix(rel, "/") + "/"
+	for file := range files {
+		if strings.HasPrefix(file, prefix) {
+			return true
+		}
+	}
+	for _, o := range baseline {
+		if !o.IsDir {
+			continue
+		}
+		dir := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
+		if dir == rel || strings.HasPrefix(dir, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func sameOutput(a, b config.OutputFile) bool {
@@ -546,6 +578,10 @@ func (g *Generator) machineExcludePatterns(plan *localPlan) (exclude string, pat
 				plan.inGitignore[rel] = true
 				continue
 			}
+			if plan.machineLocalDirs[rel] {
+				patterns = append(patterns, "/"+escapeGitPattern(repoRel)+"/")
+				continue
+			}
 			// Local rule files share a folder with committed rules: one pattern
 			// per folder also covers the ones added later.
 			if stableLocalName(rel) && localGitignorePattern(g.config.RulesDirs, rel) != rel {
@@ -690,9 +726,12 @@ func (g *Generator) guardLocal(profile string, outputs []config.OutputFile) erro
 // localOutputPattern is the managed-.gitignore pattern for a machine-local
 // output, or "" when .git/info/exclude holds it instead: overlay-derived paths
 // differ per machine, so they stay out of the shared .gitignore.
-func (g *Generator) localOutputPattern(relPath string) string {
+func (g *Generator) localOutputPattern(relPath string, isDir bool) string {
 	if g.plan != nil && g.plan.machineLocal[relPath] && !g.plan.inGitignore[relPath] {
 		return ""
+	}
+	if isDir {
+		return strings.TrimSuffix(relPath, "/") + "/"
 	}
 	return localGitignorePattern(g.config.RulesDirs, relPath)
 }

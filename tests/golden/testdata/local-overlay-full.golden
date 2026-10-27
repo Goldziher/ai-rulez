@@ -2388,7 +2388,7 @@ description: "Scratch skill"
 
 # Scratch
 <<<<
-.gitignore file 0644 940 a4b8f6a8ea2ec5ee3f164f9d91fc1bdacede989d4e07fc49914e58b520126e76
+.gitignore file 0644 792 fba48c375192f523d3ddf6581c03ac6efb2e513f7a6dd499885b452fb8c45bca
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
@@ -2421,16 +2421,7 @@ description: "Scratch skill"
 .cursor/rules/manual.mdc
 .cursor/rules/targeted.mdc
 .cursor/rules/typescript.mdc
-.gemini/agents/
-.github/agents/
-.github/skills/
-.kilo/agents/
-.kilo/commands/
-.kilo/skills/
 .mcp.json
-.opencode/agents/
-.opencode/commands/
-.opencode/skills/
 AGENTS.md
 CLAUDE.md
 # END ai-rulez

@@ -126,6 +126,8 @@ func (g *Generator) protectedGitignorePatterns(outputs []config.OutputFile) map[
 	for _, output := range outputs {
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		switch {
+		case output.LocalOnly && output.IsDir:
+			protected[strings.TrimSuffix(relPath, "/")+"/"] = true
 		case output.LocalOnly:
 			protected[localGitignorePattern(g.config.RulesDirs, relPath)] = true
 		case output.Sensitive:

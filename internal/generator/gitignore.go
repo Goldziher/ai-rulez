@@ -180,7 +180,7 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	for _, output := range outputs {
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if output.LocalOnly {
-			if pattern := g.localOutputPattern(relPath); pattern != "" {
+			if pattern := g.localOutputPattern(relPath, output.IsDir); pattern != "" {
 				paths[pattern] = true
 			}
 			continue
