@@ -349,7 +349,8 @@ acceptance, and the `[[lint.accept]]` entries of those rules that accepted nothi
 finding is a `violation` when it is an error (`AR9W0` by default), a `warning` below that, and `accepted` when an entry
 accepts it. With `--root DIR` the session is the one started in `DIR`: its `CLAUDE.md`, rules, skills, agents,
 `.mcp.json` and settings, with paths relative to `DIR`, while the configuration, the map and `[[lint.accept]]` stay
-the project's (an entry's `path` is relative to the project root, as in `validate`).
+the project's (an entry's `path` is relative to the project root, as in `validate`). An entry whose `path` matches
+no file under `DIR` is not judged, so it is not reported as stale.
 
 A start-of-session artifact whose file was not read (over the 1 MiB read limit, or a symlink to outside the root)
 loads in every session, but no leak in it can be found. It is listed under `unchecked` with the reason, and as an

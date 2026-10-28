@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // CodeAcceptUnused is AR9I0, the [[lint.accept]] entry that accepted nothing.
@@ -120,6 +122,9 @@ func (r *runner) acceptJudgeable(e *acceptEntry) bool {
 	if r.sel != nil && !r.sel[AnalyzerFor(e.code).Name] {
 		return false
 	}
+	if !r.acceptInExposureScope(e) {
+		return false
+	}
 	// The entry is judged when its path matches a file this run linted, or
 	// matches no file of the project at all (the file is gone). A file that
 	// exists but was not linted (a --path or --glob run) says nothing.
@@ -142,6 +147,27 @@ func (r *runner) acceptJudgeable(e *acceptEntry) bool {
 		}
 	}
 	return true
+}
+
+// acceptInExposureScope reports whether the entry of an exposure rule can be judged. A session exposure source
+// rooted below the project (exposure leakage --root) inventories only that directory, so an entry whose path
+// matches no indexed file under it accepts nothing there without being stale.
+func (r *runner) acceptInExposureScope(e *acceptEntry) bool {
+	if r.exposure == nil || AnalyzerFor(e.code).Name != AnalyzerExposure {
+		return true
+	}
+	root := r.exposureRoot()
+	prefix, err := filepath.Rel(gitutil.Resolve(r.tree.Top), gitutil.Resolve(root))
+	if err != nil || prefix == "." || safefs.RelEscapes(prefix) {
+		return true
+	}
+	prefix = filepath.ToSlash(prefix) + "/"
+	for _, rel := range r.tree.Paths() {
+		if strings.HasPrefix(rel, prefix) && r.pathMatches(filepath.Join(r.tree.Top, filepath.FromSlash(rel)), e.path) {
+			return true
+		}
+	}
+	return false
 }
 
 // validateAccepts reports entries that would silently match nothing or accept
