@@ -65,7 +65,7 @@ func TestValidateWarnsAboutSkippedNestedRoots(t *testing.T) {
 			nestedRootsWorkspace(t)
 			resetValidateFlags(t)
 			viper.Set("quiet", false)
-			t.Cleanup(func() { viper.Set("quiet", false) })
+			t.Cleanup(func() { viper.Set("quiet", nil) }) // nil clears the override, so a later test reads the environment again
 			validateRecursive, validateFormat, validateStrict = tt.recursive, tt.format, tt.strict
 
 			// Act

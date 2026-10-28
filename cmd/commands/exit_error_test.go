@@ -106,9 +106,13 @@ func TestFailKeepsAnExitErrorsCode(t *testing.T) {
 	assert.Same(t, inner, fail(inner))
 }
 
-// Every command is a RunE: os.Exit lives in main only.
+// Every command is a RunE: os.Exit lives in main only. Cobra's own help
+// command, which an earlier in-process run adds to the root, is not ours.
 func TestEveryRunnableCommandUsesRunE(t *testing.T) {
 	walkCommands(RootCmd, func(c *cobra.Command) {
+		if c.Parent() == RootCmd && c.Name() == "help" {
+			return
+		}
 		assert.Nil(t, c.Run, "%s uses Run; return an error from RunE instead of calling os.Exit", c.CommandPath())
 	})
 }
