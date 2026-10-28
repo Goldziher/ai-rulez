@@ -375,6 +375,10 @@ func TestLoadFileProblemsCarryTheFileAndLine(t *testing.T) {
 		{"unknown table", "[skills]\nx = \"a\"\n", `unknown key "skills"`, []int{1}},
 		{"syntax", "[[area]\nname = 1\n", "not valid TOML", []int{1}},
 		{"skill area", "[[area]]\nname = \"a\"\n[skill_areas]\nx = \"b\"\n", "names no area", []int{4}},
+		{"duplicate after the same word as a term in its own table", "[[area]]\nname = \"ops\"\n[[area]]\nterms = [\"ops\"]\n\nname = \"ops\"\n", "duplicate", []int{6}},
+		{"reserved name after the same word as a term", "[[area]]\nterms = [\"unclassified\"]\nname = \"unclassified\"\n", "is reserved", []int{3}},
+		{"a quoted skill key holding =", "[[area]]\nname = \"a\"\n[skill_areas]\n\"x=y\" = \"nope\"\n", "names no area", []int{4}},
+		{"a multi-line string line that looks like a table", "[[area]]\nname = \"a\"\ndescription = \"\"\"\n[not a table]\n\"\"\"\npaths = [\"x/\"]\n", `path "x/"`, []int{6}},
 		{"skill area named earlier as a term", "[[area]]\nname = \"a\"\nterms = [\"ops\"]\n\n[skill_areas]\nfirst = \"a\"\n\"x-y\" = \"ops\"\nz = \"ops\"\n", "names no area", []int{7, 8}},
 	}
 	for _, tt := range tests {
