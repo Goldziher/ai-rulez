@@ -147,7 +147,8 @@ func checkExposureLeakage(r *runner) {
 	}
 	r.leakage.ran, r.leakage.checked, r.leakage.unchecked = true, lk.Checked, lk.Unchecked
 	root := r.exposureRoot()
-	for _, l := range lk.Leaks {
+	for i := range lk.Leaks {
+		l := &lk.Leaks[i]
 		code := CodeExposureAreaTerm
 		if l.Ambiguous {
 			code = CodeExposureAreaAmbiguous
@@ -159,7 +160,7 @@ func checkExposureLeakage(r *runner) {
 			continue
 		}
 		r.exposureDeps(before, abs, nil)
-		r.leakage.leaks = append(r.leakage.leaks, leakRecord{leak: l, code: code, file: r.findings[before].File})
+		r.leakage.leaks = append(r.leakage.leaks, leakRecord{leak: *l, code: code, file: r.findings[before].File})
 	}
 	for _, s := range lk.UnknownSkills {
 		path, line := r.skillAreasLine(lk.AreasFile, s.Skill)
@@ -223,7 +224,8 @@ func (rep *Report) Leakage() *LeakageResult {
 		Unchecked: append([]ExposureUnchecked{}, x.unchecked...),
 		Stale:     append([]string{}, x.stale...),
 	}
-	for _, rec := range x.leaks {
+	for i := range x.leaks {
+		rec := &x.leaks[i]
 		f, ok := found[key{rec.code, rec.file, max(rec.leak.Line, 1), rec.leak.Message}]
 		if !ok {
 			continue

@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/exposure"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
@@ -101,7 +102,7 @@ func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.Leakag
 	if err != nil {
 		return nil, oops.Wrapf(err, "resolve the project root")
 	}
-	tree, err := lint.LoadTree(leakageTreeRoot(base, root))
+	tree, err := lint.LoadTreeContext(ctx, gitutil.Git{}, leakageTreeRoot(base, root), "")
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
@@ -183,10 +184,11 @@ func areasFilePath(root, file string) string {
 func writeLeakageText(w io.Writer, rep *exposure.LeakageReport) error {
 	var violations []exposure.Leak
 	counts := map[exposure.LeakSeverity]int{}
-	for _, l := range rep.Findings {
+	for i := range rep.Findings {
+		l := &rep.Findings[i]
 		counts[l.Severity]++
 		if l.Severity == exposure.LeakViolation {
-			violations = append(violations, l)
+			violations = append(violations, *l)
 		}
 	}
 	var b strings.Builder
@@ -211,7 +213,8 @@ func writeLeakageText(w io.Writer, rep *exposure.LeakageReport) error {
 	if len(rep.Findings) > 0 {
 		b.WriteString("findings:\n")
 	}
-	for _, l := range rep.Findings {
+	for i := range rep.Findings {
+		l := &rep.Findings[i]
 		fmt.Fprintf(&b, "  %s %s %s/%s %s:%d: %s\n", l.Severity, l.Code, l.Area, l.Term, l.Path, l.Line, l.Excerpt)
 		if l.Reason != "" {
 			fmt.Fprintf(&b, "    accepted: %s\n", l.Reason)
