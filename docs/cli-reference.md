@@ -1102,7 +1102,7 @@ ai-rulez export okf --check
 
 ## `ai-rulez exposure`
 
-Inspect what a Claude Code session loads and which area each artifact belongs to
+Report what a Claude Code session loads at start, and inspect its artifacts and areas
 
 ```text
 ai-rulez exposure [flags]
@@ -1111,15 +1111,21 @@ ai-rulez exposure [flags]
 Examples:
 
 ```bash
+ai-rulez exposure
+ai-rulez exposure --plugins all --context-window 1000000 --format json
 ai-rulez exposure inventory
 ai-rulez exposure inventory --format json --with-text
 ai-rulez exposure areas --areas tools/context/areas.toml --format json
 ai-rulez exposure collisions --min-score 0.2
+ai-rulez exposure leakage --format json
 ```
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
+| `--context-window` | int | `0` | Model context window in tokens, for the skill listing budget (default: [exposure] context_window, else 200000) |
+| `--format` | string | `text` | Output format: text, json |
+| `--harness` | string | `claude` | Harness whose load model applies; only claude |
 | `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
 | `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
 
@@ -1190,6 +1196,28 @@ ai-rulez exposure inventory --format json --with-text
 | ---- | ---- | ------- | ----------- |
 | `--format` | string | `text` | Output format: text, json |
 | `--with-text` | bool |  | Include each artifact's text in the JSON output |
+| `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
+| `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
+| `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
+
+## `ai-rulez exposure leakage`
+
+Report area terms in the text a session sees at its start (AR9W0, AR9W1)
+
+```text
+ai-rulez exposure leakage [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez exposure leakage
+ai-rulez exposure leakage --areas tools/context/areas.toml --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
 | `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
 | `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
 | `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |

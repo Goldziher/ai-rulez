@@ -23,6 +23,7 @@ var JSONContracts = []JSONContract{
 	{"exposure inventory", "exposure-inventory.v1.schema.json"},
 	{"exposure areas", "exposure-areas.v1.schema.json"},
 	{"exposure collisions", "exposure-collisions.v1.schema.json"},
+	{"exposure leakage", "exposure-leakage.v1.schema.json"},
 	{"catalog", "catalog.v1.schema.json"},
 	{"catalog diff", "catalog-diff.schema.json"},
 	{"verify --attestation", "verify-attestation.schema.json"},

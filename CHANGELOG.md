@@ -60,6 +60,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   session lists at start with `[exposure] plugins` and `context_window`; `[lint.load_budgets]
   claude-skill-listing-total` sets a fixed budget instead. The `exposure` command without a subcommand used to print
   its help.
+- **Area term leakage: `AR9W0`, `AR9W1`, `AR9W6` and `ai-rulez exposure leakage`.** With an `[exposure]` area map,
+  `validate` reads the text a Claude Code session sees at its start (the root `CLAUDE.md`, unconditional root rules,
+  the skill and agent listing lines, `.mcp.json` server names, enabled plugin keys; an artifact of unknown phase
+  counts as start) and reports each term of an area that is not shared, outside path literals, as `AR9W0`
+  (`exposure-area-term`, an error), and each listed skill or agent that names only ambiguous words as `AR9W1`
+  (`exposure-area-term-ambiguous`, a warning). The message `<kind> "<name>" at session start names term "<term>" of
+  area "<area>"` is a stable contract, so `[[lint.accept]]` entries accept findings by artifact or term, and an entry
+  that accepts nothing is `AR9I0`. `AR9W6` (`exposure-skill-area-unknown`, a warning) reports a `skill_areas` key that
+  names no skill. Under `--changed`, every leak is kept when the areas file, the configuration or the root settings
+  change. `ai-rulez exposure leakage` prints the same findings with their acceptance and the stale acceptances
+  (`--areas`, `--plugins`, `--root`; `schema/exposure-leakage.v1.schema.json` with `--format json`) and exits `2` on
+  a violation or a stale acceptance. See
+  [Area term leakage](https://goldziher.github.io/ai-rulez/exposure/#area-term-leakage).
 
 ### Changed
 
@@ -71,7 +84,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - **`find_context` no longer returns a rule whose `paths:` gate was lost to broken YAML for every path.** A Claude
-  Code rule whose frontmatter names `paths:` but does not parse (an unquoted `: ` in a value, an unclosed quote or
+  Code rule whose frontmatter names `paths:` but does not parse (an unquoted `:` in a value, an unclosed quote or
   bracket, a tab indent, a block that never closes) was indexed with no restriction, so a `path` query returned it for
   any file, although Claude Code may still gate it. Where it applies cannot be known, so it now fails closed: a `path`
   query never returns it, and a `scope` query lists it with `"paths_unreadable": true`. A rule whose broken block

@@ -10,13 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeExposure returns its pairs at or over the threshold it is asked for and records the threshold.
-type fakeExposure struct {
+// fakeCollisions returns its pairs at or over the threshold it is asked for and records the threshold.
+type fakeCollisions struct {
+	noExposure
 	pairs []ExposureCollision
 	asked []float64
 }
 
-func (f *fakeExposure) Collisions(minScore float64) []ExposureCollision {
+func (f *fakeCollisions) Collisions(minScore float64) []ExposureCollision {
 	f.asked = append(f.asked, minScore)
 	var out []ExposureCollision
 	for i := range f.pairs {
@@ -82,7 +83,7 @@ func TestExposureAreaCollision(t *testing.T) {
 				".claude/skills/charge/SKILL.md": "---\nname: charge\ndescription: Look up customer invoice details by name.\n---\nbody\n",
 				".claude/agents/finder.md":       "---\nname: finder\ndescription: Finds customer invoice records.\n---\nbody\n",
 			})
-			src := &fakeExposure{pairs: collisionPairs()}
+			src := &fakeCollisions{pairs: collisionPairs()}
 			var opts []Option
 			if !tt.noSource {
 				opts = append(opts, WithExposure(src))

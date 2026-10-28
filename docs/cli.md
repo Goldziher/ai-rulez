@@ -104,10 +104,11 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez eval run` | Run the eval cases of skills through a pluggable runner and score them |
 | `ai-rulez export` | Export ai-rulez content to another format |
 | `ai-rulez export okf` | Export rules, context, skills and more as an OKF bundle |
-| `ai-rulez exposure` | Inspect what a Claude Code session loads and which area each artifact belongs to |
+| `ai-rulez exposure` | Report what a Claude Code session loads at start, and inspect its artifacts and areas |
 | `ai-rulez exposure areas` | Show the area map and the area of every artifact, with how it was decided |
 | `ai-rulez exposure collisions` | Rank skill and agent pairs of different areas whose listings overlap |
 | `ai-rulez exposure inventory` | List every artifact a session can see, with its phase, visibility and parse status |
+| `ai-rulez exposure leakage` | Report area terms in the text a session sees at its start (AR9W0, AR9W1) |
 | `ai-rulez generate` | Generate AI assistant rule files from configuration |
 | `ai-rulez guard` | Block agent edits to generated files (PreToolUse hook) |
 | `ai-rulez import` | Import content from another format into .ai-rulez/ |
@@ -3078,6 +3079,7 @@ entry in this table (`schema.JSONContracts`).
 | `ai-rulez exposure inventory --format json` | [`schema/exposure-inventory.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-inventory.v1.schema.json) |
 | `ai-rulez exposure areas --format json` | [`schema/exposure-areas.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-areas.v1.schema.json) |
 | `ai-rulez exposure collisions --format json` | [`schema/exposure-collisions.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-collisions.v1.schema.json) |
+| `ai-rulez exposure leakage --format json` | [`schema/exposure-leakage.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-leakage.v1.schema.json) |
 | `ai-rulez catalog --format json` | [`schema/catalog.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.v1.schema.json) |
 | `ai-rulez catalog diff --format json` | [`schema/catalog-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog-diff.schema.json) |
 | `ai-rulez verify --attestation --format json` | [`schema/verify-attestation.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verify-attestation.schema.json) |

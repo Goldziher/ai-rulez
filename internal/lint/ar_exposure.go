@@ -46,6 +46,9 @@ type ExposureSource interface {
 	// Collisions are the pairs at or over minScore, highest score first; none
 	// when the area map cannot be used (AR9W5 reports it).
 	Collisions(minScore float64) []ExposureCollision
+	// Leakage is what the leakage rules report; ok is false when there is no
+	// usable area map (AR9W5 reports an invalid one) or no inventory.
+	Leakage() (leakage ExposureLeakage, ok bool)
 }
 
 // WithExposure hands the exposure rules the session exposure of the project.
