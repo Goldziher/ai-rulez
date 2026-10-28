@@ -182,8 +182,8 @@ func TestExposureLintSourceBelowTheProjectRoot(t *testing.T) {
 	// Arrange
 	root := t.TempDir()
 	for name, body := range map[string]string{
-		"CLAUDE.md":                                       "The invoice flow, at the project root.\n",
-		"services/billing/CLAUDE.md":                      "Every invoice.\n",
+		"CLAUDE.md":                  "The invoice flow, at the project root.\n",
+		"services/billing/CLAUDE.md": "Every invoice.\n",
 		"services/billing/.claude/skills/charge/SKILL.md": "---\nname: charge\ndescription: Charges a card.\n---\n",
 		"services/billing/.claude/agents/clerk.md":        "---\nname: clerk\ndescription: Charges a card.\n---\n",
 		"products/search/.claude/skills/rank/SKILL.md":    "---\nname: rank\ndescription: Charges a card.\n---\n",
