@@ -107,12 +107,28 @@ func (b *builder) markdownFile(kind Kind, source Source, file, scope, fallback s
 func unreadArtifact(kind Kind, source Source, file, scope, fallback, reason string) Artifact {
 	a := Artifact{
 		Kind: kind, Source: source, Name: fallback, Path: file, Scope: scope, Visibility: VisibilityAlways,
-		Frontmatter: &FrontmatterStatus{Error: "not read: " + reason},
+		Frontmatter: &FrontmatterStatus{Error: unreadPrefix + reason},
 	}
 	if gated(kind) && scope == RootScope {
 		a.Phase = PhaseUnknown
 	}
 	return a
+}
+
+// unreadPrefix leads the frontmatter error of an artifact kept unread.
+const unreadPrefix = "not read: "
+
+// UnreadReason is why the file of an artifact kept unread was not read (see
+// unreadArtifact), "" for an artifact that was read.
+func (a *Artifact) UnreadReason() string {
+	if a.Frontmatter == nil {
+		return ""
+	}
+	reason, ok := strings.CutPrefix(a.Frontmatter.Error, unreadPrefix)
+	if !ok {
+		return ""
+	}
+	return reason
 }
 
 // header is the frontmatter the load model reads.

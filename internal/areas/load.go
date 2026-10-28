@@ -229,6 +229,9 @@ func firstDelimiter(line string) (index int, delimiter string) {
 	return literal, "'''"
 }
 
+// LineKey is the key a TOML line assigns (see lineKey); ok is false for a line that assigns none.
+func LineKey(line string) (key string, ok bool) { return lineKey(line) }
+
 // lineKey is the key a TOML line assigns: a bare, "basic" or 'literal' key followed by "=".
 func lineKey(line string) (string, bool) {
 	t := strings.TrimSpace(line)

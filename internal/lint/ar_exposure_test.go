@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExposureMapInvalid(t *testing.T) {
@@ -148,6 +151,8 @@ type fakeExposure struct {
 // fakes of each exposure rule family.
 type noExposure struct{}
 
+func (noExposure) Root() string                                { return "" }
+func (noExposure) Inputs() []string                            { return nil }
 func (noExposure) StartExposure() *ExposureStart               { return nil }
 func (noExposure) Collisions(float64) []ExposureCollision      { return nil }
 func (noExposure) Leakage() (leakage ExposureLeakage, ok bool) { return ExposureLeakage{}, false }
@@ -201,6 +206,7 @@ func TestExposureStartBudget(t *testing.T) {
 		sev      Severity
 		measured bool
 		inText   []string
+		line     int // the line of the finding; 0 is 6, the start_budget line
 	}{
 		{name: "no exposure table is inert and never reads the exposure", table: "", start: over, want: 0},
 		{name: "no start_budget is off", table: "[exposure]\ncontext_window = 200000\n", start: over, want: 0, measured: true},
@@ -214,6 +220,10 @@ func TestExposureStartBudget(t *testing.T) {
 			start: over, want: 1, sev: SeverityWarning, measured: true,
 		},
 		{name: "at the budget is clean", table: "[exposure]\nstart_budget = 150\n", start: over, want: 0, measured: true},
+		{
+			name: "a comment naming the key is not its line", table: "[exposure]\n# start_budget keeps sessions small\nstart_budget = 100\n",
+			start: over, want: 1, sev: SeverityError, measured: true, line: 7,
+		},
 		{name: "an inventory that cannot be built is silent", table: "[exposure]\nstart_budget = 100\n", start: nil, want: 0, measured: true},
 	}
 	for _, tt := range tests {
@@ -235,8 +245,12 @@ func TestExposureStartBudget(t *testing.T) {
 				if a := AnalyzerFor(f.Code); f.Severity != tt.sev || a != (AnalyzerInfo{AnalyzerExposure, ScopeBundle}) {
 					t.Errorf("AR9W3 classified as %s %v, want %s", f.Severity, a, tt.sev)
 				}
-				if !strings.HasSuffix(filepath.ToSlash(f.File), "/.ai-rulez/config.toml") || f.Line != 6 {
-					t.Errorf("AR9W3 at %s:%d, want config.toml:6 (the start_budget line)", f.File, f.Line)
+				line := tt.line
+				if line == 0 {
+					line = 6
+				}
+				if !strings.HasSuffix(filepath.ToSlash(f.File), "/.ai-rulez/config.toml") || f.Line != line {
+					t.Errorf("AR9W3 at %s:%d, want config.toml:%d (the start_budget line)", f.File, f.Line, line)
 				}
 				for _, w := range tt.inText {
 					if !strings.Contains(f.Message, w) {
@@ -304,6 +318,67 @@ func TestClaudeSkillListingTotal(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+// fakeStart is an ExposureSource with a fixed start-of-session exposure and inputs.
+type fakeStart struct {
+	noExposure
+	start  *ExposureStart
+	inputs []string
+}
+
+func (f fakeStart) StartExposure() *ExposureStart { return f.start }
+func (f fakeStart) Inputs() []string              { return f.inputs }
+
+// Under --changed, AR9W3 and the AR964 listing total sit on the config, but the change that moves them is in a
+// start-of-session artifact or an input, so they depend on those.
+func TestExposureStartUnderChanged(t *testing.T) {
+	tests := []struct {
+		name    string
+		changed []string
+		kept    bool
+	}{
+		{name: "a changed root CLAUDE.md keeps them", changed: []string{"CLAUDE.md"}, kept: true},
+		{name: "a changed listed skill keeps them", changed: []string{".claude/skills/deploy/SKILL.md"}, kept: true},
+		{name: "changed root settings keep them", changed: []string{".claude/settings.json"}, kept: true},
+		{name: "a changed configuration keeps them", changed: []string{".ai-rulez/config.toml"}, kept: true},
+		{name: "an unrelated change keeps neither", changed: []string{"README.md"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":          baseConfig + "\n[exposure]\nstart_budget = 100\n",
+				"CLAUDE.md":                      "# Guide\n",
+				".claude/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: Deploys.\n---\nBody.\n",
+				".claude/settings.json":          "{}\n",
+				"README.md":                      "unrelated\n",
+			})
+			gitAdd(t, root)
+			src := fakeStart{
+				start: &ExposureStart{
+					ContextWindow: 200000, StartArtifacts: 2, StartTokens: 150, ListingSkills: 1, ListingChars: 9000, ListingBudgetChars: 8000,
+					StartPaths: []string{filepath.Join(root, "CLAUDE.md"), filepath.Join(root, ".claude", "skills", "deploy", "SKILL.md")},
+				},
+				inputs: []string{filepath.Join(root, ".ai-rulez", "config.toml"), filepath.Join(root, ".claude", "settings.json")},
+			}
+			rep := leakRun(t, root, WithExposure(src))
+			require.Equal(t, 1, countCode(rep.Findings, CodeExposureStartBudget), dump(rep.Findings))
+			require.Len(t, findingsWith(rep.Findings, CodeLoadBudget, "skills a session lists at start"), 1, dump(rep.Findings))
+
+			// Act
+			NarrowToChanged(rep, tt.changed, "HEAD")
+
+			// Assert
+			want := 0
+			if tt.kept {
+				want = 1
+			}
+			assert.Equal(t, want, countCode(rep.Findings, CodeExposureStartBudget), "AR9W3\n%s", dump(rep.Findings))
+			assert.Len(t, findingsWith(rep.Findings, CodeLoadBudget, "skills a session lists at start"), want, "AR964 listing total\n%s", dump(rep.Findings))
 		})
 	}
 }

@@ -2,12 +2,11 @@ package exposure
 
 import "github.com/Goldziher/ai-rulez/v5/internal/areas"
 
-// AreaSkill is the skill whose owner the area map resolves, filled as the
-// reference implementation does. A repository skill is owned by its scope and
-// classified by its listing text. A plugin skill is owned by its plugin
-// directory and classified by its qualified name (`plugin:skill`), so its
-// description never places it: the plugin directory or an explicit skill_areas
-// entry does.
+// AreaSkill is the skill whose owner the area map resolves. A repository skill
+// is owned by its scope and classified by its listing text. A plugin skill is
+// owned by its plugin directory and classified by its qualified name
+// (`plugin:skill`), so its description never places it: the plugin directory
+// or an explicit skill_areas entry does.
 func (a *Artifact) AreaSkill() areas.Skill {
 	if a.Source == SourcePlugin {
 		return areas.Skill{Name: a.Name, Plugin: a.Plugin, Scope: AreaScope(a), Text: a.QualifiedName}
@@ -17,17 +16,22 @@ func (a *Artifact) AreaSkill() areas.Skill {
 
 // Classify sets Area and AreaSource on every artifact: a skill gets its owner
 // (Map.Owner of AreaSkill), any other artifact the classification of its
-// directory and text (Map.ClassifyWithSource of AreaScope and Text). Call it
-// before WithoutText. A nil map leaves every artifact Unclassified.
+// directory and text (Map.ClassifyWithSource of AreaScope and Text). The
+// directory is read as ClaimScope gives it, relative to the base of the map's
+// path claims. Call it before WithoutText. A nil map leaves every artifact
+// Unclassified.
 func (inv *Inventory) Classify(m *areas.Map) {
 	for i := range inv.Artifacts {
 		a := &inv.Artifacts[i]
+		scope := inv.ClaimScope(a)
 		if a.Kind == KindSkill {
-			owner := m.Owner(a.AreaSkill())
+			skill := a.AreaSkill()
+			skill.Scope = scope
+			owner := m.Owner(skill)
 			a.Area, a.AreaSource = owner.Area, owner.Source
 			continue
 		}
-		a.Area, a.AreaSource = m.ClassifyWithSource(AreaScope(a), a.Text)
+		a.Area, a.AreaSource = m.ClassifyWithSource(scope, a.Text)
 	}
 }
 
@@ -70,7 +74,7 @@ type AreaInfo struct {
 }
 
 // ClassifiedArtifact identifies an artifact and gives its area. AreaScope is
-// the directory whose path claims were tried (see AreaScope).
+// the directory whose path claims were tried (see Inventory.ClaimScope).
 type ClassifiedArtifact struct {
 	Kind          Kind         `json:"kind"`
 	Source        Source       `json:"source"`
@@ -118,7 +122,7 @@ func NewAreasReport(inv *Inventory, m *areas.Map, areasFile string) *AreasReport
 		a := &classified.Artifacts[i]
 		rep.Artifacts = append(rep.Artifacts, ClassifiedArtifact{
 			Kind: a.Kind, Source: a.Source, Name: a.Name, QualifiedName: a.QualifiedName, Plugin: a.Plugin, Path: a.Path,
-			Scope: a.Scope, AreaScope: AreaScope(a), Phase: a.Phase, Area: a.Area, AreaSource: a.AreaSource,
+			Scope: a.Scope, AreaScope: classified.ClaimScope(a), Phase: a.Phase, Area: a.Area, AreaSource: a.AreaSource,
 		})
 		rep.Counts[a.Area]++
 	}

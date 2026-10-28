@@ -18,7 +18,7 @@ func registerArExposureGate(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeExposureGateUnreadable: {
-			Why:  "`paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `: ` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, and a gate value of the wrong type (`paths: 5`, or `disable-model-invocation: yes`, a string to YAML 1.2) leaves the same doubt, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.",
+			Why:  "`paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `: ` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, and a gate value of the wrong type (`paths: 5`, or `disable-model-invocation: yes`, a string to YAML 1.2 that Claude Code reads as YAML 1.1 does) leaves the same doubt, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.",
 			Bad:  "`description: Use when: deploying` above `paths: [\"services/billing/**\"]`",
 			Good: "`description: \"Use when: deploying\"` above `paths: [\"services/billing/**\"]`",
 		},
@@ -87,7 +87,7 @@ func reportWrongTypedGates(r *runner, it *item, fm frontmatter) {
 		return
 	}
 	r.add(CodeExposureGateUnreadable, it.abs, line,
-		"%s %q sets %s to a value of the wrong type (paths takes a string or a list of strings, disable-model-invocation true or false), so whether Claude Code keeps the gate cannot be known: it may load at session start",
+		"%s %q sets %s to a value of the wrong type (paths takes a string or a list of strings, disable-model-invocation true or false), so the gate cannot be read and the item may load at session start; write the value in that form",
 		it.kind, itemID(it.kind, it.cf), quoteAll(keys))
 }
 

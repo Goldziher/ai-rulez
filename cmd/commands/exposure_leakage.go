@@ -26,7 +26,11 @@ func newExposureLeakageCmd(f *exposureFlags) *cobra.Command {
 the root CLAUDE.md, unconditional root rules, the skill and agent listing lines, the MCP server names and
 the enabled plugin names (AR9W0, a violation), outside repository path literals, and each listed skill or
 agent that names only ambiguous words (AR9W1, a warning). An artifact whose phase is unknown counts as
-start of session.
+start of session. A start-of-session artifact whose file could not be read (over the read limit, a
+symlink to outside the root) is listed as unchecked: it is not a finding, and no leak in it can be found.
+
+--root inspects that directory as a session started there sees it, with the configuration and area map
+of the project; the paths are relative to --root.
 
 The findings are those of ` + "`ai-rulez validate`" + `, accepted by the same [[lint.accept]] entries: an accepted
 finding is listed with the entry's reason, and an entry for AR9W0 or AR9W1 that accepts nothing is a stale
@@ -37,6 +41,7 @@ acceptance (AR9I0). A [[lint.accept]] match is a substring of the message
 acceptance, 1 the command could not run (bad flags, an invalid configuration or area map, no area map),
 2 a violation or a stale acceptance.`,
 		Example: `  ai-rulez exposure leakage
+  ai-rulez exposure leakage --root services/billing
   ai-rulez exposure leakage --areas tools/context/areas.toml --format json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -62,9 +67,10 @@ acceptance, 1 the command could not run (bad flags, an invalid configuration or 
 	return cmd
 }
 
-// runExposureLeakage runs the exposure rules of `validate` over the project
-// with the area map and plugin mode of the flags, and returns their leakage
-// view.
+// runExposureLeakage runs the exposure rules of `validate` over the inventory
+// of --root (the project root by default) with the area map and plugin mode
+// of the flags, and returns their leakage view. The paths are relative to
+// --root.
 func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.LeakageReport, error) {
 	if f.plugins != "" && !exposure.PluginMode(f.plugins).Valid() {
 		return nil, oops.Errorf("unknown --plugins %q (use none, enabled or all)", f.plugins)
@@ -84,7 +90,7 @@ func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.Leakag
 	if problems := lint.ValidateSettings(cfg.Lint); len(problems) > 0 {
 		return nil, oops.Errorf("invalid [lint] settings: %v", problems)
 	}
-	m, file, err := exposureMap(cfg.Exposure, cfg.BaseDir, root, f.areasFile)
+	m, file, err := exposureMap(cfg.Exposure, cfg.BaseDir, root, f.areasFile, configFileOf(cfg))
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +102,7 @@ func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.Leakag
 		return nil, oops.Wrapf(err, "index repository files")
 	}
 	src := exposureLintSource{
-		ctx: ctx, cfg: cfg, areas: m, areasFile: areasFilePath(root, file),
+		ctx: ctx, cfg: cfg, dir: root, areas: m, areasFile: areasFilePath(root, file),
 		plugins: exposure.PluginMode(f.plugins), cache: &exposureCache{},
 	}
 	rep, err := lint.RunWith(cfg, tree, lint.Options{Analyzers: []string{lint.AnalyzerExposure}, Cwd: root},
@@ -108,7 +114,9 @@ func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.Leakag
 	if res == nil {
 		return nil, oops.Errorf("the exposure rules did not run (is the exposure analyzer disabled?)")
 	}
-	return leakageReport(res), nil
+	out := leakageReport(res)
+	out.Root, out.Plugins, out.AreasFile = filepath.ToSlash(root), src.mode(), file
+	return out, nil
 }
 
 // leakageReport is the leakage view of a run as `exposure leakage` prints it: an accepted finding is
@@ -116,8 +124,14 @@ func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.Leakag
 // [lint.severity] moves a leak between the two.
 func leakageReport(res *lint.LeakageResult) *exposure.LeakageReport {
 	out := &exposure.LeakageReport{
-		SchemaVersion: exposure.SchemaLeakage, ArtifactsChecked: res.Checked,
-		Findings: make([]exposure.Leak, 0, len(res.Leaks)), StaleAcceptances: append([]string{}, res.Stale...),
+		SchemaVersion:    exposure.SchemaLeakage,
+		ArtifactsChecked: res.Checked,
+		Findings:         make([]exposure.Leak, 0, len(res.Leaks)),
+		Unchecked:        make([]exposure.Unchecked, 0, len(res.Unchecked)),
+		StaleAcceptances: append([]string{}, res.Stale...),
+	}
+	for _, u := range res.Unchecked {
+		out.Unchecked = append(out.Unchecked, exposure.Unchecked{Path: u.Path, Kind: exposure.Kind(u.Kind), Name: u.Name, Reason: u.Reason})
 	}
 	for i := range res.Leaks {
 		l := &res.Leaks[i]
@@ -150,7 +164,8 @@ func areasFilePath(root, file string) string {
 }
 
 // writeLeakageText prints the counts per area, kind and term of the
-// violations, every finding, and the stale acceptances.
+// violations, every finding, the artifacts that could not be checked, and the
+// stale acceptances.
 func writeLeakageText(w io.Writer, rep *exposure.LeakageReport) error {
 	var violations []exposure.Leak
 	counts := map[exposure.LeakSeverity]int{}
@@ -187,6 +202,9 @@ func writeLeakageText(w io.Writer, rep *exposure.LeakageReport) error {
 		if l.Reason != "" {
 			fmt.Fprintf(&b, "    accepted: %s\n", l.Reason)
 		}
+	}
+	for _, u := range rep.Unchecked {
+		fmt.Fprintf(&b, "unchecked: %s %s %s: %s\n", u.Kind, u.Name, u.Path, u.Reason)
 	}
 	for _, s := range rep.StaleAcceptances {
 		fmt.Fprintf(&b, "stale acceptance: %s\n", s)

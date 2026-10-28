@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // SchemaCollisions is the schema_version of a CollisionReport
@@ -16,10 +17,11 @@ const SchemaCollisions = 1
 // DefaultCollisionMinScore is the word overlap at which `exposure collisions`
 // reports a pair, and AR9W2's when it is on without [exposure]
 // collision_min_score.
-const DefaultCollisionMinScore = 0.1
+const DefaultCollisionMinScore = config.ExposureDefaultCollisionMinScore
 
-// DefaultCollisionLimit is the number of pairs `exposure collisions` prints.
-const DefaultCollisionLimit = 20
+// DefaultCollisionLimit is the number of pairs `exposure collisions` prints,
+// and AR9W2 reports one by one.
+const DefaultCollisionLimit = config.ExposureDefaultCollisionLimit
 
 // Collision is two start-of-session listings (skills or agents) of different
 // areas whose words overlap: Score is the Jaccard index of their word sets and

@@ -201,7 +201,9 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 // native Claude Code inventory against Claude Code's listing budget, 1% of the
 // context window at 4 characters per token. It runs only with an [exposure]
 // table, whose inventory measures what Claude Code lists rather than what
-// ai-rulez generates.
+// ai-rulez generates. The finding is on the config and depends on the
+// start-of-session artifacts and the exposure inputs, so --changed keeps it
+// when a listed skill grows.
 func checkClaudeListingTotal(r *runner, b *loadBudget, cfgPath string, cfgLines []string) {
 	start := r.exposureStart()
 	if start == nil || cfgPath == "" {
@@ -212,6 +214,7 @@ func checkClaudeListingTotal(r *runner, b *loadBudget, cfgPath string, cfgLines 
 		limit, basis = v, "[lint.load_budgets] "+b.ID
 	}
 	at := max(1, lineContaining(cfgLines, `"`+presetClaude+`"`))
+	before := len(r.findings)
 	switch {
 	case start.ListingChars > limit:
 		r.add(CodeLoadBudget, cfgPath, at, "the %d skills a session lists at start add up to %d %s, past the %d-%s skill listing budget of %s (%s, %s); Claude Code drops descriptions to fit, starting with the skills invoked least",
@@ -220,6 +223,7 @@ func checkClaudeListingTotal(r *runner, b *loadBudget, cfgPath string, cfgLines 
 		r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "the %d skills a session lists at start add up to %d of %d %s, within 10%% of the skill listing budget of %s (%s, %s)",
 			start.ListingSkills, start.ListingChars, limit, b.Unit, b.presetLabel(), basis, b.Source)
 	}
+	r.exposureDeps(before, cfgPath, start.StartPaths)
 }
 
 // scopedFallbackSkills is the skills rules.scoped_fallback = "skill" would write

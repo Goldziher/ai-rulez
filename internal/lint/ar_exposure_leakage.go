@@ -20,20 +20,26 @@ const (
 type ExposureLeakage struct {
 	// Checked counts the start-of-session artifacts read (an artifact of unknown phase included).
 	Checked int
-	// Leaks are the area words found, in the order of the reference implementation: by artifact, a body's
-	// violations by line, then a listing's warnings.
+	// Leaks are the area words found: by artifact in inventory order, a body's violations by line, then a
+	// listing's warnings.
 	Leaks []ExposureLeak
 	// UnknownSkills are the skill_areas entries whose key names no skill of the inventory, by key.
 	UnknownSkills []ExposureSkillArea
 	// AreasFile is the absolute path of the areas file the map was read from, "" for the [exposure] table of
 	// the configuration.
 	AreasFile string
-	// Inputs are the absolute paths of the files besides the artifacts that decide which leaks there are: the
-	// areas file, the configuration, the root settings and the marketplace.
-	Inputs []string
+	// Unchecked are the start-of-session artifacts whose text could not be read (over the read limit, a
+	// symlink to outside the root), so no leak in them can be found. They are reported, not findings.
+	Unchecked []ExposureUnchecked
 }
 
-// ExposureLeak is one area word in the start-of-session text. Path is repository-relative and slash
+// ExposureUnchecked is a start-of-session artifact whose text was not read. Path is relative to the source's
+// Root and slash separated; Kind is the artifact kind and Name its qualified name.
+type ExposureUnchecked struct {
+	Path, Kind, Name, Reason string
+}
+
+// ExposureLeak is one area word in the start-of-session text. Path is relative to the source's Root and slash
 // separated; Kind is the artifact kind (claude_md, rule, skill, agent, mcp_server, plugin) and Name its
 // qualified name. Message is the finding message, a public contract a [[lint.accept]] match is a substring of.
 type ExposureLeak struct {
@@ -61,6 +67,8 @@ type LeakageResult struct {
 	Checked int
 	// Leaks are the AR9W0 and AR9W1 findings the run reported, in the source's order.
 	Leaks []LeakFinding
+	// Unchecked are the start-of-session artifacts whose text could not be read.
+	Unchecked []ExposureUnchecked
 	// Stale are the messages of the AR9I0 findings of the [[lint.accept]] entries for AR9W0 or AR9W1.
 	Stale []string
 }
@@ -78,9 +86,10 @@ type LeakFinding struct {
 
 // leakageRun is what the leakage rules reported in one run.
 type leakageRun struct {
-	ran     bool
-	checked int
-	leaks   []leakRecord
+	ran       bool
+	checked   int
+	leaks     []leakRecord
+	unchecked []ExposureUnchecked
 }
 
 // leakRecord is a leak reported as a finding in file (the finding's display path).
@@ -136,8 +145,8 @@ func checkExposureLeakage(r *runner) {
 	if !ok {
 		return
 	}
-	r.leakage.ran, r.leakage.checked = true, lk.Checked
-	root := r.rootAbs()
+	r.leakage.ran, r.leakage.checked, r.leakage.unchecked = true, lk.Checked, lk.Unchecked
+	root := r.exposureRoot()
 	for _, l := range lk.Leaks {
 		code := CodeExposureAreaTerm
 		if l.Ambiguous {
@@ -149,9 +158,7 @@ func checkExposureLeakage(r *runner) {
 		if len(r.findings) == before {
 			continue
 		}
-		for _, in := range lk.Inputs {
-			r.dep(abs, in)
-		}
+		r.exposureDeps(before, abs, nil)
 		r.leakage.leaks = append(r.leakage.leaks, leakRecord{leak: l, code: code, file: r.findings[before].File})
 	}
 	for _, s := range lk.UnknownSkills {
@@ -210,7 +217,12 @@ func (rep *Report) Leakage() *LeakageResult {
 		f := &rep.Findings[i]
 		found[key{f.Code, f.File, f.Line, f.Message}] = f
 	}
-	out := &LeakageResult{Checked: x.checked, Leaks: []LeakFinding{}, Stale: append([]string{}, x.stale...)}
+	out := &LeakageResult{
+		Checked:   x.checked,
+		Leaks:     []LeakFinding{},
+		Unchecked: append([]ExposureUnchecked{}, x.unchecked...),
+		Stale:     append([]string{}, x.stale...),
+	}
 	for _, rec := range x.leaks {
 		f, ok := found[key{rec.code, rec.file, max(rec.leak.Line, 1), rec.leak.Message}]
 		if !ok {

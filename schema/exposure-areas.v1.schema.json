@@ -71,7 +71,7 @@
           "scope": { "type": "string", "description": "The directory that owns the artifact; \".\" for the root." },
           "area_scope": {
             "type": "string",
-            "description": "The directory whose path claims were tried: the scope, or a plugin skill's plugin directory."
+            "description": "The directory whose path claims were tried: the scope, or a plugin skill's plugin directory, relative to the project root of the area map (with --root's path in front when --root lies below it)."
           },
           "phase": { "enum": ["start", "on_demand", "manual", "unknown"] },
           "area": { "type": "string" },

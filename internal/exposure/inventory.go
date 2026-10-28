@@ -20,7 +20,7 @@
 // frontmatter is parsed and is not part of the text. Not modeled: `@path` imports inside
 // CLAUDE.md and rules, whose text is not counted.
 //
-// Known gaps against Claude Code, shared with the reference implementation:
+// Known gaps against Claude Code:
 //   - CLAUDE.local.md is not read, though Claude Code loads it at the start of
 //     a session (it is machine-local, usually ignored by git).
 //   - A nested .mcp.json and a nested .claude/settings*.json (and the plugins
@@ -68,8 +68,8 @@ import (
 // document of the CLI it is an integer, bumped on an incompatible change.
 const SchemaInventory = 1
 
-// BytesPerToken is the ratio behind EstimateTokens, the one the reference
-// implementation of the load model uses.
+// BytesPerToken is the ratio behind EstimateTokens, the measured load model's
+// (see docs/exposure.md).
 const BytesPerToken = 3.9
 
 // EstimateTokens is the token estimate of a text of n UTF-8 bytes: n / 3.9
@@ -246,6 +246,10 @@ type Inventory struct {
 	Plugins       PluginSummary `json:"plugins"`
 	Artifacts     []Artifact    `json:"artifacts"`
 	Problems      []Problem     `json:"problems"`
+	// areaPrefix is the path of Root below Options.AreaBase, slash separated, ""
+	// when Root is the base or lies elsewhere; Classify reads the scopes with it
+	// in front (ClaimScope).
+	areaPrefix string
 }
 
 // Options configure Build.
@@ -263,6 +267,12 @@ type Options struct {
 	// Requested names plugins a session installs on top of the enabled ones
 	// (PluginsEnabled only).
 	Requested []string
+	// AreaBase is the directory the path claims of an area map are relative
+	// to: the project root of the configuration that holds the map. Empty is
+	// Root. When Root lies below it, Classify matches the claims against the
+	// scopes with Root's path below AreaBase in front, so `--root
+	// services/billing` matches the claim `services/billing`.
+	AreaBase string
 }
 
 // Build reads the inventory of the repository at opts.Root.
@@ -307,7 +317,25 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 		Plugins:       catalog.summary(mode, opts.Requested),
 		Artifacts:     all,
 		Problems:      append([]Problem{}, b.problems...),
+		areaPrefix:    areaPrefix(opts.AreaBase, root),
 	}, nil
+}
+
+// areaPrefix is the path of root below base, slash separated; "" when base is
+// empty or root, or root does not lie below it.
+func areaPrefix(base, root string) string {
+	if base == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(base)
+	if err != nil {
+		return ""
+	}
+	rel, err := filepath.Rel(abs, root)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return ""
+	}
+	return filepath.ToSlash(rel)
 }
 
 // Start lists the artifacts in context when the session starts, failing
@@ -333,6 +361,20 @@ func AreaScope(a *Artifact) string {
 		return a.PluginPath
 	}
 	return a.Scope
+}
+
+// ClaimScope is the AreaScope of an artifact as the path claims of the area
+// map read it: relative to Options.AreaBase, which differs from AreaScope
+// when the inventory's root lies below that base.
+func (inv *Inventory) ClaimScope(a *Artifact) string {
+	scope := AreaScope(a)
+	switch {
+	case inv.areaPrefix == "":
+		return scope
+	case scope == RootScope || scope == "":
+		return inv.areaPrefix
+	}
+	return inv.areaPrefix + "/" + scope
 }
 
 // WithoutText is a copy of the inventory without the artifact texts, which an

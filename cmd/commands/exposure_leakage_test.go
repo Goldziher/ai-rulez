@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/exposure"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestRunExposureLeakageRejects(t *testing.T) {
@@ -68,6 +69,7 @@ func TestWriteLeakageText(t *testing.T) {
 			{Severity: exposure.LeakAccepted, Code: "AR9W0", Area: "billing", Term: "invoice", Kind: exposure.KindSkill, Path: "s", Line: 1, Excerpt: "s: invoices", Reason: "kept on purpose"},
 			{Severity: exposure.LeakWarning, Code: "AR9W1", Area: "billing/search", Term: "account", Kind: exposure.KindAgent, Path: "a", Line: 1, Excerpt: "a: account"},
 		},
+		Unchecked:        []exposure.Unchecked{{Path: ".claude/skills/big/SKILL.md", Kind: exposure.KindSkill, Name: "big", Reason: "over the read limit"}},
 		StaleAcceptances: []string{"lint.accept[2] (AR9W0 in CLAUDE.md) accepted no finding; remove it or fix its path or match"},
 	}
 	var out bytes.Buffer
@@ -83,6 +85,7 @@ func TestWriteLeakageText(t *testing.T) {
 		"  violation AR9W0 search/ranker CLAUDE.md:4: tune the ranker\n",
 		"  accepted AR9W0 billing/invoice s:1: s: invoices\n    accepted: kept on purpose\n",
 		"  warning AR9W1 billing/search/account a:1: a: account\n",
+		"unchecked: skill big .claude/skills/big/SKILL.md: over the read limit\n",
 		"stale acceptance: lint.accept[2] (AR9W0 in CLAUDE.md) accepted no finding",
 	} {
 		assert.Contains(t, out.String(), want)
@@ -136,13 +139,89 @@ func TestExposureLintSourceLeakage(t *testing.T) {
 				Message: `skill "lookup" at session start names term "account" of area "billing"`},
 		},
 		UnknownSkills: []lint.ExposureSkillArea{{Skill: "ghost", Area: "billing"}},
-		Inputs: []string{
-			filepath.Join(abs, ".claude", "settings.json"),
-			filepath.Join(abs, ".claude", "settings.local.json"),
-			filepath.Join(abs, ".claude-plugin", "marketplace.json"),
-		},
 	}, got)
+	assert.Equal(t, []string{
+		filepath.Join(abs, ".claude", "settings.json"),
+		filepath.Join(abs, ".claude", "settings.local.json"),
+		filepath.Join(abs, ".claude-plugin", "marketplace.json"),
+	}, src.Inputs())
+	assert.Equal(t, abs, src.Root())
 	assert.Len(t, src.cache.invs, 2, "the enabled inventory and, for the unknown key, the all-plugins one")
+}
+
+// A start-of-session skill whose file is not read (a symlink to outside the root) loads in every session but
+// has no text to check: the leakage lists it as unchecked instead of passing it silently or inventing a leak.
+func TestExposureLintSourceLeakageListsTheUncheckedArtifacts(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "SKILL.md")
+	require.NoError(t, os.WriteFile(outside, []byte("---\nname: big\ndescription: Every invoice.\n---\n"), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Join(root, ".claude", "skills", "big"), 0o750))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(root, ".claude", "skills", "big", "SKILL.md"))
+	cfg := &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{
+		Areas: []config.ExposureArea{{Name: "billing", Terms: []string{"invoice"}}},
+	}}
+	src := exposureLintSource{ctx: t.Context(), cfg: cfg, cache: &exposureCache{}}
+
+	// Act
+	got, ok := src.Leakage()
+
+	// Assert
+	require.True(t, ok)
+	assert.Empty(t, got.Leaks, "the text was never read")
+	assert.Equal(t, 1, got.Checked)
+	require.Len(t, got.Unchecked, 1)
+	u := got.Unchecked[0]
+	assert.Equal(t, lint.ExposureUnchecked{Path: ".claude/skills/big/SKILL.md", Kind: "skill", Name: "big", Reason: u.Reason}, u)
+	assert.Contains(t, u.Reason, "outside the repository root")
+}
+
+// --root below the project inventories that directory, while the area map and its path claims stay the
+// project's: the claim services/billing owns what lies at --root.
+func TestExposureLintSourceBelowTheProjectRoot(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	for name, body := range map[string]string{
+		"CLAUDE.md":                                       "The invoice flow, at the project root.\n",
+		"services/billing/CLAUDE.md":                      "Every invoice.\n",
+		"services/billing/.claude/skills/charge/SKILL.md": "---\nname: charge\ndescription: Charges a card.\n---\n",
+		"services/billing/.claude/agents/clerk.md":        "---\nname: clerk\ndescription: Charges a card.\n---\n",
+		"products/search/.claude/skills/rank/SKILL.md":    "---\nname: rank\ndescription: Charges a card.\n---\n",
+	} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o750))
+		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
+	}
+	cfg := &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{
+		Areas: []config.ExposureArea{
+			{Name: "billing", Paths: []string{"services/billing"}, Terms: []string{"invoice"}},
+			{Name: "search", Paths: []string{"products/search"}, Terms: []string{"ranker"}},
+		},
+	}}
+	dir := filepath.Join(root, "services", "billing")
+	src := exposureLintSource{ctx: t.Context(), cfg: cfg, dir: dir, cache: &exposureCache{}}
+
+	// Act
+	leakage, ok := src.Leakage()
+	collisions := src.Collisions(0.1)
+	start := src.StartExposure()
+
+	// Assert
+	require.True(t, ok)
+	var paths []string
+	for _, l := range leakage.Leaks {
+		paths = append(paths, l.Path)
+	}
+	assert.Equal(t, []string{"CLAUDE.md"}, paths, "the CLAUDE.md of --root, relative to it; the project root's is not read")
+	assert.Equal(t, dir, src.Root())
+	assert.Empty(t, collisions, "charge and clerk are both billing by the project's claim, so they do not collide")
+	require.NotNil(t, start)
+	assert.Equal(t, []string{
+		filepath.Join(dir, "CLAUDE.md"),
+		filepath.Join(dir, ".claude", "agents", "clerk.md"),
+		filepath.Join(dir, ".claude", "skills", "charge", "SKILL.md"),
+	}, start.StartPaths)
+	assert.Contains(t, src.Inputs(), filepath.Join(dir, ".claude", "settings.json"), "the settings of the session's root")
 }
 
 func TestExposureLintSourceWithoutAMap(t *testing.T) {
@@ -162,7 +241,8 @@ func TestLeakageReport(t *testing.T) {
 			{ExposureLeak: leak, Code: "AR9W0", Severity: lint.SeverityWarning},
 			{ExposureLeak: leak, Code: "AR9W1", Severity: lint.SeverityError, Accepted: true, Reason: "why"},
 		},
-		Stale: []string{"stale"},
+		Unchecked: []lint.ExposureUnchecked{{Path: "big.md", Kind: "rule", Name: "big", Reason: "over the read limit"}},
+		Stale:     []string{"stale"},
 	}
 
 	got := leakageReport(res)
@@ -173,7 +253,10 @@ func TestLeakageReport(t *testing.T) {
 	warning.Severity, warning.Code = exposure.LeakWarning, "AR9W0"
 	accepted.Severity, accepted.Code, accepted.Reason = exposure.LeakAccepted, "AR9W1", "why"
 	assert.Equal(t, &exposure.LeakageReport{
-		SchemaVersion: exposure.SchemaLeakage, ArtifactsChecked: 2,
-		Findings: []exposure.Leak{violation, warning, accepted}, StaleAcceptances: []string{"stale"},
+		SchemaVersion:    exposure.SchemaLeakage,
+		ArtifactsChecked: 2,
+		Findings:         []exposure.Leak{violation, warning, accepted},
+		Unchecked:        []exposure.Unchecked{{Path: "big.md", Kind: exposure.KindRule, Name: "big", Reason: "over the read limit"}},
+		StaleAcceptances: []string{"stale"},
 	}, got)
 }

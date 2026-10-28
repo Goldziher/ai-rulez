@@ -195,3 +195,15 @@ func TestUnknownSkillAreas(t *testing.T) {
 		})
 	}
 }
+
+func TestUncheckedArtifacts(t *testing.T) {
+	read := finish(markdownArtifact(KindClaudeMD, SourceFile, "CLAUDE.md", RootScope, "CLAUDE.md", "Some text.\n"))
+	broken := finish(markdownArtifact(KindSkill, SourceFile, ".claude/skills/odd/SKILL.md", RootScope, "odd", "---\nname: odd\ndescription: Use when: x\n---\nBody.\n"))
+	unread := finish(unreadArtifact(KindSkill, SourceFile, ".claude/skills/big/SKILL.md", RootScope, "big", "2000000 bytes, over the read limit of 1048576"))
+
+	got := UncheckedArtifacts([]Artifact{read, broken, unread})
+
+	assert.Equal(t, []Unchecked{{Path: ".claude/skills/big/SKILL.md", Kind: KindSkill, Name: "big", Reason: "2000000 bytes, over the read limit of 1048576"}}, got,
+		"only the artifact kept unread; a block that does not parse was still read")
+	assert.Empty(t, UncheckedArtifacts([]Artifact{read, broken}))
+}

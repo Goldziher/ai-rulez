@@ -1,6 +1,7 @@
 package exposure
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -99,6 +100,59 @@ func TestInventory_Classify(t *testing.T) {
 		a := named(t, inv, tt.kind, tt.name)
 		assert.Equal(t, tt.area, a.Area, "area of %s", tt.name)
 		assert.Equal(t, tt.source, a.AreaSource, "source of %s", tt.name)
+	}
+}
+
+// An inventory of a directory below the project root reads the map's path claims against the scopes as the
+// project root sees them, so the claim services/billing owns what lies at the inventory's own root.
+func TestInventory_ClassifyBelowTheAreaBase(t *testing.T) {
+	repo := writeRepo(t, map[string]string{
+		"services/billing/CLAUDE.md":                 "Nothing to see.\n",
+		"services/billing/.claude/skills/x/SKILL.md": skillMD("x", "Does a thing."),
+		"services/billing/api/CLAUDE.md":             "Nothing here either.\n",
+	})
+	root := filepath.Join(repo, "services", "billing")
+	tests := []struct {
+		name     string
+		base     string
+		wantArea string
+		wantSrc  areas.Source
+		scopes   map[string]string
+	}{
+		{
+			name: "below the base, the claims of the project root apply", base: repo, wantArea: "billing", wantSrc: areas.SourcePath,
+			scopes: map[string]string{"CLAUDE.md": "services/billing", "x": "services/billing", "api/CLAUDE.md": "services/billing/api"},
+		},
+		{
+			name: "without a base, the scopes are the inventory root's", wantArea: areas.Unclassified, wantSrc: areas.SourceNone,
+			scopes: map[string]string{"CLAUDE.md": RootScope, "x": RootScope, "api/CLAUDE.md": "api"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			inv := build(t, root, func(o *Options) { o.AreaBase = tt.base })
+
+			// Act
+			inv.Classify(classifiedMap(t))
+
+			// Assert
+			for _, probe := range []struct {
+				kind Kind
+				name string
+			}{{KindClaudeMD, "CLAUDE.md"}, {KindSkill, "x"}, {KindClaudeMD, "api/CLAUDE.md"}} {
+				a := named(t, inv, probe.kind, probe.name)
+				assert.Equal(t, tt.wantArea, a.Area, "area of %s", probe.name)
+				assert.Equal(t, tt.wantSrc, a.AreaSource, "source of %s", probe.name)
+				assert.Equal(t, tt.scopes[probe.name], inv.ClaimScope(&a), "claim scope of %s", probe.name)
+			}
+			rep := NewAreasReport(inv, classifiedMap(t), "")
+			for _, c := range rep.Artifacts {
+				if want, ok := tt.scopes[c.QualifiedName]; ok {
+					assert.Equal(t, want, c.AreaScope, "the report's area_scope of %s", c.QualifiedName)
+				}
+			}
+		})
 	}
 }
 

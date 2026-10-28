@@ -59,9 +59,11 @@ func TestExposureLintSourceStartExposure(t *testing.T) {
 	assert.Equal(t, len("deploy: Deploys the service."), start.ListingChars)
 	assert.Equal(t, 2, start.StartArtifacts, "the root CLAUDE.md and the deploy skill")
 	assert.Positive(t, start.StartTokens)
-	first, err := src.inventory(root, src.mode())
+	assert.Equal(t, []string{filepath.Join(root, "CLAUDE.md"), filepath.Join(root, ".claude", "skills", "deploy", "SKILL.md")}, start.StartPaths,
+		"the files of the start-of-session artifacts, which AR9W3 and AR964 depend on")
+	first, err := src.inventory(src.mode())
 	require.NoError(t, err)
-	second, err := src.inventory(root, src.mode())
+	second, err := src.inventory(src.mode())
 	require.NoError(t, err)
 	assert.Same(t, first, second, "the inventory is built once")
 }

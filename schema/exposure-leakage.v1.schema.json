@@ -2,16 +2,31 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-leakage.v1.schema.json",
   "title": "ai-rulez exposure leakage",
-  "description": "Output of `ai-rulez exposure leakage --format json`: the area terms in the text a Claude Code session sees at its start (AR9W0, AR9W1), with their acceptance by [[lint.accept]], and the acceptances of those rules that accepted nothing (AR9I0). See docs/exposure.md.",
+  "description": "Output of `ai-rulez exposure leakage --format json`: the area terms in the text a Claude Code session sees at its start (AR9W0, AR9W1), with their acceptance by [[lint.accept]], the start-of-session artifacts whose text could not be read, and the acceptances of those rules that accepted nothing (AR9I0). See docs/exposure.md.",
   "type": "object",
-  "required": ["schema_version", "artifacts_checked", "findings", "stale_acceptances"],
+  "required": [
+    "schema_version",
+    "root",
+    "plugins",
+    "areas_file",
+    "artifacts_checked",
+    "findings",
+    "unchecked",
+    "stale_acceptances"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": 1 },
+    "root": { "type": "string", "description": "The absolute repository root inspected (--root), slash separated." },
+    "plugins": { "enum": ["none", "enabled", "all"], "description": "The plugin mode of the inventory." },
+    "areas_file": {
+      "type": "string",
+      "description": "The areas file the map was read from, relative to the root and slash separated (absolute when it lies outside the root); empty for the inline [exposure] form."
+    },
     "artifacts_checked": {
       "type": "integer",
       "minimum": 0,
-      "description": "The start-of-session artifacts read, an artifact of unknown phase included."
+      "description": "The start-of-session artifacts, an artifact of unknown phase and an unchecked one included."
     },
     "findings": {
       "type": "array",
@@ -54,6 +69,21 @@
             "type": "string",
             "description": "The reason of the [[lint.accept]] entry of an accepted finding, else empty."
           }
+        }
+      }
+    },
+    "unchecked": {
+      "type": "array",
+      "description": "The start-of-session artifacts kept unread (over the read limit, or a symlink to outside the root), in inventory order: they load in every session, but no leak in them can be found. They are not findings and do not change the exit code.",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind", "name", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "description": "The file, relative to the root and slash separated." },
+          "kind": { "enum": ["claude_md", "rule", "skill", "agent"] },
+          "name": { "type": "string", "description": "The qualified name of the artifact." },
+          "reason": { "type": "string", "description": "Why the file was not read." }
         }
       }
     },

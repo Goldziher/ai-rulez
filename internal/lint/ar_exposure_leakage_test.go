@@ -9,14 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeLeakage is an ExposureSource with a fixed leakage.
+// fakeLeakage is an ExposureSource with a fixed leakage, inputs and root.
 type fakeLeakage struct {
 	noExposure
 	leakage ExposureLeakage
 	ok      bool
+	inputs  []string
+	root    string
 }
 
 func (f fakeLeakage) Leakage() (ExposureLeakage, bool) { return f.leakage, f.ok }
+func (f fakeLeakage) Inputs() []string                 { return f.inputs }
+func (f fakeLeakage) Root() string                     { return f.root }
 
 func leakMessage(kind, name, term, area string) string {
 	return kind + ` "` + name + `" at session start names term "` + term + `" of area "` + area + `"`
@@ -49,14 +53,14 @@ func leakProject(t *testing.T, table string) string {
 
 // leakSource is the session exposure of leakProject at root.
 func leakSource(root string, leaks ...ExposureLeak) fakeLeakage {
-	return fakeLeakage{ok: true, leakage: ExposureLeakage{
-		Checked: 4,
-		Leaks:   leaks,
-		Inputs: []string{
+	return fakeLeakage{
+		ok:      true,
+		leakage: ExposureLeakage{Checked: 4, Leaks: leaks},
+		inputs: []string{
 			filepath.Join(root, ".ai-rulez", "config.toml"),
 			filepath.Join(root, ".claude", "settings.json"),
 		},
-	}}
+	}
 }
 
 func leakRun(t *testing.T, root string, opts ...Option) *Report {
@@ -185,13 +189,18 @@ func TestReport_Leakage(t *testing.T) {
 	writeFiles(t, root, map[string]string{".claude/rules/billing.md": "The invoice rule.\n"})
 	ignored := ExposureLeak{Area: "billing", Term: "invoice", Kind: "rule", Name: "billing", Path: ".claude/rules/billing.md", Scope: ".", Line: 1, Excerpt: "The invoice rule.", Message: leakMessage("rule", "billing", "invoice", "billing")}
 
+	src := leakSource(root, serverLeak, ignored, claudeLeak, skillLeak)
+	unread := ExposureUnchecked{Path: ".claude/skills/big/SKILL.md", Kind: "skill", Name: "big", Reason: "over the read limit"}
+	src.leakage.Unchecked = []ExposureUnchecked{unread}
+
 	// Act
-	got := leakRun(t, root, WithExposure(leakSource(root, serverLeak, ignored, claudeLeak, skillLeak))).Leakage()
+	got := leakRun(t, root, WithExposure(src)).Leakage()
 
 	// Assert
 	require.NotNil(t, got)
 	assert.Equal(t, &LeakageResult{
-		Checked: 4,
+		Checked:   4,
+		Unchecked: []ExposureUnchecked{unread},
 		Leaks: []LeakFinding{
 			{ExposureLeak: serverLeak, Code: CodeExposureAreaTerm, Severity: SeverityError, Accepted: true, Reason: "server names stay"},
 			{ExposureLeak: claudeLeak, Code: CodeExposureAreaTerm, Severity: SeverityError},
@@ -298,4 +307,28 @@ func TestExposureLeakageUnderChanged(t *testing.T) {
 			assert.Equal(t, tt.want, got, dump(rep.Findings))
 		})
 	}
+}
+
+// A source rooted below the project (exposure leakage --root) names its artifacts relative to that root, so a
+// leak is reported in the file below it.
+func TestExposureLeakageUnderTheSourceRoot(t *testing.T) {
+	// Arrange
+	root := leakProject(t, "")
+	writeFiles(t, root, map[string]string{"services/billing/CLAUDE.md": "# Billing\nEvery invoice.\n"})
+	leak := ExposureLeak{Area: "billing", Term: "invoice", Kind: "claude_md", Name: "CLAUDE.md", Path: "CLAUDE.md", Scope: ".", Line: 2, Excerpt: "Every invoice.", Message: leakMessage("claude_md", "CLAUDE.md", "invoice", "billing")}
+	src := leakSource(root, leak)
+	src.root = filepath.Join(root, "services", "billing")
+
+	// Act
+	rep := leakRun(t, root, WithExposure(src))
+
+	// Assert
+	fs := codeFindings(rep.Findings, CodeExposureAreaTerm)
+	require.Len(t, fs, 1, dump(rep.Findings))
+	assert.Equal(t, "services/billing/CLAUDE.md", filepath.ToSlash(fs[0].File))
+	assert.Equal(t, 2, fs[0].Line)
+	got := rep.Leakage()
+	require.NotNil(t, got)
+	require.Len(t, got.Leaks, 1, "the view finds the finding in the file below the source root")
+	assert.Equal(t, "CLAUDE.md", got.Leaks[0].Path)
 }

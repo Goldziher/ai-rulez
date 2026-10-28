@@ -181,6 +181,10 @@ func TestExposureAreas(t *testing.T) {
 		arts := exposureArtifacts(t, res.Stdout)
 		require.Contains(t, arts, "charge")
 		assert.NotContains(t, arts, "ops:probe", "the inventory is of --root")
+		assert.Equal(t, exposureArtifact{
+			Kind: "skill", QualifiedName: "charge", Path: ".claude/skills/charge/SKILL.md", Phase: "start",
+			Area: "billing", AreaSource: "path", AreaScope: "services/billing",
+		}, arts["charge"], "the claim services/billing of the project's map owns what lies at --root")
 	})
 
 	t.Run("-C names the map's configuration for another --root", func(t *testing.T) {
@@ -221,7 +225,7 @@ func TestExposureFailures(t *testing.T) {
 		{"a missing -C with --root", []string{"-C", "nope.toml", "exposure", "inventory", "--root", "empty"}, "does not exist"},
 		{"--with-text without json", []string{"exposure", "inventory", "--with-text"}, "--with-text applies to --format json"},
 		{"an unknown harness", []string{"exposure", "--harness", "codex"}, `unknown --harness "codex"`},
-		{"a negative context window", []string{"exposure", "--context-window", "-5"}, "--context-window must be positive"},
+		{"a negative context window", []string{"exposure", "--context-window", "-5"}, "--context-window must not be negative"},
 		{"an unknown subcommand", []string{"exposure", "inventroy"}, `unknown command "inventroy"`},
 	}
 	for _, tt := range tests {
