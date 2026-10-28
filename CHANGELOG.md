@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.9.0] - 2026-10-28
+
 ### Added
 
 - **`[exposure]` area map and `AR9W5 exposure-map-invalid`.** A new `[exposure]` table describes the areas of a
