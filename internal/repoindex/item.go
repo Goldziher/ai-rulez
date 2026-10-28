@@ -59,7 +59,7 @@ func newItem(c *candidate, content []byte) Item {
 	default:
 		return it
 	}
-	if err != nil && it.Only == nil && frontmatter.NamesKey(block.Raw, keyPaths) || pathsMistyped(front) {
+	if (err != nil && it.Only == nil && frontmatter.NamesKey(block.Raw, keyPaths)) || pathsMistyped(front) {
 		it.Only = &PathGlobs{Unreadable: true}
 	}
 	return it
