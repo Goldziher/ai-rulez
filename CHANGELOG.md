@@ -15,10 +15,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `/` or `.` and as whole words otherwise, outside repository path literals; an artifact belongs to the most specific
   path claim, else the area whose terms dominate its text, and a skill's owner is its `skill_areas` entry, then the
   path claim (a plugin skill's: its plugin's directory), then the terms. `validate` reports a map it cannot use
-  (duplicate or malformed names, bad path claims, `skill_areas` values naming no area, an unreadable or misspelled
-  `areas_file`) as `AR9W5`, an error, on the line of the offending entry; without an `[exposure]` table nothing is
-  checked. The exposure report and leakage rules that read the map follow. See
-  [Session exposure and areas](https://goldziher.github.io/ai-rulez/exposure/).
+  (invalid scalar keys, duplicate, reserved or malformed names, bad path claims, `skill_areas` values naming no area,
+  an unreadable or misspelled `areas_file`) as `AR9W5`, an error, on the line of the offending entry; without an
+  `[exposure]` table nothing is checked. See [Session exposure and areas](https://goldziher.github.io/ai-rulez/exposure/).
 - **`ai-rulez exposure inventory` and `ai-rulez exposure areas`.** `exposure inventory` lists every Claude Code
   artifact a session started at the repository root can see (CLAUDE.md files, rules, skills, commands, agents,
   `.mcp.json` servers, settings and enabled plugins) with its phase (start, on demand, manual or unknown),
@@ -27,39 +26,26 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   loaded and the area of every artifact with how it was decided (`skill_areas`, `path`, `terms` or `none`), for
   diffing against another classifier; a plugin skill is owned by its plugin's directory. Both take `--areas FILE` to
   try a map before configuring it and `--root DIR` (which still honours `-C/--config`, `--config-dir` and
-  `--no-local`, and otherwise discovers the configuration from `DIR` upwards), and print
+  `--no-local`, and otherwise discovers the configuration from `DIR` upwards; the path claims stay relative to the
+  project root, so `--root services/billing` matches the claim `services/billing`), and print
   `schema/exposure-inventory.v1.schema.json` and `schema/exposure-areas.v1.schema.json` with `--format json`.
   Tokens are estimated as bytes / 3.9 rounded up; a file over the read limit is kept unread and estimated from its
   size. Outside a git repository the file walk lists symlinked files, as git does, so `CLAUDE.md -> AGENTS.md` is
   read there too.
-- **`ai-rulez exposure collisions` and `AR9W2 exposure-area-collision`.** `exposure collisions` compares the listing
-  of every skill and agent a session sees at start with every other one of a different area (unclassified counts as
-  one) and ranks the pairs by the Jaccard index of their words (lowercase runs of a letter and two or more letters or
-  digits, less common stopwords), then by path, with the shared words (`--min-score`, default `[exposure]
-  collision_min_score` or 0.1; `--limit`, default 20, 0 for all; `--areas`, `--root`, `--plugins`;
-  `schema/exposure-collisions.v1.schema.json` with `--format json`). `validate` reports the same pairs as `AR9W2`, off
-  until `[exposure] collision_min_score` is set, which turns it on at warning, on the description line of the pair's
-  first listing.
-- **`AR9W4 exposure-gate-unreadable`.** `validate` warns about a skill, command or rule whose frontmatter does not
-  parse (`AR306`) while a line of the block names `paths`, `disable-model-invocation` or `user-invocable`: Claude Code
-  recovers some broken blocks and keeps the gate, and drops others whole, so the item may load at session start in
-  every session. Reported on the line of the first gate key, for the claude preset and for a run without a
-  configuration; no `[exposure]` table is needed. `exposure inventory` gives such a root item the phase `unknown`,
-  counted as start. See [A gate that cannot be read](https://goldziher.github.io/ai-rulez/exposure/#a-gate-that-cannot-be-read),
-  which also records how Claude Code reads the YAML 1.1 booleans `yes`, `on` and `no`.
 - **`ai-rulez exposure`: the start-of-session report, `AR9W3 exposure-start-budget` and the Claude skill listing
   budget.** Run without a subcommand, `exposure` reports what a Claude Code session started at the repository root
-  costs before it touches a file: the estimated start tokens in total and by kind (a root artifact whose frontmatter
-  does not parse counts as start), the skill listing against Claude Code's listing budget (1% of the context window
-  at 4 characters per token, 8000 characters at 200000 tokens), the capped descriptions, the artifacts and tokens by
-  phase and kind, and the heaviest artifacts at start (`--context-window N`, `--plugins none|enabled|all`,
+  costs before it touches a file: the estimated start tokens in total and by kind (a root artifact of phase
+  `unknown` counts as start), the skill listing against Claude Code's listing budget (1% of the context window at 4
+  characters per token, 8000 characters at 200000 tokens), the capped descriptions, the artifacts and tokens by phase
+  and kind, and the heaviest artifacts at start (`--context-window N`, `--plugins none|enabled|all`,
   `--harness claude`, `--areas FILE`, `--root DIR`; `--format json` prints `schema/exposure-report.v1.schema.json`).
   It exits 2 when the start tokens exceed the new `[exposure] start_budget`, which `validate` also reports as
   `AR9W3`, an error, off while `start_budget` is unset. With an `[exposure]` table and the claude preset, `AR964`
   gains the row `claude-skill-listing-total` (warning past the budget, info from 90%), measured over the skills a
   session lists at start with `[exposure] plugins` and `context_window`; `[lint.load_budgets]
-  claude-skill-listing-total` sets a fixed budget instead. The `exposure` command without a subcommand used to print
-  its help.
+  claude-skill-listing-total` sets a fixed budget instead. Both findings sit on the configuration and, under
+  `validate --changed`, are kept when any start-of-session artifact, the configuration, the root settings or the
+  marketplace changed, so the change that pushes a session past the budget does not pass unseen.
 - **Area term leakage: `AR9W0`, `AR9W1`, `AR9W6` and `ai-rulez exposure leakage`.** With an `[exposure]` area map,
   `validate` reads the text a Claude Code session sees at its start (the root `CLAUDE.md`, unconditional root rules,
   the skill and agent listing lines, `.mcp.json` server names, enabled plugin keys; an artifact of unknown phase
@@ -67,29 +53,52 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   (`exposure-area-term`, an error), and each listed skill or agent that names only ambiguous words as `AR9W1`
   (`exposure-area-term-ambiguous`, a warning). The message `<kind> "<name>" at session start names term "<term>" of
   area "<area>"` is a stable contract, so `[[lint.accept]]` entries accept findings by artifact or term, and an entry
-  that accepts nothing is `AR9I0`. `AR9W6` (`exposure-skill-area-unknown`, a warning) reports a `skill_areas` key that
-  names no skill. Under `--changed`, every leak is kept when the areas file, the configuration or the root settings
-  change. `ai-rulez exposure leakage` prints the same findings with their acceptance and the stale acceptances
-  (`--areas`, `--plugins`, `--root`; `schema/exposure-leakage.v1.schema.json` with `--format json`) and exits `2` on
-  a violation or a stale acceptance. See
-  [Area term leakage](https://goldziher.github.io/ai-rulez/exposure/#area-term-leakage).
+  that accepts nothing is `AR9I0`. A plugin both `.claude/settings.json` and `.claude/settings.local.json` enable is
+  reported on the tracked `settings.json`. `AR9W6` (`exposure-skill-area-unknown`, a warning) reports a
+  `skill_areas` key that names no skill. Under `--changed`, every leak is kept when the areas file, the
+  configuration, the root settings or the marketplace change. `ai-rulez exposure leakage` prints the same findings
+  with their acceptance, the start-of-session artifacts whose file could not be read (`unchecked`, not findings) and
+  the stale acceptances (`--areas`, `--plugins`, `--root DIR` to inspect the session of `DIR` with paths relative to
+  it; `schema/exposure-leakage.v1.schema.json` with `--format json`) and exits `2` on a violation or a stale
+  acceptance. See [Area term leakage](https://goldziher.github.io/ai-rulez/exposure/#area-term-leakage).
+- **`ai-rulez exposure collisions` and `AR9W2 exposure-area-collision`.** `exposure collisions` compares the listing
+  of every skill and agent a session sees at start with every other one of a different area (unclassified counts as
+  one) and ranks the pairs by the Jaccard index of their words (lowercase runs of a letter and two or more letters or
+  digits, less common stopwords), then by path, with the shared words (`--min-score`, default `[exposure]
+  collision_min_score` or 0.1; `--limit`, default 20, 0 for all; `--areas`, `--root`, `--plugins`;
+  `schema/exposure-collisions.v1.schema.json` with `--format json`). `validate` reports the same pairs as `AR9W2`, off
+  until `[exposure] collision_min_score` is set, which turns it on at warning: the 20 highest on the description line
+  of the pair's first listing, and the rest in one summary finding on the configuration. Under `--changed` a pair's
+  finding is kept when either listing, the area map or the configuration changed.
+- **`AR9W4 exposure-gate-unreadable`.** `validate` warns about a skill, command or rule whose frontmatter does not
+  parse (`AR306`) while a line of the block names `paths`, `disable-model-invocation` or `user-invocable`, and about
+  one whose block parses but sets `paths` or `disable-model-invocation` to a value of the wrong type (`paths: 5`,
+  `disable-model-invocation: yes`): Claude Code recovers some broken blocks and keeps the gate, and drops others
+  whole, so the item may load at session start in every session. Reported on the line of the first gate key, for the
+  claude preset and for a run without a configuration; no `[exposure]` table is needed. `exposure inventory` gives
+  such a root item the phase `unknown`, counted as start. See
+  [A gate that cannot be read](https://goldziher.github.io/ai-rulez/exposure/#a-gate-that-cannot-be-read), which also
+  records how Claude Code reads the YAML 1.1 booleans `yes`, `on` and `no`.
 
 ### Changed
 
 - **Repository index items keep the frontmatter parse error.** An item whose frontmatter is not valid YAML, is not a
   mapping or never closes is indexed as before (a value of the wrong type or a complex key still keeps the other
   keys, a syntax error keeps none), but now carries the decode error instead of dropping it, so a reader can tell a
-  lost `paths:` gate from an absent one. The index cache format moves to version 5, so a cache written by an earlier version is rebuilt once.
+  lost `paths:` gate from an absent one. The index cache format moves to version 5, so a cache written by an earlier
+  version is rebuilt once.
 
 ### Fixed
 
-- **`find_context` no longer returns a rule whose `paths:` gate was lost to broken YAML for every path.** A Claude
+- **`find_context` no longer returns a rule or skill whose `paths:` gate cannot be read for every path.** A Claude
   Code rule whose frontmatter names `paths:` but does not parse (an unquoted `:` in a value, an unclosed quote or
-  bracket, a tab indent, a block that never closes) was indexed with no restriction, so a `path` query returned it for
-  any file, although Claude Code may still gate it. Where it applies cannot be known, so it now fails closed: a `path`
-  query never returns it, and a `scope` query lists it with `"paths_unreadable": true`. A rule whose broken block
-  names no `paths:` and a rule whose YAML type error still decodes its `paths:` are unchanged, as is loading by name;
-  a skill whose frontmatter does not parse was, and is, not served. See [Monorepos: scopes and nested
+  bracket, a tab indent, a block that never closes), or a rule or skill whose `paths` value is neither a string nor a
+  list of strings (`paths: 5`), was indexed with no restriction, so a `path` query returned it for any file, although
+  Claude Code may still gate it. Where it applies cannot be known, so it now fails closed: a `path` query never
+  returns it, and a `scope` query lists it with `"paths_unreadable": true`. A rule whose broken block names no
+  `paths:` and a rule whose YAML type error still decodes its `paths:` are unchanged, as is loading by name; a skill
+  whose frontmatter does not parse was, and is, not served. A Cursor rule whose broken block names `globs:` still
+  applies everywhere (a known limitation). See [Monorepos: scopes and nested
   context](https://goldziher.github.io/ai-rulez/mcp-server/#monorepos-scopes-and-nested-context).
 
 ## [5.8.0] - 2026-10-27

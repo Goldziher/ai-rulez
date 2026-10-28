@@ -19,6 +19,7 @@ rule on this page has any effect except `AR9W4`, which needs none; the commands 
 - [Classifying an artifact](#classifying-an-artifact)
 - [The owner of a skill](#the-owner-of-a-skill)
 - [Commands](#commands)
+- [A gate that cannot be read](#a-gate-that-cannot-be-read)
 - [Start-of-session budgets](#start-of-session-budgets)
 - [Area term leakage](#area-term-leakage)
 - [Validation](#validation)
@@ -67,7 +68,7 @@ terms = ["invoice"]
 
 [[area]]
 name = "platform"
-paths = ["deploy", "dev_tools"]
+paths = ["infra", "tools"]
 shared = true
 terms = ["terraform"]
 
@@ -107,10 +108,9 @@ Terms are matched case-insensitively:
   (`services/billing_api/README.md`) up to the next space, quote, backtick, bracket, comma or semicolon. Naming a
   location is not naming an area. A path is not a literal when a letter, digit, `_`, `/`, `.`, `@` or `-` precedes it.
 
-Case folding follows Python's `re.IGNORECASE`, the reference the format comes from: `K` (U+212A, the Kelvin sign)
-matches `k`, a final `ς` is the lowercase of `Σ`. A test holds the matcher to vectors recorded from the Python
-implementation, which pins CPython 3.11 (Unicode 14.0). A character that is unassigned in that Unicode version may
-match differently.
+Case folding follows Python's `re.IGNORECASE` on str patterns (CPython 3.11, Unicode 14.0): `K` (U+212A, the Kelvin
+sign) matches `k`, a final `ς` is the lowercase of `Σ`. A test holds the matcher to recorded vectors. A character
+that is unassigned in Unicode 14.0 may match differently.
 
 ## Classifying an artifact
 
@@ -132,8 +132,8 @@ The owner of a skill is resolved in this order, and reported with its source:
 | `none` | nothing does: the owner is `unclassified` |
 
 A plugin skill is listed at the repository root, but it belongs where its plugin lives: a plugin under
-`dev_tools/plugins/ops` is owned by the area that claims `dev_tools`, whatever its skills' descriptions say. Place
-a plugin outside every claim with `[skill_areas]`.
+`tools/plugins/ops` is owned by the area that claims `tools`, whatever its skills' descriptions say. Place a plugin
+outside every claim with `[skill_areas]`.
 
 An explicit entry is the way to place a skill that still lives at the repository root: once it moves under the
 area's directory, the path claim gives the same answer and the entry can go.
@@ -143,21 +143,28 @@ area's directory, the path claim gives the same answer and the entry can go.
 The commands are offline, free and deterministic. They inspect the project root (the directory of the
 configuration, else the working directory) or `--root DIR`, and read the area map of the `[exposure]` table or of
 `--areas FILE`, a file in the `areas_file` format that replaces the configured map, so a map can be tried before
-it is configured. With `--root` the configuration is still `-C/--config` when it is given (one that cannot be read
-or is invalid fails the command), else the one `--config-dir` names in `DIR`, else the one discovered from `DIR`
-upwards, so `--root` on a subdirectory of a project uses the project's map; `--no-local` applies either way. The
-`areas_file` of the configuration stays relative to the configuration's project root; the path claims of the map are
-matched against artifact paths relative to `--root`. Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid
-configuration or area map, whose problems are listed with their lines as `AR9W5` reports them), `2` (`exposure`
-only) the start tokens exceed `[exposure] start_budget`; `exposure leakage` exits `2` on a violation or a stale
-acceptance.
+it is configured.
+
+`--root DIR` inspects what a Claude Code session started in `DIR` sees, for every command, `exposure leakage`
+included: the inventory is of `DIR`, and the paths the commands print are relative to it. The
+configuration is still `-C/--config` when it is given (one that cannot be read or is invalid fails the command),
+else the one `--config-dir` names in `DIR`, else the one discovered from `DIR` upwards, so `--root` on a
+subdirectory of a project uses the project's map; `--no-local` applies either way. The `areas_file` of the
+configuration and the path claims of the map stay relative to the configuration's project root: below it, `DIR`'s
+path is put in front of every scope before the claims are tried, so `--root services/billing` matches the claim
+`services/billing` for what lies at `DIR` itself. A `DIR` outside the project root is matched as its own root.
+
+Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid configuration or area
+map, whose problems are listed with the file and line `AR9W5` reports; a problem of the inline map whose entry
+cannot be found names `[exposure]`), `2` (`exposure` only) the start tokens exceed `[exposure] start_budget`;
+`exposure leakage` exits `2` on a violation or a stale acceptance.
 
 | Flag | Commands | Meaning |
 | --- | --- | --- |
 | `--format text\|json` | all | Output format |
 | `--plugins none\|enabled\|all` | all | Marketplace plugins whose skills are listed: none, the ones the root `.claude/settings*.json` enable, or all; default `[exposure] plugins`, else `enabled` |
 | `--areas FILE` | all | Area map file to use instead of the `[exposure]` table |
-| `--root DIR` | all | Repository root to inspect |
+| `--root DIR` | all | Directory to inspect, as a session started there sees it; default the project root, else the working directory |
 | `--context-window N` | `exposure` | Model context window in tokens, for the skill listing budget; default `[exposure] context_window`, else 200000 |
 | `--harness claude` | `exposure` | Harness whose load model applies; only `claude` |
 | `--with-text` | `inventory` | Include each artifact's text in the JSON (`--format json` only; with text output it is an error) |
@@ -190,7 +197,7 @@ configured or given:
   "schema_version": 1,
   "harness": "claude",
   "root": "/work/repo",
-  "plugins": {"mode": "enabled", "marketplace": "tools", "available": [{"name": "ops", "path": "dev_tools/plugins/ops"}], "enabled": ["ops"], "loaded": ["ops"]},
+  "plugins": {"mode": "enabled", "marketplace": "tools", "available": [{"name": "ops", "path": "tools/plugins/ops"}], "enabled": ["ops"], "loaded": ["ops"]},
   "start_budget": 6000,
   "listing": {"context_window": 200000, "skills": 24, "chars": 8210, "budget_chars": 8000, "over_budget_chars": 210, "descriptions_capped": 1},
   "start_tokens": 3120,
@@ -199,8 +206,8 @@ configured or given:
   "counts_by_phase_and_kind": {"start": {"skill": 24, "agent": 5, "mcp_server": 3, "claude_md": 1, "settings": 1},
                                "on_demand": {"skill": 60, "rule": 40, "claude_md": 20}, "manual": {"skill": 12}},
   "items": [
-    {"kind": "skill", "name": "ops:probe", "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
-     "phase": "start", "tokens": 7}
+    {"kind": "skill", "name": "ops:probe", "path": "tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
+     "phase": "start", "tokens": 8}
   ]
 }
 ```
@@ -210,8 +217,9 @@ phase; `tokens_by_phase` holds the phases that have artifacts.
 
 ### `ai-rulez exposure inventory`
 
-Every native Claude Code artifact a session started at the repository root can see. The load model follows Claude
-Code 2.1.306 as measured:
+Every native Claude Code artifact a session started at the repository root can see. The load model (what loads at
+start, on demand and manually) was measured on Claude Code 2.1.306; how Claude Code reads a gate it cannot parse was
+measured separately, on 2.1.312 (see [A gate that cannot be read](#a-gate-that-cannot-be-read)):
 
 - **Start of the session:** the root `CLAUDE.md` (and `.claude/CLAUDE.md`), unconditional root rules, the listing of
   root skills (`.claude/skills/<name>/SKILL.md`, and `.claude/commands/**/*.md` as `a:b` skills), root agents
@@ -225,7 +233,9 @@ Code 2.1.306 as measured:
   `not read:`); whether it loads at start cannot be known. A start count includes it (fail closed), as the text
   summary does (see [A gate that cannot be read](#a-gate-that-cannot-be-read)).
 - `skillOverrides` `off` removes a skill and `name-only` blanks its description; `.claude/settings.local.json`
-  applies over `.claude/settings.json`; `claudeMdExcludes` globs exclude `CLAUDE.md` files and rules.
+  applies over `.claude/settings.json`; `claudeMdExcludes` globs exclude `CLAUDE.md` files and rules. An enabled
+  plugin is listed from `.claude/settings.json` when that file enables it, even if `.claude/settings.local.json` does
+  too, and from `.claude/settings.local.json` only when that file alone enables it.
 - The listing text of a skill is `name: description when_to_use`, whitespace squashed, capped at 1536 characters.
   `tokens` estimates every text as its UTF-8 bytes divided by 3.9, rounded up (0 for an empty text). A file over
   the 1 MiB read limit is kept unread with a problem; its `text_bytes` is the file size and `tokens` the estimate
@@ -246,10 +256,10 @@ With an area map every artifact carries `area` and `area_source`; the text of ea
   "harness": "claude",
   "root": "/work/repo",
   "settings": {"skill_overrides": {}, "claude_md_excludes": [], "enabled_plugins": ["ops@tools"]},
-  "plugins": {"mode": "enabled", "marketplace": "tools", "available": [{"name": "ops", "path": "dev_tools/plugins/ops"}], "enabled": ["ops"], "loaded": ["ops"]},
+  "plugins": {"mode": "enabled", "marketplace": "tools", "available": [{"name": "ops", "path": "tools/plugins/ops"}], "enabled": ["ops"], "loaded": ["ops"]},
   "artifacts": [
     {"kind": "skill", "source": "plugin", "name": "probe", "qualified_name": "ops:probe", "plugin": "ops",
-     "plugin_path": "dev_tools/plugins/ops", "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
+     "plugin_path": "tools/plugins/ops", "path": "tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
      "visibility": "always", "phase": "start", "paths": [], "listing_text": "ops:probe: Probes a service.",
      "listing_chars": 28, "truncated": false, "text_bytes": 28, "text_sha256": "…", "tokens": 8, "line_offset": 0,
      "frontmatter": {"ok": true}, "area": "platform", "area_source": "path"}
@@ -262,7 +272,8 @@ With an area map every artifact carries `area` and `area_source`; the text of ea
 
 The area map as loaded (terms and ambiguous words normalized) and, for every artifact of the inventory, its area
 and how it was decided: `skill_areas`, `path`, `terms` or `none`. `area_scope` is the directory whose path claims
-were tried: the artifact's scope, or a plugin skill's plugin directory. Diff the JSON against another classifier to
+were tried: the artifact's scope, or a plugin skill's plugin directory, relative to the project root of the map
+(with `--root`'s path in front when `--root` lies below it). Diff the JSON against another classifier to
 compare them. `areas_file` is the file the map came from, relative to `--root` with forward slashes, or absolute
 (with forward slashes) when it lies outside the root; it is empty for the inline form. `counts` has every area
 of the map and `unclassified`, 0 when no artifact is in it. `problems` repeats the inventory's: an artifact that
@@ -280,7 +291,7 @@ was not read is classified on an empty text. Without an area map the command fai
   "skill_areas": {"deploy-staging": "platform"},
   "artifacts": [
     {"kind": "skill", "source": "plugin", "name": "probe", "qualified_name": "ops:probe", "plugin": "ops",
-     "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".", "area_scope": "dev_tools/plugins/ops",
+     "path": "tools/plugins/ops/skills/probe/SKILL.md", "scope": ".", "area_scope": "tools/plugins/ops",
      "phase": "start", "area": "platform", "area_source": "path"}
   ],
   "counts": {"billing": 4, "platform": 3, "unclassified": 12},
@@ -310,17 +321,6 @@ as everywhere) with every other one of a different area, and ranks the pairs:
 map. The JSON follows
 [`schema/exposure-collisions.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-collisions.v1.schema.json):
 
-### `ai-rulez exposure leakage`
-
-The area terms in the text a session sees at its start, as `validate` reports them (`AR9W0`, `AR9W1`), each with its
-acceptance, and the `[[lint.accept]]` entries of those rules that accepted nothing. It runs the `exposure` rules of
-`validate` with the area map and plugin mode of the flags, so `[lint.severity]`, `[lint] ignore_paths`,
-`[[lint.ignore_rules]]` and inline `ai-rulez-lint-ignore` comments apply as they do there; a baseline does not. A
-finding is a `violation` when it is an error (`AR9W0` by default), a `warning` below that, and `accepted` when an entry
-accepts it. The command fails (exit `2`) on a violation or a stale acceptance. Without an area map it fails (exit
-`1`). The JSON follows
-[`schema/exposure-leakage.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-leakage.v1.schema.json):
-
 ```json
 {
   "schema_version": 1,
@@ -333,6 +333,39 @@ accepts it. The command fails (exit `2`) on a violation or a stale acceptance. W
     {"score": 0.5, "shared": ["customer", "details", "look", "name"],
      "first": ".claude/skills/charge/SKILL.md", "first_kind": "skill", "first_name": "charge", "first_area": "billing",
      "second": ".claude/skills/rank/SKILL.md", "second_kind": "skill", "second_name": "rank", "second_area": "search"}
+  ]
+}
+```
+
+To separate two listings, lead each description with what sets it apart (the area's own nouns), not with the words
+every skill of the repository uses.
+
+### `ai-rulez exposure leakage`
+
+The area terms in the text a session sees at its start, as `validate` reports them (`AR9W0`, `AR9W1`), each with its
+acceptance, and the `[[lint.accept]]` entries of those rules that accepted nothing. It runs the `exposure` rules of
+`validate` with the area map and plugin mode of the flags, so `[lint.severity]`, `[lint] ignore_paths`,
+`[[lint.ignore_rules]]` and inline `ai-rulez-lint-ignore` comments apply as they do there; a baseline does not. A
+finding is a `violation` when it is an error (`AR9W0` by default), a `warning` below that, and `accepted` when an entry
+accepts it. With `--root DIR` the session is the one started in `DIR`: its `CLAUDE.md`, rules, skills, agents,
+`.mcp.json` and settings, with paths relative to `DIR`, while the configuration, the map and `[[lint.accept]]` stay
+the project's (an entry's `path` is relative to the project root, as in `validate`).
+
+A start-of-session artifact whose file was not read (over the 1 MiB read limit, or a symlink to outside the root)
+loads in every session, but no leak in it can be found. It is listed under `unchecked` with the reason, and as an
+`unchecked:` line of the text output; it is not a finding and does not change the exit code. Read it, or bring it
+under the limit, to have it checked.
+
+The command fails (exit `2`) on a violation or a stale acceptance. Without an area map it fails (exit `1`). The JSON
+follows
+[`schema/exposure-leakage.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-leakage.v1.schema.json):
+
+```json
+{
+  "schema_version": 1,
+  "root": "/work/repo",
+  "plugins": "enabled",
+  "areas_file": "tools/context/areas.toml",
   "artifacts_checked": 14,
   "findings": [
     {"severity": "accepted", "code": "AR9W0", "area": "billing", "term": "invoice", "kind": "mcp_server",
@@ -345,14 +378,15 @@ accepts it. The command fails (exit `2`) on a violation or a stale acceptance. W
      "name": "lookup", "path": ".claude/skills/lookup/SKILL.md", "scope": ".", "line": 1,
      "excerpt": "lookup: Looks up an account.", "reason": ""}
   ],
+  "unchecked": [
+    {"path": ".claude/rules/generated.md", "kind": "rule", "name": "generated",
+     "reason": "1500000 bytes, over the read limit of 1048576"}
+  ],
   "stale_acceptances": [
     "lint.accept[2] (AR9W0 in CLAUDE.md) accepted no finding; remove it or fix its path or match"
   ]
 }
 ```
-
-To separate two listings, lead each description with what sets it apart (the area's own nouns), not with the words
-every skill of the repository uses.
 
 ## A gate that cannot be read
 
@@ -368,17 +402,25 @@ after a file the `paths:` glob matches was read):
 | `description: "Use when testing` (an unclosed quote) | dropped: listed at start, the description is the first body line | does not parse |
 | `paths` indented with a tab | dropped: listed at start, the description is the first body line | does not parse |
 
-So a broken block may keep its gate or lose it, and nothing short of Claude Code's parser tells which. ai-rulez does
-not guess:
+So a broken block may keep its gate or lose it, and nothing short of Claude Code's parser tells which. A block that
+parses but gives a gate a value of the wrong type leaves the same doubt: `paths` that is neither a string nor a list
+of strings (`paths: 5`, a list holding a number, an empty `paths:`), or `disable-model-invocation` that is not `true`
+or `false` (see [YAML 1.1 booleans](#yaml-11-booleans)). ai-rulez does not guess:
 
 - `exposure inventory` gives such a root rule or skill the phase `unknown`, which the start-of-session reports count as
   start (fail closed).
 - The MCP server never returns such a rule for a `find_context` `path` query, and a `scope` query lists it with
-  `"paths_unreadable": true`. A skill whose frontmatter does not parse is not served at all.
-- `validate` reports it as `AR9W4 exposure-gate-unreadable` (warning) next to the `AR306` for the block, for the claude
-  preset and for a run without a configuration.
+  `"paths_unreadable": true`; a rule or skill whose `paths` value has the wrong type is served the same way. A skill
+  whose frontmatter does not parse is not served at all.
+- `validate` reports it as `AR9W4 exposure-gate-unreadable` (warning), next to the `AR306` for a block that does not
+  parse, for the claude preset and for a run without a configuration.
 
-Quoting the value YAML cannot read (`description: "Use when: testing"`) fixes all three.
+Quoting the value YAML cannot read (`description: "Use when: testing"`), and writing a gate as a string or a list of
+strings (`paths`) or as `true` or `false`, fixes all three.
+
+A known limitation: only `paths:` fails closed in the MCP server. A Cursor rule (`.cursor/rules/*.mdc`) whose broken
+block names `globs:` (and not `alwaysApply: true`) is served as a rule that applies everywhere, as if it had no
+globs; `AR306` reports the block.
 
 ### YAML 1.1 booleans
 
@@ -386,9 +428,9 @@ Quoting the value YAML cannot read (`description: "Use when: testing"`) fixes al
 `y`, `n`; lower case, capitalized or upper case) as booleans; YAML 1.2, and parsers that follow it, read them as
 strings. Claude Code 2.1.312 follows YAML 1.1 here: a skill with `disable-model-invocation: yes` or `on` was kept out
 of the model's listing and one with `no` was listed. ai-rulez parses YAML 1.2 (`gopkg.in/yaml.v3`), so it reads `yes`
-as the string `"yes"`: `validate` reports the value as `AR304` (not a boolean), and `exposure inventory` gives a
-root skill the phase `unknown` with the frontmatter error `"disable-model-invocation" is not a boolean`. Write `true` and
-`false`, which every reader agrees on.
+as the string `"yes"`: `validate` reports the value as `AR304` (not a boolean) and as `AR9W4`, and `exposure
+inventory` gives a root skill the phase `unknown` with the frontmatter error `"disable-model-invocation" is not a
+boolean`. Write `true` and `false`, which every reader agrees on.
 
 ## Start-of-session budgets
 
@@ -396,10 +438,15 @@ Two checks of `validate` read the start-of-session report, both only with an `[e
 `ai-rulez exposure` computes them with `[exposure] plugins` and `context_window`:
 
 - **`AR9W3 exposure-start-budget`** reports start tokens over `[exposure] start_budget`. It is off while
-  `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same case, so either can gate CI.
+  `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same
+  case, so either can gate CI.
 - **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
   reports a start-of-session skill listing over Claude Code's listing budget, with the claude preset configured.
   `[lint.load_budgets] claude-skill-listing-total = N` replaces the computed budget with a fixed one.
+
+Both findings sit on the configuration, but the change that moves them is usually elsewhere: under `validate
+--changed` they depend on every start-of-session artifact and on the files that shape the session (see
+[Under --changed](#under-changed)).
 
 ```toml
 [exposure]
@@ -413,8 +460,9 @@ Text a session sees at its start is in the context of every task. A word there t
 session toward it, so the rules read the start-of-session artifacts of the inventory: the root `CLAUDE.md` (and
 `.claude/CLAUDE.md`), unconditional root rules, the listing line of each root skill and agent, the server names of the
 root `.mcp.json` and the enabled plugin keys, and, with `plugins = "enabled"` or `"all"`, the listings of the plugin
-skills that load. An artifact of unknown phase (broken frontmatter that names a gate) counts as start: the check
-fails closed.
+skills that load. An artifact of unknown phase ([a gate that cannot be read](#a-gate-that-cannot-be-read)) counts as
+start: the check fails closed. An artifact whose file was not read has no text to check; `exposure leakage` lists it
+as unchecked, and `validate` does not report it.
 
 - **`AR9W0 exposure-area-term`** (error): a term of an area that is not `shared`, on a non-blank line, outside path
   literals (see [Matching terms](#matching-terms)). Each line reports each term once per area that lists it, in line
@@ -434,8 +482,11 @@ The message of `AR9W0` and `AR9W1` is a stable contract, so an acceptance can na
 ```
 
 Accept a finding with a reason in `[[lint.accept]]`; `match` is a case-sensitive substring of the message, and `path`
-the file of the finding (`.mcp.json` for a server, the settings file for a plugin key). An entry that accepts
-nothing is reported as `AR9I0` and fails `exposure leakage`:
+the file of the finding: `.mcp.json` for a server, and for a plugin key the settings file that lists it,
+`.claude/settings.json` when that file enables the plugin. Only a plugin that `.claude/settings.local.json` alone
+enables is reported there; that file is machine-local and usually untracked, so the finding, and the entry that
+accepts it, exist only on the machines that have it. An entry that accepts nothing is reported as `AR9I0` and fails
+`exposure leakage`:
 
 ```toml
 [[lint.accept]]
@@ -451,12 +502,25 @@ match = 'names term "invoice"'
 reason = "the root map names each area once to route to its guide"
 ```
 
-Under `validate --changed` (or `--since`), a leak finding is kept when its own file changed, and every leak finding is
-kept when the areas file, the configuration file, `.claude/settings.json`, `.claude/settings.local.json` or the
-repository marketplace changed: the finding depends on those files the way an `AR701` duplicate depends on the other
-file of the pair (an `AR964` finding, by contrast, has no such dependency and is kept only when its own file changed). An `AR9W6` finding sits on the areas file or the configuration and is kept when that file changed.
-`AR9I0` sits on the configuration file and, as for every rule, is kept only when the configuration changed, so a
-change that fixes the last finding an entry accepted shows the stale entry only in a full run.
+### Under `--changed`
+
+Under `validate --changed` (or `--since`) a finding is kept when its file changed or a file it depends on did, the
+way an `AR701` duplicate depends on the other file of the pair. Every exposure finding depends on the files that
+shape the session: the areas file, the configuration file, `.claude/settings.json`, `.claude/settings.local.json` and
+the repository marketplace. Besides those:
+
+- A leak finding (`AR9W0`, `AR9W1`) sits on its artifact and is kept when that file changed.
+- `AR9W3` and the `AR964` `claude-skill-listing-total` finding sit on the configuration and depend on every
+  start-of-session artifact, so the change that pushes a session past the budget keeps them.
+- An `AR9W2` finding sits on the first listing of its pair and depends on the second, so editing either listing into
+  a collision keeps it; the summary finding past the 20th pair sits on the configuration and depends on every listing
+  it counts.
+- An `AR9W6` finding sits on the areas file or the configuration and is kept when that file changed.
+
+A dependency belongs to a file, not to one finding: while `AR9W3`, the listing total or the `AR9W2` summary stands,
+any other finding on the configuration is kept too when a start-of-session artifact changed. `AR9I0` sits on the
+configuration file and, as for every rule, is kept only when the configuration changed, so a change that fixes the
+last finding an entry accepted shows the stale entry only in a full run.
 
 ## Validation
 
@@ -470,14 +534,20 @@ is not used at all, so every rule that reads it stays quiet until it is fixed. S
 [Strict validation](strict-validation.md#ar9w5-exposure-map-invalid).
 
 `AR9W2 exposure-area-collision` is off until `[exposure] collision_min_score` is set, which turns it on at warning
-with that threshold; a `[lint.severity]` entry turns it on at the default 0.1. It reports every pair
-`exposure collisions` would at that score, on the description line of the pair's first listing, with a message of
-the form `skill "charge" of area "billing" and skill "rank" of area "search" list overlapping words at session start
-(score 0.50, at least 0.10): customer, details, look, name`. The plugin skills counted are those of
-`[exposure] plugins`. See [Strict validation](strict-validation.md#ar9w2-exposure-area-collision).
+with that threshold; a `[lint.severity]` entry turns it on at the default 0.1. It reports the 20 highest pairs
+`exposure collisions` would at that score (its default `--limit`), each on the description line of the pair's first
+listing, with a message of the form `skill "charge" of area "billing" and skill "rank" of area "search" list
+overlapping words at session start (score 0.50, at least 0.10): customer, details, look, name`. When more pairs reach
+the score, one more finding at the same severity, on the `collision_min_score` line of the configuration, counts the
+rest (`and 35 more pairs ... see ai-rulez exposure collisions`), so a large repository gets 21 findings, not
+thousands. The plugin skills counted are those of `[exposure] plugins`. See
+[Strict validation](strict-validation.md#ar9w2-exposure-area-collision).
 
 `AR9W4 exposure-gate-unreadable` (warning) reports a skill, command or rule whose frontmatter does not parse (`AR306`)
-while a line of the block names `paths`, `disable-model-invocation` or `user-invocable`, on that line. It needs no
+while a line of the block names `paths`, `disable-model-invocation` or `user-invocable`, on that line, and one whose
+block parses but sets `paths` to something other than a string or a list of strings, or `disable-model-invocation`
+to something other than `true` or `false`, on the first such key: the cases `exposure inventory` reads as phase
+`unknown`. It needs no
 `[exposure]` table and runs for the claude preset and for a run without a configuration. See
 [A gate that cannot be read](#a-gate-that-cannot-be-read) and
 [Strict validation](strict-validation.md#ar9w4-exposure-gate-unreadable).
