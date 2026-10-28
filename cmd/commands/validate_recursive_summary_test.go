@@ -83,7 +83,7 @@ func TestRunRecursiveValidate_JSONStaysParseableWithFindings(t *testing.T) {
 	resetValidateFlags(t)
 	t.Setenv(repoRootEnv, "")
 	viper.Set("quiet", false)
-	t.Cleanup(func() { viper.Set("quiet", false) })
+	t.Cleanup(func() { viper.Set("quiet", nil) }) // nil clears the override, so a later test reads the environment again
 	validateRecursive, validateFormat, validateStrict = true, "json", true
 
 	// Act

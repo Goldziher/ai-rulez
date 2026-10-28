@@ -557,7 +557,7 @@ func TestMarketplaceAddAndPluginInstall_ConfirmWhatWasWritten(t *testing.T) {
 			// Arrange
 			lockProject(t, "")
 			viper.Set("quiet", tt.quiet)
-			t.Cleanup(func() { viper.Set("quiet", false) })
+			t.Cleanup(func() { viper.Set("quiet", nil) }) // nil clears the override, so a later test reads the environment again
 
 			// Act
 			_, stderr, err := runSubBoth(t, tt.build, tt.args...)

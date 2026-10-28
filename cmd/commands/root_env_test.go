@@ -16,6 +16,7 @@ import (
 
 func TestBareEnvironmentVariablesDoNotChangeBehaviour(t *testing.T) {
 	// Arrange
+	clearSwitchOverrides(t)
 	t.Setenv("QUIET", "1")
 	t.Setenv("DEBUG", "1")
 	t.Setenv("VERBOSE", "1")
@@ -26,8 +27,18 @@ func TestBareEnvironmentVariablesDoNotChangeBehaviour(t *testing.T) {
 	assert.False(t, viper.GetBool("debug"), "bare DEBUG must not turn on debug logging")
 }
 
+// clearSwitchOverrides drops a value an earlier test set with viper.Set, which
+// would otherwise win over the environment these tests read.
+func clearSwitchOverrides(t *testing.T) {
+	t.Helper()
+	for _, key := range []string{"quiet", "debug"} {
+		viper.Set(key, nil)
+	}
+}
+
 func TestPrefixedEnvironmentVariablesSetTheGlobalSwitches(t *testing.T) {
 	// Arrange
+	clearSwitchOverrides(t)
 	t.Setenv("AI_RULEZ_QUIET", "1")
 	t.Setenv("AI_RULEZ_DEBUG", "true")
 	initConfig()

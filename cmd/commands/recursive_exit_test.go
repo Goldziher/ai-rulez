@@ -134,7 +134,7 @@ func TestValidateCmd_HonoursQuietFlag(t *testing.T) {
 	validateFormat = ""
 	t.Cleanup(func() { validateFormat = oldFormat })
 	viper.Set("quiet", true)
-	t.Cleanup(func() { viper.Set("quiet", false) })
+	t.Cleanup(func() { viper.Set("quiet", nil) }) // nil clears the override, so a later test reads the environment again
 
 	applyValidateQuiet()
 
