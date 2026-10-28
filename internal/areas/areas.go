@@ -72,8 +72,9 @@ type Problem struct {
 	// map is located by LineIn.
 	Key string
 	// area is the 1-based area table the problem is in, 0 for none; needle is text in that table that locates
-	// the line (the table's header when it is "").
+	// the line (the table's header when it is ""), preferably on the line assigning field.
 	area   int
+	field  string
 	needle string
 	// skill is the [skill_areas] key the problem is about.
 	skill string
@@ -97,7 +98,7 @@ func New(defs []config.ExposureArea, skillAreas map[string]string) (*Map, []Prob
 		area, areaProblems := normalizeArea(i, &defs[i])
 		problems = append(problems, areaProblems...)
 		if area.Name != "" && seen[area.Name] {
-			problems = append(problems, Problem{Message: fmt.Sprintf("duplicate area name %q", area.Name), area: i + 1, needle: quoted(area.Name)})
+			problems = append(problems, Problem{Message: fmt.Sprintf("duplicate area name %q", area.Name), area: i + 1, field: keyName, needle: quoted(area.Name)})
 		}
 		seen[area.Name] = true
 		areas = append(areas, area)
@@ -139,24 +140,24 @@ func normalizeArea(index int, def *config.ExposureArea) (Area, []Problem) {
 		}
 	}
 	var problems []Problem
-	add := func(needle, format string, args ...any) {
-		problems = append(problems, Problem{Message: fmt.Sprintf(format, args...), area: index + 1, needle: needle})
+	add := func(field, needle, format string, args ...any) {
+		problems = append(problems, Problem{Message: fmt.Sprintf(format, args...), area: index + 1, field: field, needle: needle})
 	}
 	switch {
 	case def.Name == "":
-		add("", "area %d has no name", index+1)
+		add(keyName, "", "area %d has no name", index+1)
 	case def.Name == Unclassified:
-		add(quoted(def.Name), "area name %q is reserved", def.Name)
+		add(keyName, quoted(def.Name), "area name %q is reserved", def.Name)
 	case !isKebab(def.Name):
-		add(quoted(def.Name), "area name %q must be lower-kebab (a-z, 0-9 and single hyphens)", def.Name)
+		add(keyName, quoted(def.Name), "area name %q must be lower-kebab (a-z, 0-9 and single hyphens)", def.Name)
 	}
 	for _, p := range def.Paths {
 		if why := badPath(p); why != "" {
-			add(quoted(p), "area %q path %q %s", def.Name, p, why)
+			add(keyPaths, quoted(p), "area %q path %q %s", def.Name, p, why)
 		}
 	}
 	if why := badDeclare(def.Declare); why != "" {
-		add(quoted(def.Declare), "area %q declare %q %s", def.Name, def.Declare, why)
+		add(keyDeclare, quoted(def.Declare), "area %q declare %q %s", def.Name, def.Declare, why)
 	}
 	return area, problems
 }
@@ -233,6 +234,13 @@ func copyMap(m map[string]string) map[string]string {
 	}
 	return out
 }
+
+// The keys of an area table whose lines a problem points at.
+const (
+	keyName    = "name"
+	keyPaths   = "paths"
+	keyDeclare = "declare"
+)
 
 func quoted(s string) string { return `"` + s + `"` }
 

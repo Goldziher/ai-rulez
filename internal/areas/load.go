@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	toml "github.com/pelletier/go-toml/v2"
@@ -99,66 +100,174 @@ func decodeProblems(path string, err error) []Problem {
 }
 
 // LineIn is the 1-based line of the problem's entry in the lines of an areas file, or of a configuration file
-// with the inline [exposure] form: the line in the problem's area table holding the offending text (the table
-// header when there is none), or the [skill_areas] line of the offending key. It is 0 when the problem is not
-// about an entry or the entry is not found.
+// with the inline [exposure] form: in the problem's area table, the line assigning the problem's key with the
+// offending text, else the first line holding that text (the table header when there is none); or the
+// [skill_areas] line whose key is the offending skill. It is 0 when the problem is not about an entry or the
+// entry is not found. A line inside a multi-line string is never read as a table header.
 func (p Problem) LineIn(lines []string) int {
 	switch {
 	case p.area > 0:
-		return areaLine(lines, p.area, p.needle)
+		return areaLine(lines, p.area, p.field, p.needle)
 	case p.skill != "":
 		return skillLine(lines, p.skill)
 	}
 	return 0
 }
 
-// areaLine finds needle in the n-th area table, else that table's header line.
-func areaLine(lines []string, n int, needle string) int {
-	seen, start := 0, 0
-	for i, l := range lines {
-		name, isHeader := tableHeader(l)
-		switch {
-		case isHeader && start > 0:
-			return start
-		case isHeader && isAreaTable(name):
-			seen++
-			if seen == n {
-				start = i + 1
-				if needle == "" {
-					return start
-				}
-			}
-		case start > 0 && strings.Contains(l, needle):
-			return i + 1
+// areaLine finds needle in the n-th area table, preferring the line that assigns field, else that table's
+// header line.
+func areaLine(lines []string, n int, field, needle string) int {
+	headers := tableHeaders(lines)
+	start, seen := -1, 0
+	for i, h := range headers {
+		if !h.ok || !isAreaTable(h.name) {
+			continue
+		}
+		seen++
+		if seen == n {
+			start = i
+			break
 		}
 	}
-	return start
+	if start < 0 {
+		return 0
+	}
+	if needle == "" {
+		return start + 1
+	}
+	fallback := start + 1
+	for i := start + 1; i < len(lines) && !headers[i].ok; i++ {
+		if !strings.Contains(lines[i], needle) {
+			continue
+		}
+		if key, ok := lineKey(lines[i]); ok && key == field {
+			return i + 1
+		}
+		if fallback == start+1 {
+			fallback = i + 1
+		}
+	}
+	return fallback
 }
 
-// skillLine finds the line assigning skill in the skill table, else that table's header line.
+// skillLine finds the line whose key is skill in the skill table, else that table's header line.
 func skillLine(lines []string, skill string) int {
-	start := 0
-	for i, l := range lines {
-		if name, isHeader := tableHeader(l); isHeader {
-			if start > 0 {
+	headers := tableHeaders(lines)
+	start := -1
+	for i, h := range headers {
+		if h.ok {
+			if start >= 0 {
 				break
 			}
-			if isSkillTable(name) {
-				start = i + 1
+			if isSkillTable(h.name) {
+				start = i
 			}
 			continue
 		}
-		if key, _, found := strings.Cut(l, "="); start > 0 && found && strings.Trim(strings.TrimSpace(key), `"'`) == skill {
+		if key, ok := lineKey(lines[i]); start >= 0 && ok && key == skill {
 			return i + 1
 		}
 	}
-	return start
+	return start + 1
 }
 
 // isAreaTable and isSkillTable recognize the tables of an area entry and of the skill assignments, in an areas
 // file and in the inline form.
 func isAreaTable(name string) bool  { return name == "area" || name == "exposure.areas" }
 func isSkillTable(name string) bool { return name == "skill_areas" || name == "exposure.skill_areas" }
+
+// header is what tableHeaders makes of one line: whether it is a table header, and the table's name.
+type header struct {
+	name string
+	ok   bool
+}
+
+// tableHeaders reads the table header of every line, skipping the lines a multi-line string spans.
+func tableHeaders(lines []string) []header {
+	out := make([]header, len(lines))
+	open := ""
+	for i, l := range lines {
+		if open == "" {
+			out[i].name, out[i].ok = tableHeader(l)
+		}
+		open = multilineOpen(l, open)
+	}
+	return out
+}
+
+// multilineOpen is the multi-line string delimiter (""" or ''') still open after line, given the one
+// open before it ("" for none).
+func multilineOpen(line, open string) string {
+	for {
+		if open == "" {
+			i, d := firstDelimiter(line)
+			if i < 0 {
+				return ""
+			}
+			open, line = d, line[i+len(d):]
+		}
+		j := strings.Index(line, open)
+		if j < 0 {
+			return open
+		}
+		line, open = line[j+len(open):], ""
+	}
+}
+
+func firstDelimiter(line string) (index int, delimiter string) {
+	basic, literal := strings.Index(line, `"""`), strings.Index(line, "'''")
+	switch {
+	case basic < 0 && literal < 0:
+		return -1, ""
+	case literal < 0 || (basic >= 0 && basic < literal):
+		return basic, `"""`
+	}
+	return literal, "'''"
+}
+
+// lineKey is the key a TOML line assigns: a bare, "basic" or 'literal' key followed by "=".
+func lineKey(line string) (string, bool) {
+	t := strings.TrimSpace(line)
+	var key, rest string
+	switch {
+	case strings.HasPrefix(t, `"`):
+		end := closingQuote(t)
+		if end < 0 {
+			return "", false
+		}
+		k, err := strconv.Unquote(t[:end+1])
+		if err != nil {
+			k = t[1:end]
+		}
+		key, rest = k, t[end+1:]
+	case strings.HasPrefix(t, "'"):
+		end := strings.IndexByte(t[1:], '\'')
+		if end < 0 {
+			return "", false
+		}
+		key, rest = t[1:end+1], t[end+2:]
+	default:
+		end := strings.IndexAny(t, " \t=")
+		if end <= 0 {
+			return "", false
+		}
+		key, rest = t[:end], t[end:]
+	}
+	return key, strings.HasPrefix(strings.TrimSpace(rest), "=")
+}
+
+// closingQuote is the index of the quote that closes the basic string at the start of t, or -1.
+func closingQuote(t string) int {
+	for i := 1; i < len(t); i++ {
+		switch t[i] {
+		case '\\':
+			i++
+		case '"':
+			return i
+		}
+	}
+	return -1
+}
 
 // tableHeader reports whether a TOML line is a table header and its name.
 func tableHeader(line string) (string, bool) {
