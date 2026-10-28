@@ -97,7 +97,11 @@ func runExposureLeakage(ctx context.Context, f *exposureFlags) (*exposure.Leakag
 	if m == nil {
 		return nil, oops.Errorf("no area map: configure [exposure] areas or areas_file, or pass --areas")
 	}
-	tree, err := lint.LoadTree(root)
+	base, err := filepath.Abs(cfg.BaseDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "resolve the project root")
+	}
+	tree, err := lint.LoadTree(leakageTreeRoot(base, root))
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
@@ -148,6 +152,16 @@ func leakageReport(res *lint.LeakageResult) *exposure.LeakageReport {
 		})
 	}
 	return out
+}
+
+// leakageTreeRoot is the directory whose files the leakage run indexes: the
+// project root when root lies inside it, so the paths of [[lint.accept]] and
+// [lint] ignore_paths stay relative to the project, as in validate; else root.
+func leakageTreeRoot(base, root string) string {
+	if filepath.IsAbs(filepath.FromSlash(rootRelative(base, root))) {
+		return root
+	}
+	return base
 }
 
 // areasFilePath is the absolute path of the areas file exposureMap names

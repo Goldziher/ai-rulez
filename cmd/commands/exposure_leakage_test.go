@@ -260,3 +260,14 @@ func TestLeakageReport(t *testing.T) {
 		StaleAcceptances: []string{"stale"},
 	}, got)
 }
+
+// The leakage run indexes the project root when --root lies inside it, so [[lint.accept]] paths stay relative to
+// the project as in validate; a --root elsewhere is indexed on its own.
+func TestLeakageTreeRoot(t *testing.T) {
+	base := t.TempDir()
+	other := t.TempDir()
+
+	assert.Equal(t, base, leakageTreeRoot(base, base))
+	assert.Equal(t, base, leakageTreeRoot(base, filepath.Join(base, "services", "billing")))
+	assert.Equal(t, other, leakageTreeRoot(base, other))
+}
