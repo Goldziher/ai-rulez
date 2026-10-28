@@ -34,18 +34,6 @@ type ExposureCollision struct {
 	SecondArea string
 }
 
-// ExposureSource reads the session exposure of the project (the Claude Code inventory classified with the
-// [exposure] area map). The exposure rules call it only when the configuration has an [exposure] table; without
-// one handed in (WithExposure), they stay silent.
-type ExposureSource interface {
-	// Collisions are the pairs at or over minScore, highest score first; none when the area map cannot be used
-	// (AR9W5 reports it).
-	Collisions(minScore float64) []ExposureCollision
-}
-
-// WithExposure hands the exposure rules the session exposure of the project.
-func WithExposure(src ExposureSource) Option { return func(r *runner) { r.exposure = src } }
-
 func registerArExposureCollisions(s *ruleSet) {
 	s.addRules(
 		RuleInfo{CodeExposureAreaCollision, "exposure-area-collision", SeverityOff, "two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over [exposure] collision_min_score (setting it turns the rule on at warning)"},
