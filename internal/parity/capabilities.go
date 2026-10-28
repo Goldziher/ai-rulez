@@ -429,6 +429,11 @@ func cliOnlyCapabilities() []Capability {
 		return Capability{ID: id, Kind: CLIOnly, CLI: cli, Reason: reason}
 	}
 	return []Capability{
+		only("exposure", "offline report of what a Claude Code session loads at its start and on demand, run by a maintainer; no tool exposes it", "exposure"),
+		only("exposure-areas", "offline view of the area map of the [exposure] settings; no tool exposes it", "exposure areas"),
+		only("exposure-collisions", "offline report of skill and agent listings that collide; no tool exposes it", "exposure collisions"),
+		only("exposure-inventory", "offline listing of the session inventory; no tool exposes it", "exposure inventory"),
+		only("exposure-leakage", "offline report of area terms in start-of-session text; validate runs the same rules", "exposure leakage"),
 		only("config-layers", "lists the config.<name>.toml files beside config.toml (in .agents/.ai-rulez/ for an .agents project) and which are active; a tool client reads the merged settings through read_config", "config layers"),
 		only("lock-write", "writes the lock, the trust anchor of the project, after network pinning and scan acceptance; an agent must not mint trust",
 			"lock"),

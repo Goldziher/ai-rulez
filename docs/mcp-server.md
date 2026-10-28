@@ -265,6 +265,11 @@ rewrites them), and the test fails when they are stale.
 | `edit context` | partial field edits and stdin input; update_context is the whole-item replacement for a tool client |
 | `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
+| `exposure` | offline report of what a Claude Code session loads at its start and on demand, run by a maintainer; no tool exposes it |
+| `exposure areas` | offline view of the area map of the [exposure] settings; no tool exposes it |
+| `exposure collisions` | offline report of skill and agent listings that collide; no tool exposes it |
+| `exposure inventory` | offline listing of the session inventory; no tool exposes it |
+| `exposure leakage` | offline report of area terms in start-of-session text; validate runs the same rules |
 | `guard` | a hook entry point the harness calls on tool use |
 | `skill update` | re-pins installed skills over the network and rewrites the lock |
 | `list` | prints where skills and commands land per harness; generate_outputs dry_run returns the same plan |
