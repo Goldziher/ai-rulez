@@ -75,11 +75,11 @@ type catalog struct {
 // `<plugin>@<marketplace>` to true and the marketplace lists it.
 func (b *builder) catalog() catalog {
 	c := catalog{enabled: map[string]bool{}}
-	text, status, _ := b.read(MarketplaceFile)
-	if status != readOK {
+	r := b.read(MarketplaceFile)
+	if r.status != readOK {
 		return c
 	}
-	ix, err := pluginimport.ParseIndex([]byte(text), pluginimport.IndexClaude)
+	ix, err := pluginimport.ParseIndex([]byte(r.text), pluginimport.IndexClaude)
 	if err != nil {
 		b.problem(MarketplaceFile, err.Error())
 		return c

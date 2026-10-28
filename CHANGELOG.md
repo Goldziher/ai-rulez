@@ -26,8 +26,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   the repository marketplace (`--plugins none|enabled|all`, `--with-text`). `exposure areas` shows the area map as
   loaded and the area of every artifact with how it was decided (`skill_areas`, `path`, `terms` or `none`), for
   diffing against another classifier; a plugin skill is owned by its plugin's directory. Both take `--areas FILE` to
-  try a map before configuring it and `--root DIR`, and print `schema/exposure-inventory.v1.schema.json` and
-  `schema/exposure-areas.v1.schema.json` with `--format json`.
+  try a map before configuring it and `--root DIR` (which still honours `-C/--config`, `--config-dir` and
+  `--no-local`, and otherwise discovers the configuration from `DIR` upwards), and print
+  `schema/exposure-inventory.v1.schema.json` and `schema/exposure-areas.v1.schema.json` with `--format json`.
+  Tokens are estimated as bytes / 3.9 rounded up; a file over the read limit is kept unread and estimated from its
+  size. Outside a git repository the file walk lists symlinked files, as git does, so `CLAUDE.md -> AGENTS.md` is
+  read there too.
 
 ### Changed
 

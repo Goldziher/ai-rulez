@@ -4,14 +4,14 @@
   "title": "ai-rulez exposure areas",
   "description": "Output of `ai-rulez exposure areas --format json`: the area map as loaded and the area of every artifact of the session inventory, with how it was decided. See docs/exposure.md.",
   "type": "object",
-  "required": ["schema_version", "root", "areas_file", "plugins", "areas", "skill_areas", "artifacts", "counts"],
+  "required": ["schema_version", "root", "areas_file", "plugins", "areas", "skill_areas", "artifacts", "counts", "problems"],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": 1 },
     "root": { "type": "string", "description": "The absolute repository root, slash separated." },
     "areas_file": {
       "type": "string",
-      "description": "The areas file the map was read from (--areas or [exposure] areas_file), empty for the inline [exposure] form."
+      "description": "The areas file the map was read from (--areas or [exposure] areas_file), relative to the root and slash separated, or absolute (slash separated) when it lies outside the root; empty for the inline [exposure] form."
     },
     "plugins": { "enum": ["none", "enabled", "all"], "description": "The plugin mode of the inventory." },
     "areas": {
@@ -71,8 +71,18 @@
     },
     "counts": {
       "type": "object",
-      "description": "The number of artifacts per area, unclassified included.",
+      "description": "The number of artifacts per area: every area of the map and unclassified, 0 when no artifact is in it.",
       "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "problems": {
+      "type": "array",
+      "description": "The inventory's problems: files that could not be read or decoded. An unread artifact is classified on an empty text.",
+      "items": {
+        "type": "object",
+        "required": ["path", "error"],
+        "additionalProperties": false,
+        "properties": { "path": { "type": "string" }, "error": { "type": "string" } }
+      }
     }
   }
 }

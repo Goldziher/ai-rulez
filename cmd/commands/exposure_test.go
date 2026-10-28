@@ -19,26 +19,36 @@ func TestExposureMap(t *testing.T) {
 	require.NoError(t, os.WriteFile(file, []byte("[[area]]\nname = \"search\"\n"), 0o600))
 	bad := filepath.Join(dir, "bad.toml")
 	require.NoError(t, os.WriteFile(bad, []byte("[[area]]\nname = \"a\"\npaths = [\"x/\"]\n"), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sub"), 0o750))
+	outside := filepath.Join(t.TempDir(), "areas.toml")
+	require.NoError(t, os.WriteFile(outside, []byte("[[area]]\nname = \"far\"\n"), 0o600))
 	inline := &config.ExposureConfig{Areas: []config.ExposureArea{{Name: "billing"}}}
 	tests := []struct {
 		name      string
 		exp       *config.ExposureConfig
 		flag      string
 		wantAreas []string
+		root      string
 		wantFile  string
 		wantErr   string
 	}{
 		{name: "no table and no flag is no map"},
 		{name: "a table without areas is no map", exp: &config.ExposureConfig{ContextWindow: 1000}},
 		{name: "the inline map", exp: inline, wantAreas: []string{"billing"}},
-		{name: "the flag replaces the table", exp: inline, flag: file, wantAreas: []string{"search"}, wantFile: file},
+		{name: "the flag replaces the table", exp: inline, flag: file, wantAreas: []string{"search"}, wantFile: "areas.toml"},
+		{name: "a file outside the root is absolute", flag: outside, wantAreas: []string{"far"}, wantFile: filepath.ToSlash(outside)},
 		{name: "the configured file", exp: &config.ExposureConfig{AreasFile: "areas.toml"}, wantAreas: []string{"search"}, wantFile: "areas.toml"},
+		{name: "a configured file outside the root is absolute", exp: &config.ExposureConfig{AreasFile: "areas.toml"}, root: filepath.Join(dir, "sub"), wantAreas: []string{"search"}, wantFile: filepath.ToSlash(file)},
 		{name: "a file problem names its line", flag: bad, wantErr: bad + `:3: area "a" path "x/"`},
 		{name: "a table problem names the table", exp: &config.ExposureConfig{Areas: []config.ExposureArea{{Name: "a"}, {Name: "a"}}}, wantErr: `[exposure]: duplicate area name "a"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, from, err := exposureMap(tt.exp, dir, tt.flag)
+			root := tt.root
+			if root == "" {
+				root = dir
+			}
+			m, from, err := exposureMap(tt.exp, dir, root, tt.flag)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "AR9W5")
@@ -64,10 +74,11 @@ func TestLoadExposureRejectsBadFlags(t *testing.T) {
 	}{
 		{"unknown plugin mode", exposureFlags{plugins: "some", root: t.TempDir()}, `unknown --plugins "some" (use none, enabled or all)`},
 		{"missing root", exposureFlags{root: filepath.Join(t.TempDir(), "nope")}, "is not a directory"},
+		{"with-text without json", exposureFlags{withText: true, root: t.TempDir()}, "--with-text applies to --format json"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := loadExposure(t.Context(), &tt.flags)
+			err := runExposureInventory(t.Context(), &bytes.Buffer{}, &tt.flags)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.want)
 		})
@@ -81,6 +92,7 @@ func TestWriteInventoryText(t *testing.T) {
 		Artifacts: []exposure.Artifact{
 			{Kind: exposure.KindClaudeMD, QualifiedName: "CLAUDE.md", Path: "CLAUDE.md", Phase: exposure.PhaseStart, Tokens: 10, Area: "billing", AreaSource: "terms"},
 			{Kind: exposure.KindSkill, QualifiedName: "s", Path: "a/.claude/skills/s/SKILL.md", Phase: exposure.PhaseOnDemand, Tokens: 4},
+			{Kind: exposure.KindRule, QualifiedName: "big", Path: ".claude/rules/big.md", Phase: exposure.PhaseUnknown, Tokens: 7},
 		},
 		Problems: []exposure.Problem{{Path: "big.md", Error: "over the read limit"}},
 	}
@@ -90,7 +102,7 @@ func TestWriteInventoryText(t *testing.T) {
 		want      []string
 		absent    []string
 	}{
-		{"without areas", false, []string{"plugins enabled, loaded: none", "2 artifacts: 1 start (10 tokens), 1 on_demand, 0 manual, 0 unknown", "problem: big.md: over the read limit"}, []string{"AREA"}},
+		{"without areas", false, []string{"plugins enabled, loaded: none", "3 artifacts: 1 start (17 tokens, unknown included), 1 on_demand, 0 manual, 1 unknown", "problem: big.md: over the read limit"}, []string{"AREA"}},
 		{"with areas", true, []string{"AREA", "billing (terms)"}, nil},
 	}
 	for _, tt := range tests {
@@ -105,6 +117,45 @@ func TestWriteInventoryText(t *testing.T) {
 			for _, w := range tt.absent {
 				assert.NotContains(t, out.String(), w)
 			}
+		})
+	}
+}
+
+// With --root, -C still names the configuration: an invalid one fails, a valid
+// one supplies the area map; without -C the map is discovered from the root.
+func TestLoadExposureUsesTheConfigFlagsWithRoot(t *testing.T) {
+	project := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(project, ".ai-rulez"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(project, ".ai-rulez", "config.toml"), []byte("version = \"5.0\"\nname = \"p\"\n\n[[exposure.areas]]\nname = \"billing\"\n"), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Join(project, "sub"), 0o750))
+	bad := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(bad, []byte("version = \"5.0\"\nname = \"bad\"\n\n[exposure]\nplugins = \"some\"\n"), 0o600))
+	empty := t.TempDir()
+	tests := []struct {
+		name, config, root, wantErr string
+		wantMap                     bool
+	}{
+		{name: "an invalid -C fails", config: bad, root: empty, wantErr: "AR9W5"},
+		{name: "a missing -C fails", config: filepath.Join(empty, "nope.toml"), root: empty, wantErr: "does not exist"},
+		{name: "a valid -C supplies the map", config: filepath.Join(project, ".ai-rulez"), root: empty, wantMap: true},
+		{name: "a subdirectory finds its project", root: filepath.Join(project, "sub"), wantMap: true},
+		{name: "a directory without a configuration has no map", root: empty},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prev := cfgFile
+			cfgFile = tt.config
+			t.Cleanup(func() { cfgFile = prev })
+
+			in, err := loadExposure(t.Context(), &exposureFlags{root: tt.root})
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantMap, in.areas != nil)
 		})
 	}
 }

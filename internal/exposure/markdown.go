@@ -94,14 +94,16 @@ func (b *builder) markdown(kind Kind, source Source, file, scope, fallback strin
 // markdownFile reads a markdown artifact; ok is false for a file that is gone.
 // A file that was refused is kept unread (see unreadArtifact).
 func (b *builder) markdownFile(kind Kind, source Source, file, scope, fallback string) (Artifact, bool) {
-	text, status, reason := b.read(file)
-	switch status {
+	r := b.read(file)
+	switch r.status {
 	case readGone:
 		return Artifact{}, false
 	case readRefused:
-		return unreadArtifact(kind, source, file, scope, fallback, reason), true
+		a := unreadArtifact(kind, source, file, scope, fallback, r.reason)
+		a.unreadBytes = r.oversized
+		return a, true
 	}
-	return markdownArtifact(kind, source, file, scope, fallback, text), true
+	return markdownArtifact(kind, source, file, scope, fallback, r.text), true
 }
 
 // unreadArtifact is a markdown artifact whose file was not read (over the read
