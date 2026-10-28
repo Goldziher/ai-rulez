@@ -15,7 +15,9 @@
 // inside the root; a target outside the root is not followed, and the artifact
 // is kept unread with a problem. Symlinked directories are not walked (the file
 // listing does not enter them). A file over repoindex.MaxFileBytes is kept
-// unread the same way rather than dropped. Not modeled: `@path` imports inside
+// unread the same way rather than dropped, its file size standing in for its
+// text in TextBytes and Tokens. A UTF-8 byte order mark is stripped before the
+// frontmatter is parsed and is not part of the text. Not modeled: `@path` imports inside
 // CLAUDE.md and rules, whose text is not counted.
 //
 // Known gaps against Claude Code, shared with the reference implementation:
@@ -33,10 +35,10 @@
 //   - The frontmatter of a CLAUDE.md is left out of its text; whether Claude
 //     Code does the same is not verified.
 //
-// Tokens is the byte-ratio estimate tokens.ByteRatio(tokens.EstimateBytesPerToken):
-// bytes / 3.94 rounded half up, at least 1 for a non-empty text and 0 for an
-// empty one. It is an estimate per artifact, not a tokenizer count; a total over
-// many short texts carries one rounding per text.
+// Tokens is EstimateTokens of the text's UTF-8 length: bytes / 3.9 rounded up
+// (BytesPerToken), so a non-empty text is at least 1 and an empty one 0. It is
+// an estimate per artifact, not a tokenizer count; a total over many short texts
+// carries one rounding per text.
 //
 // Root scope: an artifact at the repository root has scope RootScope ("."),
 // as in internal/repoindex. internal/areas names the root "" and accepts ".".
@@ -59,13 +61,26 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
 	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
-	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // SchemaInventory is the schema_version of an Inventory, whose JSON is
 // described by schema/exposure-inventory.v1.schema.json. Like every JSON
 // document of the CLI it is an integer, bumped on an incompatible change.
 const SchemaInventory = 1
+
+// BytesPerToken is the ratio behind EstimateTokens, the one the reference
+// implementation of the load model uses.
+const BytesPerToken = 3.9
+
+// EstimateTokens is the token estimate of a text of n UTF-8 bytes: n / 3.9
+// rounded up, 0 for an empty text.
+func EstimateTokens(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	// ceil(n / 3.9) in integers: ceil(10n / 39).
+	return (n*10 + 38) / 39
+}
 
 // HarnessClaude is the only harness the load model describes.
 const HarnessClaude = "claude"
@@ -177,8 +192,10 @@ type Artifact struct {
 	// listing cap.
 	Truncated bool `json:"truncated"`
 	// TextBytes, TextSHA256 and Tokens describe Text: its UTF-8 length, its
-	// sha256 (hex) and its estimated token count (bytes / 3.94 rounded half up,
-	// at least 1; see the package doc).
+	// sha256 (hex) and its estimated token count (EstimateTokens: bytes / 3.9
+	// rounded up). For a file over the read limit, kept unread, TextBytes is the
+	// file size and Tokens its estimate, so a start count still sees it;
+	// TextSHA256 stays the hash of the empty text.
 	TextBytes  int    `json:"text_bytes"`
 	TextSHA256 string `json:"text_sha256"`
 	Tokens     int    `json:"tokens"`
@@ -196,6 +213,9 @@ type Artifact struct {
 	// rule, the listing line of a skill or agent, the name of a server or plugin,
 	// nothing for a settings file. WithoutText drops it from an output.
 	Text string `json:"text,omitempty"`
+	// unreadBytes is the size of a file that was not read for its size, which
+	// stands in for its text in TextBytes and Tokens.
+	unreadBytes int
 }
 
 // Settings are the root project settings the load model applies,
@@ -319,7 +339,8 @@ func AreaScope(a *Artifact) string {
 // output includes only on request.
 func (inv *Inventory) WithoutText() *Inventory {
 	out := *inv
-	out.Artifacts = append([]Artifact(nil), inv.Artifacts...)
+	out.Artifacts = make([]Artifact, len(inv.Artifacts))
+	copy(out.Artifacts, inv.Artifacts)
 	for i := range out.Artifacts {
 		out.Artifacts[i].Text = ""
 	}
@@ -361,16 +382,25 @@ const (
 	readRefused
 )
 
+// readResult is what read made of a listed file: its text, the status, why it
+// was refused, and the size of a file refused for being over the read limit.
+type readResult struct {
+	text      string
+	status    readStatus
+	reason    string
+	oversized int
+}
+
 // read reads a listed file as Claude Code does: a symlinked file is read
 // through its link, provided the target is a regular file inside the root.
 // Every outcome other than readOK and a plain missing file is a problem;
 // reason says why a file was refused.
-func (b *builder) read(rel string) (text string, status readStatus, reason string) {
+func (b *builder) read(rel string) readResult {
 	abs := filepath.Join(b.root, filepath.FromSlash(rel))
 	info, err := os.Lstat(abs)
 	switch {
 	case os.IsNotExist(err):
-		return "", readGone, ""
+		return readResult{status: readGone}
 	case err != nil:
 		return b.refuse(rel, err.Error())
 	}
@@ -379,7 +409,7 @@ func (b *builder) read(rel string) (text string, status readStatus, reason strin
 		if terr != nil {
 			if os.IsNotExist(terr) {
 				b.problem(rel, "a symlink whose target does not exist")
-				return "", readGone, ""
+				return readResult{status: readGone}
 			}
 			return b.refuse(rel, terr.Error())
 		}
@@ -395,18 +425,20 @@ func (b *builder) read(rel string) (text string, status readStatus, reason strin
 	case !info.Mode().IsRegular():
 		return b.refuse(rel, "not a regular file")
 	case info.Size() > repoindex.MaxFileBytes:
-		return b.refuse(rel, fmt.Sprintf("%d bytes, over the read limit of %d", info.Size(), repoindex.MaxFileBytes))
+		r := b.refuse(rel, fmt.Sprintf("%d bytes, over the read limit of %d", info.Size(), repoindex.MaxFileBytes))
+		r.oversized = int(info.Size())
+		return r
 	}
 	data, err := os.ReadFile(abs) //nolint:gosec // a listed file below the root, or a symlink resolved inside it
 	if err != nil {
 		return b.refuse(rel, err.Error())
 	}
-	return decodeText(data), readOK, ""
+	return readResult{text: decodeText(data), status: readOK}
 }
 
-func (b *builder) refuse(rel, reason string) (text string, status readStatus, why string) {
+func (b *builder) refuse(rel, reason string) readResult {
 	b.problem(rel, reason)
-	return "", readRefused, reason
+	return readResult{status: readRefused, reason: reason}
 }
 
 // inside reports whether a resolved path lies below the resolved root.
@@ -458,8 +490,11 @@ func finish(a Artifact) Artifact {
 	a.ListingChars = utf8.RuneCountInString(a.ListingText)
 	sum := sha256.Sum256([]byte(a.Text))
 	a.TextBytes = len(a.Text)
+	if a.Text == "" && a.unreadBytes > 0 {
+		a.TextBytes = a.unreadBytes
+	}
 	a.TextSHA256 = hex.EncodeToString(sum[:])
-	a.Tokens = tokens.ByteRatio(tokens.EstimateBytesPerToken).Count(a.Text)
+	a.Tokens = EstimateTokens(a.TextBytes)
 	return a
 }
 
