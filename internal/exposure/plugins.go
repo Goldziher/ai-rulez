@@ -96,7 +96,7 @@ func (b *builder) catalog() catalog {
 	}
 	for key, on := range b.rootSettings.enabled {
 		plugin, market, found := strings.Cut(key, enabledSep)
-		if on && found && market == c.name && listed[plugin] {
+		if on && found && c.name != "" && market == c.name && listed[plugin] {
 			c.enabled[plugin] = true
 		}
 	}
