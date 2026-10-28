@@ -7,7 +7,8 @@ describes the parts as an **area map**: which directories each area claims, who 
 
 This page describes the table, how the map is matched, and the commands that show what a Claude Code session loads
 and where each artifact belongs. The rules and reports that build on it (start-of-session exposure, area term
-leakage, collisions between areas) follow in later releases; today `validate` checks the map itself (`AR9W5`).
+leakage) follow in later releases; today `validate` checks the map itself (`AR9W5`) and, when
+`collision_min_score` is set, listings of different areas that overlap (`AR9W2`).
 Without an `[exposure]` table no rule on this page has any effect; the commands work without one.
 
 - [Configuration](#configuration)
@@ -27,7 +28,7 @@ context_window = 200000            # tokens (default 200000)
 plugins = "enabled"                # none | enabled (default) | all: plugin skills counted at start
 areas_file = "tools/context/areas.toml"   # optional: the map in its own file
 start_budget = 0                   # most estimated start tokens; 0 (default) is off
-collision_min_score = 0            # word overlap between areas; 0 (default) is off
+collision_min_score = 0            # AR9W2 word overlap between areas; 0 (default) is off
 
 [[exposure.areas]]
 name = "billing"                   # unique, lower-kebab
@@ -43,9 +44,10 @@ declare = "services/billing/"      # optional: what a session of this area decla
 deploy-staging = "platform"
 ```
 
-Every key is optional. `start_budget`, `collision_min_score`, `plugins`, `context_window` and `declare` are read by
-the exposure report and context evals, which arrive in later releases; they are validated now so a table written
-today keeps working.
+Every key is optional. `collision_min_score` turns on `AR9W2` and is the default `--min-score` of
+`exposure collisions`; `plugins` is the default `--plugins` of the commands. `start_budget`, `context_window` and
+`declare` are read by the exposure report and context evals, which arrive in later releases; they are validated now
+so a table written today keeps working.
 
 The map is either inline (`[[exposure.areas]]` and `[exposure.skill_areas]`) or in `areas_file`, never both. The
 file is resolved from the project root, must stay inside it, and holds the same fields under shorter names:
@@ -133,7 +135,7 @@ area's directory, the path claim gives the same answer and the entry can go.
 
 ## Commands
 
-Both commands are offline, free and deterministic. They inspect the project root (the directory of the
+The commands are offline, free and deterministic. They inspect the project root (the directory of the
 configuration, else the working directory) or `--root DIR`, and read the area map of the `[exposure]` table or of
 `--areas FILE`, a file in the `areas_file` format that replaces the configured map, so a map can be tried before
 it is configured. With `--root` the configuration is still `-C/--config` when it is given (one that cannot be read
@@ -145,11 +147,13 @@ configuration or area map, whose problems are listed with their lines as `AR9W5`
 
 | Flag | Commands | Meaning |
 | --- | --- | --- |
-| `--format text\|json` | both | Output format |
-| `--plugins none\|enabled\|all` | both | Marketplace plugins whose skills are listed: none, the ones the root `.claude/settings*.json` enable, or all; default `[exposure] plugins`, else `enabled` |
-| `--areas FILE` | both | Area map file to use instead of the `[exposure]` table |
-| `--root DIR` | both | Repository root to inspect |
+| `--format text\|json` | all | Output format |
+| `--plugins none\|enabled\|all` | all | Marketplace plugins whose skills are listed: none, the ones the root `.claude/settings*.json` enable, or all; default `[exposure] plugins`, else `enabled` |
+| `--areas FILE` | all | Area map file to use instead of the `[exposure]` table |
+| `--root DIR` | all | Repository root to inspect |
 | `--with-text` | `inventory` | Include each artifact's text in the JSON (`--format json` only; with text output it is an error) |
+| `--min-score N` | `collisions` | Lowest score reported, 0 to 1; default `[exposure] collision_min_score` when set, else 0.1 |
+| `--limit N` | `collisions` | Pairs printed, highest score first (default 20); 0 prints every pair |
 
 ### `ai-rulez exposure inventory`
 
@@ -230,6 +234,47 @@ was not read is classified on an empty text. Without an area map the command fai
 }
 ```
 
+### `ai-rulez exposure collisions`
+
+The model chooses a skill or agent by its listing, so two listings that share most of their words compete for the
+same prompts, and a session working on one area can load the instructions of another. The command compares every
+skill and agent listed at the start of a session (phase `start`, and phase `unknown`, which counts as start here
+as everywhere) with every other one of a different area, and ranks the pairs:
+
+- **Words** of a listing are the runs of a lowercase ASCII letter followed by two or more lowercase ASCII letters or
+  digits in its qualified name and listing text, lowercased first, less a fixed list of stopwords ("the", "use",
+  "when", "task", "user", ...). `k8s` and `s3bucket` are words; `v2` and `3d` are not.
+- **Areas** are the ones `exposure areas` reports: a skill's owner (`skill_areas`, then the path claim, then the
+  terms), an agent's classification. `unclassified` counts as an area of its own, so an unclassified listing collides
+  with a classified one but never with another unclassified one.
+- **Score** is the Jaccard index: shared words over the words of either listing. A pair with no shared word is never
+  reported, even at `--min-score 0`.
+- **Order** is score, highest first, then the path of the first listing, then the second; the first of a pair is the
+  one listed first in the inventory.
+
+`total` counts every pair at or over the score; `collisions` keeps the first `--limit`. The command needs an area
+map. The JSON follows
+[`schema/exposure-collisions.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-collisions.v1.schema.json):
+
+```json
+{
+  "schema_version": 1,
+  "root": "/work/repo",
+  "plugins": "enabled",
+  "min_score": 0.1,
+  "artifacts_compared": 3,
+  "total": 1,
+  "collisions": [
+    {"score": 0.5, "shared": ["customer", "details", "look", "name"],
+     "first": ".claude/skills/charge/SKILL.md", "first_kind": "skill", "first_name": "charge", "first_area": "billing",
+     "second": ".claude/skills/rank/SKILL.md", "second_kind": "skill", "second_name": "rank", "second_area": "search"}
+  ]
+}
+```
+
+To separate two listings, lead each description with what sets it apart (the area's own nouns), not with the words
+every skill of the repository uses.
+
 ## Validation
 
 `AR9W5 exposure-map-invalid` (error) reports a map that cannot be used: a duplicate, reserved or non-kebab area name,
@@ -238,3 +283,10 @@ value that names no area, an `areas_file` that is missing, outside the project o
 `areas_file` and inline areas, and invalid scalar keys. A finding on the file names its line. A map with any problem
 is not used at all, so every rule that reads it stays quiet until it is fixed. See
 [Strict validation](strict-validation.md#ar9w5-exposure-map-invalid).
+
+`AR9W2 exposure-area-collision` is off until `[exposure] collision_min_score` is set, which turns it on at warning
+with that threshold; a `[lint.severity]` entry turns it on at the default 0.1. It reports every pair
+`exposure collisions` would at that score, on the description line of the pair's first listing, with a message of
+the form `skill "charge" of area "billing" and skill "rank" of area "search" list overlapping words at session start
+(score 0.50, at least 0.10): customer, details, look, name`. The plugin skills counted are those of
+`[exposure] plugins`. See [Strict validation](strict-validation.md#ar9w2-exposure-area-collision).
