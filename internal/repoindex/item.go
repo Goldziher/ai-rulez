@@ -11,6 +11,9 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
+// keyPaths is the frontmatter key of the Claude Code path restriction.
+const keyPaths = "paths"
+
 // Hash is the content hash an item carries: "sha256:" and the hex digest.
 func Hash(content []byte) string {
 	sum := sha256.Sum256(content)
@@ -53,6 +56,11 @@ func newItem(c *candidate, content []byte) Item {
 		it.Only = ruleGlobs(front)
 	case KindSkill:
 		it.Only = skillGlobs(front)
+	default:
+		return it
+	}
+	if err != nil && it.Only == nil && frontmatter.NamesKey(block.Raw, keyPaths) {
+		it.Only = &PathGlobs{Unreadable: true}
 	}
 	return it
 }
@@ -60,7 +68,7 @@ func newItem(c *candidate, content []byte) Item {
 // ruleGlobs reads the path restriction of a rule from its frontmatter: `paths`
 // (Claude Code) and `globs` (Cursor, ignored for a rule that is always applied).
 func ruleGlobs(front map[string]any) *PathGlobs {
-	g := &PathGlobs{Paths: globList(front["paths"])}
+	g := &PathGlobs{Paths: globList(front[keyPaths])}
 	if always, _ := front["alwaysApply"].(bool); !always { //nolint:errcheck // absent or not a bool means not always applied
 		g.Globs = globList(front["globs"])
 	}
@@ -74,7 +82,7 @@ func ruleGlobs(front map[string]any) *PathGlobs {
 // in SKILL.md and hides the skill until a matching file is read. `globs` is a
 // Cursor rule field; a skill has no Cursor form, so it is not read.
 func skillGlobs(front map[string]any) *PathGlobs {
-	paths := globList(front["paths"])
+	paths := globList(front[keyPaths])
 	if len(paths) == 0 {
 		return nil
 	}

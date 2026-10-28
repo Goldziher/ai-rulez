@@ -83,3 +83,26 @@ func TestDecode_AYAMLErrorKeepsWhatDecoded(t *testing.T) {
 		})
 	}
 }
+
+func TestNamesKey(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		keys []string
+		want bool
+	}{
+		{name: "a top-level key", raw: "description: Use when: x\npaths: [src/**]\n", keys: []string{"paths"}, want: true},
+		{name: "an indented key", raw: "description: d\n\tpaths: [src/**]\n", keys: []string{"paths"}, want: true},
+		{name: "a blank before the colon", raw: "paths : [src/**]\n", keys: []string{"paths"}, want: true},
+		{name: "any of several keys", raw: "user-invocable: no\n", keys: []string{"paths", "user-invocable"}, want: true},
+		{name: "a longer key is another key", raw: "pathsx: [a]\nmy-paths: [b]\n", keys: []string{"paths"}},
+		{name: "a key named in a value", raw: "description: set paths: here\n", keys: []string{"paths"}},
+		{name: "a key with no colon", raw: "paths\n", keys: []string{"paths"}},
+		{name: "an empty block", raw: "", keys: []string{"paths"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, NamesKey(c.raw, c.keys...))
+		})
+	}
+}

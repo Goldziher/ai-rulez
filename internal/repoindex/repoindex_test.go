@@ -711,20 +711,30 @@ func TestBuild_SkillPathsSurviveTheCache(t *testing.T) {
 
 func TestBuild_FrontmatterParseErrorIsKept(t *testing.T) {
 	tests := []struct {
-		name      string
-		content   string
-		wantError string
+		name       string
+		file       string
+		content    string
+		wantError  string
+		unreadable bool
 	}{
 		{name: "valid frontmatter", content: "---\ndescription: A skill\npaths: [src/**]\n---\nBody.\n"},
 		{name: "no frontmatter", content: "# A skill\n"},
-		{name: "invalid YAML", content: "---\ndescription: Use when: deploying\npaths: [src/**]\n---\nBody.\n", wantError: "mapping values are not allowed"},
+		{name: "invalid YAML naming paths", content: "---\ndescription: Use when: deploying\npaths: [src/**]\n---\nBody.\n", wantError: "mapping values are not allowed", unreadable: true},
+		{name: "invalid YAML without paths", content: "---\ndescription: Use when: deploying\n---\nBody.\n", wantError: "mapping values are not allowed"},
+		{name: "a broken paths value", content: "---\ndescription: d\npaths: [src/**\n---\nBody.\n", wantError: "yaml", unreadable: true},
+		{name: "a broken rule naming paths", file: ".claude/rules/r.md", content: "---\ndescription: Use when: x\npaths: [src/**]\n---\nBody.\n", wantError: "mapping values", unreadable: true},
 		{name: "a list is not a mapping", content: "---\n- a\n---\nBody.\n", wantError: "cannot unmarshal"},
 		{name: "never closed", content: "---\ndescription: A skill\nBody.\n", wantError: "never closes"},
+		{name: "never closed naming paths", content: "---\npaths: [src/**]\nBody.\n", wantError: "never closes", unreadable: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			root := layout(t, map[string]string{".claude/skills/s/SKILL.md": tt.content})
+			file := tt.file
+			if file == "" {
+				file = ".claude/skills/s/SKILL.md"
+			}
+			root := layout(t, map[string]string{file: tt.content})
 			cache := newFakeCache()
 
 			// Act
@@ -743,7 +753,12 @@ func TestBuild_FrontmatterParseErrorIsKept(t *testing.T) {
 					continue
 				}
 				assert.Contains(t, items[0].ParseError, tt.wantError)
-				assert.Nil(t, items[0].Only, "the served index still reads a broken block as no frontmatter (fail-closed is a separate change)")
+				if !tt.unreadable {
+					assert.Nil(t, items[0].Only, "a broken block that names no paths leaves the item unrestricted")
+					continue
+				}
+				require.NotNil(t, items[0].Only, "a broken block that names paths restricts the item (fail closed)")
+				assert.Equal(t, PathGlobs{Unreadable: true}, *items[0].Only)
 			}
 		})
 	}

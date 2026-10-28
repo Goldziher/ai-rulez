@@ -3,9 +3,7 @@ package exposure
 import (
 	"fmt"
 	"path"
-	"regexp"
 	"strings"
-	"sync"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
@@ -38,11 +36,6 @@ const (
 // listingCap is the characters of description plus when_to_use one skill keeps
 // in the listing.
 func listingCap() int { return harnesslimits.MustValue("claude.skill_listing_chars") }
-
-// gateKeyRe finds a key in a raw frontmatter block that would gate the item.
-var gateKeyRe = sync.OnceValue(func() *regexp.Regexp {
-	return regexp.MustCompile(`(?m)^[ \t]*(?:paths|disable-model-invocation|user-invocable)[ \t]*:`)
-})
 
 // collect classifies one listed file and reads the artifacts it holds.
 func (b *builder) collect(file string) {
@@ -153,7 +146,7 @@ func markdownArtifact(kind Kind, source Source, file, scope, fallback, text stri
 	default:
 		a.Text, a.LineOffset = bodyOf(text, block)
 	}
-	if err != nil && gated(kind) && scope == RootScope && gateKeyRe().MatchString(block.Raw) {
+	if err != nil && gated(kind) && scope == RootScope && frontmatter.NamesKey(block.Raw, frontmatter.GateKeys...) {
 		a.Phase = PhaseUnknown
 	}
 	return a

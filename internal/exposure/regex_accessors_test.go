@@ -3,6 +3,5 @@ package exposure
 import "testing"
 
 func TestRegexAccessorsCompile(t *testing.T) {
-	_ = gateKeyRe()
 	_ = collisionWordRe()
 }

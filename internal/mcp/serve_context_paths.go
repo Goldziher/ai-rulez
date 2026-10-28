@@ -19,11 +19,16 @@ import (
 // relative to the same directory and also match a bare pattern such as `*.tsx`
 // at any depth. An item with neither applies everywhere in its scope. For a
 // directory it applies when some glob could match a path below it. A
-// restriction none of whose globs can be read does not hide the item.
+// restriction none of whose globs can be read does not hide the item, but one
+// whose globs are lost (a frontmatter block that names `paths:` and does not
+// parse) does: where the item applies cannot be known, so it fails closed.
 func appliesTo(it *repoindex.Item, query string, asDir bool) bool {
 	only := it.Only
 	if only == nil {
 		return true
+	}
+	if only.Unreadable {
+		return false
 	}
 	rel, inside := relativeToScope(it.Scope, query)
 	switch {

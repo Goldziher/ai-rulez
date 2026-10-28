@@ -46,7 +46,18 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Repository index items keep the frontmatter parse error.** An item whose frontmatter is not valid YAML, is not a
   mapping or never closes is indexed as before (a value of the wrong type or a complex key still keeps the other
   keys, a syntax error keeps none), but now carries the decode error instead of dropping it, so a reader can tell a
-  lost `paths:` gate from an absent one. What the skills server serves is unchanged. The index cache format moves to version 4, so a cache written by an earlier version is rebuilt once.
+  lost `paths:` gate from an absent one. The index cache format moves to version 5, so a cache written by an earlier version is rebuilt once.
+
+### Fixed
+
+- **`find_context` no longer returns a rule whose `paths:` gate was lost to broken YAML for every path.** A Claude
+  Code rule whose frontmatter names `paths:` but does not parse (an unquoted `: ` in a value, an unclosed quote or
+  bracket, a tab indent, a block that never closes) was indexed with no restriction, so a `path` query returned it for
+  any file, although Claude Code may still gate it. Where it applies cannot be known, so it now fails closed: a `path`
+  query never returns it, and a `scope` query lists it with `"paths_unreadable": true`. A rule whose broken block
+  names no `paths:` and a rule whose YAML type error still decodes its `paths:` are unchanged, as is loading by name;
+  a skill whose frontmatter does not parse was, and is, not served. See [Monorepos: scopes and nested
+  context](https://goldziher.github.io/ai-rulez/mcp-server/#monorepos-scopes-and-nested-context).
 
 ## [5.8.0] - 2026-10-27
 

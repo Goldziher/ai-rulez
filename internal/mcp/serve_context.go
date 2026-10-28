@@ -191,6 +191,9 @@ func contextSummary(it *repoindex.Item) map[string]any {
 		if len(only.Globs) > 0 {
 			out["globs"] = only.Globs
 		}
+		if only.Unreadable {
+			out["paths_unreadable"] = true
+		}
 	}
 	return out
 }
@@ -214,7 +217,7 @@ type loadContextIn struct {
 type contextSearchOut struct {
 	Count   int      `json:"count" jsonschema:"Number of results"`
 	Total   int      `json:"total" jsonschema:"Matches before the limit"`
-	Results []any    `json:"results,omitempty" jsonschema:"Instruction files, rules and agents: name, kind, scope, source, description, uri, hash"`
+	Results []any    `json:"results,omitempty" jsonschema:"Instruction files, rules and agents: name, kind, scope, source, description, uri, hash, and paths or globs for a rule they restrict (paths_unreadable when its frontmatter names paths but does not parse)"`
 	Path    string   `json:"path,omitempty" jsonschema:"The path that was resolved"`
 	Scopes  []string `json:"scopes,omitempty" jsonschema:"The scopes the path resolved to, nearest first"`
 	Scope   string   `json:"scope,omitempty" jsonschema:"The scope that was listed"`
