@@ -59,8 +59,8 @@ func resolveAreasFile(root, name string) (path, why string) {
 	}
 	path = filepath.Join(root, clean)
 	// A symlink may not lead the file out of the project either; a missing file is left to LoadFile.
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		if realRoot, err := filepath.EvalSymlinks(root); err == nil && !safefs.Within(realRoot, real) {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		if realRoot, err := filepath.EvalSymlinks(root); err == nil && !safefs.Within(realRoot, resolved) {
 			return "", "must stay inside the project root"
 		}
 	}
