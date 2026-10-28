@@ -6,6 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **`AR964` counts each skill once in the Codex skill listing.** A copy of a skill under another directory, such
+  as a public mirror at `skills/<name>/SKILL.md`, a plugin bundle's `.ai-rulez/skills` or its harness outputs, was
+  added to the `codex-skill-listing` total again, although Codex lists one skill per name. The total now counts
+  each skill name once and prefers the configured copy, so projects no longer have to raise
+  `[lint.load_budgets] codex-skill-listing` to stay clean ([#513](https://github.com/Goldziher/ai-rulez/issues/513)).
+
 ## [5.9.0] - 2026-10-28
 
 ### Added

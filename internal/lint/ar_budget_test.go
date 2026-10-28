@@ -101,3 +101,45 @@ func TestLoadBudgetMessagesNameTheHarnessAndMarkUnverifiedFigures(t *testing.T) 
 		t.Errorf("an unverified figure should say so: %q", msg)
 	}
 }
+
+func TestCodexSkillListingCountsEachSkillNameOnce(t *testing.T) {
+	skill := func(name string) string {
+		// name, a space and the description are 100 chars, the whole budget below.
+		return "---\nname: " + name + "\ndescription: Use when " + strings.Repeat("x", 100-len(name)-len(" Use when ")) + "\n---\nBody.\n"
+	}
+	cfg := "version = \"5.0\"\nname = \"budget\"\npresets = [\"codex\"]\n[lint.load_budgets]\ncodex-skill-listing = 100\n"
+	tests := []struct {
+		name  string
+		extra map[string]string
+		want  string
+	}{
+		{"authored only", nil, "the 1 skill names and descriptions add up to 100 of 100 chars"},
+		{"identical mirror", map[string]string{"skills/alpha/SKILL.md": skill("alpha")}, "the 1 skill names and descriptions add up to 100 of 100 chars"},
+		{"mirror and plugin copies", map[string]string{
+			"skills/alpha/SKILL.md":                  skill("alpha"),
+			"plugin/.ai-rulez/skills/alpha/SKILL.md": skill("alpha"),
+			"plugin/.claude/skills/alpha/SKILL.md":   skill("alpha"),
+		}, "the 1 skill names and descriptions add up to 100 of 100 chars"},
+		{"another skill counts", map[string]string{".agents/skills/gamma/SKILL.md": skill("gamma")}, "the 2 skill names and descriptions add up to 200 chars"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			files := map[string]string{".ai-rulez/config.toml": cfg, ".ai-rulez/skills/alpha/SKILL.md": skill("alpha")}
+			for k, v := range tt.extra {
+				files[k] = v
+			}
+			writeFiles(t, root, files)
+			findings, _ := lintWithTargets(t, root, TargetSpec{Detect: true})
+			var got []string
+			for _, f := range findings {
+				if f.Code == CodeLoadBudget {
+					got = append(got, f.Message)
+				}
+			}
+			if assert.Len(t, got, 1, dump(findings)) {
+				assert.Contains(t, got[0], tt.want)
+			}
+		})
+	}
+}
