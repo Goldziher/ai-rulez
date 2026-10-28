@@ -271,6 +271,7 @@ global internal/lint/ar_exfil.go 7
 global internal/lint/ar_frontmatter.go 11
 global internal/lint/ar_hooks.go 1
 global internal/lint/ar_imports.go 1
+global internal/lint/ar_malware.go 1
 global internal/lint/ar_manifest_data.go 2
 global internal/lint/ar_mcp.go 1
 global internal/lint/ar_plugin.go 5
