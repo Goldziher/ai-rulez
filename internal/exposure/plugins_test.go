@@ -188,7 +188,7 @@ func TestAreaScope(t *testing.T) {
 		a    Artifact
 		want string
 	}{
-		{name: "the root is the empty scope", a: Artifact{Scope: RootScope}, want: ""},
+		{name: "the root stays the root scope", a: Artifact{Scope: RootScope}, want: RootScope},
 		{name: "a nested scope is kept", a: Artifact{Scope: "svc/api"}, want: "svc/api"},
 		{name: "a plugin skill is owned by its plugin directory", a: Artifact{Source: SourcePlugin, Scope: RootScope, PluginPath: "a/plugins/one"}, want: "a/plugins/one"},
 	}
