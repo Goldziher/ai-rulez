@@ -65,8 +65,8 @@ func TestExposureGateUnreadableAR9W4(t *testing.T) {
 		},
 		{
 			name:     "paths that is not a string or a list of strings",
-			files:    map[string]string{".ai-rulez/skills/bad/SKILL.md": "---\nname: bad\ndescription: Use when testing the gate.\npaths: 5\n---\nBody.\n"},
-			wantFile: "skills/bad/SKILL.md", wantLine: 4, typed: true,
+			files:    map[string]string{".claude/skills/bad/SKILL.md": "---\nname: bad\ndescription: Use when testing the gate.\npaths: 5\n---\nBody.\n"},
+			wantFile: ".claude/skills/bad/SKILL.md", wantLine: 4, typed: true,
 			inText: []string{`skill "bad"`, `sets "paths" to a value of the wrong type`, "the gate cannot be read"},
 		},
 		{
@@ -82,8 +82,8 @@ func TestExposureGateUnreadableAR9W4(t *testing.T) {
 		},
 		{
 			name:     "two wrong-typed gates, on the first",
-			files:    map[string]string{".ai-rulez/rules/scoped.md": "---\ndescription: Scoped.\ndisable-model-invocation: \"no\"\npaths: 5\n---\n# Scoped\n"},
-			wantFile: "rules/scoped.md", wantLine: 3, typed: true,
+			files:    map[string]string{".claude/skills/two/SKILL.md": "---\nname: two\ndescription: Two gates.\ndisable-model-invocation: \"no\"\npaths: 5\n---\nBody.\n"},
+			wantFile: ".claude/skills/two/SKILL.md", wantLine: 4, typed: true,
 			inText: []string{`"disable-model-invocation", "paths"`},
 		},
 		{
