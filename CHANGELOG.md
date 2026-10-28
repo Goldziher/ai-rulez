@@ -6,6 +6,30 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[exposure]` area map and `AR9W5 exposure-map-invalid`.** A new `[exposure]` table describes the areas of a
+  repository: the directories each one claims (`!` excludes, a trailing `*` name prefix, longest claim wins), its
+  owner, the words that name it and the ones it shares with other areas, inline as `[[exposure.areas]]` and
+  `[exposure.skill_areas]` or in an `areas_file`. Terms match case-insensitively, as substrings when they hold `_`,
+  `/` or `.` and as whole words otherwise, outside repository path literals; an artifact belongs to the most specific
+  path claim, else the area whose terms dominate its text, and a skill's owner is its `skill_areas` entry, then the
+  path claim, then the terms. `validate` reports a map it cannot use (duplicate or malformed names, bad path claims,
+  `skill_areas` values naming no area, an unreadable or misspelled `areas_file`) as `AR9W5`, an error; without an
+  `[exposure]` table nothing is checked. The exposure report and leakage rules that read the map follow. See
+  [Session exposure and areas](https://goldziher.github.io/ai-rulez/exposure/).
+
+### Changed
+
+- **Repository index items keep the frontmatter parse error.** An item whose frontmatter is not valid YAML, is not a
+  mapping or never closes is indexed as before (a value of the wrong type or a complex key still keeps the other
+  keys, a syntax error keeps none), but now carries the decode error instead of dropping it, so a reader can tell a
+  lost `paths:` gate from an absent one. What the skills server serves is unchanged. The index cache format moves to version 4, so a cache written by an earlier version is rebuilt once.
+- **Internal: the Claude Code session load model (`internal/exposure`).** The groundwork for `ai-rulez exposure`:
+  every CLAUDE.md, rule, skill, command, agent, `.mcp.json` server, settings file and enabled plugin of a repository
+  with its phase (start, on demand, manual or unknown), visibility, listing text and frontmatter status, after
+  `skillOverrides`, `claudeMdExcludes` and the repository marketplace. No command uses it yet.
+
 ## [5.8.0] - 2026-10-27
 
 ### Added

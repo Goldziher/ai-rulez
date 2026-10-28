@@ -19,6 +19,56 @@
       "enum": ["static", "served", "both"],
       "type": "string"
     },
+    "exposureArea": {
+      "additionalProperties": false,
+      "description": "One area: a part of the repository, its owner and the words that name it.",
+      "properties": {
+        "ambiguous": {
+          "description": "Words the area uses in its own sense that other areas use too; a word in terms wins.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "declare": {
+          "description": "Repository path a session of this area declares it works on (context evals).",
+          "type": "string"
+        },
+        "description": {
+          "description": "Finishes the sentence \"I work on ...\" for the area.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Unique lower-kebab area name; unclassified is reserved.",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Free text (a team, people); reported, never parsed.",
+          "type": "string"
+        },
+        "paths": {
+          "description": "Directories the area claims: repository-relative prefixes without leading or trailing slash. \"!\" excludes, a trailing \"*\" is a name prefix, and the longest claim on a directory wins.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "shared": {
+          "description": "Repository-wide tooling: the terms classify artifacts but never count as leakage (default false).",
+          "type": "boolean"
+        },
+        "terms": {
+          "description": "Words that name the area, matched case-insensitively: a term with _, / or . as a substring, any other on word boundaries.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "patternList": {
       "items": {
         "type": "string"
@@ -713,6 +763,59 @@
         "type": "object"
       },
       "type": "array"
+    },
+    "exposure": {
+      "additionalProperties": false,
+      "description": "Session exposure: what a session sees at start, and the area map that names which part of the repository an artifact belongs to. Keep the map inline (areas, skill_areas) or in areas_file, not both. Every key is optional; the rules that read the table are inert without it. See docs/exposure.md.",
+      "properties": {
+        "areas": {
+          "description": "Inline area map.",
+          "items": {
+            "$ref": "#/$defs/exposureArea"
+          },
+          "type": "array"
+        },
+        "areas_file": {
+          "description": "TOML file, relative to the project root, with [[area]] tables and a [skill_areas] table (the same fields as areas and skill_areas).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "collision_min_score": {
+          "description": "Word overlap at which two start-listed skills or agents of different areas collide; 0 (default) turns the check off.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "context_window": {
+          "description": "Model context window in tokens (default 200000).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "harness": {
+          "description": "Harness whose load model applies (default claude, the only one).",
+          "enum": ["claude"],
+          "type": "string"
+        },
+        "plugins": {
+          "description": "Plugin skills counted at session start: none, enabled (default) or all.",
+          "enum": ["none", "enabled", "all"],
+          "type": "string"
+        },
+        "skill_areas": {
+          "additionalProperties": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": "Skill name (or plugin:skill) to area name. An entry wins over the path claim and the terms.",
+          "type": "object"
+        },
+        "start_budget": {
+          "description": "Most estimated start-of-session tokens allowed; 0 (default) turns the check off.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
     },
     "gitignore": {
       "default": false,

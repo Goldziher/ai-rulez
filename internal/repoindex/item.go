@@ -7,8 +7,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
@@ -22,13 +20,17 @@ func Hash(content []byte) string {
 // newItem builds the item a candidate and its content describe.
 func newItem(c *candidate, content []byte) Item {
 	block := frontmatter.Split(content)
-	var front map[string]any
-	if block.Closed {
-		_ = yaml.Unmarshal([]byte(block.Raw), &front) //nolint:errcheck // malformed frontmatter only costs the description
-	}
+	front, err := frontmatter.Decode(block)
 	it := Item{
 		Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit,
 		Hash: Hash(content),
+	}
+	if err != nil {
+		// The item keeps what the YAML decode read all the same (every other key
+		// on a type error, nothing on a syntax error), as the served index always
+		// did; the error travels with it so a reader can tell a lost gate from an
+		// absent one.
+		it.ParseError = err.Error()
 	}
 	switch c.kind {
 	case KindSkill:

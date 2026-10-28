@@ -210,6 +210,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `diag` | Collects the warnings of one generate run, de-duplicated |
 | `doctor` | Read-only diagnostics over a project |
 | `evals` | Harness-neutral eval case format for skills and the runners that score them |
+| `exposure` | The Claude Code session load model: every native artifact of a repository with its phase (start, on demand, manual or unknown), visibility, listing text and frontmatter parse status, after the root project settings and the repository marketplace |
 | `fmdiff` | Differential fuzzing of the frontmatter splitters |
 | `forge` | Minimal read-only client for the hosting forge of a git remote |
 | `frontmatter` | Splits a leading YAML frontmatter block from markdown |
@@ -248,7 +249,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `publish` | Turns a verified plugin bundle into release artifacts and emitter output |
 | `releasetime` | Finds when a git tag was released, for minimum-age gates |
 | `render` | Separates what a command produces from what it says about it |
-| `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there |
+| `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there; an item keeps the error of a frontmatter block that does not decode |
 | `indexcache` | Keeps the repository index summaries and scan verdicts between runs of the MCP server: location (user cache or project), authenticated index file, lock, status and clear |
 | `review` | Scores skills, agents, commands and rules against a rubric |
 | `roles` | Builds the roles manifest |

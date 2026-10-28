@@ -3931,7 +3931,7 @@ ai-rulez validate --outputs
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--allow-egress` | string list |  | With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable) |
-| `--analyzer` | string list |  | Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): budgets, config, convert, delivery, descriptions, duplicates, evals, hooks, llmstxt, lock, mcp, metadata, okf, plugin, references, roles, search, security, traps, verifiers |
+| `--analyzer` | string list |  | Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): budgets, config, convert, delivery, descriptions, duplicates, evals, exposure, hooks, llmstxt, lock, mcp, metadata, okf, plugin, references, roles, search, security, traps, verifiers |
 | `--approvals-base` | string |  | Report approvals added since this git revision for content that also changed since it (AR716) |
 | `--baseline` | string |  | Accept the findings recorded in this baseline file (default: <config dir>/lint-baseline.json when it exists); only new findings count toward the exit code |
 | `--baseline-reason` | string |  | With --update-baseline, the reason stored on new entries (required for security findings) |

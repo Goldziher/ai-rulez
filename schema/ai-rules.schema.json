@@ -2418,6 +2418,54 @@
       },
       "additionalProperties": false
     },
+    "exposure": {
+      "type": "object",
+      "description": "Session exposure: what a session sees at start, and the area map that names which part of the repository an artifact belongs to. Keep the map inline (areas, skill_areas) or in areas_file, not both. Every key is optional; the rules that read the table are inert without it. See docs/exposure.md.",
+      "properties": {
+        "harness": {
+          "type": "string",
+          "enum": ["claude"],
+          "description": "Harness whose load model applies (default claude, the only one)."
+        },
+        "context_window": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Model context window in tokens (default 200000)."
+        },
+        "plugins": {
+          "type": "string",
+          "enum": ["none", "enabled", "all"],
+          "description": "Plugin skills counted at session start: none, enabled (default) or all."
+        },
+        "areas_file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "TOML file, relative to the project root, with [[area]] tables and a [skill_areas] table (the same fields as areas and skill_areas)."
+        },
+        "start_budget": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Most estimated start-of-session tokens allowed; 0 (default) turns the check off."
+        },
+        "collision_min_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Word overlap at which two start-listed skills or agents of different areas collide; 0 (default) turns the check off."
+        },
+        "areas": {
+          "type": "array",
+          "description": "Inline area map.",
+          "items": { "$ref": "#/$defs/exposureArea" }
+        },
+        "skill_areas": {
+          "type": "object",
+          "description": "Skill name (or plugin:skill) to area name. An entry wins over the path claim and the terms.",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      },
+      "additionalProperties": false
+    },
     "telemetry": {
       "type": "object",
       "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",
@@ -4142,6 +4190,50 @@
     }
   },
   "$defs": {
+    "exposureArea": {
+      "type": "object",
+      "description": "One area: a part of the repository, its owner and the words that name it.",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Unique lower-kebab area name; unclassified is reserved."
+        },
+        "description": {
+          "type": "string",
+          "description": "Finishes the sentence \"I work on ...\" for the area."
+        },
+        "owner": {
+          "type": "string",
+          "description": "Free text (a team, people); reported, never parsed."
+        },
+        "paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Directories the area claims: repository-relative prefixes without leading or trailing slash. \"!\" excludes, a trailing \"*\" is a name prefix, and the longest claim on a directory wins."
+        },
+        "terms": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Words that name the area, matched case-insensitively: a term with _, / or . as a substring, any other on word boundaries."
+        },
+        "ambiguous": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Words the area uses in its own sense that other areas use too; a word in terms wins."
+        },
+        "shared": {
+          "type": "boolean",
+          "description": "Repository-wide tooling: the terms classify artifacts but never count as leakage (default false)."
+        },
+        "declare": {
+          "type": "string",
+          "description": "Repository path a session of this area declares it works on (context evals)."
+        }
+      },
+      "additionalProperties": false
+    },
     "verifierRequire": {
       "type": "object",
       "description": "Exactly one predicate or combinator.",

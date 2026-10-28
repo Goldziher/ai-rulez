@@ -79,6 +79,7 @@ type tomlOutput struct {
 	Review                *ReviewConfig                `toml:"review,omitempty"`
 	Judge                 *JudgeConfig                 `toml:"judge,omitempty"`
 	Improve               *ImproveConfig               `toml:"improve,omitempty"`
+	Exposure              *ExposureConfig              `toml:"exposure,omitempty"`
 	Search                *skillsearch.Config          `toml:"search,omitempty"`
 	Scopes                []ScopeConfig                `toml:"scopes,omitempty"`
 	Plugins               []PluginConfig               `toml:"plugins,omitempty"`
@@ -196,6 +197,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Review:                cfg.Review,
 		Judge:                 cfg.Judge,
 		Improve:               cfg.Improve,
+		Exposure:              cfg.Exposure,
 		Search:                cfg.Search,
 		Scopes:                cfg.Scopes,
 		Plugins:               cfg.Plugins,

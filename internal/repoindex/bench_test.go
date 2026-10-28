@@ -60,7 +60,7 @@ func BenchmarkBuildPreListed(b *testing.B) {
 		b.Run(shapeName(shape), func(b *testing.B) {
 			shape.Git = true
 			root := testutil.BuildMonorepo(b, shape)
-			files := listFiles(context.Background(), root)
+			files := ListFiles(context.Background(), root)
 			b.ResetTimer()
 			b.ReportAllocs()
 			for range b.N {
@@ -83,7 +83,7 @@ func BenchmarkListFiles(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 			for range b.N {
-				if len(listFiles(context.Background(), root)) == 0 {
+				if len(ListFiles(context.Background(), root)) == 0 {
 					b.Fatal("no files listed")
 				}
 			}

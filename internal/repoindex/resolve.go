@@ -50,8 +50,9 @@ func (ix *Index) Resolve(p string) (Resolution, error) {
 func (ix *Index) resolveScope(scope string, owner map[string]string) []Resolved {
 	items := ix.byScope[scope]
 	out := make([]Resolved, 0, len(items))
-	for _, it := range items {
-		r := Resolved{Item: it}
+	for i := range items {
+		it := &items[i]
+		r := Resolved{Item: *it}
 		if shadows(it.Kind) {
 			key := string(it.Kind) + "\x00" + it.Name
 			if first, seen := owner[key]; !seen {
@@ -79,9 +80,9 @@ func (ix *Index) Within(scope string, recursive bool) ([]Item, error) {
 		return nil, oops.Errorf("no scope %q in the repository index", clean)
 	}
 	var out []Item
-	for _, it := range ix.items {
-		if it.Scope == clean || recursive && (clean == RootScope || strings.HasPrefix(it.Scope, clean+"/")) {
-			out = append(out, it)
+	for i := range ix.items {
+		if it := &ix.items[i]; it.Scope == clean || recursive && (clean == RootScope || strings.HasPrefix(it.Scope, clean+"/")) {
+			out = append(out, *it)
 		}
 	}
 	sortItems(out)
