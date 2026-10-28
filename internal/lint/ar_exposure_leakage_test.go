@@ -390,3 +390,33 @@ func TestExposureLeakageStaleAcceptanceWithoutAR9I0(t *testing.T) {
 		})
 	}
 }
+
+// An AR9W6 finding depends on the files that shape the session, so a renamed or deleted skill (a change of the
+// settings or the marketplace) keeps it under --changed.
+func TestExposureSkillAreaUnknownUnderChanged(t *testing.T) {
+	tests := []struct {
+		name    string
+		changed []string
+		want    int
+	}{
+		{name: "the areas file keeps it", changed: []string{"tools/areas.toml"}, want: 1},
+		{name: "the settings keep it", changed: []string{".claude/settings.json"}, want: 1},
+		{name: "an unrelated change keeps none", changed: []string{"README.md"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := leakProject(t, "[exposure]\nareas_file = \"tools/areas.toml\"\n")
+			src := leakSource(root)
+			src.leakage.UnknownSkills = []ExposureSkillArea{{Skill: "ghost", Area: "billing"}}
+			src.leakage.AreasFile = filepath.Join(root, "tools", "areas.toml")
+			rep := leakRun(t, root, WithExposure(src))
+
+			// Act
+			NarrowToChanged(rep, tt.changed, "HEAD")
+
+			// Assert
+			assert.Len(t, codeFindings(rep.Findings, CodeExposureSkillUnknown), tt.want, dump(rep.Findings))
+		})
+	}
+}
