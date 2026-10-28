@@ -6,10 +6,10 @@ import (
 )
 
 // The matcher reproduces the character semantics of Python's re module with re.IGNORECASE on str patterns
-// (CPython 3.11 and later, Lib/re/_compiler.py and Modules/_sre), so an area map classifies text the same way as the
-// reference implementation the format comes from. RE2 has no lookbehind, so the matcher is a hand-written
-// scanner over code points; these predicates are its character classes. A differential test holds them to
-// vectors recorded from CPython.
+// (CPython 3.11 and later, Lib/re/_compiler.py and Modules/_sre), so an area map classifies text the same way
+// wherever the format is read with those regular expressions. RE2 has no lookbehind, so the matcher is a
+// hand-written scanner over code points; these predicates are its character classes. A differential test holds
+// them to vectors recorded under CPython.
 
 // pyLower is the simple lowercase mapping _sre uses for case-insensitive matching.
 func pyLower(r rune) rune { return unicode.ToLower(r) }
