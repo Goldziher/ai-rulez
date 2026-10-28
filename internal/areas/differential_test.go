@@ -12,21 +12,21 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// pythonVectors are the outputs of the Python reference implementation of the area map on seeded random texts
-// and directories (testdata/python_vectors.json). The texts mix every case the matcher must get right: upper,
-// title and mixed case, the characters re.IGNORECASE folds specially (U+212A, U+017F, U+0130, U+0131, sigma), word
-// and non-word neighbors, path literals with every stop and guard character, and non-ASCII terms.
+// recordedVectors are the outputs of the area map on seeded random texts and directories, recorded with the
+// regular expressions of the matcher (see matcher) under Python's re module (testdata/match_vectors.json). The
+// texts mix every case the matcher must get right: upper, title and mixed case, the characters re.IGNORECASE
+// folds specially (U+212A, U+017F, U+0130, U+0131, sigma), word and non-word neighbors, path literals with every
+// stop and guard character, and non-ASCII terms.
 //
-// How they were made: a one-off script built the two maps of the file with the reference implementation, drew
-// 450 texts and 80 directories per map from a fixed seed, and recorded for each text the stripped text, the
-// matches and the classification without a directory, and for each directory every area's match length and the
-// classification with no text and with the text of the same index. The script is not in this repository because
-// it imports the reference implementation, which is not; extending the vectors means recording new inputs from
-// that implementation the same way. The reference pins CPython 3.11 (Unicode 14.0); the character predicates the
-// matcher emulates were checked against every assigned code point on CPython 3.11 to 3.14, so the recording
-// interpreter does not change the vectors. Go 1.27 ships Unicode 17, so a code point unassigned in the CPython
-// build may classify differently; none occurs in the vectors.
-type pythonVectors struct {
+// How they were made: a one-off script built the two maps of the file, drew 450 texts and 80 directories per map
+// from a fixed seed, and recorded for each text the stripped text, the matches and the classification without a
+// directory, and for each directory every area's match length and the classification with no text and with the
+// text of the same index. Extending the vectors means recording new inputs the same way. The recording ran on
+// CPython 3.11 (Unicode 14.0); the character predicates the matcher emulates were checked against every assigned
+// code point on CPython 3.11 to 3.14, so the recording interpreter does not change the vectors. Go 1.27 ships
+// Unicode 17, so a code point unassigned in the CPython build may classify differently; none occurs in the
+// vectors.
+type recordedVectors struct {
 	Maps []struct {
 		Name       string                `json:"name"`
 		Areas      []config.ExposureArea `json:"areas"`
@@ -50,17 +50,17 @@ type pythonVectors struct {
 	} `json:"maps"`
 }
 
-func loadVectors(t *testing.T) pythonVectors {
+func loadVectors(t *testing.T) recordedVectors {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", "python_vectors.json"))
+	data, err := os.ReadFile(filepath.Join("testdata", "match_vectors.json"))
 	require.NoError(t, err)
-	var v pythonVectors
+	var v recordedVectors
 	require.NoError(t, json.Unmarshal(data, &v))
 	require.Len(t, v.Maps, 2)
 	return v
 }
 
-func TestMatchesThePythonReference(t *testing.T) {
+func TestMatchesTheRecordedVectors(t *testing.T) {
 	vectors := loadVectors(t)
 	for _, vm := range vectors.Maps {
 		t.Run(vm.Name, func(t *testing.T) {
@@ -97,8 +97,8 @@ func TestMatchesThePythonReference(t *testing.T) {
 // FuzzFindTerms checks the invariants of the matcher on arbitrary text: it never panics, every match names a
 // word of the map, the result is sorted and duplicate-free, and stripping path literals is idempotent.
 func FuzzFindTerms(f *testing.F) {
-	vectors := pythonVectors{}
-	data, err := os.ReadFile(filepath.Join("testdata", "python_vectors.json"))
+	vectors := recordedVectors{}
+	data, err := os.ReadFile(filepath.Join("testdata", "match_vectors.json"))
 	if err == nil {
 		_ = json.Unmarshal(data, &vectors) //nolint:errcheck // seeds are optional
 	}

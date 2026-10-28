@@ -2,8 +2,8 @@
 // words that name it. It loads and validates the map ([exposure] areas or areas_file, rule AR9W5), finds area
 // terms in text, classifies an artifact by its directory and text, and resolves the owning area of a skill.
 //
-// The semantics follow the reference implementation the format comes from, a Python harness, exactly; a
-// differential test holds the matcher to vectors recorded from it.
+// Term matching follows the semantics of Python's re module with re.IGNORECASE on str patterns (CPython 3.11)
+// exactly; a differential test holds the matcher to recorded vectors.
 package areas
 
 import (

@@ -1,5 +1,5 @@
 {
-  "generator": "Recorded once from the Python reference implementation of the area map (re.IGNORECASE on str patterns; the reference pins CPython 3.11) with seeded random texts; see differential_test.go.",
+  "generator": "Recorded once with the regular expressions of the area matcher under Python's re module (re.IGNORECASE on str patterns, CPython 3.11) on seeded random texts; see differential_test.go.",
   "maps": [
     {
       "areas": [

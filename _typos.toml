@@ -9,5 +9,5 @@ caf = "caf"             # café test data
 propert = "propert"     # split/truncated schema token
 
 [files]
-# Seeded random texts recorded from the reference area matcher: misspellings are the point.
-extend-exclude = ["internal/areas/testdata/python_vectors.json"]
+# Seeded random texts the area matcher is tested on: misspellings are the point.
+extend-exclude = ["internal/areas/testdata/match_vectors.json"]

@@ -21,7 +21,7 @@ type term struct {
 	bounded bool
 }
 
-// matcher finds area terms in text the way the reference implementation's regular expressions do:
+// matcher finds area terms in text the way these regular expressions do under Python's re module:
 //
 //	terms:          (?i) alternatives longest first, each (?<![A-Za-z0-9])term(?![A-Za-z0-9]) unless it holds _ / .
 //	path literals:  (?<![\w/.@-])(?:root|...)/[^\s`'")\],;]*  (root = first segment of a path claim, "*" removed)
