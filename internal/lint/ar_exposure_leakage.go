@@ -164,7 +164,9 @@ func checkExposureLeakage(r *runner) {
 	}
 	for _, s := range lk.UnknownSkills {
 		path, line := r.skillAreasLine(lk.AreasFile, s.Skill)
+		before := len(r.findings)
 		r.add(CodeExposureSkillUnknown, path, line, "skill_areas assigns %q to %q, but no skill of the session inventory is named %q; rename or remove the entry", s.Skill, s.Area, s.Skill)
+		r.exposureDeps(before, path, nil)
 	}
 }
 
