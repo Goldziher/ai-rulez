@@ -21,7 +21,7 @@ These are two independent choices:
   stable 5.x release, after GitHub, npm, PyPI and Homebrew publication. The tag is derived from
   the release's major version. Release candidates never move it, and rerunning an older release
   cannot move it backward.
-- `with: version: 5.9.1` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, a release
+- `with: version: 5.9.2` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, a release
   candidate `X.Y.Z-rc.N`, or `latest` (the default). `latest` follows GitHub's
   `releases/latest` redirect, which names the newest published stable release (never a draft or a
   release candidate), and the download is then checked against that release's `checksums.txt`.
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.9.1
+          version: 5.9.2
       - run: ai-rulez generate --check
       - run: ai-rulez validate --strict
       - run: ai-rulez lock --check
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez/check@v5
         with:
-          version: 5.9.1
+          version: 5.9.2
           expected-config-count: "2" # the root and one module
 ```
 
@@ -143,7 +143,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez/update@v5
         with:
-          version: 5.9.1
+          version: 5.9.2
 ```
 
 In order, it:
@@ -221,7 +221,7 @@ steps:
       fetch-depth: 2
   - uses: Goldziher/ai-rulez@v5
     with:
-      version: 5.9.1
+      version: 5.9.2
       llm-provider: openai
       llm-model: gpt-4o-mini
       llm-api-key-env: OPENAI_API_KEY
@@ -247,7 +247,7 @@ diagnostic requires a project; `llm estimate` can run without one.
 ```yaml
 - uses: Goldziher/ai-rulez@v5
   with:
-    version: 5.9.1
+    version: 5.9.2
 - name: Inspect LLM configuration without a request
   env:
     AI_RULEZ_LLM_PROVIDER: openai
