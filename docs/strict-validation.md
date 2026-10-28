@@ -4356,7 +4356,7 @@ a skill or agent listed at session start names no term of any area but some ambi
 
 ### AR9W2 exposure-area-collision
 
-two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over [exposure] collision_min_score (setting it turns the rule on at warning)
+two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over [exposure] collision_min_score (setting it turns the rule on at warning); the 20 highest pairs are reported, the rest in one summary finding
 
 - Default severity: `off`
 - Analyzer: `exposure` (scope `bundle`)
@@ -4376,17 +4376,17 @@ the estimated tokens a Claude Code session loads at start exceed [exposure] star
 
 ### AR9W4 exposure-gate-unreadable
 
-a skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names paths, disable-model-invocation or user-invocable, so whether it is gated, and when it loads, cannot be known
+a skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names paths, disable-model-invocation or user-invocable, or sets paths or disable-model-invocation to a value of the wrong type, so whether it is gated, and when it loads, cannot be known
 
 - Default severity: `warning`
 - Analyzer: `exposure` (scope `item`)
-- Why: `paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `:` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.
+- Why: `paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `: ` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, and a gate value of the wrong type (`paths: 5`, or `disable-model-invocation: yes`, a string to YAML 1.2 that Claude Code reads as YAML 1.1 does) leaves the same doubt, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.
 - Bad: `description: Use when: deploying` above `paths: ["services/billing/**"]`
 - Good: `description: "Use when: deploying"` above `paths: ["services/billing/**"]`
 
 ### AR9W5 exposure-map-invalid
 
-the [exposure] table or its area map is invalid: a duplicate or malformed area name, a bad path claim, a skill_areas value naming no area, an unreadable areas_file, or both areas_file and inline areas
+the [exposure] table or its area map is invalid: a bad scalar key, a duplicate, malformed or reserved area name, a bad path claim, a skill_areas value naming no area, an unknown key, an unreadable areas_file, or both areas_file and inline areas
 
 - Default severity: `error`
 - Analyzer: `exposure` (scope `bundle`)

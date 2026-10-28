@@ -1212,6 +1212,7 @@ Examples:
 
 ```bash
 ai-rulez exposure leakage
+ai-rulez exposure leakage --root services/billing
 ai-rulez exposure leakage --areas tools/context/areas.toml --format json
 ```
 
