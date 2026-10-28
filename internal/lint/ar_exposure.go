@@ -8,7 +8,7 @@ import (
 )
 
 // Session exposure and areas (AR9W, docs/exposure.md). Every rule is inert unless the configuration has an
-// [exposure] table.
+// [exposure] table, except AR9W4 (ar_exposure_gate.go), which reads only the item.
 const (
 	// AnalyzerExposure is the analyzer name of the session exposure and area codes.
 	AnalyzerExposure = "exposure"

@@ -356,6 +356,7 @@ ai-rulez validate --strict --outputs
 | AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
 | AR9W2 | `exposure-area-collision` | off | Two skills or agents listed at session start, of different areas (unclassified counts as one), share listing words with a Jaccard index of at least `[exposure] collision_min_score`; setting it turns the rule on at warning, and a `[lint.severity]` entry turns it on at 0.1. Reported on the description line of the pair's first listing; `ai-rulez exposure collisions` ranks every pair (see [Session exposure and areas](exposure.md#ai-rulez-exposure-collisions)) |
+| AR9W4 | `exposure-gate-unreadable` | warning | A skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names `paths`, `disable-model-invocation` or `user-invocable`, so whether it is gated, and when it loads, cannot be known. Needs no `[exposure]` table: reported for the claude preset and for a run without a configuration (see [Session exposure and areas](exposure.md#a-gate-that-cannot-be-read)) |
 | AR9W5 | `exposure-map-invalid` | error | The `[exposure]` table or its area map is invalid: a duplicate, reserved or non-kebab area name, a bad path claim, a `skill_areas` value that names no area, an unknown key or unreadable `areas_file`, or both `areas_file` and inline areas. Only reported when the configuration has an `[exposure]` table (see [Session exposure and areas](exposure.md)) |
 | AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --strict --verifiers`; severity is the verifier's own) |
 | AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --strict --verifiers`) |
@@ -437,7 +438,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | Harness built-in names ([#447](https://github.com/Goldziher/ai-rulez/issues/447); `AR9U0`, `AR9U1` used; reported by `validate --strict`, see [Built-in names of harnesses](#built-in-names-of-harnesses)) | allocated |
-| `AR9W0`-`AR9W9` | Session exposure and areas (`AR9W2`, `AR9W5` used; inert without an `[exposure]` table, see [Session exposure and areas](exposure.md)) | allocated |
+| `AR9W0`-`AR9W9` | Session exposure and areas (`AR9W2`, `AR9W4`, `AR9W5` used; inert without an `[exposure]` table except `AR9W4`, which needs none, see [Session exposure and areas](exposure.md)) | allocated |
 | `AR9V0`-`AR9V9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims; moved from `AR9U` for #447) | reserved |
 
 Unlisted letters (`AR9X`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -793,7 +794,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `llmstxt` | `AR9P0`-`AR9P6` |
 | `traps` | `AR9C0`-`AR9CA` |
 | `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0`, `AR9I0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables, unused `[[lint.accept]]` entries) |
-| `exposure` | `AR9W2` (listings of different areas that overlap), `AR9W5` (the `[exposure]` table and its area map) |
+| `exposure` | `AR9W2` (listings of different areas that overlap), `AR9W4` (a frontmatter gate that cannot be read), `AR9W5` (the `[exposure]` table and its area map) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
