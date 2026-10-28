@@ -18161,7 +18161,7 @@ a skill, command or rule Claude Code loads has frontmatter that does not parse (
 
 - Default severity: `warning`
 - Analyzer: `exposure` (scope `item`)
-- Why: `paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `: ` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, and a gate value of the wrong type (`paths: 5`, or `disable-model-invocation: yes`, a string to YAML 1.2 that Claude Code reads as YAML 1.1 does) leaves the same doubt, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.
+- Why: `paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted colon and space in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, and a gate value of the wrong type (`paths: 5`, or `disable-model-invocation: yes`, a string to YAML 1.2 that Claude Code reads as YAML 1.1 does) leaves the same doubt, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.
 - Bad: `description: Use when: deploying` above `paths: ["services/billing/**"]`
 - Good: `description: "Use when: deploying"` above `paths: ["services/billing/**"]`
 
@@ -18589,7 +18589,7 @@ after a file the `paths:` glob matches was read):
 | Frontmatter of a skill with `paths: ["src/**"]` | Claude Code | ai-rulez reads |
 |---|---|---|
 | valid | hidden until `src/a.txt` is read | path gated, on demand |
-| `description: Use when: testing` (an unquoted `: `) | recovered: hidden until `src/a.txt` is read, the description kept | does not parse |
+| `description: Use when: testing` (an unquoted colon and space) | recovered: hidden until `src/a.txt` is read, the description kept | does not parse |
 | `description: "Use when testing` (an unclosed quote) | dropped: listed at start, the description is the first body line | does not parse |
 | `paths` indented with a tab | dropped: listed at start, the description is the first body line | does not parse |
 
