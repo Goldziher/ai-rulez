@@ -1652,7 +1652,7 @@ Describes the areas of a repository (the directories each one claims, its owner 
 session exposure checks. The map is inline or in `areas_file`, not both; `validate` reports a map it cannot use as
 `AR9W5`, area terms in the text a session sees at its start as `AR9W0` and `AR9W1` (accepted with `[[lint.accept]]`),
 and `skill_areas` keys that name no skill as `AR9W6`; `collision_min_score` turns on `AR9W2` for start-listed skills
-and agents of different areas whose listings overlap. `start_budget` caps the estimated tokens a session loads at
+and agents of different areas whose listings overlap (the 20 highest pairs, then one finding for the rest). `start_budget` caps the estimated tokens a session loads at
 start (`AR9W3`), and `context_window` sizes the skill listing budget `AR964` checks. Without the table nothing
 changes. See
 [Session exposure and areas](exposure.md).

@@ -695,3 +695,31 @@ func TestFindContext_SummaryMarksALostGate(t *testing.T) {
 	assert.NotContains(t, byName["broken"], "paths")
 	assert.NotContains(t, byName["plain"], "paths_unreadable", "a broken block that names no paths is not marked")
 }
+
+// A rule whose frontmatter parses but whose paths value is not a string or a list of strings has lost its gate as
+// surely as a broken block: a path query never returns it, and a scope query lists it marked paths_unreadable.
+func TestFindContext_AMistypedGateFailsClosed(t *testing.T) {
+	tests := []struct {
+		name string
+		args map[string]any
+		want []string
+	}{
+		{name: "a file", args: map[string]any{"path": "cmd/main.go", "kind": "rule"}, want: []string{"rule:.:style"}},
+		{name: "a scope query lists it", args: map[string]any{"scope": ".", "kind": "rule"}, want: []string{"rule:.:numbered", "rule:.:style"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := monorepoProject(t)
+			writeFile(t, root, ".claude/rules/numbered.md", "---\ndescription: Go rules\npaths: 5\n---\n\nGo rules.\n")
+			_, session := contextServer(t, root)
+
+			// Act
+			out, isErr := toolJSON(t, session, "find_context", tt.args)
+
+			// Assert
+			require.False(t, isErr, "%v", out)
+			assert.Equal(t, tt.want, contextKeys(t, out))
+		})
+	}
+}

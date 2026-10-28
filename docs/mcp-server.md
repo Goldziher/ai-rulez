@@ -790,10 +790,15 @@ directory. A path that exists is a directory if the filesystem says so; one that
 element has an extension. A restriction none of whose globs can be read does not hide the item.
 
 A rule whose frontmatter names `paths:` but does not parse as YAML (an unquoted `:` in a value, an unclosed quote or
-bracket, a tab indent, a block that never closes) has lost its globs. Where it applies cannot be known, so it fails
-closed: a `path` query never returns it, and a `scope` query lists it with `"paths_unreadable": true` instead of as a
-rule that applies everywhere. A skill whose frontmatter does not parse is not served at all. `ai-rulez validate`
-reports the block as `AR306` and the lost gate as `AR9W4`.
+bracket, a tab indent, a block that never closes) has lost its globs. So has a rule or skill whose `paths` value
+parses but is neither a string nor a list of strings (`paths: 5`, a list holding a number, an empty `paths:`). Where
+it applies cannot be known, so it fails closed: a `path` query never returns it, and a `scope` query lists it with
+`"paths_unreadable": true` instead of as an item that applies everywhere. A skill whose frontmatter does not parse is
+not served at all. `ai-rulez validate` reports the block as `AR306` and the lost gate as `AR9W4`.
+
+A known limitation: only `paths:` fails closed. A Cursor rule (`.cursor/rules/*.mdc`) whose broken block names
+`globs:` (and not `alwaysApply: true`) is served as a rule that applies everywhere, as if it had no globs; fix the
+block (`AR306` reports it) to restore the restriction.
 
 `load_context` reads one, by `scope` and `name` or by `uri`, with an optional `budget_bytes`:
 
