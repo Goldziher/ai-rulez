@@ -106,8 +106,7 @@ func (m *Map) ClassifyWithSource(scope, text string) (string, Source) {
 }
 
 // Skill identifies a skill for owner resolution. Build it from an inventory artifact with
-// exposure.Artifact.AreaSkill, which fills it as the reference implementation does; the fields differ between
-// repository and plugin skills.
+// exposure.Artifact.AreaSkill; the fields differ between repository and plugin skills.
 type Skill struct {
 	// Name is the skill's name; for a plugin skill, without the plugin prefix.
 	Name string
