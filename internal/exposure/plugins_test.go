@@ -225,3 +225,22 @@ func TestBuild_AnUnnamedMarketplaceEnablesNothing(t *testing.T) {
 		})
 	}
 }
+
+func TestBuild_SettingsThroughASymlinkedClaudeDirAreNotRead(t *testing.T) {
+	// Arrange
+	outside := writeRepo(t, map[string]string{"settings.json": `{"enabledPlugins": {"one@mkt": true}}`})
+	root := marketplaceRepo(t, "")
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(root, ".claude"))
+
+	// Act
+	inv := build(t, root)
+
+	// Assert
+	assert.Empty(t, inv.Plugins.Enabled)
+	assert.Empty(t, pluginSkills(inv))
+	var refused []string
+	for _, p := range inv.Problems {
+		refused = append(refused, p.Path)
+	}
+	assert.Contains(t, refused, ".claude/settings.json")
+}

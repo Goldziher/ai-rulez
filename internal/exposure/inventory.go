@@ -465,6 +465,8 @@ func (b *builder) read(rel string) readResult {
 			return b.refuse(rel, err.Error())
 		}
 		abs = target
+	} else if dir := realPath(filepath.Dir(abs)); !b.inside(dir) {
+		return b.refuse(rel, "in a directory that resolves to "+filepath.ToSlash(dir)+", outside the repository root; not followed")
 	}
 	switch {
 	case !info.Mode().IsRegular():
