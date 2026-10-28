@@ -60,11 +60,42 @@ func (l *Leak) Message() string {
 // LeakageReport is what `ai-rulez exposure leakage` prints.
 type LeakageReport struct {
 	SchemaVersion int `json:"schema_version"`
-	// ArtifactsChecked counts the start-of-session artifacts read.
+	// Root is the absolute repository root inspected, slash separated.
+	Root string `json:"root"`
+	// Plugins is the plugin mode of the inventory.
+	Plugins PluginMode `json:"plugins"`
+	// AreasFile is the areas file the map was read from, "" for the inline [exposure] form.
+	AreasFile string `json:"areas_file"`
+	// ArtifactsChecked counts the start-of-session artifacts, an unchecked one included.
 	ArtifactsChecked int    `json:"artifacts_checked"`
 	Findings         []Leak `json:"findings"`
+	// Unchecked are the start-of-session artifacts whose text could not be read, so no leak in them can be
+	// found. They are not findings: the inventory lists each as a problem.
+	Unchecked []Unchecked `json:"unchecked"`
 	// StaleAcceptances describes each [[lint.accept]] entry for a leakage rule that accepted nothing (AR9I0).
 	StaleAcceptances []string `json:"stale_acceptances"`
+}
+
+// Unchecked is a start-of-session artifact kept unread (over the read limit, or a symlink to outside the
+// root): it loads in every session, but its text is not known. Path is relative to the root; Name is the
+// qualified name.
+type Unchecked struct {
+	Path   string `json:"path"`
+	Kind   Kind   `json:"kind"`
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
+}
+
+// UncheckedArtifacts lists the artifacts of start that were kept unread, in order.
+func UncheckedArtifacts(start []Artifact) []Unchecked {
+	var out []Unchecked
+	for i := range start {
+		a := &start[i]
+		if reason := a.UnreadReason(); reason != "" {
+			out = append(out, Unchecked{Path: a.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: reason})
+		}
+	}
+	return out
 }
 
 // OK reports whether the report passes: no violation and no stale acceptance.

@@ -67,7 +67,7 @@ func TestExposureGateUnreadableAR9W4(t *testing.T) {
 			name:     "paths that is not a string or a list of strings",
 			files:    map[string]string{".ai-rulez/skills/bad/SKILL.md": "---\nname: bad\ndescription: Use when testing the gate.\npaths: 5\n---\nBody.\n"},
 			wantFile: "skills/bad/SKILL.md", wantLine: 4, typed: true,
-			inText: []string{`skill "bad"`, `sets "paths" to a value of the wrong type`, "cannot be known"},
+			inText: []string{`skill "bad"`, `sets "paths" to a value of the wrong type`, "the gate cannot be read"},
 		},
 		{
 			name:     "a paths list holding a number",

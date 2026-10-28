@@ -23,10 +23,14 @@ func TestExposureMap(t *testing.T) {
 	outside := filepath.Join(t.TempDir(), "areas.toml")
 	require.NoError(t, os.WriteFile(outside, []byte("[[area]]\nname = \"far\"\n"), 0o600))
 	inline := &config.ExposureConfig{Areas: []config.ExposureArea{{Name: "billing"}}}
+	cfgFile := filepath.Join(dir, "config.toml")
+	require.NoError(t, os.WriteFile(cfgFile, []byte("[exposure]\n[[exposure.areas]]\nname = \"a\"\n[[exposure.areas]]\nname = \"a\"\n"), 0o600))
+	duplicate := &config.ExposureConfig{Areas: []config.ExposureArea{{Name: "a"}, {Name: "a"}}}
 	tests := []struct {
 		name      string
 		exp       *config.ExposureConfig
 		flag      string
+		config    string
 		wantAreas []string
 		root      string
 		wantFile  string
@@ -40,7 +44,8 @@ func TestExposureMap(t *testing.T) {
 		{name: "the configured file", exp: &config.ExposureConfig{AreasFile: "areas.toml"}, wantAreas: []string{"search"}, wantFile: "areas.toml"},
 		{name: "a configured file outside the root is absolute", exp: &config.ExposureConfig{AreasFile: "areas.toml"}, root: filepath.Join(dir, "sub"), wantAreas: []string{"search"}, wantFile: filepath.ToSlash(file)},
 		{name: "a file problem names its line", flag: bad, wantErr: bad + `:3: area "a" path "x/"`},
-		{name: "a table problem names the table", exp: &config.ExposureConfig{Areas: []config.ExposureArea{{Name: "a"}, {Name: "a"}}}, wantErr: `[exposure]: duplicate area name "a"`},
+		{name: "a table problem without a configuration file names the table", exp: duplicate, wantErr: `[exposure]: duplicate area name "a"`},
+		{name: "a table problem names its configuration line", exp: duplicate, config: cfgFile, wantErr: `config.toml:5: duplicate area name "a"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,7 +53,7 @@ func TestExposureMap(t *testing.T) {
 			if root == "" {
 				root = dir
 			}
-			m, from, err := exposureMap(tt.exp, dir, root, tt.flag)
+			m, from, err := exposureMap(tt.exp, dir, root, tt.flag, tt.config)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "AR9W5")
@@ -102,7 +107,7 @@ func TestWriteInventoryText(t *testing.T) {
 		want      []string
 		absent    []string
 	}{
-		{"without areas", false, []string{"plugins enabled, loaded: none", "3 artifacts: 1 start (17 tokens, unknown included), 1 on_demand, 0 manual, 1 unknown", "problem: big.md: over the read limit"}, []string{"AREA"}},
+		{"without areas", false, []string{"plugins enabled, loaded: none", "3 artifacts: 2 start (17 tokens, unknown included), 1 on_demand, 0 manual, 1 unknown", "problem: big.md: over the read limit"}, []string{"AREA"}},
 		{"with areas", true, []string{"AREA", "billing (terms)"}, nil},
 	}
 	for _, tt := range tests {
@@ -167,7 +172,7 @@ func TestRunExposureReportRejectsBadFlags(t *testing.T) {
 		want  string
 	}{
 		{"unknown harness", exposureFlags{harness: "codex", root: t.TempDir()}, `unknown --harness "codex" (only claude)`},
-		{"negative window", exposureFlags{harness: "claude", contextWindow: -1, root: t.TempDir()}, "--context-window must be positive"},
+		{"negative window", exposureFlags{harness: "claude", contextWindow: -1, root: t.TempDir()}, "--context-window must not be negative"},
 		{"unknown plugin mode", exposureFlags{harness: "claude", plugins: "some", root: t.TempDir()}, `unknown --plugins "some"`},
 	}
 	for _, tt := range tests {

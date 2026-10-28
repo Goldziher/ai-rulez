@@ -18,6 +18,15 @@ const (
 // ExposureDefaultContextWindow is the context window, in tokens, when [exposure] context_window is unset.
 const ExposureDefaultContextWindow = 200000
 
+// ExposureDefaultCollisionMinScore is the word overlap at which two listings collide when [exposure]
+// collision_min_score is unset: the default of `exposure collisions --min-score`, and AR9W2's when a severity
+// turns it on.
+const ExposureDefaultCollisionMinScore = 0.1
+
+// ExposureDefaultCollisionLimit is the number of pairs `exposure collisions` prints by default, and AR9W2
+// reports one by one before it sums up the rest.
+const ExposureDefaultCollisionLimit = 20
+
 // ExposureConfig is the [exposure] table: what a session sees at start and the area map that names which part
 // of the repository an artifact belongs to (docs/exposure.md). The map is either inline ([[exposure.areas]] and
 // [exposure.skill_areas]) or in areas_file, never both. Every key is optional; the rules that read the table are

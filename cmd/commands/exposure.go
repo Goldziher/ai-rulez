@@ -144,7 +144,7 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 		return oops.Errorf("unknown --harness %q (only %s)", f.harness, config.ExposureHarnessClaude)
 	}
 	if f.contextWindow < 0 {
-		return oops.Errorf("--context-window must be positive, got %d", f.contextWindow)
+		return oops.Errorf("--context-window must not be negative, got %d", f.contextWindow)
 	}
 	in, err := loadExposure(ctx, f)
 	if err != nil {
@@ -238,10 +238,10 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 		mode = exposure.PluginMode(exp.Plugins)
 	}
 	in := &exposureInput{exp: exp}
-	if in.areas, in.areasFile, err = exposureMap(exp, base, root, f.areasFile); err != nil {
+	if in.areas, in.areasFile, err = exposureMap(exp, base, root, f.areasFile, configFileOf(cfg)); err != nil {
 		return nil, err
 	}
-	if in.inv, err = exposure.Build(ctx, exposure.Options{Root: root, Plugins: mode}); err != nil {
+	if in.inv, err = exposure.Build(ctx, exposure.Options{Root: root, AreaBase: base, Plugins: mode}); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	return in, nil
@@ -306,7 +306,10 @@ func exposureConfigFor(ctx context.Context, root string) (*config.Config, error)
 // whose areas_file is relative to base, the directory of the configuration; it
 // is nil when neither configures one. The file it names is relative to root
 // and slash separated, or absolute (slash separated) when it lies outside root.
-func exposureMap(exp *config.ExposureConfig, base, root, areasFlag string) (*areas.Map, string, error) {
+// A problem is listed with its file and line, as AR9W5 reports it: in the areas
+// file, or in configPath (the configuration file, "" when there is none) for
+// the inline form, where a problem whose entry is not found names [exposure].
+func exposureMap(exp *config.ExposureConfig, base, root, areasFlag, configPath string) (*areas.Map, string, error) {
 	var (
 		m        *areas.Map
 		problems []areas.Problem
@@ -325,15 +328,37 @@ func exposureMap(exp *config.ExposureConfig, base, root, areasFlag string) (*are
 	if len(problems) == 0 {
 		return m, file, nil
 	}
+	var cfgLines []string
+	if configPath != "" {
+		if data, err := os.ReadFile(configPath); err == nil { //nolint:gosec // the project's own configuration file
+			cfgLines = strings.Split(string(data), "\n")
+		}
+	}
 	lines := make([]string, 0, len(problems))
 	for _, p := range problems {
 		where := "[exposure]"
-		if p.File != "" {
+		switch {
+		case p.File != "":
 			where = fmt.Sprintf("%s:%d", p.File, p.Line)
+		case p.LineIn(cfgLines) > 0:
+			where = fmt.Sprintf("%s:%d", rootRelative(root, configPath), p.LineIn(cfgLines))
 		}
 		lines = append(lines, where+": "+p.Message)
 	}
 	return nil, "", oops.Errorf("the area map is invalid (AR9W5):\n  %s", strings.Join(lines, "\n  "))
+}
+
+// configFileOf is the absolute path of the configuration file of cfg, "" when
+// there is none.
+func configFileOf(cfg *config.Config) string {
+	if cfg == nil || cfg.ConfigFile == "" {
+		return ""
+	}
+	p, err := filepath.Abs(cfg.ConfigPath())
+	if err != nil {
+		return ""
+	}
+	return p
 }
 
 // rootRelative is p relative to root, slash separated, or p made absolute and
@@ -384,10 +409,11 @@ func writeInventoryText(w io.Writer, inv *exposure.Inventory, withAreas bool) er
 	if err := writeTable(w, rows); err != nil {
 		return err
 	}
-	// The start figure counts the unknown artifacts too, as Inventory.Start does
-	// (fail closed).
+	// The start figures count the unknown artifacts too, as Inventory.Start and
+	// Report.StartArtifacts do (fail closed).
 	startTokens := tokens[exposure.PhaseStart] + tokens[exposure.PhaseUnknown]
-	parts := []string{fmt.Sprintf("%d %s (%d tokens, unknown included)", counts[exposure.PhaseStart], exposure.PhaseStart, startTokens)}
+	startCount := counts[exposure.PhaseStart] + counts[exposure.PhaseUnknown]
+	parts := []string{fmt.Sprintf("%d %s (%d tokens, unknown included)", startCount, exposure.PhaseStart, startTokens)}
 	for _, p := range []exposure.Phase{exposure.PhaseOnDemand, exposure.PhaseManual, exposure.PhaseUnknown} {
 		parts = append(parts, fmt.Sprintf("%d %s", counts[p], p))
 	}
