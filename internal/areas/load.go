@@ -195,8 +195,8 @@ func tableHeaders(lines []string) []header {
 	return out
 }
 
-// multilineOpen is the multi-line string delimiter (""" or ''') still open after line, given the one
-// open before it ("" for none).
+// multilineOpen is the multi-line string delimiter (three double or three single quotes) still open
+// after line, given the one open before it (empty for none).
 func multilineOpen(line, open string) string {
 	for {
 		if open == "" {
