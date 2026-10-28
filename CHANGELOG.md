@@ -14,10 +14,20 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `[exposure.skill_areas]` or in an `areas_file`. Terms match case-insensitively, as substrings when they hold `_`,
   `/` or `.` and as whole words otherwise, outside repository path literals; an artifact belongs to the most specific
   path claim, else the area whose terms dominate its text, and a skill's owner is its `skill_areas` entry, then the
-  path claim, then the terms. `validate` reports a map it cannot use (duplicate or malformed names, bad path claims,
-  `skill_areas` values naming no area, an unreadable or misspelled `areas_file`) as `AR9W5`, an error; without an
-  `[exposure]` table nothing is checked. The exposure report and leakage rules that read the map follow. See
+  path claim (a plugin skill's: its plugin's directory), then the terms. `validate` reports a map it cannot use
+  (duplicate or malformed names, bad path claims, `skill_areas` values naming no area, an unreadable or misspelled
+  `areas_file`) as `AR9W5`, an error, on the line of the offending entry; without an `[exposure]` table nothing is
+  checked. The exposure report and leakage rules that read the map follow. See
   [Session exposure and areas](https://goldziher.github.io/ai-rulez/exposure/).
+- **`ai-rulez exposure inventory` and `ai-rulez exposure areas`.** `exposure inventory` lists every Claude Code
+  artifact a session started at the repository root can see (CLAUDE.md files, rules, skills, commands, agents,
+  `.mcp.json` servers, settings and enabled plugins) with its phase (start, on demand, manual or unknown),
+  visibility, listing text, estimated tokens and frontmatter status, after `skillOverrides`, `claudeMdExcludes` and
+  the repository marketplace (`--plugins none|enabled|all`, `--with-text`). `exposure areas` shows the area map as
+  loaded and the area of every artifact with how it was decided (`skill_areas`, `path`, `terms` or `none`), for
+  diffing against another classifier; a plugin skill is owned by its plugin's directory. Both take `--areas FILE` to
+  try a map before configuring it and `--root DIR`, and print `schema/exposure-inventory.v1.schema.json` and
+  `schema/exposure-areas.v1.schema.json` with `--format json`.
 
 ### Changed
 
@@ -25,10 +35,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   mapping or never closes is indexed as before (a value of the wrong type or a complex key still keeps the other
   keys, a syntax error keeps none), but now carries the decode error instead of dropping it, so a reader can tell a
   lost `paths:` gate from an absent one. What the skills server serves is unchanged. The index cache format moves to version 4, so a cache written by an earlier version is rebuilt once.
-- **Internal: the Claude Code session load model (`internal/exposure`).** The groundwork for `ai-rulez exposure`:
-  every CLAUDE.md, rule, skill, command, agent, `.mcp.json` server, settings file and enabled plugin of a repository
-  with its phase (start, on demand, manual or unknown), visibility, listing text and frontmatter status, after
-  `skillOverrides`, `claudeMdExcludes` and the repository marketplace. No command uses it yet.
 
 ## [5.8.0] - 2026-10-27
 

@@ -105,13 +105,18 @@ func TestEveryJSONContractValidatesAgainstItsSchema(t *testing.T) {
 	snapshot := env.run(root, "catalog", "--format", "json", "--schema-version", "2")
 	require.Equal(t, 0, snapshot.ExitCode, snapshot.Stderr)
 	require.NoError(t, os.WriteFile(catalog, []byte(snapshot.Stdout), 0o600))
-	writeTree(t, root, map[string]string{"bundle/index.md": "---\nokf_version: \"0.2\"\n---\n\n# Concepts\n"})
+	writeTree(t, root, map[string]string{
+		"bundle/index.md": "---\nokf_version: \"0.2\"\n---\n\n# Concepts\n",
+		"areas.toml":      "[[area]]\nname = \"db\"\npaths = [\"db\"]\n",
+	})
 	runAll(root, []reportCase{
 		{"validate", []string{"validate"}, 0},
 		{"scan", []string{"scan"}, 0},
 		{"doctor", []string{"doctor"}, 0},
 		{"tokens", []string{"tokens"}, 0},
 		{"cost", []string{"cost"}, 0},
+		{"exposure inventory", []string{"exposure", "inventory", "--with-text"}, 0},
+		{"exposure areas", []string{"exposure", "areas", "--areas", filepath.Join(root, "areas.toml")}, 0},
 		{"catalog", []string{"catalog"}, 0},
 		{"catalog diff", []string{"catalog", "diff", catalog, catalog}, 0},
 		{"lock --check", []string{"lock", "--check"}, 0},
@@ -189,6 +194,12 @@ func TestReportSchemasRejectAWrongDocument(t *testing.T) {
 		"sbom-report.schema.json":    `{"schema_version":1,"status":"bogus","type":"cyclonedx","findings":[],"differences":[]}`,
 		"verifiers-test.schema.json": `{"schema_version":1,"ok":true,"passed":0,"total":0,"results":null,"untested":[],"problems":[]}`,
 		schema.ErrorDocumentSchema:   `{"schema_version":1,"status":"error","error":"x","exit_code":0}`,
+		"exposure-inventory.v1.schema.json": `{"schema_version":1,"harness":"claude","root":"/r","settings":{"skill_overrides":{},"claude_md_excludes":[],"enabled_plugins":[]},` +
+			`"plugins":{"mode":"enabled","marketplace":"","available":[],"enabled":[],"loaded":[]},"problems":[],"artifacts":[{"kind":"skill","source":"file","name":"s",` +
+			`"qualified_name":"s","path":"p","scope":".","visibility":"always","phase":"later","paths":[],"listing_chars":0,"truncated":false,"text_bytes":0,` +
+			`"text_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","tokens":0,"line_offset":0}]}`,
+		"exposure-areas.v1.schema.json": `{"schema_version":1,"root":"/r","areas_file":"","plugins":"enabled","areas":[],"skill_areas":{},"counts":{},` +
+			`"artifacts":[{"kind":"skill","source":"file","name":"s","qualified_name":"s","path":"p","scope":".","area_scope":".","phase":"start","area":"a","area_source":"guess"}]}`,
 	} {
 		schemaBytes, err := os.ReadFile(filepath.Join("..", "..", "..", "schema", file))
 		require.NoError(t, err)

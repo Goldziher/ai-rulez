@@ -17,7 +17,7 @@ import (
 // cannot ship without its contract.
 var reportCommands = []string{
 	"validate", "scan", "doctor", "verify", "lock", "tokens", "cost", "catalog", "sbom", "scanners", "roles",
-	"publish", "update", "sign", "export", "okf", "verifiers", "eval", "judge",
+	"publish", "update", "sign", "export", "okf", "verifiers", "eval", "judge", "exposure",
 }
 
 // noContractYet are report commands whose JSON has no schema of its own; each

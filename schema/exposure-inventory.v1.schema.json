@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-inventory.v1.schema.json",
+  "title": "ai-rulez exposure inventory",
+  "description": "Output of `ai-rulez exposure inventory --format json`: every native Claude Code artifact of the repository, when a session started at its root sees it, and the root project settings that shaped the listing. See docs/exposure.md.",
+  "type": "object",
+  "required": ["schema_version", "harness", "root", "settings", "plugins", "artifacts", "problems"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "harness": { "const": "claude" },
+    "root": { "type": "string", "description": "The absolute repository root, slash separated." },
+    "settings": {
+      "type": "object",
+      "description": "The root project settings the load model applied, .claude/settings.local.json over .claude/settings.json.",
+      "required": ["skill_overrides", "claude_md_excludes", "enabled_plugins"],
+      "additionalProperties": false,
+      "properties": {
+        "skill_overrides": { "type": "object", "additionalProperties": { "type": "string" } },
+        "claude_md_excludes": { "type": "array", "items": { "type": "string" } },
+        "enabled_plugins": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The enabledPlugins keys (plugin@marketplace) set to true, sorted."
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "description": "The repository marketplace as the inventory read it.",
+      "required": ["mode", "marketplace", "available", "enabled", "loaded"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["none", "enabled", "all"] },
+        "marketplace": {
+          "type": "string",
+          "description": "The name of the repository marketplace, empty without one."
+        },
+        "available": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "path"],
+            "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "path": { "type": "string" } }
+          }
+        },
+        "enabled": { "type": "array", "items": { "type": "string" } },
+        "loaded": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "artifacts": { "type": "array", "items": { "$ref": "#/definitions/artifact" } },
+    "problems": {
+      "type": "array",
+      "description": "Files that could not be read or decoded.",
+      "items": {
+        "type": "object",
+        "required": ["path", "error"],
+        "additionalProperties": false,
+        "properties": { "path": { "type": "string" }, "error": { "type": "string" } }
+      }
+    }
+  },
+  "definitions": {
+    "artifact": {
+      "type": "object",
+      "required": [
+        "kind",
+        "source",
+        "name",
+        "qualified_name",
+        "path",
+        "scope",
+        "visibility",
+        "phase",
+        "paths",
+        "listing_chars",
+        "truncated",
+        "text_bytes",
+        "text_sha256",
+        "tokens",
+        "line_offset"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
+        "source": { "enum": ["file", "command", "plugin"] },
+        "name": { "type": "string" },
+        "qualified_name": { "type": "string", "description": "plugin:skill for a plugin skill, the name otherwise." },
+        "plugin": { "type": "string" },
+        "plugin_path": { "type": "string", "description": "The directory of the plugin of a plugin skill." },
+        "path": { "type": "string" },
+        "scope": { "type": "string", "description": "The directory that owns the artifact; \".\" for the root." },
+        "visibility": { "enum": ["always", "path_gated", "manual_only"] },
+        "phase": { "enum": ["start", "on_demand", "manual", "unknown"] },
+        "paths": { "type": "array", "items": { "type": "string" } },
+        "listing_text": { "type": "string" },
+        "listing_chars": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "text_bytes": { "type": "integer", "minimum": 0 },
+        "text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "line_offset": { "type": "integer", "minimum": 0 },
+        "frontmatter": {
+          "type": "object",
+          "required": ["ok"],
+          "additionalProperties": false,
+          "properties": { "ok": { "type": "boolean" }, "error": { "type": "string" } }
+        },
+        "area": { "type": "string", "description": "The owning area; present only with an area map." },
+        "area_source": { "enum": ["skill_areas", "path", "terms", "none"] },
+        "text": {
+          "type": "string",
+          "description": "What the session sees of the artifact; present only with --with-text."
+        }
+      }
+    }
+  }
+}

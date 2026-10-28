@@ -39,7 +39,7 @@
 // many short texts carries one rounding per text.
 //
 // Root scope: an artifact at the repository root has scope RootScope ("."),
-// as in internal/repoindex. internal/areas names the root "" and accepts ".";
+// as in internal/repoindex. internal/areas names the root "" and accepts ".".
 // AreaScope and Artifact.AreaSkill map an artifact to what the area
 // classification reads, and Inventory.Classify applies it.
 package exposure
@@ -62,8 +62,10 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
-// SchemaInventory is the schema_version of an Inventory.
-const SchemaInventory = "exposure-inventory.v1"
+// SchemaInventory is the schema_version of an Inventory, whose JSON is
+// described by schema/exposure-inventory.v1.schema.json. Like every JSON
+// document of the CLI it is an integer, bumped on an incompatible change.
+const SchemaInventory = 1
 
 // HarnessClaude is the only harness the load model describes.
 const HarnessClaude = "claude"
@@ -217,13 +219,13 @@ type Problem struct {
 
 // Inventory is the result of Build.
 type Inventory struct {
-	SchemaVersion string        `json:"schema_version"`
+	SchemaVersion int           `json:"schema_version"`
 	Harness       string        `json:"harness"`
 	Root          string        `json:"root"`
 	Settings      Settings      `json:"settings"`
 	Plugins       PluginSummary `json:"plugins"`
 	Artifacts     []Artifact    `json:"artifacts"`
-	Problems      []Problem     `json:"problems,omitempty"`
+	Problems      []Problem     `json:"problems"`
 }
 
 // Options configure Build.
@@ -284,7 +286,7 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 		Settings:      b.rootSettings.summary(),
 		Plugins:       catalog.summary(mode, opts.Requested),
 		Artifacts:     all,
-		Problems:      b.problems,
+		Problems:      append([]Problem{}, b.problems...),
 	}, nil
 }
 
@@ -302,16 +304,13 @@ func (inv *Inventory) Start() []Artifact {
 	return out
 }
 
-// AreaScope is the directory that owns an artifact in the terms of
-// internal/areas, for its path claims (Map.Claim, IsUnder): the repository root
-// is "" there where it is RootScope (".") here, and a plugin skill, whose Scope
-// is the root it loads at, is owned by its plugin directory.
+// AreaScope is the directory whose path claims own an artifact in
+// internal/areas (Map.Claim): its Scope, except for a plugin skill, whose Scope
+// is the root it loads at and which is owned by its plugin directory. The root
+// stays RootScope ("."), which internal/areas reads as its own "".
 func AreaScope(a *Artifact) string {
-	switch {
-	case a.Source == SourcePlugin && a.PluginPath != "":
+	if a.Source == SourcePlugin && a.PluginPath != "" {
 		return a.PluginPath
-	case a.Scope == RootScope:
-		return ""
 	}
 	return a.Scope
 }

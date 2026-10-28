@@ -1100,6 +1100,74 @@ ai-rulez export okf --check
 | `--profile` | string |  | Profile to export (default: from config or 'default') |
 | `--role` | string |  | Export the slice of content a role selects (see 'ai-rulez roles list'); mutually exclusive with --profile |
 
+## `ai-rulez exposure`
+
+Inspect what a Claude Code session loads and which area each artifact belongs to
+
+```text
+ai-rulez exposure [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez exposure inventory
+ai-rulez exposure inventory --format json --with-text
+ai-rulez exposure areas --areas tools/context/areas.toml --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
+| `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
+| `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
+
+## `ai-rulez exposure areas`
+
+Show the area map and the area of every artifact, with how it was decided
+
+```text
+ai-rulez exposure areas [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez exposure areas
+ai-rulez exposure areas --areas tools/context/areas.toml --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
+| `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
+| `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
+
+## `ai-rulez exposure inventory`
+
+List every artifact a session can see, with its phase, visibility and parse status
+
+```text
+ai-rulez exposure inventory [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez exposure inventory
+ai-rulez exposure inventory --plugins all
+ai-rulez exposure inventory --format json --with-text
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--with-text` | bool |  | Include each artifact's text in the JSON output |
+| `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
+| `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
+| `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
+
 ## `ai-rulez generate`
 
 Generate AI assistant rule files from configuration

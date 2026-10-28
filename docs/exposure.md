@@ -5,15 +5,17 @@ the start of every session (the root `CLAUDE.md`, unconditional rules, the skill
 those parts unless every session needs it, and a skill that belongs to one part should say so. The `[exposure]` table
 describes the parts as an **area map**: which directories each area claims, who owns it, and the words that name it.
 
-This page describes the table and how the map is matched. The rules and reports that use it (start-of-session
-exposure, area term leakage, collisions between areas) build on it in later releases; today `validate` checks the
-map itself (`AR9W5`). Without an `[exposure]` table nothing on this page has any effect.
+This page describes the table, how the map is matched, and the commands that show what a Claude Code session loads
+and where each artifact belongs. The rules and reports that build on it (start-of-session exposure, area term
+leakage, collisions between areas) follow in later releases; today `validate` checks the map itself (`AR9W5`).
+Without an `[exposure]` table no rule on this page has any effect; the commands work without one.
 
 - [Configuration](#configuration)
 - [The area map](#the-area-map)
 - [Matching terms](#matching-terms)
 - [Classifying an artifact](#classifying-an-artifact)
 - [The owner of a skill](#the-owner-of-a-skill)
+- [Commands](#commands)
 - [Validation](#validation)
 
 ## Configuration
@@ -128,6 +130,91 @@ a plugin outside every claim with `[skill_areas]`.
 
 An explicit entry is the way to place a skill that still lives at the repository root: once it moves under the
 area's directory, the path claim gives the same answer and the entry can go.
+
+## Commands
+
+Both commands are offline, free and deterministic. They inspect the project root (the directory of the
+configuration, else the working directory) or `--root DIR`, and read the area map of the `[exposure]` table or of
+`--areas FILE`, a file in the `areas_file` format that replaces the configured map, so a map can be tried before
+it is configured. Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid
+configuration or area map, whose problems are listed with their lines as `AR9W5` reports them).
+
+| Flag | Commands | Meaning |
+| --- | --- | --- |
+| `--format text\|json` | both | Output format |
+| `--plugins none\|enabled\|all` | both | Marketplace plugins whose skills are listed: none, the ones the root `.claude/settings*.json` enable, or all; default `[exposure] plugins`, else `enabled` |
+| `--areas FILE` | both | Area map file to use instead of the `[exposure]` table |
+| `--root DIR` | both | Repository root to inspect |
+| `--with-text` | `inventory` | Include each artifact's text in the JSON |
+
+### `ai-rulez exposure inventory`
+
+Every native Claude Code artifact a session started at the repository root can see. The load model follows Claude
+Code 2.1.306 as measured:
+
+- **Start of the session:** the root `CLAUDE.md` (and `.claude/CLAUDE.md`), unconditional root rules, the listing of
+  root skills (`.claude/skills/<name>/SKILL.md`, and `.claude/commands/**/*.md` as `a:b` skills), root agents
+  (`.claude/agents/<name>.md`), the server names of the root `.mcp.json`, and the enabled plugins with their skills
+  (`plugin:skill`).
+- **On demand:** anything in a subdirectory, and anything gated by `paths:`, once a matching file is touched.
+- **Manual:** `disable-model-invocation: true` or `skillOverrides` `user-invocable-only`: only the user runs it.
+- **Unknown:** a root rule or skill whose frontmatter does not parse while it names a gate (`paths:`,
+  `disable-model-invocation`, `user-invocable`); whether it loads at start cannot be known.
+- `skillOverrides` `off` removes a skill and `name-only` blanks its description; `.claude/settings.local.json`
+  applies over `.claude/settings.json`; `claudeMdExcludes` globs exclude `CLAUDE.md` files and rules.
+- The listing text of a skill is `name: description when_to_use`, whitespace squashed, capped at 1536 characters.
+  `tokens` estimates every text at 3.94 bytes per token.
+
+Not modeled: `@path` imports, `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents,
+commands and MCP servers of plugins. A file the inventory cannot read is listed under `problems`.
+
+The JSON follows [`schema/exposure-inventory.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-inventory.v1.schema.json).
+With an area map every artifact carries `area` and `area_source`; the text of each artifact is included only with
+`--with-text`:
+
+```json
+{
+  "schema_version": 1,
+  "harness": "claude",
+  "root": "/work/repo",
+  "settings": {"skill_overrides": {}, "claude_md_excludes": [], "enabled_plugins": ["ops@tools"]},
+  "plugins": {"mode": "enabled", "marketplace": "tools", "available": [{"name": "ops", "path": "dev_tools/plugins/ops"}], "enabled": ["ops"], "loaded": ["ops"]},
+  "artifacts": [
+    {"kind": "skill", "source": "plugin", "name": "probe", "qualified_name": "ops:probe", "plugin": "ops",
+     "plugin_path": "dev_tools/plugins/ops", "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
+     "visibility": "always", "phase": "start", "paths": [], "listing_text": "ops:probe: Probes a service.",
+     "listing_chars": 28, "truncated": false, "text_bytes": 28, "text_sha256": "…", "tokens": 7, "line_offset": 0,
+     "frontmatter": {"ok": true}, "area": "platform", "area_source": "path"}
+  ],
+  "problems": []
+}
+```
+
+### `ai-rulez exposure areas`
+
+The area map as loaded (terms and ambiguous words normalized) and, for every artifact of the inventory, its area
+and how it was decided: `skill_areas`, `path`, `terms` or `none`. `area_scope` is the directory whose path claims
+were tried: the artifact's scope, or a plugin skill's plugin directory. Diff the JSON against another classifier to
+compare them. Without an area map the command fails. The JSON follows
+[`schema/exposure-areas.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-areas.v1.schema.json):
+
+```json
+{
+  "schema_version": 1,
+  "root": "/work/repo",
+  "areas_file": "tools/context/areas.toml",
+  "plugins": "enabled",
+  "areas": [{"name": "billing", "description": "", "owner": "team-billing", "paths": ["services/billing_*"],
+             "terms": ["invoice"], "ambiguous": [], "shared": false, "declare": ""}],
+  "skill_areas": {"deploy-staging": "platform"},
+  "artifacts": [
+    {"kind": "skill", "source": "plugin", "name": "probe", "qualified_name": "ops:probe", "plugin": "ops",
+     "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".", "area_scope": "dev_tools/plugins/ops",
+     "phase": "start", "area": "platform", "area_source": "path"}
+  ],
+  "counts": {"billing": 4, "platform": 3, "unclassified": 12}
+}
+```
 
 ## Validation
 

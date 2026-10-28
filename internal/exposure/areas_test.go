@@ -112,3 +112,39 @@ func TestInventory_ClassifyWithoutAMapLeavesEverythingUnclassified(t *testing.T)
 		assert.Equal(t, areas.SourceNone, a.AreaSource, a.Path)
 	}
 }
+
+func TestNewAreasReport(t *testing.T) {
+	// Arrange
+	inv := build(t, classifiedRepo(t), func(o *Options) { o.Plugins = PluginsAll })
+
+	// Act
+	rep := NewAreasReport(inv, classifiedMap(t), "tools/areas.toml")
+
+	// Assert
+	assert.Equal(t, SchemaAreas, rep.SchemaVersion)
+	assert.Equal(t, inv.Root, rep.Root)
+	assert.Equal(t, "tools/areas.toml", rep.AreasFile)
+	assert.Equal(t, PluginsAll, rep.Plugins)
+	require.Len(t, rep.Areas, 3)
+	assert.Equal(t, AreaInfo{Name: "tooling", Paths: []string{"tools"}, Terms: []string{}, Ambiguous: []string{}, Shared: true}, rep.Areas[2])
+	assert.Equal(t, map[string]string{"kit:solo": "search", "lookup": "billing", "deploy": "tooling"}, rep.SkillAreas)
+	require.Len(t, rep.Artifacts, len(inv.Artifacts))
+	probe := rep.Artifacts[0]
+	for _, a := range rep.Artifacts {
+		if a.QualifiedName == "ops:probe" {
+			probe = a
+		}
+	}
+	assert.Equal(t, ClassifiedArtifact{
+		Kind: KindSkill, Source: SourcePlugin, Name: "probe", QualifiedName: "ops:probe", Plugin: "ops",
+		Path: "tools/plugins/ops/skills/probe/SKILL.md", Scope: RootScope, AreaScope: "tools/plugins/ops",
+		Phase: PhaseStart, Area: "tooling", AreaSource: areas.SourcePath,
+	}, probe)
+	total := 0
+	for _, n := range rep.Counts {
+		total += n
+	}
+	assert.Equal(t, len(inv.Artifacts), total)
+	assert.Equal(t, 2, rep.Counts["tooling"], "ops:probe and deploy")
+	assert.Empty(t, inv.Artifacts[0].Area, "the report leaves the inventory unclassified")
+}
