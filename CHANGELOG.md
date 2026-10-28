@@ -40,6 +40,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `schema/exposure-collisions.v1.schema.json` with `--format json`). `validate` reports the same pairs as `AR9W2`, off
   until `[exposure] collision_min_score` is set, which turns it on at warning, on the description line of the pair's
   first listing.
+- **`AR9W4 exposure-gate-unreadable`.** `validate` warns about a skill, command or rule whose frontmatter does not
+  parse (`AR306`) while a line of the block names `paths`, `disable-model-invocation` or `user-invocable`: Claude Code
+  recovers some broken blocks and keeps the gate, and drops others whole, so the item may load at session start in
+  every session. Reported on the line of the first gate key, for the claude preset and for a run without a
+  configuration; no `[exposure]` table is needed. `exposure inventory` gives such a root item the phase `unknown`,
+  counted as start. See [A gate that cannot be read](https://goldziher.github.io/ai-rulez/exposure/#a-gate-that-cannot-be-read),
+  which also records how Claude Code reads the YAML 1.1 booleans `yes`, `on` and `no`.
 
 ### Changed
 
