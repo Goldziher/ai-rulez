@@ -332,3 +332,37 @@ func TestExposureLeakageUnderTheSourceRoot(t *testing.T) {
 	require.Len(t, got.Leaks, 1, "the view finds the finding in the file below the source root")
 	assert.Equal(t, "CLAUDE.md", got.Leaks[0].Path)
 }
+
+// Under a source rooted below the project, an entry can only be judged when its path could match a file of that
+// root: an entry for a file elsewhere accepts nothing there without being stale.
+func TestExposureLeakageAcceptanceUnderTheSourceRoot(t *testing.T) {
+	accept := func(rule, path, match string) string {
+		return "\n[[lint.accept]]\nrule = \"" + rule + "\"\npath = \"" + path + "\"\nmatch = '" + match + "'\nreason = \"kept\"\n"
+	}
+	tests := []struct {
+		name      string
+		accepts   string
+		wantStale int
+	}{
+		{name: "an entry for a file outside the root is not judged", accepts: accept("AR9W0", ".mcp.json", `mcp_server "invoice-`)},
+		{name: "an entry for a file under the root that accepts nothing is stale", accepts: accept("AR9W0", "services/billing/CLAUDE.md", `names term "ledger"`), wantStale: 1},
+		{name: "an entry for a file under the root that accepts the leak is used", accepts: accept("AR9W0", "services/billing/CLAUDE.md", `names term "invoice"`)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := leakProject(t, tt.accepts)
+			writeFiles(t, root, map[string]string{"services/billing/CLAUDE.md": "# Billing\nEvery invoice.\n"})
+			gitAdd(t, root)
+			leak := ExposureLeak{Area: "billing", Term: "invoice", Kind: "claude_md", Name: "CLAUDE.md", Path: "CLAUDE.md", Scope: ".", Line: 2, Excerpt: "Every invoice.", Message: leakMessage("claude_md", "CLAUDE.md", "invoice", "billing")}
+			src := leakSource(root, leak)
+			src.root = filepath.Join(root, "services", "billing")
+
+			// Act
+			rep := leakRun(t, root, WithExposure(src))
+
+			// Assert
+			assert.Equal(t, tt.wantStale, countCode(rep.Findings, CodeAcceptUnused), dump(rep.Findings))
+		})
+	}
+}

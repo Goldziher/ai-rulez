@@ -123,7 +123,7 @@ func TestExposureLeakage(t *testing.T) {
 			{Severity: "violation", Code: "AR9W0", Area: "billing", Term: "invoice", Kind: "claude_md", Name: "CLAUDE.md", Path: "CLAUDE.md", Line: 3},
 			{Severity: "warning", Code: "AR9W1", Area: "billing", Term: "card", Kind: "skill", Name: "charge", Path: ".claude/skills/charge/SKILL.md", Line: 1},
 		}, doc.Findings, "the session of services/billing, not the repository root's")
-		assert.Len(t, doc.Stale, 1, "the acceptance of the root .mcp.json accepts nothing below it")
+		assert.Empty(t, doc.Stale, "the acceptance of the root .mcp.json is not judged below the root")
 
 		text := env.run(root, "exposure", "leakage", "--root", billing)
 		require.Equal(t, 2, text.ExitCode, text.Stderr)
