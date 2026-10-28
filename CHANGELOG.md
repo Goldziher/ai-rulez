@@ -47,6 +47,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   configuration; no `[exposure]` table is needed. `exposure inventory` gives such a root item the phase `unknown`,
   counted as start. See [A gate that cannot be read](https://goldziher.github.io/ai-rulez/exposure/#a-gate-that-cannot-be-read),
   which also records how Claude Code reads the YAML 1.1 booleans `yes`, `on` and `no`.
+- **`ai-rulez exposure`: the start-of-session report, `AR9W3 exposure-start-budget` and the Claude skill listing
+  budget.** Run without a subcommand, `exposure` reports what a Claude Code session started at the repository root
+  costs before it touches a file: the estimated start tokens in total and by kind (a root artifact whose frontmatter
+  does not parse counts as start), the skill listing against Claude Code's listing budget (1% of the context window
+  at 4 characters per token, 8000 characters at 200000 tokens), the capped descriptions, the artifacts and tokens by
+  phase and kind, and the heaviest artifacts at start (`--context-window N`, `--plugins none|enabled|all`,
+  `--harness claude`, `--areas FILE`, `--root DIR`; `--format json` prints `schema/exposure-report.v1.schema.json`).
+  It exits 2 when the start tokens exceed the new `[exposure] start_budget`, which `validate` also reports as
+  `AR9W3`, an error, off while `start_budget` is unset. With an `[exposure]` table and the claude preset, `AR964`
+  gains the row `claude-skill-listing-total` (warning past the budget, info from 90%), measured over the skills a
+  session lists at start with `[exposure] plugins` and `context_window`; `[lint.load_budgets]
+  claude-skill-listing-total` sets a fixed budget instead. The `exposure` command without a subcommand used to print
+  its help.
 
 ### Changed
 

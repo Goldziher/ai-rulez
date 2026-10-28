@@ -1651,12 +1651,16 @@ The table is pinned in the lock. See [Verifiers](verifiers.md#settings).
 Describes the areas of a repository (the directories each one claims, its owner and the words that name it) for the
 session exposure checks. The map is inline or in `areas_file`, not both; `validate` reports a map it cannot use as
 `AR9W5`, and `collision_min_score` turns on `AR9W2` for start-listed skills and agents of different areas whose
-listings overlap. Without the table nothing changes. See [Session exposure and areas](exposure.md).
+listings overlap. `start_budget` caps the estimated tokens a session loads at start (`AR9W3`), and `context_window`
+sizes the skill listing budget `AR964` checks. Without the table nothing changes. See
+[Session exposure and areas](exposure.md).
 
 ```toml
 [exposure]
 areas_file = "tools/context/areas.toml"   # [[area]] tables and [skill_areas], relative to the project root
 collision_min_score = 0.2                 # AR9W2 at warning; 0 (default) is off
+context_window = 200000                   # tokens; the skill listing budget is 1% of it at 4 characters per token
+start_budget = 6000                       # AR9W3 above 6000 estimated start tokens; 0 (default) is off
 ```
 
 ### `header`

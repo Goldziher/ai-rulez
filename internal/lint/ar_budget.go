@@ -14,7 +14,7 @@ import (
 const CodeLoadBudget = "AR964"
 
 func registerArBudget(s *ruleSet) {
-	s.addRules(RuleInfo{CodeLoadBudget, "load-budget-exceeded", SeverityWarning, "content exceeds a documented load limit of a configured harness (Claude skill listing, Codex AGENTS.md chain and skill listing, Windsurf/Devin rule files, Cursor rule length)"})
+	s.addRules(RuleInfo{CodeLoadBudget, "load-budget-exceeded", SeverityWarning, "content exceeds a documented load limit of a configured harness (Claude skill listing per skill and in total, Codex AGENTS.md chain and skill listing, Windsurf/Devin rule files, Cursor rule length)"})
 	s.addRunCheck(checkLoadBudgets, AnalyzerPlugin)
 }
 
@@ -39,8 +39,14 @@ type loadBudget struct {
 
 const loadBudgetsChecked = "2026-10-05"
 
+// loadBudgetClaudeListingTotal is the row of the whole Claude skill listing. Its
+// limit scales with the context window, so the run takes it from the exposure
+// measure (WithExposure) and the row's Limit is the figure at 200000 tokens.
+const loadBudgetClaudeListingTotal = "claude-skill-listing-total"
+
 var loadBudgets = []loadBudget{
 	{ID: "claude-skill-listing", Presets: []string{presetClaude}, Scope: "listing", Unit: unitChars, Limit: 1536, Source: "https://code.claude.com/docs/en/skills", Checked: loadBudgetsChecked, Verified: true},
+	{ID: loadBudgetClaudeListingTotal, Presets: []string{presetClaude}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://code.claude.com/docs/en/skills", Checked: "2026-10-28", Verified: true},
 	{ID: "codex-agents-chain", Presets: []string{presetCodex}, Scope: scopeChain, Unit: unitBytes, Limit: 32768, Source: "https://learn.chatgpt.com/docs/agent-configuration/agents-md", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "codex-skill-listing", Presets: []string{presetCodex}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://learn.chatgpt.com/docs/agent-configuration/skills", Checked: loadBudgetsChecked},
 	{ID: "windsurf-rule-file", Label: "Windsurf (devin preset)", Presets: []string{"devin"}, Scope: scopeFile, Unit: unitChars, Limit: 12000, Source: "https://docs.devin.ai/desktop/cascade/memories", Checked: loadBudgetsChecked, Verified: true},
@@ -100,6 +106,10 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 		own := loadBudgets[i]
 		b := &own
 		if !b.applies(configured) {
+			continue
+		}
+		if b.ID == loadBudgetClaudeListingTotal {
+			checkClaudeListingTotal(r, b, cfgPath, cfgLines)
 			continue
 		}
 		if v := r.lc.LoadBudgets[b.ID]; v > 0 {
@@ -184,6 +194,31 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 			r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "the %d skill names and descriptions%s add up to %d of %d %s, within 10%% of the skill listing budget of %s (%s)",
 				name, fallbackNote(fallback), total, b.Limit, b.Unit, b.presetLabel(), b.Source)
 		}
+	}
+}
+
+// checkClaudeListingTotal reports the start-of-session skill listing of the
+// native Claude Code inventory against Claude Code's listing budget, 1% of the
+// context window at 4 characters per token. It runs only with an [exposure]
+// table, whose inventory measures what Claude Code lists rather than what
+// ai-rulez generates.
+func checkClaudeListingTotal(r *runner, b *loadBudget, cfgPath string, cfgLines []string) {
+	start := r.exposureStart()
+	if start == nil || cfgPath == "" {
+		return
+	}
+	limit, basis := start.ListingBudgetChars, fmt.Sprintf("1%% of a %d-token context window at about 4 characters per token", start.ContextWindow)
+	if v := r.lc.LoadBudgets[b.ID]; v > 0 {
+		limit, basis = v, "[lint.load_budgets] "+b.ID
+	}
+	at := max(1, lineContaining(cfgLines, `"`+presetClaude+`"`))
+	switch {
+	case start.ListingChars > limit:
+		r.add(CodeLoadBudget, cfgPath, at, "the %d skills a session lists at start add up to %d %s, past the %d-%s skill listing budget of %s (%s, %s); Claude Code drops descriptions to fit, starting with the skills invoked least",
+			start.ListingSkills, start.ListingChars, b.Unit, limit, b.Unit, b.presetLabel(), basis, b.Source)
+	case start.ListingChars*10 >= limit*9:
+		r.addSev(SeverityInfo, CodeLoadBudget, cfgPath, at, "the %d skills a session lists at start add up to %d of %d %s, within 10%% of the skill listing budget of %s (%s, %s)",
+			start.ListingSkills, start.ListingChars, limit, b.Unit, b.presetLabel(), basis, b.Source)
 	}
 }
 

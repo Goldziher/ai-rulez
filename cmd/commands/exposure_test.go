@@ -159,3 +159,78 @@ func TestLoadExposureUsesTheConfigFlagsWithRoot(t *testing.T) {
 		})
 	}
 }
+
+func TestRunExposureReportRejectsBadFlags(t *testing.T) {
+	tests := []struct {
+		name  string
+		flags exposureFlags
+		want  string
+	}{
+		{"unknown harness", exposureFlags{harness: "codex", root: t.TempDir()}, `unknown --harness "codex" (only claude)`},
+		{"negative window", exposureFlags{harness: "claude", contextWindow: -1, root: t.TempDir()}, "--context-window must be positive"},
+		{"unknown plugin mode", exposureFlags{harness: "claude", plugins: "some", root: t.TempDir()}, `unknown --plugins "some"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := runExposureReport(t.Context(), &bytes.Buffer{}, &tt.flags)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+}
+
+func TestWriteReportText(t *testing.T) {
+	inv := &exposure.Inventory{
+		Root: "/r", Harness: exposure.HarnessClaude,
+		Artifacts: []exposure.Artifact{
+			{Kind: exposure.KindClaudeMD, QualifiedName: "CLAUDE.md", Path: "CLAUDE.md", Phase: exposure.PhaseStart, Tokens: 50},
+			{Kind: exposure.KindSkill, QualifiedName: "a", Path: ".claude/skills/a/SKILL.md", Phase: exposure.PhaseStart, Tokens: 10, ListingChars: 60, Truncated: true},
+			{Kind: exposure.KindSkill, QualifiedName: "b", Path: ".claude/skills/b/SKILL.md", Phase: exposure.PhaseUnknown, Tokens: 4, ListingChars: 10},
+			{Kind: exposure.KindRule, QualifiedName: "r", Path: "svc/.claude/rules/r.md", Phase: exposure.PhaseOnDemand, Tokens: 300},
+		},
+	}
+	tests := []struct {
+		name   string
+		opts   exposure.ReportOptions
+		want   []string
+		absent []string
+	}{
+		{
+			name: "within budget",
+			opts: exposure.ReportOptions{ContextWindow: 200000},
+			want: []string{
+				"start of session: 3 artifacts, ~64 tokens",
+				"skill listing: 2 skills, 70 chars of 8000 budget (200000 token window), 1 description cut at the per-skill cap",
+				"start tokens by kind:\n  claude_md: 50\n  skill: 14\n",
+				"  start: claude_md 1, skill 1\n  on_demand: rule 1\n  manual: none\n  unknown: skill 1\n",
+				"tokens if loaded, by phase:\n  start: 60\n  on_demand: 300\n  unknown: 4\n",
+				"heaviest at start:\n  ~50 claude_md CLAUDE.md\n  ~10 skill .claude/skills/a/SKILL.md\n  ~4 skill .claude/skills/b/SKILL.md\n",
+			},
+			absent: []string{"OVER", "start budget", "svc/.claude/rules/r.md"},
+		},
+		{
+			name: "over the listing budget and the start budget",
+			opts: exposure.ReportOptions{ContextWindow: 1000, StartBudget: 60},
+			want: []string{"70 chars of 40 budget (1000 token window), OVER by 30: descriptions will be dropped", "start budget: OVER by 4: [exposure] start_budget 60"},
+		},
+		{
+			name: "within the start budget",
+			opts: exposure.ReportOptions{ContextWindow: 200000, StartBudget: 64},
+			want: []string{"start budget: within [exposure] start_budget 64"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+
+			require.NoError(t, writeReportText(&out, exposure.NewReport(inv, tt.opts)))
+
+			for _, w := range tt.want {
+				assert.Contains(t, out.String(), w)
+			}
+			for _, w := range tt.absent {
+				assert.NotContains(t, out.String(), w)
+			}
+		})
+	}
+}

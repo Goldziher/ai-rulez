@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-report.v1.schema.json",
+  "title": "ai-rulez exposure report",
+  "description": "Output of `ai-rulez exposure --format json`: what a Claude Code session started at the repository root loads before it touches a file, the skill listing against Claude Code's listing budget, and what waits on demand or for the user. An artifact of phase unknown counts as start in start_tokens, start_tokens_by_kind and listing. See docs/exposure.md.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "harness",
+    "root",
+    "plugins",
+    "start_budget",
+    "listing",
+    "start_tokens",
+    "tokens_by_phase",
+    "start_tokens_by_kind",
+    "counts_by_phase_and_kind",
+    "items"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
+    "phase": { "enum": ["start", "on_demand", "manual", "unknown"] },
+    "count": { "type": "integer", "minimum": 0 },
+    "kindCounts": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/kind" },
+      "additionalProperties": { "$ref": "#/definitions/count" }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "harness": { "const": "claude" },
+    "root": { "type": "string", "description": "The absolute repository root, slash separated." },
+    "plugins": {
+      "type": "object",
+      "description": "The repository marketplace as the inventory read it; the skills of the loaded plugins are listed at start.",
+      "required": ["mode", "marketplace", "available", "enabled", "loaded"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["none", "enabled", "all"] },
+        "marketplace": { "type": "string" },
+        "available": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "path"],
+            "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "path": { "type": "string" } }
+          }
+        },
+        "enabled": { "type": "array", "items": { "type": "string" } },
+        "loaded": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "start_budget": {
+      "$ref": "#/definitions/count",
+      "description": "The [exposure] start_budget the start tokens were checked against; 0 when there is none. The command exits 2 when start_tokens exceeds a non-zero budget."
+    },
+    "listing": {
+      "type": "object",
+      "description": "The start-of-session skill listing against Claude Code's budget: 1% of the context window at 4 characters per token.",
+      "required": ["context_window", "skills", "chars", "budget_chars", "over_budget_chars", "descriptions_capped"],
+      "additionalProperties": false,
+      "properties": {
+        "context_window": { "type": "integer", "minimum": 1, "description": "The model context window in tokens." },
+        "skills": { "$ref": "#/definitions/count" },
+        "chars": { "$ref": "#/definitions/count", "description": "Characters of the listing lines of the listed skills." },
+        "budget_chars": { "$ref": "#/definitions/count" },
+        "over_budget_chars": { "$ref": "#/definitions/count", "description": "chars past budget_chars, 0 when the listing fits." },
+        "descriptions_capped": {
+          "$ref": "#/definitions/count",
+          "description": "Listed skills whose description and when_to_use exceed the per-skill listing cap."
+        }
+      }
+    },
+    "start_tokens": { "$ref": "#/definitions/count", "description": "Estimated tokens in context at session start." },
+    "tokens_by_phase": {
+      "type": "object",
+      "description": "Estimated tokens of every artifact of a phase, if all of them loaded; only phases that have artifacts.",
+      "propertyNames": { "$ref": "#/definitions/phase" },
+      "additionalProperties": { "$ref": "#/definitions/count" }
+    },
+    "start_tokens_by_kind": { "$ref": "#/definitions/kindCounts" },
+    "counts_by_phase_and_kind": {
+      "type": "object",
+      "description": "Artifacts per phase and kind; start, on_demand and manual are always present, unknown when an artifact has it.",
+      "required": ["start", "on_demand", "manual"],
+      "propertyNames": { "$ref": "#/definitions/phase" },
+      "additionalProperties": { "$ref": "#/definitions/kindCounts" }
+    },
+    "items": {
+      "type": "array",
+      "description": "Every artifact of the inventory, in inventory order.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "name", "path", "scope", "phase", "tokens"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "$ref": "#/definitions/kind" },
+          "name": { "type": "string", "description": "The qualified name: plugin:skill for a plugin skill." },
+          "path": { "type": "string" },
+          "scope": { "type": "string", "description": "The directory that owns the artifact; \".\" for the root." },
+          "phase": { "$ref": "#/definitions/phase" },
+          "tokens": { "$ref": "#/definitions/count" },
+          "area": { "type": "string", "description": "The artifact's area, when an area map is configured or given." }
+        }
+      }
+    }
+  }
+}

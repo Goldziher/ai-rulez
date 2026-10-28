@@ -5,11 +5,12 @@ the start of every session (the root `CLAUDE.md`, unconditional rules, the skill
 those parts unless every session needs it, and a skill that belongs to one part should say so. The `[exposure]` table
 describes the parts as an **area map**: which directories each area claims, who owns it, and the words that name it.
 
-This page describes the table, how the map is matched, and the commands that show what a Claude Code session loads
-and where each artifact belongs. The rules and reports that build on it (start-of-session exposure, area term
-leakage) follow in later releases; today `validate` checks the map itself (`AR9W5`), reports a frontmatter gate
-that cannot be read (`AR9W4`) and, when `collision_min_score` is set, listings of different areas that overlap
-(`AR9W2`). Without an `[exposure]` table no rule on this page has any effect except `AR9W4`, which needs none; the
+This page describes the table, how the map is matched, and the commands that show what a Claude Code session loads,
+what that costs at the start of every session, and where each artifact belongs. `validate` checks the map itself
+(`AR9W5`), the start-of-session budget (`AR9W3`), the skill listing budget (`AR964`), a frontmatter gate that cannot
+be read (`AR9W4`) and, when `collision_min_score` is set, listings of different areas that overlap (`AR9W2`). The area
+term leakage rules follow in later releases. Without an `[exposure]` table no rule on this page has any effect except
+`AR9W4`, which needs none; the
 commands work without one.
 
 - [Configuration](#configuration)
@@ -18,6 +19,7 @@ commands work without one.
 - [Classifying an artifact](#classifying-an-artifact)
 - [The owner of a skill](#the-owner-of-a-skill)
 - [Commands](#commands)
+- [Start-of-session budgets](#start-of-session-budgets)
 - [Validation](#validation)
 
 ## Configuration
@@ -45,10 +47,11 @@ declare = "services/billing/"      # optional: what a session of this area decla
 deploy-staging = "platform"
 ```
 
-Every key is optional. `collision_min_score` turns on `AR9W2` and is the default `--min-score` of
-`exposure collisions`; `plugins` is the default `--plugins` of the commands. `start_budget`, `context_window` and
-`declare` are read by the exposure report and context evals, which arrive in later releases; they are validated now
-so a table written today keeps working.
+Every key is optional. `plugins`, `context_window` and `start_budget` are read by `ai-rulez exposure` and by
+`validate` (see [Start-of-session budgets](#start-of-session-budgets)); `collision_min_score` turns on `AR9W2` and is
+the default `--min-score` of `exposure collisions`; `plugins` is also the default `--plugins` of the subcommands.
+`declare` is read by context evals, which arrive in a later release, and is validated now so a table written today
+keeps working.
 
 The map is either inline (`[[exposure.areas]]` and `[exposure.skill_areas]`) or in `areas_file`, never both. The
 file is resolved from the project root, must stay inside it, and holds the same fields under shorter names:
@@ -144,7 +147,8 @@ or is invalid fails the command), else the one `--config-dir` names in `DIR`, el
 upwards, so `--root` on a subdirectory of a project uses the project's map; `--no-local` applies either way. The
 `areas_file` of the configuration stays relative to the configuration's project root; the path claims of the map are
 matched against artifact paths relative to `--root`. Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid
-configuration or area map, whose problems are listed with their lines as `AR9W5` reports them).
+configuration or area map, whose problems are listed with their lines as `AR9W5` reports them), `2` (`exposure`
+only) the start tokens exceed `[exposure] start_budget`.
 
 | Flag | Commands | Meaning |
 | --- | --- | --- |
@@ -152,9 +156,55 @@ configuration or area map, whose problems are listed with their lines as `AR9W5`
 | `--plugins none\|enabled\|all` | all | Marketplace plugins whose skills are listed: none, the ones the root `.claude/settings*.json` enable, or all; default `[exposure] plugins`, else `enabled` |
 | `--areas FILE` | all | Area map file to use instead of the `[exposure]` table |
 | `--root DIR` | all | Repository root to inspect |
+| `--context-window N` | `exposure` | Model context window in tokens, for the skill listing budget; default `[exposure] context_window`, else 200000 |
+| `--harness claude` | `exposure` | Harness whose load model applies; only `claude` |
 | `--with-text` | `inventory` | Include each artifact's text in the JSON (`--format json` only; with text output it is an error) |
 | `--min-score N` | `collisions` | Lowest score reported, 0 to 1; default `[exposure] collision_min_score` when set, else 0.1 |
 | `--limit N` | `collisions` | Pairs printed, highest score first (default 20); 0 prints every pair |
+
+### `ai-rulez exposure`
+
+Without a subcommand, `exposure` reports what a session started at the repository root costs before it touches a
+file, and what waits:
+
+- **Start tokens:** the estimated tokens of every start-of-session artifact of the [inventory](#ai-rulez-exposure-inventory)
+  (the same estimate as its `tokens`), in total and by kind. A root rule or skill of phase `unknown` counts as start:
+  a reader that guards the start of a session fails closed.
+- **The skill listing:** the start-of-session skills (plugin skills included, as `--plugins` selects them), the
+  characters of their listing lines, and Claude Code's budget for the listing: 1% of the context window, counted at
+  4 characters per token, so 8000 characters at 200000 tokens. Over the budget Claude Code keeps every skill name but
+  drops descriptions, starting with the skills invoked least, and the descriptions carry the words a request is
+  matched against. `descriptions_capped` counts the listed skills whose description and `when_to_use` pass the
+  per-skill cap of 1536 characters.
+- **Phases:** the artifacts per phase and kind, and the tokens each phase would add if all of it loaded.
+- **The heaviest** five artifacts at start (text only).
+
+The JSON follows [`schema/exposure-report.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-report.v1.schema.json).
+`items` lists every artifact of the inventory with its qualified name, phase and tokens, and its `area` when a map is
+configured or given:
+
+```json
+{
+  "schema_version": 1,
+  "harness": "claude",
+  "root": "/work/repo",
+  "plugins": {"mode": "enabled", "marketplace": "tools", "available": [{"name": "ops", "path": "dev_tools/plugins/ops"}], "enabled": ["ops"], "loaded": ["ops"]},
+  "start_budget": 6000,
+  "listing": {"context_window": 200000, "skills": 24, "chars": 8210, "budget_chars": 8000, "over_budget_chars": 210, "descriptions_capped": 1},
+  "start_tokens": 3120,
+  "tokens_by_phase": {"start": 3120, "on_demand": 48210, "manual": 940},
+  "start_tokens_by_kind": {"skill": 1650, "claude_md": 1020, "agent": 440, "mcp_server": 10, "settings": 0},
+  "counts_by_phase_and_kind": {"start": {"skill": 24, "agent": 5, "mcp_server": 3, "claude_md": 1, "settings": 1},
+                               "on_demand": {"skill": 60, "rule": 40, "claude_md": 20}, "manual": {"skill": 12}},
+  "items": [
+    {"kind": "skill", "name": "ops:probe", "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
+     "phase": "start", "tokens": 7}
+  ]
+}
+```
+
+`counts_by_phase_and_kind` always holds `start`, `on_demand` and `manual`, and `unknown` when an artifact has that
+phase; `tokens_by_phase` holds the phases that have artifacts.
 
 ### `ai-rulez exposure inventory`
 
@@ -312,7 +362,26 @@ as the string `"yes"`: `validate` reports the value as `AR304` (not a boolean), 
 root skill the phase `unknown` with the frontmatter error `"disable-model-invocation" is not a boolean`. Write `true` and
 `false`, which every reader agrees on.
 
+## Start-of-session budgets
+
+Two checks of `validate` read the start-of-session report, both only with an `[exposure]` table, both computed as
+`ai-rulez exposure` computes them with `[exposure] plugins` and `context_window`:
+
+- **`AR9W3 exposure-start-budget`** reports start tokens over `[exposure] start_budget`. It is off while
+  `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same case, so either can gate CI.
+- **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
+  reports a start-of-session skill listing over Claude Code's listing budget, with the claude preset configured.
+  `[lint.load_budgets] claude-skill-listing-total = N` replaces the computed budget with a fixed one.
+
+```toml
+[exposure]
+context_window = 200000            # the listing budget is 8000 characters
+start_budget = 6000                # AR9W3 above 6000 estimated start tokens
+```
+
 ## Validation
+
+`AR9W3 exposure-start-budget` (off, error with `start_budget`) is described in [Start-of-session budgets](#start-of-session-budgets).
 
 `AR9W5 exposure-map-invalid` (error) reports a map that cannot be used: a duplicate, reserved or non-kebab area name,
 a bad path claim (absolute, trailing slash, empty, `.` or `..` segment, `*` other than at the end), a `skill_areas`

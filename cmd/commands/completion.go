@@ -49,6 +49,7 @@ enum  lint-profile     = default strict permissive
 enum  gate-level       = info warning error
 enum  isolation        = none auto require
 enum  harness          = claude codex cursor
+enum  harness@exposure = claude
 enum  tokenizer        = $tokenizers
 enum  mode             = cases activation
 enum  mode@search      = lexical hybrid vector
