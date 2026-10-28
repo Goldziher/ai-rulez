@@ -43,8 +43,31 @@ func Decode(b Block) (map[string]any, error) {
 // rule: `paths` defers it until a matching file is read,
 // `disable-model-invocation` keeps it from the model and `user-invocable` from
 // the user. A block that does not decode but names one of them hides whether,
-// and how, the item is gated.
-var GateKeys = []string{"paths", "disable-model-invocation", "user-invocable"}
+// and how, the item is gated. Each call returns a new slice.
+func GateKeys() []string {
+	return []string{"paths", "disable-model-invocation", "user-invocable"}
+}
+
+// StringList reads a gate value that must be one string or a list of strings,
+// as Claude Code reads `paths`: ok is false for any other value, null and a list
+// holding something other than a string included.
+func StringList(v any) ([]string, bool) {
+	switch t := v.(type) {
+	case string:
+		return []string{t}, true
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, e := range t {
+			s, ok := e.(string)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, s)
+		}
+		return out, true
+	}
+	return nil, false
+}
 
 // NamesKey reports whether a line of a raw block holds one of keys as a key:
 // after any indentation, the key and then a colon, blanks allowed between. It
