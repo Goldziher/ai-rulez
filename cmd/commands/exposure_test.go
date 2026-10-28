@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/exposure"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestExposureMap(t *testing.T) {
@@ -238,4 +239,20 @@ func TestWriteReportText(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A file named through a symlink to the root is still relative to it, as on
+// macOS, where the temporary directory /var/... is /private/var/....
+func TestRootRelativeThroughASymlink(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "real")
+	require.NoError(t, os.MkdirAll(real, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(real, "areas.toml"), nil, 0o600))
+	link := filepath.Join(dir, "link")
+	testutil.SymlinkOrSkip(t, real, link)
+
+	assert.Equal(t, "areas.toml", rootRelative(real, filepath.Join(link, "areas.toml")))
+	assert.Equal(t, "areas.toml", rootRelative(link, filepath.Join(real, "areas.toml")))
+	outside := filepath.Join(t.TempDir(), "areas.toml")
+	assert.Equal(t, filepath.ToSlash(outside), rootRelative(real, outside))
 }

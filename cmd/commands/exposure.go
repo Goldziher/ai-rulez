@@ -368,11 +368,27 @@ func rootRelative(root, p string) string {
 	if err != nil {
 		return filepath.ToSlash(p)
 	}
+	if rel, ok := relativeBelow(root, abs); ok {
+		return rel
+	}
+	// One side may name the other through a symlink (macOS /var is /private/var).
+	if realRoot, err := filepath.EvalSymlinks(root); err == nil {
+		if realAbs, err := filepath.EvalSymlinks(abs); err == nil {
+			if rel, ok := relativeBelow(realRoot, realAbs); ok {
+				return rel
+			}
+		}
+	}
+	return filepath.ToSlash(abs)
+}
+
+// relativeBelow is abs relative to root, slash separated, when abs lies inside root.
+func relativeBelow(root, abs string) (string, bool) {
 	rel, err := filepath.Rel(root, abs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
-		return filepath.ToSlash(abs)
+		return "", false
 	}
-	return filepath.ToSlash(rel)
+	return filepath.ToSlash(rel), true
 }
 
 // writeTable writes rows as aligned columns, the first row being the header.
