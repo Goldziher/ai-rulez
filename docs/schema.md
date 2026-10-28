@@ -180,6 +180,7 @@ The schema files are available in the repository:
 | `schema/exposure-inventory.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure inventory --format json`: every native Claude Code artifact with its phase, visibility and parse status; see [Session exposure](exposure.md#commands) |
 | `schema/exposure-areas.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure areas --format json`: the area map as loaded and the area of every artifact, with how it was decided |
 | `schema/exposure-collisions.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure collisions --format json`: skills and agents listed at session start, of different areas, ranked by the word overlap of their listings; see [Session exposure](exposure.md#ai-rulez-exposure-collisions) |
+| `schema/exposure-leakage.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure leakage --format json`: the area terms in start-of-session text (AR9W0, AR9W1) with their acceptance, and the stale acceptances (AR9I0); see [Session exposure](exposure.md#ai-rulez-exposure-leakage) |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query (lexical or hybrid) |
 | `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--output` writes |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json`: every input construct as mapped, approximated or dropped |

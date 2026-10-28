@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"path/filepath"
 	"strings"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/areas"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/exposure"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
-	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 // sharedWordsShown is the number of shared words a text row of `exposure collisions` prints.
@@ -113,48 +110,4 @@ func sharedText(words []string) string {
 		return strings.Join(words, ", ")
 	}
 	return fmt.Sprintf("%s (+%d)", strings.Join(words[:sharedWordsShown], ", "), len(words)-sharedWordsShown)
-}
-
-// exposureLintSource is the session exposure validate hands the exposure rules (lint.ExposureSource): the
-// inventory of the project root classified with the [exposure] area map.
-type exposureLintSource struct {
-	ctx context.Context
-	cfg *config.Config
-}
-
-// exposureLintOptions hands the exposure rules the project's session exposure when it has an [exposure] table.
-func exposureLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option {
-	if cfg == nil || cfg.Exposure == nil || !lint.AnalyzerSelected(sel, lint.AnalyzerExposure) {
-		return nil
-	}
-	return []lint.Option{lint.WithExposure(exposureLintSource{ctx: ctx, cfg: cfg})}
-}
-
-// Collisions implements lint.ExposureSource. A map with problems, or an inventory that cannot be built, gives
-// none: AR9W5 reports the map.
-func (s exposureLintSource) Collisions(minScore float64) []lint.ExposureCollision {
-	root, err := filepath.Abs(s.cfg.BaseDir)
-	if err != nil {
-		return nil
-	}
-	m, problems := areas.Load(s.cfg.Exposure, root)
-	if m == nil || len(problems) > 0 {
-		return nil
-	}
-	inv, err := exposure.Build(s.ctx, exposure.Options{Root: root, Plugins: exposure.PluginMode(s.cfg.Exposure.EffectivePlugins())})
-	if err != nil {
-		return nil
-	}
-	inv.Classify(m)
-	_, found := exposure.FindCollisions(inv.Artifacts, minScore)
-	out := make([]lint.ExposureCollision, 0, len(found))
-	for i := range found {
-		c := &found[i]
-		out = append(out, lint.ExposureCollision{
-			Score: c.Score, Shared: c.Shared,
-			First: c.First, FirstKind: string(c.FirstKind), FirstName: c.FirstName, FirstArea: c.FirstArea,
-			Second: c.Second, SecondKind: string(c.SecondKind), SecondName: c.SecondName, SecondArea: c.SecondArea,
-		})
-	}
-	return out
 }

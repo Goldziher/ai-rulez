@@ -127,25 +127,6 @@ func TestExposureLintSource(t *testing.T) {
 	}
 }
 
-func TestExposureLintOptions(t *testing.T) {
-	with := &config.Config{Exposure: &config.ExposureConfig{}}
-	tests := []struct {
-		name string
-		cfg  *config.Config
-		sel  []string
-		want int
-	}{
-		{"an [exposure] table", with, nil, 1},
-		{"no [exposure] table", &config.Config{}, nil, 0},
-		{"the exposure analyzer not selected", with, []string{"security"}, 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Len(t, exposureLintOptions(t.Context(), tt.cfg, tt.sel), tt.want)
-		})
-	}
-}
-
 func TestCollisionDefaultsAgree(t *testing.T) {
 	assert.InDelta(t, lint.DefaultExposureCollisionMinScore, exposure.DefaultCollisionMinScore, 0)
 }

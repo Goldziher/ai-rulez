@@ -103,6 +103,8 @@ type Report struct {
 	Units map[string]int `json:"-"`
 	// unitRuns keeps the analyzers each unit declared, for tests.
 	unitRuns map[string]unitRun
+	// leakage is what Leakage reads.
+	leakage *leakageResult
 }
 
 // Counts returns findings per severity.
@@ -230,6 +232,10 @@ type runner struct {
 	// files that refer to a changed file.
 	deps  map[string]map[string]struct{}
 	names map[string][]string
+	// staleAccepts are the [[lint.accept]] entries reported as AR9I0.
+	staleAccepts []staleAccept
+	// leakage is what the leakage rules reported (see ar_exposure_leakage.go).
+	leakage leakageRun
 	// exampleGlobs are the lint.example_paths; exampleCache memoizes the
 	// example-fence lines per file.
 	exampleGlobs []globMatcher
@@ -448,7 +454,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	})
 	assignIdentity(r.findings, tree, r.cwd)
 	rep := &Report{Root: r.display(baseAbs), Notices: r.targets.Notices(), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
-		Units: map[string]int{}, unitRuns: r.units, External: so.External}
+		Units: map[string]int{}, unitRuns: r.units, External: so.External, leakage: r.leakageView()}
 	for name, u := range r.units {
 		rep.Units[name] = u.count
 	}

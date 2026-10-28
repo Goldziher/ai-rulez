@@ -4,7 +4,17 @@
   "title": "ai-rulez exposure areas",
   "description": "Output of `ai-rulez exposure areas --format json`: the area map as loaded and the area of every artifact of the session inventory, with how it was decided. See docs/exposure.md.",
   "type": "object",
-  "required": ["schema_version", "root", "areas_file", "plugins", "areas", "skill_areas", "artifacts", "counts", "problems"],
+  "required": [
+    "schema_version",
+    "root",
+    "areas_file",
+    "plugins",
+    "areas",
+    "skill_areas",
+    "artifacts",
+    "counts",
+    "problems"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": 1 },

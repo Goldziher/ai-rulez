@@ -46,7 +46,7 @@ func TestExposureLintSourceStartExposure(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o750))
 		require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
 	}
-	src := &exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{ContextWindow: 1000}}}
+	src := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{ContextWindow: 1000}}, cache: &exposureCache{}}
 
 	// Act
 	start := src.StartExposure()
@@ -59,11 +59,15 @@ func TestExposureLintSourceStartExposure(t *testing.T) {
 	assert.Equal(t, len("deploy: Deploys the service."), start.ListingChars)
 	assert.Equal(t, 2, start.StartArtifacts, "the root CLAUDE.md and the deploy skill")
 	assert.Positive(t, start.StartTokens)
-	assert.Same(t, src.inventory(), src.inventory(), "the inventory is built once")
+	first, err := src.inventory(root, src.mode())
+	require.NoError(t, err)
+	second, err := src.inventory(root, src.mode())
+	require.NoError(t, err)
+	assert.Same(t, first, second, "the inventory is built once")
 }
 
 func TestExposureLintSourceWithoutAnInventory(t *testing.T) {
-	src := &exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: t.TempDir(), Exposure: &config.ExposureConfig{Plugins: "some"}}}
+	src := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: t.TempDir(), Exposure: &config.ExposureConfig{Plugins: "some"}}}
 
 	assert.Nil(t, src.StartExposure())
 }

@@ -59,6 +59,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerArExposure,
 		registerArExposureCollisions,
 		registerArExposureGate,
+		registerArExposureLeakage,
 		registerArFmcomponents,
 		registerArFrontmatter,
 		registerArHidden,
