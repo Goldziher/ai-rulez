@@ -201,6 +201,9 @@ func TestReportSchemasRejectAWrongDocument(t *testing.T) {
 			`"text_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","tokens":0,"line_offset":0}]}`,
 		"exposure-collisions.v1.schema.json": `{"schema_version":1,"root":"/r","plugins":"none","min_score":0.1,"artifacts_compared":2,"total":1,` +
 			`"collisions":[{"score":0.5,"shared":[],"first":"a","first_kind":"skill","first_name":"a","first_area":"x","second":"b","second_kind":"rule","second_name":"b","second_area":"y"}]}`,
+		"exposure-report.v1.schema.json": `{"schema_version":1,"harness":"claude","root":"/r","plugins":{"mode":"none","marketplace":"","available":[],"enabled":[],"loaded":[]},` +
+			`"start_budget":0,"listing":{"context_window":200000,"skills":0,"chars":0,"budget_chars":8000,"over_budget_chars":0,"descriptions_capped":0},` +
+			`"start_tokens":0,"tokens_by_phase":{"later":1},"start_tokens_by_kind":{},"counts_by_phase_and_kind":{"start":{},"on_demand":{},"manual":{}},"items":[]}`,
 		"exposure-areas.v1.schema.json": `{"schema_version":1,"root":"/r","areas_file":"","plugins":"enabled","areas":[],"skill_areas":{},"counts":{},` +
 			`"artifacts":[{"kind":"skill","source":"file","name":"s","qualified_name":"s","path":"p","scope":".","area_scope":".","phase":"start","area":"a","area_source":"guess"}]}`,
 	} {

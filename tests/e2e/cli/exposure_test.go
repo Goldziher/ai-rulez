@@ -220,6 +220,9 @@ func TestExposureFailures(t *testing.T) {
 		{"an invalid -C with --root", []string{"-C", "badcfg/config.toml", "exposure", "inventory", "--root", "empty"}, "AR9W5"},
 		{"a missing -C with --root", []string{"-C", "nope.toml", "exposure", "inventory", "--root", "empty"}, "does not exist"},
 		{"--with-text without json", []string{"exposure", "inventory", "--with-text"}, "--with-text applies to --format json"},
+		{"an unknown harness", []string{"exposure", "--harness", "codex"}, `unknown --harness "codex"`},
+		{"a negative context window", []string{"exposure", "--context-window", "-5"}, "--context-window must be positive"},
+		{"an unknown subcommand", []string{"exposure", "inventroy"}, `unknown command "inventroy"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -228,4 +231,129 @@ func TestExposureFailures(t *testing.T) {
 			assert.Contains(t, res.Stderr, tt.want)
 		})
 	}
+}
+
+type exposureReportDoc struct {
+	Plugins struct {
+		Loaded []string `json:"loaded"`
+	} `json:"plugins"`
+	StartBudget int `json:"start_budget"`
+	Listing     struct {
+		ContextWindow   int `json:"context_window"`
+		Skills          int `json:"skills"`
+		Chars           int `json:"chars"`
+		BudgetChars     int `json:"budget_chars"`
+		OverBudgetChars int `json:"over_budget_chars"`
+	} `json:"listing"`
+	StartTokens          int                       `json:"start_tokens"`
+	StartTokensByKind    map[string]int            `json:"start_tokens_by_kind"`
+	CountsByPhaseAndKind map[string]map[string]int `json:"counts_by_phase_and_kind"`
+	Items                []struct {
+		Kind  string `json:"kind"`
+		Name  string `json:"name"`
+		Phase string `json:"phase"`
+		Area  string `json:"area"`
+	} `json:"items"`
+}
+
+func exposureReport(t *testing.T, stdout string) exposureReportDoc {
+	t.Helper()
+	var doc exposureReportDoc
+	require.NoError(t, json.Unmarshal([]byte(stdout), &doc), stdout)
+	return doc
+}
+
+func TestExposureReport(t *testing.T) {
+	env := newIsoEnv(t)
+	root := exposureProject(t, env, exposureAreasConfig)
+
+	t.Run("json reports the start of the session and the listing budget", func(t *testing.T) {
+		res := env.run(root, "exposure", "--format", "json")
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		validateAgainstSchema(t, "exposure-report.v1.schema.json", res.Stdout)
+		doc := exposureReport(t, res.Stdout)
+		assert.Equal(t, []string{"ops", "kit"}, doc.Plugins.Loaded)
+		assert.Equal(t, 200000, doc.Listing.ContextWindow)
+		assert.Equal(t, 8000, doc.Listing.BudgetChars)
+		assert.Equal(t, doc.CountsByPhaseAndKind["start"]["skill"], doc.Listing.Skills)
+		assert.GreaterOrEqual(t, doc.Listing.Skills, 3, "the generated deploy skill and both plugin skills")
+		assert.Positive(t, doc.Listing.Chars)
+		assert.Zero(t, doc.StartBudget)
+		sum := 0
+		for _, n := range doc.StartTokensByKind {
+			sum += n
+		}
+		assert.Equal(t, doc.StartTokens, sum)
+		areas := map[string]string{}
+		for _, it := range doc.Items {
+			areas[it.Name] = it.Area
+		}
+		assert.Equal(t, "tooling", areas["ops:probe"], "items carry the area of the configured map")
+	})
+
+	t.Run("--context-window scales the listing budget", func(t *testing.T) {
+		res := env.run(root, "exposure", "--format", "json", "--context-window", "1000")
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		doc := exposureReport(t, res.Stdout)
+		assert.Equal(t, 40, doc.Listing.BudgetChars)
+		assert.Equal(t, doc.Listing.Chars-40, doc.Listing.OverBudgetChars)
+	})
+
+	t.Run("--plugins none leaves the plugin skills out", func(t *testing.T) {
+		res := env.run(root, "exposure", "--format", "json", "--plugins", "none")
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		for _, it := range exposureReport(t, res.Stdout).Items {
+			assert.NotEqual(t, "ops:probe", it.Name)
+		}
+	})
+
+	t.Run("text names the totals and the heaviest artifacts", func(t *testing.T) {
+		res := env.run(root, "exposure")
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		for _, want := range []string{"start of session:", "skill listing:", "of 8000 budget (200000 token window)", "start tokens by kind:", "artifacts by phase and kind:", "heaviest at start:"} {
+			assert.Contains(t, res.Stdout, want)
+		}
+	})
+
+	t.Run("the subcommands still run", func(t *testing.T) {
+		for _, sub := range []string{"inventory", "areas"} {
+			res := env.run(root, "exposure", sub, "--format", "json")
+			require.Equal(t, 0, res.ExitCode, "%s: %s", sub, res.Stderr)
+			assert.NotContains(t, res.Stdout, `"start_tokens"`, sub)
+		}
+	})
+}
+
+func TestExposureStartBudget(t *testing.T) {
+	env := newIsoEnv(t)
+	root := exposureProject(t, env, "\n[exposure]\nstart_budget = 1\n")
+
+	t.Run("the report exits 2 over the budget", func(t *testing.T) {
+		res := env.run(root, "exposure", "--format", "json")
+		require.Equal(t, 2, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
+		validateAgainstSchema(t, "exposure-report.v1.schema.json", res.Stdout)
+		doc := exposureReport(t, res.Stdout)
+		assert.Equal(t, 1, doc.StartBudget)
+		assert.Greater(t, doc.StartTokens, 1)
+	})
+
+	t.Run("text says by how much", func(t *testing.T) {
+		res := env.run(root, "exposure")
+		require.Equal(t, 2, res.ExitCode, res.Stderr)
+		assert.Contains(t, res.Stdout, "start budget: OVER by")
+	})
+
+	t.Run("validate reports AR9W3", func(t *testing.T) {
+		res := env.run(root, "validate")
+		assert.NotEqual(t, 0, res.ExitCode)
+		assert.Contains(t, res.Stdout+res.Stderr, "AR9W3")
+	})
+
+	t.Run("within the budget exits 0 and validate is quiet", func(t *testing.T) {
+		roomy := exposureProject(t, env, "\n[exposure]\nstart_budget = 1000000\n")
+		res := env.run(roomy, "exposure")
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		assert.Contains(t, res.Stdout, "start budget: within")
+		assert.NotContains(t, env.run(roomy, "validate").Stdout, "AR9W3")
+	})
 }

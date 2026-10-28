@@ -30,32 +30,44 @@ const (
 
 // exposureFlags are the flags of the exposure commands.
 type exposureFlags struct {
-	root      string
-	areasFile string
-	plugins   string
-	asJSON    bool
-	withText  bool
+	root          string
+	areasFile     string
+	plugins       string
+	harness       string
+	contextWindow int
+	asJSON        bool
+	withText      bool
 }
 
 // exposureInput is what an exposure command reads: the inventory and, when one
 // is configured or given, the area map and where it came from.
 type exposureInput struct {
 	inv       *exposure.Inventory
+	exp       *config.ExposureConfig
 	areas     *areas.Map
 	areasFile string
-	exp       *config.ExposureConfig
 }
 
-// newExposureCmd groups the static session-exposure commands.
+// exposureHeaviest is how many start-of-session artifacts the text report names.
+const exposureHeaviest = 5
+
+// newExposureCmd is the start-of-session exposure report and the static
+// session-exposure commands below it.
 func newExposureCmd() *cobra.Command {
 	var f exposureFlags
 	group := &cobra.Command{
 		Use:   "exposure",
-		Short: "Inspect what a Claude Code session loads and which area each artifact belongs to",
+		Short: "Report what a Claude Code session loads at start, and inspect its artifacts and areas",
 		Long: `Inspect the context a Claude Code session started at the repository root sees: the CLAUDE.md
 files, rules, skills, agents, MCP servers and plugins, when each one loads (at session start, on demand,
 only when the user runs it), and which area of the [exposure] area map it belongs to. The commands are
 offline, free and deterministic; see docs/exposure.md.
+
+Without a subcommand, exposure prints the start-of-session report: the estimated tokens a session loads
+before it touches a file, by kind, the skill listing against Claude Code's listing budget (1% of
+--context-window at 4 characters per token, default [exposure] context_window, else 200000), the artifacts
+by phase and kind, and the heaviest artifacts at start. A root artifact whose frontmatter does not parse
+(phase unknown) counts as start. --format json prints schema/exposure-report.v1.schema.json.
 
 The repository is the project root (the directory of the configuration, else the working directory) or
 --root. The configuration is -C/--config when given, else the one discovered from --root (or from the
@@ -65,11 +77,17 @@ none, enabled (the ones the root .claude/settings*.json enable; the default unle
 says otherwise) or all.
 
 Exit codes: 0 the report was printed, 1 the command could not run (bad flags, an invalid
-configuration or area map).`,
-		Example: `  ai-rulez exposure inventory
+configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget.`,
+		Example: `  ai-rulez exposure
+  ai-rulez exposure --plugins all --context-window 1000000 --format json
+  ai-rulez exposure inventory
   ai-rulez exposure inventory --format json --with-text
   ai-rulez exposure areas --areas tools/context/areas.toml --format json
   ai-rulez exposure collisions --min-score 0.2`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return fail(runExposureReport(cmd.Context(), cmd.OutOrStdout(), &f))
+		},
 	}
 	inventory := &cobra.Command{
 		Use:   "inventory",
@@ -109,11 +127,51 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	pf.StringVar(&f.root, "root", "", "Repository root to inspect (default: the project root, else the working directory)")
 	pf.StringVar(&f.areasFile, "areas", "", "Area map file to use instead of the [exposure] table (the areas_file format)")
 	pf.StringVar(&f.plugins, "plugins", "", "Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled)")
+	group.Flags().IntVar(&f.contextWindow, "context-window", 0, "Model context window in tokens, for the skill listing budget (default: [exposure] context_window, else 200000)")
+	group.Flags().StringVar(&f.harness, "harness", config.ExposureHarnessClaude, "Harness whose load model applies; only claude")
+	addJSONFormat(group.Flags(), &f.asJSON, "")
 	addJSONFormat(inventory.Flags(), &f.asJSON, "")
 	addJSONFormat(areasCmd.Flags(), &f.asJSON, "")
 	inventory.Flags().BoolVar(&f.withText, "with-text", false, "Include each artifact's text in the JSON output")
 	group.AddCommand(inventory, areasCmd, newExposureCollisionsCmd(&f))
 	return group
+}
+
+func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error {
+	if f.harness != config.ExposureHarnessClaude {
+		return oops.Errorf("unknown --harness %q (only %s)", f.harness, config.ExposureHarnessClaude)
+	}
+	if f.contextWindow < 0 {
+		return oops.Errorf("--context-window must be positive, got %d", f.contextWindow)
+	}
+	in, err := loadExposure(ctx, f)
+	if err != nil {
+		return err
+	}
+	if in.areas != nil {
+		in.inv.Classify(in.areas)
+	}
+	window := f.contextWindow
+	if window == 0 {
+		window = in.exp.EffectiveContextWindow()
+	}
+	var budget int
+	if in.exp != nil {
+		budget = in.exp.StartBudget
+	}
+	rep := exposure.NewReport(in.inv, exposure.ReportOptions{ContextWindow: window, StartBudget: budget})
+	if f.asJSON {
+		err = jsondoc.Write(w, rep)
+	} else {
+		err = writeReportText(w, rep)
+	}
+	if err != nil {
+		return err //nolint:wrapcheck // stdout write
+	}
+	if rep.OverStartBudget() {
+		return exitStatus(exitFindings)
+	}
+	return nil
 }
 
 func runExposureInventory(ctx context.Context, w io.Writer, f *exposureFlags) error {
@@ -336,6 +394,79 @@ func writeInventoryText(w io.Writer, inv *exposure.Inventory, withAreas bool) er
 		fmt.Fprintf(w, "problem: %s: %s\n", p.Path, p.Error) //nolint:errcheck // stdout write
 	}
 	return nil
+}
+
+func writeReportText(w io.Writer, rep *exposure.Report) error {
+	start := rep.StartArtifacts()
+	l := rep.Listing
+	listing := fmt.Sprintf("skill listing: %d %s, %d chars of %d budget (%d token window)", l.Skills, plural(l.Skills, "skill"), l.Chars, l.BudgetChars, l.ContextWindow)
+	if l.OverBudgetChars > 0 {
+		listing += fmt.Sprintf(", OVER by %d: descriptions will be dropped", l.OverBudgetChars)
+	}
+	if l.DescriptionsCapped > 0 {
+		listing += fmt.Sprintf(", %d %s cut at the per-skill cap", l.DescriptionsCapped, plural(l.DescriptionsCapped, "description"))
+	}
+	lines := []string{fmt.Sprintf("start of session: %d %s, ~%d tokens", start, plural(start, "artifact"), rep.StartTokens)}
+	if rep.StartBudget > 0 {
+		verdict := "within"
+		if rep.OverStartBudget() {
+			verdict = fmt.Sprintf("OVER by %d:", rep.StartTokens-rep.StartBudget)
+		}
+		lines = append(lines, fmt.Sprintf("start budget: %s [exposure] start_budget %d", verdict, rep.StartBudget))
+	}
+	lines = append(lines, listing, "start tokens by kind:")
+	lines = append(lines, countLines(rep.StartTokensByKind)...)
+	lines = append(lines, "artifacts by phase and kind:")
+	for _, p := range []exposure.Phase{exposure.PhaseStart, exposure.PhaseOnDemand, exposure.PhaseManual, exposure.PhaseUnknown} {
+		counts, ok := rep.CountsByPhaseAndKind[p]
+		if !ok {
+			continue
+		}
+		parts := make([]string, 0, len(counts))
+		for _, kind := range byCountDesc(counts) {
+			parts = append(parts, fmt.Sprintf("%s %d", kind, counts[kind]))
+		}
+		if len(parts) == 0 {
+			parts = []string{"none"}
+		}
+		lines = append(lines, fmt.Sprintf("  %s: %s", p, strings.Join(parts, ", ")))
+	}
+	lines = append(lines, "tokens if loaded, by phase:")
+	for _, p := range []exposure.Phase{exposure.PhaseStart, exposure.PhaseOnDemand, exposure.PhaseManual, exposure.PhaseUnknown} {
+		if n, ok := rep.TokensByPhase[p]; ok {
+			lines = append(lines, fmt.Sprintf("  %s: %d", p, n))
+		}
+	}
+	lines = append(lines, "heaviest at start:")
+	for _, it := range rep.Heaviest(exposureHeaviest) {
+		lines = append(lines, fmt.Sprintf("  ~%d %s %s", it.Tokens, it.Kind, it.Path))
+	}
+	_, err := fmt.Fprintln(w, strings.Join(lines, "\n"))
+	return oops.Wrapf(err, "write the exposure report")
+}
+
+// countLines renders counts as indented `kind: n` lines, the largest first.
+func countLines(counts map[exposure.Kind]int) []string {
+	out := make([]string, 0, len(counts))
+	for _, kind := range byCountDesc(counts) {
+		out = append(out, fmt.Sprintf("  %s: %d", kind, counts[kind]))
+	}
+	return out
+}
+
+// byCountDesc is the kinds of counts, the largest count first, then by name.
+func byCountDesc(counts map[exposure.Kind]int) []exposure.Kind {
+	kinds := make([]exposure.Kind, 0, len(counts))
+	for k := range counts {
+		kinds = append(kinds, k)
+	}
+	sort.Slice(kinds, func(i, j int) bool {
+		if counts[kinds[i]] != counts[kinds[j]] {
+			return counts[kinds[i]] > counts[kinds[j]]
+		}
+		return kinds[i] < kinds[j]
+	})
+	return kinds
 }
 
 func writeAreasText(w io.Writer, rep *exposure.AreasReport) error {

@@ -118,9 +118,10 @@ func TestEveryLimitRowIsWellFormed(t *testing.T) {
 // The duplicated size numbers elsewhere in the repository must equal the table.
 func TestSizeConstantsEqualTheLimitsTable(t *testing.T) {
 	want := map[string]int{
-		"claude-skill-listing": harnesslimits.MustValue("claude.skill_listing_chars"),
-		"codex-agents-chain":   harnesslimits.MustValue("codex.agents_md_chain_bytes"),
-		"windsurf-rule-file":   harnesslimits.MustValue("devin.rule_file_chars"),
+		"claude-skill-listing":       harnesslimits.MustValue("claude.skill_listing_chars"),
+		"claude-skill-listing-total": harnesslimits.MustValue("claude.skill_listing_total_chars"),
+		"codex-agents-chain":         harnesslimits.MustValue("codex.agents_md_chain_bytes"),
+		"windsurf-rule-file":         harnesslimits.MustValue("devin.rule_file_chars"),
 	}
 	for _, b := range loadBudgets {
 		if v, ok := want[b.ID]; ok && b.Limit != v {

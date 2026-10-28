@@ -498,6 +498,7 @@ func (r *runner) resolveSettings() {
 	}
 	r.evalSettings()
 	r.exposureCollisionSeverity()
+	r.exposureStartBudgetSeverity()
 	if r.cfg.LockEnforced() {
 		// An unpinned remote or MCP package is a hole in an enforced lock, not a hint.
 		r.sev[CodeUnpinnedRemote] = SeverityError

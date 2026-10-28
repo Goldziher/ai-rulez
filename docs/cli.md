@@ -3074,6 +3074,7 @@ entry in this table (`schema.JSONContracts`).
 | `ai-rulez doctor --format json` | [`schema/doctor-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/doctor-report.schema.json) |
 | `ai-rulez tokens --format json` | [`schema/tokens-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/tokens-report.schema.json) |
 | `ai-rulez cost --format json` | [`schema/cost-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/cost-report.schema.json) |
+| `ai-rulez exposure --format json` | [`schema/exposure-report.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-report.v1.schema.json) |
 | `ai-rulez exposure inventory --format json` | [`schema/exposure-inventory.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-inventory.v1.schema.json) |
 | `ai-rulez exposure areas --format json` | [`schema/exposure-areas.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-areas.v1.schema.json) |
 | `ai-rulez exposure collisions --format json` | [`schema/exposure-collisions.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-collisions.v1.schema.json) |
