@@ -227,7 +227,8 @@ func TestBuild_EnabledPluginArtifacts(t *testing.T) {
 	}{
 		{name: "only true values", shared: `{"enabledPlugins": {"one@m": true, "off@m": false}}`, want: []string{".claude/settings.json one@m"}, wantEnabled: []string{"one@m"}},
 		{name: "local disables a shared plugin", shared: `{"enabledPlugins": {"one@m": true, "two@m": true}}`, local: `{"enabledPlugins": {"two@m": false}}`, want: []string{".claude/settings.json one@m"}, wantEnabled: []string{"one@m"}},
-		{name: "a plugin both enable is listed once, from the local file", shared: `{"enabledPlugins": {"one@m": true}}`, local: `{"enabledPlugins": {"one@m": true}}`, want: []string{".claude/settings.local.json one@m"}, wantEnabled: []string{"one@m"}},
+		{name: "a plugin both enable is listed once, from the tracked shared file", shared: `{"enabledPlugins": {"one@m": true}}`, local: `{"enabledPlugins": {"one@m": true}}`, want: []string{".claude/settings.json one@m"}, wantEnabled: []string{"one@m"}},
+		{name: "only local enables a plugin the shared file does not name", shared: `{"enabledPlugins": {"one@m": true}}`, local: `{"enabledPlugins": {"two@m": true, "one@m": true}}`, want: []string{".claude/settings.json one@m", ".claude/settings.local.json two@m"}, wantEnabled: []string{"one@m", "two@m"}},
 		{name: "local enables a plugin", shared: `{"enabledPlugins": {"one@m": false}}`, local: `{"enabledPlugins": {"one@m": true}}`, want: []string{".claude/settings.local.json one@m"}, wantEnabled: []string{"one@m"}},
 		{name: "a non-boolean value makes the file unreadable", shared: `{"enabledPlugins": {"one@m": "yes"}}`},
 		{name: "keys keep their order", shared: `{"enabledPlugins": {"z@m": true, "a@m": true}}`, want: []string{".claude/settings.json z@m", ".claude/settings.json a@m"}, wantEnabled: []string{"a@m", "z@m"}},
