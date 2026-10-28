@@ -57,6 +57,7 @@ nav = [
   { "Validate" = [
     { "GitHub Actions" = "github-actions.md" },
     { "Strict Validation" = "strict-validation.md" },
+    { "Session Exposure and Areas" = "exposure.md" },
     { "Verifiers" = "verifiers.md" },
     { "Poly Hooks" = "poly-hooks.md" },
   ] },

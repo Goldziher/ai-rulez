@@ -154,9 +154,9 @@ func (v *repoView) contextCandidates(q scopeQuery) (items []repoindex.Item, scop
 		all = v.index.Items()
 	}
 	asDir := q.Path != "" && v.isDir(q.Path)
-	for _, it := range all {
-		if servedAsContext(it.Kind) && (q.Path == "" || appliesTo(&it, q.Path, asDir)) {
-			items = append(items, it)
+	for i := range all {
+		if it := &all[i]; servedAsContext(it.Kind) && (q.Path == "" || appliesTo(it, q.Path, asDir)) {
+			items = append(items, *it)
 		}
 	}
 	return items, scopes, nil

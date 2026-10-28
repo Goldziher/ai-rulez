@@ -188,8 +188,8 @@ func (v *repoView) selectSkills(q scopeQuery) (skillSelection, error) {
 			return skillSelection{}, err //nolint:wrapcheck // names the scope
 		}
 		global = q.Scope == repoindex.RootScope
-		for _, it := range items {
-			if it.Kind == repoindex.KindSkill {
+		for i := range items {
+			if it := &items[i]; it.Kind == repoindex.KindSkill {
 				dirs[it.Path] = true
 			}
 		}

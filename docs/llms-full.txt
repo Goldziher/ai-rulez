@@ -2872,6 +2872,17 @@ command_env = []              # extra environment variable names passed to comma
 Credential-looking and proxy names in `command_env` and unknown includes in `trust_exec_from` are configuration errors.
 The table is pinned in the lock. See [Verifiers](verifiers.md#settings).
 
+##### `exposure`
+
+Describes the areas of a repository (the directories each one claims, its owner and the words that name it) for the
+session exposure checks. The map is inline or in `areas_file`, not both; `validate` reports a map it cannot use as
+`AR9W5`. Without the table nothing changes. See [Session exposure and areas](exposure.md).
+
+```toml
+[exposure]
+areas_file = "tools/context/areas.toml"   # [[area]] tables and [skill_areas], relative to the project root
+```
+
 ##### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
@@ -14117,6 +14128,7 @@ ai-rulez validate --strict --outputs
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
 | AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
+| AR9W5 | `exposure-map-invalid` | error | The `[exposure]` table or its area map is invalid: a duplicate, reserved or non-kebab area name, a bad path claim, a `skill_areas` value that names no area, an unknown key or unreadable `areas_file`, or both `areas_file` and inline areas. Only reported when the configuration has an `[exposure]` table (see [Session exposure and areas](exposure.md)) |
 | AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --strict --verifiers`; severity is the verifier's own) |
 | AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --strict --verifiers`) |
 | AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run`, `test` and `validate --strict --verifiers`) |
@@ -14197,9 +14209,10 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | Harness built-in names ([#447](https://github.com/Goldziher/ai-rulez/issues/447); `AR9U0`, `AR9U1` used; reported by `validate --strict`, see [Built-in names of harnesses](#built-in-names-of-harnesses)) | allocated |
+| `AR9W0`-`AR9W9` | Session exposure and areas (`AR9W5` used; inert without an `[exposure]` table, see [Session exposure and areas](exposure.md)) | allocated |
 | `AR9V0`-`AR9V9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims; moved from `AR9U` for #447) | reserved |
 
-Unlisted letters (`AR9I`, `AR9T`, `AR9W`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+Unlisted letters (`AR9X`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
 a UI for `AR9H`).
 
@@ -14552,6 +14565,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `llmstxt` | `AR9P0`-`AR9P6` |
 | `traps` | `AR9C0`-`AR9CA` |
 | `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0`, `AR9I0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables, unused `[[lint.accept]]` entries) |
+| `exposure` | `AR9W5` (the `[exposure]` table and its area map) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
@@ -18087,7 +18101,159 @@ a skill, command or agent is named like a name the harness refuses to load; lint
 - Bad: `.ai-rulez/skills/synced/SKILL.md` with the claude preset
 - Good: Rename the skill (`sync-notes`)
 
+##### AR9W5 exposure-map-invalid
+
+the [exposure] table or its area map is invalid: a duplicate or malformed area name, a bad path claim, a skill_areas value naming no area, an unreadable areas_file, or both areas_file and inline areas
+
+- Default severity: `error`
+- Analyzer: `exposure` (scope `bundle`)
+- Why: The area map decides which area owns a skill and which words name an area. A map with a problem is not used at all, so the exposure rules that read it stay silent until it is fixed; this finding is the only sign that they are off.
+- Bad: Two `[[area]]` tables named `billing`, a path claim `"services/billing/"` with a trailing slash, or `[skill_areas] deploy = "ops"` with no area `ops`
+- Good: Unique lower-kebab names, repository-relative claims such as `"services/billing_*"` or `"!services/billing_legacy"`, and skill_areas values that name an area
+
 <!-- rules:end -->
+
+## Session Exposure and Areas
+
+Source: https://goldziher.github.io/ai-rulez/exposure/
+
+A large repository has parts that belong to different teams: services, products, shared tooling. Context loaded at
+the start of every session (the root `CLAUDE.md`, unconditional rules, the skill listing) should not name one of
+those parts unless every session needs it, and a skill that belongs to one part should say so. The `[exposure]` table
+describes the parts as an **area map**: which directories each area claims, who owns it, and the words that name it.
+
+This page describes the table and how the map is matched. The rules and reports that use it (start-of-session
+exposure, area term leakage, collisions between areas) build on it in later releases; today `validate` checks the
+map itself (`AR9W5`). Without an `[exposure]` table nothing on this page has any effect.
+
+- [Configuration](#configuration)
+- [The area map](#the-area-map)
+- [Matching terms](#matching-terms)
+- [Classifying an artifact](#classifying-an-artifact)
+- [The owner of a skill](#the-owner-of-a-skill)
+- [Validation](#validation)
+
+#### Configuration
+
+```toml
+[exposure]
+harness = "claude"                 # only "claude"
+context_window = 200000            # tokens (default 200000)
+plugins = "enabled"                # none | enabled (default) | all: plugin skills counted at start
+areas_file = "tools/context/areas.toml"   # optional: the map in its own file
+start_budget = 0                   # most estimated start tokens; 0 (default) is off
+collision_min_score = 0            # word overlap between areas; 0 (default) is off
+
+[[exposure.areas]]
+name = "billing"                   # unique, lower-kebab
+description = "the billing service and its jobs"   # finishes "I work on ..."
+owner = "team-billing"             # free text, never parsed
+paths = ["services/billing_*", "services/invoices", "!services/billing_legacy"]
+terms = ["invoice", "ledger_sync"]
+ambiguous = ["account"]
+shared = false                     # repository-wide tooling: terms classify, never leak
+declare = "services/billing/"      # optional: what a session of this area declares it works on
+
+[exposure.skill_areas]             # explicit owners; win over path claims and terms
+deploy-staging = "platform"
+```
+
+Every key is optional. `start_budget`, `collision_min_score`, `plugins`, `context_window` and `declare` are read by
+the exposure report and context evals, which arrive in later releases; they are validated now so a table written
+today keeps working.
+
+The map is either inline (`[[exposure.areas]]` and `[exposure.skill_areas]`) or in `areas_file`, never both. The
+file is resolved from the project root, must stay inside it, and holds the same fields under shorter names:
+
+```toml
+# tools/context/areas.toml
+[[area]]
+name = "billing"
+owner = "team-billing"
+paths = ["services/billing_*"]
+terms = ["invoice"]
+
+[[area]]
+name = "platform"
+paths = ["deploy", "dev_tools"]
+shared = true
+terms = ["terraform"]
+
+[skill_areas]
+deploy-staging = "platform"
+```
+
+A key the file does not define is an error, not ignored, so a misspelled key is reported.
+
+#### The area map
+
+- **`name`** is unique and lower-kebab (`a-z`, `0-9`, single hyphens). `unclassified` is reserved: it is the area of
+  anything the map does not place.
+- **`paths`** are repository-relative directory prefixes with no leading or trailing slash. `services/invoices`
+  claims that directory and everything below it, not `services/invoices2`. A trailing `*` makes a name prefix:
+  `services/billing_*` claims `services/billing_api` and `services/billing_jobs/x`, and `vendor/*` claims everything
+  below `vendor` but not `vendor` itself. A `!` path excludes: an area
+  never claims a directory one of its own excludes cover. When several areas claim a directory, the longest
+  matching path wins, and the first area in the map wins a tie.
+- **`terms`** are the words that name the area. They are trimmed, lowercased and deduplicated. A word may be a term
+  of several areas.
+- **`ambiguous`** are words the area uses in its own sense that other areas also use (`account`, `query`). They never
+  decide an area on their own. A word that is both a term and ambiguous in one area is a term.
+- **`shared`** marks repository-wide tooling (a build system, CI): its terms still classify artifacts, but naming
+  them at session start is not leakage.
+- **`owner`** and **`description`** are reported as they are.
+
+#### Matching terms
+
+Terms are matched case-insensitively:
+
+- A term that contains `_`, `/` or `.` (`ledger_sync`, `@acme/ui`, `api.v2`) matches anywhere, as a substring.
+- Any other term matches only as a whole word: the characters before and after it must not be ASCII letters or
+  digits. `invoice` matches `Invoice`, `INVOICE_ID` and `team_invoice`, but not `invoices` or `reinvoice`.
+- Longer terms are tried first, so `ledger_sync` wins over `ledger` where both match.
+- Repository path literals are blanked out first: a path claim's first segment followed by `/`
+  (`services/billing_api/README.md`) up to the next space, quote, backtick, bracket, comma or semicolon. Naming a
+  location is not naming an area. A path is not a literal when a letter, digit, `_`, `/`, `.`, `@` or `-` precedes it.
+
+Case folding follows Python's `re.IGNORECASE`, the reference the format comes from: `K` (U+212A, the Kelvin sign)
+matches `k`, a final `ς` is the lowercase of `Σ`. A test holds the matcher to vectors recorded from the Python
+implementation, which pins CPython 3.11 (Unicode 14.0). A character that is unassigned in that Unicode version may
+match differently.
+
+#### Classifying an artifact
+
+An artifact (a skill, a rule, a `CLAUDE.md`) in a directory, with a text, belongs to:
+
+1. the area with the most specific path claim on the directory;
+2. otherwise, the area with the most distinct terms in the text (ambiguous words do not count); a tie gives none;
+3. otherwise `unclassified`.
+
+#### The owner of a skill
+
+The owner of a skill is resolved in this order, and reported with its source:
+
+| Source | When |
+| --- | --- |
+| `skill_areas` | `[skill_areas]` names the skill. A plugin skill is looked up as `plugin:skill`, then by its bare name |
+| `path` | an area claims the skill's directory: for a repository skill, the directory that holds its `.claude` directory; for a plugin skill, the plugin's directory |
+| `terms` | the terms of the skill's text decide (see above): a repository skill's listing text (`name: description`); a plugin skill's qualified name (`plugin:skill`), never its description |
+| `none` | nothing does: the owner is `unclassified` |
+
+A plugin skill is listed at the repository root, but it belongs where its plugin lives: a plugin under
+`dev_tools/plugins/ops` is owned by the area that claims `dev_tools`, whatever its skills' descriptions say. Place
+a plugin outside every claim with `[skill_areas]`.
+
+An explicit entry is the way to place a skill that still lives at the repository root: once it moves under the
+area's directory, the path claim gives the same answer and the entry can go.
+
+#### Validation
+
+`AR9W5 exposure-map-invalid` (error) reports a map that cannot be used: a duplicate, reserved or non-kebab area name,
+a bad path claim (absolute, trailing slash, empty, `.` or `..` segment, `*` other than at the end), a `skill_areas`
+value that names no area, an `areas_file` that is missing, outside the project or has an unknown key, both
+`areas_file` and inline areas, and invalid scalar keys. A finding on the file names its line. A map with any problem
+is not used at all, so every rule that reads it stays quiet until it is fixed. See
+[Strict validation](strict-validation.md#ar9w5-exposure-map-invalid).
 
 ## Verifiers
 
@@ -27828,6 +27994,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `diag` | Collects the warnings of one generate run, de-duplicated |
 | `doctor` | Read-only diagnostics over a project |
 | `evals` | Harness-neutral eval case format for skills and the runners that score them |
+| `exposure` | The Claude Code session load model: every native artifact of a repository with its phase (start, on demand, manual or unknown), visibility, listing text and frontmatter parse status, after the root project settings and the repository marketplace |
 | `fmdiff` | Differential fuzzing of the frontmatter splitters |
 | `forge` | Minimal read-only client for the hosting forge of a git remote |
 | `frontmatter` | Splits a leading YAML frontmatter block from markdown |
@@ -27866,7 +28033,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `publish` | Turns a verified plugin bundle into release artifacts and emitter output |
 | `releasetime` | Finds when a git tag was released, for minimum-age gates |
 | `render` | Separates what a command produces from what it says about it |
-| `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there |
+| `repoindex` | Indexes the skills, instruction files, rules and agents a repository keeps at any depth by scope, and resolves a path to what applies there; an item keeps the error of a frontmatter block that does not decode |
 | `indexcache` | Keeps the repository index summaries and scan verdicts between runs of the MCP server: location (user cache or project), authenticated index file, lock, status and clear |
 | `review` | Scores skills, agents, commands and rules against a rubric |
 | `roles` | Builds the roles manifest |
@@ -35286,7 +35453,7 @@ ai-rulez validate --outputs
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--allow-egress` | string list |  | With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable) |
-| `--analyzer` | string list |  | Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): budgets, config, convert, delivery, descriptions, duplicates, evals, hooks, llmstxt, lock, mcp, metadata, okf, plugin, references, roles, search, security, traps, verifiers |
+| `--analyzer` | string list |  | Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): budgets, config, convert, delivery, descriptions, duplicates, evals, exposure, hooks, llmstxt, lock, mcp, metadata, okf, plugin, references, roles, search, security, traps, verifiers |
 | `--approvals-base` | string |  | Report approvals added since this git revision for content that also changed since it (AR716) |
 | `--baseline` | string |  | Accept the findings recorded in this baseline file (default: <config dir>/lint-baseline.json when it exists); only new findings count toward the exit code |
 | `--baseline-reason` | string |  | With --update-baseline, the reason stored on new entries (required for security findings) |

@@ -38,7 +38,7 @@ const (
 
 const (
 	// FormatVersion is the version of the index file; another one is discarded.
-	FormatVersion = 3
+	FormatVersion = 4
 
 	dirName    = "monorepo-index"
 	indexFile  = "index.json"

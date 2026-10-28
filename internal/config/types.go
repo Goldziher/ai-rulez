@@ -130,6 +130,8 @@ type Config struct {
 	Judge *JudgeConfig `yaml:"judge,omitempty" json:"judge,omitempty" toml:"judge,omitempty"`
 	// Improve configures `ai-rulez improve run` defaults: gate thresholds, the optimizer and its isolation (types_improve.go).
 	Improve *ImproveConfig `yaml:"improve,omitempty" json:"improve,omitempty" toml:"improve,omitempty"`
+	// Exposure configures the session exposure report and the area map (types_exposure.go).
+	Exposure *ExposureConfig `yaml:"exposure,omitempty" json:"exposure,omitempty" toml:"exposure,omitempty"`
 	// Search configures `ai-rulez search` and find_skill ranking: lexical by default, optionally hybrid with embeddings (docs/search.md).
 	Search *skillsearch.Config `yaml:"search,omitempty" json:"search,omitempty" toml:"search,omitempty"`
 	// Verifiers declares deterministic repo checks run by `ai-rulez verifiers run`.
