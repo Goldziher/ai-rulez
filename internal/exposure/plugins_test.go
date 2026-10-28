@@ -198,3 +198,30 @@ func TestAreaScope(t *testing.T) {
 		})
 	}
 }
+
+func TestBuild_AnUnnamedMarketplaceEnablesNothing(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings string
+	}{
+		{name: "a key with an empty marketplace", settings: `{"enabledPlugins": {"one@": true}}`},
+		{name: "a key with a marketplace", settings: `{"enabledPlugins": {"one@mkt": true}}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := writeRepo(t, map[string]string{
+				MarketplaceFile:           `{"plugins": [{"name": "one", "source": "./a"}]}`,
+				"a/skills/probe/SKILL.md": skillMD("probe", "Probes things."),
+				".claude/settings.json":   tt.settings,
+			})
+
+			// Act
+			inv := build(t, root, func(*Options) {})
+
+			// Assert
+			assert.Empty(t, inv.Plugins.Enabled)
+			assert.Empty(t, pluginSkills(inv))
+		})
+	}
+}
