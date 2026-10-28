@@ -405,6 +405,7 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
 		opts = append(opts, okfLintOptions(ctx, cfg)...)
 	}
+	opts = append(opts, exposureLintOptions(ctx, cfg, sel)...)
 	if lint.AnalyzerSelected(sel, lint.AnalyzerLLMsTxt) {
 		if files := llmsTxtLintFiles(cfg); len(files) > 0 {
 			opts = append(opts, lint.WithLLMsTxt(files))

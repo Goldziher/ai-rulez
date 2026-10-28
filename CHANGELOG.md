@@ -32,6 +32,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   Tokens are estimated as bytes / 3.9 rounded up; a file over the read limit is kept unread and estimated from its
   size. Outside a git repository the file walk lists symlinked files, as git does, so `CLAUDE.md -> AGENTS.md` is
   read there too.
+- **`ai-rulez exposure collisions` and `AR9W2 exposure-area-collision`.** `exposure collisions` compares the listing
+  of every skill and agent a session sees at start with every other one of a different area (unclassified counts as
+  one) and ranks the pairs by the Jaccard index of their words (lowercase runs of a letter and two or more letters or
+  digits, less common stopwords), then by path, with the shared words (`--min-score`, default `[exposure]
+  collision_min_score` or 0.1; `--limit`, default 20, 0 for all; `--areas`, `--root`, `--plugins`;
+  `schema/exposure-collisions.v1.schema.json` with `--format json`). `validate` reports the same pairs as `AR9W2`, off
+  until `[exposure] collision_min_score` is set, which turns it on at warning, on the description line of the pair's
+  first listing.
 
 ### Changed
 

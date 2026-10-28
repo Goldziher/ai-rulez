@@ -181,6 +181,7 @@ type runner struct {
 	planned      PlannedFiles           // what a run would write, for the traps (WithPlanned)
 	renderCopies func() []GeneratedCopy // the plugin renderings of the definitions (WithGeneratedCopies)
 	reach        HarnessReach           // the harnesses that load each output (WithHarnessReach)
+	exposure     ExposureSource         // the session exposure of the project (WithExposure)
 	namesOnce    sync.Once
 	namesMu      sync.Mutex
 	harnessNames nameTables
@@ -496,6 +497,7 @@ func (r *runner) resolveSettings() {
 		r.sev[CodeClaudeMDShadow] = SeverityWarning
 	}
 	r.evalSettings()
+	r.exposureCollisionSeverity()
 	if r.cfg.LockEnforced() {
 		// An unpinned remote or MCP package is a hole in an enforced lock, not a hint.
 		r.sev[CodeUnpinnedRemote] = SeverityError

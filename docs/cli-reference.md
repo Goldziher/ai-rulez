@@ -1114,6 +1114,7 @@ Examples:
 ai-rulez exposure inventory
 ai-rulez exposure inventory --format json --with-text
 ai-rulez exposure areas --areas tools/context/areas.toml --format json
+ai-rulez exposure collisions --min-score 0.2
 ```
 
 | Flag | Type | Default | Description |
@@ -1140,6 +1141,31 @@ ai-rulez exposure areas --areas tools/context/areas.toml --format json
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--format` | string | `text` | Output format: text, json |
+| `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
+| `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
+| `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
+
+## `ai-rulez exposure collisions`
+
+Rank skill and agent pairs of different areas whose listings overlap
+
+```text
+ai-rulez exposure collisions [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez exposure collisions
+ai-rulez exposure collisions --min-score 0.2 --limit 50
+ai-rulez exposure collisions --areas tools/context/areas.toml --plugins none --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--limit` | int | `20` | Pairs printed, highest score first; 0 prints every pair |
+| `--min-score` | number | `0.1` | Lowest word overlap (Jaccard index, 0 to 1) reported (default: [exposure] collision_min_score, else 0.1) |
 | `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
 | `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
 | `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
