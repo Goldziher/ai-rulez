@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // testAreas is a synthetic map shaped like a real one: overlapping claims with excludes and a name-prefix glob,
@@ -365,9 +366,7 @@ func TestLoad(t *testing.T) {
 func TestLoadRefusesAnAreasFileSymlinkedOutOfTheProject(t *testing.T) {
 	root, outside := t.TempDir(), t.TempDir()
 	writeFile(t, outside, "areas.toml", testAreas)
-	if err := os.Symlink(filepath.Join(outside, "areas.toml"), filepath.Join(root, "areas.toml")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, filepath.Join(outside, "areas.toml"), filepath.Join(root, "areas.toml"))
 	m, problems := Load(&config.ExposureConfig{AreasFile: "areas.toml"}, root)
 	require.Len(t, problems, 1)
 	assert.Contains(t, problems[0].Message, "inside the project root")
