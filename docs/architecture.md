@@ -198,6 +198,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `agentplugins` | Builds, validates and imports Agent Plugins packages (1.0.0 and 1.1.0) |
 | `agentssource` | Completes the `source = "agents"` content tree: root and nested `AGENTS.md`, generated files dropped |
 | `ambient` | Names what library code may not reach for on its own (working directory, environment, clock) |
+| `areas` | Loads the `[exposure]` area map, matches paths and terms to areas and classifies artifacts and skills by owner |
 | `approval` | Decides whether pinned content has the reviewer approvals the policy requires |
 | `ard` | Builds and validates Agentic Resource Discovery manifests |
 | `builtins` | Embedded builtin packs: language packs and universal rules |
@@ -210,7 +211,7 @@ Every package below `internal/`, derived from the tree. Sub-packages are named w
 | `diag` | Collects the warnings of one generate run, de-duplicated |
 | `doctor` | Read-only diagnostics over a project |
 | `evals` | Harness-neutral eval case format for skills and the runners that score them |
-| `exposure` | The Claude Code session load model: every native artifact of a repository with its phase (start, on demand, manual or unknown), visibility, listing text and frontmatter parse status, after the root project settings and the repository marketplace |
+| `exposure` | The Claude Code session load model: every native artifact of a repository with its phase (start, on demand, manual or unknown), visibility, listing text and frontmatter parse status, after the root project settings and the repository marketplace; the start-of-session report and budget, area term leakage and listing collisions ([Session exposure](exposure.md)) |
 | `fmdiff` | Differential fuzzing of the frontmatter splitters |
 | `forge` | Minimal read-only client for the hosting forge of a git remote |
 | `frontmatter` | Splits a leading YAML frontmatter block from markdown |

@@ -23,7 +23,7 @@ Key directories:
 - `internal/` holds the service packages. The groups, with the packages to open first:
   - Load and merge: `config` (config, content tree, layers, plugin definitions), `project` (wires includes, installed skills and the `.agents` source into a load), `includes`, `skillsource`, `builtins`, `workspace` (the read view a load goes through), `agentssource` (root and nested `AGENTS.md` for `source = "agents"`), `okf` and `okfbridge`.
   - Render and write: `generator` (plan, apply, drift, clean, plugins, the managed `.gitignore` block), `generator/providers/builtin` (declarative preset specs), `generator/presets` (Go presets), `templates`, `gitignore`, `gitutil`, `agentplugins`, `ard`, `mcpcard`, `publish`.
-  - Check: `lint` (`validate`, `scan`, the `AR` codes), `judge`, `review`, `evals`, `verifiers`, `doctor`.
+  - Check: `lint` (`validate`, `scan`, the `AR` codes), `judge`, `review`, `evals`, `verifiers`, `doctor`, `exposure`, `areas`, `repoindex`.
   - Govern: `lockfile`, `lockrun`, `contentlock`, `approval`, `signing`, `policy`, `sbom`.
   - Serve and call out: `mcp`, `llm`, `skillsearch`, `telemetry`, `usage`.
   - Shared plumbing: `logger`, `progress`, `diag` (per-run warning collector), `render`, `runner`, `safefs`, `walkutil`, `watch`.
