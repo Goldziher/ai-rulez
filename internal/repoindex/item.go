@@ -59,10 +59,23 @@ func newItem(c *candidate, content []byte) Item {
 	default:
 		return it
 	}
-	if err != nil && it.Only == nil && frontmatter.NamesKey(block.Raw, keyPaths) {
+	if err != nil && it.Only == nil && frontmatter.NamesKey(block.Raw, keyPaths) || pathsMistyped(front) {
 		it.Only = &PathGlobs{Unreadable: true}
 	}
 	return it
+}
+
+// pathsMistyped reports a `paths` value that is neither a string nor a list of
+// strings (`paths: 5`, a list holding a number, an empty `paths:`). It decodes
+// without an error, but where the item applies cannot be known, as the
+// exposure inventory reads it (phase unknown), so the gate fails closed.
+func pathsMistyped(front map[string]any) bool {
+	v, ok := front[keyPaths]
+	if !ok {
+		return false
+	}
+	_, typed := frontmatter.StringList(v)
+	return !typed
 }
 
 // ruleGlobs reads the path restriction of a rule from its frontmatter: `paths`
