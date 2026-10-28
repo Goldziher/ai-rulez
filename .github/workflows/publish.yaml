@@ -38,6 +38,7 @@ jobs:
   meta:
     name: Resolve versions
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: read
     outputs:
@@ -211,6 +212,7 @@ jobs:
     needs: meta
     if: needs.meta.outputs.archives_complete != 'true' || needs.meta.outputs.provenance_complete != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: write
     steps:
@@ -239,6 +241,7 @@ jobs:
     needs: [meta, create_release]
     if: needs.meta.outputs.archives_complete != 'true'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     # Linux builds run in Debian bookworm so the binary's glibc floor is 2.36 rather than whatever the
     # runner image ships. The liter-llm native library is glibc-only (no musl).
     container: ${{ matrix.image }}
@@ -365,6 +368,7 @@ jobs:
     needs: [meta, build]
     if: needs.meta.outputs.archives_complete != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: write
     steps:
@@ -427,6 +431,7 @@ jobs:
          needs.meta.outputs.provenance_complete != 'true')
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: write
       id-token: write
@@ -503,6 +508,7 @@ jobs:
           needs.meta.outputs.release_draft != 'true')
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: write
     steps:
@@ -539,6 +545,7 @@ jobs:
          needs.finalize_release.result == 'skipped')
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
@@ -598,6 +605,7 @@ jobs:
          needs.finalize_release.result == 'skipped')
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
@@ -648,6 +656,7 @@ jobs:
          needs.finalize_release.result == 'skipped')
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: read
     steps:
@@ -709,6 +718,7 @@ jobs:
         needs.publish_homebrew.result == 'success'
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     concurrency:
       group: publish-floating-action-tag
       cancel-in-progress: false

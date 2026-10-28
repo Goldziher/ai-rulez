@@ -34,7 +34,7 @@ jobs:
   live-llm:
     name: Live LLM
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 180
     continue-on-error: false
     env:
       AI_RULEZ_LIVE_LLM: "1"
@@ -60,7 +60,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "$AI_RULEZ_LIVE_OUT"
-          go test -timeout 40m -v ./internal/llm/... ./internal/evals/... 2>&1 | tee "$RUNNER_TEMP/live-llm.log"
+          go test -timeout 180m -v ./internal/llm/... ./internal/evals/... 2>&1 | tee "$RUNNER_TEMP/live-llm.log"
 
       - name: Upload the transcripts and the test log
         if: always()
@@ -75,7 +75,7 @@ jobs:
   live-sigstore-keyless:
     name: Live Sigstore (keyless, staging)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     continue-on-error: false
     permissions:
       contents: read
@@ -163,7 +163,7 @@ jobs:
       - name: Run the keyless round trip
         run: |
           set -o pipefail
-          go test -timeout 15m -v ./internal/signing -run TestLiveKeylessRoundTrip 2>&1 | tee "$RUNNER_TEMP/live-sigstore.log"
+          go test -timeout 180m -v ./internal/signing -run TestLiveKeylessRoundTrip 2>&1 | tee "$RUNNER_TEMP/live-sigstore.log"
 
       - name: Record the result in the step summary
         if: always()
@@ -187,7 +187,7 @@ jobs:
   live-kms:
     name: Live KMS (Vault, ephemeral dev server)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     continue-on-error: false
     steps:
       - name: Checkout
@@ -234,7 +234,7 @@ jobs:
           AI_RULEZ_LIVE_KMS_KEY: hashivault://ai-rulez
         run: |
           set -o pipefail
-          go test -timeout 15m -v ./internal/signing -run TestLiveKMSRoundTrip 2>&1 | tee "$RUNNER_TEMP/live-kms.log"
+          go test -timeout 180m -v ./internal/signing -run TestLiveKMSRoundTrip 2>&1 | tee "$RUNNER_TEMP/live-kms.log"
 
       - name: Stop Vault
         if: always()
