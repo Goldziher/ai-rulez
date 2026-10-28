@@ -117,6 +117,7 @@ func TestEveryJSONContractValidatesAgainstItsSchema(t *testing.T) {
 		{"cost", []string{"cost"}, 0},
 		{"exposure inventory", []string{"exposure", "inventory", "--with-text"}, 0},
 		{"exposure areas", []string{"exposure", "areas", "--areas", filepath.Join(root, "areas.toml")}, 0},
+		{"exposure collisions", []string{"exposure", "collisions", "--areas", filepath.Join(root, "areas.toml"), "--min-score", "0"}, 0},
 		{"catalog", []string{"catalog"}, 0},
 		{"catalog diff", []string{"catalog", "diff", catalog, catalog}, 0},
 		{"lock --check", []string{"lock", "--check"}, 0},
@@ -198,6 +199,8 @@ func TestReportSchemasRejectAWrongDocument(t *testing.T) {
 			`"plugins":{"mode":"enabled","marketplace":"","available":[],"enabled":[],"loaded":[]},"problems":[],"artifacts":[{"kind":"skill","source":"file","name":"s",` +
 			`"qualified_name":"s","path":"p","scope":".","visibility":"always","phase":"later","paths":[],"listing_chars":0,"truncated":false,"text_bytes":0,` +
 			`"text_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","tokens":0,"line_offset":0}]}`,
+		"exposure-collisions.v1.schema.json": `{"schema_version":1,"root":"/r","plugins":"none","min_score":0.1,"artifacts_compared":2,"total":1,` +
+			`"collisions":[{"score":0.5,"shared":[],"first":"a","first_kind":"skill","first_name":"a","first_area":"x","second":"b","second_kind":"rule","second_name":"b","second_area":"y"}]}`,
 		"exposure-areas.v1.schema.json": `{"schema_version":1,"root":"/r","areas_file":"","plugins":"enabled","areas":[],"skill_areas":{},"counts":{},` +
 			`"artifacts":[{"kind":"skill","source":"file","name":"s","qualified_name":"s","path":"p","scope":".","area_scope":".","phase":"start","area":"a","area_source":"guess"}]}`,
 	} {

@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-collisions.v1.schema.json",
+  "title": "ai-rulez exposure collisions",
+  "description": "Output of `ai-rulez exposure collisions --format json`: pairs of skills and agents listed at session start, of different areas, ranked by the Jaccard index of the words of their listings. See docs/exposure.md.",
+  "type": "object",
+  "required": ["schema_version", "root", "plugins", "min_score", "artifacts_compared", "total", "collisions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "root": { "type": "string", "description": "The absolute repository root, slash separated." },
+    "plugins": { "enum": ["none", "enabled", "all"], "description": "The plugin mode of the inventory." },
+    "min_score": { "type": "number", "minimum": 0, "maximum": 1, "description": "The lowest score reported." },
+    "artifacts_compared": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of skills and agents listed at session start."
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of pairs at or over min_score, before --limit."
+    },
+    "collisions": {
+      "type": "array",
+      "description": "The pairs, highest score first, then by first and second path; at most --limit of them.",
+      "items": {
+        "type": "object",
+        "required": [
+          "score",
+          "shared",
+          "first",
+          "first_kind",
+          "first_name",
+          "first_area",
+          "second",
+          "second_kind",
+          "second_name",
+          "second_area"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "score": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1,
+            "description": "Shared words over the words of either listing."
+          },
+          "shared": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "The words both listings use, sorted."
+          },
+          "first": { "type": "string", "description": "The path of the artifact that comes first in the inventory." },
+          "first_kind": { "enum": ["skill", "agent"] },
+          "first_name": { "type": "string", "description": "Its qualified name." },
+          "first_area": { "type": "string" },
+          "second": { "type": "string" },
+          "second_kind": { "enum": ["skill", "agent"] },
+          "second_name": { "type": "string" },
+          "second_area": { "type": "string" }
+        }
+      }
+    }
+  }
+}

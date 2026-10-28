@@ -43,6 +43,7 @@ type exposureInput struct {
 	inv       *exposure.Inventory
 	areas     *areas.Map
 	areasFile string
+	exp       *config.ExposureConfig
 }
 
 // newExposureCmd groups the static session-exposure commands.
@@ -67,7 +68,8 @@ Exit codes: 0 the report was printed, 1 the command could not run (bad flags, an
 configuration or area map).`,
 		Example: `  ai-rulez exposure inventory
   ai-rulez exposure inventory --format json --with-text
-  ai-rulez exposure areas --areas tools/context/areas.toml --format json`,
+  ai-rulez exposure areas --areas tools/context/areas.toml --format json
+  ai-rulez exposure collisions --min-score 0.2`,
 	}
 	inventory := &cobra.Command{
 		Use:   "inventory",
@@ -110,7 +112,7 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	addJSONFormat(inventory.Flags(), &f.asJSON, "")
 	addJSONFormat(areasCmd.Flags(), &f.asJSON, "")
 	inventory.Flags().BoolVar(&f.withText, "with-text", false, "Include each artifact's text in the JSON output")
-	group.AddCommand(inventory, areasCmd)
+	group.AddCommand(inventory, areasCmd, newExposureCollisionsCmd(&f))
 	return group
 }
 
@@ -175,7 +177,7 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 	if mode == "" && exp != nil {
 		mode = exposure.PluginMode(exp.Plugins)
 	}
-	in := &exposureInput{}
+	in := &exposureInput{exp: exp}
 	if in.areas, in.areasFile, err = exposureMap(exp, base, root, f.areasFile); err != nil {
 		return nil, err
 	}

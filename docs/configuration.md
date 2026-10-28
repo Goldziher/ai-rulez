@@ -1650,11 +1650,13 @@ The table is pinned in the lock. See [Verifiers](verifiers.md#settings).
 
 Describes the areas of a repository (the directories each one claims, its owner and the words that name it) for the
 session exposure checks. The map is inline or in `areas_file`, not both; `validate` reports a map it cannot use as
-`AR9W5`. Without the table nothing changes. See [Session exposure and areas](exposure.md).
+`AR9W5`, and `collision_min_score` turns on `AR9W2` for start-listed skills and agents of different areas whose
+listings overlap. Without the table nothing changes. See [Session exposure and areas](exposure.md).
 
 ```toml
 [exposure]
 areas_file = "tools/context/areas.toml"   # [[area]] tables and [skill_areas], relative to the project root
+collision_min_score = 0.2                 # AR9W2 at warning; 0 (default) is off
 ```
 
 ### `header`
