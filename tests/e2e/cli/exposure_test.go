@@ -349,7 +349,7 @@ func TestExposureStartBudget(t *testing.T) {
 
 	t.Run("validate reports AR9W3", func(t *testing.T) {
 		res := env.run(root, "validate")
-		assert.NotEqual(t, 0, res.ExitCode)
+		assert.Equal(t, 2, res.ExitCode, res.Stdout+res.Stderr)
 		assert.Contains(t, res.Stdout+res.Stderr, "AR9W3")
 	})
 
