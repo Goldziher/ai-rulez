@@ -7,9 +7,10 @@ describes the parts as an **area map**: which directories each area claims, who 
 
 This page describes the table, how the map is matched, and the commands that show what a Claude Code session loads
 and where each artifact belongs. The rules and reports that build on it (start-of-session exposure, area term
-leakage) follow in later releases; today `validate` checks the map itself (`AR9W5`) and, when
-`collision_min_score` is set, listings of different areas that overlap (`AR9W2`).
-Without an `[exposure]` table no rule on this page has any effect; the commands work without one.
+leakage) follow in later releases; today `validate` checks the map itself (`AR9W5`), reports a frontmatter gate
+that cannot be read (`AR9W4`) and, when `collision_min_score` is set, listings of different areas that overlap
+(`AR9W2`). Without an `[exposure]` table no rule on this page has any effect except `AR9W4`, which needs none; the
+commands work without one.
 
 - [Configuration](#configuration)
 - [The area map](#the-area-map)
@@ -167,9 +168,10 @@ Code 2.1.306 as measured:
 - **On demand:** anything in a subdirectory, and anything gated by `paths:`, once a matching file is touched.
 - **Manual:** `disable-model-invocation: true` or `skillOverrides` `user-invocable-only`: only the user runs it.
 - **Unknown:** a root rule or skill whose frontmatter does not parse while it names a gate (`paths:`,
-  `disable-model-invocation`, `user-invocable`), or one that was not read (over the read limit, or a symlink to
-  outside the root; `frontmatter.ok` is false and the error starts with `not read:`); whether it loads at start
-  cannot be known. A start count includes it (fail closed), as the text summary does.
+  `disable-model-invocation`, `user-invocable`), or whose gate value has the wrong type, or one that was not read
+  (over the read limit, or a symlink to outside the root; `frontmatter.ok` is false and the error starts with
+  `not read:`); whether it loads at start cannot be known. A start count includes it (fail closed), as the text
+  summary does (see [A gate that cannot be read](#a-gate-that-cannot-be-read)).
 - `skillOverrides` `off` removes a skill and `name-only` blanks its description; `.claude/settings.local.json`
   applies over `.claude/settings.json`; `claudeMdExcludes` globs exclude `CLAUDE.md` files and rules.
 - The listing text of a skill is `name: description when_to_use`, whitespace squashed, capped at 1536 characters.
@@ -274,6 +276,41 @@ map. The JSON follows
 
 To separate two listings, lead each description with what sets it apart (the area's own nouns), not with the words
 every skill of the repository uses.
+## A gate that cannot be read
+
+`paths:`, `disable-model-invocation` and `user-invocable` decide when Claude Code shows a skill or rule. When the
+frontmatter around them is not valid YAML, what happens depends on Claude Code's own parser. Measured on Claude Code
+2.1.312 with synthetic skills in a throwaway repository (the skill listing at the start of a `claude -p` session, then
+after a file the `paths:` glob matches was read):
+
+| Frontmatter of a skill with `paths: ["src/**"]` | Claude Code | ai-rulez reads |
+|---|---|---|
+| valid | hidden until `src/a.txt` is read | path gated, on demand |
+| `description: Use when: testing` (an unquoted `: `) | recovered: hidden until `src/a.txt` is read, the description kept | does not parse |
+| `description: "Use when testing` (an unclosed quote) | dropped: listed at start, the description is the first body line | does not parse |
+| `paths` indented with a tab | dropped: listed at start, the description is the first body line | does not parse |
+
+So a broken block may keep its gate or lose it, and nothing short of Claude Code's parser tells which. ai-rulez does
+not guess:
+
+- `exposure inventory` gives such a root rule or skill the phase `unknown`, which the start-of-session reports count as
+  start (fail closed).
+- The MCP server never returns such a rule for a `find_context` `path` query, and a `scope` query lists it with
+  `"paths_unreadable": true`. A skill whose frontmatter does not parse is not served at all.
+- `validate` reports it as `AR9W4 exposure-gate-unreadable` (warning) next to the `AR306` for the block, for the claude
+  preset and for a run without a configuration.
+
+Quoting the value YAML cannot read (`description: "Use when: testing"`) fixes all three.
+
+### YAML 1.1 booleans
+
+`disable-model-invocation` and `user-invocable` are booleans. YAML 1.1 also reads `yes`, `no`, `on` and `off` (and
+`y`, `n`; lower case, capitalized or upper case) as booleans; YAML 1.2, and parsers that follow it, read them as
+strings. Claude Code 2.1.312 follows YAML 1.1 here: a skill with `disable-model-invocation: yes` or `on` was kept out
+of the model's listing and one with `no` was listed. ai-rulez parses YAML 1.2 (`gopkg.in/yaml.v3`), so it reads `yes`
+as the string `"yes"`: `validate` reports the value as `AR304` (not a boolean), and `exposure inventory` gives a
+root skill the phase `unknown` with the frontmatter error `"disable-model-invocation" is not a boolean`. Write `true` and
+`false`, which every reader agrees on.
 
 ## Validation
 
@@ -290,3 +327,9 @@ with that threshold; a `[lint.severity]` entry turns it on at the default 0.1. I
 the form `skill "charge" of area "billing" and skill "rank" of area "search" list overlapping words at session start
 (score 0.50, at least 0.10): customer, details, look, name`. The plugin skills counted are those of
 `[exposure] plugins`. See [Strict validation](strict-validation.md#ar9w2-exposure-area-collision).
+
+`AR9W4 exposure-gate-unreadable` (warning) reports a skill, command or rule whose frontmatter does not parse (`AR306`)
+while a line of the block names `paths`, `disable-model-invocation` or `user-invocable`, on that line. It needs no
+`[exposure]` table and runs for the claude preset and for a run without a configuration. See
+[A gate that cannot be read](#a-gate-that-cannot-be-read) and
+[Strict validation](strict-validation.md#ar9w4-exposure-gate-unreadable).
