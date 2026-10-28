@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.9.1] - 2026-10-28
+
 ### Fixed
 
 - **`AR964` counts each skill once in the Codex skill listing.** A copy of a skill under another directory, such
