@@ -291,12 +291,15 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 	if !mode.Valid() {
 		return nil, oops.Errorf("build the exposure inventory: unknown plugin mode %q (use none, enabled or all)", mode)
 	}
-	files := opts.Files
+	files, capped := opts.Files, false
 	if files == nil {
-		files = repoindex.ListFiles(ctx, root)
+		files, capped = repoindex.ListFilesCapped(ctx, root)
 	}
 	files = withRootSettings(root, files)
 	b := &builder{root: root, absRoot: filepath.ToSlash(root), realRoot: realPath(root), files: files}
+	if capped {
+		b.problems = append(b.problems, Problem{Path: ".", Error: fmt.Sprintf("the file walk stopped after %d files; artifacts past them are not counted", len(files))})
+	}
 	b.readSettings()
 	for _, file := range walkOrder(files) {
 		b.collect(file)
