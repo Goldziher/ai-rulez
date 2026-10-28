@@ -80,19 +80,19 @@ func TestPathMissingIgnoresContainerImages(t *testing.T) {
 		body string
 		want int
 	}{
-		{"image reference with an underscore is not a path", "Build the container image `armis/sra_session_vnc` for the service.", 0},
-		{"image reference with a registry host is not a path", "Push `ghcr.io/armis/sra_session_vnc` to the registry.", 0},
-		{"missing path with an extension is reported", "Edit `armis/gone.go` after the move.", 1},
-		{"missing directory without an underscore is reported", "Read `armis/legacy` for the old shape.", 1},
-		{"missing path with an extension and an underscore is reported", "Read `armis/sra_session_vnc.go` for the shapes.", 1},
+		{"image reference with an underscore is not a path", "Build the container image `acme/sra_session_vnc` for the service.", 0},
+		{"image reference with a registry host is not a path", "Push `ghcr.io/acme/sra_session_vnc` to the registry.", 0},
+		{"missing path with an extension is reported", "Edit `acme/gone.go` after the move.", 1},
+		{"missing directory without an underscore is reported", "Read `acme/legacy` for the old shape.", 1},
+		{"missing path with an extension and an underscore is reported", "Read `acme/sra_session_vnc.go` for the shapes.", 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			root := t.TempDir()
 			writeFiles(t, root, precisionTree(tt.body, "", map[string]string{
-				"armis/keep.txt": "x\n",
-				"ghcr.io/.keep":  "",
+				"acme/keep.txt": "x\n",
+				"ghcr.io/.keep": "",
 			}))
 			gitAdd(t, root)
 

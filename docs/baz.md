@@ -113,7 +113,7 @@ One rule with many globs is copied into every directory those globs point into, 
   `services/web/AGENTS.md`). It is off by default, so the output is unchanged.
 - **`baz_dedupe_max = <K>`** collapses an item that would be copied into more than K directories to the directory
   covering all of them, even without `baz_dedupe`. When the directories share nothing but the repository root (a rule
-  scoped to `armis/`, `deploy/` and `dev_tools/`), the item goes to the root `AGENTS.md`, the baz contribution to that
+  scoped to `platform/`, `deploy/` and `dev_tools/`), the item goes to the root `AGENTS.md`, the baz contribution to that
   shared file. With `baz_unscoped = "skip"` the root is off limits for path-scoped items, so the copies stay. `0`
   disables it.
 - **`baz_budget = <bytes>`** makes `generate` warn when the total size of the Baz `AGENTS.md` surface (the root file

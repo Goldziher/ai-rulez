@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	validateProjectNaraURL = "https://nara.armis.com/api/mcp/allMcpServer/mcp"
-	validateLocalNaraURL   = "https://nara.armis.com/api/mcp/haverikoMcpServer/mcp"
+	validateProjectTeamURL = "https://mcp.example.com/api/mcp/project/mcp"
+	validateLocalTeamURL   = "https://mcp.example.com/api/mcp/personal/mcp"
 )
 
 // TestValidateMCPUserScopeFlagIsOptIn pins the flag: it exists on validate, not
@@ -43,7 +43,7 @@ func TestValidateMCPUserScopeFlagIsOptIn(t *testing.T) {
 func TestStrictLintMCPUserScope(t *testing.T) {
 	// Arrange: a project server also defined, at a different url, in the local
 	// scope of the configured claude harness.
-	extra := fmt.Sprintf("\n[[mcp_servers]]\nname = \"nara\"\ntransport = \"http\"\nurl = %q\n", validateProjectNaraURL)
+	extra := fmt.Sprintf("\n[[mcp_servers]]\nname = \"team\"\ntransport = \"http\"\nurl = %q\n", validateProjectTeamURL)
 	_, cfg := strictProject(t, extra, nil)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -51,7 +51,7 @@ func TestStrictLintMCPUserScope(t *testing.T) {
 		t.Setenv("USERPROFILE", home)
 	}
 	writeFile(t, filepath.Join(home, ".claude.json"),
-		fmt.Sprintf(`{"projects":{%q:{"mcpServers":{"nara":{"type":"http","url":%q}}}}}`, cfg.BaseDir, validateLocalNaraURL))
+		fmt.Sprintf(`{"projects":{%q:{"mcpServers":{"team":{"type":"http","url":%q}}}}}`, cfg.BaseDir, validateLocalTeamURL))
 
 	oldScope := validateMCPUserScope
 	t.Cleanup(func() { validateMCPUserScope = oldScope })
@@ -76,7 +76,7 @@ func TestStrictLintMCPUserScope(t *testing.T) {
 	if on[0].Code != lint.CodeMCPConfigInvalid || on[0].Severity != lint.SeverityWarning {
 		t.Errorf("finding = %+v, want a warning under %s", on[0], lint.CodeMCPConfigInvalid)
 	}
-	for _, want := range []string{"nara", validateProjectNaraURL, validateLocalNaraURL, "claude mcp remove nara -s local"} {
+	for _, want := range []string{"team", validateProjectTeamURL, validateLocalTeamURL, "claude mcp remove team -s local"} {
 		if !strings.Contains(on[0].Message+on[0].File, want) {
 			t.Errorf("finding %+v does not name %q", on[0], want)
 		}

@@ -7,11 +7,6 @@
 @ant-design/cssinjs
 @ant-design/icons
 @anthropic-ai/claude-agent-sdk
-@armis/armis-assistant
-@armis/fe-utils
-@armis/icons
-@armis/mastra-db
-@armis/ui
 @atlaskit/editor-json-transformer
 @atlaskit/editor-markdown-transformer
 @aws-cdk/aws-msk-alpha
@@ -181,9 +176,6 @@
 @silk/api-integrations
 @silk/api-remediation-owner-notifications
 @silk/api-tasks
-@silk/armis-api
-@silk/armis-integration-config-parser
-@silk/armis-server
 @silk/atlas-admin-api
 @silk/aws
 @silk/backend
