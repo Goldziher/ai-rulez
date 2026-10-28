@@ -208,7 +208,7 @@ func TestReportSchemasRejectAWrongDocument(t *testing.T) {
 			`"start_tokens":0,"tokens_by_phase":{"later":1},"start_tokens_by_kind":{},"counts_by_phase_and_kind":{"start":{},"on_demand":{},"manual":{}},"items":[]}`,
 		"exposure-areas.v1.schema.json": `{"schema_version":1,"root":"/r","areas_file":"","plugins":"enabled","areas":[],"skill_areas":{},"counts":{},` +
 			`"artifacts":[{"kind":"skill","source":"file","name":"s","qualified_name":"s","path":"p","scope":".","area_scope":".","phase":"start","area":"a","area_source":"guess"}]}`,
-		"exposure-leakage.v1.schema.json": `{"schema_version":1,"artifacts_checked":1,"stale_acceptances":[],"findings":[{"severity":"fatal","code":"AR9W0","area":"a",` +
+		"exposure-leakage.v1.schema.json": `{"schema_version":1,"root":"/r","plugins":"none","areas_file":"","artifacts_checked":1,"unchecked":[],"stale_acceptances":[],"findings":[{"severity":"fatal","code":"AR9W0","area":"a",` +
 			`"term":"t","kind":"skill","name":"s","path":"p","scope":".","line":1,"excerpt":"e","reason":""}]}`,
 	} {
 		schemaBytes, err := os.ReadFile(filepath.Join("..", "..", "..", "schema", file))

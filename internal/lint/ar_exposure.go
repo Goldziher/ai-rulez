@@ -33,6 +33,10 @@ type ExposureStart struct {
 	ListingSkills      int
 	ListingChars       int
 	ListingBudgetChars int
+	// StartPaths are the absolute paths of the files of the start-of-session
+	// artifacts, each once: a change to any of them moves the measure, so the
+	// findings on it depend on them under --changed.
+	StartPaths []string
 }
 
 // ExposureSource reads the session exposure of the project (the Claude Code
@@ -40,6 +44,14 @@ type ExposureStart struct {
 // it only when the configuration has an [exposure] table; without one handed
 // in (WithExposure), they stay silent.
 type ExposureSource interface {
+	// Root is the absolute directory the inventory is of, which the paths of
+	// the leaks and collisions are relative to; "" is the project root.
+	Root() string
+	// Inputs are the absolute paths of the files besides the artifacts that
+	// decide the exposure: the areas file, the configuration, the root settings
+	// and the marketplace. The findings of the exposure rules depend on them
+	// under --changed.
+	Inputs() []string
 	// StartExposure is the start-of-session exposure (AR9W3, AR964
 	// claude-skill-listing-total); nil when the inventory cannot be built.
 	StartExposure() *ExposureStart
@@ -63,6 +75,32 @@ func (r *runner) exposureStart() *ExposureStart {
 	return r.exposure.StartExposure()
 }
 
+// exposureRoot is the absolute directory the exposure source's paths are
+// relative to: its Root, else the project root.
+func (r *runner) exposureRoot() string {
+	if r.exposure != nil {
+		if root := r.exposure.Root(); root != "" {
+			return root
+		}
+	}
+	return r.rootAbs()
+}
+
+// exposureDeps records, when a finding was added since before, that the file
+// it is in depends on the exposure source's inputs and on paths, so --changed
+// keeps it when one of them changed.
+func (r *runner) exposureDeps(before int, from string, paths []string) {
+	if len(r.findings) == before || r.exposure == nil {
+		return
+	}
+	for _, in := range r.exposure.Inputs() {
+		r.dep(from, in)
+	}
+	for _, p := range paths {
+		r.dep(from, p)
+	}
+}
+
 // exposureStartBudgetSeverity turns AR9W3 on at error when [exposure]
 // start_budget is set.
 func (r *runner) exposureStartBudgetSeverity() {
@@ -74,7 +112,7 @@ func (r *runner) exposureStartBudgetSeverity() {
 func registerArExposure(s *ruleSet) {
 	s.addRules(
 		RuleInfo{CodeExposureStartBudget, "exposure-start-budget", SeverityOff, "the estimated tokens a Claude Code session loads at start exceed [exposure] start_budget (setting it turns the rule on at error)"},
-		RuleInfo{CodeExposureMapInvalid, "exposure-map-invalid", SeverityError, "the [exposure] table or its area map is invalid: a duplicate or malformed area name, a bad path claim, a skill_areas value naming no area, an unreadable areas_file, or both areas_file and inline areas"},
+		RuleInfo{CodeExposureMapInvalid, "exposure-map-invalid", SeverityError, "the [exposure] table or its area map is invalid: a bad scalar key, a duplicate, malformed or reserved area name, a bad path claim, a skill_areas value naming no area, an unknown key, an unreadable areas_file, or both areas_file and inline areas"},
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeExposureStartBudget: {
@@ -95,7 +133,10 @@ func registerArExposure(s *ruleSet) {
 }
 
 // checkExposureStartBudget reports start-of-session tokens over [exposure]
-// start_budget (AR9W3).
+// start_budget (AR9W3). The finding is on the config line, and depends on
+// every start-of-session artifact and on the source's inputs, so --changed
+// keeps it when the change that pushes the session past the budget is in one
+// of them.
 func checkExposureStartBudget(r *runner) {
 	if r.cfg == nil || r.cfg.Exposure == nil || r.cfg.Exposure.StartBudget <= 0 || r.sev[CodeExposureStartBudget] == SeverityOff {
 		return
@@ -106,9 +147,11 @@ func checkExposureStartBudget(r *runner) {
 	}
 	budget := r.cfg.Exposure.StartBudget
 	path, line := r.exposureLine("start_budget")
+	before := len(r.findings)
 	r.add(CodeExposureStartBudget, path, line,
 		"a session started at the repository root loads about %d estimated tokens (%d artifacts), %d past the [exposure] start_budget of %d; run `ai-rulez exposure` for the heaviest artifacts",
 		start.StartTokens, start.StartArtifacts, start.StartTokens-budget, budget)
+	r.exposureDeps(before, path, start.StartPaths)
 }
 
 // checkExposureMap reports an invalid [exposure] table and area map (AR9W5).
@@ -139,7 +182,8 @@ func checkExposureMap(r *runner) {
 	}
 }
 
-// exposureLine finds the config line holding key inside the [exposure] tables, else the [exposure] header.
+// exposureLine finds the config line that sets key inside the [exposure] tables, else the [exposure] header.
+// A comment, or another key whose name or value holds the text, is not the key.
 func (r *runner) exposureLine(key string) (path string, line int) {
 	return r.configLineWhere(func(lines []string) int {
 		header, inside := 0, false
@@ -152,7 +196,7 @@ func (r *runner) exposureLine(key string) (path string, line int) {
 				}
 				continue
 			}
-			if inside && key != "" && strings.Contains(l, key) {
+			if k, ok := areas.LineKey(l); inside && key != "" && ok && k == key {
 				return i + 1
 			}
 		}

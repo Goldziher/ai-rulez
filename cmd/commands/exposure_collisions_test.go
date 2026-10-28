@@ -129,4 +129,5 @@ func TestExposureLintSource(t *testing.T) {
 
 func TestCollisionDefaultsAgree(t *testing.T) {
 	assert.InDelta(t, lint.DefaultExposureCollisionMinScore, exposure.DefaultCollisionMinScore, 0)
+	assert.Equal(t, lint.DefaultExposureCollisionLimit, exposure.DefaultCollisionLimit)
 }

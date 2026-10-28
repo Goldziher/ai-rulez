@@ -2,6 +2,8 @@ package cli
 
 import (
 	"encoding/json"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,6 +54,7 @@ type leakageFinding struct {
 }
 
 type leakageDoc struct {
+	Root             string           `json:"root"`
 	ArtifactsChecked int              `json:"artifacts_checked"`
 	Findings         []leakageFinding `json:"findings"`
 	Stale            []string         `json:"stale_acceptances"`
@@ -104,6 +107,27 @@ func TestExposureLeakage(t *testing.T) {
 		require.Equal(t, 2, res.ExitCode, res.Stderr)
 		assert.Contains(t, res.Stdout, `rule \"billing\" at session start names term \"invoice\" of area \"billing\"`)
 		assert.Contains(t, res.Stdout, `"AR9W1"`)
+	})
+
+	// Last: it adds a file below the project.
+	t.Run("--root below the project inspects that directory, with paths relative to it", func(t *testing.T) {
+		writeTree(t, root, map[string]string{"services/billing/CLAUDE.md": "# Billing\n\nEvery invoice is ours.\n"})
+		billing := filepath.Join("services", "billing")
+
+		res := env.run(root, "exposure", "leakage", "--format", "json", "--root", billing)
+
+		require.Equal(t, 2, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
+		doc := leakage(t, res.Stdout)
+		assert.True(t, strings.HasSuffix(doc.Root, "/services/billing"), "root %s", doc.Root)
+		assert.Equal(t, []leakageFinding{
+			{Severity: "violation", Code: "AR9W0", Area: "billing", Term: "invoice", Kind: "claude_md", Name: "CLAUDE.md", Path: "CLAUDE.md", Line: 3},
+			{Severity: "warning", Code: "AR9W1", Area: "billing", Term: "card", Kind: "skill", Name: "charge", Path: ".claude/skills/charge/SKILL.md", Line: 1},
+		}, doc.Findings, "the session of services/billing, not the repository root's")
+		assert.Len(t, doc.Stale, 1, "the acceptance of the root .mcp.json accepts nothing below it")
+
+		text := env.run(root, "exposure", "leakage", "--root", billing)
+		require.Equal(t, 2, text.ExitCode, text.Stderr)
+		assert.Contains(t, text.Stdout, "violation AR9W0 billing/invoice CLAUDE.md:3")
 	})
 }
 
