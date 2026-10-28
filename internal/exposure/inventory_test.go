@@ -481,7 +481,8 @@ func TestBuild_SymlinksOutsideTheRootAreKeptUnread(t *testing.T) {
 }
 
 // A file over the read limit is kept with its phase from the path rules and an
-// empty text, not dropped.
+// empty text, not dropped; its size stands in for the text in text_bytes and
+// tokens, so a start budget still counts it.
 func TestBuild_FilesOverTheSizeLimitAreKeptUnread(t *testing.T) {
 	// Arrange
 	big := strings.Repeat("x", repoindex.MaxFileBytes+1)
@@ -514,7 +515,8 @@ func TestBuild_FilesOverTheSizeLimitAreKeptUnread(t *testing.T) {
 		assert.Equal(t, tt.wantPhase, a.Phase, "%s %s", tt.kind, tt.name)
 		assert.Equal(t, VisibilityAlways, a.Visibility)
 		assert.Empty(t, a.Text)
-		assert.Zero(t, a.TextBytes)
+		assert.Equal(t, len(big), a.TextBytes, "the size of the file stands in for its text")
+		assert.Equal(t, EstimateTokens(len(big)), a.Tokens, "an unread file is estimated from its size, never 0")
 		require.NotNil(t, a.Frontmatter)
 		assert.False(t, a.Frontmatter.OK)
 		assert.Contains(t, a.Frontmatter.Error, "over the read limit")
@@ -529,6 +531,59 @@ func TestBuild_ListsTheRepositoryWhenNoFilesAreGiven(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"CLAUDE.md", ".claude/skills/s/SKILL.md"}, paths(inv.Artifacts, KindClaudeMD, KindSkill))
+}
+
+// Outside a git repository the file listing is a walk, which lists a symlinked
+// file as git would, so the reader decides what to follow.
+func TestBuild_WalkListsSymlinkedFiles(t *testing.T) {
+	// Arrange
+	root := writeRepo(t, map[string]string{"AGENTS.md": "Shared instructions.\n", ".claude/rules/a.md": "Rule a.\n"})
+	link(t, root, "AGENTS.md", "CLAUDE.md")
+	link(t, root, "a.md", ".claude/rules/b.md")
+	link(t, root, ".claude", "linked-dir")
+
+	// Act
+	inv, err := Build(context.Background(), Options{Root: root})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, inv.Problems)
+	assert.Equal(t, "Shared instructions.\n", named(t, inv, KindClaudeMD, "CLAUDE.md").Text)
+	assert.Equal(t, "Rule a.\n", named(t, inv, KindRule, "b").Text)
+}
+
+// A UTF-8 byte order mark is stripped before the frontmatter is parsed, so a
+// BOM-prefixed file keeps its gate, and it is not part of the text.
+func TestBuild_StripsAByteOrderMark(t *testing.T) {
+	// Arrange
+	const bom = "\ufeff"
+	root := writeRepo(t, map[string]string{
+		"CLAUDE.md":          bom + "Root.\n",
+		".claude/rules/r.md": bom + "---\npaths: [src/**]\n---\nGated.\n",
+	})
+
+	// Act
+	inv := build(t, root)
+
+	// Assert
+	top := named(t, inv, KindClaudeMD, "CLAUDE.md")
+	assert.Equal(t, "Root.\n", top.Text)
+	sum := sha256.Sum256([]byte("Root.\n"))
+	assert.Equal(t, hex.EncodeToString(sum[:]), top.TextSHA256)
+	rule := named(t, inv, KindRule, "r")
+	assert.True(t, rule.Frontmatter.OK)
+	assert.Equal(t, []string{"src/**"}, rule.Paths)
+	assert.Equal(t, VisibilityPathGated, rule.Visibility)
+	assert.Equal(t, PhaseOnDemand, rule.Phase)
+	assert.Equal(t, "Gated.", rule.Text)
+}
+
+func TestEstimateTokens(t *testing.T) {
+	for _, tt := range []struct{ bytes, want int }{
+		{0, 0}, {1, 1}, {3, 1}, {4, 2}, {28, 8}, {39, 10}, {40, 11}, {390, 100}, {391, 101},
+	} {
+		assert.Equal(t, tt.want, EstimateTokens(tt.bytes), "%d bytes", tt.bytes)
+	}
 }
 
 func TestBuild_RejectsBadOptions(t *testing.T) {
@@ -597,4 +652,14 @@ func TestInventory_JSONHasNoNull(t *testing.T) {
 	assert.Contains(t, string(data), `"problems":[]`)
 	assert.Contains(t, string(data), `"skill_overrides":{}`)
 	assert.Contains(t, string(data), `"schema_version":1`)
+}
+
+// An empty inventory prints "artifacts": [] with or without the texts.
+func TestInventory_EmptyArtifactsAreAnEmptyList(t *testing.T) {
+	inv := build(t, writeRepo(t, map[string]string{"README.md": "nothing"}))
+
+	data, err := json.Marshal(inv.WithoutText())
+
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"artifacts":[]`)
 }

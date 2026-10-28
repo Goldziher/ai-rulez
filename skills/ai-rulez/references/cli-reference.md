@@ -178,7 +178,7 @@ Commands that print JSON take `--format text|json`; `--json` was removed in v5.
 - `ai-rulez catalog [--format json] [--schema-version 1|2]` — Items with owner, version, tokens, roles and lock status; `--html <dir>` writes a static site (`--role`, `--include-excerpt`, `--indexable`, `--clean`, `--base-title`, `--allow-findings AR001`)
 - `ai-rulez sbom [--type cyclonedx] [--online] [-o <file>]` — CycloneDX 1.6 bill of materials
 - `ai-rulez tokens [--role <name>] [--by-role] [--budget <n>] [--compare-profiles <p>] [--tokenizer ...] [--format json]` — Prompt-token surface per runtime; `ai-rulez cost [--target <preset>] [--top <n>] [--budget <n>] [--format text|json|markdown]` names the biggest offenders
-- `ai-rulez exposure inventory [--plugins none|enabled|all] [--with-text] [--areas <file>] [--root <dir>] [--format text|json]` — Every Claude Code artifact a session at the repository root can see, with its phase (start, on demand, manual), visibility and frontmatter status; `ai-rulez exposure areas` shows the `[exposure]` area map and the area of each artifact with how it was decided (`skill_areas`, `path`, `terms`, `none`)
+- `ai-rulez exposure inventory [--plugins none|enabled|all] [--with-text] [--areas <file>] [--root <dir>] [--format text|json]` — Every Claude Code artifact a session at the repository root can see, with its phase (start, on demand, manual, unknown), visibility and frontmatter status; `ai-rulez exposure areas` shows the `[exposure]` area map and the area of each artifact with how it was decided (`skill_areas`, `path`, `terms`, `none`)
 
 ## Verification, Search and Evals
 

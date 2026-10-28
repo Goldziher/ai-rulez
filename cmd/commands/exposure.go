@@ -57,8 +57,9 @@ only when the user runs it), and which area of the [exposure] area map it belong
 offline, free and deterministic; see docs/exposure.md.
 
 The repository is the project root (the directory of the configuration, else the working directory) or
---root. The area map is the [exposure] table of the configuration, or --areas, which replaces
-[exposure] areas_file. --plugins selects the repository-marketplace plugins whose skills are listed:
+--root. The configuration is -C/--config when given, else the one discovered from --root (or from the
+working directory), with --config-dir and --no-local applied as by every command. The area map is the
+[exposure] table of the configuration, or --areas, which replaces [exposure] areas_file. --plugins selects the repository-marketplace plugins whose skills are listed:
 none, enabled (the ones the root .claude/settings*.json enable; the default unless [exposure] plugins
 says otherwise) or all.
 
@@ -77,7 +78,7 @@ estimated tokens and frontmatter status, the root project settings that shaped t
 could not be read. With an area map, each artifact also carries its area and how it was decided.
 
 --format json prints schema/exposure-inventory.v1.schema.json; the artifact texts are left out unless
---with-text is given.`,
+--with-text is given (which applies to --format json only).`,
 		Example: `  ai-rulez exposure inventory
   ai-rulez exposure inventory --plugins all
   ai-rulez exposure inventory --format json --with-text`,
@@ -114,6 +115,9 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 }
 
 func runExposureInventory(ctx context.Context, w io.Writer, f *exposureFlags) error {
+	if f.withText && !f.asJSON {
+		return oops.Errorf("--with-text applies to --format json")
+	}
 	in, err := loadExposure(ctx, f)
 	if err != nil {
 		return err
@@ -157,8 +161,12 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 		return nil, err
 	}
 	var exp *config.ExposureConfig
+	base := root
 	if cfg != nil {
 		exp = cfg.Exposure
+		if base, err = filepath.Abs(cfg.BaseDir); err != nil {
+			return nil, oops.Wrapf(err, "resolve the project root")
+		}
 	}
 	if problems := exp.Validate(); len(problems) > 0 {
 		return nil, oops.Errorf("the [exposure] table is invalid (AR9W5): %s", strings.Join(problems, "; "))
@@ -168,7 +176,7 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 		mode = exposure.PluginMode(exp.Plugins)
 	}
 	in := &exposureInput{}
-	if in.areas, in.areasFile, err = exposureMap(exp, root, f.areasFile); err != nil {
+	if in.areas, in.areasFile, err = exposureMap(exp, base, root, f.areasFile); err != nil {
 		return nil, err
 	}
 	if in.inv, err = exposure.Build(ctx, exposure.Options{Root: root, Plugins: mode}); err != nil {
@@ -178,7 +186,9 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 }
 
 // exposureProject is the configuration (nil when there is none) and the
-// absolute repository root.
+// absolute repository root. With --root the configuration is still -C when
+// given (an unreadable or invalid one fails), else the one --config-dir names
+// in the root, else the one discovered from the root upwards.
 func exposureProject(ctx context.Context, rootFlag string) (*config.Config, string, error) {
 	if rootFlag != "" {
 		root, err := filepath.Abs(rootFlag)
@@ -188,7 +198,7 @@ func exposureProject(ctx context.Context, rootFlag string) (*config.Config, stri
 		if info, err := os.Stat(root); err != nil || !info.IsDir() {
 			return nil, "", oops.Errorf("--root %s is not a directory", rootFlag)
 		}
-		cfg, err := loadProject(ctx, root, config.WithoutRemote())
+		cfg, err := exposureConfigFor(ctx, root)
 		if errors.Is(err, config.ErrNoConfig) {
 			return nil, root, nil
 		}
@@ -206,9 +216,35 @@ func exposureProject(ctx context.Context, rootFlag string) (*config.Config, stri
 	return cfg, root, oops.Wrapf(err, "resolve the project root")
 }
 
-// exposureMap loads the area map of --areas, else of the [exposure] table; it
-// is nil when neither configures one.
-func exposureMap(exp *config.ExposureConfig, root, areasFlag string) (*areas.Map, string, error) {
+// exposureConfigFor loads the configuration of an explicit --root, honoring
+// -C, --config-dir and --no-local as loadConfigOrNoConfig does for the working
+// directory.
+func exposureConfigFor(ctx context.Context, root string) (*config.Config, error) {
+	opts := []config.LoadOption{config.WithoutRemote()}
+	if noLocal {
+		opts = append(opts, config.WithoutLocal())
+	}
+	switch {
+	case cfgFile != "":
+		return loadProjectFile(ctx, cfgFile, opts...)
+	case configDir != "":
+		return loadProjectDir(ctx, root, configDir, opts...)
+	}
+	project, err := config.DiscoverProjectRoot(ctx, root)
+	switch {
+	case errors.Is(err, config.ErrNoConfig):
+		return nil, err //nolint:wrapcheck // the caller checks for ErrNoConfig
+	case err != nil:
+		project = root
+	}
+	return loadProject(ctx, project, opts...)
+}
+
+// exposureMap loads the area map of --areas, else of the [exposure] table,
+// whose areas_file is relative to base, the directory of the configuration; it
+// is nil when neither configures one. The file it names is relative to root
+// and slash separated, or absolute (slash separated) when it lies outside root.
+func exposureMap(exp *config.ExposureConfig, base, root, areasFlag string) (*areas.Map, string, error) {
 	var (
 		m        *areas.Map
 		problems []areas.Problem
@@ -216,11 +252,13 @@ func exposureMap(exp *config.ExposureConfig, root, areasFlag string) (*areas.Map
 	)
 	switch {
 	case areasFlag != "":
-		file = areasFlag
+		file = rootRelative(root, areasFlag)
 		m, problems = areas.LoadFile(areasFlag)
 	case exp != nil:
-		file = exp.AreasFile
-		m, problems = areas.Load(exp, root)
+		if exp.AreasFile != "" {
+			file = rootRelative(root, filepath.Join(base, filepath.FromSlash(exp.AreasFile)))
+		}
+		m, problems = areas.Load(exp, base)
 	}
 	if len(problems) == 0 {
 		return m, file, nil
@@ -234,6 +272,20 @@ func exposureMap(exp *config.ExposureConfig, root, areasFlag string) (*areas.Map
 		lines = append(lines, where+": "+p.Message)
 	}
 	return nil, "", oops.Errorf("the area map is invalid (AR9W5):\n  %s", strings.Join(lines, "\n  "))
+}
+
+// rootRelative is p relative to root, slash separated, or p made absolute and
+// slash separated when it lies outside root.
+func rootRelative(root, p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return filepath.ToSlash(p)
+	}
+	rel, err := filepath.Rel(root, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return filepath.ToSlash(abs)
+	}
+	return filepath.ToSlash(rel)
 }
 
 // writeTable writes rows as aligned columns, the first row being the header.
@@ -270,7 +322,10 @@ func writeInventoryText(w io.Writer, inv *exposure.Inventory, withAreas bool) er
 	if err := writeTable(w, rows); err != nil {
 		return err
 	}
-	parts := []string{fmt.Sprintf("%d %s (%d tokens)", counts[exposure.PhaseStart], exposure.PhaseStart, tokens[exposure.PhaseStart])}
+	// The start figure counts the unknown artifacts too, as Inventory.Start does
+	// (fail closed).
+	startTokens := tokens[exposure.PhaseStart] + tokens[exposure.PhaseUnknown]
+	parts := []string{fmt.Sprintf("%d %s (%d tokens, unknown included)", counts[exposure.PhaseStart], exposure.PhaseStart, startTokens)}
 	for _, p := range []exposure.Phase{exposure.PhaseOnDemand, exposure.PhaseManual, exposure.PhaseUnknown} {
 		parts = append(parts, fmt.Sprintf("%d %s", counts[p], p))
 	}

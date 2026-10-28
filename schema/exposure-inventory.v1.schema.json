@@ -97,9 +97,17 @@
         "listing_text": { "type": "string" },
         "listing_chars": { "type": "integer", "minimum": 0 },
         "truncated": { "type": "boolean" },
-        "text_bytes": { "type": "integer", "minimum": 0 },
+        "text_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The UTF-8 length of the text; for a file kept unread because it is over the read limit, the file size."
+        },
         "text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "tokens": { "type": "integer", "minimum": 0 },
+        "tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated tokens: text_bytes / 3.9 rounded up, 0 for an empty text."
+        },
         "line_offset": { "type": "integer", "minimum": 0 },
         "frontmatter": {
           "type": "object",

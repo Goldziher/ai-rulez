@@ -49,8 +49,12 @@ type AreasReport struct {
 	Areas      []AreaInfo           `json:"areas"`
 	SkillAreas map[string]string    `json:"skill_areas"`
 	Artifacts  []ClassifiedArtifact `json:"artifacts"`
-	// Counts is the number of artifacts per area, Unclassified included.
+	// Counts is the number of artifacts per area: every area of the map and
+	// Unclassified, 0 when no artifact is in it.
 	Counts map[string]int `json:"counts"`
+	// Problems are the inventory's: the files it could not read or decode. An
+	// unread artifact is classified on an empty text.
+	Problems []Problem `json:"problems"`
 }
 
 // AreaInfo is one area of the map, normalized as the map holds it.
@@ -95,7 +99,8 @@ func NewAreasReport(inv *Inventory, m *areas.Map, areasFile string) *AreasReport
 		Areas:         []AreaInfo{},
 		SkillAreas:    map[string]string{},
 		Artifacts:     make([]ClassifiedArtifact, 0, len(classified.Artifacts)),
-		Counts:        map[string]int{},
+		Counts:        map[string]int{areas.Unclassified: 0},
+		Problems:      append([]Problem{}, inv.Problems...),
 	}
 	all := m.Areas()
 	for i := range all {
@@ -104,6 +109,7 @@ func NewAreasReport(inv *Inventory, m *areas.Map, areasFile string) *AreasReport
 			Name: a.Name, Description: a.Description, Owner: a.Owner, Paths: nonNil(a.Paths), Terms: nonNil(a.Terms),
 			Ambiguous: nonNil(a.Ambiguous), Shared: a.Shared, Declare: a.Declare,
 		})
+		rep.Counts[a.Name] = 0
 	}
 	for k, v := range m.SkillAreas() {
 		rep.SkillAreas[k] = v

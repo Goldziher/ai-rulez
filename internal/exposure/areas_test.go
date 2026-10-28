@@ -148,3 +148,16 @@ func TestNewAreasReport(t *testing.T) {
 	assert.Equal(t, 2, rep.Counts["tooling"], "ops:probe and deploy")
 	assert.Empty(t, inv.Artifacts[0].Area, "the report leaves the inventory unclassified")
 }
+
+// Every area and unclassified has a count, 0 when no artifact is in it, and
+// the inventory's problems carry through, so a reader sees an artifact that was
+// classified on an empty text.
+func TestNewAreasReport_CountsEveryAreaAndKeepsTheProblems(t *testing.T) {
+	inv := &Inventory{Root: "/r", Artifacts: []Artifact{}, Problems: []Problem{{Path: "big.md", Error: "over the read limit"}}}
+
+	rep := NewAreasReport(inv, classifiedMap(t), "")
+
+	assert.Equal(t, map[string]int{"billing": 0, "search": 0, "tooling": 0, areas.Unclassified: 0}, rep.Counts)
+	assert.Equal(t, []Problem{{Path: "big.md", Error: "over the read limit"}}, rep.Problems)
+	assert.NotNil(t, NewAreasReport(&Inventory{}, classifiedMap(t), "").Problems, "no problems is an empty list")
+}

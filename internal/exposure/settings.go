@@ -144,11 +144,11 @@ func (b *builder) readSettings() {
 		if pruned(file) || !isSettingsFile(path.Base(file)) || path.Base(path.Dir(file)) != claudeDir {
 			continue
 		}
-		text, status, _ := b.read(file)
-		if status != readOK {
+		r := b.read(file)
+		if r.status != readOK {
 			continue
 		}
-		s, err := parseSettings(text)
+		s, err := parseSettings(r.text)
 		if err != nil {
 			b.problem(file, err.Error())
 			continue
@@ -303,11 +303,11 @@ func applyOverride(a Artifact, override string) (Artifact, bool) {
 // mcpServers lists the servers of a .mcp.json. A file that does not decode,
 // or names a server that is not an object, lists none.
 func (b *builder) mcpServers(file, scope string) {
-	text, status, _ := b.read(file)
-	if status != readOK {
+	r := b.read(file)
+	if r.status != readOK {
 		return
 	}
-	top, err := topLevel(text)
+	top, err := topLevel(r.text)
 	if err != nil {
 		b.problem(file, err.Error())
 		return

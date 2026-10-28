@@ -131,6 +131,15 @@ func TestExposureInventory(t *testing.T) {
 		assert.Contains(t, arts, "lone")
 		assert.NotContains(t, arts, "charge")
 	})
+
+	t.Run("an empty directory prints an empty artifact list", func(t *testing.T) {
+		for _, args := range [][]string{nil, {"--with-text"}} {
+			res := env.run(root, append([]string{"exposure", "inventory", "--format", "json", "--root", t.TempDir()}, args...)...)
+			require.Equal(t, 0, res.ExitCode, res.Stderr)
+			validateAgainstSchema(t, "exposure-inventory.v1.schema.json", res.Stdout)
+			assert.Contains(t, res.Stdout, `"artifacts": []`)
+		}
+	})
 }
 
 func TestExposureAreas(t *testing.T) {
@@ -162,7 +171,24 @@ func TestExposureAreas(t *testing.T) {
 		arts := exposureArtifacts(t, res.Stdout)
 		assert.Equal(t, "unclassified", arts["ops:probe"].Area, "a plugin skill is never placed by its description")
 		assert.Equal(t, "unclassified", arts["charge"].Area)
-		assert.Contains(t, res.Stdout, `"areas_file": "`+filepath.ToSlash(filepath.Join(root, "areas.toml")))
+		assert.Contains(t, res.Stdout, `"areas_file": "areas.toml"`, "relative to the root, whatever the flag says")
+	})
+
+	t.Run("--root below the project uses the project's map", func(t *testing.T) {
+		res := env.run(root, "exposure", "areas", "--format", "json", "--root", filepath.Join("services", "billing"))
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		validateAgainstSchema(t, "exposure-areas.v1.schema.json", res.Stdout)
+		arts := exposureArtifacts(t, res.Stdout)
+		require.Contains(t, arts, "charge")
+		assert.NotContains(t, arts, "ops:probe", "the inventory is of --root")
+	})
+
+	t.Run("-C names the map's configuration for another --root", func(t *testing.T) {
+		other := t.TempDir()
+		res := env.run(other, "-C", filepath.Join(root, ".ai-rulez"), "exposure", "areas", "--format", "json", "--root", other)
+		require.Equal(t, 0, res.ExitCode, res.Stderr)
+		validateAgainstSchema(t, "exposure-areas.v1.schema.json", res.Stdout)
+		assert.Contains(t, res.Stdout, `"name": "billing"`)
 	})
 
 	t.Run("text shows the map and the classification", func(t *testing.T) {
@@ -177,7 +203,11 @@ func TestExposureAreas(t *testing.T) {
 func TestExposureFailures(t *testing.T) {
 	env := newIsoEnv(t)
 	root := exposureProject(t, env, "")
-	writeTree(t, root, map[string]string{"bad.toml": "[[area]]\nname = \"a\"\n[[area]]\nname = \"a\"\n"})
+	writeTree(t, root, map[string]string{
+		"bad.toml":           "[[area]]\nname = \"a\"\n[[area]]\nname = \"a\"\n",
+		"badcfg/config.toml": "version = \"5.0\"\nname = \"bad\"\n\n[exposure]\nplugins = \"some\"\n",
+		"empty/.gitkeep":     "",
+	})
 	tests := []struct {
 		name string
 		args []string
@@ -187,6 +217,9 @@ func TestExposureFailures(t *testing.T) {
 		{"an invalid map names its line", []string{"exposure", "inventory", "--areas", "bad.toml"}, `bad.toml:4: duplicate area name "a"`},
 		{"an unknown plugin mode", []string{"exposure", "inventory", "--plugins", "some"}, `unknown --plugins "some"`},
 		{"a missing root", []string{"exposure", "inventory", "--root", "nope"}, "is not a directory"},
+		{"an invalid -C with --root", []string{"-C", "badcfg/config.toml", "exposure", "inventory", "--root", "empty"}, "AR9W5"},
+		{"a missing -C with --root", []string{"-C", "nope.toml", "exposure", "inventory", "--root", "empty"}, "does not exist"},
+		{"--with-text without json", []string{"exposure", "inventory", "--with-text"}, "--with-text applies to --format json"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
