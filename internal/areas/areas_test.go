@@ -41,7 +41,7 @@ ambiguous = ["query"]
 [[area]]
 name = "tooling"
 owner = "devx"
-paths = ["dev_tools"]
+paths = ["tools"]
 shared = true
 terms = ["buildtool"]
 `
@@ -209,14 +209,14 @@ func TestStripPathLiterals(t *testing.T) {
 	m := testMap(t)
 	assert.Equal(t, "see   and x", m.StripPathLiterals("see services/billing_x/a.md and x"))
 	assert.Equal(t, "keep my/services/x and a/services/b", m.StripPathLiterals("keep my/services/x and a/services/b"))
-	assert.Equal(t, "( )", m.StripPathLiterals("(dev_tools/run.sh)"))
+	assert.Equal(t, "( )", m.StripPathLiterals("(tools/run.sh)"))
 }
 
 func TestOwner(t *testing.T) {
 	m, problems := New([]config.ExposureArea{
 		{Name: "billing", Paths: []string{"services/billing"}, Terms: []string{"invoice"}},
 		{Name: "search", Terms: []string{"ranker"}},
-		{Name: "tooling", Paths: []string{"dev_tools"}, Shared: true},
+		{Name: "tooling", Paths: []string{"tools"}, Shared: true},
 	}, map[string]string{"deploy": "tooling", "kit:solo": "search", "lookup": "billing"})
 	require.Empty(t, problems)
 	tests := []struct {
@@ -230,7 +230,7 @@ func TestOwner(t *testing.T) {
 		{"nothing", Skill{Name: "x", Text: "format files"}, Owner{Unclassified, SourceNone}},
 		{"plugin skill by qualified name", Skill{Name: "solo", Plugin: "kit"}, Owner{"search", SourceSkillAreas}},
 		{"plugin skill by bare name", Skill{Name: "lookup", Plugin: "kit"}, Owner{"billing", SourceSkillAreas}},
-		{"plugin skill in a claimed directory", Skill{Name: "inner", Plugin: "p", Scope: "dev_tools/.claude/plugins/p", Text: "p:inner"}, Owner{"tooling", SourcePath}},
+		{"plugin skill in a claimed directory", Skill{Name: "inner", Plugin: "p", Scope: "tools/.claude/plugins/p", Text: "p:inner"}, Owner{"tooling", SourcePath}},
 		{"a repository skill never matches a qualified entry", Skill{Name: "solo"}, Owner{Unclassified, SourceNone}},
 		{"a colon name of a repository skill is not split", Skill{Name: "ops:lookup"}, Owner{Unclassified, SourceNone}},
 	}
