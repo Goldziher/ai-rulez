@@ -22,6 +22,8 @@ func TestExposureGateUnreadableAR9W4(t *testing.T) {
 		wantFile string
 		wantLine int
 		inText   []string
+		// typed marks a block that parses but holds a gate value of the wrong type, which AR306 does not report.
+		typed bool
 	}{
 		{
 			name:     "an authored skill naming paths",
@@ -60,6 +62,33 @@ func TestExposureGateUnreadableAR9W4(t *testing.T) {
 			name:     "a block that never closes",
 			files:    map[string]string{".ai-rulez/rules/open.md": "---\npaths: [\"**/*.go\"]\n\n# Open\nbody\n"},
 			wantFile: "rules/open.md", wantLine: 2,
+		},
+		{
+			name:     "paths that is not a string or a list of strings",
+			files:    map[string]string{".ai-rulez/skills/bad/SKILL.md": "---\nname: bad\ndescription: Use when testing the gate.\npaths: 5\n---\nBody.\n"},
+			wantFile: "skills/bad/SKILL.md", wantLine: 4, typed: true,
+			inText: []string{`skill "bad"`, `sets "paths" to a value of the wrong type`, "cannot be known"},
+		},
+		{
+			name:     "a paths list holding a number",
+			files:    map[string]string{".claude/skills/native/SKILL.md": "---\nname: native\ndescription: Use when testing the gate.\npaths: [\"src/**\", 5]\n---\nBody.\n"},
+			wantFile: ".claude/skills/native/SKILL.md", wantLine: 4, typed: true,
+		},
+		{
+			name:     "disable-model-invocation yes, a string to YAML 1.2",
+			files:    map[string]string{".claude/skills/native/SKILL.md": "---\nname: native\ndescription: Use when testing the gate.\ndisable-model-invocation: yes\n---\nBody.\n"},
+			wantFile: ".claude/skills/native/SKILL.md", wantLine: 4, typed: true,
+			inText: []string{`sets "disable-model-invocation" to a value of the wrong type`},
+		},
+		{
+			name:     "two wrong-typed gates, on the first",
+			files:    map[string]string{".ai-rulez/rules/scoped.md": "---\ndescription: Scoped.\ndisable-model-invocation: \"no\"\npaths: 5\n---\n# Scoped\n"},
+			wantFile: "rules/scoped.md", wantLine: 3, typed: true,
+			inText: []string{`"disable-model-invocation", "paths"`},
+		},
+		{
+			name:  "well-typed gates are clean",
+			files: map[string]string{".claude/skills/ok/SKILL.md": "---\nname: ok\ndescription: Use when testing the gate.\ndisable-model-invocation: true\npaths: src/**\n---\nBody.\n"},
 		},
 		{
 			name:  "a broken block that names no gate",
@@ -116,6 +145,10 @@ func TestExposureGateUnreadableAR9W4(t *testing.T) {
 			assert.Equal(t, SeverityWarning, f.Severity)
 			for _, s := range tt.inText {
 				assert.Contains(t, f.Message, s)
+			}
+			if tt.typed {
+				assert.False(t, has(got, "AR306", tt.wantFile, 0), "a block that parses is not AR306:\n%s", dump(got))
+				return
 			}
 			assert.True(t, has(got, "AR306", tt.wantFile, 1), "AR9W4 comes with AR306:\n%s", dump(got))
 		})

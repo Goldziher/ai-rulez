@@ -146,7 +146,7 @@ func markdownArtifact(kind Kind, source Source, file, scope, fallback, text stri
 	default:
 		a.Text, a.LineOffset = bodyOf(text, block)
 	}
-	if err != nil && gated(kind) && scope == RootScope && frontmatter.NamesKey(block.Raw, frontmatter.GateKeys...) {
+	if err != nil && gated(kind) && scope == RootScope && frontmatter.NamesKey(block.Raw, frontmatter.GateKeys()...) {
 		a.Phase = PhaseUnknown
 	}
 	return a
@@ -179,7 +179,7 @@ func decodeHeader(block frontmatter.Block) (header, error) {
 		*f.dst = s
 	}
 	if v, ok := front[keyPaths]; ok {
-		paths, pathsOK := stringOrList(v)
+		paths, pathsOK := frontmatter.StringList(v)
 		if !pathsOK {
 			return header{}, fmt.Errorf("frontmatter %q is not a string or a list of strings", keyPaths)
 		}
@@ -193,24 +193,6 @@ func decodeHeader(block frontmatter.Block) (header, error) {
 		h.disableModelInvocation = on
 	}
 	return h, nil
-}
-
-func stringOrList(v any) ([]string, bool) {
-	switch t := v.(type) {
-	case string:
-		return []string{t}, true
-	case []any:
-		out := make([]string, 0, len(t))
-		for _, e := range t {
-			s, ok := e.(string)
-			if !ok {
-				return nil, false
-			}
-			out = append(out, s)
-		}
-		return out, true
-	}
-	return nil, false
 }
 
 func visibilityOf(kind Kind, h header) Visibility {

@@ -802,6 +802,52 @@ func TestBuild_FrontmatterTypeErrorKeepsTheKeysThatDecode(t *testing.T) {
 	}
 }
 
+// A paths value of the wrong type decodes without an error, but where the item
+// applies cannot be known, so it fails closed as a lost gate does; a value that
+// is a string or a list of strings keeps its globs.
+func TestBuild_AMistypedPathsValueFailsClosed(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		content string
+		want    PathGlobs
+	}{
+		{name: "a number", content: "---\ndescription: d\npaths: 5\n---\nBody.\n", want: PathGlobs{Unreadable: true}},
+		{name: "a list holding a number", content: "---\ndescription: d\npaths: [src/**, 5]\n---\nBody.\n", want: PathGlobs{Unreadable: true}},
+		{name: "a mapping", content: "---\ndescription: d\npaths:\n  a: b\n---\nBody.\n", want: PathGlobs{Unreadable: true}},
+		{name: "an empty value", content: "---\ndescription: d\npaths:\n---\nBody.\n", want: PathGlobs{Unreadable: true}},
+		{name: "a rule with a number and valid globs", file: ".claude/rules/r.md", content: "---\npaths: 5\nglobs: src/**\n---\nBody.\n", want: PathGlobs{Unreadable: true}},
+		{name: "a string", content: "---\ndescription: d\npaths: src/**\n---\nBody.\n", want: PathGlobs{Paths: []string{"src/**"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			file := tt.file
+			if file == "" {
+				file = ".claude/skills/s/SKILL.md"
+			}
+			root := layout(t, map[string]string{file: tt.content})
+			cache := newFakeCache()
+
+			// Act
+			read, err := Build(context.Background(), Options{Root: root, Cache: cache})
+			require.NoError(t, err)
+			cache.items = cache.stored
+			cached, err := Build(context.Background(), Options{Root: root, Cache: cache})
+			require.NoError(t, err)
+
+			// Assert
+			for _, ix := range []*Index{read, cached} {
+				items := ix.Items()
+				require.Len(t, items, 1)
+				assert.Empty(t, items[0].ParseError, "the block decodes")
+				require.NotNil(t, items[0].Only)
+				assert.Equal(t, tt.want, *items[0].Only)
+			}
+		})
+	}
+}
+
 // A walk lists a symlinked file as git lists it, leaving the reader to decide
 // whether to follow it; a symlinked directory is neither listed nor entered.
 func TestListFiles_WalkKeepsSymlinkedFiles(t *testing.T) {

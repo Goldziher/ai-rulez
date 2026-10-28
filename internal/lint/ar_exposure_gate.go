@@ -14,11 +14,11 @@ const CodeExposureGateUnreadable = "AR9W4"
 
 func registerArExposureGate(s *ruleSet) {
 	s.addRules(
-		RuleInfo{CodeExposureGateUnreadable, "exposure-gate-unreadable", SeverityWarning, "a skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names paths, disable-model-invocation or user-invocable, so whether it is gated, and when it loads, cannot be known"},
+		RuleInfo{CodeExposureGateUnreadable, "exposure-gate-unreadable", SeverityWarning, "a skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names paths, disable-model-invocation or user-invocable, or sets paths or disable-model-invocation to a value of the wrong type, so whether it is gated, and when it loads, cannot be known"},
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeExposureGateUnreadable: {
-			Why:  "`paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `: ` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.",
+			Why:  "`paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `: ` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, and a gate value of the wrong type (`paths: 5`, or `disable-model-invocation: yes`, a string to YAML 1.2) leaves the same doubt, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.",
 			Bad:  "`description: Use when: deploying` above `paths: [\"services/billing/**\"]`",
 			Good: "`description: \"Use when: deploying\"` above `paths: [\"services/billing/**\"]`",
 		},
@@ -27,27 +27,77 @@ func registerArExposureGate(s *ruleSet) {
 	s.addItemCheck(checkExposureGateUnreadable, AnalyzerExposure)
 }
 
-// gatedKinds are the item kinds Claude Code gates by frontmatter: a command is
+// gatedKind reports an item kind Claude Code gates by frontmatter: a command is
 // a skill to it.
-var gatedKinds = []string{kindSkill, kindCommand, kindRule}
+func gatedKind(kind string) bool { return kind == kindSkill || kind == kindCommand || kind == kindRule }
+
+// The gate keys whose values the exposure inventory reads, and must be able to.
+const (
+	gateKeyPaths   = "paths"
+	gateKeyDisable = "disable-model-invocation"
+)
 
 // checkExposureGateUnreadable reports a lost gate (AR9W4): an item AR306
-// reports whose block names a gate key.
-func checkExposureGateUnreadable(r *runner, it *item, d doc, _ frontmatter) {
-	if !it.cf.MalformedFrontmatter || !slices.Contains(gatedKinds, it.kind) || !r.targetsClaude() || !r.harnessLoads(it, presetClaude) {
+// reports whose block names a gate key, or a block that parses but holds a gate
+// value of the wrong type, which the exposure inventory reads as phase unknown
+// too.
+func checkExposureGateUnreadable(r *runner, it *item, d doc, fm frontmatter) {
+	if !gatedKind(it.kind) || !r.targetsClaude() || !r.harnessLoads(it, presetClaude) {
+		return
+	}
+	if !it.cf.MalformedFrontmatter {
+		reportWrongTypedGates(r, it, fm)
 		return
 	}
 	keys, line := gateKeysIn(d)
 	if len(keys) == 0 {
 		return
 	}
+	r.add(CodeExposureGateUnreadable, it.abs, line,
+		"%s %q names %s in frontmatter that does not parse, so whether Claude Code keeps the gate cannot be known: it may load at session start; quote the value YAML cannot read (AR306)",
+		it.kind, itemID(it.kind, it.cf), quoteAll(keys))
+}
+
+// reportWrongTypedGates reports the gate keys of a block that parses whose
+// values have the wrong type: `paths` that is not a string or a list of
+// strings, `disable-model-invocation` that is not true or false (`yes` is a
+// string to YAML 1.2). The finding is on the first such key.
+func reportWrongTypedGates(r *runner, it *item, fm frontmatter) {
+	var keys []string
+	line := 0
+	for _, k := range fm.keys {
+		bad := false
+		switch k.Name {
+		case gateKeyPaths:
+			_, ok := fmsplit.StringList(k.Value)
+			bad = !ok
+		case gateKeyDisable:
+			_, ok := k.Value.(bool)
+			bad = !ok
+		}
+		if !bad || slices.Contains(keys, k.Name) {
+			continue
+		}
+		keys = append(keys, k.Name)
+		if line == 0 {
+			line = k.Line
+		}
+	}
+	if len(keys) == 0 {
+		return
+	}
+	r.add(CodeExposureGateUnreadable, it.abs, line,
+		"%s %q sets %s to a value of the wrong type (paths takes a string or a list of strings, disable-model-invocation true or false), so whether Claude Code keeps the gate cannot be known: it may load at session start",
+		it.kind, itemID(it.kind, it.cf), quoteAll(keys))
+}
+
+// quoteAll is keys quoted and joined by ", ".
+func quoteAll(keys []string) string {
 	quoted := make([]string, len(keys))
 	for i, k := range keys {
 		quoted[i] = strconv.Quote(k)
 	}
-	r.add(CodeExposureGateUnreadable, it.abs, line,
-		"%s %q names %s in frontmatter that does not parse, so whether Claude Code keeps the gate cannot be known: it may load at session start; quote the value YAML cannot read (AR306)",
-		it.kind, itemID(it.kind, it.cf), strings.Join(quoted, ", "))
+	return strings.Join(quoted, ", ")
 }
 
 // gateKeysIn lists the gate keys a frontmatter block names, in the order they
@@ -58,8 +108,9 @@ func gateKeysIn(d doc) (keys []string, line int) {
 	if d.bodyStart > 0 {
 		end = d.bodyStart - 1
 	}
+	gateKeys := fmsplit.GateKeys()
 	for i := 1; i < end; i++ {
-		for _, key := range fmsplit.GateKeys {
+		for _, key := range gateKeys {
 			if slices.Contains(keys, key) || !fmsplit.NamesKey(d.lines[i], key) {
 				continue
 			}
