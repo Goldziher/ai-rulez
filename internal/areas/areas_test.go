@@ -343,6 +343,8 @@ func TestLoad(t *testing.T) {
 		{"both", &config.ExposureConfig{AreasFile: "tools/areas.toml", SkillAreas: map[string]string{"x": "a"}}, 0, "keep the area map in one place"},
 		{"absolute", &config.ExposureConfig{AreasFile: filepath.Join(root, "tools", "areas.toml")}, 0, "relative to the project root"},
 		{"escapes", &config.ExposureConfig{AreasFile: "../areas.toml"}, 0, "inside the project root"},
+		{"escapes after a directory", &config.ExposureConfig{AreasFile: "tools/../../areas.toml"}, 0, "inside the project root"},
+		{"dot dot that stays inside", &config.ExposureConfig{AreasFile: "tools/../tools/areas.toml"}, 4, ""},
 		{"missing", &config.ExposureConfig{AreasFile: "nope.toml"}, 0, "cannot be read"},
 	}
 	for _, tt := range tests {
@@ -358,6 +360,18 @@ func TestLoad(t *testing.T) {
 			assert.Len(t, m.Areas(), tt.areas)
 		})
 	}
+}
+
+func TestLoadRefusesAnAreasFileSymlinkedOutOfTheProject(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	writeFile(t, outside, "areas.toml", testAreas)
+	if err := os.Symlink(filepath.Join(outside, "areas.toml"), filepath.Join(root, "areas.toml")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	m, problems := Load(&config.ExposureConfig{AreasFile: "areas.toml"}, root)
+	require.Len(t, problems, 1)
+	assert.Contains(t, problems[0].Message, "inside the project root")
+	assert.Nil(t, m)
 }
 
 func TestLoadFileProblemsCarryTheFileAndLine(t *testing.T) {

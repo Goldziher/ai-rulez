@@ -53,10 +53,18 @@ func resolveAreasFile(root, name string) (path, why string) {
 	if filepath.IsAbs(name) || strings.HasPrefix(name, "/") || strings.Contains(name, `\`) {
 		return "", "must be a forward-slash path relative to the project root"
 	}
-	if safefs.RelEscapes(filepath.FromSlash(name)) {
+	clean := filepath.Clean(filepath.FromSlash(name))
+	if safefs.RelEscapes(clean) {
 		return "", "must stay inside the project root"
 	}
-	return filepath.Join(root, filepath.FromSlash(name)), ""
+	path = filepath.Join(root, clean)
+	// A symlink may not lead the file out of the project either; a missing file is left to LoadFile.
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		if realRoot, err := filepath.EvalSymlinks(root); err == nil && !safefs.Within(realRoot, real) {
+			return "", "must stay inside the project root"
+		}
+	}
+	return path, ""
 }
 
 // LoadFile reads and validates an areas file: [[area]] tables and a [skill_areas] table. Every problem names
