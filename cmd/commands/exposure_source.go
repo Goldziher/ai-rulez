@@ -150,7 +150,9 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	}
 	start := inv.Start()
 	out := lint.ExposureLeakage{Checked: len(start), AreasFile: file}
-	for _, l := range exposure.Leaks(start, m) {
+	leaks := exposure.Leaks(start, m)
+	for i := range leaks {
+		l := &leaks[i]
 		out.Leaks = append(out.Leaks, lint.ExposureLeak{
 			Ambiguous: l.Severity == exposure.LeakWarning, Area: l.Area, Term: l.Term, Kind: string(l.Kind), Name: l.Name,
 			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(),
@@ -229,7 +231,9 @@ func startPaths(inv *exposure.Inventory) []string {
 	root := filepath.FromSlash(inv.Root)
 	seen := map[string]bool{}
 	var out []string
-	for _, a := range inv.Start() {
+	start := inv.Start()
+	for i := range start {
+		a := &start[i]
 		if a.Path == "" || seen[a.Path] {
 			continue
 		}

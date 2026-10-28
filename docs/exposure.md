@@ -398,7 +398,7 @@ after a file the `paths:` glob matches was read):
 | Frontmatter of a skill with `paths: ["src/**"]` | Claude Code | ai-rulez reads |
 |---|---|---|
 | valid | hidden until `src/a.txt` is read | path gated, on demand |
-| `description: Use when: testing` (an unquoted `: `) | recovered: hidden until `src/a.txt` is read, the description kept | does not parse |
+| `description: Use when: testing` (an unquoted colon and space) | recovered: hidden until `src/a.txt` is read, the description kept | does not parse |
 | `description: "Use when testing` (an unclosed quote) | dropped: listed at start, the description is the first body line | does not parse |
 | `paths` indented with a tab | dropped: listed at start, the description is the first body line | does not parse |
 
