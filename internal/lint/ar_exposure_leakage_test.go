@@ -366,3 +366,27 @@ func TestExposureLeakageAcceptanceUnderTheSourceRoot(t *testing.T) {
 		})
 	}
 }
+
+// A stale acceptance is part of the leakage view even when AR9I0 itself is off or ignored.
+func TestExposureLeakageStaleAcceptanceWithoutAR9I0(t *testing.T) {
+	tests := []struct {
+		name  string
+		extra string
+	}{
+		{name: "AR9I0 reported"},
+		{name: "AR9I0 off", extra: "[lint.severity]\nAR9I0 = \"off\"\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := leakProject(t, tt.extra+"\n[[lint.accept]]\nrule = \"AR9W0\"\npath = \"CLAUDE.md\"\nmatch = 'names term \"ledger\"'\nreason = \"gone\"\n")
+
+			// Act
+			got := leakRun(t, root, WithExposure(leakSource(root, claudeLeak))).Leakage()
+
+			// Assert
+			require.NotNil(t, got)
+			assert.Equal(t, []string{"lint.accept[0] (AR9W0 in CLAUDE.md) accepted no finding; remove it or fix its path or match"}, got.Stale)
+		})
+	}
+}
