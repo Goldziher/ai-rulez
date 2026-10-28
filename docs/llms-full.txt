@@ -18253,7 +18253,11 @@ area's directory, the path claim gives the same answer and the entry can go.
 Both commands are offline, free and deterministic. They inspect the project root (the directory of the
 configuration, else the working directory) or `--root DIR`, and read the area map of the `[exposure]` table or of
 `--areas FILE`, a file in the `areas_file` format that replaces the configured map, so a map can be tried before
-it is configured. Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid
+it is configured. With `--root` the configuration is still `-C/--config` when it is given (one that cannot be read
+or is invalid fails the command), else the one `--config-dir` names in `DIR`, else the one discovered from `DIR`
+upwards, so `--root` on a subdirectory of a project uses the project's map; `--no-local` applies either way. The
+`areas_file` of the configuration stays relative to the configuration's project root; the path claims of the map are
+matched against artifact paths relative to `--root`. Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid
 configuration or area map, whose problems are listed with their lines as `AR9W5` reports them).
 
 | Flag | Commands | Meaning |
@@ -18262,7 +18266,7 @@ configuration or area map, whose problems are listed with their lines as `AR9W5`
 | `--plugins none\|enabled\|all` | both | Marketplace plugins whose skills are listed: none, the ones the root `.claude/settings*.json` enable, or all; default `[exposure] plugins`, else `enabled` |
 | `--areas FILE` | both | Area map file to use instead of the `[exposure]` table |
 | `--root DIR` | both | Repository root to inspect |
-| `--with-text` | `inventory` | Include each artifact's text in the JSON |
+| `--with-text` | `inventory` | Include each artifact's text in the JSON (`--format json` only; with text output it is an error) |
 
 ##### `ai-rulez exposure inventory`
 
@@ -18276,11 +18280,17 @@ Code 2.1.306 as measured:
 - **On demand:** anything in a subdirectory, and anything gated by `paths:`, once a matching file is touched.
 - **Manual:** `disable-model-invocation: true` or `skillOverrides` `user-invocable-only`: only the user runs it.
 - **Unknown:** a root rule or skill whose frontmatter does not parse while it names a gate (`paths:`,
-  `disable-model-invocation`, `user-invocable`); whether it loads at start cannot be known.
+  `disable-model-invocation`, `user-invocable`), or one that was not read (over the read limit, or a symlink to
+  outside the root; `frontmatter.ok` is false and the error starts with `not read:`); whether it loads at start
+  cannot be known. A start count includes it (fail closed), as the text summary does.
 - `skillOverrides` `off` removes a skill and `name-only` blanks its description; `.claude/settings.local.json`
   applies over `.claude/settings.json`; `claudeMdExcludes` globs exclude `CLAUDE.md` files and rules.
 - The listing text of a skill is `name: description when_to_use`, whitespace squashed, capped at 1536 characters.
-  `tokens` estimates every text at 3.94 bytes per token.
+  `tokens` estimates every text as its UTF-8 bytes divided by 3.9, rounded up (0 for an empty text). A file over
+  the 1 MiB read limit is kept unread with a problem; its `text_bytes` is the file size and `tokens` the estimate
+  of that size, so a start budget still counts it.
+- A UTF-8 byte order mark at the start of a file is stripped before the frontmatter is parsed: the frontmatter
+  after it is read as usual, and the mark is not part of the text, `text_bytes` or `text_sha256`.
 
 Not modeled: `@path` imports, `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents,
 commands and MCP servers of plugins. A file the inventory cannot read is listed under `problems`.
@@ -18300,7 +18310,7 @@ With an area map every artifact carries `area` and `area_source`; the text of ea
     {"kind": "skill", "source": "plugin", "name": "probe", "qualified_name": "ops:probe", "plugin": "ops",
      "plugin_path": "dev_tools/plugins/ops", "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".",
      "visibility": "always", "phase": "start", "paths": [], "listing_text": "ops:probe: Probes a service.",
-     "listing_chars": 28, "truncated": false, "text_bytes": 28, "text_sha256": "…", "tokens": 7, "line_offset": 0,
+     "listing_chars": 28, "truncated": false, "text_bytes": 28, "text_sha256": "…", "tokens": 8, "line_offset": 0,
      "frontmatter": {"ok": true}, "area": "platform", "area_source": "path"}
   ],
   "problems": []
@@ -18312,7 +18322,10 @@ With an area map every artifact carries `area` and `area_source`; the text of ea
 The area map as loaded (terms and ambiguous words normalized) and, for every artifact of the inventory, its area
 and how it was decided: `skill_areas`, `path`, `terms` or `none`. `area_scope` is the directory whose path claims
 were tried: the artifact's scope, or a plugin skill's plugin directory. Diff the JSON against another classifier to
-compare them. Without an area map the command fails. The JSON follows
+compare them. `areas_file` is the file the map came from, relative to `--root` with forward slashes, or absolute
+(with forward slashes) when it lies outside the root; it is empty for the inline form. `counts` has every area
+of the map and `unclassified`, 0 when no artifact is in it. `problems` repeats the inventory's: an artifact that
+was not read is classified on an empty text. Without an area map the command fails. The JSON follows
 [`schema/exposure-areas.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-areas.v1.schema.json):
 
 ```json
@@ -18329,7 +18342,8 @@ compare them. Without an area map the command fails. The JSON follows
      "path": "dev_tools/plugins/ops/skills/probe/SKILL.md", "scope": ".", "area_scope": "dev_tools/plugins/ops",
      "phase": "start", "area": "platform", "area_source": "path"}
   ],
-  "counts": {"billing": 4, "platform": 3, "unclassified": 12}
+  "counts": {"billing": 4, "platform": 3, "unclassified": 12},
+  "problems": []
 }
 ```
 
