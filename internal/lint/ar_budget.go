@@ -116,6 +116,10 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 			b.Limit = v
 		}
 		total, name, imported := 0, 0, 0
+		var listed map[int]bool
+		if b.Scope == keySkills {
+			listed = r.listedSkills()
+		}
 		for i := range r.items {
 			it := &r.items[i]
 			// Sums measure what the harness loads, so included and installed items
@@ -155,7 +159,7 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 					total += measure(b.Unit, it.cf.Content)
 				}
 			case keySkills:
-				if it.kind == kindSkill {
+				if it.kind == kindSkill && listed[i] {
 					total += measure(b.Unit, skillListingName(it)+r.description(it))
 					name++
 					if !it.owned {
@@ -270,6 +274,29 @@ func fallbackAdvice(n int) string {
 		return ""
 	}
 	return "; set [rules] scoped_fallback_group to fold them into fewer skills, or fallback: false on an item to keep it out"
+}
+
+// listedSkills picks, by index into r.items, the one skill per name a harness
+// lists. A mirror of a skill (skills/<name>/SKILL.md, a plugin bundle or its
+// harness outputs) has the same name and is listed once, so the configured copy
+// is preferred over an unmanaged one, then the first found.
+func (r *runner) listedSkills() map[int]bool {
+	chosen := map[string]int{}
+	for i := range r.items {
+		it := &r.items[i]
+		if it.kind != kindSkill || it.isDoc || (it.targetOnly && r.pathIgnored(it.abs)) {
+			continue
+		}
+		id := itemID(it.kind, it.cf)
+		if j, ok := chosen[id]; !ok || r.items[j].targetOnly && !it.targetOnly {
+			chosen[id] = i
+		}
+	}
+	listed := make(map[int]bool, len(chosen))
+	for _, i := range chosen {
+		listed[i] = true
+	}
+	return listed
 }
 
 func skillListingName(it *item) string { return itemID(it.kind, it.cf) + " " }
