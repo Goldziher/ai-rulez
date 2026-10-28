@@ -41,7 +41,7 @@ type ExposureCollision struct {
 
 func registerArExposureCollisions(s *ruleSet) {
 	s.addRules(
-		RuleInfo{CodeExposureAreaCollision, "exposure-area-collision", SeverityOff, "two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over [exposure] collision_min_score (setting it turns the rule on at warning)"},
+		RuleInfo{CodeExposureAreaCollision, "exposure-area-collision", SeverityOff, "two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over [exposure] collision_min_score (setting it turns the rule on at warning); the 20 highest pairs are reported, the rest in one summary finding"},
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeExposureAreaCollision: {
