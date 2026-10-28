@@ -38,7 +38,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-plan-before.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6fa01abfcc50975af
+plan-before.json file 0644 7016 3cab472a5de53c07d03a131e00bf0a630eec15e92a82c1f0b91cc99320085608
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -227,7 +227,7 @@ exit: 0
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "debd1f0cfb763a5773b07a74ed3a0e5f778a8c0a133012869bf887d9761b241a"
+      "sha256": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688"
     },
     {
       "path": ".cursor/mcp.json",
@@ -333,7 +333,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-+ .ai-rulez/.generated-manifest.local.json file 0644 5116 9a80eb66e2047895128038af968faa7e8f76f8a8faf54a0a74b3ad4e1d59b16d
++ .ai-rulez/.generated-manifest.local.json file 0644 5116 be875027037946b3f724e2b1074451222e96f872db5f358222d61ef9ce38f419
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -392,7 +392,7 @@ WARN  [permissions] ask rules are not generated for cursor: it has no ask list a
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-+ plan-after.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6fa01abfcc50975af
++ plan-after.json file 0644 7016 3cab472a5de53c07d03a131e00bf0a630eec15e92a82c1f0b91cc99320085608
 --- home tree
 (no change)
 
@@ -548,7 +548,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 5116 9a80eb66e2047895128038af968faa7e8f76f8a8faf54a0a74b3ad4e1d59b16d
+.ai-rulez/.generated-manifest.local.json file 0644 5116 be875027037946b3f724e2b1074451222e96f872db5f358222d61ef9ce38f419
 >>>>
 {
   "version": "1",
@@ -561,8 +561,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "a86c35e916913cabea85eec53e10e0cb6428ecc75a6b6c6ca5443eb871eb187a"
+          "0fb663e09eec397ca9c7390952c03770b854923fe56bbec5d8045628af555a2b",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -650,7 +650,7 @@ echo review
           "preToolUse"
         ],
         "elementSums": [
-          "66909212a827c87f80fe5a3ca8a59df99a440047e433a4bd8673f78e9074ed8b",
+          "0f3d3a6da035793226a00d415adaea604f4ab2e002a76e616908a35fca165002",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -707,14 +707,14 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "affe8804c96c78217c4a864bed614bbe923921c5071cb3eaaa62a26bc03fb834",
+    ".claude/settings.json": "e948f3d22909c9ac75e63b4609ce7c70f72e6299a1e0517427ab609af9481207",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "debd1f0cfb763a5773b07a74ed3a0e5f778a8c0a133012869bf887d9761b241a",
+    ".cursor/hooks.json": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c"
   }
@@ -1496,7 +1496,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-plan-after.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6fa01abfcc50975af
+plan-after.json file 0644 7016 3cab472a5de53c07d03a131e00bf0a630eec15e92a82c1f0b91cc99320085608
 >>>>
 {
   "schema": 1,
@@ -1678,7 +1678,7 @@ plan-after.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6f
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "debd1f0cfb763a5773b07a74ed3a0e5f778a8c0a133012869bf887d9761b241a"
+      "sha256": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688"
     },
     {
       "path": ".cursor/mcp.json",
@@ -1752,7 +1752,7 @@ plan-after.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6f
   "removals": []
 }
 <<<<
-plan-before.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6fa01abfcc50975af
+plan-before.json file 0644 7016 3cab472a5de53c07d03a131e00bf0a630eec15e92a82c1f0b91cc99320085608
 >>>>
 {
   "schema": 1,
@@ -1934,7 +1934,7 @@ plan-before.json file 0644 7016 5a4e3fbac9c68a60c7923c2e3e702dbbc6ad2a108a61a4c6
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "debd1f0cfb763a5773b07a74ed3a0e5f778a8c0a133012869bf887d9761b241a"
+      "sha256": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688"
     },
     {
       "path": ".cursor/mcp.json",

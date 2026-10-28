@@ -61,7 +61,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5182 8b9cba82fbd93cba23059abb2ef961dbf94420ce88e565010e5eb7caebf9a31f
-.ai-rulez/.generated-manifest.local.json file 0644 19398 b4295d70421b13da3de9a14857185565c09acb363391e8f0e92bbda8b1dc2860
+.ai-rulez/.generated-manifest.local.json file 0644 19398 9e8ece107879b621fd3d4a6a11d5e4eac302e6fb51fffb031d1c2ecd2cd8c5c2
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -426,7 +426,7 @@ INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-~ .ai-rulez/.generated-manifest.local.json file 0644 18869 9db85e496aaab4d13ea9dd088d7ad985ff07c762ef37a505412007dd3a9bd6fd
+~ .ai-rulez/.generated-manifest.local.json file 0644 18869 2e2e86db13034f07d1caa4f13ec6ea02caf5ade8592380398c31075d6843abbd
 --- home tree
 (no change)
 

@@ -15,7 +15,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.9.1"
+revision = "v5.9.2"
 hooks = ["ai-rulez-validate"]
 ```
 

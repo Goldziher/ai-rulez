@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.9.2] - 2026-10-28
+
 ### Fixed
 
 - **The macOS binaries run on macOS 14 again, and the release builds without the retiring `macos-14` runner.**
