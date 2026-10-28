@@ -1646,6 +1646,17 @@ command_env = []              # extra environment variable names passed to comma
 Credential-looking and proxy names in `command_env` and unknown includes in `trust_exec_from` are configuration errors.
 The table is pinned in the lock. See [Verifiers](verifiers.md#settings).
 
+### `exposure`
+
+Describes the areas of a repository (the directories each one claims, its owner and the words that name it) for the
+session exposure checks. The map is inline or in `areas_file`, not both; `validate` reports a map it cannot use as
+`AR9W5`. Without the table nothing changes. See [Session exposure and areas](exposure.md).
+
+```toml
+[exposure]
+areas_file = "tools/context/areas.toml"   # [[area]] tables and [skill_areas], relative to the project root
+```
+
 ### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.

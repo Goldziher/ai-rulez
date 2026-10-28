@@ -708,3 +708,81 @@ func TestBuild_SkillPathsSurviveTheCache(t *testing.T) {
 	require.NotNil(t, ix.Items()[0].Only)
 	assert.Equal(t, []string{"src/**"}, ix.Items()[0].Only.Paths, "a cache hit keeps the paths")
 }
+
+func TestBuild_FrontmatterParseErrorIsKept(t *testing.T) {
+	tests := []struct {
+		name      string
+		content   string
+		wantError string
+	}{
+		{name: "valid frontmatter", content: "---\ndescription: A skill\npaths: [src/**]\n---\nBody.\n"},
+		{name: "no frontmatter", content: "# A skill\n"},
+		{name: "invalid YAML", content: "---\ndescription: Use when: deploying\npaths: [src/**]\n---\nBody.\n", wantError: "mapping values are not allowed"},
+		{name: "a list is not a mapping", content: "---\n- a\n---\nBody.\n", wantError: "cannot unmarshal"},
+		{name: "never closed", content: "---\ndescription: A skill\nBody.\n", wantError: "never closes"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := layout(t, map[string]string{".claude/skills/s/SKILL.md": tt.content})
+			cache := newFakeCache()
+
+			// Act
+			read, err := Build(context.Background(), Options{Root: root, Cache: cache})
+			require.NoError(t, err)
+			cache.items = cache.stored
+			cached, err := Build(context.Background(), Options{Root: root, Cache: cache})
+			require.NoError(t, err)
+
+			// Assert
+			for _, ix := range []*Index{read, cached} {
+				items := ix.Items()
+				require.Len(t, items, 1)
+				if tt.wantError == "" {
+					assert.Empty(t, items[0].ParseError)
+					continue
+				}
+				assert.Contains(t, items[0].ParseError, tt.wantError)
+				assert.Nil(t, items[0].Only, "the served index still reads a broken block as no frontmatter (fail-closed is a separate change)")
+			}
+		})
+	}
+}
+
+// A YAML type error still decodes the other keys, and the served item keeps
+// them, as it did before the error was recorded: the description, the name and
+// the paths gate.
+func TestBuild_FrontmatterTypeErrorKeepsTheKeysThatDecode(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{name: "a complex key", content: "---\nname: badkey\ndescription: d\n? [a, b]\n: v\npaths: [src/**]\n---\nBody.\n"},
+		{name: "a tag that does not resolve, after the keys", content: "---\nname: badkey\ndescription: d\npaths: [src/**]\nk: !!int notanint\n---\nBody.\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := layout(t, map[string]string{".claude/skills/s/SKILL.md": tt.content})
+			cache := newFakeCache()
+
+			// Act
+			read, err := Build(context.Background(), Options{Root: root, Cache: cache})
+			require.NoError(t, err)
+			cache.items = cache.stored
+			cached, err := Build(context.Background(), Options{Root: root, Cache: cache})
+			require.NoError(t, err)
+
+			// Assert
+			for _, ix := range []*Index{read, cached} {
+				items := ix.Items()
+				require.Len(t, items, 1)
+				assert.NotEmpty(t, items[0].ParseError)
+				assert.Equal(t, "badkey", items[0].Name)
+				assert.Equal(t, "d", items[0].Description)
+				require.NotNil(t, items[0].Only, "the paths gate survives the type error")
+				assert.Equal(t, []string{"src/**"}, items[0].Only.Paths)
+			}
+		})
+	}
+}

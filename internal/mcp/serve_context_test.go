@@ -611,3 +611,31 @@ func TestFindContext_SummaryNamesTheGlobsOfARule(t *testing.T) {
 	assert.Equal(t, []any{"**/*.go"}, byName["go"]["paths"])
 	assert.NotContains(t, byName["style"], "paths")
 }
+
+// A rule whose frontmatter has a YAML type error (a complex key) still decodes
+// its other keys, so the served rule keeps its paths gate and its description.
+func TestFindContext_ATypeErrorInTheFrontmatterKeepsTheGate(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want []string
+	}{
+		{name: "a file the glob names", path: "cmd/main.go", want: []string{"rule:.:partly", "rule:.:style"}},
+		{name: "a file the glob does not name", path: "README.md", want: []string{"rule:.:style"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := monorepoProject(t)
+			writeFile(t, root, ".claude/rules/partly.md", "---\ndescription: Partly decoded\n? [a, b]\n: v\npaths:\n  - \"**/*.go\"\n---\n\nGo rules.\n")
+			_, session := contextServer(t, root)
+
+			// Act
+			out, isErr := toolJSON(t, session, "find_context", map[string]any{"path": tt.path, "kind": "rule"})
+
+			// Assert
+			require.False(t, isErr, "%v", out)
+			assert.Equal(t, tt.want, contextKeys(t, out))
+		})
+	}
+}

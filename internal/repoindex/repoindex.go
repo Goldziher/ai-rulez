@@ -47,6 +47,11 @@ type Item struct {
 	// Only, when set, restricts a rule or a skill to the files that match it; nil
 	// means it applies everywhere in its scope.
 	Only *PathGlobs `json:"only,omitempty"`
+	// ParseError, when set, is why the frontmatter block could not be decoded
+	// (invalid YAML, not a mapping, or never closed). The item is then indexed
+	// as if it had no frontmatter, so Only is nil even when the block names
+	// paths.
+	ParseError string `json:"parse_error,omitempty"`
 }
 
 // PathGlobs are the globs a rule or skill names the files it applies to by,
@@ -130,6 +135,7 @@ type CachedItem struct {
 	Description string     `json:"description,omitempty"`
 	Hash        string     `json:"hash"`
 	Only        *PathGlobs `json:"only,omitempty"`
+	ParseError  string     `json:"parse_error,omitempty"`
 	// Generated records that a generator's header was found in the file.
 	Generated bool `json:"generated,omitempty"`
 }
@@ -175,7 +181,7 @@ func Build(ctx context.Context, opts Options) (*Index, error) {
 	}
 	files := opts.Files
 	if files == nil {
-		files = listFiles(ctx, opts.Root)
+		files = ListFiles(ctx, opts.Root)
 	}
 	b := &builder{opts: opts, limit: limit, exclude: exclude, markers: map[string]map[string]bool{}}
 	b.collect(files)
@@ -348,7 +354,7 @@ func (b *builder) readCached(c *candidate) {
 	}
 	it, generated := b.admit(c, content)
 	b.opts.Cache.Store(c.file, size, mtime, CachedItem{
-		Name: it.Name, Description: it.Description, Hash: it.Hash, Only: it.Only, Generated: generated,
+		Name: it.Name, Description: it.Description, Hash: it.Hash, Only: it.Only, ParseError: it.ParseError, Generated: generated,
 	})
 }
 
@@ -359,7 +365,7 @@ func (b *builder) fromCache(c *candidate, ci CachedItem, abs string) bool {
 		b.generated[c.kind]++
 		return true
 	}
-	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash, Only: ci.Only}
+	it := Item{Kind: c.kind, Scope: c.scope, Source: c.source, Path: c.unit, Name: ci.Name, Description: ci.Description, Hash: ci.Hash, Only: ci.Only, ParseError: ci.ParseError}
 	if b.opts.Screen != nil {
 		if b.opts.ScreenKnown == nil {
 			return false
@@ -393,14 +399,15 @@ func (b *builder) finish() *Index {
 	for scope, set := range b.markers {
 		sources[scope] = set
 	}
-	for _, it := range b.items {
-		ix.byScope[it.Scope] = append(ix.byScope[it.Scope], it)
+	for i := range b.items {
+		it := &b.items[i]
+		ix.byScope[it.Scope] = append(ix.byScope[it.Scope], *it)
 		if sources[it.Scope] == nil {
 			sources[it.Scope] = map[string]bool{}
 		}
 		sources[it.Scope][it.Source] = true
 		if it.Kind != KindSkill {
-			ix.lookup[lookupKey(it.Scope, it.Name)] = it
+			ix.lookup[lookupKey(it.Scope, it.Name)] = *it
 		}
 	}
 	for path, set := range sources {
@@ -409,8 +416,8 @@ func (b *builder) finish() *Index {
 			s.Sources = append(s.Sources, source)
 		}
 		sort.Strings(s.Sources)
-		for _, it := range ix.byScope[path] {
-			s.Counts[it.Kind]++
+		for i := range ix.byScope[path] {
+			s.Counts[ix.byScope[path][i].Kind]++
 		}
 		ix.scopes = append(ix.scopes, s)
 	}
@@ -438,7 +445,8 @@ func (b *builder) namespaceCollisions() {
 	})
 	taken := map[string]bool{}
 	kept := b.items[:0]
-	for _, it := range b.items {
+	for i := range b.items {
+		it := b.items[i]
 		if it.Kind == KindSkill {
 			kept = append(kept, it)
 			continue
@@ -468,9 +476,9 @@ func (ix *Index) Items() []Item { return append([]Item(nil), ix.items...) }
 // Skills lists the skill items, shallowest skill directory first, then by path.
 func (ix *Index) Skills() []Item {
 	var out []Item
-	for _, it := range ix.items {
-		if it.Kind == KindSkill {
-			out = append(out, it)
+	for i := range ix.items {
+		if ix.items[i].Kind == KindSkill {
+			out = append(out, ix.items[i])
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {

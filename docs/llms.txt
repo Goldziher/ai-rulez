@@ -58,6 +58,7 @@
 
 - [GitHub Actions](https://goldziher.github.io/ai-rulez/github-actions/): The official action is Goldziher/ai-rulez at the repository root.
 - [Strict Validation](https://goldziher.github.io/ai-rulez/strict-validation/): ai-rulez validate checks that configuration parses and matches the schema.
+- [Session Exposure and Areas](https://goldziher.github.io/ai-rulez/exposure/): A large repository has parts that belong to different teams: services, products, shared tooling.
 - [Verifiers](https://goldziher.github.io/ai-rulez/verifiers/): \[\[verifiers\]\] declares deterministic, read-only checks over the repository, run by ai-rulez verifiers run.
 - [Poly Hooks](https://goldziher.github.io/ai-rulez/poly-hooks/): AI-Rulez publishes a reusable Poly hook catalog in poly-hooks.toml.
 

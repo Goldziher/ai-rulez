@@ -7,3 +7,7 @@ hel = "hel"             # test fixture token
 invokable = "invokable"
 caf = "caf"             # café test data
 propert = "propert"     # split/truncated schema token
+
+[files]
+# Seeded random texts recorded from the reference area matcher: misspellings are the point.
+extend-exclude = ["internal/areas/testdata/python_vectors.json"]

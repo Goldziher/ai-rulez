@@ -19,12 +19,12 @@ const (
 	maxWalk = 200000
 )
 
-// listFiles lists the files below root that are not ignored: git's own listing
+// ListFiles lists the files below root that are not ignored: git's own listing
 // (tracked files and untracked files .gitignore does not exclude) in a
 // repository, else a walk that skips .git and node_modules. Paths are slash
 // separated and relative to root; a symlink may be among them, and the reader
 // refuses it.
-func listFiles(ctx context.Context, root string) []string {
+func ListFiles(ctx context.Context, root string) []string {
 	if files, ok, err := (gitutil.Git{}).ListFilesContext(ctx, root); ok && err == nil {
 		return files
 	}

@@ -274,7 +274,9 @@ func (v *repoView) signature() string {
 		return ""
 	}
 	var b strings.Builder
-	for _, it := range v.index.Items() {
+	items := v.index.Items()
+	for i := range items {
+		it := &items[i]
 		b.WriteString(string(it.Kind) + "\x00" + it.Scope + "\x00" + it.Name + "\x00" + it.Hash + "\x00" + it.Description + "\n")
 	}
 	return b.String()

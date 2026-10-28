@@ -200,8 +200,9 @@ func (st *ServeSetup) warnRenamed(report *DiscoveryReport) {
 func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *renderedSkills, served []generator.ServedSkill, roleKeeps func(string) bool) []generator.ServedSkill {
 	items := d.find(ctx)
 	owners := map[string]string{}
-	for _, item := range items {
-		skill, ok := d.load(item)
+	for i := range items {
+		item := &items[i]
+		skill, ok := d.load(*item)
 		if !ok {
 			continue
 		}
@@ -222,13 +223,13 @@ func (st *ServeSetup) appendDiscovered(ctx context.Context, d *discovery, r *ren
 		if r.taken[name] {
 			holder, byRepo := owners[name]
 			if !byRepo {
-				d.shadow(name, item, ownerAiRulez)
+				d.shadow(name, *item, ownerAiRulez)
 				continue
 			}
 			// Another repository skill has the name: this one is namespaced by its path.
 			renamed := repoindex.NamespacedName(item.Path)
 			if r.taken[renamed] || !validSkillSegment(renamed) {
-				d.shadow(name, item, holder)
+				d.shadow(name, *item, holder)
 				continue
 			}
 			skill.ID, skill.Files[0].Content = renamed, skillsource.RewriteName(skill.Files[0].Content, renamed)
