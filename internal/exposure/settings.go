@@ -236,34 +236,51 @@ func excludeRegexp(pattern string) *regexp.Regexp {
 	return regexp.MustCompile(b.String())
 }
 
-// settingsArtifacts lists a settings file and the plugins it enables. A plugin
-// the sibling settings.local.json sets is that file's to list, so the local
-// file decides, as Claude Code merges them.
+// settingsArtifacts lists a settings file and the plugins it enables, as
+// Claude Code merges the pair: a plugin the sibling settings.local.json turns
+// off is not listed, and a plugin both files enable is the shared file's to
+// list. settings.local.json is machine-local and usually untracked, so a
+// finding on the plugin is then on the tracked file every checkout has; the
+// local file lists only the plugins that it alone enables.
 func (b *builder) settingsArtifacts(file, scope string) {
 	b.artifacts = append(b.artifacts, Artifact{Kind: KindSettings, Source: SourceFile, Name: path.Base(file), Path: file, Scope: scope, Visibility: VisibilityAlways})
 	s := b.settings[file]
 	if s == nil {
 		return
 	}
-	var local *settingsFile
-	if path.Base(file) == settingsShared {
+	var shared, local *settingsFile
+	switch path.Base(file) {
+	case settingsShared:
 		local = b.settings[path.Join(path.Dir(file), settingsLocal)]
+	case settingsLocal:
+		shared = b.settings[path.Join(path.Dir(file), settingsShared)]
 	}
 	for _, kb := range s.enabled {
-		if !kb.on || (local != nil && local.sets(kb.key)) {
+		if !kb.on {
+			continue
+		}
+		if on, set := local.value(kb.key); set && !on {
+			continue
+		}
+		if on, _ := shared.value(kb.key); on {
 			continue
 		}
 		b.artifacts = append(b.artifacts, Artifact{Kind: KindPlugin, Source: SourceFile, Name: kb.key, Path: file, Scope: scope, Visibility: VisibilityAlways, Text: kb.key})
 	}
 }
 
-func (s *settingsFile) sets(key string) bool {
+// value is what the file sets key to in enabledPlugins; set is false when it
+// does not name the key, or the file is nil.
+func (s *settingsFile) value(key string) (on, set bool) {
+	if s == nil {
+		return false, false
+	}
 	for _, kb := range s.enabled {
 		if kb.key == key {
-			return true
+			return kb.on, true
 		}
 	}
-	return false
+	return false, false
 }
 
 // applySettings drops the CLAUDE.md files and rules claudeMdExcludes matches
