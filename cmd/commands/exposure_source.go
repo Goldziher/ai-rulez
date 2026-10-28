@@ -146,6 +146,7 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	mode := s.mode()
 	inv, err := s.inventory(mode)
 	if err != nil {
+		logger.Warn("Skipped the session exposure leakage checks", "error", err)
 		return lint.ExposureLeakage{}, false
 	}
 	start := inv.Start()
@@ -252,6 +253,7 @@ func (s exposureLintSource) Collisions(minScore float64) []lint.ExposureCollisio
 	}
 	inv, err := s.inventory(s.mode())
 	if err != nil {
+		logger.Warn("Skipped the session exposure collision checks", "error", err)
 		return nil
 	}
 	classified := *inv
