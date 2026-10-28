@@ -52,7 +52,7 @@ CALIBRATION EXAMPLES
 3. Attached rule says "SHOULD prefer pytest fixtures"; the file shows a helper without one -> nothing (guidance, no
    evidence of deviation).
 4. File is `.claude/rules/sql.md` with `paths: ["**/*"]` but its body only talks about migrations in
-   `armis/services/db/` -> JR-G04 low.
+   `platform/services/db/` -> JR-G04 low.
 5. The skill restates the AGENTS.md section "Branch names never contain /" in the same words -> JR-G03 low with a
    token estimate; no finding if the skill adds the exact `acli` command.
 OUTPUT: findings[] (codes JR-G01..JR-G07 only), criteria_results (empty array if no rubric was given), coverage.

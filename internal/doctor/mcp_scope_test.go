@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	projectNaraURL = "https://nara.armis.com/api/mcp/allMcpServer/mcp"
-	localNaraURL   = "https://nara.armis.com/api/mcp/haverikoMcpServer/mcp"
-	mcpScopeConfig = baseConfig + "\n[[mcp_servers]]\nname = \"nara\"\ntransport = \"http\"\nurl = \"" + projectNaraURL + "\"\n"
+	projectTeamURL = "https://mcp.example.com/api/mcp/project/mcp"
+	localTeamURL   = "https://mcp.example.com/api/mcp/personal/mcp"
+	mcpScopeConfig = baseConfig + "\n[[mcp_servers]]\nname = \"team\"\ntransport = \"http\"\nurl = \"" + projectTeamURL + "\"\n"
 )
 
 // setHome points the user-scope lookup at a fresh directory holding the given
@@ -46,7 +46,7 @@ func runMCPScope(t *testing.T, dir string, readUser bool) *Report {
 func TestCheckMCPScope_ProjectVsUserScope(t *testing.T) {
 	// Arrange: the project server and a user-scope server share a name but not a url.
 	dir := project(t, map[string]string{".ai-rulez/config.toml": mcpScopeConfig})
-	setHome(t, fmt.Sprintf(`{"mcpServers":{"nara":{"type":"http","url":%q}}}`, localNaraURL))
+	setHome(t, fmt.Sprintf(`{"mcpServers":{"team":{"type":"http","url":%q}}}`, localTeamURL))
 
 	// Act
 	got := byCheck(runMCPScope(t, dir, true), CheckMCPScope)
@@ -55,7 +55,7 @@ func TestCheckMCPScope_ProjectVsUserScope(t *testing.T) {
 	if len(got) != 1 || got[0].Severity != SeverityWarning {
 		t.Fatalf("findings = %+v, want one warning", got)
 	}
-	for _, want := range []string{"nara", projectNaraURL, localNaraURL, "user", "claude mcp remove nara -s user"} {
+	for _, want := range []string{"team", projectTeamURL, localTeamURL, "user", "claude mcp remove team -s user"} {
 		if !strings.Contains(got[0].Message+got[0].Hint, want) {
 			t.Errorf("finding %+v does not name %q", got[0], want)
 		}
@@ -65,7 +65,7 @@ func TestCheckMCPScope_ProjectVsUserScope(t *testing.T) {
 func TestCheckMCPScope_ProjectVsLocalScope(t *testing.T) {
 	// Arrange: the shadowing server is in the per-project (local) section.
 	dir := project(t, map[string]string{".ai-rulez/config.toml": mcpScopeConfig})
-	setHome(t, fmt.Sprintf(`{"projects":{%q:{"mcpServers":{"nara":{"type":"http","url":%q}}}}}`, dir, localNaraURL))
+	setHome(t, fmt.Sprintf(`{"projects":{%q:{"mcpServers":{"team":{"type":"http","url":%q}}}}}`, dir, localTeamURL))
 
 	// Act
 	got := byCheck(runMCPScope(t, dir, true), CheckMCPScope)
@@ -74,7 +74,7 @@ func TestCheckMCPScope_ProjectVsLocalScope(t *testing.T) {
 	if len(got) != 1 || got[0].Severity != SeverityWarning {
 		t.Fatalf("findings = %+v, want one warning", got)
 	}
-	for _, want := range []string{"local", "claude mcp remove nara -s local"} {
+	for _, want := range []string{"local", "claude mcp remove team -s local"} {
 		if !strings.Contains(got[0].Message+got[0].Hint, want) {
 			t.Errorf("finding %+v does not name %q", got[0], want)
 		}
@@ -84,7 +84,7 @@ func TestCheckMCPScope_ProjectVsLocalScope(t *testing.T) {
 func TestCheckMCPScope_IdenticalEndpointDoesNotWarn(t *testing.T) {
 	// Arrange: the same name and the same url in both scopes is one server, not a conflict.
 	dir := project(t, map[string]string{".ai-rulez/config.toml": mcpScopeConfig})
-	setHome(t, fmt.Sprintf(`{"mcpServers":{"nara":{"type":"http","url":%q}}}`, projectNaraURL))
+	setHome(t, fmt.Sprintf(`{"mcpServers":{"team":{"type":"http","url":%q}}}`, projectTeamURL))
 
 	// Act
 	got := byCheck(runMCPScope(t, dir, true), CheckMCPScope)
@@ -98,7 +98,7 @@ func TestCheckMCPScope_IdenticalEndpointDoesNotWarn(t *testing.T) {
 func TestCheckMCPScope_OffUnlessOptedIn(t *testing.T) {
 	// Arrange: a real conflict that must stay invisible without the opt-in.
 	dir := project(t, map[string]string{".ai-rulez/config.toml": mcpScopeConfig})
-	setHome(t, fmt.Sprintf(`{"mcpServers":{"nara":{"type":"http","url":%q}}}`, localNaraURL))
+	setHome(t, fmt.Sprintf(`{"mcpServers":{"team":{"type":"http","url":%q}}}`, localTeamURL))
 
 	// Act
 	got := byCheck(runMCPScope(t, dir, false), CheckMCPScope)
@@ -111,7 +111,7 @@ func TestCheckMCPScope_OffUnlessOptedIn(t *testing.T) {
 
 func TestCheckMCPScope_DuplicateURLDifferentNames(t *testing.T) {
 	// Arrange: two generated servers that differ only by name but point at one url.
-	cfg := baseConfig + "\n[[mcp_servers]]\nname = \"nara\"\ntransport = \"http\"\nurl = \"" + projectNaraURL + "\"\n\n[[mcp_servers]]\nname = \"nara-alias\"\ntransport = \"http\"\nurl = \"" + projectNaraURL + "\"\n"
+	cfg := baseConfig + "\n[[mcp_servers]]\nname = \"team\"\ntransport = \"http\"\nurl = \"" + projectTeamURL + "\"\n\n[[mcp_servers]]\nname = \"team-alias\"\ntransport = \"http\"\nurl = \"" + projectTeamURL + "\"\n"
 	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
 	setHome(t, "")
 
@@ -122,7 +122,7 @@ func TestCheckMCPScope_DuplicateURLDifferentNames(t *testing.T) {
 	if len(got) != 1 || got[0].Severity != SeverityWarning {
 		t.Fatalf("findings = %+v, want one warning", got)
 	}
-	for _, want := range []string{"nara", "nara-alias", projectNaraURL, "likely duplicates"} {
+	for _, want := range []string{"team", "team-alias", projectTeamURL, "likely duplicates"} {
 		if !strings.Contains(got[0].Message, want) {
 			t.Errorf("finding %+v does not name %q", got[0], want)
 		}
@@ -133,9 +133,9 @@ func TestCheckMCPScope_HandAuthoredProjectFile(t *testing.T) {
 	// Arrange: the project server is hand-authored in .mcp.json, not in config.toml.
 	dir := project(t, map[string]string{
 		".ai-rulez/config.toml": baseConfig,
-		".mcp.json":             fmt.Sprintf(`{"mcpServers":{"nara":{"type":"http","url":%q}}}`, projectNaraURL),
+		".mcp.json":             fmt.Sprintf(`{"mcpServers":{"team":{"type":"http","url":%q}}}`, projectTeamURL),
 	})
-	setHome(t, fmt.Sprintf(`{"mcpServers":{"nara":{"type":"http","url":%q}}}`, localNaraURL))
+	setHome(t, fmt.Sprintf(`{"mcpServers":{"team":{"type":"http","url":%q}}}`, localTeamURL))
 
 	// Act
 	got := byCheck(runMCPScope(t, dir, true), CheckMCPScope)

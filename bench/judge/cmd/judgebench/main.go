@@ -2,7 +2,7 @@
 // repository, runs `ai-rulez judge` over it with a real model and prints precision, recall, the
 // false-positive rate of the traps, grounding and cost. It spends money: --max-cost is a hard cap.
 //
-// The corpus is synthetic. The default environment is the Armis Bedrock account used for the
+// The corpus is synthetic. The default environment is the Bedrock account used for the
 // published numbers (AWS_PROFILE=default, AWS_REGION=eu-north-1); override both with the flags.
 package main
 

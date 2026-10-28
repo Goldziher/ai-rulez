@@ -32,7 +32,6 @@ apache-libcloud
 appnope
 apscheduler
 apsw
-armis-docker-compose
 arrow
 asn1crypto
 astor
@@ -196,7 +195,6 @@ humanize
 idna
 idstools
 ijson
-impacket-armis
 importlib-metadata
 importlib-resources
 inflate64
@@ -329,7 +327,6 @@ pandas-stubs
 pandera
 pansi
 paramiko
-paramiko-armis
 parso
 pass
 passlib
