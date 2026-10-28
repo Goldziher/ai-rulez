@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-leakage.v1.schema.json",
+  "title": "ai-rulez exposure leakage",
+  "description": "Output of `ai-rulez exposure leakage --format json`: the area terms in the text a Claude Code session sees at its start (AR9W0, AR9W1), with their acceptance by [[lint.accept]], and the acceptances of those rules that accepted nothing (AR9I0). See docs/exposure.md.",
+  "type": "object",
+  "required": ["schema_version", "artifacts_checked", "findings", "stale_acceptances"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifacts_checked": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The start-of-session artifacts read, an artifact of unknown phase included."
+    },
+    "findings": {
+      "type": "array",
+      "description": "By artifact in inventory order: a text's violations by line (within a line by term, then area map order), then a listing's warnings by term.",
+      "items": {
+        "type": "object",
+        "required": ["severity", "code", "area", "term", "kind", "name", "path", "scope", "line", "excerpt", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "enum": ["violation", "warning", "accepted"],
+            "description": "violation: an error finding, which fails the command; warning: a finding below error; accepted: a finding a [[lint.accept]] entry accepts."
+          },
+          "code": { "enum": ["AR9W0", "AR9W1"] },
+          "area": {
+            "type": "string",
+            "description": "The area the term names; for AR9W1, every area that uses the ambiguous word, sorted and joined by \"/\"."
+          },
+          "term": {
+            "type": "string",
+            "description": "The term or ambiguous word, lowercase as the area map holds it."
+          },
+          "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin"] },
+          "name": {
+            "type": "string",
+            "description": "The qualified name of the artifact (plugin:skill for a plugin skill)."
+          },
+          "path": { "type": "string", "description": "The file, relative to the root and slash separated." },
+          "scope": { "type": "string", "description": "The directory that owns the artifact; \".\" for the root." },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The file line of a CLAUDE.md or rule line; 1 for a listing line, a server or plugin name, and every AR9W1 finding."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "The line (for AR9W1, the listing), whitespace squashed, cut to 140 characters."
+          },
+          "reason": {
+            "type": "string",
+            "description": "The reason of the [[lint.accept]] entry of an accepted finding, else empty."
+          }
+        }
+      }
+    },
+    "stale_acceptances": {
+      "type": "array",
+      "description": "The AR9I0 messages of the [[lint.accept]] entries for AR9W0 or AR9W1 that accepted no finding.",
+      "items": { "type": "string" }
+    }
+  }
+}

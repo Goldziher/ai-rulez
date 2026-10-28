@@ -139,9 +139,18 @@ func TestExposureMapInvalid(t *testing.T) {
 // fakeExposure is an ExposureSource with a fixed start-of-session exposure that
 // counts how often it is read.
 type fakeExposure struct {
+	noExposure
 	start *ExposureStart
 	calls *int
 }
+
+// noExposure is an ExposureSource with nothing to report, embedded by the
+// fakes of each exposure rule family.
+type noExposure struct{}
+
+func (noExposure) StartExposure() *ExposureStart               { return nil }
+func (noExposure) Collisions(float64) []ExposureCollision      { return nil }
+func (noExposure) Leakage() (leakage ExposureLeakage, ok bool) { return ExposureLeakage{}, false }
 
 func (f fakeExposure) StartExposure() *ExposureStart {
 	*f.calls++

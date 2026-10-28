@@ -150,7 +150,11 @@ func areaLine(lines []string, n int, field, needle string) int {
 	return fallback
 }
 
-// skillLine finds the line whose key is skill in the skill table, else that table's header line.
+// SkillLine is the 1-based line assigning skill in the [skill_areas] table of the lines of an areas file (or
+// the [exposure.skill_areas] table of a configuration file), else that table's header line, else 0.
+func SkillLine(lines []string, skill string) int { return skillLine(lines, skill) }
+
+// skillLine finds the line assigning skill in the skill table, else that table's header line.
 func skillLine(lines []string, skill string) int {
 	headers := tableHeaders(lines)
 	start := -1

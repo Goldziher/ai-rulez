@@ -77,13 +77,15 @@ none, enabled (the ones the root .claude/settings*.json enable; the default unle
 says otherwise) or all.
 
 Exit codes: 0 the report was printed, 1 the command could not run (bad flags, an invalid
-configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget.`,
+configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget; exposure leakage exits 2 on a
+violation or a stale acceptance.`,
 		Example: `  ai-rulez exposure
   ai-rulez exposure --plugins all --context-window 1000000 --format json
   ai-rulez exposure inventory
   ai-rulez exposure inventory --format json --with-text
   ai-rulez exposure areas --areas tools/context/areas.toml --format json
-  ai-rulez exposure collisions --min-score 0.2`,
+  ai-rulez exposure collisions --min-score 0.2
+  ai-rulez exposure leakage --format json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return fail(runExposureReport(cmd.Context(), cmd.OutOrStdout(), &f))
@@ -133,7 +135,7 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	addJSONFormat(inventory.Flags(), &f.asJSON, "")
 	addJSONFormat(areasCmd.Flags(), &f.asJSON, "")
 	inventory.Flags().BoolVar(&f.withText, "with-text", false, "Include each artifact's text in the JSON output")
-	group.AddCommand(inventory, areasCmd, newExposureCollisionsCmd(&f))
+	group.AddCommand(inventory, areasCmd, newExposureCollisionsCmd(&f), newExposureLeakageCmd(&f))
 	return group
 }
 

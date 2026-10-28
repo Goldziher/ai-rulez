@@ -93,10 +93,20 @@ func (r *runner) applyAccepts() {
 	}
 	for _, e := range entries {
 		if !e.used && r.acceptJudgeable(e) {
+			before := len(r.findings)
 			r.add(CodeAcceptUnused, r.configFilePath(), 1,
 				"lint.accept[%d] (%s in %s) accepted no finding; remove it or fix its path or match", e.index, e.cfg.Rule, e.cfg.Path)
+			if len(r.findings) > before {
+				r.staleAccepts = append(r.staleAccepts, staleAccept{code: e.code, message: r.findings[before].Message})
+			}
 		}
 	}
+}
+
+// staleAccept is a [[lint.accept]] entry of the rule code reported as AR9I0
+// with message.
+type staleAccept struct {
+	code, message string
 }
 
 // acceptJudgeable reports whether this run could have produced the finding the

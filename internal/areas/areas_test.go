@@ -414,3 +414,26 @@ func TestInlineAndFileFormsAreTheSame(t *testing.T) {
 	require.Empty(t, problems)
 	assert.Equal(t, testMap(t).Areas(), inline.Areas())
 }
+
+func TestSkillLine(t *testing.T) {
+	file := strings.Split("[[area]]\nname = \"a\"\n[skill_areas]\ndeploy = \"a\"\n\"ops:probe\" = \"a\"\n", "\n")
+	inline := strings.Split("[exposure]\n[exposure.skill_areas]\ndeploy = \"a\"\n[other]\nghost = \"a\"\n", "\n")
+	tests := []struct {
+		name  string
+		lines []string
+		skill string
+		want  int
+	}{
+		{name: "a key of the areas file", lines: file, skill: "deploy", want: 4},
+		{name: "a quoted key", lines: file, skill: "ops:probe", want: 5},
+		{name: "a missing key is the table header", lines: file, skill: "ghost", want: 3},
+		{name: "a key of the inline table", lines: inline, skill: "deploy", want: 3},
+		{name: "a key after the table is not in it", lines: inline, skill: "ghost", want: 2},
+		{name: "no table", lines: []string{"[[area]]", "name = \"a\""}, skill: "deploy", want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, SkillLine(tt.lines, tt.skill))
+		})
+	}
+}

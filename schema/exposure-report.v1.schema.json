@@ -65,9 +65,15 @@
       "properties": {
         "context_window": { "type": "integer", "minimum": 1, "description": "The model context window in tokens." },
         "skills": { "$ref": "#/definitions/count" },
-        "chars": { "$ref": "#/definitions/count", "description": "Characters of the listing lines of the listed skills." },
+        "chars": {
+          "$ref": "#/definitions/count",
+          "description": "Characters of the listing lines of the listed skills."
+        },
         "budget_chars": { "$ref": "#/definitions/count" },
-        "over_budget_chars": { "$ref": "#/definitions/count", "description": "chars past budget_chars, 0 when the listing fits." },
+        "over_budget_chars": {
+          "$ref": "#/definitions/count",
+          "description": "chars past budget_chars, 0 when the listing fits."
+        },
         "descriptions_capped": {
           "$ref": "#/definitions/count",
           "description": "Listed skills whose description and when_to_use exceed the per-skill listing cap."

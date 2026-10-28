@@ -7,11 +7,11 @@ describes the parts as an **area map**: which directories each area claims, who 
 
 This page describes the table, how the map is matched, and the commands that show what a Claude Code session loads,
 what that costs at the start of every session, and where each artifact belongs. `validate` checks the map itself
-(`AR9W5`), the start-of-session budget (`AR9W3`), the skill listing budget (`AR964`), a frontmatter gate that cannot
-be read (`AR9W4`) and, when `collision_min_score` is set, listings of different areas that overlap (`AR9W2`). The area
-term leakage rules follow in later releases. Without an `[exposure]` table no rule on this page has any effect except
-`AR9W4`, which needs none; the
-commands work without one.
+(`AR9W5`), area terms in the text a session sees at its start (`AR9W0`, `AR9W1`, see
+[Area term leakage](#area-term-leakage)), `skill_areas` entries that name no skill (`AR9W6`), the start-of-session
+budget (`AR9W3`), the skill listing budget (`AR964`), a frontmatter gate that cannot be read (`AR9W4`) and, when
+`collision_min_score` is set, listings of different areas that overlap (`AR9W2`). Without an `[exposure]` table no
+rule on this page has any effect except `AR9W4`, which needs none; the commands work without one.
 
 - [Configuration](#configuration)
 - [The area map](#the-area-map)
@@ -20,6 +20,7 @@ commands work without one.
 - [The owner of a skill](#the-owner-of-a-skill)
 - [Commands](#commands)
 - [Start-of-session budgets](#start-of-session-budgets)
+- [Area term leakage](#area-term-leakage)
 - [Validation](#validation)
 
 ## Configuration
@@ -148,7 +149,8 @@ upwards, so `--root` on a subdirectory of a project uses the project's map; `--n
 `areas_file` of the configuration stays relative to the configuration's project root; the path claims of the map are
 matched against artifact paths relative to `--root`. Exit codes: `0` the report was printed, `1` the command could not run (a bad flag, an invalid
 configuration or area map, whose problems are listed with their lines as `AR9W5` reports them), `2` (`exposure`
-only) the start tokens exceed `[exposure] start_budget`.
+only) the start tokens exceed `[exposure] start_budget`; `exposure leakage` exits `2` on a violation or a stale
+acceptance.
 
 | Flag | Commands | Meaning |
 | --- | --- | --- |
@@ -308,6 +310,17 @@ as everywhere) with every other one of a different area, and ranks the pairs:
 map. The JSON follows
 [`schema/exposure-collisions.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-collisions.v1.schema.json):
 
+### `ai-rulez exposure leakage`
+
+The area terms in the text a session sees at its start, as `validate` reports them (`AR9W0`, `AR9W1`), each with its
+acceptance, and the `[[lint.accept]]` entries of those rules that accepted nothing. It runs the `exposure` rules of
+`validate` with the area map and plugin mode of the flags, so `[lint.severity]`, `[lint] ignore_paths`,
+`[[lint.ignore_rules]]` and inline `ai-rulez-lint-ignore` comments apply as they do there; a baseline does not. A
+finding is a `violation` when it is an error (`AR9W0` by default), a `warning` below that, and `accepted` when an entry
+accepts it. The command fails (exit `2`) on a violation or a stale acceptance. Without an area map it fails (exit
+`1`). The JSON follows
+[`schema/exposure-leakage.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-leakage.v1.schema.json):
+
 ```json
 {
   "schema_version": 1,
@@ -320,12 +333,27 @@ map. The JSON follows
     {"score": 0.5, "shared": ["customer", "details", "look", "name"],
      "first": ".claude/skills/charge/SKILL.md", "first_kind": "skill", "first_name": "charge", "first_area": "billing",
      "second": ".claude/skills/rank/SKILL.md", "second_kind": "skill", "second_name": "rank", "second_area": "search"}
+  "artifacts_checked": 14,
+  "findings": [
+    {"severity": "accepted", "code": "AR9W0", "area": "billing", "term": "invoice", "kind": "mcp_server",
+     "name": "invoice-db", "path": ".mcp.json", "scope": ".", "line": 1, "excerpt": "invoice-db",
+     "reason": "server names stay in the root .mcp.json"},
+    {"severity": "violation", "code": "AR9W0", "area": "billing", "term": "invoice", "kind": "claude_md",
+     "name": "CLAUDE.md", "path": "CLAUDE.md", "scope": ".", "line": 12,
+     "excerpt": "Run the invoice reconciler before a release.", "reason": ""},
+    {"severity": "warning", "code": "AR9W1", "area": "billing/search", "term": "account", "kind": "skill",
+     "name": "lookup", "path": ".claude/skills/lookup/SKILL.md", "scope": ".", "line": 1,
+     "excerpt": "lookup: Looks up an account.", "reason": ""}
+  ],
+  "stale_acceptances": [
+    "lint.accept[2] (AR9W0 in CLAUDE.md) accepted no finding; remove it or fix its path or match"
   ]
 }
 ```
 
 To separate two listings, lead each description with what sets it apart (the area's own nouns), not with the words
 every skill of the repository uses.
+
 ## A gate that cannot be read
 
 `paths:`, `disable-model-invocation` and `user-invocable` decide when Claude Code shows a skill or rule. When the
@@ -378,6 +406,57 @@ Two checks of `validate` read the start-of-session report, both only with an `[e
 context_window = 200000            # the listing budget is 8000 characters
 start_budget = 6000                # AR9W3 above 6000 estimated start tokens
 ```
+
+## Area term leakage
+
+Text a session sees at its start is in the context of every task. A word there that names one area pulls every
+session toward it, so the rules read the start-of-session artifacts of the inventory: the root `CLAUDE.md` (and
+`.claude/CLAUDE.md`), unconditional root rules, the listing line of each root skill and agent, the server names of the
+root `.mcp.json` and the enabled plugin keys, and, with `plugins = "enabled"` or `"all"`, the listings of the plugin
+skills that load. An artifact of unknown phase (broken frontmatter that names a gate) counts as start: the check
+fails closed.
+
+- **`AR9W0 exposure-area-term`** (error): a term of an area that is not `shared`, on a non-blank line, outside path
+  literals (see [Matching terms](#matching-terms)). Each line reports each term once per area that lists it, in line
+  order, and the terms of a line by term and then area map order. The line is the file line of a `CLAUDE.md` or rule
+  line (frontmatter counted), and `1` for a listing line, a server name or a plugin key.
+- **`AR9W1 exposure-area-term-ambiguous`** (warning): a skill or agent listing that names no term at all (a shared
+  area's included) but some ambiguous words; one finding per word, on line `1`, its area every area that uses the
+  word, sorted and joined by `/` (`billing/search`).
+- **`AR9W6 exposure-skill-area-unknown`** (warning): a `skill_areas` key that names no skill of the inventory, neither
+  a qualified name (`plugin:skill`) nor a plugin skill's bare name. A plugin that is not enabled still counts. It is
+  reported on the key's line in the areas file or the configuration.
+
+The message of `AR9W0` and `AR9W1` is a stable contract, so an acceptance can name the artifact or the term:
+
+```text
+<kind> "<name>" at session start names term "<term>" of area "<area>"
+```
+
+Accept a finding with a reason in `[[lint.accept]]`; `match` is a case-sensitive substring of the message, and `path`
+the file of the finding (`.mcp.json` for a server, the settings file for a plugin key). An entry that accepts
+nothing is reported as `AR9I0` and fails `exposure leakage`:
+
+```toml
+[[lint.accept]]
+rule = "AR9W0"
+path = ".mcp.json"
+match = 'mcp_server "billing-'
+reason = "server names stay in the root .mcp.json; their tools are deferred"
+
+[[lint.accept]]
+rule = "AR9W0"
+path = "CLAUDE.md"
+match = 'names term "invoice"'
+reason = "the root map names each area once to route to its guide"
+```
+
+Under `validate --changed` (or `--since`), a leak finding is kept when its own file changed, and every leak finding is
+kept when the areas file, the configuration file, `.claude/settings.json`, `.claude/settings.local.json` or the
+repository marketplace changed: the finding depends on those files the way an `AR701` duplicate depends on the other
+file of the pair (an `AR964` finding, by contrast, has no such dependency and is kept only when its own file changed). An `AR9W6` finding sits on the areas file or the configuration and is kept when that file changed.
+`AR9I0` sits on the configuration file and, as for every rule, is kept only when the configuration changed, so a
+change that fixes the last finding an entry accepted shows the stale entry only in a full run.
 
 ## Validation
 

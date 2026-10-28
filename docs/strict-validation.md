@@ -355,10 +355,13 @@ ai-rulez validate --strict --outputs
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
 | AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
+| AR9W0 | `exposure-area-term` | error | A term of an area that is not `shared` appears in text a Claude Code session sees at its start: a root `CLAUDE.md` line, an unconditional root rule, a skill or agent listing line, an MCP server name or an enabled plugin key, outside path literals; an artifact of unknown phase counts as start. The message `<kind> "<name>" at session start names term "<term>" of area "<area>"` is a contract for `[[lint.accept]]` `match`. Only reported with an `[exposure]` area map (see [Area term leakage](exposure.md#area-term-leakage)) |
+| AR9W1 | `exposure-area-term-ambiguous` | warning | A skill or agent listed at session start names no term of any area but some ambiguous words; one finding per word, its area every area that uses it joined by `/` (see [Area term leakage](exposure.md#area-term-leakage)) |
 | AR9W2 | `exposure-area-collision` | off | Two skills or agents listed at session start, of different areas (unclassified counts as one), share listing words with a Jaccard index of at least `[exposure] collision_min_score`; setting it turns the rule on at warning, and a `[lint.severity]` entry turns it on at 0.1. Reported on the description line of the pair's first listing; `ai-rulez exposure collisions` ranks every pair (see [Session exposure and areas](exposure.md#ai-rulez-exposure-collisions)) |
 | AR9W3 | `exposure-start-budget` | off | The estimated tokens a Claude Code session started at the repository root loads before it touches a file (as `ai-rulez exposure` reports them) exceed `[exposure] start_budget`. Setting `start_budget` turns it on at error (see [Session exposure and areas](exposure.md#start-of-session-budgets)) |
 | AR9W4 | `exposure-gate-unreadable` | warning | A skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names `paths`, `disable-model-invocation` or `user-invocable`, so whether it is gated, and when it loads, cannot be known. Needs no `[exposure]` table: reported for the claude preset and for a run without a configuration (see [Session exposure and areas](exposure.md#a-gate-that-cannot-be-read)) |
 | AR9W5 | `exposure-map-invalid` | error | The `[exposure]` table or its area map is invalid: a duplicate, reserved or non-kebab area name, a bad path claim, a `skill_areas` value that names no area, an unknown key or unreadable `areas_file`, or both `areas_file` and inline areas. Only reported when the configuration has an `[exposure]` table (see [Session exposure and areas](exposure.md)) |
+| AR9W6 | `exposure-skill-area-unknown` | warning | A `skill_areas` key names no skill of the session inventory (a renamed, moved or deleted skill), on its line in the areas file or the configuration; a skill of a plugin that is not enabled still counts (see [Area term leakage](exposure.md#area-term-leakage)) |
 | AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --strict --verifiers`; severity is the verifier's own) |
 | AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --strict --verifiers`) |
 | AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run`, `test` and `validate --strict --verifiers`) |
@@ -439,7 +442,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | Harness built-in names ([#447](https://github.com/Goldziher/ai-rulez/issues/447); `AR9U0`, `AR9U1` used; reported by `validate --strict`, see [Built-in names of harnesses](#built-in-names-of-harnesses)) | allocated |
-| `AR9W0`-`AR9W9` | Session exposure and areas (`AR9W2`, `AR9W3`, `AR9W4`, `AR9W5` used; inert without an `[exposure]` table except `AR9W4`, which needs none, see [Session exposure and areas](exposure.md)) | allocated |
+| `AR9W0`-`AR9W9` | Session exposure and areas (`AR9W0`-`AR9W6` used; inert without an `[exposure]` table except `AR9W4`, which needs none, see [Session exposure and areas](exposure.md)) | allocated |
 | `AR9V0`-`AR9V9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims; moved from `AR9U` for #447) | reserved |
 
 Unlisted letters (`AR9X`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -795,7 +798,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `llmstxt` | `AR9P0`-`AR9P6` |
 | `traps` | `AR9C0`-`AR9CA` |
 | `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0`, `AR9I0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables, unused `[[lint.accept]]` entries) |
-| `exposure` | `AR9W2` (listings of different areas that overlap), `AR9W3` (the start-of-session budget), `AR9W4` (a frontmatter gate that cannot be read), `AR9W5` (the `[exposure]` table and its area map) |
+| `exposure` | `AR9W0`, `AR9W1` (area terms at session start), `AR9W2` (listings of different areas that overlap), `AR9W3` (the start-of-session budget), `AR9W4` (a frontmatter gate that cannot be read), `AR9W5` (the `[exposure]` table and its area map), `AR9W6` (`skill_areas` keys that name no skill) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
@@ -3053,7 +3056,7 @@ a .claude-plugin/plugin.json or marketplace.json breaks the documented schema (r
 
 ### AR964 load-budget-exceeded
 
-content exceeds a documented load limit of a configured harness (Claude skill listing, Codex AGENTS.md chain and skill listing, Windsurf/Devin rule files, Cursor rule length)
+content exceeds a documented load limit of a configured harness (Claude skill listing per skill and in total, Codex AGENTS.md chain and skill listing, Windsurf/Devin rule files, Cursor rule length)
 
 - Default severity: `warning`
 - Analyzer: `plugin` (scope `item`)
@@ -4331,6 +4334,26 @@ a skill, command or agent is named like a name the harness refuses to load; lint
 - Bad: `.ai-rulez/skills/synced/SKILL.md` with the claude preset
 - Good: Rename the skill (`sync-notes`)
 
+### AR9W0 exposure-area-term
+
+a term of an area that is not shared appears in text a Claude Code session sees at its start (a root CLAUDE.md, an unconditional root rule, a skill or agent listing line, an MCP server name, an enabled plugin name), outside path literals
+
+- Default severity: `error`
+- Analyzer: `exposure` (scope `bundle`)
+- Why: What a session sees at its start is in the context of every task, whatever area it is about. A word that names one area there pulls every session toward that area and costs tokens in all the others; the knowledge belongs in the area's own directory, where it loads on demand. The message is `<kind> "<name>" at session start names term "<term>" of area "<area>"`, so a `[[lint.accept]]` match can name the artifact or the term.
+- Bad: A root CLAUDE.md line `Run the invoice reconciler before a release`, with `invoice` a term of the area `billing`
+- Good: Move the line to `services/billing/CLAUDE.md`, name the location instead (`services/billing/`, a path literal), or accept it with a reason: `[[lint.accept]] rule = "AR9W0" path = "CLAUDE.md" match = 'names term "invoice"'`
+
+### AR9W1 exposure-area-term-ambiguous
+
+a skill or agent listed at session start names no term of any area but some ambiguous words, so the area it belongs to cannot be told
+
+- Default severity: `warning`
+- Analyzer: `exposure` (scope `bundle`)
+- Why: A skill or agent listed at session start whose description holds only words several areas use (`account`, `query`) may belong to one of them. Its listing loads in every session while the map cannot say whose it is.
+- Bad: `.claude/skills/lookup/SKILL.md` with `description: Looks up an account by query`, both ambiguous words
+- Good: `description: Looks up a billing customer account` (a term decides), or `[skill_areas] lookup = "billing"` and the skill moved under the area's directory
+
 ### AR9W2 exposure-area-collision
 
 two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over [exposure] collision_min_score (setting it turns the rule on at warning)
@@ -4341,6 +4364,26 @@ two skills or agents listed at session start, of different areas, overlap in the
 - Bad: A billing skill `charge` described as "Look up customer invoice details by name" next to a search skill `rank` described as "Look up customer ranker details by name"
 - Good: Descriptions that lead with what sets each apart: "Refund or void a billing invoice" and "Tune the search ranker weights"
 
+### AR9W3 exposure-start-budget
+
+the estimated tokens a Claude Code session loads at start exceed [exposure] start_budget (setting it turns the rule on at error)
+
+- Default severity: `off`
+- Analyzer: `exposure` (scope `bundle`)
+- Why: Everything a session loads before it touches a file (the root CLAUDE.md, unconditional rules, the skill and agent listings, MCP server names) is paid for by every session, whatever it works on. A budget turns growth of that surface into a decision instead of drift. The estimate is the one `ai-rulez exposure` reports.
+- Bad: `[exposure] start_budget = 4000` while the root CLAUDE.md and the skill listing add up to about 5200 estimated tokens
+- Good: Move area-specific guidance into a subdirectory CLAUDE.md or a `paths:`-gated rule, so it loads on demand, or raise start_budget on purpose
+
+### AR9W4 exposure-gate-unreadable
+
+a skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names paths, disable-model-invocation or user-invocable, so whether it is gated, and when it loads, cannot be known
+
+- Default severity: `warning`
+- Analyzer: `exposure` (scope `item`)
+- Why: `paths:` defers a skill or rule until a matching file is read and `disable-model-invocation` keeps a skill out of the model's listing. When the block around them is not valid YAML, Claude Code (2.1.312, measured) recovers some blocks and keeps the gate (an unquoted `:` in a value), and drops others whole (an unclosed quote, a tab indent), so the item then loads at session start in every session. Which one happens is up to the harness's own parser, so `ai-rulez exposure inventory` reports the phase as `unknown` and counts it at session start, and the MCP server never returns such a rule for a `path` query. Only for the claude preset, or a run without a configuration; AR306 reports the block itself.
+- Bad: `description: Use when: deploying` above `paths: ["services/billing/**"]`
+- Good: `description: "Use when: deploying"` above `paths: ["services/billing/**"]`
+
 ### AR9W5 exposure-map-invalid
 
 the [exposure] table or its area map is invalid: a duplicate or malformed area name, a bad path claim, a skill_areas value naming no area, an unreadable areas_file, or both areas_file and inline areas
@@ -4350,5 +4393,15 @@ the [exposure] table or its area map is invalid: a duplicate or malformed area n
 - Why: The area map decides which area owns a skill and which words name an area. A map with a problem is not used at all, so the exposure rules that read it stay silent until it is fixed; this finding is the only sign that they are off.
 - Bad: Two `[[area]]` tables named `billing`, a path claim `"services/billing/"` with a trailing slash, or `[skill_areas] deploy = "ops"` with no area `ops`
 - Good: Unique lower-kebab names, repository-relative claims such as `"services/billing_*"` or `"!services/billing_legacy"`, and skill_areas values that name an area
+
+### AR9W6 exposure-skill-area-unknown
+
+a skill_areas key of the area map names no skill of the session inventory
+
+- Default severity: `warning`
+- Analyzer: `exposure` (scope `bundle`)
+- Why: A skill_areas entry outlives the skill it places when the skill is renamed, moved into a plugin or deleted. The stale entry places nothing, and would silently place a different skill that later takes the name.
+- Bad: `[skill_areas] deploy-staging = "platform"` after the skill was renamed `ship-staging`
+- Good: Rename the key (`ship-staging = "platform"`), or remove it; a plugin skill is keyed `plugin:skill`
 
 <!-- rules:end -->
