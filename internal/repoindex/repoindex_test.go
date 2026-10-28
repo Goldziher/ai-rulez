@@ -786,3 +786,20 @@ func TestBuild_FrontmatterTypeErrorKeepsTheKeysThatDecode(t *testing.T) {
 		})
 	}
 }
+
+// A walk lists a symlinked file as git lists it, leaving the reader to decide
+// whether to follow it; a symlinked directory is neither listed nor entered.
+func TestListFiles_WalkKeepsSymlinkedFiles(t *testing.T) {
+	// Arrange
+	root := layout(t, map[string]string{"AGENTS.md": "# Root\n", "dir/a.md": "a\n"})
+	testutil.SymlinkOrSkip(t, "AGENTS.md", filepath.Join(root, "CLAUDE.md"))
+	testutil.SymlinkOrSkip(t, "missing.md", filepath.Join(root, "dangling.md"))
+	testutil.SymlinkOrSkip(t, "dir", filepath.Join(root, "linked"))
+
+	// Act
+	files := ListFiles(context.Background(), root)
+
+	// Assert
+	sort.Strings(files)
+	assert.Equal(t, []string{"AGENTS.md", "CLAUDE.md", "dangling.md", "dir/a.md"}, files)
+}
