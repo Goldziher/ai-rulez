@@ -96,3 +96,41 @@ func TestLoadSkill_LoadsAPathGatedSkillByName(t *testing.T) {
 	// Assert
 	require.False(t, isErr, "%v", out)
 }
+
+// A skill whose frontmatter does not parse is not served at all (the Skills
+// extension cannot represent it), so a lost `paths:` gate never widens what
+// find_skill returns, with or without a path.
+func TestFindSkill_ASkillWithABrokenGateIsNotServed(t *testing.T) {
+	tests := []struct {
+		name string
+		args map[string]any
+	}{
+		{name: "a path the lost gate may have named", args: map[string]any{"path": "backend/services/orders/kafka_consumer.py"}},
+		{name: "a directory", args: map[string]any{"path": "backend"}},
+		{name: "no filter", args: map[string]any{}},
+		{name: "a scope filter", args: map[string]any{"scope": "."}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := pathGatedProject(t)
+			writeFile(t, root, ".claude/skills/broken-gate/SKILL.md",
+				"---\nname: broken-gate\ndescription: Kafka consumer conventions: broken gate\npaths:\n  - \"backend/services/**\"\n---\n\n# broken\n")
+			srv := newServerFor(t, &ServeSetup{WorkDir: root, DiscoverSkills: "repo"})
+			session := connect(t, srv)
+			args := map[string]any{"task": "kafka consumer conventions broken gate", "limit": 20}
+			for k, v := range tt.args {
+				args[k] = v
+			}
+
+			// Act
+			out, isErr := toolJSON(t, session, "find_skill", args)
+
+			// Assert
+			require.False(t, isErr, "%v", out)
+			names := resultNames(t, out)
+			assert.NotContains(t, names, "broken-gate")
+			assert.Contains(t, names, "plain-conventions", "the query itself returns results")
+		})
+	}
+}

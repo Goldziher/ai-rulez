@@ -2,6 +2,7 @@ package frontmatter
 
 import (
 	"errors"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -36,4 +37,27 @@ func Decode(b Block) (map[string]any, error) {
 		front = map[string]any{}
 	}
 	return front, nil
+}
+
+// GateKeys are the frontmatter keys by which Claude Code gates a skill or a
+// rule: `paths` defers it until a matching file is read,
+// `disable-model-invocation` keeps it from the model and `user-invocable` from
+// the user. A block that does not decode but names one of them hides whether,
+// and how, the item is gated.
+var GateKeys = []string{"paths", "disable-model-invocation", "user-invocable"}
+
+// NamesKey reports whether a line of a raw block holds one of keys as a key:
+// after any indentation, the key and then a colon, blanks allowed between. It
+// reads the text, not the YAML, so it finds a key in a block that does not
+// decode, where the key's value is lost.
+func NamesKey(raw string, keys ...string) bool {
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimLeft(line, " \t")
+		for _, key := range keys {
+			if rest, ok := strings.CutPrefix(line, key); ok && strings.HasPrefix(strings.TrimLeft(rest, " \t"), ":") {
+				return true
+			}
+		}
+	}
+	return false
 }
