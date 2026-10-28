@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.9.0'
 scope = 'all'
-tree = 'sha256:560ccdf83e5a97fd913e2a5fcbf1158bd960be557c0bf769023aad4576c9062f'
+tree = 'sha256:a7b06c07805954d5ab015f34b25eec6cbf640a9b83ebb9c2f4fdbd05957bdd31'
 
 [[served]]
 name = 'build'
@@ -220,7 +220,7 @@ digest = 'sha256:2ea295eab8c29fe6b916437ab8f1a0801f37ea58b330f240e89411610b76e19
 kind = 'context'
 id = 'cli-and-crud'
 path = 'context/cli-and-crud.md'
-digest = 'sha256:2444977f0c39c311ede777ee13e62e89528a21c518b7210a4e8aa68b6bbcd9d3'
+digest = 'sha256:bd8e2a3b428a8cb07155892e56d4a2deef6c2ef59633e394d9fbf40eae78e60d'
 
 [[item]]
 kind = 'context'
@@ -274,13 +274,13 @@ digest = 'sha256:a16fe999be34b31769fa233a28df54c6c7fa0ff81debb846fb541a0e4e29796
 kind = 'context'
 id = 'tool-overview'
 path = 'context/tool-overview.md'
-digest = 'sha256:44a644275350a39005ab308217f63cef5a20dfb06730bbcf694afba692a1519c'
+digest = 'sha256:8e3a7bbde2c8d94c3d729638763c9aeccdf761fcc56f8d7c94ad2048f39321ba'
 
 [[item]]
 kind = 'context'
 id = 'workspace-layout'
 path = 'context/workspace-layout.md'
-digest = 'sha256:c03d1c8771683195b30bf6493a637b27b83a009d88273e5b3c3ebc1360277f14'
+digest = 'sha256:c92a50d6d50b6a6b141a571caa39a0e5f8514d221181d04a72fc949b8f833a73'
 
 [[item]]
 kind = 'rule'

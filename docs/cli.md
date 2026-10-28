@@ -33,6 +33,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
 | `ai-rulez migrate v5` / `migrate okf` | Migrate a 4.x project to 5.0, or the content tree to OKF ([details](#migrate-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
+| `ai-rulez exposure`             | What a Claude Code session loads at its start and what that costs; `inventory`, `areas`, `collisions` and `leakage` check it against the `[exposure]` area map ([Session exposure](exposure.md)) |
 | `ai-rulez search`               | Rank skills against a query (lexical or hybrid with embeddings); `index`, `status`, `mine`; `--eval` measures the ranking ([details](#search-command)) |
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
 | `ai-rulez eval import`          | Import eval scenarios from another tool as eval cases ([details](evals.md#importing-scenarios)) |
