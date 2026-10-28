@@ -95,12 +95,10 @@ func (r *runner) applyAccepts() {
 	}
 	for _, e := range entries {
 		if !e.used && r.acceptJudgeable(e) {
-			before := len(r.findings)
-			r.add(CodeAcceptUnused, r.configFilePath(), 1,
-				"lint.accept[%d] (%s in %s) accepted no finding; remove it or fix its path or match", e.index, e.cfg.Rule, e.cfg.Path)
-			if len(r.findings) > before {
-				r.staleAccepts = append(r.staleAccepts, staleAccept{code: e.code, message: r.findings[before].Message})
-			}
+			msg := fmt.Sprintf("lint.accept[%d] (%s in %s) accepted no finding; remove it or fix its path or match", e.index, e.cfg.Rule, e.cfg.Path)
+			// Recorded whether or not AR9I0 is reported, so `exposure leakage` fails on it with AR9I0 off.
+			r.staleAccepts = append(r.staleAccepts, staleAccept{code: e.code, message: msg})
+			r.add(CodeAcceptUnused, r.configFilePath(), 1, "%s", msg)
 		}
 	}
 }
