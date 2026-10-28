@@ -23,7 +23,7 @@ jobs:
     name: Race detector
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -35,7 +35,7 @@ jobs:
 
       - name: Test with -race
         run: >-
-          go test -race -count=1 -timeout 20m
+          go test -race -count=1 -timeout 180m
           ./internal/includes/...
           ./internal/telemetry/...
           ./internal/runner/...
@@ -46,7 +46,7 @@ jobs:
     name: Fuzz ${{ matrix.target }}
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:

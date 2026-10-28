@@ -36,6 +36,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
       - uses: xberg-io/actions/setup-ai-rulez@v1

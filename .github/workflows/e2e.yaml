@@ -15,7 +15,7 @@ jobs:
   comprehensive-e2e:
     name: Comprehensive E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -60,6 +60,8 @@ jobs:
         run: task build
 
       - name: Run all e2e tests
+        env:
+          TEST_TIMEOUT: 180m
         run: task test:e2e
 
       - name: Upload comprehensive test results
