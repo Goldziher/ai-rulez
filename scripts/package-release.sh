@@ -49,6 +49,12 @@ if [ "$(go env GOHOSTOS)/$(go env GOHOSTARCH)" != "$target" ]; then
   exit 1
 fi
 
+# The minimum macOS a darwin binary needs follows the build host unless it is pinned, so a newer
+# runner image would silently drop older macOS releases. The liter-llm static library targets 11.0.
+if [ "$goos" = darwin ]; then
+  export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
+fi
+
 exe=""
 archive_ext="tar.gz"
 if [ "$goos" = windows ]; then

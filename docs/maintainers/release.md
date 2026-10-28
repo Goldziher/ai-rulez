@@ -106,8 +106,8 @@ push), and the same ref identity is carried.
 | ----------------------------------------- | ------------------ | ----------------------- | ------ |
 | `ai-rulez_<v>_linux_amd64.tar.gz`         | `ubuntu-latest`    | `debian:bookworm`       | verified in the v5.4.0 publish run |
 | `ai-rulez_<v>_linux_arm64.tar.gz`         | `ubuntu-24.04-arm` | `debian:bookworm`       | verified in the v5.4.0 publish run |
-| `ai-rulez_<v>_darwin_arm64.tar.gz`        | `macos-14`         | host                    | verified in the v5.4.0 publish run |
-| `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host                    | verified in the v5.4.0 publish run |
+| `ai-rulez_<v>_darwin_arm64.tar.gz`        | `macos-15`         | host, macOS 14.0 target | `macos-14` retires on 2026-11-02 |
+| `ai-rulez_<v>_darwin_amd64.tar.gz`        | `macos-15-intel`   | host, macOS 14.0 target | verified in the v5.4.0 publish run |
 | `ai-rulez_<v>_windows_amd64.zip`          | `windows-latest`   | host (MinGW gcc)        | verified in the v5.4.0 publish run; see below |
 
 `windows/arm64` is not supported. Archive names and `checksums.txt` are unchanged from the GoReleaser era. The archive
@@ -115,6 +115,10 @@ root holds `ai-rulez`/`ai-rulez.exe`, `README.md` and `LICENSE` as before, plus 
 `LICENSES/`, which are new. The npm and PyPI wrappers extract only the binary (and on Windows any `.dll` beside it), so
 they and the Homebrew formula work as before; both wrappers still fail closed when `checksums.txt` or the archive's
 entry is missing or does not match.
+
+The darwin builds set `MACOSX_DEPLOYMENT_TARGET=14.0` (`scripts/package-release.sh`): without it the minimum macOS
+follows the runner image, so 5.9.0's Intel binary built on `macos-15-intel` required macOS 15. The publish workflow fails
+a darwin archive whose `LC_BUILD_VERSION` minimum is not 14.0.
 
 Builds use `-trimpath -buildvcs=false -ldflags "-s -w -X main.version=<version>"`; archives have fixed mtimes, sorted
 entries and no owner or gzip timestamp, so two builds of the same inputs on the same toolchain are byte-identical.

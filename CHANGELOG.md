@@ -6,6 +6,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- **The macOS binaries run on macOS 14 again, and the release builds without the retiring `macos-14` runner.**
+  The minimum macOS of a darwin binary followed the runner image that built it, so 5.9.0's Intel binary required
+  macOS 15. Both darwin builds now target macOS 14.0 (`MACOSX_DEPLOYMENT_TARGET`), the Apple silicon build moves from
+  `macos-14`, which GitHub retires on 2026-11-02, to `macos-15`, and the publish workflow rejects a darwin binary that
+  needs a newer macOS. 5.9.1 was never published as a GitHub release (its Apple silicon build got no runner), so its
+  npm and PyPI packages cannot download a binary; use 5.9.2.
+
 ## [5.9.1] - 2026-10-28
 
 ### Fixed
