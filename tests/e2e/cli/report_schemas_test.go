@@ -115,6 +115,7 @@ func TestEveryJSONContractValidatesAgainstItsSchema(t *testing.T) {
 		{"doctor", []string{"doctor"}, 0},
 		{"tokens", []string{"tokens"}, 0},
 		{"cost", []string{"cost"}, 0},
+		{"exposure", []string{"exposure"}, 0},
 		{"exposure inventory", []string{"exposure", "inventory", "--with-text"}, 0},
 		{"exposure areas", []string{"exposure", "areas", "--areas", filepath.Join(root, "areas.toml")}, 0},
 		{"exposure collisions", []string{"exposure", "collisions", "--areas", filepath.Join(root, "areas.toml"), "--min-score", "0"}, 0},
