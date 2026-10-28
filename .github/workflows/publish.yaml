@@ -264,7 +264,7 @@ jobs:
             image: debian:bookworm
           - goos: darwin
             goarch: arm64
-            os: macos-14
+            os: macos-15
           - goos: darwin
             goarch: amd64
             os: macos-15-intel
@@ -329,6 +329,13 @@ jobs:
               otool -L "$dir/ai-rulez"
               if otool -L "$dir/ai-rulez" | grep -qi liter_llm_ffi; then
                 echo "::error::ai-rulez links the liter-llm shared library; it must be linked statically"
+                exit 1
+              fi
+              # The binary must still run on macOS 14 whatever runner image built it.
+              minos="$(otool -l "$dir/ai-rulez" | awk '/LC_BUILD_VERSION/ {f=1} f && $1 == "minos" {print $2; exit}')"
+              echo "minimum macOS: ${minos:-unknown}"
+              if [ "$minos" != "14.0" ]; then
+                echo "::error::ai-rulez requires macOS ${minos:-unknown}, expected 14.0 (MACOSX_DEPLOYMENT_TARGET)"
                 exit 1
               fi
               ;;
