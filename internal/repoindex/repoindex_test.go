@@ -864,3 +864,27 @@ func TestListFiles_WalkKeepsSymlinkedFiles(t *testing.T) {
 	sort.Strings(files)
 	assert.Equal(t, []string{"AGENTS.md", "CLAUDE.md", "dangling.md", "dir/a.md"}, files)
 }
+
+func TestWalkFilesReportsTheLimit(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"a.md", "b.md", "c.md"} {
+		require.NoError(t, os.WriteFile(filepath.Join(root, name), []byte("x\n"), 0o600))
+	}
+	tests := []struct {
+		name   string
+		limit  int
+		files  int
+		capped bool
+	}{
+		{"below the limit", 5, 3, false},
+		{"exactly the limit", 3, 3, false},
+		{"over the limit", 2, 2, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files, capped := walkFiles(root, tt.limit)
+			assert.Len(t, files, tt.files)
+			assert.Equal(t, tt.capped, capped)
+		})
+	}
+}
