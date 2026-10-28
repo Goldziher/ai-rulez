@@ -176,6 +176,8 @@ The schema files are available in the repository:
 | `schema/approve-list.schema.json` | JSON Schema | v1      | `ai-rulez approve --list --format json`: the `[governance]` policy and the approval status of pinned content; see [Approvals](approvals.md) |
 | `schema/verify-approvals.schema.json` | JSON Schema | v1 | `ai-rulez verify --approvals --format json`: the re-check of signed and review-linked approvals; see [Approvals](approvals.md#verifying-approvals) |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
+| `schema/exposure-inventory.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure inventory --format json`: every native Claude Code artifact with its phase, visibility and parse status; see [Session exposure](exposure.md#commands) |
+| `schema/exposure-areas.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure areas --format json`: the area map as loaded and the area of every artifact, with how it was decided |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query (lexical or hybrid) |
 | `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--output` writes |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json`: every input construct as mapped, approximated or dropped |

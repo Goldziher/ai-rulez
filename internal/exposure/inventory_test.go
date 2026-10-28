@@ -585,3 +585,16 @@ func TestInventory_JSONShape(t *testing.T) {
 	assert.NotContains(t, string(bare), `"text":`)
 	assert.Equal(t, "s: d", inv.Artifacts[1].Text, "WithoutText leaves the inventory as it was")
 }
+
+// Empty lists and maps print as [] and {}, never null, as every JSON document of the CLI does.
+func TestInventory_JSONHasNoNull(t *testing.T) {
+	inv := build(t, writeRepo(t, map[string]string{"README.md": "nothing"}))
+
+	data, err := json.Marshal(inv)
+
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "null")
+	assert.Contains(t, string(data), `"problems":[]`)
+	assert.Contains(t, string(data), `"skill_overrides":{}`)
+	assert.Contains(t, string(data), `"schema_version":1`)
+}

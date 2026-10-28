@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-areas.v1.schema.json",
+  "title": "ai-rulez exposure areas",
+  "description": "Output of `ai-rulez exposure areas --format json`: the area map as loaded and the area of every artifact of the session inventory, with how it was decided. See docs/exposure.md.",
+  "type": "object",
+  "required": ["schema_version", "root", "areas_file", "plugins", "areas", "skill_areas", "artifacts", "counts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "root": { "type": "string", "description": "The absolute repository root, slash separated." },
+    "areas_file": {
+      "type": "string",
+      "description": "The areas file the map was read from (--areas or [exposure] areas_file), empty for the inline [exposure] form."
+    },
+    "plugins": { "enum": ["none", "enabled", "all"], "description": "The plugin mode of the inventory." },
+    "areas": {
+      "type": "array",
+      "description": "The areas in map order, terms and ambiguous words normalized (trimmed, lowercased, unique, sorted).",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "owner", "paths", "terms", "ambiguous", "shared", "declare"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "owner": { "type": "string" },
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "terms": { "type": "array", "items": { "type": "string" } },
+          "ambiguous": { "type": "array", "items": { "type": "string" } },
+          "shared": { "type": "boolean" },
+          "declare": { "type": "string" }
+        }
+      }
+    },
+    "skill_areas": { "type": "object", "additionalProperties": { "type": "string" } },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "source",
+          "name",
+          "qualified_name",
+          "path",
+          "scope",
+          "area_scope",
+          "phase",
+          "area",
+          "area_source"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
+          "source": { "enum": ["file", "command", "plugin"] },
+          "name": { "type": "string" },
+          "qualified_name": { "type": "string" },
+          "plugin": { "type": "string" },
+          "path": { "type": "string" },
+          "scope": { "type": "string", "description": "The directory that owns the artifact; \".\" for the root." },
+          "area_scope": {
+            "type": "string",
+            "description": "The directory whose path claims were tried: the scope, or a plugin skill's plugin directory."
+          },
+          "phase": { "enum": ["start", "on_demand", "manual", "unknown"] },
+          "area": { "type": "string" },
+          "area_source": { "enum": ["skill_areas", "path", "terms", "none"] }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "description": "The number of artifacts per area, unclassified included.",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  }
+}

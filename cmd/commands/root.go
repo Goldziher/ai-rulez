@@ -162,6 +162,7 @@ func init() {
 	RootCmd.AddCommand(SBOMCmd)
 	RootCmd.AddCommand(TokensCmd)
 	RootCmd.AddCommand(CostCmd)
+	RootCmd.AddCommand(newExposureCmd())
 	RootCmd.AddCommand(EvalCmd)
 	RootCmd.AddCommand(ImproveCmd)
 	RootCmd.AddCommand(LocalCmd)
