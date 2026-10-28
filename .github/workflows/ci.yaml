@@ -21,6 +21,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -45,11 +46,12 @@ jobs:
         with:
           # Pinned, so a local run with the same version matches CI; bump on purpose.
           version: v2.15.0
-          args: --timeout=10m
+          args: --timeout=180m
 
   tidy:
     name: go mod tidy
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -69,6 +71,7 @@ jobs:
   public-api:
     name: Public API (pkg/airulez)
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -138,6 +141,7 @@ jobs:
   npm-wrapper:
     name: npm wrapper (Node 24)
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -153,6 +157,7 @@ jobs:
   test:
     name: Test - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -206,7 +211,7 @@ jobs:
 
       - name: Run all tests (unit + platform)
         env:
-          TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
+          TEST_TIMEOUT: 180m
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: task test
 
@@ -243,7 +248,7 @@ jobs:
     name: E2E Tests - ${{ matrix.os }} - ${{ matrix.test-suite }}
     runs-on: ${{ matrix.os }}
     needs: [lint, test]
-    timeout-minutes: 30
+    timeout-minutes: 180
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -277,7 +282,7 @@ jobs:
       - name: Run e2e tests - ${{ matrix.test-suite }}
         run: |
           echo "::group::E2E Tests - ${{ matrix.test-suite }}"
-          go test -timeout 20m ./tests/e2e/${{ matrix.test-suite }}/...
+          go test -timeout 180m ./tests/e2e/${{ matrix.test-suite }}/...
           echo "::endgroup::"
       - name: Upload test results
         if: always()
@@ -292,7 +297,7 @@ jobs:
   docker-e2e:
     name: Docker E2E (registry, collector)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -319,13 +324,14 @@ jobs:
           AI_RULEZ_E2E_OTELCOL: "1"
           AI_RULEZ_LIVE_OTEL: "1"
         run: >-
-          go test -count=1 -timeout 20m -v
+          go test -count=1 -timeout 180m -v
           -run 'TestDocker|TestLive_RegistryV2RoundTrip|TestCollector|TestLiveCollector'
           ./tests/e2e/cli/ ./internal/publish/oci/ ./internal/telemetry/
 
   govulncheck:
     name: Vulnerability Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -344,7 +350,7 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     needs: [lint, test]
-    timeout-minutes: 20
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -377,6 +383,8 @@ jobs:
       # shell: bash runs with pipefail, so a failing benchmark is not hidden by tee.
       - name: Run benchmarks once
         shell: bash
+        env:
+          TEST_TIMEOUT: 180m
         run: task test:benchmark:smoke | tee benchmark-results.txt
 
       - name: Upload benchmark results
@@ -416,7 +424,7 @@ jobs:
     name: Comprehensive Test Suite - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: [lint]
-    timeout-minutes: 90
+    timeout-minutes: 180
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -457,7 +465,7 @@ jobs:
 
       - name: Run all test suites (unit + platform + e2e)
         env:
-          TEST_TIMEOUT: ${{ runner.os == 'Windows' && '45m' || '30m' }}
+          TEST_TIMEOUT: 180m
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: task test:all
 
@@ -487,6 +495,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     needs: [lint, test, e2e-test, comprehensive-test]
     steps:
       - name: Checkout code

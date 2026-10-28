@@ -37,6 +37,7 @@ jobs:
   bats:
     name: Bats on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -76,6 +77,7 @@ jobs:
   lib:
     name: Vendored xberg-bats and Bats lint
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
 

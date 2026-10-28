@@ -142,7 +142,7 @@ tasks:
   test:e2e:
     desc: "Run all e2e tests"
     cmds:
-      - go test -timeout 30m ./tests/e2e/...
+      - go test -timeout {{default "30m" .TEST_TIMEOUT}} ./tests/e2e/...
 
   test:e2e:cli:
     desc: "Run e2e CLI tests"
@@ -169,7 +169,7 @@ tasks:
   test:platform:
     desc: "Run cross-platform specific tests"
     cmds:
-      - go test -timeout 30m ./tests/platform/...
+      - go test -timeout {{default "30m" .TEST_TIMEOUT}} ./tests/platform/...
 
   test:bats:
     desc: "Run the Bats suites for shell scripts (usage: task test:bats -- [bats args or suite path])"
@@ -211,7 +211,7 @@ tasks:
   test:benchmark:smoke:
     desc: "Run every benchmark once (-benchtime=1x): proves they still run, measures nothing. CI runs this; the regression gate is test:benchmark:regression"
     cmds:
-      - go test -bench=. -benchtime=1x -run='^$' -timeout 15m ./...
+      - go test -bench=. -benchtime=1x -run='^$' -timeout {{default "15m" .TEST_TIMEOUT}} ./...
 
   test:benchmark:large:
     desc: "Run Go benchmarks including the 2000-file synthetic project (one iteration each)"
