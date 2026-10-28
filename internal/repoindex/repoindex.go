@@ -48,18 +48,23 @@ type Item struct {
 	// means it applies everywhere in its scope.
 	Only *PathGlobs `json:"only,omitempty"`
 	// ParseError, when set, is why the frontmatter block could not be decoded
-	// (invalid YAML, not a mapping, or never closed). The item is then indexed
-	// as if it had no frontmatter, so Only is nil even when the block names
-	// paths.
+	// (invalid YAML, not a mapping, or never closed). The item keeps what the
+	// decode read all the same; when that holds no globs but the block names
+	// `paths:`, Only is unreadable instead of nil, so the lost gate fails closed.
 	ParseError string `json:"parse_error,omitempty"`
 }
 
 // PathGlobs are the globs a rule or skill names the files it applies to by,
 // relative to its scope: `paths:` in the Claude Code form (rules and skills),
 // `globs:` in a Cursor rule that is not always applied.
+//
+// Unreadable marks a restriction whose globs are lost: the frontmatter block
+// names `paths:` but does not decode. Such an item matches no path, since
+// where it applies cannot be known.
 type PathGlobs struct {
-	Paths []string `json:"paths,omitempty"`
-	Globs []string `json:"globs,omitempty"`
+	Paths      []string `json:"paths,omitempty"`
+	Globs      []string `json:"globs,omitempty"`
+	Unreadable bool     `json:"unreadable,omitempty"`
 }
 
 // Scope is a directory that holds convention files.
