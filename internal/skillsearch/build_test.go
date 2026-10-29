@@ -337,7 +337,9 @@ func TestCommandEmbedder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			e := &CommandEmbedder{
-				Argv: []string{script(t, tt.body)}, PassEnv: []string{"PASSED"},
+				// sh runs the script, so no exec targets a file just written: a parallel
+				// fork can still hold its write descriptor (ETXTBSY, "text file busy").
+				Argv: []string{"/bin/sh", script(t, tt.body)}, PassEnv: []string{"PASSED"},
 				Getenv: func(k string) string {
 					if k == "PATH" {
 						return "/usr/bin:/bin"
