@@ -60,8 +60,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 5182 8b9cba82fbd93cba23059abb2ef961dbf94420ce88e565010e5eb7caebf9a31f
-.ai-rulez/.generated-manifest.local.json file 0644 19398 9e8ece107879b621fd3d4a6a11d5e4eac302e6fb51fffb031d1c2ecd2cd8c5c2
+.ai-rulez/.generated-manifest.json file 0644 5350 c8b91589498f68d9768b11c8e2150c005922a7a8158ce203dad3a73e76529123
+.ai-rulez/.generated-manifest.local.json file 0644 20173 c80e4f6e325ce2c6d7b4bfb19aabb37fb97d4615d12c2c60ca5466848271654d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -145,7 +145,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/helper.toml file 0644 88 2cd2537d532bb3ce063715d3dd4b80145e251a6a7149411d2ae0dfbc5f500ef2
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 321 995c2a001216b2b2f5980c225802139d31589b3616b6b5b71313e4bc4d561b2f
+.codex/config.toml file 0600 401 6f0b3476c475df2da3584c8da39c8708e9cf0e5d61888c1a7b1ded4f803a2aed
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -161,7 +161,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/quick.md file 0644 55 6da8934bdbd5f2a1c39f521bf3118d90a929b0e6cb49ae801b21ea21ae9febc1
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0600 482 f8cf3fb157962e923d18894ad9d23d6bbf9e7477674d6d06b59f2a8123612452
+.cursor/mcp.json file 0600 610 428aac10059646f5cf50a6837dc670321494c4f9baf97df6996ccff653ae20db
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -261,7 +261,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .opencode/skills/scratch/ dir 0755
 .opencode/skills/scratch/SKILL.md file 0644 150 840b60e9b2cd7374a669c0a76336256af88013efba44cd33f201a9c29dda5ec6
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 547 dd8303f1e4edb5c7fc5436db37e3a93667f2d000280d564da65da580a94818af
+.vscode/mcp.json file 0600 698 69abfa76345ce8b800cfebc033992a553005cb82c8f82ea53ff7a139535f22fb
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
@@ -272,7 +272,7 @@ GEMINI.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b206
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0600 915 c18268664298f582eed44cd5947f66d6f4961874cc2f6994059f3f52bd0ae259
-opencode.json file 0600 962 c6b99383b04d57af967fc89e796bc26ed5c69eb4ee0ea4f3a0d9cfb045b73dc3
+opencode.json file 0600 1130 9aeafb8ecfdea117223ded62c65089373be9963c49c16ee8f43a3fd61e856460
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -425,8 +425,8 @@ WARN  Stale MCP server mcp.personal in opencode.json: it was generated from a [[
 INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-~ .ai-rulez/.generated-manifest.local.json file 0644 18869 2e2e86db13034f07d1caa4f13ec6ea02caf5ade8592380398c31075d6843abbd
+~ .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
+~ .ai-rulez/.generated-manifest.local.json file 0644 19598 12f32e67db5691d440fd371e0705157fce5eac2e9d5ae395514c7cb830f7ea04
 --- home tree
 (no change)
 

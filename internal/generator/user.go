@@ -167,6 +167,9 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	tempCfg.Content = contentTree
 	tempCfg.MCPServers = nil
 	tempCfg.MCP = nil
+	// User scope has no project to attach ai-rulez's own server to: MCP output is
+	// project-only, so the self server ([mcp] self_server) stays out of it.
+	tempCfg.SetSelfServer(false)
 	tempCfg.Scopes = nil
 	tempCfg.AgentsMD = false
 	tempCfg.UserScope = true

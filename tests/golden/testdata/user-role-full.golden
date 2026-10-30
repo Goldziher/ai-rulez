@@ -75,7 +75,7 @@ description: "Helps"
 # Helper
 <<<<
 .claude/ dir 0755
-.claude/CLAUDE.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
+.claude/CLAUDE.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -83,7 +83,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -183,7 +182,7 @@ name: helper
 # Helper
 <<<<
 .codex/ dir 0755
-.codex/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+.codex/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -191,7 +190,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -544,7 +542,7 @@ description: Helps
 # Helper
 <<<<
 .config/opencode/ dir 0755
-.config/opencode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+.config/opencode/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -552,7 +550,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -917,7 +914,7 @@ name: buddy
 
 # Buddy
 <<<<
-.copilot/copilot-instructions.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
+.copilot/copilot-instructions.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -925,7 +922,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -1035,7 +1031,7 @@ name: buddy
 }
 <<<<
 .gemini/ dir 0755
-.gemini/GEMINI.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+.gemini/GEMINI.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1043,7 +1039,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez

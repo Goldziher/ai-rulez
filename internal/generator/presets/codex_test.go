@@ -256,6 +256,8 @@ func TestCodexPresetGenerator_EmitsConfigTOMLWhenEffortSet(t *testing.T) {
 			EffortByPreset: map[string]string{"codex": "high"},
 		},
 	}
+	// The self MCP server has its own test; this one is about the effort key.
+	cfg.SetSelfServer(false)
 	outputs, err := g.Generate(&config.ContentTree{}, t.TempDir(), cfg)
 	require.NoError(t, err)
 
@@ -312,6 +314,7 @@ func TestCodexPresetGenerator_OmitsConfigTOMLWhenNoEffort(t *testing.T) {
 		Name:    "test",
 		Presets: []config.Preset{{BuiltIn: "codex"}},
 	}
+	cfg.SetSelfServer(false) // this test is about the effort key alone
 	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
 	require.NoError(t, err)
 	for _, o := range outputs {
@@ -372,6 +375,7 @@ func TestCodexPresetGenerator_InheritTierIsDropped(t *testing.T) {
 		Presets:  []config.Preset{{BuiltIn: "codex"}},
 		Defaults: &config.DefaultsConfig{Effort: "inherit"},
 	}
+	cfg.SetSelfServer(false) // this test is about the effort tier alone
 	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
 	require.NoError(t, err)
 	for _, o := range outputs {

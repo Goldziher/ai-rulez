@@ -39,8 +39,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3108 bc6ae6889e110fa62e696fd078c20ae5dc1aea521b2622691013a8a37237f125
-.ai-rulez/.generated-manifest.local.json file 0644 7818 eb1fe62549906d08f4ea90005a9672754134c56cd10e3184b68b0126a0d14360
+.ai-rulez/.generated-manifest.json file 0644 3218 89f40f5853989017e9c6af8b3b309afc49fc1772f72da0ad6702b5804bd02868
+.ai-rulez/.generated-manifest.local.json file 0644 8158 b01da67a359311141f77119779414d7a4b1d8aced0fc5bbadf4508b49e66d7f8
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -97,7 +97,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0644 172 8694fed0985cfcd41339e2ff5b5adedff98d9ed787c20f4b3baf00e881691d63
+.codex/config.toml file 0644 252 8dda2015313d0f3899bc9c93bdd1ac6ea5f75378ef53d08182495ecd0aa52e61
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -129,7 +129,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-opencode.json file 0644 627 67223e5c641a7fa93f7c5a6ff56f6621b1515ef3d96b1a87dc6e874605d23c93
+opencode.json file 0644 795 d081012c0f3feb1068917a1fc39027f9b516dbd3cf7abeb0204eb393ecff9842
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

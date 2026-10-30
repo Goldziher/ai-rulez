@@ -14,7 +14,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 835 451a59af1f7bfa29cc01ff58ced89c02290ac613fe02f3eafd3c8b5606bcce2f
-.ai-rulez/.generated-manifest.local.json file 0644 1449 398eb8e4fa300508c4d8820e9c63d3b6f5ba7140612e55db5514c4e486872127
+.ai-rulez/.generated-manifest.local.json file 0644 1642 7a6e35ebf6cdd10d40526bc6be067ba5661075be0f57789127bbb484a44a3fa2
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -49,7 +49,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .xum/agents/ dir 0755
 .xum/agents/architect.md file 0644 223 d266198e5e1f60cb53f0332b2164bbbe91d95cbeb8ee1df88dcec487df5db029
 .xum/agents/tester.md file 0644 215 21931fb070413836dd869c7ed161217dc6206625da3d0470fb0c01a7c213a272
-.xum/mcp.jsonc file 0600 271 5d4bfda0a306dee364069bb0f9ec753c5d71bfdcf8044a0059d0ff3ab31ff41c
+.xum/mcp.jsonc file 0600 317 7c698b8cd309f8164d556e2e8f15220a6bfce8dd6b72f916efddfd674d6318e2
 .xum/skills/ dir 0755
 .xum/skills/deployer/ dir 0755
 .xum/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a

@@ -148,7 +148,10 @@ func TestXumPresetGenerator_AgentSubagentRunnable(t *testing.T) {
 func renderXumMCP(t *testing.T, baseDir string, servers map[string]*config.MCPServer) (string, bool) {
 	t.Helper()
 	g := &XumPresetGenerator{}
-	out, err := g.renderMCPConfig(baseDir, &config.Config{MCPServers: servers})
+	cfg := &config.Config{MCPServers: servers}
+	// The self MCP server has its own test; these cases map declared servers.
+	cfg.SetSelfServer(false)
+	out, err := g.renderMCPConfig(baseDir, cfg)
 	if err != nil {
 		t.Fatalf("renderMCPConfig() error: %v", err)
 	}

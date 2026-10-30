@@ -34,8 +34,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2187 6d4eb3966fef2eccc24374d7c4d299fe0313ab401b1ad612bb3f76acca865315
-.ai-rulez/.generated-manifest.local.json file 0644 4645 95ddc49ac94a56afe38801b09c687d6fcf9953510c9bc39c516d3d93024f0601
+.ai-rulez/.generated-manifest.json file 0644 2246 2f6f5af9e3aebfbe70d0070f45a7bab123eff891e8dd5d0d5fb7dcef90cd02b7
+.ai-rulez/.generated-manifest.local.json file 0644 4842 372dace030411a72755896c280f7e4ce9a96e51150ef70b5d5b3e46f95cb37ed
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -114,7 +114,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/dba.toml file 0644 84 474c38115dea275ee7a05c26f3711fd16895f16b1f510eedaa8a0e4b3ac06ab5
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -145,8 +145,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/SKILL.md file 0644 190 8b196dcd988ed3e4bd99fc6cf307a1bc604cbdd3c9c7e4dd002f9f8e4580e269
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
-~ .ai-rulez/.generated-manifest.json file 0644 2350 af68f39be8125430017c26c66a9fa113e3eee466c0dd3a00584ea0ef14f78edf
-~ .ai-rulez/.generated-manifest.local.json file 0644 4764 351be46e39ff30724a03c7c19f8ee25bd549aa1e3b30b02aa32101a7a07418ad
+~ .ai-rulez/.generated-manifest.json file 0644 2409 81ba9553b2b83c5493f1ece44c5f894cec172c2610c5e397b14a5ccf0e8e0020
+~ .ai-rulez/.generated-manifest.local.json file 0644 4961 5d991be917b47df27aae2418f717af833711648f7480f566bf5c5c4ab1a48305
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 ~ .claude/settings.json file 0644 1966 9f95020bf6c4879ab6fbec9a517192ef112e7aa8a14688d075a88529e3a1bf17
 + .claude/skills/storybook/ dir 0755
@@ -172,8 +172,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 --- project tree
 + .agents/skills/deployer/ dir 0755
 + .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
-~ .ai-rulez/.generated-manifest.json file 0644 2101 6c518c6bf0fd0d3e567b6b3b749f27e84d6dda4bb55c07b5b1bf957c56ab9270
-~ .ai-rulez/.generated-manifest.local.json file 0644 4370 f437af0d2d440892b2532b07ebe3b315ef56ca73d969a27825e494fb0d92e67b
+~ .ai-rulez/.generated-manifest.json file 0644 2160 02f5e5694659e64ff38bbb439c557b29669989f1b1a5a2b7b73c16e990a88873
+~ .ai-rulez/.generated-manifest.local.json file 0644 4567 0f76ac8feef86e10f8726e2cca6a2a8327401b04b6def4a09fade43fffc13fbb
 ~ .claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 + .claude/skills/deployer/ dir 0755
 + .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
@@ -409,8 +409,8 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2101 6c518c6bf0fd0d3e567b6b3b749f27e84d6dda4bb55c07b5b1bf957c56ab9270
-.ai-rulez/.generated-manifest.local.json file 0644 4370 f437af0d2d440892b2532b07ebe3b315ef56ca73d969a27825e494fb0d92e67b
+.ai-rulez/.generated-manifest.json file 0644 2160 02f5e5694659e64ff38bbb439c557b29669989f1b1a5a2b7b73c16e990a88873
+.ai-rulez/.generated-manifest.local.json file 0644 4567 0f76ac8feef86e10f8726e2cca6a2a8327401b04b6def4a09fade43fffc13fbb
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -486,7 +486,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8

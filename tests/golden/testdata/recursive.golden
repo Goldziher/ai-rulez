@@ -21,12 +21,15 @@ a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e
 b/ dir 0755
 b/c/ dir 0755
 b/c/.ai-rulez/ dir 0755
-b/c/.ai-rulez/.generated-manifest.json file 0644 248 28ec859d498a928610099c1f374d08c150d46d792f31d784be6659460d1a98d8
-b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 10f7e61492aceb0e209a5f3514f3330e30b0fb53cafba09a7ed9cd762a45a2a8
+b/c/.ai-rulez/.generated-manifest.json file 0644 539 74d41b553fded953fa3aeae1dc1938df3b031f4e0ebd7d9fe3e4a00990f3cd55
+b/c/.ai-rulez/.generated-manifest.local.json file 0644 955 a95e251e284786760b6d32de0f4f74e637291761186b22d8acb539924d98f09f
 b/c/.ai-rulez/config.toml file 0644 75 dad294c3b507bd1c225b10c2ec97eb319b5b85e420fea2cb5a094864b20b073f
 b/c/.ai-rulez/context/ dir 0755
 b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
+b/c/.codex/ dir 0755
+b/c/.codex/config.toml file 0644 79 5c8da019c1a809d9677cd68f7c6cf248ae8c28815e49f01a5668300cd1192cf7
 b/c/.cursor/ dir 0755
+b/c/.cursor/mcp.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
 b/c/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
@@ -55,12 +58,15 @@ a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e
 b/ dir 0755
 b/c/ dir 0755
 b/c/.ai-rulez/ dir 0755
-b/c/.ai-rulez/.generated-manifest.json file 0644 248 28ec859d498a928610099c1f374d08c150d46d792f31d784be6659460d1a98d8
-b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 10f7e61492aceb0e209a5f3514f3330e30b0fb53cafba09a7ed9cd762a45a2a8
+b/c/.ai-rulez/.generated-manifest.json file 0644 539 74d41b553fded953fa3aeae1dc1938df3b031f4e0ebd7d9fe3e4a00990f3cd55
+b/c/.ai-rulez/.generated-manifest.local.json file 0644 955 a95e251e284786760b6d32de0f4f74e637291761186b22d8acb539924d98f09f
 b/c/.ai-rulez/config.toml file 0644 75 dad294c3b507bd1c225b10c2ec97eb319b5b85e420fea2cb5a094864b20b073f
 b/c/.ai-rulez/context/ dir 0755
 b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
+b/c/.codex/ dir 0755
+b/c/.codex/config.toml file 0644 79 5c8da019c1a809d9677cd68f7c6cf248ae8c28815e49f01a5668300cd1192cf7
 b/c/.cursor/ dir 0755
+b/c/.cursor/mcp.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
 b/c/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0

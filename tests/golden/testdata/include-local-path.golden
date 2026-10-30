@@ -25,8 +25,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/tk/ dir 0755
 .agents/skills/tk/SKILL.md file 0644 137 42ea8f74f5128842ff368a7e6a516b4c25ce320f85c822e27140a88b6b0a1900
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2465 ba9aac8ae100ae7a6e86536697b1bf2790de9a7ad6717070f4fc1b6d2e3fc5ba
-.ai-rulez/.generated-manifest.local.json file 0644 5116 be875027037946b3f724e2b1074451222e96f872db5f358222d61ef9ce38f419
+.ai-rulez/.generated-manifest.json file 0644 2523 21954499bbb00c28193e7107b1c88dbb3d3f498013d5d745ef1ceee7d6b15c4c
+.ai-rulez/.generated-manifest.local.json file 0644 5289 91241c1c42287f9451c208c8b1ba41e902482322f928338fab77a311666fe5c7
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -92,7 +92,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -141,8 +141,8 @@ Includes:
 .agents/skills/tk/ dir 0755
 .agents/skills/tk/SKILL.md file 0644 137 42ea8f74f5128842ff368a7e6a516b4c25ce320f85c822e27140a88b6b0a1900
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2465 ba9aac8ae100ae7a6e86536697b1bf2790de9a7ad6717070f4fc1b6d2e3fc5ba
-.ai-rulez/.generated-manifest.local.json file 0644 5116 be875027037946b3f724e2b1074451222e96f872db5f358222d61ef9ce38f419
+.ai-rulez/.generated-manifest.json file 0644 2523 21954499bbb00c28193e7107b1c88dbb3d3f498013d5d745ef1ceee7d6b15c4c
+.ai-rulez/.generated-manifest.local.json file 0644 5289 91241c1c42287f9451c208c8b1ba41e902482322f928338fab77a311666fe5c7
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -208,7 +208,7 @@ Includes:
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
