@@ -16,6 +16,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `[plugin] content_root`); an asset that is not there is still read from beside the config
   directory
   ([#531](https://github.com/Goldziher/ai-rulez/issues/531)).
+- **Concurrent roots no longer race on a shared `.gitignore`.** Generators that share a repository's
+  `.gitignore` now read and rewrite it under the same per-file lock as `.git/info/exclude`, so one root
+  cannot drop another's entries or, on Windows, fail with a sharing violation.
 
 ## [5.9.6] - 2026-10-30
 
