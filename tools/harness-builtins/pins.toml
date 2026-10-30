@@ -592,7 +592,7 @@ key = "command"
 kind = "command"
 url_contains = "docs/tools/slash-commands.md"
 collision = "unknown"
-exclude = ["dashboard"]                       # the reserved group carries it
+exclude = ["dashboard"] # the reserved group carries it
 
 [[openclaw.target]]
 key = "reserved"

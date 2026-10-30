@@ -167,7 +167,7 @@ func init() {
 	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): "+strings.Join(lint.AnalyzerNames(), ", "))
 	specOutput.String(ValidateCmd.Flags(), &validateOutput, "Write the report to this file instead of stdout")
 	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
-	ValidateCmd.Flags().BoolVar(&validateMCPUserScope, "mcp-user-scope", false, "Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); needs --strict")
+	ValidateCmd.Flags().BoolVar(&validateMCPUserScope, "mcp-user-scope", false, "Also check MCP servers against the configured harnesses' user and local scopes, and warn about a user-scope server whose launch command does not resolve (reads files outside the project, for example ~/.claude.json or ~/.config/opencode/opencode.json); needs --strict")
 	ValidateCmd.Flags().StringVar(&validateExplain, "explain", "", "Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit")
 	addBaselineFlags(ValidateCmd)
 	addTargetFlags(ValidateCmd)

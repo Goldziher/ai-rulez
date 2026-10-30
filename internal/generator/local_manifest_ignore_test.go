@@ -171,6 +171,8 @@ codex="xhigh"
 	generate := func() *Generator {
 		cfg, err := config.LoadConfig(t.Context(), root, config.WithoutLocal())
 		require.NoError(t, err)
+		// This test is about the ownership metadata of the effort key alone.
+		cfg.SetSelfServer(false)
 		g := NewGenerator(cfg)
 		require.NoError(t, g.Generate(""))
 		return g

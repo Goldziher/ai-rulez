@@ -179,7 +179,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	// root whether or not MCP servers exist (see renderMCPConfig); a monorepo
 	// scope writes the document only for its servers.
 	// User scope has neither: MCP servers and the machine-local entry are project-only.
-	if !cfg.UserScope && (len(cfg.MCPServers) > 0 || !rulefiles.InScope(cfg)) {
+	if !cfg.UserScope && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer() || !rulefiles.InScope(cfg)) {
 		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
 		mcpFile, err := g.renderMCPDocument(mcpPath, cfg)
 		if err != nil {
@@ -259,7 +259,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 			owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeInstructionsKey}, Value: entries, Elements: claimed})
 		}
 	}
-	if len(cfg.MCPServers) > 0 {
+	if len(cfg.MCPServers) > 0 || cfg.HasSelfServer() {
 		owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeMCPKey}, Value: g.mcpServersValue(cfg), Members: true})
 	}
 	owned = append(owned, settings.OpencodePluginKeys(cfg, mcpPath)...)
@@ -452,13 +452,13 @@ func readOpencodeInstructions(cfg *config.Config, path string) (entries []any, i
 	return entries, json.Unmarshal(raw, &entries) == nil, nil
 }
 
-// mcpServersValue renders the configured MCP servers in OpenCode's config shape:
-// type local (command array, environment) or remote (url, headers), and
-// `enabled` on every entry.
+// mcpServersValue renders the configured MCP servers and ai-rulez's own server
+// in OpenCode's config shape: type local (command array, environment) or remote
+// (url, headers), and `enabled` on every entry.
 func (g *OpencodePresetGenerator) mcpServersValue(cfg *config.Config) map[string]interface{} {
 	servers := make(map[string]interface{})
 
-	for name, server := range cfg.MCPServers {
+	add := func(name string, server *config.MCPServer) {
 		entry := map[string]interface{}{
 			keyEnabled: server.IsEnabled(),
 		}
@@ -485,6 +485,13 @@ func (g *OpencodePresetGenerator) mcpServersValue(cfg *config.Config) map[string
 
 		ApplyEnvRefs(entry, server, opencodeEnvRef)
 		servers[name] = entry
+	}
+
+	for name, server := range cfg.MCPServers {
+		add(name, server)
+	}
+	if self := selfMCPServer(cfg); self != nil {
+		add(self.Name, self)
 	}
 
 	return servers

@@ -11,8 +11,8 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=18
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1428 c374e8ef671b8e5a8c4c1e86b5e20239774c3794589e234fab81cfe1d2b4d502
-.ai-rulez/.generated-manifest.local.json file 0644 2887 166ff0c61bbe88171ea91a97f7301dac9882fda334dae8943ed2dc120c8b867d
+.ai-rulez/.generated-manifest.json file 0644 1486 f66c19947cb0f45face9a948d1bf23c8123b7fd7a2ff2cc3f595181e7d9b37d8
+.ai-rulez/.generated-manifest.local.json file 0644 3060 32e4437ecbc15bcc6a69889866713f3a95482605cfe1c43ba027a8ec75888446
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -47,7 +47,7 @@ INFO  Generation complete files=18
 .devin/agents/tester.md file 0644 181 000e4a75e8281da1d0fc4051b5a3fe3d8c847502fbe91f3cd925eedb742c3ce2
 .devin/config.json file 0644 237 bc2afde2e8fe0bbccd3875196a2eb5ff9b24682b1445e7b7aa1f4155f0284dfb
 .devin/hooks.v1.json file 0644 376 cd48b1f3ebc1741b685095fccf0ca599fd4c7562295f650ff11eb8c85a598423
-.devin/mcp_config.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.devin/mcp_config.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .devin/rules/ dir 0755
 .devin/rules/always.md file 0644 267 8d22ebebb39d9a32e594528873d26b3fecd70f3345de787f36bc5d7bfabc8d95
 .devin/rules/auto.md file 0644 282 cbb82d8013eb3e2fb28f34487ba0c28eea92da8a24b57226423e7e98b7e2ba21

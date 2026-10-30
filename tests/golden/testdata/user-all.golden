@@ -138,7 +138,6 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -149,7 +148,6 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -167,7 +165,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  17 project-shaped output(s) have no documented user-level location and are not written
+  15 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -355,7 +353,6 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -366,7 +363,6 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -384,7 +380,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  17 project-shaped output(s) have no documented user-level location and are not written
+  15 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -425,12 +421,12 @@ WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are ena
 WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
 WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
 INFO  Generating user-level configuration profile=default home=$HOME
-INFO  User-level generation complete files=162
+INFO  User-level generation complete files=160
 --- project tree
 (no change)
 --- home tree
 + .agents/ dir 0755
-+ .agents/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .agents/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .agents/plugins/ dir 0755
 + .agents/plugins/ai-rulez/ dir 0755
 + .agents/plugins/ai-rulez/hooks/ dir 0755
@@ -448,7 +444,7 @@ INFO  User-level generation complete files=162
 + .augment/skills/helper/ dir 0755
 + .augment/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .bob/ dir 0755
-+ .bob/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .bob/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .bob/rules/ dir 0755
 + .bob/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .bob/settings/ dir 0755
@@ -471,7 +467,7 @@ INFO  User-level generation complete files=162
 + .cline/skills/helper/ dir 0755
 + .cline/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .codebuddy/ dir 0755
-+ .codebuddy/CODEBUDDY.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .codebuddy/CODEBUDDY.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .codebuddy/agents/ dir 0755
 + .codebuddy/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .codebuddy/rules/ dir 0755
@@ -481,22 +477,21 @@ INFO  User-level generation complete files=162
 + .codebuddy/skills/helper/ dir 0755
 + .codebuddy/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .codewhale/ dir 0755
-+ .codewhale/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .codewhale/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .codewhale/skills/ dir 0755
 + .codewhale/skills/helper/ dir 0755
 + .codewhale/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .codex/ dir 0755
-+ .codex/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .codex/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .codex/agents/ dir 0755
 + .codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
 + .codex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .codex/rules/ dir 0755
 + .codex/rules/ai-rulez.rules file 0644 338 20e79faa1ff0244bcf6238a431259150f364c373a0f70a020f09789f645744a3
 + .commandcode/ dir 0755
-+ .commandcode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .commandcode/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .commandcode/agents/ dir 0755
 + .commandcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .commandcode/mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 + .commandcode/settings.json file 0644 302 7a25e2ebf831ac932802e34cf13ef4e0c62f4ff1d6a237a549d0f006713dc2fc
 + .commandcode/skills/ dir 0755
 + .commandcode/skills/helper/ dir 0755
@@ -505,14 +500,14 @@ INFO  User-level generation complete files=162
 + .config/agents/skills/ dir 0755
 + .config/agents/skills/helper/ dir 0755
 + .config/agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
-+ .config/ai-rulez/.generated-manifest.json file 0644 11405 e11fa3bc9e0223ef5dec57d5bf546ed264fec1f1028788667b2b6a1bbf89a07c
-+ .config/ai-rulez/.generated-manifest.local.json file 0644 20235 7e8e57d94b21e2aced2d14eb2d0a758b570879846675c7b78af922ceac17798b
++ .config/ai-rulez/.generated-manifest.json file 0644 11263 92fe915a2727caa2f1a6057db6b8a2a80383c8e6996493593125303ffe8b2958
++ .config/ai-rulez/.generated-manifest.local.json file 0644 19430 30bcf1d4b8ca4c24e21e1be21bb7f0fc3fb2f10e2549e7675e95396465ddacc7
 + .config/amp/ dir 0755
-+ .config/amp/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .config/amp/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .config/amp/plugins/ dir 0755
 + .config/amp/plugins/ai-rulez-hooks.ts file 0644 7355 3eb89e87c0f874a9e41f8f6d616fc7ed3615a6aa550496cb09be306240ef3f78
 + .config/crush/ dir 0755
-+ .config/crush/CRUSH.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .config/crush/CRUSH.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .config/crush/skills/ dir 0755
 + .config/crush/skills/helper/ dir 0755
 + .config/crush/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
@@ -524,18 +519,18 @@ INFO  User-level generation complete files=162
 + .config/devin/skills/helper/ dir 0755
 + .config/devin/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/goose/ dir 0755
-+ .config/goose/.goosehints file 0644 487 0ac16766e0e7e4622820074caebac274ef93d1e3b253cc411abeb9454d09cfa7
++ .config/goose/.goosehints file 0644 442 5fa00ffe0772260a44f911711f5082b3cbdf233ec68194ccf887bf13d5d5b56d
 + .config/goose/agents/ dir 0755
 + .config/goose/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .config/kilo/ dir 0755
-+ .config/kilo/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .config/kilo/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .config/kilo/agents/ dir 0755
 + .config/kilo/agents/buddy.md file 0644 139 5ce4d18d2a0cd1963ef73413c758b4b5f3e2d10f1e8704b233562f60722f58ee
 + .config/kilo/kilo.jsonc file 0644 117 5c792fd5f36121e8add38e5fc7da94b1028b75c545e2e2a92805abcc32dea80b
 + .config/kilo/plugins/ dir 0755
 + .config/kilo/plugins/ai-rulez-hooks.js file 0644 8335 9d4f85a750e3181f1cda99170ff12192a5d19f18bb65aa179fe79986b3fc40fd
 + .config/mimocode/ dir 0755
-+ .config/mimocode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .config/mimocode/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .config/mimocode/agents/ dir 0755
 + .config/mimocode/agents/buddy.md file 0644 139 5ce4d18d2a0cd1963ef73413c758b4b5f3e2d10f1e8704b233562f60722f58ee
 + .config/mimocode/mimocode.jsonc file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
@@ -549,7 +544,7 @@ INFO  User-level generation complete files=162
 + .config/muse/skills/helper/ dir 0755
 + .config/muse/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/opencode/ dir 0755
-+ .config/opencode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .config/opencode/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .config/opencode/agents/ dir 0755
 + .config/opencode/agents/buddy.md file 0644 134 81ae320b25c504b95e130059b3a32a3ae4cff078f93dd97cc607adc182d19508
 + .config/opencode/opencode.json file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
@@ -559,18 +554,18 @@ INFO  User-level generation complete files=162
 + .config/opencode/skills/helper/ dir 0755
 + .config/opencode/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/poolside/ dir 0755
-+ .config/poolside/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .config/poolside/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .config/poolside/settings.yaml file 0644 178 83dc335d3a4207b149f527fe30ef3caf547fb4f4f3e29d22a9aefd37d45f6b8d
 + .config/poolside/skills/ dir 0755
 + .config/poolside/skills/helper/ dir 0755
 + .config/poolside/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .config/zed/ dir 0755
-+ .config/zed/AGENTS.md file 0644 399 f2922fe67d62cc42465ade34e8e2e62ebbc7b55726e1c3a6829015a40630e5e9
++ .config/zed/AGENTS.md file 0644 354 8fccd3ce1b68dae16e167a21b7bf07abf8c7365820fd32529a1cd96da63e61ae
 + .config/zed/settings.json file 0644 423 5aae152603d0e7e7f70efc9da9fb4ab98a6f7a2ed075bdd9d25f4ad6cc232139
 + .copilot/ dir 0755
 + .copilot/agents/ dir 0755
 + .copilot/agents/buddy.agent.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .copilot/copilot-instructions.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .copilot/copilot-instructions.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .copilot/hooks/ dir 0755
 + .copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
 + .copilot/instructions/ dir 0755
@@ -584,7 +579,7 @@ INFO  User-level generation complete files=162
 + .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 + .deepagents/ dir 0755
 + .deepagents/agent/ dir 0755
-+ .deepagents/agent/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .deepagents/agent/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .deepagents/agent/agents/ dir 0755
 + .deepagents/agent/agents/buddy/ dir 0755
 + .deepagents/agent/agents/buddy/AGENTS.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
@@ -593,12 +588,12 @@ INFO  User-level generation complete files=162
 + .deepagents/agent/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .deepagents/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .dsh/ dir 0755
-+ .dsh/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .dsh/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .dsh/skills/ dir 0755
 + .dsh/skills/helper/ dir 0755
 + .dsh/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .factory/ dir 0755
-+ .factory/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .factory/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .factory/droids/ dir 0755
 + .factory/droids/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .factory/hooks.json file 0644 145 9961ee7e1de0d4605e8a4ad3426687c28a17336ee36b6acc04050df5bdc5fa6e
@@ -606,23 +601,22 @@ INFO  User-level generation complete files=162
 + .factory/skills/helper/ dir 0755
 + .factory/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .gemini/ dir 0755
-+ .gemini/GEMINI.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .gemini/GEMINI.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .gemini/agents/ dir 0755
 + .gemini/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .gemini/config/ dir 0755
 + .gemini/config/agents/ dir 0755
 + .gemini/config/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .gemini/config/mcp_config.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 + .gemini/config/skills/ dir 0755
 + .gemini/config/skills/helper/ dir 0755
 + .gemini/config/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .gemini/settings.json file 0644 322 da7a6947eb7aab4b4d90cfc67845a253729cd3c89da99b93538e534f4aaca3a6
 + .gitlab/ dir 0755
 + .gitlab/duo/ dir 0755
-+ .gitlab/duo/chat-rules.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .gitlab/duo/chat-rules.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .gitlab/duo/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .grok/ dir 0755
-+ .grok/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .grok/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .grok/agents/ dir 0755
 + .grok/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .grok/config.toml file 0644 110 568bcc840b23193cde397827caa35d7c320b8ba9b22b5e9ecfc1c82eb126b7da
@@ -639,7 +633,7 @@ INFO  User-level generation complete files=162
 + .hermes/skills/helper/ dir 0755
 + .hermes/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .junie/ dir 0755
-+ .junie/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .junie/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .junie/agents/ dir 0755
 + .junie/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .junie/config.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
@@ -653,7 +647,7 @@ INFO  User-level generation complete files=162
 + .kilo/skills/helper/ dir 0755
 + .kilo/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .kimi-code/ dir 0755
-+ .kimi-code/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .kimi-code/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .kimi-code/agents/ dir 0755
 + .kimi-code/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .kimi-code/config.toml file 0644 331 176792a187f98dba4a39b9b3add5d2580b725359b83fd69670bb36b661302448
@@ -669,7 +663,7 @@ INFO  User-level generation complete files=162
 + .kiro/skills/helper/ dir 0755
 + .kiro/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .kiro/steering/ dir 0755
-+ .kiro/steering/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .kiro/steering/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .kiro/steering/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .letta/ dir 0755
 + .letta/agents/ dir 0755
@@ -680,7 +674,7 @@ INFO  User-level generation complete files=162
 + .letta/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .omp/ dir 0755
 + .omp/agent/ dir 0755
-+ .omp/agent/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .omp/agent/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .omp/agent/agents/ dir 0755
 + .omp/agent/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .omp/agent/config.yml file 0644 200 7fc55085fa9dd87cd60b15b5cb70722dcc7d5f0e1a86e2c3400aee0e44863306
@@ -691,10 +685,10 @@ INFO  User-level generation complete files=162
 + .omp/agent/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .openclaw/ dir 0755
 + .openclaw/workspace/ dir 0755
-+ .openclaw/workspace/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .openclaw/workspace/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .pi/ dir 0755
 + .pi/agent/ dir 0755
-+ .pi/agent/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .pi/agent/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .pi/agent/agents/ dir 0755
 + .pi/agent/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .pi/agent/extensions/ dir 0755
@@ -703,17 +697,17 @@ INFO  User-level generation complete files=162
 + .pi/agent/skills/helper/ dir 0755
 + .pi/agent/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .qoder/ dir 0755
-+ .qoder/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .qoder/AGENTS.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .qoder/agents/ dir 0755
 + .qoder/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .qoder/rules/ dir 0755
 + .qoder/rules/mine.md file 0644 257 8ba5f03bd0ad69a816962c967731e40545b94bb920bef9fec8d13305fe93165e
-+ .qoder/settings.json file 0644 473 d974075f0a3e2d56c0dcbd39f783d82cb17a05704b15ca2f821ffb66b84ff067
++ .qoder/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 + .qoder/skills/ dir 0755
 + .qoder/skills/helper/ dir 0755
 + .qoder/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .qwen/ dir 0755
-+ .qwen/QWEN.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .qwen/QWEN.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 + .qwen/agents/ dir 0755
 + .qwen/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .qwen/rules/ dir 0755
@@ -723,7 +717,7 @@ INFO  User-level generation complete files=162
 + .qwen/skills/helper/ dir 0755
 + .qwen/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .reasonix/ dir 0755
-+ .reasonix/REASONIX.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .reasonix/REASONIX.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .reasonix/settings.json file 0644 94 9a1c39720a52146fbdaa7eb199514dcfec58f172aaa582a89e366753e9cdc4ea
 + .reasonix/skills/ dir 0755
 + .reasonix/skills/buddy/ dir 0755
@@ -732,12 +726,12 @@ INFO  User-level generation complete files=162
 + .reasonix/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .roo/ dir 0755
 + .roo/rules/ dir 0755
-+ .roo/rules/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .roo/rules/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .roo/skills/ dir 0755
 + .roo/skills/helper/ dir 0755
 + .roo/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .rovodev/ dir 0755
-+ .rovodev/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .rovodev/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .rovodev/skills/ dir 0755
 + .rovodev/skills/helper/ dir 0755
 + .rovodev/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
@@ -765,7 +759,7 @@ INFO  User-level generation complete files=162
 + .trae/skills/helper/ dir 0755
 + .trae/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .vibe/ dir 0755
-+ .vibe/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .vibe/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .vibe/config.toml file 0644 64 4410c95e96dcbb0d498d046a1bee08942e66267174c97cfc127e960680c16109
 + .vibe/skills/ dir 0755
 + .vibe/skills/helper/ dir 0755
@@ -775,7 +769,7 @@ INFO  User-level generation complete files=162
 + .warp/skills/helper/ dir 0755
 + .warp/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .zcode/ dir 0755
-+ .zcode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
++ .zcode/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 + .zcode/agents/ dir 0755
 + .zcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .zcode/cli/ dir 0755
@@ -929,7 +923,6 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -940,7 +933,6 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -958,7 +950,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  17 project-shaped output(s) have no documented user-level location and are not written
+  15 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -999,7 +991,7 @@ WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are ena
 WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
 WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
 INFO  Generating user-level configuration profile=default home=$HOME
-INFO  User-level generation complete files=162
+INFO  User-level generation complete files=160
 --- project tree
 (no change)
 --- home tree
@@ -1196,7 +1188,6 @@ user-level plan (profile backend, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -1207,7 +1198,6 @@ user-level plan (profile backend, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
-  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -1225,7 +1215,7 @@ user-level plan (profile backend, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  22 project-shaped output(s) have no documented user-level location and are not written
+  20 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -1266,11 +1256,11 @@ WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are ena
 WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
 WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
 INFO  Generating user-level configuration profile=backend home=$HOME
-INFO  User-level generation complete files=215
+INFO  User-level generation complete files=213
 --- project tree
 (no change)
 --- home tree
-~ .agents/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .agents/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .agents/skills/db/ dir 0755
 + .agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
 + .augment/rules/be.md file 0644 248 f5ad4e4aa14543eaae0d08c8f5e129422bcc7feeb3715429b13f7cbcdb8a2575
@@ -1289,49 +1279,49 @@ INFO  User-level generation complete files=215
 + .codebuddy/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .codewhale/skills/db/ dir 0755
 + .codewhale/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .codex/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
-~ .commandcode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .codex/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
+~ .commandcode/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .commandcode/skills/db/ dir 0755
 + .commandcode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/agents/skills/db/ dir 0755
 + .config/agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .config/ai-rulez/.generated-manifest.json file 0644 14278 3762f61911b3541f9a87aa2a5d5abbaafb646059bcac86581ad04590978f9f30
-~ .config/ai-rulez/.generated-manifest.local.json file 0644 20339 d70b81a304495faed16e2032aab803a15965ddb69d5a49e1279b67adc662272c
-~ .config/amp/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
-~ .config/crush/CRUSH.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .config/ai-rulez/.generated-manifest.json file 0644 14136 b58674dc4a0e7fa3bdfbedb7f1da5008085b8a740c3be46a589d4a79dc14664b
+~ .config/ai-rulez/.generated-manifest.local.json file 0644 19534 1b4caf6b4bc6e1587242eb1f4d2742db43a2ed671c1a166ca5f78c405f3bfb9d
+~ .config/amp/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
+~ .config/crush/CRUSH.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .config/crush/skills/db/ dir 0755
 + .config/crush/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/devin/skills/db/ dir 0755
 + .config/devin/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .config/goose/.goosehints file 0644 510 9ab65dace71afe16ee15f4c21a9a6bdb1a47c9eb49d60517cdc25bc697dabf95
-~ .config/mimocode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .config/goose/.goosehints file 0644 465 abaeb28037ef62013fcda4692540ef8feb30e905d5d71fda5435128d5c548b37
+~ .config/mimocode/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .config/mimocode/skills/db/ dir 0755
 + .config/mimocode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/muse/skills/db/ dir 0755
 + .config/muse/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .config/opencode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .config/opencode/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .config/opencode/skills/db/ dir 0755
 + .config/opencode/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .config/poolside/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .config/poolside/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .config/poolside/skills/db/ dir 0755
 + .config/poolside/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .config/zed/AGENTS.md file 0644 422 7143aa5f97219ca1ca6007e3f1282d89a8f0fb403db044c392275376ceaee4a1
+~ .config/zed/AGENTS.md file 0644 377 a4443897a8ffe933e5815546010684b3d107ed7cdd332a599cd67a74163dd6b2
 + .copilot/instructions/be.instructions.md file 0644 245 86e3815921417e89f25d932ae31709c5515fc275ae5b4f762da1fb98419cb2f1
 + .copilot/skills/db/ dir 0755
 + .copilot/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .deepagents/agent/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .deepagents/agent/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .deepagents/agent/skills/db/ dir 0755
 + .deepagents/agent/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .dsh/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .dsh/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .dsh/skills/db/ dir 0755
 + .dsh/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .factory/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .factory/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .factory/skills/db/ dir 0755
 + .factory/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .gemini/GEMINI.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .gemini/GEMINI.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .gemini/config/skills/db/ dir 0755
 + .gemini/config/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .gitlab/duo/chat-rules.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .gitlab/duo/chat-rules.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .grok/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .grok/skills/db/ dir 0755
 + .grok/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
@@ -1342,7 +1332,7 @@ INFO  User-level generation complete files=215
 + .kilo/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .kilo/skills/db/ dir 0755
 + .kilo/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .kimi-code/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .kimi-code/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .kimi-code/skills/db/ dir 0755
 + .kimi-code/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .kiro/skills/db/ dir 0755
@@ -1353,8 +1343,8 @@ INFO  User-level generation complete files=215
 + .omp/agent/rules/be.md file 0644 249 d08c11a08559ff2ed801683d35ee371926f8ad6e16cea9be3b4e0e1a409bb355
 + .omp/agent/skills/db/ dir 0755
 + .omp/agent/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .openclaw/workspace/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
-~ .pi/agent/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .openclaw/workspace/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
+~ .pi/agent/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .pi/agent/skills/db/ dir 0755
 + .pi/agent/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
 + .qoder/rules/be.md file 0644 248 0d24889315fcf09b20a5b33ce3d635b4b475938ed68839c831d9a8ea4f63af46
@@ -1363,13 +1353,13 @@ INFO  User-level generation complete files=215
 + .qwen/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .qwen/skills/db/ dir 0755
 + .qwen/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .reasonix/REASONIX.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .reasonix/REASONIX.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .reasonix/skills/db/ dir 0755
 + .reasonix/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .roo/rules/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .roo/rules/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .roo/skills/db/ dir 0755
 + .roo/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .rovodev/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .rovodev/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .rovodev/skills/db/ dir 0755
 + .rovodev/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .snowflake/cortex/skills/db/ dir 0755
@@ -1378,12 +1368,12 @@ INFO  User-level generation complete files=215
 + .takt/facets/policies/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .trae/skills/db/ dir 0755
 + .trae/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .vibe/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .vibe/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .vibe/skills/db/ dir 0755
 + .vibe/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .warp/skills/db/ dir 0755
 + .warp/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
-~ .zcode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .zcode/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
 + .zcode/skills/db/ dir 0755
 + .zcode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + Documents/Cline/Rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
@@ -1432,7 +1422,6 @@ Clean plan (profile default)
   remove file: .codex/rules/ai-rulez.rules
   remove file: .commandcode/AGENTS.md
   remove file: .commandcode/agents/buddy.md
-  remove file: .commandcode/mcp.json
   remove file: .commandcode/settings.json
   remove file: .commandcode/skills/db/SKILL.md
   remove file: .commandcode/skills/helper/SKILL.md
@@ -1498,7 +1487,6 @@ Clean plan (profile default)
   remove file: .gemini/GEMINI.md
   remove file: .gemini/agents/buddy.md
   remove file: .gemini/config/agents/buddy.md
-  remove file: .gemini/config/mcp_config.json
   remove file: .gemini/config/skills/db/SKILL.md
   remove file: .gemini/config/skills/helper/SKILL.md
   remove file: .gemini/settings.json
@@ -1897,7 +1885,6 @@ Clean plan (profile default)
   remove file: .codex/rules/ai-rulez.rules
   remove file: .commandcode/AGENTS.md
   remove file: .commandcode/agents/buddy.md
-  remove file: .commandcode/mcp.json
   remove file: .commandcode/settings.json
   remove file: .commandcode/skills/db/SKILL.md
   remove file: .commandcode/skills/helper/SKILL.md
@@ -1963,7 +1950,6 @@ Clean plan (profile default)
   remove file: .gemini/GEMINI.md
   remove file: .gemini/agents/buddy.md
   remove file: .gemini/config/agents/buddy.md
-  remove file: .gemini/config/mcp_config.json
   remove file: .gemini/config/skills/db/SKILL.md
   remove file: .gemini/config/skills/helper/SKILL.md
   remove file: .gemini/settings.json
@@ -2313,7 +2299,7 @@ Clean plan (profile default)
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
-Removed user-level generated files: 213 files, 236 directories
+Removed user-level generated files: 211 files, 236 directories
 --- project tree
 (no change)
 --- home tree

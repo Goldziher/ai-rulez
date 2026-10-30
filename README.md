@@ -411,7 +411,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v5.9.2
+    rev: v5.9.3
     hooks:
       - id: ai-rulez-recursive   # generate: write outputs for every nested .ai-rulez/ root
       - id: ai-rulez-validate    # validate --recursive: content, security and link checks
@@ -442,7 +442,7 @@ repository needs:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.9.2"
+revision = "v5.9.3"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 

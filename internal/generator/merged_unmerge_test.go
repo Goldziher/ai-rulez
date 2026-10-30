@@ -205,7 +205,9 @@ func TestOpencode_HandAuthoredDocumentKeepsItsShapeAndCleanRestoresIt(t *testing
 	// Assert
 	require.NoError(t, err)
 	assert.NotContains(t, generated, "$schema", "a hand-authored document gets no $schema")
-	assert.JSONEq(t, `{"model":"x","instructions":["docs/a.md","AGENTS.local.md"]}`, generated)
+	// The self MCP server is ai-rulez's to add, and clean takes it back out: the
+	// hand-authored keys survive both runs.
+	assert.JSONEq(t, `{"model":"x","instructions":["docs/a.md","AGENTS.local.md"],"mcp":{"ai-rulez":{"type":"local","command":["npx","-y","ai-rulez@latest","mcp"],"enabled":true}}}`, generated)
 	assert.JSONEq(t, `{"model":"x","instructions":["docs/a.md"]}`, readAgentsMDFile(t, root, "opencode.json"))
 }
 

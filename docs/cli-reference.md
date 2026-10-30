@@ -688,7 +688,7 @@ ai-rulez doctor --format json
 | ---- | ---- | ------- | ----------- |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--format` | string | `text` | Output format: text, json |
-| `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); off by default |
+| `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes, and warn about a user-scope server whose launch command does not resolve (reads files outside the project, for example ~/.claude.json or ~/.config/opencode/opencode.json); off by default |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
@@ -4071,7 +4071,7 @@ ai-rulez validate --outputs
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
 | `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json"). A matched file that is not linted is named on stderr as "<file>: not linted (<reason>)" and in the JSON report's notices, and a glob that matches nothing warns |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile) |
-| `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); needs --strict |
+| `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes, and warn about a user-scope server whose launch command does not resolve (reads files outside the project, for example ~/.claude.json or ~/.config/opencode/opencode.json); needs --strict |
 | `--min-severity` | string |  | With --write-baseline, record only findings of at least this severity (info, warning, error) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |

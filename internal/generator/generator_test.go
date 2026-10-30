@@ -74,9 +74,9 @@ func TestGenerator_MultiPreset(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify each preset wrote its outputs; presets with no content to write
-	// leave no empty directory behind
+	// still carry ai-rulez's own MCP server, and no empty directory is left behind
 	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
-	assert.NoDirExists(t, filepath.Join(tempDir, ".devin"))
+	assert.FileExists(t, filepath.Join(tempDir, ".devin", "mcp_config.json"))
 }
 
 func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {

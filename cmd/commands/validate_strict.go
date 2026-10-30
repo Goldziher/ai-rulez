@@ -319,7 +319,7 @@ func finishStrictReport(ctx context.Context, cfg *config.Config, tree *lint.Tree
 // turns its findings into lint findings, so a strict run reports and judges them
 // like any other. It reads user-scope files, which is why it is opt-in.
 func mcpUserScopeFindings(cfg *config.Config) []lint.Finding {
-	findings := doctor.MCPScopeFindings(cfg)
+	findings := doctor.MCPScopeFindings(cfg, nil)
 	out := make([]lint.Finding, 0, len(findings))
 	for _, f := range findings {
 		file := f.Path
