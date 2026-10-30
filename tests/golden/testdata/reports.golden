@@ -45,7 +45,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-.ai-rulez/.generated-manifest.local.json file 0644 13405 660f3910354cb441b17e0e562f7a116632e420d67e1ea5bf4a00537d0c54fa1d
+.ai-rulez/.generated-manifest.local.json file 0644 13405 15293e396406fa1078a96d59618f5c380da6c1569d51ccae54c32b3d6551cd65
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -1082,7 +1082,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-.ai-rulez/.generated-manifest.local.json file 0644 13405 660f3910354cb441b17e0e562f7a116632e420d67e1ea5bf4a00537d0c54fa1d
+.ai-rulez/.generated-manifest.local.json file 0644 13405 15293e396406fa1078a96d59618f5c380da6c1569d51ccae54c32b3d6551cd65
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

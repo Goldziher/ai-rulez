@@ -67,7 +67,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .ai-rulez/.generated-manifest.json file 0644 2309 f2d5d7ff7f6addf5da54682fb03aa5f8391184e5a9b96d430c0a864f2673075b
-+ .ai-rulez/.generated-manifest.local.json file 0644 5427 97f9aefa462db03144498a767688bb606ab3fd5590fe7ccf303821b6e2446f66
++ .ai-rulez/.generated-manifest.local.json file 0644 5427 a0877b3e8a3fd8f7f46233ce64164d66932ba27fe55ffe280884eb61ba8c1d7d
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -129,7 +129,7 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=35
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-~ .ai-rulez/.generated-manifest.local.json file 0644 5427 62e33f5fff36e4029f42d4685f1bf005142581b1b6b4b1cd61897d5924310be3
+~ .ai-rulez/.generated-manifest.local.json file 0644 5427 483436f7d592fdaab41a0abbaadf89fb41ca70786eaa02b5ba915e3849e1fb81
 ~ .cursor/mcp.json file 0600 471 92e148ff4f05a7a980bf979c30371d910cf1ab7a72effb70daaf58791c59b0d3
 ~ .mcp.json file 0600 539 1c020874e496e9dab075503b306f275288355aa9ff970a15794a8bf7b178b846
 --- home tree
@@ -202,7 +202,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2309 f2d5d7ff7f6addf5da54682fb03aa5f8391184e5a9b96d430c0a864f2673075b
-.ai-rulez/.generated-manifest.local.json file 0644 5427 62e33f5fff36e4029f42d4685f1bf005142581b1b6b4b1cd61897d5924310be3
+.ai-rulez/.generated-manifest.local.json file 0644 5427 483436f7d592fdaab41a0abbaadf89fb41ca70786eaa02b5ba915e3849e1fb81
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
