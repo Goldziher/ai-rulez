@@ -4,7 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## [5.9.3] - 2026-10-30
+
+### Added
+
+- **Every harness that reads a project MCP file carries ai-rulez's own server.** `[mcp] self_server`
+  (on by default) reached only `.mcp.json`, `.gemini/settings.json`, `.vscode/mcp.json` and
+  `.agents/mcp_config.json`, because the OpenCode, Cursor, Codex, Devin and Xum presets built their
+  server maps from `[[mcp_servers]]` alone. They now render `mcp.ai-rulez`, `mcpServers.ai-rulez`,
+  `[mcp_servers.ai-rulez]` and `servers.ai-rulez` exactly like a declared server, honoring
+  `self_server_command`, `self_server_version`, `--serve-skills` and a declared server of that name.
+  The alternative was a hand-written user-level entry, which stops working the moment the binary it
+  names moves. User scope never carries it: MCP output stays project-only.
+
+### Fixed
+
+- **User scope writes no MCP entry.** `generate --user` dropped `[[mcp_servers]]` but kept
+  `[mcp] self_server`, so it wrote ai-rulez's own server into `~/.commandcode/mcp.json` and
+  `~/.gemini/config/mcp_config.json` (and a "served by MCP" header line). User scope is documented as
+  touching nothing project-shaped, and that entry named whichever binary ran the last generation; it
+  is gone, and `generate --user` now writes 2 fewer files.
+- **`doctor --mcp-user-scope` reads OpenCode's user config and reports a server that cannot start.**
+  It reads `~/.config/opencode/opencode.json` (honouring `XDG_CONFIG_HOME`) in both shapes OpenCode
+  accepts, the canonical `mcp.servers.<name>` and the compat `mcp.<name>` members, skipping a
+  `disabled` one. It now warns when a user-scope stdio server's command is an absolute path that does
+  not exist or a binary that is not on PATH; OpenCode only reports that at startup as
+  `NotFound: ChildProcess.spawn (/path/to/binary mcp)`, naming neither the file nor the fix.
 
 ## [5.9.2] - 2026-10-28
 
