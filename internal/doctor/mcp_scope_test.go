@@ -254,10 +254,12 @@ func TestCheckMCPScope_OpenCodeV1ShapeIsAlsoRead(t *testing.T) {
 func TestCheckMCPScope_UnresolvedUserCommandWarns(t *testing.T) {
 	// Arrange: one entry names a missing file, the other a binary that is not on PATH.
 	dir := project(t, map[string]string{".ai-rulez/config.toml": opencodeScopeConfig(`presets = ["opencode"]`)})
+	// Built from a temp dir so the path is absolute on Windows too, where "/nonexistent/..." has no drive.
+	missing := filepath.Join(t.TempDir(), "nonexistent", "ai-rulez")
 	setHomeFiles(t, map[string]string{
-		".config/opencode/opencode.json": `{"mcp":{"servers":{
-			"gone":{"type":"local","command":["/nonexistent/ai-rulez","mcp"]},
-			"ghost":{"type":"local","command":["ghost-binary","mcp"]}}}}`,
+		".config/opencode/opencode.json": fmt.Sprintf(`{"mcp":{"servers":{
+			"gone":{"type":"local","command":[%q,"mcp"]},
+			"ghost":{"type":"local","command":["ghost-binary","mcp"]}}}}`, missing),
 	})
 	lookPath := func(name string) (string, error) {
 		if name == "ghost-binary" {
@@ -274,7 +276,7 @@ func TestCheckMCPScope_UnresolvedUserCommandWarns(t *testing.T) {
 		t.Fatalf("findings = %+v, want two", got)
 	}
 	messages := got[0].Message + got[0].Hint + got[1].Message + got[1].Hint
-	for _, want := range []string{"/nonexistent/ai-rulez", "does not exist", "ghost-binary", "is not on PATH"} {
+	for _, want := range []string{missing, "does not exist", "ghost-binary", "is not on PATH"} {
 		if !strings.Contains(messages, want) {
 			t.Errorf("findings %+v do not name %q", got, want)
 		}

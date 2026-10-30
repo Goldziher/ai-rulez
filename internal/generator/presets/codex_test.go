@@ -186,9 +186,10 @@ func TestCodexPresetGenerator_CommandsAreSkills(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			content := &config.ContentTree{Commands: []config.ContentFile{tt.command}, Skills: tt.skills}
+			root := t.TempDir()
 
 			// Act
-			outputs, err := (&CodexPresetGenerator{}).Generate(content, "/p", &config.Config{BaseDir: "/p"})
+			outputs, err := (&CodexPresetGenerator{}).Generate(content, root, &config.Config{BaseDir: root})
 
 			// Assert
 			require.NoError(t, err)
