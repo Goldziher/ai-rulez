@@ -16,6 +16,24 @@ import (
 // at all. Each family of generated output gets its own resolver so none of them
 // has to be read through the others.
 func gitignorePatternForOutput(rd *config.RulesDirSet, relPath string, isDir bool) string {
+	return anchorGitignorePattern(gitignorePatternForPath(rd, relPath, isDir))
+}
+
+// anchorGitignorePattern pins a single-segment pattern to the directory of the
+// .gitignore that carries it. An unanchored name such as `.mcp.json` or
+// `AGENTS.md` matches at every depth, so it also hides a tracked
+// `plugin/.mcp.json`, or a nested AGENTS.md another tool reads (#515). A pattern
+// with a slash is already anchored, and a negated one is the user's.
+func anchorGitignorePattern(pattern string) string {
+	if pattern == "" || strings.HasPrefix(pattern, "!") || strings.Contains(pattern, "/") {
+		return pattern
+	}
+	return "/" + pattern
+}
+
+// gitignorePatternForPath is the resolver behind gitignorePatternForOutput, whose
+// patterns are anchored before they are returned.
+func gitignorePatternForPath(rd *config.RulesDirSet, relPath string, isDir bool) string {
 	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
 	if relPath == ".github" || strings.HasSuffix(relPath, "/.github") {
 		return ""

@@ -101,7 +101,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/shared.mdc file 0644 235 059b030ce3ebf06ed880a8ea3a830aadef6e40019b97e43cce2246c325e762b5
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 798 2c642f5e6b0a8cc2ea424cca90ff4e07f8e20c083d4b3747bb76f322a75fc192
+.gitignore file 0644 800 d3956eb23985b41f53176c931243b13558be06f9e9c85d3c80da133d52fb4473
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 502 b1ee761c40eebbe11c26e6c4cb15503e1d799ea29b9afbf3e54032361951b611
 scripts/ dir 0755
@@ -257,7 +257,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/shared.mdc file 0644 235 059b030ce3ebf06ed880a8ea3a830aadef6e40019b97e43cce2246c325e762b5
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 798 2c642f5e6b0a8cc2ea424cca90ff4e07f8e20c083d4b3747bb76f322a75fc192
+.gitignore file 0644 800 d3956eb23985b41f53176c931243b13558be06f9e9c85d3c80da133d52fb4473
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 502 b1ee761c40eebbe11c26e6c4cb15503e1d799ea29b9afbf3e54032361951b611
 scripts/ dir 0755

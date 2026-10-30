@@ -41,7 +41,7 @@ INFO  Generation complete files=15
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 394 235e56c19d6cd979c2454d6ef5f1e5e5461b89c653a480ada7ce6c72f6d503b7
+.gitignore file 0644 396 b8bc96733e03d9df056a68cc139f7b43fe54a33d496e2bba0ba5927c1f239b52
 .mcp.json file 0600 551 ec430b8ed5d4983817b8c684b55ca8ce0f3e2eb50f2ccb507f5e88d3f729d1bf
 .qoder/ dir 0755
 .qoder/agents/ dir 0755

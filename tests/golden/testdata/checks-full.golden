@@ -348,7 +348,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14301 2845cb1eb139339440ed0eb1a45636dbd720302733a28c90b05a2e7f547f5ab5
+.ai-rulez/.generated-manifest.local.json file 0644 14301 b4aae3d983fd631704617149165f8328327455eb87409bb1af8c57bc23888ca3
 >>>>
 {
   "version": "1",
@@ -468,7 +468,7 @@ echo review
           "preToolUse"
         ],
         "elementSums": [
-          "1178d499f2f178dfe2a7bb097d17d4f33093ecfca02c1251ba2a8df7152e0c65",
+          "11b809a5b5336a8dda071cb014f4d02e7623c92ffaabcfccaeeb3222450bc291",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -511,8 +511,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b",
-          "d0fa98f0683274d029b763af8756a6ebaeac6e6a8cb02f60dd58a994bc6da501"
+          "a489c253d86fcbf502af8f357562bfa7ec3eecba287c06373b1a8ab796afe649",
+          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
         ]
       },
       {
@@ -798,9 +798,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "cbfd5f29a74a0ee11573eecd292c6773c4827680d02ef596882222f2dce75e60",
+    ".cursor/hooks.json": "dabbf91d476ae2a861681ae07ce98b9cf4a58cf25bb1b5b75743a0b5883ff055",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".factory/hooks.json": "efb26868318c0273b418a7b96d3faa1d0f11cb21584c16f1363b78e21c62cd57",
+    ".factory/hooks.json": "f14ffaccf6878368fb918d8cbb6fe9537e4daf14a76eb05f6fec8f50a48cb14c",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -1956,7 +1956,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-.gitignore file 0644 1461 0420c53ef065ec6743a1f2e9379d5b2daa4f10c0f1dffc2532aa325a1829b633
+.gitignore file 0644 1465 bd037917ec113b8454e87c135fdfaa624f350af0c3659ad8547de37735ee7fe7
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/commands/
@@ -2007,7 +2007,6 @@ echo review
 .kilo/rules/manual.md
 .kilo/rules/typescript.md
 .kilo/skills/
-.mcp.json
 .qwen/agents/
 .qwen/commands/
 .qwen/rules/always.md
@@ -2018,9 +2017,10 @@ echo review
 .qwen/skills/
 .rovodev/skills/
 .rovodev/subagents/
-AGENTS.md
-QWEN.md
-kilo.jsonc
+/.mcp.json
+/AGENTS.md
+/QWEN.md
+/kilo.jsonc
 # END ai-rulez
 <<<<
 .gitlab/ dir 0755

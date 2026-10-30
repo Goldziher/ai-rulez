@@ -61,7 +61,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5350 c8b91589498f68d9768b11c8e2150c005922a7a8158ce203dad3a73e76529123
-.ai-rulez/.generated-manifest.local.json file 0644 20173 c80e4f6e325ce2c6d7b4bfb19aabb37fb97d4615d12c2c60ca5466848271654d
+.ai-rulez/.generated-manifest.local.json file 0644 20173 ac2b6d9ce68c363e469a57d0fab5d7b00fc762b01c613820f493677a5a677d50
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -207,7 +207,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .github/skills/scratch/ dir 0755
 .github/skills/scratch/SKILL.md file 0644 150 840b60e9b2cd7374a669c0a76336256af88013efba44cd33f201a9c29dda5ec6
-.gitignore file 0644 1232 35a2d8c0ed05d23a1e6fe47fe91eea8527cf5b31cabf5ac4e9acb5fcfee301db
+.gitignore file 0644 1237 0100f60d355a870fa06708395d3d5ae4aeb32c4107b09ca1912cc6d6570cc7e4
 .kilo/ dir 0755
 .kilo/agents/ dir 0755
 .kilo/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
@@ -426,7 +426,7 @@ INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-~ .ai-rulez/.generated-manifest.local.json file 0644 19598 12f32e67db5691d440fd371e0705157fce5eac2e9d5ae395514c7cb830f7ea04
+~ .ai-rulez/.generated-manifest.local.json file 0644 19598 ef3fba22e5d4adc9ba7b0054ef725c1cccd1723c8e59f9781eecf37a81ac3048
 --- home tree
 (no change)
 

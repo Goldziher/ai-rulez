@@ -35,7 +35,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2941 eef53cfa8566e7b016897ef0a1ced1b1d902b8d42bed9cc89c1d4ea70fef01db
-.ai-rulez/.generated-manifest.local.json file 0644 9809 c0256942e3c5ae33e64fc1d49194ddb21c2fefc8034cc3e43fde4a53c8dcd99f
+.ai-rulez/.generated-manifest.local.json file 0644 9809 6d8a7b2ff753ca5eadfc0d4f27c4afec6e9718e12beaf7b23102029937de28d4
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -115,7 +115,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/manual.mdc file 0644 169 b445e358bffc781d13e4155727bb149aa737a79947dc648242abc380f44a3ae6
 .cursor/rules/targeted.mdc file 0644 164 e9198dc48e5205c315d1c1223e6d84fe9f110487d58c989102b576bbb4274bbe
 .cursor/rules/typescript.mdc file 0644 219 c5f5e1451a1eb0062c7d10cd3dc6752a05c7bc1015a60d6a9dc133f654054741
-.gitignore file 0644 792 fba48c375192f523d3ddf6581c03ac6efb2e513f7a6dd499885b452fb8c45bca
+.gitignore file 0644 795 85df2f5fee3b43264cc7420eaf6c988b09b50d24f52060039812b586f5cab66b
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 453 fcae40e91abf1f12c4e218479b47de4e815dbb35f45fa3988a5ab68534a25c78
 CLAUDE.md file 0644 154 bcf291027bdd4b95071500227b34218a092b47263f42a9e91d012c9e51f54682
@@ -339,7 +339,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 9809 c0256942e3c5ae33e64fc1d49194ddb21c2fefc8034cc3e43fde4a53c8dcd99f
+.ai-rulez/.generated-manifest.local.json file 0644 9809 6d8a7b2ff753ca5eadfc0d4f27c4afec6e9718e12beaf7b23102029937de28d4
 >>>>
 {
   "version": "1",
@@ -352,8 +352,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
+          "073193999a29282d72e9dd698c2d8b15a95f6c1e85829e4a7ff35a931f051c35",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -431,7 +431,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "e5159e048283a7e3e771e85b5f2be4f10b1cac010f6002e22aa50833477a266b"
+          "f3e84ed5abbcf212b017250325eb69b6cd8c44b43f0aae2a233686b3a079f257"
         ]
       },
       {
@@ -488,7 +488,7 @@ policy:
           "preToolUse"
         ],
         "elementSums": [
-          "1178d499f2f178dfe2a7bb097d17d4f33093ecfca02c1251ba2a8df7152e0c65",
+          "11b809a5b5336a8dda071cb014f4d02e7623c92ffaabcfccaeeb3222450bc291",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -565,7 +565,7 @@ policy:
     ".claude/rules/manual.md": "3a3c8154e79628e3af69efcd84847afded58727ed77b5231246a626620e8e372",
     ".claude/rules/targeted.md": "932c6f57cb04350b0409a54da4a2eb0fd60611bb987b130c3d592434583d21e0",
     ".claude/rules/typescript.md": "fc10e1d096af635fd18081fad01178d482f1a860096147ecd8f47f31efb136cf",
-    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
+    ".claude/settings.json": "5fc45f60aa357c068853b30b25b807e236636dcebb88deddc3021e5ccd61a090",
     ".claude/skills/build/SKILL.md": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085",
     ".claude/skills/deployer/SKILL.md": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba",
     ".claude/skills/reviewer/SKILL.md": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675",
@@ -575,7 +575,7 @@ policy:
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
-    ".codex/hooks.json": "b7ba3827da403c5c133bf117abfc8ed0902b0c84d6f9444edf7a60e2c03554af",
+    ".codex/hooks.json": "ec1c2da7952ad7db2a8bd7148fd20be2d7f2dc86bfa34693dbaf050962de9653",
     ".codex/rules/ai-rulez.rules": "ba69c377e35820f60b01d6f4285a1acfaa08a98fbf74df1f5294a82ee4ed6582",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/agents/architect.md": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d",
@@ -583,7 +583,7 @@ policy:
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "cbfd5f29a74a0ee11573eecd292c6773c4827680d02ef596882222f2dce75e60",
+    ".cursor/hooks.json": "dabbf91d476ae2a861681ae07ce98b9cf4a58cf25bb1b5b75743a0b5883ff055",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
     ".cursor/rules/always.mdc": "846acdb48cbb5f87ffb80a1d4291df9a6a59b06e659467b332a74faf65e37191",
     ".cursor/rules/auto.mdc": "fa766acb9c6c4c8dd5ffac48ffc810a4eaa7d63a64a4bb4b651e54d082e23737",
@@ -1372,7 +1372,7 @@ Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not t
 
 Use strict mode.
 <<<<
-.gitignore file 0644 792 fba48c375192f523d3ddf6581c03ac6efb2e513f7a6dd499885b452fb8c45bca
+.gitignore file 0644 795 85df2f5fee3b43264cc7420eaf6c988b09b50d24f52060039812b586f5cab66b
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
@@ -1405,9 +1405,9 @@ Use strict mode.
 .cursor/rules/manual.mdc
 .cursor/rules/targeted.mdc
 .cursor/rules/typescript.mdc
-.mcp.json
-AGENTS.md
-CLAUDE.md
+/.mcp.json
+/AGENTS.md
+/CLAUDE.md
 # END ai-rulez
 <<<<
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c

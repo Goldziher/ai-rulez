@@ -43,7 +43,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3484 b77285a1750b3cdcdd6c7f9e0ea2fec98192523e2f32dfcd97d7466e7d2fd67e
-.ai-rulez/.generated-manifest.local.json file 0644 10984 5b234837cfa480ef5f5ec2ed88e32460d7b82e4805f853f5f2fe899e4b043a23
+.ai-rulez/.generated-manifest.local.json file 0644 10984 7148148dcf18d01c46b6b136ba84a20b721002f313dfb014f7a2b93a407c846f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -122,7 +122,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1389 a8976a9ca2d5045d4f36f46d7a275f5de5d705dd36e159471aafb5b9df38fe54
-.gitignore file 0644 742 fad2f7f880d9cca191e8ea6489bac61e5ae9ab2a29db5355ad59af00cc1cbfe1
+.gitignore file 0644 746 71fc1cae63b83f04529137a124eb755baa5d0e6ae4ea1834a376b6b1ff5fbb52
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
@@ -419,7 +419,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 11225 94c1eea382f7c4207c1c65e4c2f8193a7563e9a12e73a32fd59d69ad1630ccf6
+.ai-rulez/.generated-manifest.local.json file 0644 11225 0d03447b7fe43faffd6966500d92af568281a8a5cf214a386a122a2563271b91
 >>>>
 {
   "version": "1",
@@ -432,8 +432,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
+          "073193999a29282d72e9dd698c2d8b15a95f6c1e85829e4a7ff35a931f051c35",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -511,7 +511,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "e5159e048283a7e3e771e85b5f2be4f10b1cac010f6002e22aa50833477a266b"
+          "f3e84ed5abbcf212b017250325eb69b6cd8c44b43f0aae2a233686b3a079f257"
         ]
       },
       {
@@ -568,7 +568,7 @@ policy:
           "preToolUse"
         ],
         "elementSums": [
-          "1178d499f2f178dfe2a7bb097d17d4f33093ecfca02c1251ba2a8df7152e0c65",
+          "11b809a5b5336a8dda071cb014f4d02e7623c92ffaabcfccaeeb3222450bc291",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -640,8 +640,8 @@ policy:
           "BeforeTool"
         ],
         "elementSums": [
-          "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "de4d1b23dc6ce27ec6269db23b7d7fd5600a259b56583a860a6643d7e8955f89"
+          "0ae8a3652d1a01a6b2ce09ac3c6201139198e9242091b1a5ab9fa6163b6f284d",
+          "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136"
         ]
       },
       {
@@ -786,20 +786,20 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
+    ".claude/settings.json": "5fc45f60aa357c068853b30b25b807e236636dcebb88deddc3021e5ccd61a090",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
-    ".codex/hooks.json": "b7ba3827da403c5c133bf117abfc8ed0902b0c84d6f9444edf7a60e2c03554af",
+    ".codex/hooks.json": "ec1c2da7952ad7db2a8bd7148fd20be2d7f2dc86bfa34693dbaf050962de9653",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "cbfd5f29a74a0ee11573eecd292c6773c4827680d02ef596882222f2dce75e60",
+    ".cursor/hooks.json": "dabbf91d476ae2a861681ae07ce98b9cf4a58cf25bb1b5b75743a0b5883ff055",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".gemini/settings.json": "5464f6955ecf7818bc4d981d87928f26762ed389413f4e792b9e370d440699a7",
+    ".gemini/settings.json": "68798cfdb966e1f7c22bdf58eb84baca8d94df674ef26bd3375ae586e81a10ed",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -1704,7 +1704,7 @@ Test first.
   }
 }
 <<<<
-.gitignore file 0644 946 4f2188814c0b078ffb9fadef3d7375be37ddcef7889c90a1cf827174b29fc2e7
+.gitignore file 0644 951 ff01190630bb9e37c40554f3178eed8029eba3ae76f53d976ecfbd219a420006
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
@@ -1739,15 +1739,15 @@ Test first.
 .cursor/rules/typescript.mdc
 .gemini/agents/
 .gemini/settings.json
-.mcp.json
 .opencode/agents/
 .opencode/commands/
 .opencode/plugins/ai-rulez-hooks.js
 .opencode/skills/
-AGENTS.md
-CLAUDE.md
-GEMINI.md
-opencode.json
+/.mcp.json
+/AGENTS.md
+/CLAUDE.md
+/GEMINI.md
+/opencode.json
 # END ai-rulez
 <<<<
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c

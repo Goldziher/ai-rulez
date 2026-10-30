@@ -23,7 +23,7 @@ INFO  Generation complete files=20
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1562 4207895ce19ed7c89ee4fe3590049c9eeebdd92fd4cbd9e26ca76c59cf010200
-.ai-rulez/.generated-manifest.local.json file 0644 3526 601da030aa2bb1d62842cdf4d95979d128cd09ac5704ff1780351c94193debca
+.ai-rulez/.generated-manifest.local.json file 0644 3526 856885f8fbac2ca1d9f284e0ebe9ba0015e7b803e24054c30bf23baeb3be797f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -71,7 +71,7 @@ INFO  Generation complete files=20
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.gitignore file 0644 528 686efedd7d349cfb85385de424b4ca4bf96845886edcb53aa9c89897f8f4ad72
+.gitignore file 0644 529 6d1d0d8547dbb1d33063e43ddef0b10a8d3828b1a4a64ea829d08edbf1f8a110
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

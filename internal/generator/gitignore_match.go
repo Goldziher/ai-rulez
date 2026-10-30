@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"path/filepath"
+	"path"
 	"strings"
 )
 
@@ -27,52 +27,43 @@ func isIgnored(filename string, patterns []string) bool {
 	return false
 }
 
-// matchesPattern checks if a filename matches a gitignore pattern
+// matchesPattern reports whether a path matches a gitignore pattern with git's
+// own semantics: a pattern with no slash matches the last segment at any depth,
+// one with a slash (leading or inside) is anchored at the root of the .gitignore
+// that holds it, "**" crosses directories, and a trailing "/" covers a
+// directory's contents. A pattern is never matched as a mere substring, and a
+// negation does not ignore anything (the caller reads it separately) — dropping
+// a managed entry because a hand-written line happened to contain it hides files
+// the user expects ignored (#519).
 func matchesPattern(filename, pattern string) bool {
-	// Exact match
-	if pattern == filename {
-		return true
-	}
-
-	// Directory pattern
-	if strings.HasSuffix(pattern, "/") {
-		return matchesDirectory(filename, pattern)
-	}
-
-	// Glob pattern
-	if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") {
-		if matched, _ := filepath.Match(pattern, filename); matched {
-			return true
-		}
-		if matched, _ := filepath.Match(pattern, filepath.Base(filename)); matched {
-			return true
-		}
+	if pattern == "" || strings.HasPrefix(pattern, "!") || strings.HasPrefix(pattern, "#") {
 		return false
 	}
-
-	// Absolute pattern
-	if strings.HasPrefix(pattern, "/") {
-		return filename == strings.TrimPrefix(pattern, "/")
+	candidate := strings.Trim(strings.TrimSuffix(filepathSlash(filename), "/"), "/")
+	if candidate == "" {
+		return false
 	}
-
-	// Substring match
-	return filename == pattern ||
-		strings.HasSuffix(filename, "/"+pattern) ||
-		strings.Contains(filename, "/"+pattern+"/") ||
-		strings.Contains(filename, pattern)
+	explicitlyAnchored := strings.HasPrefix(pattern, "/")
+	body := strings.Trim(strings.TrimSuffix(pattern, "/"), "/")
+	if body == "" {
+		return false
+	}
+	if !explicitlyAnchored && !strings.Contains(body, "/") {
+		if globMatch(body, path.Base(candidate)) {
+			return true
+		}
+		return coversAncestor(body, candidate)
+	}
+	regex := globRegexp(body)
+	segments := strings.Split(candidate, "/")
+	for i := range segments {
+		if regex.MatchString(strings.Join(segments[:i+1], "/")) {
+			return true
+		}
+	}
+	return false
 }
 
-// matchesDirectory checks if filename matches a directory pattern.
-//
-// A directory pattern covers the directory itself and everything nested under
-// it, so the nesting check has to run whether or not filename is itself a
-// directory: a pre-existing ".claude/" already ignores ".claude/skills/", and
-// re-listing the subdirectory inside the managed fence would duplicate it.
-// Trailing slashes and the leading anchor are notation, not path segments, so
-// both sides are normalised before comparing.
-func matchesDirectory(filename, pattern string) bool {
-	dirPrefix := strings.TrimPrefix(strings.TrimSuffix(pattern, "/"), "/")
-	candidate := strings.TrimPrefix(strings.TrimSuffix(filename, "/"), "/")
-
-	return candidate == dirPrefix || strings.HasPrefix(candidate, dirPrefix+"/")
-}
+// filepathSlash normalizes a path to forward slashes without importing
+// path/filepath into this file's matcher.
+func filepathSlash(p string) string { return strings.ReplaceAll(p, "\\", "/") }

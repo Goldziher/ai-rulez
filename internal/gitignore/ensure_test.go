@@ -2,11 +2,14 @@ package gitignore
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 func TestEnsureEntries(t *testing.T) {
@@ -28,10 +31,10 @@ func TestEnsureEntries(t *testing.T) {
 			want:     "node_modules/\n\n" + BeginMarker + "\na\n" + EndMarker + "\n",
 		},
 		{
-			name:     "adds to an existing fence keeping its entries",
+			name:     "adds to an existing fence keeping its entries, sorted",
 			existing: ptr("x\n\n" + BeginMarker + "\nold\n" + EndMarker + "\n\ntail\n"),
 			patterns: []string{"new"},
-			want:     "x\n\n" + BeginMarker + "\nold\nnew\n" + EndMarker + "\n\ntail\n",
+			want:     "x\n\n" + BeginMarker + "\nnew\nold\n" + EndMarker + "\n\ntail\n",
 		},
 		{
 			name:     "fence without END is not absorbed; a fresh complete fence is appended",
@@ -77,3 +80,29 @@ func TestEnsureEntries(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+// TestEnsureEntries_NestedConfigWritesTheToplevelBlock is the #517 regression: a
+// config below the work tree root contributes prefixed entries to the one block
+// at the toplevel, and grows no .gitignore of its own.
+func TestEnsureEntries_NestedConfigWritesTheToplevelBlock(t *testing.T) {
+	// Arrange
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := t.TempDir()
+	require.NoError(t, gitutil.CommandNoContext(root, "init", "-q").Run())
+	base := filepath.Join(root, "plugin")
+	nested := filepath.Join(base, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(nested, 0o755))
+
+	// Act
+	require.NoError(t, EnsureEntries(nil, base, []string{".ai-rulez/config.local.*", ".ai-rulez/local/"}))
+
+	// Assert
+	toplevel, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	require.NoError(t, err)
+	assert.Contains(t, string(toplevel), "plugin/.ai-rulez/config.local.*")
+	assert.Contains(t, string(toplevel), "plugin/.ai-rulez/local/")
+	_, err = os.Stat(filepath.Join(nested, ".gitignore"))
+	assert.True(t, os.IsNotExist(err), "a nested config grows no .gitignore of its own")
+}

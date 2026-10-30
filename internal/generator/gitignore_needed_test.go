@@ -74,32 +74,31 @@ func TestUpdateGitignore_AddsOnlyWhatGitDoesNotIgnore(t *testing.T) {
 	}{
 		{
 			name:       "nothing ignored yet",
-			wantBlock:  []string{"CLAUDE.md", "AGENTS.md", ".claude/skills/", "packages/web/AGENTS.md"},
+			wantBlock:  []string{"/CLAUDE.md", "/AGENTS.md", ".claude/skills/", "packages/web/AGENTS.md"},
 			wantAbsent: nil,
 		},
 		{
 			name:       "user already ignores .claude/",
 			userRules:  ".claude/\n",
-			wantBlock:  []string{"CLAUDE.md", "AGENTS.md"},
+			wantBlock:  []string{"/CLAUDE.md", "/AGENTS.md"},
 			wantAbsent: []string{".claude/skills/"},
 		},
 		{
 			name:       "user negates CLAUDE.md",
 			userRules:  "!CLAUDE.md\n",
-			wantBlock:  []string{"AGENTS.md", ".claude/skills/"},
-			wantAbsent: []string{"CLAUDE.md"},
+			wantBlock:  []string{"/AGENTS.md", ".claude/skills/"},
+			wantAbsent: []string{"/CLAUDE.md"},
 		},
 		{
 			name:       "user glob ignores markdown",
 			userRules:  "*.md\n",
 			wantBlock:  []string{".claude/skills/"},
-			wantAbsent: []string{"CLAUDE.md", "AGENTS.md", "packages/web/AGENTS.md"},
+			wantAbsent: []string{"/CLAUDE.md", "/AGENTS.md", "packages/web/AGENTS.md"},
 		},
 		{
-			name:       "global excludes file covers a path",
-			global:     "CLAUDE.md\n",
-			wantBlock:  []string{"AGENTS.md", ".claude/skills/"},
-			wantAbsent: []string{"CLAUDE.md"},
+			name:      "the developer's global excludes file does not cover a path",
+			global:    "CLAUDE.md\n",
+			wantBlock: []string{"/CLAUDE.md", "/AGENTS.md", ".claude/skills/"},
 		},
 		{
 			name:       "user rule catching only one stand-in name does not cover the directory (tmp)",
@@ -116,13 +115,13 @@ func TestUpdateGitignore_AddsOnlyWhatGitDoesNotIgnore(t *testing.T) {
 		{
 			name:       "user rule covering everything under the directory does",
 			userRules:  ".claude/skills/*\n",
-			wantBlock:  []string{"CLAUDE.md"},
+			wantBlock:  []string{"/CLAUDE.md"},
 			wantAbsent: []string{".claude/skills/"},
 		},
 		{
 			name:       "nested .gitignore covers its own subtree",
 			subRules:   "AGENTS.md\n",
-			wantBlock:  []string{"CLAUDE.md", "AGENTS.md", ".claude/skills/"},
+			wantBlock:  []string{"/CLAUDE.md", "/AGENTS.md", ".claude/skills/"},
 			wantAbsent: []string{"packages/web/AGENTS.md"},
 		},
 	}
@@ -175,8 +174,8 @@ func TestUpdateGitignore_SecondRunIsStable(t *testing.T) {
 
 	assert.Equal(t, first, second)
 	inside := gitignore.PatternsInsideFence(second)
-	assert.Contains(t, inside, "AGENTS.md")
-	assert.NotContains(t, inside, "CLAUDE.md")
+	assert.Contains(t, inside, "/AGENTS.md")
+	assert.NotContains(t, inside, "/CLAUDE.md")
 	assert.NotContains(t, inside, ".claude/skills/")
 }
 
@@ -215,7 +214,7 @@ func TestUpdateGitignore_OutsideRepositoryAddsEverything(t *testing.T) {
 	require.NoError(t, gen.updateGitignore(gitignoreOutputs(dir)))
 
 	inside := gitignore.PatternsInsideFence(readGitignore(t, dir))
-	assert.Contains(t, inside, "CLAUDE.md")
+	assert.Contains(t, inside, "/CLAUDE.md")
 	assert.Contains(t, inside, ".claude/skills/")
 }
 
@@ -235,9 +234,9 @@ func TestNeededGitignorePatterns_ProtectedOutputsUnignoredByUser(t *testing.T) {
 		},
 		{
 			name:        "sensitive MCP config negated",
-			output:      config.OutputFile{Path: ".mcp.json", Sensitive: true},
+			output:      config.OutputFile{Path: "/.mcp.json", Sensitive: true},
 			rules:       "!.mcp.json\n",
-			wantWarning: ".mcp.json",
+			wantWarning: "/.mcp.json",
 		},
 		{
 			name:       "local output not mentioned",
@@ -268,7 +267,7 @@ func TestNeededGitignorePatterns_ProtectedOutputsUnignoredByUser(t *testing.T) {
 			}
 			require.Len(t, overridden, 1)
 			assert.Equal(t, tt.wantWarning, overridden[0].Pattern)
-			assert.Equal(t, "!"+tt.wantWarning, overridden[0].Rule)
+			assert.Equal(t, "!"+strings.TrimPrefix(tt.wantWarning, "/"), overridden[0].Rule)
 		})
 	}
 }
@@ -284,7 +283,7 @@ func TestEnsureSecretOutputsIgnored_RefusesWhenUserUnignoredSecretOutput(t *test
 	})
 
 	err := gen.ensureSecretOutputsIgnored([]config.OutputFile{{
-		Path: filepath.Join(dir, ".mcp.json"), Content: `{"env":{"TOKEN":"supersecretvalue"}}`,
+		Path: filepath.Join(dir, "/.mcp.json"), Content: `{"env":{"TOKEN":"supersecretvalue"}}`,
 	}})
 
 	require.Error(t, err)
@@ -306,7 +305,7 @@ func TestWithoutManagedBlock(t *testing.T) {
 
 func TestGitignoreProbes(t *testing.T) {
 	tests := map[string][]string{
-		"CLAUDE.md":                {"CLAUDE.md"},
+		"/CLAUDE.md":               {"CLAUDE.md"},
 		"/root-only.md":            {"root-only.md"},
 		".claude/skills/":          {".claude/skills/generated-probe", ".claude/skills/x7q-probe.tmp"},
 		".ai-rulez/config.local.*": {".ai-rulez/config.local.generated-probe", ".ai-rulez/config.local.x7q-probe.tmp"},
@@ -343,7 +342,7 @@ func TestNeededGitignorePatterns_NeverTouchesUserFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, string(before), string(after))
 	assert.True(t, info.ModTime().Equal(past), "mtime changed: %v", info.ModTime())
-	assert.Contains(t, needed, "CLAUDE.md", "own block must not count as user rules")
+	assert.Contains(t, needed, "/CLAUDE.md", "own block must not count as user rules")
 	assert.NotContains(t, needed, ".claude/skills/")
 }
 
@@ -357,7 +356,7 @@ func TestNeededGitignorePatterns_ManyNestedGitignores(t *testing.T) {
 		if i%2 == 0 {
 			require.NoError(t, os.WriteFile(filepath.Join(pkg, ".gitignore"), []byte("AGENTS.md\n"), 0o644))
 		}
-		outputs = append(outputs, config.OutputFile{Path: filepath.Join(pkg, "AGENTS.md")})
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(pkg, "/AGENTS.md")})
 	}
 	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 	require.NoError(t, gen.updateGitignore(outputs)) // creates a block, forcing the mirror path
@@ -374,7 +373,7 @@ func TestNeededGitignorePatterns_SubdirectoryBaseDirWithBlock(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("CLAUDE.md\n"), 0o644))
 	base := filepath.Join(dir, "sub")
 	require.NoError(t, os.MkdirAll(base, 0o755))
-	outputs := []config.OutputFile{{Path: filepath.Join(base, "CLAUDE.md")}, {Path: filepath.Join(base, "AGENTS.md")}}
+	outputs := []config.OutputFile{{Path: filepath.Join(base, "/CLAUDE.md")}, {Path: filepath.Join(base, "/AGENTS.md")}}
 	gen := NewGenerator(&config.Config{BaseDir: base, Gitignore: gitignoreOn()})
 	require.NoError(t, os.WriteFile(filepath.Join(base, ".gitignore"), []byte("seed\n"), 0o644))
 	require.NoError(t, gen.updateGitignore(outputs))
@@ -383,7 +382,7 @@ func TestNeededGitignorePatterns_SubdirectoryBaseDirWithBlock(t *testing.T) {
 
 	assert.Equal(t, []string{
 		".ai-rulez/.config.local.*", ".ai-rulez/.generated-manifest.local.json", ".ai-rulez/config.local.*",
-		".ai-rulez/local/", "AGENTS.md",
+		".ai-rulez/local/", "/AGENTS.md",
 	}, filterManifest(needed))
 }
 
