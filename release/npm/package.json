@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "5.9.5",
+  "version": "5.9.6",
   "description": "Author, generate, validate and govern AI agent rules, skills, plugins and MCP configuration across 52 coding assistants. Review with verified model evidence, evaluate skills, lock and sign dependencies, and publish bundles. CLI, MCP server and Go API.",
   "keywords": [
     "agent-plugins",

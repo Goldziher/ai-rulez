@@ -348,7 +348,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14301 e0e1fe21bb9ecd66f3a17ab2cea3e3e3bf17d6290842ff047013d720a727d851
+.ai-rulez/.generated-manifest.local.json file 0644 14301 e3f959a0db64c7a6d522c64253c521128b8e9d9b3eefa278a96f56fa39873c96
 >>>>
 {
   "version": "1",
@@ -469,7 +469,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "d8f5a937891b0c5e96f729ef9b9fa6fab24dbe8e679a7dfd91a146ec9a8fe80f"
+          "f2827c7c96e5a61603e904cfd3bf44585eb266662c19b8dd95b563221c8f8c5d"
         ]
       },
       {
@@ -511,7 +511,7 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "0f72613c9131663daeb7b45a8e7eaab3d4c65aa2e6283b9b26243f4395971bd2",
+          "3f203c91b32a99679c93b19c3da7f29b7b1a20ac3d710705f82a2fbd8b3684af",
           "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
         ]
       },
@@ -798,9 +798,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "0def264f4a7f45b376d63b401f6e882e86580be35bd914b560bde4855fd2c7fb",
+    ".cursor/hooks.json": "56b45537cead131f1c146501abed4c7f1b299e405250dff71416aa1458e1779a",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".factory/hooks.json": "374fce2b231ef679bb386fa0c7dfa5ba1f3735a51669037103180c08a3b5dca6",
+    ".factory/hooks.json": "7d2e32322f6dfbc5662e7a630bdd1caf76bd9657188307a9d0017bd1ccb7a1b6",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
