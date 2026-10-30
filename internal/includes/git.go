@@ -100,12 +100,45 @@ func invalidateScan(aiRulezDir string) {
 // private to the user running ai-rulez.
 const cacheDirMode = 0o700
 
-// getIncludeCacheDir isolates repository, sparse path and configured ref so one
-// project cannot overwrite another project's pinned cache. ~keep
+// getIncludeCacheDir isolates repository, sparse path and the ref the cache is
+// keyed by so one project cannot overwrite another project's pinned cache. ~keep
 func getIncludeCacheDir(host ambient.Host, sourceName, repoURL, path, ref string) (string, error) {
 	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL) + "\x00" + path + "\x00" + ref))
 	dir := SafeCacheName(sourceName) + "-" + hex.EncodeToString(sum[:])[:cacheHashLen]
 	return config.CacheDirIn(host.Env, "includes", dir) //nolint:wrapcheck // already contextual
+}
+
+// pinnedIncludeCacheDir is the cache directory of an include the lock pins to
+// commit: one tree per commit, so a checkout pinning another commit can neither
+// read nor overwrite it (#524).
+//
+// A cache written before the commit was part of the identity — by an older
+// ai-rulez, or by the `lock` run that wrote the pin — lives in the ref-keyed
+// directory. It is still used while it holds exactly the pinned commit, so
+// already-populated caches are not discarded; a directory holding another
+// commit is never read through it.
+func pinnedIncludeCacheDir(host ambient.Host, sourceName, repoURL, path, ref, commit string) (string, error) {
+	if commit == "" {
+		return getIncludeCacheDir(host, sourceName, repoURL, path, ref) //nolint:wrapcheck // already contextual
+	}
+	pinned, err := getIncludeCacheDir(host, sourceName, repoURL, path, commit)
+	if err != nil || isCacheDir(pinned) {
+		return pinned, err //nolint:wrapcheck // already contextual
+	}
+	legacy, err := getIncludeCacheDir(host, sourceName, repoURL, path, ref)
+	if err != nil {
+		return "", err //nolint:wrapcheck // already contextual
+	}
+	if cachedCommit(legacy) == commit {
+		return legacy, nil
+	}
+	return pinned, nil
+}
+
+// isCacheDir reports whether dir is an existing directory.
+func isCacheDir(dir string) bool {
+	info, err := os.Stat(dir)
+	return err == nil && info.IsDir()
 }
 
 // SafeCacheName keeps a source name usable as one path segment.
@@ -151,7 +184,7 @@ type GitSource struct {
 	repoURL     string // Normalized HTTPS URL
 	originalURL string // Original URL (may be SSH format)
 	path        string // Path within repo to .ai-rulez/ (optional, defaults to root)
-	ref         string // Fetch ref; the configured request determines cacheDir separately. ~keep
+	ref         string // Fetch ref: the locked commit when pinned, else the configured ref. ~keep
 	cacheDir    string // ~/.cache/ai-rulez/includes/{name}-{source hash}/
 	include     []string
 	accessToken string
@@ -174,6 +207,13 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 // NewGitSourceIn is NewGitSource with the environment (the cache location) taken
 // from host instead of the process.
 func NewGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
+	return newGitSource(host, name, repoURL, path, ref, "", baseDir, include, accessToken)
+}
+
+// newGitSource builds a git source. commit is the commit the lock pins ("" when
+// the source is not pinned): it keys the cache, so two checkouts pinning
+// different commits of one include never share a directory (#524).
+func newGitSource(host ambient.Host, name, repoURL, path, ref, commit, baseDir string, include []string, accessToken string) (*GitSource, error) {
 	repoURL = stripGitPlus(repoURL)
 	// Validate URL format
 	if err := validateGitURL(repoURL); err != nil {
@@ -181,7 +221,7 @@ func NewGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string,
 	}
 
 	// Create cache directory in system cache location
-	cacheDir, err := getIncludeCacheDir(host, name, repoURL, path, ref)
+	cacheDir, err := pinnedIncludeCacheDir(host, name, repoURL, path, ref, commit)
 	if err != nil {
 		return nil, oops.
 			With("source_name", name).
@@ -214,12 +254,18 @@ func NewOKFGitSource(name, repoURL, path, ref, baseDir string, include []string,
 
 // NewOKFGitSourceIn is NewOKFGitSource with the environment taken from host.
 func NewOKFGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
+	return newOKFGitSource(host, name, repoURL, path, ref, "", baseDir, include, accessToken)
+}
+
+// newOKFGitSource builds an OKF git source, commit being the commit the lock pins
+// (see [newGitSource]).
+func newOKFGitSource(host ambient.Host, name, repoURL, path, ref, commit, baseDir string, include []string, accessToken string) (*GitSource, error) {
 	for _, seg := range strings.Split(path, "/") {
 		if seg == ".." {
 			return nil, oops.With("include", name).Errorf("invalid OKF bundle path %q", path)
 		}
 	}
-	s, err := NewGitSourceIn(host, name, repoURL, path, ref, baseDir, include, accessToken)
+	s, err := newGitSource(host, name, repoURL, path, ref, commit, baseDir, include, accessToken)
 	if err != nil {
 		return nil, err
 	}

@@ -73,7 +73,7 @@ func VersionSources(cfg *config.Config, kind string, names map[string]bool, toke
 			List: func(ctx context.Context) ([]tagresolve.RawTag, error) {
 				return includes.ListRemoteTags(ctx, url, token)
 			},
-			TreeDir: func(string) string { return includes.CachedTreeDir(cfg, w) }})
+			TreeDir: func(commit string) string { return includes.CachedTreeDir(cfg, w, commit) }})
 	}
 	for i := range cfg.SkillSources {
 		spec := skillsource.FromConfig(&cfg.SkillSources[i])

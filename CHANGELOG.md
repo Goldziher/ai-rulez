@@ -14,6 +14,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   instructions. The inventory now adds those native artifacts whether or not git ignores them, and this
   covers `exposure inventory`, leakage and the start budget alike
   ([#522](https://github.com/Goldziher/ai-rulez/issues/522)).
+- **The include cache is keyed by the locked commit, so checkouts on different pins no longer break each
+  other.** Every checkout on a machine shared one `<name>-<hash>` directory per include, so the checkout that
+  ran last decided its contents: `lock --check` failed with `fetched commit <A> but the lock records <B>`
+  although its lock was correct, and `mcp` could not read the project's `[mcp]` settings and registered every
+  tool instead of the configured allow-list. A lock-pinned include is now cached under its pinned commit, so a
+  load that needs another commit fetches it into a directory of its own; a cache written under the ref alone is
+  still read while it holds exactly the pinned commit. `ai-rulez mcp` now stops when the project cannot be read
+  instead of silently serving every tool
+  ([#524](https://github.com/Goldziher/ai-rulez/issues/524)).
 
 ### Added
 

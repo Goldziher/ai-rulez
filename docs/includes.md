@@ -391,9 +391,12 @@ An installed skill whose `SKILL.md` is a symlink fails to resolve, with an error
 Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path` (`http://` and `git://` are then rejected);
 anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash>`
 with mode `0700`. The hash identifies the normalized URL, configured path, and requested ref or version
-constraint. Projects pinned to different commits and modules at different paths keep independent caches;
-resolving a tag or version request to its locked commit does not change that request's cache identity.
-Installed skills use the same identity scheme under `~/.cache/ai-rulez/skills/`.
+constraint, and — for an include `ai-rulez.lock` pins — the commit it pins: the cache holds one tree per locked
+commit, so two checkouts on one machine that pin different commits of the same include never read (or overwrite)
+each other's content, and an offline `lock --check` or `mcp` start reads the commit its own lock records. A cache
+written under the ref alone (by an older ai-rulez, or by the `lock` run that wrote the pin) is still read while it
+holds exactly the pinned commit, and is replaced by a per-commit tree otherwise. Modules at different paths keep
+independent caches. Installed skills keep their ref-keyed scheme under `~/.cache/ai-rulez/skills/`.
 
 This replaces the earlier URL-only cache namespace. The first online load populates the new cache;
 existing cache files remain untouched. An offline or frozen run still requires a populated cache for
