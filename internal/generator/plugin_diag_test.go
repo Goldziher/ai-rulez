@@ -15,6 +15,8 @@ func TestPluginEntryPointsUseTheRunsCollector(t *testing.T) {
 		"DryRunPlugin":        func(g *Generator) { _, _ = g.DryRunPlugin("") },
 		"PluginVersionDrift":  func(g *Generator) { _, _ = g.PluginVersionDrift("") },
 		"PluginFiles":         func(g *Generator) { _, _ = g.PluginFiles("") },
+		"GenerateMemberFiles": func(g *Generator) { _, _ = g.GenerateMemberFiles("") },
+		"DryRunMember":        func(g *Generator) { _, _ = g.DryRunMember("") },
 	}
 	for name, call := range calls {
 		t.Run(name, func(t *testing.T) {

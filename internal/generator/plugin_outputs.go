@@ -61,6 +61,65 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	return written, nil
 }
 
+// GenerateMemberFiles renders this plugin-authoring root as the marketplace member
+// that an enclosing root lists: the same bundle `generate --plugin` writes for it,
+// without the marketplace index the enclosing root owns. A recursive run otherwise
+// renders the member standalone, which adds indexes that are neither tracked nor
+// ignored and churns the Source-Hash of every bundle file (#516).
+func (g *Generator) GenerateMemberFiles(profile string) (int, error) {
+	g.diagnostics()
+	outputs, err := g.memberBundleOutputs(profile)
+	if err != nil {
+		return 0, err
+	}
+	if err := g.refuseSymlinkedOutputs(outputs); err != nil {
+		return 0, err
+	}
+	if err := g.writeOutputs(outputs); err != nil {
+		return 0, err
+	}
+	written := 0
+	for _, output := range outputs {
+		if !output.IsDir {
+			written++
+		}
+	}
+	g.log().Info("Plugin member generation complete", "files", written)
+	return written, nil
+}
+
+// DryRunMember lists what GenerateMemberFiles would write.
+func (g *Generator) DryRunMember(profile string) ([]string, error) {
+	g.diagnostics()
+	outputs, err := g.memberBundleOutputs(profile)
+	if err != nil {
+		return nil, err
+	}
+	if err := g.refuseSymlinkedOutputs(outputs); err != nil {
+		return nil, err
+	}
+	lines := make([]string, 0, len(outputs)+1)
+	lines = append(lines, "plugin member bundle:")
+	for _, output := range outputs {
+		lines = append(lines, "write-file: "+filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path))))
+	}
+	return lines, nil
+}
+
+// memberBundleOutputs builds this root's plugin manifest and renders the member
+// bundle, without the marketplace indexes a standalone plugin render adds.
+func (g *Generator) memberBundleOutputs(profile string) ([]config.OutputFile, error) {
+	manifest, err := g.buildPluginManifest(profile)
+	if err != nil {
+		return nil, err
+	}
+	outputs, err := plugin.GenerateMember(manifest, g.config.BaseDir)
+	if err != nil {
+		return nil, oops.With("plugin", manifest.Name).Wrapf(err, "render the plugin member bundle")
+	}
+	return g.withoutAgentsSourcePluginOutputs(outputs), nil
+}
+
 // ErrPluginNotGenerated is returned by VerifyPlugin when none of the expected
 // plugin files exist on disk, so a caller can tell "never generated" from "stale".
 var ErrPluginNotGenerated = errors.New("plugin bundle not generated")
