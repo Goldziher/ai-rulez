@@ -663,3 +663,33 @@ func TestInventory_EmptyArtifactsAreAnEmptyList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(data), `"artifacts":[]`)
 }
+
+// TestWithNativeArtifacts_AddsGitignoredContext is the #522 regression: the git
+// listing leaves out a generated CLAUDE.md, AGENTS.md and .claude/, but a session
+// loads them, so exposure has to count them.
+func TestWithNativeArtifacts_AddsGitignoredContext(t *testing.T) {
+	// Arrange
+	root := writeRepo(t, map[string]string{
+		"CLAUDE.md":             "Read the instructions in this repository.\n",
+		"AGENTS.md":             "Always follow the conventions.\n",
+		".claude/rules/rule.md": "Always follow the repository conventions.\n",
+		"README.md":             "readme\n",
+	})
+
+	// Act
+	got := withNativeArtifacts(root, []string{"README.md"})
+
+	// Assert
+	assert.ElementsMatch(t, []string{"README.md", "CLAUDE.md", "AGENTS.md", ".claude/rules/rule.md"}, got)
+}
+
+func TestWithNativeArtifacts_KeepsOneEntryPerFile(t *testing.T) {
+	// Arrange
+	root := writeRepo(t, map[string]string{"CLAUDE.md": "x\n"})
+
+	// Act
+	got := withNativeArtifacts(root, []string{"CLAUDE.md"})
+
+	// Assert
+	assert.Equal(t, []string{"CLAUDE.md"}, got)
+}

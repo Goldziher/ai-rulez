@@ -13,6 +13,11 @@ channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
 
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+
 [[hooks]]
 id = "ai-rulez-check"
 stages = ["pre-commit"]
@@ -27,6 +32,11 @@ channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
 
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+
 [[hooks]]
 id = "ai-rulez-generate"
 stages = ["pre-commit"]
@@ -39,6 +49,11 @@ pass_filenames = false
 channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
+
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
 
 [[hooks]]
 id = "ai-rulez-recursive"
@@ -53,6 +68,11 @@ channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
 
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+
 [[hooks]]
 id = "ai-rulez-plugin-generate"
 stages = ["pre-commit"]
@@ -65,6 +85,11 @@ pass_filenames = false
 channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
+
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
 
 [[hooks]]
 id = "ai-rulez-plugin-verify"
@@ -92,3 +117,8 @@ pass_filenames = false
 channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
+
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
