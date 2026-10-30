@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -137,6 +138,10 @@ func bundleCodexAssets(m *Manifest, baseDir string) ([]config.OutputFile, error)
 	}
 	paths := []string{m.Interface.ComposerIcon, m.Interface.Logo, m.Interface.LogoDark}
 	paths = append(paths, m.Interface.Screenshots...)
+	// Prefer the same root as the include globs, the plugin content root:
+	// SourceDir can be the output root, whose bundled copy may be stale. It
+	// stays the fallback for assets kept beside the config dir.
+	root := pluginContentRoot(m)
 	var outputs []config.OutputFile
 	for _, path := range paths {
 		if path == "" {
@@ -146,7 +151,11 @@ func bundleCodexAssets(m *Manifest, baseDir string) ([]config.OutputFile, error)
 		if filepath.IsAbs(path) || clean == ".." || strings.HasPrefix(filepath.ToSlash(clean), "../") {
 			return nil, oops.With("path", path).Errorf("Codex asset path must stay inside the plugin root")
 		}
-		out, err := passthroughFile(m.SourceDir, clean, filepath.Join(baseDir, clean))
+		sourceRoot := root
+		if _, statErr := os.Lstat(filepath.Join(root, clean)); statErr != nil {
+			sourceRoot = m.SourceDir
+		}
+		out, err := passthroughFile(sourceRoot, clean, filepath.Join(baseDir, clean))
 		if err != nil {
 			return nil, err
 		}

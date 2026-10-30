@@ -40,7 +40,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3218 89f40f5853989017e9c6af8b3b309afc49fc1772f72da0ad6702b5804bd02868
-.ai-rulez/.generated-manifest.local.json file 0644 8158 8be78f1e084e8978d2c9c5b0082b3bd161609ab00beb232bcb6ad85c841a4dc3
+.ai-rulez/.generated-manifest.local.json file 0644 8158 b1d1e2ad67ce1995d7def14bb696271fd4ada7a4e10f1898288cb8b15e2d54ce
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

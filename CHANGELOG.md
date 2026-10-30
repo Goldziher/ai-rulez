@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.9.7] - 2026-10-30
+
+### Fixed
+
+- **Codex interface assets are read from the plugin content root.** `composer_icon`, `logo`, `logo_dark` and
+  `screenshots` were copied from the project directory, which is the plugin output root when the config
+  directory sits inside it, so the stale bundled copy was read as the source: edits to the source never
+  reached the bundle, `verify --plugin` passed, and deleting the output `assets/` made `generate --plugin`
+  fail. They now resolve against the same root as `include` (next to `config.toml`, or under
+  `[plugin] content_root`); an asset that is not there is still read from beside the config
+  directory
+  ([#531](https://github.com/Goldziher/ai-rulez/issues/531)).
+
 ## [5.9.6] - 2026-10-30
 
 ### Fixed
