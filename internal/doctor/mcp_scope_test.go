@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -276,7 +277,7 @@ func TestCheckMCPScope_UnresolvedUserCommandWarns(t *testing.T) {
 		t.Fatalf("findings = %+v, want two", got)
 	}
 	messages := got[0].Message + got[0].Hint + got[1].Message + got[1].Hint
-	for _, want := range []string{missing, "does not exist", "ghost-binary", "is not on PATH"} {
+	for _, want := range []string{strconv.Quote(missing), "does not exist", "ghost-binary", "is not on PATH"} {
 		if !strings.Contains(messages, want) {
 			t.Errorf("findings %+v do not name %q", got, want)
 		}
