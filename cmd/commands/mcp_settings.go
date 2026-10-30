@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 )
 
@@ -123,12 +122,12 @@ func (s mcpSettings) validate() error {
 
 // loadMCPSettings resolves the settings of this run: the [mcp] table of the
 // project the server is started in, under the flags. A project that cannot be
-// read is reported and the flags alone decide; the server's own load of the
-// project reports the same problem where it matters.
+// read stops the server: serving every tool instead would silently ignore the
+// [mcp] tools allow-list, and the token cost of that is invisible to the client.
 func loadMCPSettings(ctx context.Context, flags *pflag.FlagSet) (mcpSettings, error) {
 	project, err := mcp.LoadProjectSettings(ctx, workingDir())
 	if err != nil {
-		logger.Warn("Could not read the [mcp] settings of the project; using the command line only", "error", err.Error())
+		return mcpSettings{}, oops.Wrapf(err, "read the [mcp] settings of the project")
 	}
 	settings := resolveMCPSettings(flags, project)
 	if err := settings.validate(); err != nil {
