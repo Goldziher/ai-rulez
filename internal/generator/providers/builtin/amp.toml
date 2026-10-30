@@ -60,7 +60,7 @@ style = "string"
 low = "low"
 medium = "medium"
 high = "high"
-xhigh = "high"    # Amp does not currently accept xhigh — cap to high.
+xhigh = "high" # Amp does not currently accept xhigh — cap to high.
 max = "max"
 
 [[sidecars]]

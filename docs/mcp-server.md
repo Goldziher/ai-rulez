@@ -108,9 +108,11 @@ in flag order, with later files winning. Generation fails if a placeholder canno
 
 ### Generated Self-Entry (`[mcp] self_server`)
 
-`generate` adds the ai-rulez server to the project `.mcp.json` **by default**, pinned to the version
-of the ai-rulez binary that ran it, so a project is MCP-ready out of the box. Turn it off with
-`self_server = false` or `generate --no-self-mcp`:
+`generate` adds the ai-rulez server to the project MCP file of every configured harness that reads one
+**by default** — `.mcp.json`, `opencode.json`, `.cursor/mcp.json`, `.codex/config.toml`,
+`.devin/mcp_config.json`, `.xum/mcp.jsonc` and `.gemini/settings.json` — pinned to the version of the
+ai-rulez binary that ran it, so a project is MCP-ready out of the box. User scope never carries it:
+MCP output is project-only. Turn it off with `self_server = false` or `generate --no-self-mcp`:
 
 ```toml
 [mcp]

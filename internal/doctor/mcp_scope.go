@@ -11,25 +11,31 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // checkMCPScope compares the project's MCP servers with the same-named servers
-// in the user and local scope of each configured harness, and reports generated
-// servers that differ only by name while pointing at the same url. It reads
-// files outside the project, so it runs only when Options.ReadUserMCP is set.
+// in the user and local scope of each configured harness, reports generated
+// servers that differ only by name while pointing at the same url, and reports a
+// user-scope server whose launch command does not resolve. It reads files outside
+// the project, so it runs only when Options.ReadUserMCP is set.
 func checkMCPScope(_ context.Context, s *state) []Finding {
 	if s.cfg == nil || !s.opts.ReadUserMCP {
 		return nil
 	}
-	return MCPScopeFindings(s.cfg)
+	return MCPScopeFindings(s.cfg, s.opts.LookPath)
 }
 
 // MCPScopeFindings is the mcp-scope check on its own, for callers that already
 // hold the configuration (validate --strict). It reads user files, so callers
-// must gate it behind an explicit opt-in.
-func MCPScopeFindings(cfg *config.Config) []Finding {
+// must gate it behind an explicit opt-in. A nil lookPath resolves binaries on
+// PATH.
+func MCPScopeFindings(cfg *config.Config, lookPath func(string) (string, error)) []Finding {
 	if cfg == nil {
 		return nil
+	}
+	if lookPath == nil {
+		lookPath = runner.LookPath
 	}
 	project := projectScopeServers(cfg)
 	var out []Finding
@@ -38,7 +44,7 @@ func MCPScopeFindings(cfg *config.Config) []Finding {
 	if err != nil {
 		return out // no home directory: nothing to compare the project against
 	}
-	return append(out, scopeConflictFindings(cfg, project, home)...)
+	return append(out, scopeConflictFindings(cfg, project, home, lookPath)...)
 }
 
 // mcpScopeEntry is an MCP server as written in a JSON MCP document. A harness
@@ -86,18 +92,27 @@ func (s mcpScopeServer) remote() bool {
 // configured harness missing here is skipped rather than guessed at.
 type harnessMCPScope struct {
 	shadowing func(home, projectDir string) map[string]mcpScopeServer
-	remove    func(scope, name string) string
+	remove    func(scope, name, origin string) string
 }
 
 // harnessMCPScopes lists the harnesses with a known user/local MCP scope. Claude
 // Code keeps both in ~/.claude.json: the top-level mcpServers is the user scope,
 // and projects[<dir>].mcpServers is the local scope. Its user-scope file is the
 // global_mcp_path its provider spec declares (internal/generator/providers).
+// OpenCode keeps one user-level opencode.json and no per-project MCP scope.
 func harnessMCPScopes() map[string]harnessMCPScope {
 	return map[string]harnessMCPScope{
 		string(config.PresetClaude): {
 			shadowing: claudeShadowing,
-			remove:    func(scope, name string) string { return "claude mcp remove " + name + " -s " + scope },
+			remove: func(scope, name, _ string) string {
+				return "claude mcp remove " + name + " -s " + scope
+			},
+		},
+		string(config.PresetOpenCode): {
+			shadowing: opencodeShadowing,
+			remove: func(_, name, origin string) string {
+				return fmt.Sprintf("remove %q from %s", name, origin)
+			},
 		},
 	}
 }
@@ -147,6 +162,90 @@ func entryServer(name, scope, origin string, e mcpScopeEntry) mcpScopeServer {
 		Command: e.Command, Args: append([]string(nil), e.Args...),
 		URL: e.URL, Transport: transport,
 	}
+}
+
+// opencodeServersKey is the canonical nested map of OpenCode v2 servers.
+const opencodeServersKey = "servers"
+
+// opencodeEntry is a server as OpenCode's opencode.json spells it: the v2 shape
+// (`mcp.servers.<name>`, switched off with `disabled`) and the v1 compat shape
+// (`mcp.<name>`, switched off with `enabled`) share the command array.
+type opencodeEntry struct {
+	Type     string   `json:"type"`
+	URL      string   `json:"url"`
+	Command  []string `json:"command"`
+	Disabled bool     `json:"disabled"`
+	Enabled  *bool    `json:"enabled"`
+}
+
+// active reports whether OpenCode starts the server.
+func (e opencodeEntry) active() bool {
+	if e.Disabled {
+		return false
+	}
+	return e.Enabled == nil || *e.Enabled
+}
+
+// opencodeUserConfigPath is the user-level opencode.json OpenCode reads:
+// $XDG_CONFIG_HOME/opencode/opencode.json, or ~/.config/opencode/opencode.json.
+func opencodeUserConfigPath(home string) string {
+	base := ambient.Getenv(ambient.OS(), "XDG_CONFIG_HOME")
+	if base == "" || !filepath.IsAbs(base) {
+		base = filepath.Join(home, ".config")
+	}
+	return filepath.Join(base, "opencode", "opencode.json")
+}
+
+// opencodeShadowing reads the user-level MCP servers OpenCode keeps in
+// opencode.json, in both shapes it accepts: the canonical `mcp.servers` map and
+// the v1 compat `mcp.<name>` members. A missing or unreadable file is not an
+// error: it simply holds no shadowing server.
+func opencodeShadowing(home, _ string) map[string]mcpScopeServer {
+	path := opencodeUserConfigPath(home)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var doc struct {
+		MCP map[string]json.RawMessage `json:"mcp"`
+	}
+	if json.Unmarshal(data, &doc) != nil {
+		return nil
+	}
+	origin := displayHomePath(home, path)
+	out := map[string]mcpScopeServer{}
+	add := func(servers map[string]opencodeEntry) {
+		for name, e := range servers {
+			if !e.active() {
+				continue
+			}
+			server := mcpScopeServer{Name: name, Scope: "user", Origin: origin, URL: e.URL, Transport: e.Type}
+			if len(e.Command) > 0 {
+				server.Command = e.Command[0]
+				server.Args = append([]string(nil), e.Command[1:]...)
+			}
+			out[name] = server
+		}
+	}
+	if raw, ok := doc.MCP[opencodeServersKey]; ok {
+		var servers map[string]opencodeEntry
+		if json.Unmarshal(raw, &servers) == nil {
+			add(servers)
+		}
+	}
+	for name, raw := range doc.MCP {
+		if name == opencodeServersKey || name == "timeout" {
+			continue
+		}
+		if _, nested := out[name]; nested {
+			continue
+		}
+		var entry opencodeEntry
+		if json.Unmarshal(raw, &entry) == nil {
+			add(map[string]opencodeEntry{name: entry})
+		}
+	}
+	return out
 }
 
 // projectMCPFile is the committed MCP document the project scope lives in.
@@ -201,8 +300,10 @@ func selfScopeServer(cfg *config.Config) mcpScopeServer {
 }
 
 // scopeConflictFindings reports each project server whose name is also defined
-// in a configured harness's user or local scope with a different endpoint.
-func scopeConflictFindings(cfg *config.Config, project []mcpScopeServer, home string) []Finding {
+// in a configured harness's user or local scope with a different endpoint, and
+// each user-scope server whose launch command cannot be resolved: the harness
+// fails to start those with "NotFound: ChildProcess.spawn".
+func scopeConflictFindings(cfg *config.Config, project []mcpScopeServer, home string, lookPath func(string) (string, error)) []Finding {
 	harnesses := map[string]bool{}
 	for _, n := range config.IndividualPresetNames() {
 		harnesses[n] = true
@@ -222,6 +323,7 @@ func scopeConflictFindings(cfg *config.Config, project []mcpScopeServer, home st
 			continue
 		}
 		shadow := scope.shadowing(home, cfg.BaseDir)
+		out = append(out, unresolvedCommandFindings(name, shadow, lookPath)...)
 		for _, pj := range project {
 			other, ok := shadow[pj.Name]
 			if !ok || pj.endpoint() == other.endpoint() {
@@ -231,7 +333,7 @@ func scopeConflictFindings(cfg *config.Config, project []mcpScopeServer, home st
 				Check: CheckMCPScope, Severity: SeverityWarning, Path: projectMCPFile,
 				Message: fmt.Sprintf("MCP server %q is defined in multiple scopes with different endpoints: project (%s: %s) and %s (%s: %s). OAuth tokens are stored per endpoint, so authenticating in one context will not carry over.",
 					pj.Name, pj.Origin, pj.endpoint(), other.Scope, other.Origin, other.endpoint()),
-				Hint: fmt.Sprintf("remove the %s copy: %s", other.Scope, scope.remove(other.Scope, pj.Name)),
+				Hint: fmt.Sprintf("remove the %s copy: %s", other.Scope, scope.remove(other.Scope, pj.Name, other.Origin)),
 			})
 		}
 	}
@@ -243,6 +345,50 @@ func scopeConflictFindings(cfg *config.Config, project []mcpScopeServer, home st
 		})
 	}
 	return out
+}
+
+// unresolvedCommandFindings reports the user-scope stdio servers of one harness
+// whose launch executable cannot be resolved, so the harness cannot start them.
+func unresolvedCommandFindings(harness string, shadow map[string]mcpScopeServer, lookPath func(string) (string, error)) []Finding {
+	names := make([]string, 0, len(shadow))
+	for name := range shadow {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var out []Finding
+	for _, name := range names {
+		server := shadow[name]
+		if server.remote() || server.Command == "" {
+			continue
+		}
+		problem := commandProblem(server.Command, lookPath)
+		if problem == "" {
+			continue
+		}
+		out = append(out, Finding{
+			Check: CheckMCPScope, Severity: SeverityWarning,
+			Message: fmt.Sprintf("MCP server %q in %s's %s scope (%s) runs %q, which %s; the harness cannot start it",
+				server.Name, harness, server.Scope, server.Origin, server.Command, problem),
+			Hint: fmt.Sprintf("install it, point the entry at a command that exists (for example npx -y ai-rulez@latest mcp), or remove it from %s", server.Origin),
+		})
+	}
+	return out
+}
+
+// commandProblem says how a launch executable does not resolve, or "" when it
+// does. An absolute path is checked as a file; anything else is looked up on
+// PATH, the way the harness launches it.
+func commandProblem(command string, lookPath func(string) (string, error)) string {
+	if filepath.IsAbs(command) {
+		if _, err := os.Stat(command); err != nil {
+			return "does not exist"
+		}
+		return ""
+	}
+	if _, err := lookPath(command); err != nil {
+		return "is not on PATH"
+	}
+	return ""
 }
 
 // duplicateURLFindings reports generated remote servers that differ only by name

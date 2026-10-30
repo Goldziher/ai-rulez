@@ -48,8 +48,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
-.config/ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-.config/ai-rulez/.generated-manifest.local.json file 0644 5116 be875027037946b3f724e2b1074451222e96f872db5f358222d61ef9ce38f419
+.config/ai-rulez/.generated-manifest.json file 0644 2358 f10037af510ebed2084239beecf98be84d174ead8808d83fa62294bd6df6d54e
+.config/ai-rulez/.generated-manifest.local.json file 0644 5289 91241c1c42287f9451c208c8b1ba41e902482322f928338fab77a311666fe5c7
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .config/ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -88,7 +88,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 273 b11d5669c39696fe45294c5c77043ad95ad203a65bc00263ad086862d9881786
 .cursor/rules/auto.mdc file 0644 284 decb75b36a9b11412b482734cfaf792df780540ff306db300aa9ee2fb3d833d1
@@ -116,7 +116,7 @@ exit: 0
 .config/ai-rulez/config.toml:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 .config/ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
 .config/ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
-.cursor/mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.cursor/mcp.json:11: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 
 validation: 0 error(s), 8 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         2
@@ -170,8 +170,8 @@ INFO  Configuration is valid path=$ROOT/.config/ai-rulez
 .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
-.config/ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-.config/ai-rulez/.generated-manifest.local.json file 0644 5116 be875027037946b3f724e2b1074451222e96f872db5f358222d61ef9ce38f419
+.config/ai-rulez/.generated-manifest.json file 0644 2358 f10037af510ebed2084239beecf98be84d174ead8808d83fa62294bd6df6d54e
+.config/ai-rulez/.generated-manifest.local.json file 0644 5289 91241c1c42287f9451c208c8b1ba41e902482322f928338fab77a311666fe5c7
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .config/ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -210,7 +210,7 @@ INFO  Configuration is valid path=$ROOT/.config/ai-rulez
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 273 b11d5669c39696fe45294c5c77043ad95ad203a65bc00263ad086862d9881786
 .cursor/rules/auto.mdc file 0644 284 decb75b36a9b11412b482734cfaf792df780540ff306db300aa9ee2fb3d833d1

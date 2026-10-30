@@ -695,17 +695,18 @@ jobs:
 
   update_action_tag:
     name: Advance the major GitHub Action tag
-    needs: [
-      meta,
-      create_release,
-      build,
-      checksums,
-      provenance,
-      finalize_release,
-      publish_npm,
-      publish_pypi,
-      publish_homebrew,
-    ]
+    needs:
+      [
+        meta,
+        create_release,
+        build,
+        checksums,
+        provenance,
+        finalize_release,
+        publish_npm,
+        publish_pypi,
+        publish_homebrew,
+      ]
     # Existing distributions and an already-public release are intentionally skipped on reruns.
     # Failed or cancelled dependencies must never promote the floating Action ref.
     if: >-

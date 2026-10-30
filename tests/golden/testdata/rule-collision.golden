@@ -29,8 +29,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3167 436d22bb098b309541dd6201e9a0cda45dcdd5e06c433e7488aa4919685e545c
-.ai-rulez/.generated-manifest.local.json file 0644 7103 caf1c441107bc0759d86779166744035ada235d585a8cb48ea558c8594bee388
+.ai-rulez/.generated-manifest.json file 0644 3225 538e32f1db376bbbd768ad463d9e4fac6566e3959c47f2ada5f30e10de6cf1c2
+.ai-rulez/.generated-manifest.local.json file 0644 7469 ff29877923228f878874648128d93d51df4afc65f75d489593bd15d8de9d787f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -94,7 +94,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -130,7 +130,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 1029 48ab26f03e67a957600362754d210bfa303b4dc003b5d4564fc728a5f6604bbc
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755

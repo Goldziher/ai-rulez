@@ -122,7 +122,7 @@ name: helper
 # Helper
 <<<<
 .codex/ dir 0755
-.codex/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
+.codex/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -130,7 +130,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -464,7 +463,7 @@ description: Helps
 # Helper
 <<<<
 .config/opencode/ dir 0755
-.config/opencode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
+.config/opencode/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -472,7 +471,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -822,7 +820,7 @@ name: buddy
 
 # Buddy
 <<<<
-.copilot/copilot-instructions.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
+.copilot/copilot-instructions.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -830,7 +828,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
@@ -915,7 +912,7 @@ name: buddy
 }
 <<<<
 .gemini/ dir 0755
-.gemini/GEMINI.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
+.gemini/GEMINI.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -923,7 +920,6 @@ Project: me
 Source: .config/ai-rulez/config.toml
 
 NEVER edit this file - modify .config/ai-rulez/ content instead
-Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez

@@ -66,8 +66,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-+ .ai-rulez/.generated-manifest.json file 0644 2251 a9283820890af575caef14ea7bb50782019caa08cc68388f4eaff275225471b2
-+ .ai-rulez/.generated-manifest.local.json file 0644 5231 1f6d5cfc7a639d26f1037bc1962cfb12f27968bdf92b4d7430aba45b93595538
++ .ai-rulez/.generated-manifest.json file 0644 2309 f2d5d7ff7f6addf5da54682fb03aa5f8391184e5a9b96d430c0a864f2673075b
++ .ai-rulez/.generated-manifest.local.json file 0644 5427 62836e2577efdfa0eb588ae46841b59d358308e4269ca3faeb6ef71397197b90
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -102,7 +102,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 + .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 + .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-+ .cursor/mcp.json file 0600 335 009e0f810b76d1e1cb4d6fba539baf8798e8123c9f21588aa2549927c0218893
++ .cursor/mcp.json file 0600 463 420f9bc1ca0ac7aa800ddd85460434507393ae9969b7dfa82b14d7177af8ed9b
 + .cursor/rules/ dir 0755
 + .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 + .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -129,8 +129,8 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=35
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-~ .ai-rulez/.generated-manifest.local.json file 0644 5231 904c5af2926f679f7ea230a059b3d4f2c5cb059b8017d3b65cba5f69c833c1cc
-~ .cursor/mcp.json file 0600 343 6ef00d0b6bd8414858717a715a1c5f07ef9a722f90d0acb3e450025b645ccfa5
+~ .ai-rulez/.generated-manifest.local.json file 0644 5427 cea131e59ce087efa1d521b51e5eccf20e245bdde27a9c2dc3056f419da8d92d
+~ .cursor/mcp.json file 0600 471 92e148ff4f05a7a980bf979c30371d910cf1ab7a72effb70daaf58791c59b0d3
 ~ .mcp.json file 0600 539 1c020874e496e9dab075503b306f275288355aa9ff970a15794a8bf7b178b846
 --- home tree
 (no change)
@@ -146,9 +146,9 @@ exit: 2
 .ai-rulez/config.toml:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 .ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
 .ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
-.cursor/mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
-.cursor/mcp.json:10: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
-.cursor/mcp.json:15: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
+.cursor/mcp.json:11: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.cursor/mcp.json:18: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
+.cursor/mcp.json:23: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
 .mcp.json:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 .mcp.json:19: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
 .mcp.json:25: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
@@ -201,8 +201,8 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2251 a9283820890af575caef14ea7bb50782019caa08cc68388f4eaff275225471b2
-.ai-rulez/.generated-manifest.local.json file 0644 5231 904c5af2926f679f7ea230a059b3d4f2c5cb059b8017d3b65cba5f69c833c1cc
+.ai-rulez/.generated-manifest.json file 0644 2309 f2d5d7ff7f6addf5da54682fb03aa5f8391184e5a9b96d430c0a864f2673075b
+.ai-rulez/.generated-manifest.local.json file 0644 5427 cea131e59ce087efa1d521b51e5eccf20e245bdde27a9c2dc3056f419da8d92d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -265,7 +265,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0600 343 6ef00d0b6bd8414858717a715a1c5f07ef9a722f90d0acb3e450025b645ccfa5
+.cursor/mcp.json file 0600 471 92e148ff4f05a7a980bf979c30371d910cf1ab7a72effb70daaf58791c59b0d3
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22

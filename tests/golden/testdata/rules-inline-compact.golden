@@ -73,7 +73,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 echo review
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3705 fd018e4b9d6cdab3bea8615aa4f20b708af204eec1cdd681d9bee3ddd26191fb
+.ai-rulez/.generated-manifest.json file 0644 3763 c678e33ab8947aba2399d2c5f194d4e7a941aa3dcd8f68bfe194297832aaff15
 >>>>
 {
   "version": "1",
@@ -146,6 +146,10 @@ echo review
     ".cursor/mcp.json": [
       [
         "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
         "local-tool"
       ],
       [
@@ -190,7 +194,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7865 0484cbf1d2586940826e1bd8d8e43d894f18f8405106a3d4ba1ade9300f6b885
+.ai-rulez/.generated-manifest.local.json file 0644 8231 aecb8187ca4b1e300a087e8c0b02c5daa98ad27830ac2a0a86c1b900d544fe37
 >>>>
 {
   "version": "1",
@@ -203,8 +207,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "0fb663e09eec397ca9c7390952c03770b854923fe56bbec5d8045628af555a2b",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
         ]
       },
       {
@@ -292,7 +296,7 @@ echo review
           "preToolUse"
         ],
         "elementSums": [
-          "0f3d3a6da035793226a00d415adaea604f4ab2e002a76e616908a35fca165002",
+          "1178d499f2f178dfe2a7bb097d17d4f33093ecfca02c1251ba2a8df7152e0c65",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -307,6 +311,13 @@ echo review
       }
     ],
     ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      },
       {
         "path": [
           "mcpServers",
@@ -367,6 +378,14 @@ echo review
       {
         "path": [
           "servers",
+          "ai-rulez"
+        ],
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9",
+        "local": true
+      },
+      {
+        "path": [
+          "servers",
           "local-tool"
         ],
         "sum": "945b1d10c94e3e21c1d7b5049b68ba05b78e1bfd4b03cb20492aaea75835dab4",
@@ -422,23 +441,23 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "e948f3d22909c9ac75e63b4609ce7c70f72e6299a1e0517427ab609af9481207",
+    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688",
-    ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".github/hooks/ai-rulez.json": "ea6f6fcb4cdcfb4a967eefb9b9faf6060e40dd46303c9867a368f27b505705cf",
+    ".cursor/hooks.json": "cbfd5f29a74a0ee11573eecd292c6773c4827680d02ef596882222f2dce75e60",
+    ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
+    ".github/hooks/ai-rulez.json": "8c1d7e2378ce6cd0fcafe1006ad4090021d7902c0a525866def709fcb200e57c",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",
     ".junie/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".junie/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
-    ".vscode/mcp.json": "c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7",
+    ".vscode/mcp.json": "d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e",
     ".vscode/settings.json": "3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703"
   }
 }
@@ -944,10 +963,18 @@ Cut a release.
   "version": 1
 }
 <<<<
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx"
+    },
     "local-tool": {
       "args": [
         "-y",
@@ -1459,10 +1486,19 @@ echo review
 }
 <<<<
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 >>>>
 {
   "servers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
     "local-tool": {
       "args": [
         "-y",

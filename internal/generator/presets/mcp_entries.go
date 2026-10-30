@@ -189,29 +189,68 @@ func nativeMCPEntry(server *config.MCPServer) map[string]any {
 	return entry
 }
 
+// selfMCPServer is ai-rulez's own server ([mcp] self_server, on by default) as a
+// config entry, so a preset that renders one entry per server writes it exactly
+// like a declared [[mcp_servers]] entry. It returns nil when the self server is
+// off or the project already declares a server of that name, which stays the
+// author's.
+func selfMCPServer(cfg *config.Config) *config.MCPServer {
+	if cfg == nil || !cfg.HasSelfServer() {
+		return nil
+	}
+	if _, declared := cfg.MCPServers[config.SelfMCPServerName]; declared {
+		return nil
+	}
+	entry := cfg.SelfMCPServerEntry()
+	server := &config.MCPServer{Name: config.SelfMCPServerName, Transport: config.TransportStdio}
+	server.Command, _ = entry[keyCommand].(string) //nolint:errcheck // a non-string command stays empty
+	switch args := entry[keyArgs].(type) {
+	case []string:
+		server.Args = append([]string(nil), args...)
+	case []any:
+		for _, arg := range args {
+			if text, ok := arg.(string); ok {
+				server.Args = append(server.Args, text)
+			}
+		}
+	}
+	if env, ok := entry[keyEnv].(map[string]string); ok && len(env) > 0 {
+		server.Env = env
+	}
+	return server
+}
+
 // mcpEntries renders every complete, expressible server through build, keyed by
-// name. A server carrying an oauth block that build cannot express is skipped
-// with a warning rather than written without the client it needs.
+// name. The self server is one of them, so a tool that reads project MCP servers
+// gets ai-rulez without the author declaring it a second time. A server carrying
+// an oauth block that build cannot express is skipped with a warning rather than
+// written without the client it needs.
 func mcpEntries(cfg *config.Config, build func(*config.MCPServer) map[string]any) map[string]any {
 	entries := map[string]any{}
 	if cfg == nil {
 		return entries
 	}
-	for name, server := range cfg.MCPServers {
+	add := func(name string, server *config.MCPServer) {
 		if server == nil {
-			continue
+			return
 		}
 		if isRemoteServer(server) && server.URL == "" || !isRemoteServer(server) && server.Command == "" {
-			continue
+			return
 		}
 		entry := build(server)
 		if entry == nil {
 			if server.IsEnabled() && server.HasOAuth() {
 				cfg.Diag.Warn("skipping MCP server that declares an oauth block: this tool has no oauth block, so a pre-registered client cannot be written", "server", name)
 			}
-			continue
+			return
 		}
 		entries[name] = entry
+	}
+	for name, server := range cfg.MCPServers {
+		add(name, server)
+	}
+	if self := selfMCPServer(cfg); self != nil {
+		add(self.Name, self)
 	}
 	return entries
 }

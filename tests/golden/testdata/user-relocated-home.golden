@@ -49,7 +49,7 @@ INFO  User-level generation complete files=25
 .agents/skills/helper/ dir 0755
 .agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 .claude/ dir 0755
-.claude/CLAUDE.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
+.claude/CLAUDE.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 .claude/agents/ dir 0755
 .claude/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 .claude/rules/ dir 0755
@@ -80,7 +80,7 @@ INFO  User-level generation complete files=25
 .config/ai-rulez/skills/helper/ dir 0755
 .config/ai-rulez/skills/helper/SKILL.md file 0644 49 6b7435a4fcbe0e1b1c9be84bf3c7cde3916532f00fc0c75cd3a44a8b81349438
 .config/opencode/ dir 0755
-.config/opencode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
+.config/opencode/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 .config/opencode/agents/ dir 0755
 .config/opencode/agents/buddy.md file 0644 134 81ae320b25c504b95e130059b3a32a3ae4cff078f93dd97cc607adc182d19508
 .config/opencode/opencode.json file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
@@ -92,7 +92,7 @@ INFO  User-level generation complete files=25
 .copilot/ dir 0755
 .copilot/agents/ dir 0755
 .copilot/agents/buddy.agent.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-.copilot/copilot-instructions.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
+.copilot/copilot-instructions.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
 .copilot/hooks/ dir 0755
 .copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
 .copilot/instructions/ dir 0755
@@ -105,13 +105,13 @@ INFO  User-level generation complete files=25
 .cursor/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 .gemini/ dir 0755
-.gemini/GEMINI.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
+.gemini/GEMINI.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 .gemini/agents/ dir 0755
 .gemini/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 .gemini/settings.json file 0644 322 da7a6947eb7aab4b4d90cfc67845a253729cd3c89da99b93538e534f4aaca3a6
 elsewhere/ dir 0755
 elsewhere/codex/ dir 0755
-elsewhere/codex/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
+elsewhere/codex/AGENTS.md file 0644 433 3ef1a83f541b7f1087df08b6b6b705a69090d7b48960e90b8aa55e691f0039bd
 elsewhere/codex/agents/ dir 0755
 elsewhere/codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
 elsewhere/codex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924

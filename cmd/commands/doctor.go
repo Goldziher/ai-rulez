@@ -44,8 +44,10 @@ matches the config, and the tool behind each preset is on PATH (info only).
 
 With --mcp-user-scope it also compares the project MCP servers with the
 same-named servers in a configured harness's user or local scope (for example
-~/.claude.json), naming both endpoints and the removal command, and reports
-generated servers that differ only by name while pointing at the same url. That
+~/.claude.json or ~/.config/opencode/opencode.json), naming both endpoints and
+the removal command, reports generated servers that differ only by name while
+pointing at the same url, and warns about a user-scope server whose launch
+command is a path that does not exist or a binary that is not on PATH. That
 check reads files outside the project, so it is off by default.
 
 Findings are errors, warnings or info.
@@ -71,7 +73,7 @@ func init() {
 	addJSONFormat(DoctorCmd.Flags(), &doctorJSON, "")
 	specProfile.String(DoctorCmd.Flags(), &doctorProfile, "Profile to render for the drift and gitignore checks (default: from config or 'default')")
 	specNoLocal.Bool(DoctorCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
-	DoctorCmd.Flags().BoolVar(&doctorMCPUserScope, "mcp-user-scope", false, "Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); off by default")
+	DoctorCmd.Flags().BoolVar(&doctorMCPUserScope, "mcp-user-scope", false, "Also check MCP servers against the configured harnesses' user and local scopes, and warn about a user-scope server whose launch command does not resolve (reads files outside the project, for example ~/.claude.json or ~/.config/opencode/opencode.json); off by default")
 }
 
 // runDoctor runs the diagnostics, prints the report to out and returns the

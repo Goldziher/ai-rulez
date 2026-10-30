@@ -238,12 +238,18 @@ func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config)
 	}, nil
 }
 
-// xumServers maps the configured servers onto Xum's mcp.jsonc entries.
+// xumServers maps the configured servers and ai-rulez's own server onto Xum's
+// mcp.jsonc entries.
 func xumServers(cfg *config.Config) map[string]interface{} {
 	servers := map[string]interface{}{}
 	for name, server := range cfg.MCPServers {
 		if entry := xumMCPEntry(cfg, server); entry != nil {
 			servers[name] = entry
+		}
+	}
+	if self := selfMCPServer(cfg); self != nil {
+		if entry := xumMCPEntry(cfg, self); entry != nil {
+			servers[self.Name] = entry
 		}
 	}
 	return servers

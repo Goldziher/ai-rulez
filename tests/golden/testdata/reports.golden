@@ -44,8 +44,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-.ai-rulez/.generated-manifest.local.json file 0644 12676 1e5397fe83975e92ef99e2e086716d6f44237309d4e0e1624e9ab2a83845bf9a
+.ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
+.ai-rulez/.generated-manifest.local.json file 0644 13405 2b03d4fe6a584e4c37c052be634f7b1451c51f6b4109e898ecbddf85e59742c2
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -102,7 +102,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -116,7 +116,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -173,12 +173,12 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -242,8 +242,8 @@ runtime codex — 10 files
     skill bodies (4)                                             73
     agent bodies (2)                                             56
     per-file provenance hashes (3)                              145
-  unmodeled                                                     250
-    sidecar documents (2)                                       250
+  unmodeled                                                     280
+    sidecar documents (2)                                       280
 
 runtime gemini — 4 files
   always loaded                                                 290
@@ -278,8 +278,8 @@ runtime cursor — 20 files
     agent bodies (2)                                             40
     skill resources (2)                                          16
     per-file provenance hashes (11)                             505
-  unmodeled                                                     656
-    sidecar documents (4)                                       602
+  unmodeled                                                     697
+    sidecar documents (4)                                       643
     unclassified outputs                                         54
 
 runtime copilot — 14 files
@@ -297,8 +297,8 @@ runtime copilot — 14 files
     agent bodies (2)                                             40
     skill resources (2)                                          16
     per-file provenance hashes (9)                              407
-  unmodeled                                                     472
-    sidecar documents (3)                                       334
+  unmodeled                                                     520
+    sidecar documents (3)                                       382
     unclassified outputs                                        138
 
 runtime opencode — 10 files
@@ -313,8 +313,8 @@ runtime opencode — 10 files
     agent bodies (2)                                             39
     skill resources (2)                                          16
     per-file provenance hashes (6)                              277
-  unmodeled                                                   2,692
-    sidecar documents                                           240
+  unmodeled                                                   2,743
+    sidecar documents                                           291
     unclassified outputs                                      2,452
 
 Headline always-loaded surface: 483 tokens (claude, the largest single runtime)
@@ -1019,10 +1019,10 @@ exit: 2
 .ai-rulez/config.toml:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 .ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
 .ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
-.cursor/mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
-.vscode/mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
-.vscode/mcp.json:10: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
-.vscode/mcp.json:16: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
+.cursor/mcp.json:11: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.vscode/mcp.json:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.vscode/mcp.json:19: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
+.vscode/mcp.json:25: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
 
 validation: 2 error(s), 9 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         3
@@ -1081,8 +1081,8 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-.ai-rulez/.generated-manifest.local.json file 0644 12676 1e5397fe83975e92ef99e2e086716d6f44237309d4e0e1624e9ab2a83845bf9a
+.ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
+.ai-rulez/.generated-manifest.local.json file 0644 13405 2b03d4fe6a584e4c37c052be634f7b1451c51f6b4109e898ecbddf85e59742c2
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -1139,7 +1139,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -1153,7 +1153,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -1210,12 +1210,12 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

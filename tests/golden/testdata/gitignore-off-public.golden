@@ -23,8 +23,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2306 6d3867203b3dc2894abecf9ec6767b18bc6c1a104f27ba55c5dbd8ef71018780
-.ai-rulez/.generated-manifest.local.json file 0644 5122 6085a09b9b480bf76a1282790f10270a9748e17711cdd386b7e403136d5dd47b
+.ai-rulez/.generated-manifest.json file 0644 2364 5d15f92d9f17b13e02889ccd0e62fccf185a7f7521c616aae56578be8d687053
+.ai-rulez/.generated-manifest.local.json file 0644 5295 c8151903aaf6ddddb8b69eb07f34137a23df54ee959b2e46d089dc52d49f6713
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -87,7 +87,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 212 8ebb7bb62f1ec2047fca1ccf2d603072ac8ef5fa3c70b6d1c830f07e316fd2d6
+.cursor/mcp.json file 0644 340 cee20867160dad3acd5253282db87a9859223405ebfdb2d94f32f255494d5b85
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22

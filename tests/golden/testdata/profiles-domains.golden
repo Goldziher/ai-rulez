@@ -45,8 +45,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
-.ai-rulez/.generated-manifest.local.json file 0644 12676 1e5397fe83975e92ef99e2e086716d6f44237309d4e0e1624e9ab2a83845bf9a
+.ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
+.ai-rulez/.generated-manifest.local.json file 0644 13405 2b03d4fe6a584e4c37c052be634f7b1451c51f6b4109e898ecbddf85e59742c2
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -121,7 +121,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -135,7 +135,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -192,12 +192,12 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -231,8 +231,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 --- project tree
 + .agents/skills/migrator/ dir 0755
 + .agents/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
-~ .ai-rulez/.generated-manifest.json file 0644 5305 3acd3de5ca5e6e64fc770e2ada70e0969563a11d35d25b31957d6a881ff92f14
-~ .ai-rulez/.generated-manifest.local.json file 0644 12774 ef9544b388a71c750e44fcf833156082abd9ab7dc7a6c32d6693f070137ade2f
+~ .ai-rulez/.generated-manifest.json file 0644 5473 f66c86b335b5c633e8f508727bb514c98b34741f03fe3273c31475adf5307f6f
+~ .ai-rulez/.generated-manifest.local.json file 0644 13503 69ffc1749ef3eb9bfa6a6911aef5f23c7ed89833aca0d0877110fd93f4ca8649
 + .claude/agents/dba.md file 0644 141 cb3f4ff6ceb1ecbe5b61ed8b8e45ebf8383405f90e30fe2142a0d81309476888
 + .claude/rules/go.md file 0644 233 c7a7097170b9648ceddcee6262e4eccae70e71f46c64369a924c3672295411db
 + .claude/skills/migrator/ dir 0755
@@ -287,8 +287,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/SKILL.md file 0644 190 8b196dcd988ed3e4bd99fc6cf307a1bc604cbdd3c9c7e4dd002f9f8e4580e269
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
-~ .ai-rulez/.generated-manifest.json file 0644 5668 69a23694a2447edde9e0b5c864f826da931475ffb85f5ade59fb5eb3c570f6f0
-~ .ai-rulez/.generated-manifest.local.json file 0644 12998 639d785eb3e2e467469ca3bcc8bc2750dde6ae20173ca90e8b6fd43f15688a86
+~ .ai-rulez/.generated-manifest.json file 0644 5836 607b038717e0c0373304c8cedb48c6c96044b6d0c8676798ed6393c382d75069
+~ .ai-rulez/.generated-manifest.local.json file 0644 13727 bca8e4d934421ee60cff5e0214422d8a0184f70ce2909ccfbe976e25e3f5c92a
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 + .claude/skills/storybook/ dir 0755
 + .claude/skills/storybook/SKILL.md file 0644 178 c09f47a388c3ac12f48f7c195654342ccda0157e1bc08c88cedaf3e2203871d4
@@ -540,8 +540,8 @@ Profiles:
 .agents/skills/storybook/agents/ dir 0755
 .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 5668 69a23694a2447edde9e0b5c864f826da931475ffb85f5ade59fb5eb3c570f6f0
-.ai-rulez/.generated-manifest.local.json file 0644 12998 639d785eb3e2e467469ca3bcc8bc2750dde6ae20173ca90e8b6fd43f15688a86
+.ai-rulez/.generated-manifest.json file 0644 5836 607b038717e0c0373304c8cedb48c6c96044b6d0c8676798ed6393c382d75069
+.ai-rulez/.generated-manifest.local.json file 0644 13727 bca8e4d934421ee60cff5e0214422d8a0184f70ce2909ccfbe976e25e3f5c92a
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -624,7 +624,7 @@ Profiles:
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/dba.toml file 0644 84 474c38115dea275ee7a05c26f3711fd16895f16b1f510eedaa8a0e4b3ac06ab5
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -640,7 +640,7 @@ Profiles:
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/commands/storybook.md file 0644 63 a7fd88bff5ff7be7d2cb21b4e49209cbfc952cfb607e0c8742894cc0160ab066
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
-.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/mcp.json file 0644 483 d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -711,12 +711,12 @@ Profiles:
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.md file 0644 913 d438e0dad7b8ca93ce84866dee604c7f9528c48b79ab1ed8d8e986dcfffc0f39
 CLAUDE.md file 0644 518 4aba14f531d056e91465d04b7dcc4903d76d6e583ff212e71b25f8cee563cf09
 GEMINI.md file 0644 913 d438e0dad7b8ca93ce84866dee604c7f9528c48b79ab1ed8d8e986dcfffc0f39
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

@@ -6,12 +6,12 @@ exit: 0
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
 INFO  Generating with configuration profile=default
-INFO  Generation complete files=12
+INFO  Generation complete files=14
 --- project tree
 .agents/ dir 0755
 .agents/.ai-rulez/ dir 0755
-.agents/.ai-rulez/.generated-manifest.json file 0644 738 b4ea98a7cbc3ff79cd3e3d3bdc0b919f267d7356a4dc1afb337ccd5402654dfc
-.agents/.ai-rulez/.generated-manifest.local.json file 0644 916 e22bd0aad214d90637017e0859d6695df31d3bc62d55c5fe4183a9b35652c8cc
+.agents/.ai-rulez/.generated-manifest.json file 0644 1029 a016d5cfa03ca61e0094d26b34d44a38312706e846c57ae736cb835df9c8140b
+.agents/.ai-rulez/.generated-manifest.local.json file 0644 1515 569206ff0c0c67b5c9fb117b31856ccaa53261aab22deb8ed66f52531a41b7c4
 .agents/agents/ dir 0755
 .agents/agents/reviewer.md file 0644 73 8b68584d457c5a199c8dd39210934bf6927dd600f101c7f6606dab8d1acc45b6
 .agents/ai-rulez.toml file 0644 88 34049ed918dc6c714bf1c58063b2251ef08c4b2e73d9da844685aa3a0778646f
@@ -38,9 +38,11 @@ INFO  Generation complete files=12
 .codex/ dir 0755
 .codex/agents/ dir 0755
 .codex/agents/reviewer.toml file 0644 119 53bfa11fc96814e1f3453d8eb794058b9e56b98181c4607ca53ab31fc60998b5
+.codex/config.toml file 0644 79 5c8da019c1a809d9677cd68f7c6cf248ae8c28815e49f01a5668300cd1192cf7
 .cursor/ dir 0755
 .cursor/agents/ dir 0755
 .cursor/agents/reviewer.md file 0644 176 8437b48f7805a60a34a990f315c886ac21d33c552ce2900b98b7d1debfeba292
+.cursor/mcp.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 261 ea2db04491e6b2b5acd1e1e4df5214568bee267a56b020a1c1ef1aa4ea315120
 .cursor/rules/go-style.mdc file 0644 281 b0341f7e89046d96c132bc2681da2918d9a40df12bfd63489bf838a00a8b8a1d
@@ -56,7 +58,7 @@ exit: 0
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
 INFO  Generating with configuration profile=default
-INFO  Generation complete files=12
+INFO  Generation complete files=14
 --- project tree
 (no change)
 --- home tree
@@ -84,7 +86,9 @@ Clean plan (profile default)
   remove file: .claude/skills/review/SKILL.md
   remove file: .claude/skills/review/references/checklist.md
   remove file: .codex/agents/reviewer.toml
+  remove file: .codex/config.toml
   remove file: .cursor/agents/reviewer.md
+  remove file: .cursor/mcp.json
   remove file: .cursor/rules/always.mdc
   remove file: .cursor/rules/go-style.mdc
   remove file: .mcp.json
@@ -104,7 +108,7 @@ Clean plan (profile default)
   remove local manifest: .agents/.ai-rulez/.generated-manifest.local.json
 --- stderr
 INFO  source = agents: AGENTS.md and .agents/ are the source and are not written skipped=12
-Removed generated files: 12 files, 11 directories
+Removed generated files: 14 files, 11 directories
 --- project tree
 .agents/ dir 0755
 .agents/agents/ dir 0755

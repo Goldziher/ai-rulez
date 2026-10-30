@@ -119,6 +119,8 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 			cfg := &config.Config{
 				Name: "test",
 			}
+			// The self MCP server has its own test; these cases count content outputs.
+			cfg.SetSelfServer(false)
 
 			outputs, err := g.Generate(tt.content, tt.baseDir, cfg)
 

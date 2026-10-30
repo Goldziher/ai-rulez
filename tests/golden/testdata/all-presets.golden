@@ -72,7 +72,7 @@ WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so t
 WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
-INFO  Generation complete files=416
+INFO  Generation complete files=421
 WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
 --- project tree
 .agents/ dir 0755
@@ -109,8 +109,8 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 25178 a570d047adbb8b6b5cecea31e70ecffc032bb46b56a5620420a5758221dc8318
-.ai-rulez/.generated-manifest.local.json file 0644 42047 7bfee82a9ef8e15d089f0e12b28d6da81f556f044285628684541038f60f98ec
+.ai-rulez/.generated-manifest.json file 0644 25809 2f9189cc5a126b527138d285b3b7af476b7d442989de6e5527f81c6480d284a9
+.ai-rulez/.generated-manifest.local.json file 0644 43705 8bcab6e7632c3f07787fc0a783145cf7ddaab97e96b228c87b0f1aa0e4a091ef
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -285,6 +285,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+.codex/config.toml file 0644 79 5c8da019c1a809d9677cd68f7c6cf248ae8c28815e49f01a5668300cd1192cf7
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -342,6 +343,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
 .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+.cursor/mcp.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 .cursor/rules/ dir 0755
 .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
@@ -372,6 +374,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .devin/agents/tester.md file 0644 181 000e4a75e8281da1d0fc4051b5a3fe3d8c847502fbe91f3cd925eedb742c3ce2
 .devin/config.json file 0644 237 bc2afde2e8fe0bbccd3875196a2eb5ff9b24682b1445e7b7aa1f4155f0284dfb
 .devin/hooks.v1.json file 0644 376 cd48b1f3ebc1741b685095fccf0ca599fd4c7562295f650ff11eb8c85a598423
+.devin/mcp_config.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 .devin/rules/ dir 0755
 .devin/rules/always.md file 0644 267 8d22ebebb39d9a32e594528873d26b3fecd70f3345de787f36bc5d7bfabc8d95
 .devin/rules/auto.md file 0644 282 cbb82d8013eb3e2fb28f34487ba0c28eea92da8a24b57226423e7e98b7e2ba21
@@ -450,7 +453,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 5513 0414be06b749197e929917f103867fe890ee8e96aeb4a4925496a95c7afb93d2
+.gitignore file 0644 5604 cd3195c3f415789c2059548a4ba85368e9e87731cc5382f6985869ba93bbfc02
 .gitlab/ dir 0755
 .gitlab/duo/ dir 0755
 .gitlab/duo/chat-rules.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
@@ -790,6 +793,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .vibe/skills/reviewer/scripts/ dir 0755
 .vibe/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .vscode/ dir 0755
+.vscode/mcp.json file 0644 173 d4a24dbe576d13e1fe0290e02c43fdbd624b08c001e0b53938a15a6d956034d7
 .vscode/settings.json file 0644 339 a0f6f8fb3481dcdc78a69b3e02eb1cb3c6e5c605249f3c185215d9ab1f7264f9
 .warp/ dir 0755
 .warp/skills/ dir 0755
@@ -809,6 +813,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .xum/agents/ dir 0755
 .xum/agents/architect.md file 0644 223 d266198e5e1f60cb53f0332b2164bbbe91d95cbeb8ee1df88dcec487df5db029
 .xum/agents/tester.md file 0644 215 21931fb070413836dd869c7ed161217dc6206625da3d0470fb0c01a7c213a272
+.xum/mcp.jsonc file 0644 68 1c76f09a5f944e9dd78aab988e6db5a92c2cd5d7a5ef3a73786041c714d54837
 .xum/skills/ dir 0755
 .xum/skills/deployer/ dir 0755
 .xum/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
@@ -844,7 +849,7 @@ REASONIX.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b39
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 crush.json file 0644 178 46c3b80aab553b4cf7da8a9adacbde933fc98a88551cecd3befe4f2fafd532e8
 kilo.jsonc file 0644 310 c37de660f9f9f4f87a29064fff35e9a9a93423e073fbebd60fcda934e91cba5b
-opencode.json file 0644 357 202d549b5b91dfdf34d4a10d6ee1bcae5411e53bd9ac165e5dec02281ef2f19b
+opencode.json file 0644 540 1c0d3741eef3fc2e234353146bf8ed3ebbe66d1477bbae3279b637b58f2b4746
 replit.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
@@ -923,7 +928,7 @@ WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so t
 WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
-INFO  Generation complete files=416
+INFO  Generation complete files=421
 WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
 --- project tree
 (no change)
@@ -1115,6 +1120,7 @@ unchanged: .agents/skills/build/agents/openai.yaml
 unchanged: .agents/skills/ship/agents/openai.yaml
 unchanged: .codex/agents/architect.toml
 unchanged: .codex/agents/tester.toml
+unchanged: .codex/config.toml
 unchanged: .codex/rules/ai-rulez.rules
 unchanged: .codex/hooks.json
 unchanged: .commandcode/skills/deployer/SKILL.md
@@ -1137,6 +1143,7 @@ unchanged: .github/agents/architect.agent.md
 unchanged: .github/agents/tester.agent.md
 unchanged: .github/prompts/build.prompt.md
 unchanged: .github/prompts/ship.prompt.md
+unchanged: .vscode/mcp.json
 unchanged: .vscode/settings.json
 unchanged: .github/hooks/ai-rulez.json
 unchanged: .github/copilot/settings.json
@@ -1165,6 +1172,7 @@ unchanged: .cursor/commands/ship.md
 unchanged: .cursor/BUGBOT.md
 unchanged: .cursor/agents/architect.md
 unchanged: .cursor/agents/tester.md
+unchanged: .cursor/mcp.json
 unchanged: .cursor/cli.json
 unchanged: .cursor/hooks.json
 unchanged: .deepagents/skills/deployer/SKILL.md
@@ -1186,6 +1194,7 @@ unchanged: .devin/skills/reviewer/references/checklist.md
 unchanged: .devin/skills/reviewer/scripts/run.sh
 unchanged: .devin/skills/build/SKILL.md
 unchanged: .devin/skills/ship/SKILL.md
+unchanged: .devin/mcp_config.json
 unchanged: .devin/config.json
 unchanged: .devin/hooks.v1.json
 unchanged: .devin/agents/architect.md
@@ -1411,6 +1420,7 @@ unchanged: .xum/skills/reviewer/references/checklist.md
 unchanged: .xum/skills/reviewer/scripts/run.sh
 unchanged: .xum/agents/architect.md
 unchanged: .xum/agents/tester.md
+unchanged: .xum/mcp.jsonc
 unchanged: .zcode/skills/deployer/SKILL.md
 unchanged: .zcode/skills/reviewer/SKILL.md
 unchanged: .zcode/skills/reviewer/references/checklist.md
@@ -1606,6 +1616,7 @@ Clean plan (profile default)
   remove file: .codewhale/skills/reviewer/scripts/run.sh
   remove file: .codex/agents/architect.toml
   remove file: .codex/agents/tester.toml
+  remove file: .codex/config.toml
   remove file: .codex/hooks.json
   remove file: .codex/rules/ai-rulez.rules
   remove file: .commandcode/agents/architect.md
@@ -1637,6 +1648,7 @@ Clean plan (profile default)
   remove file: .cursor/commands/build.md
   remove file: .cursor/commands/ship.md
   remove file: .cursor/hooks.json
+  remove file: .cursor/mcp.json
   remove file: .cursor/rules/always.mdc
   remove file: .cursor/rules/auto.mdc
   remove file: .cursor/rules/context-architecture.mdc
@@ -1655,6 +1667,7 @@ Clean plan (profile default)
   remove file: .devin/agents/tester.md
   remove file: .devin/config.json
   remove file: .devin/hooks.v1.json
+  remove file: .devin/mcp_config.json
   remove file: .devin/rules/always.md
   remove file: .devin/rules/auto.md
   remove file: .devin/rules/context-architecture.md
@@ -1886,6 +1899,7 @@ Clean plan (profile default)
   remove file: .vibe/skills/reviewer/SKILL.md
   remove file: .vibe/skills/reviewer/references/checklist.md
   remove file: .vibe/skills/reviewer/scripts/run.sh
+  remove file: .vscode/mcp.json
   remove file: .vscode/settings.json
   remove file: .warp/skills/build/SKILL.md
   remove file: .warp/skills/deployer/SKILL.md
@@ -1895,6 +1909,7 @@ Clean plan (profile default)
   remove file: .warp/skills/ship/SKILL.md
   remove file: .xum/agents/architect.md
   remove file: .xum/agents/tester.md
+  remove file: .xum/mcp.jsonc
   remove file: .xum/skills/deployer/SKILL.md
   remove file: .xum/skills/reviewer/SKILL.md
   remove file: .xum/skills/reviewer/references/checklist.md
@@ -2251,7 +2266,7 @@ WARN  Gemini CLI does not know Claude model aliases; omitting the model so the a
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-Removed generated files: 416 files, 323 directories
+Removed generated files: 421 files, 323 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

@@ -134,7 +134,7 @@ units:
     expect:
       - code: JR-G04
         path: governance-repo/apps/web/.claude/rules/forms.md
-        contains: "paths: [\"**/*.css\"]"
+        contains: 'paths: ["**/*.css"]'
         min_severity: low
     clean_categories: [security]
     attach:
@@ -152,7 +152,7 @@ units:
     expect:
       - code: JR-G04
         path: governance-repo/tools/cli/.claude/rules/templates.md
-        contains: "paths: [\"**/*\"]"
+        contains: 'paths: ["**/*"]'
         min_severity: low
     clean_categories: [security]
     attach:
@@ -183,7 +183,7 @@ units:
     expect:
       - code: JR-G05
         path: governance-repo/services/billing/.claude/commands/refund-order.md
-        contains: "argument-hint: \"<order-id>\""
+        contains: 'argument-hint: "<order-id>"'
         min_severity: medium
     clean_categories: [security]
     attach:
@@ -204,7 +204,7 @@ units:
     expect:
       - code: JR-G05
         path: governance-repo/services/billing/.claude/commands/close-period.md
-        contains: "argument-hint: \"[period]\""
+        contains: 'argument-hint: "[period]"'
         min_severity: medium
     clean_categories: [security]
     attach:

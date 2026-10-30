@@ -149,7 +149,7 @@ policy:
   allow_implicit_invocation: false
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2183 6f1e6bb37ead795252e10ed6d89f56ff170a624bf933db63e58a843adf2bea89
+.ai-rulez/.generated-manifest.json file 0644 2242 7b53eb143c0423c36f93bbfd6ae07e82c06f86094db42b793ec2a919b6be4997
 >>>>
 {
   "version": "1",
@@ -197,6 +197,10 @@ policy:
     ".codex/config.toml": [
       [
         "mcp_servers",
+        "ai-rulez"
+      ],
+      [
+        "mcp_servers",
         "local-tool"
       ],
       [
@@ -227,7 +231,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4274 8d4321e1dceb044d88bf89261d5e85dcced1c09ddb8b915c0c6a7c1bb040d588
+.ai-rulez/.generated-manifest.local.json file 0644 4471 94aeb73aad70615d72a3646169a57ecf668e6f03e6af1c498e4f15aff3a0c237
 >>>>
 {
   "version": "1",
@@ -240,8 +244,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "0fb663e09eec397ca9c7390952c03770b854923fe56bbec5d8045628af555a2b",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
         ]
       },
       {
@@ -289,6 +293,14 @@ policy:
       {
         "path": [
           "mcp_servers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839",
+        "local": true
+      },
+      {
+        "path": [
+          "mcp_servers",
           "local-tool"
         ],
         "sum": "63f27588bcef062945d641da2109c583b19eaf735aa823fa2f28ae96832eba62",
@@ -311,7 +323,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "e634ca405f095725257cff52a8b06de8e61566c43885531deac099cd87f7af84"
+          "e5159e048283a7e3e771e85b5f2be4f10b1cac010f6002e22aa50833477a266b"
         ]
       },
       {
@@ -353,13 +365,13 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "e948f3d22909c9ac75e63b4609ce7c70f72e6299a1e0517427ab609af9481207",
+    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
-    ".codex/config.toml": "5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc",
-    ".codex/hooks.json": "39d72460cdd1b4d5ba6dba4548130be3631cdd4b434e09b913ef59144889af77",
+    ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
+    ".codex/hooks.json": "b7ba3827da403c5c133bf117abfc8ed0902b0c84d6f9444edf7a60e2c03554af",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c"
   }
 }
@@ -889,8 +901,12 @@ Test first.
 
 """
 <<<<
-.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/config.toml file 0600 314 5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c
 >>>>
+[mcp_servers.ai-rulez]
+args = ["-y", "ai-rulez@latest", "mcp"]
+command = "npx"
+
 [mcp_servers.local-tool]
 args = ["-y", "golden-mcp"]
 command = "npx"

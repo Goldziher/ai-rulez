@@ -155,7 +155,7 @@ policy:
   allow_implicit_invocation: false
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3595 877ee897a34658aebb0460571a0cc5bdff79f055deb982d81cb4aecc3f009817
+.ai-rulez/.generated-manifest.json file 0644 3763 c9410467143f6002eb1c9801779dc74d99c1e3a012746e23411406361f4500f2
 >>>>
 {
   "version": "1",
@@ -217,6 +217,10 @@ policy:
     ".codex/config.toml": [
       [
         "mcp_servers",
+        "ai-rulez"
+      ],
+      [
+        "mcp_servers",
         "local-tool"
       ],
       [
@@ -229,6 +233,10 @@ policy:
       ]
     ],
     ".cursor/mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
       [
         "mcpServers",
         "local-tool"
@@ -295,6 +303,10 @@ policy:
     "opencode.json": [
       [
         "mcp",
+        "ai-rulez"
+      ],
+      [
+        "mcp",
         "local-tool"
       ],
       [
@@ -315,7 +327,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 21067 519b389ea5543b12ed888648f676a19f4c6860d2763ea7c299554370b3ba4395
+.ai-rulez/.generated-manifest.local.json file 0644 21842 b37348a83d026040371be19a2f5090a8ecd549155f8d2dfbb9cada6c8cf858e4
 >>>>
 {
   "version": "1",
@@ -404,8 +416,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "0fb663e09eec397ca9c7390952c03770b854923fe56bbec5d8045628af555a2b",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
         ]
       },
       {
@@ -453,6 +465,14 @@ policy:
       {
         "path": [
           "mcp_servers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839",
+        "local": true
+      },
+      {
+        "path": [
+          "mcp_servers",
           "local-tool"
         ],
         "sum": "63f27588bcef062945d641da2109c583b19eaf735aa823fa2f28ae96832eba62",
@@ -483,7 +503,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "e634ca405f095725257cff52a8b06de8e61566c43885531deac099cd87f7af84"
+          "e5159e048283a7e3e771e85b5f2be4f10b1cac010f6002e22aa50833477a266b"
         ]
       },
       {
@@ -540,7 +560,7 @@ policy:
           "preToolUse"
         ],
         "elementSums": [
-          "0f3d3a6da035793226a00d415adaea604f4ab2e002a76e616908a35fca165002",
+          "1178d499f2f178dfe2a7bb097d17d4f33093ecfca02c1251ba2a8df7152e0c65",
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
@@ -555,6 +575,14 @@ policy:
       }
     ],
     ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839",
+        "local": true
+      },
       {
         "path": [
           "mcpServers",
@@ -628,7 +656,7 @@ policy:
         ],
         "elementSums": [
           "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "bbf0e82a5bd9d81517109a11b94e168f1ba4a98eb35b4f7ae7db00bc13377242"
+          "de4d1b23dc6ce27ec6269db23b7d7fd5600a259b56583a860a6643d7e8955f89"
         ],
         "local": true
       },
@@ -698,6 +726,14 @@ policy:
       }
     ],
     ".vscode/mcp.json": [
+      {
+        "path": [
+          "servers",
+          "ai-rulez"
+        ],
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9",
+        "local": true
+      },
       {
         "path": [
           "servers",
@@ -883,6 +919,14 @@ policy:
       {
         "path": [
           "mcp",
+          "ai-rulez"
+        ],
+        "sum": "a4080dc069318dcf0ba4ecef396ff522f7efd05495b73fa38e35a8b9dc6d22fc",
+        "local": true
+      },
+      {
+        "path": [
+          "mcp",
           "local-tool"
         ],
         "sum": "e987f37c1855bccf1413c5453c1d41713530bf6e306df18ecabc90a9e70d5c78",
@@ -966,23 +1010,23 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "e948f3d22909c9ac75e63b4609ce7c70f72e6299a1e0517427ab609af9481207",
+    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/helper.toml": "2cd2537d532bb3ce063715d3dd4b80145e251a6a7149411d2ae0dfbc5f500ef2",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
-    ".codex/config.toml": "995c2a001216b2b2f5980c225802139d31589b3616b6b5b71313e4bc4d561b2f",
-    ".codex/hooks.json": "39d72460cdd1b4d5ba6dba4548130be3631cdd4b434e09b913ef59144889af77",
+    ".codex/config.toml": "6f0b3476c475df2da3584c8da39c8708e9cf0e5d61888c1a7b1ded4f803a2aed",
+    ".codex/hooks.json": "b7ba3827da403c5c133bf117abfc8ed0902b0c84d6f9444edf7a60e2c03554af",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/quick.md": "6da8934bdbd5f2a1c39f521bf3118d90a929b0e6cb49ae801b21ea21ae9febc1",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "b9fd6376c376de77a124f8d6ce080f148c97ec6198da67d52fb76401b2b62688",
-    ".cursor/mcp.json": "f8cf3fb157962e923d18894ad9d23d6bbf9e7477674d6d06b59f2a8123612452",
-    ".gemini/settings.json": "2d0b619975a8d32fb52c57196319cc889dc60a2d5694c7346b66c633ea8cc64e",
-    ".github/hooks/ai-rulez.json": "ea6f6fcb4cdcfb4a967eefb9b9faf6060e40dd46303c9867a368f27b505705cf",
+    ".cursor/hooks.json": "cbfd5f29a74a0ee11573eecd292c6773c4827680d02ef596882222f2dce75e60",
+    ".cursor/mcp.json": "428aac10059646f5cf50a6837dc670321494c4f9baf97df6996ccff653ae20db",
+    ".gemini/settings.json": "4b37efa931d11ba063466d549cca14d8f199897a780e8cb6699dc669c0589b05",
+    ".github/hooks/ai-rulez.json": "8c1d7e2378ce6cd0fcafe1006ad4090021d7902c0a525866def709fcb200e57c",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
@@ -992,11 +1036,11 @@ policy:
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".vscode/mcp.json": "dd8303f1e4edb5c7fc5436db37e3a93667f2d000280d564da65da580a94818af",
+    ".vscode/mcp.json": "69abfa76345ce8b800cfebc033992a553005cb82c8f82ea53ff7a139535f22fb",
     ".vscode/settings.json": "3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703",
     "REVIEW.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     "kilo.jsonc": "c18268664298f582eed44cd5947f66d6f4961874cc2f6994059f3f52bd0ae259",
-    "opencode.json": "c6b99383b04d57af967fc89e796bc26ed5c69eb4ee0ea4f3a0d9cfb045b73dc3"
+    "opencode.json": "9aeafb8ecfdea117223ded62c65089373be9963c49c16ee8f43a3fd61e856460"
   },
   "assets": {
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -1616,8 +1660,12 @@ Test first.
 
 """
 <<<<
-.codex/config.toml file 0600 321 995c2a001216b2b2f5980c225802139d31589b3616b6b5b71313e4bc4d561b2f
+.codex/config.toml file 0600 401 6f0b3476c475df2da3584c8da39c8708e9cf0e5d61888c1a7b1ded4f803a2aed
 >>>>
+[mcp_servers.ai-rulez]
+args = ["-y", "ai-rulez@latest", "mcp"]
+command = "npx"
+
 [mcp_servers.local-tool]
 args = ["-y", "golden-mcp"]
 command = "npx"
@@ -1812,10 +1860,18 @@ Cut a release.
   "version": 1
 }
 <<<<
-.cursor/mcp.json file 0600 482 f8cf3fb157962e923d18894ad9d23d6bbf9e7477674d6d06b59f2a8123612452
+.cursor/mcp.json file 0600 610 428aac10059646f5cf50a6837dc670321494c4f9baf97df6996ccff653ae20db
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx"
+    },
     "local-tool": {
       "args": [
         "-y",
@@ -3392,10 +3448,19 @@ description: "Scratch skill"
 # Scratch
 <<<<
 .vscode/ dir 0755
-.vscode/mcp.json file 0600 547 dd8303f1e4edb5c7fc5436db37e3a93667f2d000280d564da65da580a94818af
+.vscode/mcp.json file 0600 698 69abfa76345ce8b800cfebc033992a553005cb82c8f82ea53ff7a139535f22fb
 >>>>
 {
   "servers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
     "local-tool": {
       "args": [
         "-y",
@@ -3835,7 +3900,7 @@ kilo.jsonc file 0600 915 c18268664298f582eed44cd5947f66d6f4961874cc2f6994059f3f5
   }
 }
 <<<<
-opencode.json file 0600 962 c6b99383b04d57af967fc89e796bc26ed5c69eb4ee0ea4f3a0d9cfb045b73dc3
+opencode.json file 0600 1130 9aeafb8ecfdea117223ded62c65089373be9963c49c16ee8f43a3fd61e856460
 >>>>
 {
   "$schema": "https://opencode.ai/config.json",
@@ -3843,6 +3908,16 @@ opencode.json file 0600 962 c6b99383b04d57af967fc89e796bc26ed5c69eb4ee0ea4f3a0d9
     "AGENTS.local.md"
   ],
   "mcp": {
+    "ai-rulez": {
+      "command": [
+        "npx",
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
     "local-tool": {
       "command": [
         "npx",

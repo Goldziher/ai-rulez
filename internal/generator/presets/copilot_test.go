@@ -21,6 +21,8 @@ func TestCopilotPresetGenerator_GetName(t *testing.T) {
 func TestCopilotPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	g := &CopilotPresetGenerator{}
 	cfg := &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
+	// The self MCP server has its own test; this case counts content outputs.
+	cfg.SetSelfServer(false)
 
 	content := &config.ContentTree{
 		Skills: []config.ContentFile{

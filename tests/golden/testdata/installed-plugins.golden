@@ -21,8 +21,8 @@ INFO  Generation complete files=19
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
-.ai-rulez/.generated-manifest.local.json file 0644 2743 c98a9cd612eb1935a9787ef55eb3d74502e60b260c6e0f398ca5787d3c1d40ac
+.ai-rulez/.generated-manifest.json file 0644 1709 650f2f3cb2a0be854f13201e3ba066ab1673766e2bd8ed04843c6243fd99ea2f
+.ai-rulez/.generated-manifest.local.json file 0644 3090 0c887aa6dcdb78f1aaf22b63ff90475c3181957fb4928805a74758317d5e35ae
 .ai-rulez/config.toml file 0644 342 aef42a2395bbff68aa6289ccb5736750ba0c26ccaf5086797aa5fef46eb29f88
 .ai-rulez/rules/ dir 0755
 .ai-rulez/rules/base.md file 0644 47 766741a7655576040b0aef4f78b6a84f8dd34c53768ba9b000b35c9bdf32b72b
@@ -42,13 +42,13 @@ INFO  Generation complete files=19
 .codex/ dir 0755
 .codex/agents/ dir 0755
 .codex/agents/planner.toml file 0644 100 bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d
-.codex/config.toml file 0644 133 8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011
+.codex/config.toml file 0644 213 f862247d8bfc9c8f7035fcd3dfdc4181d323cfccf830b2c6d9eefa037cdf451e
 .cursor/ dir 0755
 .cursor/agents/ dir 0755
 .cursor/agents/planner.md file 0644 157 e1b72400dfadbe9604e240b05e59be1ab4753db9dfa702a9f78764209d65411e
 .cursor/commands/ dir 0755
 .cursor/commands/ship.md file 0644 52 932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab
-.cursor/mcp.json file 0644 207 b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09
+.cursor/mcp.json file 0644 335 3d4061eb472e387f2b50a428d901fed7d85ab2673ec1483ad676e6f310ed50ac
 .mcp.json file 0644 403 449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a
 AGENTS.md file 0644 448 005e0df39648f70646b036b45784dd02573aa4bc3f29b6be2f259e817ec38f93
 CLAUDE.md file 0644 385 a5339d809644df61225e26f170d180f3c38c12076884484abd15cfc9198aba1b
@@ -101,11 +101,11 @@ exit: 0
 locked cx-explain  sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359
 locked review  sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d
 locked ship  sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b
-pinned 4 item(s) and 18 output(s), tree sha256:a4c53571a003dac988babb6d449c2a157e617be8edebc96713a376808be6cee4
+pinned 4 item(s) and 18 output(s), tree sha256:dbcb05c00e11550a603829ff0d9094a1e0cb7c688ed8373ece500e71cde8ffd4
 --- stderr
 INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 --- project tree
-+ .ai-rulez/ai-rulez.lock file 0600 3799 ce0727dfa889ff35fe6b5ab4632b9ea152a8cc30b1d4ea9a54bf66f38f9f9634
++ .ai-rulez/ai-rulez.lock file 0600 3799 7617fcf8159842b72a68aa555d41d438869bdf2af80a05ccbbfa76a8ca74bb44
 --- home tree
 (no change)
 
@@ -207,7 +207,7 @@ policy:
   allow_implicit_invocation: false
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1592 69ccc51d58f8429877e2cadcf61287d38d0c4d390f58c5600350d48a66d8e8d2
+.ai-rulez/.generated-manifest.json file 0644 1709 650f2f3cb2a0be854f13201e3ba066ab1673766e2bd8ed04843c6243fd99ea2f
 >>>>
 {
   "version": "1",
@@ -242,6 +242,10 @@ policy:
     ".codex/config.toml": [
       [
         "mcp_servers",
+        "ai-rulez"
+      ],
+      [
+        "mcp_servers",
         "cx-api"
       ],
       [
@@ -250,6 +254,10 @@ policy:
       ]
     ],
     ".cursor/mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
       [
         "mcpServers",
         "cx-api"
@@ -280,7 +288,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2743 c98a9cd612eb1935a9787ef55eb3d74502e60b260c6e0f398ca5787d3c1d40ac
+.ai-rulez/.generated-manifest.local.json file 0644 3090 0c887aa6dcdb78f1aaf22b63ff90475c3181957fb4928805a74758317d5e35ae
 >>>>
 {
   "version": "1",
@@ -310,6 +318,13 @@ policy:
       {
         "path": [
           "mcp_servers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      },
+      {
+        "path": [
+          "mcp_servers",
           "cx-api"
         ],
         "sum": "b6ab9af4649e26f4b90a7786ee4b70f287a0b0189551386e1accb431f4e97986"
@@ -323,6 +338,13 @@ policy:
       }
     ],
     ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      },
       {
         "path": [
           "mcpServers",
@@ -368,14 +390,14 @@ policy:
     ".claude/settings.json": "508dba13556787f47c8864ccfeb355277fabfe6461994b653077f342436f8eed",
     ".claude/skills/review/references/checklist.md": "a3895d114a01050d05d91e8c942a9ed74d3e0dc1ced41764ada6a4de0463175e",
     ".codex/agents/planner.toml": "bb617f0c9fcc9f555d63e29e2bb863f28121e9583b869481cbe566d2f84cca6d",
-    ".codex/config.toml": "8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011",
+    ".codex/config.toml": "f862247d8bfc9c8f7035fcd3dfdc4181d323cfccf830b2c6d9eefa037cdf451e",
     ".cursor/commands/ship.md": "932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab",
-    ".cursor/mcp.json": "b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09",
+    ".cursor/mcp.json": "3d4061eb472e387f2b50a428d901fed7d85ab2673ec1483ad676e6f310ed50ac",
     ".mcp.json": "449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a"
   }
 }
 <<<<
-.ai-rulez/ai-rulez.lock file 0600 3799 ce0727dfa889ff35fe6b5ab4632b9ea152a8cc30b1d4ea9a54bf66f38f9f9634
+.ai-rulez/ai-rulez.lock file 0600 3799 7617fcf8159842b72a68aa555d41d438869bdf2af80a05ccbbfa76a8ca74bb44
 >>>>
 # ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
@@ -384,7 +406,7 @@ version = 1
 ai_rulez_version = '$VERSION'
 scope = 'all'
 outputs_pinned = true
-tree = 'sha256:a4c53571a003dac988babb6d449c2a157e617be8edebc96713a376808be6cee4'
+tree = 'sha256:dbcb05c00e11550a603829ff0d9094a1e0cb7c688ed8373ece500e71cde8ffd4'
 
 [[served]]
 name = 'cx-explain'
@@ -473,7 +495,7 @@ digest = 'sha256:6cf62add8dcc02d95ceb3998b2f893942030d32630202b5df4e7b603a314c19
 
 [[output]]
 path = '.codex/config.toml'
-digest = 'sha256:a008a6ce713b2460f6d112af78ae2b8e2988d99378f17a5e02909d41f703564c'
+digest = 'sha256:33af4d01a38cec6099a50f0f63d9d0e08601c266e59a729000555216ea73a7f5'
 
 [[output]]
 path = '.cursor/agents/planner.md'
@@ -485,7 +507,7 @@ digest = 'sha256:b5e93ecdef99ef5f2857e1fe77a02af8747c3a8f8289e2b7db258e9da68e393
 
 [[output]]
 path = '.cursor/mcp.json'
-digest = 'sha256:17d0d20bdee3d14f15cd91a13ff960eb6ffcdd882b3d8fc9b91f65f7ac721304'
+digest = 'sha256:a826ab156a90dfe493beac5e45943fc1cc6d4663c59fd7f8b071ce256fd95af7'
 
 [[output]]
 path = '.mcp.json'
@@ -640,8 +662,12 @@ Plan before you code.
 
 """
 <<<<
-.codex/config.toml file 0644 133 8b0379c25eb5769b5863b9a383ee09eeeb2efcb2005bfcd719a7428ac41d1011
+.codex/config.toml file 0644 213 f862247d8bfc9c8f7035fcd3dfdc4181d323cfccf830b2c6d9eefa037cdf451e
 >>>>
+[mcp_servers.ai-rulez]
+args = ["-y", "ai-rulez@latest", "mcp"]
+command = "npx"
+
 [mcp_servers.cx-api]
 url = "https://example.com/mcp"
 
@@ -670,10 +696,18 @@ Plan before you code.
 
 Ship $ARGUMENTS.
 <<<<
-.cursor/mcp.json file 0644 207 b4656f8f1103a1f49e40f47b6ee7c6103aebc38df51a174cb222a9104514fc09
+.cursor/mcp.json file 0644 335 3d4061eb472e387f2b50a428d901fed7d85ab2673ec1483ad676e6f310ed50ac
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx"
+    },
     "cx-api": {
       "url": "https://example.com/mcp"
     },

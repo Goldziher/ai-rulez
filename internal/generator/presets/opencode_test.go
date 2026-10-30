@@ -717,7 +717,13 @@ func TestOpencodePresetGenerator_WritesConfigWithoutMCPServers(t *testing.T) {
 		{name: "project root", cfg: &config.Config{Name: "test"}, wantWrite: true},
 		{
 			name: "monorepo scope without servers",
-			cfg:  &config.Config{Name: "test", Run: &config.RunState{Scope: &config.ScopeRun{}}},
+			cfg: &config.Config{Name: "test", Run: &config.RunState{Scope: &config.ScopeRun{}},
+				MCP: &config.MCPConfig{SelfServer: boolPtr(false)}},
+		},
+		{
+			name:      "monorepo scope with the self server",
+			cfg:       &config.Config{Name: "test", Run: &config.RunState{Scope: &config.ScopeRun{}}},
+			wantWrite: true,
 		},
 	}
 	for _, tt := range tests {

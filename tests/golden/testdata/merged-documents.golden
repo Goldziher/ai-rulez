@@ -40,8 +40,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3017 7cc102bf497e27cf210552314e23987daf85d65b6221a48de27698d93ea8aa04
-.ai-rulez/.generated-manifest.local.json file 0644 7636 44a781ef5fa6b4668a333ecfe8f12b24c8831fda8110d62f8a84ed712cac32e5
+.ai-rulez/.generated-manifest.json file 0644 3127 644a594adf8eaf40c4073ebdb7c18a42978b21a868c7ff88fbb58dcebc26fea5
+.ai-rulez/.generated-manifest.local.json file 0644 7976 3e13159c7f89acfa6cafacc1ca2ed886422c5e88d9070ba6fc14a8cd70485446
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -100,7 +100,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
 .codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
-.codex/config.toml file 0644 172 8694fed0985cfcd41339e2ff5b5adedff98d9ed787c20f4b3baf00e881691d63
+.codex/config.toml file 0644 252 8dda2015313d0f3899bc9c93bdd1ac6ea5f75378ef53d08182495ecd0aa52e61
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
@@ -132,7 +132,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-opencode.json file 0644 675 f667fa2234bec9234685b6bd147caa3726f8e509014602ad24321759ebb09a66
+opencode.json file 0644 843 3cda0b28e550777bd832621de301802b70825837ccea023625301f56bf29a6a5
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -157,8 +157,8 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 1794 48e52fb31e94c9f482f9942ef3462529d234bf31eb57356b48ab48e26ac46a2d
-~ .ai-rulez/.generated-manifest.local.json file 0644 4361 d5ada3875c67cf7c3b2f817c4ecf123008b86abc1bb9af5f9ddc842f061961fc
+~ .ai-rulez/.generated-manifest.json file 0644 1845 ebeb41701c2b2ba1be19d068b1f0e4fd3c2c5f112bac90196599b4c33a355747
+~ .ai-rulez/.generated-manifest.local.json file 0644 4527 fc87453eadccd464213683085cf676f5f463bdaf5a2f159333671765790e79fc
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
 ~ .gitignore file 0644 489 2615233d61516fda0ff97d1f2d0fe871103e53db4c1697490e03392d6200ab33
@@ -232,7 +232,7 @@ WARN  A hand-written rule file has the same name as a generated rule; the genera
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1794 48e52fb31e94c9f482f9942ef3462529d234bf31eb57356b48ab48e26ac46a2d
+.ai-rulez/.generated-manifest.json file 0644 1845 ebeb41701c2b2ba1be19d068b1f0e4fd3c2c5f112bac90196599b4c33a355747
 >>>>
 {
   "version": "1",
@@ -280,6 +280,10 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
     "opencode.json": [
       [
         "mcp",
+        "ai-rulez"
+      ],
+      [
+        "mcp",
         "public-remote"
       ],
       [
@@ -296,7 +300,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4361 d5ada3875c67cf7c3b2f817c4ecf123008b86abc1bb9af5f9ddc842f061961fc
+.ai-rulez/.generated-manifest.local.json file 0644 4527 fc87453eadccd464213683085cf676f5f463bdaf5a2f159333671765790e79fc
 >>>>
 {
   "version": "1",
@@ -309,8 +313,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "PreToolUse"
         ],
         "elementSums": [
-          "0fb663e09eec397ca9c7390952c03770b854923fe56bbec5d8045628af555a2b",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
         ]
       },
       {
@@ -385,6 +389,13 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
         "elementSums": [
           "59744dbf84a2973dbb56fbcd87da54df692a39176f2935c18835ed8e6daa1d9a"
         ]
+      },
+      {
+        "path": [
+          "mcp",
+          "ai-rulez"
+        ],
+        "sum": "a4080dc069318dcf0ba4ecef396ff522f7efd05495b73fa38e35a8b9dc6d22fc"
       },
       {
         "path": [
@@ -1430,7 +1441,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-opencode.json file 0644 675 f667fa2234bec9234685b6bd147caa3726f8e509014602ad24321759ebb09a66
+opencode.json file 0644 843 3cda0b28e550777bd832621de301802b70825837ccea023625301f56bf29a6a5
 >>>>
 {
   // mine
@@ -1440,6 +1451,16 @@ opencode.json file 0644 675 f667fa2234bec9234685b6bd147caa3726f8e509014602ad2432
     "AGENTS.local.md"
   ],
   "mcp": {
+    "ai-rulez": {
+      "command": [
+        "npx",
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
     "public-remote": {
       "enabled": true,
       "type": "remote",

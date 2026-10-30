@@ -793,7 +793,10 @@ Behavior:
   are preserved, so running `generate` twice produces no diff.
 - **Every MCP writer agrees**: the root `.mcp.json` is rendered identically by the `mcp` preset and
   the cursor/copilot writers, and the `antigravity` preset adds the same entry to
-  `.agents/mcp_config.json`.
+  `.agents/mcp_config.json`. Each harness that reads its own project MCP file gets the entry too:
+  `opencode.json` (`mcp.ai-rulez`), `.cursor/mcp.json`, `.codex/config.toml` (`[mcp_servers.ai-rulez]`),
+  `.devin/mcp_config.json`, `.xum/mcp.jsonc` and `.gemini/settings.json`. User scope never carries it:
+  MCP output is project-only.
 - **With `[[mcp_servers]]`**: declared servers keep their existing behavior (ai-rulez owns the whole
   `mcpServers` object, see [Settings document merge behavior](#settings-document-merge-behavior)),
   and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which

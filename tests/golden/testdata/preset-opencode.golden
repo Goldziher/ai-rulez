@@ -13,8 +13,8 @@ INFO  Generation complete files=12
 WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1147 bc963d21469e8f96f9e66ebef0b47f16358c70ea219075f3860dd4e7a2291d89
-.ai-rulez/.generated-manifest.local.json file 0644 3011 b3f72b77876655d79c7635fcbe21d4fcf59db5327583e48e21156f2f6ddb36ee
+.ai-rulez/.generated-manifest.json file 0644 1198 270024c3b8500d738718246629f376c2f0a4b8c9d3e4a0641a19371531c679e4
+.ai-rulez/.generated-manifest.local.json file 0644 3177 21d4afff2dd399d1613c1572ac89d7b02c621efd8dd368c621480a6b8880cb6c
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -64,7 +64,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
