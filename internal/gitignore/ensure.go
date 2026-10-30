@@ -57,6 +57,26 @@ func allPatterns(content string) map[string]bool {
 	return out
 }
 
+// EnsureTarget returns the file EnsureEntries(baseDir, ...) rewrites: the
+// repository block's .gitignore, or .git/info/exclude when that .gitignore is a
+// symbolic link. Callers that run EnsureEntries concurrently lock on it.
+func EnsureTarget(baseDir string) string {
+	baseDir, _ = repositoryBlockLocation(baseDir, nil)
+	return WriteTarget(baseDir)
+}
+
+// WriteTarget returns the file a managed block for baseDir is written to:
+// baseDir/.gitignore, or .git/info/exclude when that .gitignore is a symbolic
+// link.
+func WriteTarget(baseDir string) string {
+	if IsSymlink(baseDir) {
+		if exclude := gitutil.InfoExcludePath(baseDir); exclude != "" {
+			return exclude
+		}
+	}
+	return filepath.Join(baseDir, ".gitignore")
+}
+
 // EnsureEntries makes sure each pattern is ignored by baseDir/.gitignore. A
 // pattern already present anywhere in the file (inside or outside the managed
 // fence) is left alone; missing ones are appended to the ai-rulez managed fence,

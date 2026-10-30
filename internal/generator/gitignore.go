@@ -59,6 +59,11 @@ func (g *Generator) ignoreLocalInputs() error {
 		}
 		return nil
 	}
+	// Roots of a recursive run share their repository's .gitignore: the read and
+	// the rewrite are one critical section, or a write drops another root's
+	// entries and, on Windows, a read fails with a sharing violation.
+	unlock := g.excludeLocks.lock(gitignore.EnsureTarget(g.config.BaseDir))
+	defer unlock()
 	if err := gitignore.EnsureEntries(g.log(), g.config.BaseDir, patterns); err != nil {
 		return oops.Wrapf(err, "gitignore the machine-local inputs")
 	}
@@ -398,6 +403,8 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 		return g.collectToGitignoreSink(outputs)
 	}
 	gitignorePath := filepath.Join(g.config.BaseDir, gitignoreFileName)
+	unlock := g.excludeLocks.lock(gitignore.WriteTarget(g.config.BaseDir))
+	defer unlock()
 
 	// Patterns git does not already cover: not ignored by a user rule, and not
 	// deliberately un-ignored by one.
