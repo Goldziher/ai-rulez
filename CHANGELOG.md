@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.9.4] - 2026-10-30
+
+### Fixed
+
+- **A root-level gitignore entry is anchored, so it no longer hides a tracked nested file.** `.mcp.json`,
+  `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and `opencode.json` were written without a leading slash, which
+  matches at every depth: a committed `plugin/.mcp.json` or a nested `AGENTS.md` another tool reads was
+  ignored by git after `generate --gitignore`. They are now written `/.mcp.json`, `/AGENTS.md`, and so on
+  ([#515](https://github.com/Goldziher/ai-rulez/issues/515)).
+- **The committed `.gitignore` block no longer depends on the developer's machine.** Deciding what to add
+  asked `git check-ignore`, which honors `core.excludesFile`, the XDG global ignore file and
+  `.git/info/exclude`; an entry covered by one developer's global ignore was left out of the committed
+  block, and two developers generated different blocks. The check now runs against a throwaway mirror of
+  the repository's own ignore files with the global excludes pointed at the null device
+  ([#518](https://github.com/Goldziher/ai-rulez/issues/518)).
+- **Gitignore matching follows git's semantics.** A hand-written `**/...` line now covers the managed entry
+  it matches (both write and `generate --check` use one rule), a line is never dropped because it is a
+  substring of another, `**` crosses directories, and the managed block is written sorted even when a later
+  root fails, so a partial run leaves the same order the final rewrite produces
+  ([#519](https://github.com/Goldziher/ai-rulez/issues/519)).
+- **A nested plugin config contributes to the one toplevel block.** Its machine-local inputs
+  (`plugin/.ai-rulez/config.local.*`, `plugin/.ai-rulez/local/`) were ignored in neither place: the
+  recursive sink skipped plugin-mode roots and `LocalDoc` wrote a `plugin/.gitignore` of its own. The block
+  writer now moves to the work-tree root and prefixes the patterns, so the overlay cannot be committed and
+  no nested `.gitignore` is created ([#517](https://github.com/Goldziher/ai-rulez/issues/517)).
+- **`generate --recursive` renders a marketplace member as a member.** A plugin-authoring root that an
+  enclosing config lists under `[marketplace] members` was rendered standalone, which wrote
+  `.claude-plugin/marketplace.json`, `.github/plugin/marketplace.json`, `.agents/plugins/marketplace.json`
+  and `.cursor-plugin/marketplace.json` into the committed bundle and churned the `Source-Hash` of every
+  file in it. The member root now renders through the member path, byte-identical to root
+  `generate --plugin` ([#516](https://github.com/Goldziher/ai-rulez/issues/516)).
+- **`ai-rulez update` refreshes the served-skill digests it invalidates.** Moving an include's version pin
+  re-resolved the source but kept the served digests of the old release, so `lock --check` failed
+  immediately after a successful update and the pre-commit hook refused the commit. The update now
+  recomputes every served skill of each serve view for the release it moves to
+  ([#521](https://github.com/Goldziher/ai-rulez/issues/521)).
+
 ## [5.9.3] - 2026-10-30
 
 ### Added

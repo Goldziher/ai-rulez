@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/pelletier/go-toml/v2"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -311,13 +313,14 @@ func processConfigFilesCounting(configFiles []string, sink *generator.GitignoreS
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, workers)
 
+	members := marketplaceMemberDirs(configFiles)
 	for _, configPath := range configFiles {
 		wg.Add(1)
 		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			written, err := processConfigFile(configPath, fileCounter, sink)
+			written, err := processConfigFile(configPath, fileCounter, sink, members)
 			atomic.AddInt64(&totalGenerated, int64(written))
 			if err != nil {
 				failedMu.Lock()
@@ -361,7 +364,7 @@ func recursiveRootGates(ctx context.Context, cfg *config.Config) error {
 // processConfigFile generates from one config. A non-nil error means the config
 // failed (and was already reported through fileCounter). sink is the recursive
 // run's shared .gitignore block, or nil outside a recursive run.
-func processConfigFile(configPath string, fileCounter *progress.FileCounter, sink *generator.GitignoreSinks) (int, error) {
+func processConfigFile(configPath string, fileCounter *progress.FileCounter, sink *generator.GitignoreSinks, members map[string]bool) (int, error) {
 	fileCounter.StartFile(configPath)
 
 	ctx := gitutil.WithMemo(cmdContext())
@@ -380,14 +383,13 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 	// A plugin-authoring root is built as a bundle, as `generate --plugin` does in
 	// it, instead of rendering harness files into the shipped tree. It is
 	// reloaded the way plugin mode loads (without the machine-local overlay).
-	plugin := pluginMode
-	if !plugin && cfg.IsPluginAuthoringRoot() {
-		plugin = true
-		logger.Info("Generating a plugin-authoring root in plugin mode", "config", configPath)
-		if cfg, err = reloadForPlugin(ctx, configPath); err != nil {
-			fileCounter.ErrorFor(configPath, err)
-			return 0, err
-		}
+	// A root an enclosing config lists as a marketplace member is rendered as that
+	// member: the enclosing root owns the index, and a standalone render would
+	// overwrite the committed bundle (#516).
+	cfg, mode, err := reloadForRenderMode(ctx, configPath, cfg, members)
+	if err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
 	}
 
 	// Create generator
@@ -396,19 +398,22 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
 	gen.SetExcludeLocks(sink.ExcludeLocks())
-	if !plugin {
+	if mode == renderOrdinary {
 		attachRecursiveGitignoreSink(ctx, gen, cfg, sink)
 	}
 	if err := applyRole(gen); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
-	if err := generatePreflightFor(cfg, gen, plugin); err != nil {
+	if err := generatePreflightFor(cfg, gen, mode == renderPlugin); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
-	if plugin {
+	switch mode {
+	case renderPlugin:
 		return processPluginConfig(configPath, cfg, gen, fileCounter)
+	case renderMember:
+		return processMemberConfig(configPath, gen, fileCounter)
 	}
 
 	if dryRun {
@@ -478,6 +483,98 @@ func processPluginConfig(configPath string, cfg *config.Config, gen *generator.G
 	}
 	fileCounter.FinishFile()
 	return written, nil
+}
+
+// rootRenderMode is how one config root renders.
+type rootRenderMode int
+
+const (
+	// renderOrdinary renders a root as itself: presets, hooks, settings.
+	renderOrdinary rootRenderMode = iota
+	// renderPlugin builds a plugin bundle, as `generate --plugin` does.
+	renderPlugin
+	// renderMember builds the bundle an enclosing marketplace root indexes.
+	renderMember
+)
+
+// renderModeFor says how a root renders. A member is not a standalone plugin:
+// the enclosing root owns the marketplace index (#516).
+func renderModeFor(cfg *config.Config, members map[string]bool) rootRenderMode {
+	switch {
+	case pluginMode:
+		return renderPlugin
+	case !cfg.IsPluginAuthoringRoot():
+		return renderOrdinary
+	case members[filepath.Clean(cfg.BaseDir)]:
+		return renderMember
+	}
+	return renderPlugin
+}
+
+// reloadForRenderMode reloads a root that is not rendered as itself, so the bundle
+// loads without the machine-local overlay, and reports its mode.
+func reloadForRenderMode(ctx context.Context, configPath string, cfg *config.Config, members map[string]bool) (*config.Config, rootRenderMode, error) {
+	mode := renderModeFor(cfg, members)
+	if mode == renderOrdinary {
+		return cfg, mode, nil
+	}
+	logger.Info("Generating a plugin-authoring root", "config", configPath, "mode", map[rootRenderMode]string{renderPlugin: "plugin", renderMember: "marketplace member"}[mode])
+	reloaded, err := reloadForPlugin(ctx, configPath)
+	return reloaded, mode, err
+}
+
+// processMemberConfig renders one marketplace member root: the bundle its
+// enclosing root's index points at, unchanged by a standalone plugin render.
+func processMemberConfig(configPath string, gen *generator.Generator, fileCounter *progress.FileCounter) (int, error) {
+	if dryRun {
+		plan, err := gen.DryRunMember(profile)
+		if err != nil {
+			fileCounter.ErrorFor(configPath, err)
+			return 0, err
+		}
+		for _, line := range plan {
+			progress.PrintlnIfNotQuiet("  " + line)
+		}
+		fileCounter.FinishFile()
+		return 0, nil
+	}
+	written, err := gen.GenerateMemberFiles(profile)
+	if err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+	fileCounter.FinishFile()
+	return written, nil
+}
+
+// marketplaceMemberDirs lists the project directories the discovered configs
+// declare as [marketplace] members, so a recursive run renders each one through
+// the member path (#516). Only the [marketplace] table is read: the full load of
+// every root happens later, once.
+func marketplaceMemberDirs(configFiles []string) map[string]bool {
+	out := map[string]bool{}
+	for _, path := range configFiles {
+		raw, err := os.ReadFile(path) //nolint:gosec // a discovered configuration file
+		if err != nil {
+			continue
+		}
+		var doc struct {
+			Marketplace struct {
+				Members []string `toml:"members"`
+			} `toml:"marketplace"`
+		}
+		if err := toml.Unmarshal(raw, &doc); err != nil {
+			continue
+		}
+		base := config.ProjectBaseDir(filepath.Dir(path))
+		for _, member := range doc.Marketplace.Members {
+			if strings.TrimSpace(member) == "" {
+				continue
+			}
+			out[filepath.Clean(filepath.Join(base, filepath.FromSlash(member)))] = true
+		}
+	}
+	return out
 }
 
 // attachRecursiveGitignoreSink points a root's generator at the managed block of
