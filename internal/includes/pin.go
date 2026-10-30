@@ -263,7 +263,7 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 			problems = append(problems, Problem{w.Kind, w.Name, "lock is stale: source, path or ref changed since it was written"})
 			continue
 		}
-		digest, commit, ok, err := cachedState(cfg, *w)
+		digest, commit, ok, err := cachedState(cfg, *w, lockCommit(lock, *w))
 		if err != nil {
 			problems = append(problems, Problem{w.Kind, w.Name, "cannot digest the cached content: " + err.Error()})
 			continue
@@ -284,9 +284,31 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 	return problems, cached
 }
 
+// pinnedCommitOf is the commit a pin records, "" when there is no pin.
+func pinnedCommitOf(p *pin) string {
+	if p == nil {
+		return ""
+	}
+	return p.entry.Commit
+}
+
+// lockCommit is the commit the cache of w is keyed by: the commit the lock pins
+// for an include, whose cache holds one tree per commit (#524), else "" — every
+// other kind keeps its own cache layout.
+func lockCommit(lock *lockfile.File, w lockfile.Want) string {
+	if w.Kind != lockfile.KindInclude {
+		return ""
+	}
+	if e := lock.Find(w.Kind, w.Name); e != nil && e.Commit != "" && e.Covers(w) {
+		return e.Commit
+	}
+	return ""
+}
+
 // cachedTree locates the cached tree of a source without fetching: the directory
 // that is digested, the cache directory holding its bookkeeping and the tree kind.
-func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind string) {
+// commit is the commit the lock pins ("" when it pins none; see [lockCommit]).
+func cachedTree(cfg *config.Config, w lockfile.Want, commit string) (dir, cacheDir, treeKind string) {
 	treeKind = contentlock.KindInstalledSkill
 	switch w.Kind {
 	case lockfile.KindMarketplace, lockfile.KindPlugin:
@@ -296,12 +318,11 @@ func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind st
 			if cfg.Includes[i].Name != w.Name {
 				continue
 			}
-			newSource := NewGitSourceIn
 			treeKind = contentlock.KindInclude
 			if cfg.Includes[i].Format == config.IncludeFormatOKF {
-				newSource, treeKind = NewOKFGitSourceIn, contentlock.KindOKFInclude
+				treeKind = contentlock.KindOKFInclude
 			}
-			src, err := newSource(cfg.Host, w.Name, cfg.Includes[i].Source, cfg.Includes[i].Path, w.Ref, cfg.BaseDir, nil, "")
+			src, err := includeSource(cfg, &cfg.Includes[i], w.Ref, commit)
 			if err != nil {
 				return "", "", treeKind
 			}
@@ -325,6 +346,16 @@ func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind st
 	return dir, cacheDir, treeKind
 }
 
+// includeSource builds the source of a configured include the way the loader
+// does (ref is the want's requested ref or version constraint), so its cache
+// directory is the one a fetch of it reads and writes.
+func includeSource(cfg *config.Config, inc *config.IncludeConfig, ref, commit string) (*GitSource, error) {
+	if inc.Format == config.IncludeFormatOKF {
+		return newOKFGitSource(cfg.Host, inc.Name, inc.Source, inc.Path, ref, commit, cfg.BaseDir, nil, "")
+	}
+	return newGitSource(cfg.Host, inc.Name, inc.Source, inc.Path, ref, commit, cfg.BaseDir, nil, "")
+}
+
 // cachedCommit is the commit the cache at cacheDir was fetched at ("" unknown).
 func cachedCommit(cacheDir string) string {
 	if meta, err := readCacheMeta(cacheDir); err == nil && meta != nil {
@@ -336,8 +367,8 @@ func cachedCommit(cacheDir string) string {
 // cachedState reads the cached tree of a source without fetching. ok is false
 // when nothing is cached; a tree that is cached but cannot be digested is an
 // error, not "not cached".
-func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok bool, err error) {
-	dir, cacheDir, treeKind := cachedTree(cfg, w)
+func cachedState(cfg *config.Config, w lockfile.Want, pinned string) (digest, commit string, ok bool, err error) {
+	dir, cacheDir, treeKind := cachedTree(cfg, w, pinned)
 	if dir == "" {
 		return "", "", false, nil
 	}
@@ -349,11 +380,13 @@ func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok
 }
 
 // NotCached lists the remote sources whose content is not in the local cache.
+// The lock, when it can be read, says which commit an include must have cached.
 func NotCached(cfg *config.Config) []lockfile.Want {
 	var out []lockfile.Want
+	lock, _ := loadLockFor(cfg) //nolint:errcheck // an unreadable lock leaves the requested ref
 	wants := Lockable(cfg)
 	for i := range wants {
-		if dir, _, _ := cachedTree(cfg, wants[i]); dir == "" {
+		if dir, _, _ := cachedTree(cfg, wants[i], lockCommit(lock, wants[i])); dir == "" {
 			out = append(out, wants[i])
 		}
 	}

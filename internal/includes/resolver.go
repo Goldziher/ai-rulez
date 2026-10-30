@@ -262,12 +262,16 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err != nil {
 			return nil, err
 		}
-		source, err := NewGitSourceIn(
+		// The cache is keyed by the commit the lock pins, so two checkouts
+		// pinning different commits of one include never read (or overwrite)
+		// each other's tree (#524).
+		source, err := newGitSource(
 			r.host(),
 			includeConf.Name,
 			includeConf.Source,
 			includeConf.Path,
 			w.Ref,
+			pinnedCommitOf(p),
 			r.baseDir,
 			includeConf.Include,
 			r.accessToken,

@@ -53,7 +53,9 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 		if err != nil {
 			return nil, err
 		}
-		src, err := NewOKFGitSourceIn(r.host(), c.Name, source, c.Path, w.Ref, r.baseDir, c.Include, r.accessToken)
+		// Keyed by the commit the lock pins, like the include cache itself (#524).
+		src, err := newOKFGitSource(r.host(), c.Name, source, c.Path, w.Ref, pinnedCommitOf(p),
+			r.baseDir, c.Include, r.accessToken)
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for OKF include '%s'", c.Name)
 		}

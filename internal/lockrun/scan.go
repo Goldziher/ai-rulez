@@ -206,7 +206,7 @@ func scanNewPins(cfg *config.Config, current, next *lockfile.File, accept bool, 
 					dir = skillsource.CachedTreeDir(spec, e.Commit, "")
 				}
 			} else if w, ok := wants[g.kind+"\x00"+e.Name]; ok {
-				dir = includes.CachedTreeDir(cfg, w)
+				dir = includes.CachedTreeDir(cfg, w, e.Commit)
 			}
 			if dir == "" {
 				continue // not in the local cache (a local source, or nothing fetched): nothing to scan

@@ -268,10 +268,15 @@ func VersionSources(cfg *config.Config) []VersionSource {
 	return out
 }
 
-// CachedTreeDir is the directory of the cached tree of a locked source ("" when
-// nothing is cached): what `update` compares before and after a refresh.
-func CachedTreeDir(cfg *config.Config, w lockfile.Want) string {
-	dir, _, _ := cachedTree(cfg, w)
+// CachedTreeDir is the directory of the cached tree of a locked source at commit
+// ("" when nothing is cached): what `update` compares before and after a refresh.
+// commit "" asks for the commit the lock on disk pins.
+func CachedTreeDir(cfg *config.Config, w lockfile.Want, commit string) string {
+	if commit == "" {
+		lock, _ := loadLockFor(cfg) //nolint:errcheck // an unreadable lock leaves the requested ref
+		commit = lockCommit(lock, w)
+	}
+	dir, _, _ := cachedTree(cfg, w, commit)
 	return dir
 }
 

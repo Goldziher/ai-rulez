@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/Goldziher/ai-rulez/v5/internal/policy"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
@@ -228,6 +230,71 @@ func TestLoadMCPSettings_PolicyRequiredReadOnlyCannotBeLoosened(t *testing.T) {
 			assert.True(t, got.readOnly)
 		})
 	}
+}
+
+// TestLoadMCPSettings_AnotherCheckoutsIncludeCacheKeepsTheTools guards #524: the
+// include cache is shared by every checkout of the repository on one machine, so
+// a lock-pinned include must be read at the commit its own lock records instead
+// of failing the load and leaving the server with every tool registered.
+func TestLoadMCPSettings_AnotherCheckoutsIncludeCacheKeepsTheTools(t *testing.T) {
+	// Arrange
+	testutil.IsolateHome(t)
+	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
+	t.Cleanup(func() {
+		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
+	})
+	remote := t.TempDir()
+	crossGit(t, remote, "init", "-q", "-b", "main")
+	writeFile(t, filepath.Join(remote, ".ai-rulez", "rules", "shared.md"), "# Shared\n\nversion one\n")
+	crossGit(t, remote, "add", "-A")
+	crossGit(t, remote, "commit", "-qm", "one")
+	root := lockProject(t, `
+[mcp]
+tools = ["find_skill", "load_skill"]
+
+[[includes]]
+name = "shared"
+source = "file://`+filepath.ToSlash(remote)+`"
+`)
+	require.Equal(t, 0, writeLockAt("", "", nil), "lock the include at its first commit")
+	pinned, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
+	require.NoError(t, err)
+	require.Len(t, pinned.Include, 1)
+	first := pinned.Include[0].Commit
+
+	// Another checkout on this machine pins a newer commit and leaves the shared
+	// cache at it.
+	writeFile(t, filepath.Join(remote, ".ai-rulez", "rules", "shared.md"), "# Shared\n\nversion two\n")
+	crossGit(t, remote, "commit", "-qam", "two")
+	require.Equal(t, 0, writeLockAt("", "", nil), "the other checkout locks the newer commit")
+	require.NoError(t, lockfile.Save(filepath.Join(root, ".ai-rulez"), pinned), "this checkout still pins its own commit")
+
+	// Act
+	settings, err := loadMCPSettings(cmdContext(), settingsFlags(t))
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"find_skill", "load_skill"}, settings.tools,
+		"the project's allow-list is read at the commit its lock pins")
+	assert.Equal(t, first, pinned.Include[0].Commit)
+}
+
+// TestLoadMCPSettings_AProjectThatCannotBeReadStopsTheServer: serving every tool
+// after a failed read silently ignores the project's allow-list, so the run fails
+// instead.
+func TestLoadMCPSettings_AProjectThatCannotBeReadStopsTheServer(t *testing.T) {
+	// Arrange
+	testutil.IsolateHome(t)
+	root := t.TempDir()
+	writeSettingsFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\nname = \"p\"\n")
+	t.Chdir(root)
+
+	// Act
+	_, err := loadMCPSettings(cmdContext(), settingsFlags(t))
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "[mcp] settings")
 }
 
 func TestResolveMCPSettings_ServeSkills(t *testing.T) {
