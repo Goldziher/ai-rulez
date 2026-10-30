@@ -57,7 +57,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .claude/agents/ dir 0755
 .claude/agents/architect.md file 0644 174 9f301f5abd9d5895521742cfbaaa54ef735edca0b20067992f30878304c18d8d
 .claude/agents/tester.md file 0644 160 65d84563c922cb1665fcec1b4c354fdd4a6ef4ad22562e0004ea26a29bbcd192
-.gitignore file 0644 264 ef5e2462952fe0d25396048dd43123c9647a07e173b3aa7378bf37ef4c0ef580
+.gitignore file 0644 266 f2bf58294eeb73a3ae30f7d7805da8c6553b1fd52a7cc0b77c18ae5fc38202e0
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755

@@ -63,8 +63,11 @@ func Entries(f *lockfile.File) []lockfile.Entry {
 type DynamicRun struct {
 	Kind   string
 	Wanted map[string]bool
-	Extras []mcp.ServeSetup
-	Strict bool
+	// AllServed recomputes every served skill of each view, not only the wanted
+	// names: a moved include changes the content its skills are served from.
+	AllServed bool
+	Extras    []mcp.ServeSetup
+	Strict    bool
 	// Version is the ai-rulez version the served digests are computed with.
 	Version string
 	// Collector keeps the warnings of the views' loads (nil: their own).
@@ -130,9 +133,9 @@ func MergeDynamic(ctx context.Context, cfg *config.Config, current, next *lockfi
 		out.Unpinned = append(out.Unpinned, r)
 		cfg.Log().Warn("Left a served skill unpinned: the security scan refuses it", "skill", r.Name, "view", viewLabel(r.View), "code", r.Code, "reason", r.Reason)
 	}
-	pick := func(name string) bool { return len(wanted) == 0 || wanted[name] }
+	pick := namePicker(wanted, false)
 	if refresh(lockfile.KindServed) {
-		next.Served = mergeServed(next.Served, res, pick)
+		next.Served = mergeServed(next.Served, res, namePicker(wanted, run.AllServed))
 	}
 	if refresh(lockfile.KindSource) {
 		for i := range res.Sources {
@@ -145,6 +148,13 @@ func MergeDynamic(ctx context.Context, cfg *config.Config, current, next *lockfi
 	}
 	sort.Strings(out.Problems)
 	return out
+}
+
+// namePicker selects the entries a refresh re-pins: every one when the request
+// named nothing (or when the caller asked for every served skill), else the
+// named ones.
+func namePicker(wanted map[string]bool, all bool) func(string) bool {
+	return func(name string) bool { return all || len(wanted) == 0 || wanted[name] }
 }
 
 // UsesDynamicSkills reports whether cfg (with the extra views) has source or

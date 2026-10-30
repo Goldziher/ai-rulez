@@ -254,7 +254,7 @@ func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 
 	patterns := gen.collectGitignorePaths(outputs)
 
-	assert.True(t, patterns["AGENTS.md"])
+	assert.True(t, patterns["/AGENTS.md"], "a single-segment root file is anchored to the .gitignore's directory")
 	assert.True(t, patterns[".codex/agents/"])
 	assert.False(t, patterns[".codex/"])
 	assert.False(t, patterns[".github/"])
@@ -524,16 +524,16 @@ func TestGenerator_Gitignore_NoAbsolutePaths(t *testing.T) {
 	require.NoError(t, err)
 	contentStr := string(content)
 
-	// Check that no absolute paths were added
-	// Absolute paths would start with / on Unix or C:\ on Windows
+	// A leading slash anchors a pattern to the .gitignore's own directory; it must
+	// never be an absolute filesystem path, and no line may name the project.
 	lines := strings.Split(contentStr, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		// Check for absolute paths
-		assert.False(t, filepath.IsAbs(line), "Found absolute path in .gitignore: %s", line)
+		assert.NotContains(t, line, tempDir, "an absolute path leaked into .gitignore: %s", line)
+		assert.NotContains(t, line, filepath.ToSlash(tempDir), "an absolute path leaked into .gitignore: %s", line)
 	}
 }
 

@@ -61,61 +61,34 @@ func withoutManagedBlock(content string) string { return gitignore.WithoutManage
 
 // userIgnoreRules asks git for the last ignore rule matching each probe, as if
 // ai-rulez's own entries were not there: a block entry would otherwise hide the
-// user's rule and make our entries look user-made on the next run. When the root
-// .gitignore or the exclude file holds one of our blocks, git is pointed at a
-// throwaway copy of the ignore files without them; the user's files are never
-// modified. It returns nil when there is no answer (not a repository, git
-// missing or failing), so callers fall back to adding everything.
+// user's rule and make our entries look user-made on the next run. Git is
+// pointed at a throwaway copy of the repository's ignore files, so the user's
+// files are never modified and the answer holds only what the repository
+// tracks: the machine's global excludes file and .git/info/exclude are left out,
+// or two developers would generate different blocks (#518). It returns nil when
+// there is no answer (not a repository, git missing or failing), so callers fall
+// back to adding everything.
 func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMatch {
 	rootRel := gitignoreFileName
 	if rel := gitutil.RepoRelative(g.git().TopLevelContext(g.ctx, g.config.BaseDir), g.managedGitignorePath()); rel != "" {
 		rootRel = rel
 	}
-	begin, end := g.excludeMarkers()
-	fallbackBegin, fallbackEnd := gitignore.FallbackMarkers(g.config.BaseDir)
 	rewrite := func(rel, content string) string {
 		switch rel {
+		case "info/exclude":
+			// Machine-local, like the global excludes file: never part of the answer.
+			return ""
 		case rootRel:
 			return withoutManagedBlock(content)
-		case "info/exclude":
-			content = gitignore.ReplaceMarkedBlock(content, begin, end, "")
-			return gitignore.ReplaceMarkedBlock(content, fallbackBegin, fallbackEnd, "")
 		}
 		return content
 	}
-	var rules map[string]gitutil.IgnoreMatch
-	var err error
-	if g.hasOwnIgnoreBlock(begin) {
-		rules, err = g.git().IgnoreRulesMirroredContext(g.ctx, g.config.BaseDir, probes, rewrite)
-	} else {
-		rules, err = g.git().IgnoreRulesContext(g.ctx, g.config.BaseDir, probes)
-	}
+	rules, err := g.git().IgnoreRulesMirroredContext(g.ctx, g.config.BaseDir, probes, rewrite)
 	if err != nil {
 		g.log().Debug("Could not ask git about ignore rules; adding every entry", "error", err)
 		return nil
 	}
 	return rules
-}
-
-// hasOwnIgnoreBlock reports whether the root .gitignore or the repository
-// exclude file holds an ai-rulez block that must be left out of the evaluation.
-func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
-	// The block lives beside the config, or at the repository toplevel for a
-	// recursive run; both must be left out of the evaluation, or this run's own
-	// entries look user-made and are never re-added.
-	if data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), g.managedGitignorePath()); err == nil {
-		if withoutManagedBlock(string(data)) != string(data) {
-			return true
-		}
-	}
-	if exclude := g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir); exclude != "" {
-		fallbackBegin, _ := gitignore.FallbackMarkers(g.config.BaseDir)
-		if data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), exclude); err == nil &&
-			(strings.Contains(string(data), excludeBegin) || strings.Contains(string(data), fallbackBegin)) {
-			return true
-		}
-	}
-	return false
 }
 
 // protectedGitignorePatterns are the patterns that keep machine-local or secret

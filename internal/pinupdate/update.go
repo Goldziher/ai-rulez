@@ -231,7 +231,7 @@ func (p *Prepared) apply(ctx context.Context, env Env, opt Options, rep *Report)
 	if err := fresh.Validate(); err != nil {
 		return false, err //nolint:wrapcheck // already contextual
 	}
-	req := lockrun.Request{Names: wantedNames(wanted)}
+	req := lockrun.Request{Names: wantedNames(wanted), RefreshServed: true}
 	lockEnv := lockrun.Env{Version: env.Version, Policy: run, Load: env.Load, Collector: env.Collector, Report: io.Discard,
 		NewForge: env.NewForge, GitToken: env.GitToken, Cwd: env.Cwd}
 	next, _, err := lockrun.Next(ctx, fresh, p.Current, &req, &lockEnv, true)

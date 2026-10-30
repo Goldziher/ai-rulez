@@ -152,7 +152,7 @@ func TestGenerate_WarnsWhenAHumanNegationConflictsWithAManagedLine(t *testing.T)
 			_, rec := generateWithLog(t, root)
 
 			// Assert
-			got := countContaining(rec.Level("WARN"), "un-ignores CLAUDE.md")
+			got := countContaining(rec.Level("WARN"), "un-ignores /CLAUDE.md")
 			if tt.wantWarn {
 				assert.Equal(t, 1, got, "%v", rec.Level("WARN"))
 				assert.Condition(t, func() bool {

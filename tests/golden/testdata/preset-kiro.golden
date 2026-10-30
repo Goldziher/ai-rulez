@@ -41,7 +41,7 @@ INFO  Generation complete files=16
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 427 f691b31fcd29a5ed55ab128d68d8d4fa9455ad25f8d54b7f2fd07b3e974ee2de
+.gitignore file 0644 429 59b03b3fa0b736d131c9d3c0701e97321cd496bab3dec9871be088eca3a79bf4
 .kiro/ dir 0755
 .kiro/agents/ dir 0755
 .kiro/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
