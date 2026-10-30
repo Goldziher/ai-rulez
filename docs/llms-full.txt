@@ -19275,7 +19275,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.9.4"
+revision = "v5.9.5"
 hooks = ["ai-rulez-validate"]
 ```
 
@@ -19329,17 +19329,18 @@ already checks the shared view, and plugin generation ignores the overlay. Do no
 
 #### Choose an execution path
 
-Hooks use the installed `ai-rulez` executable. Select the system channel in the gitignored
-`poly.local.toml` and install the reviewed CLI version before installing hooks:
+Each hook offers two execution paths. `system` runs an installed `ai-rulez`; `npm` runs
+`npx -y ai-rulez@latest` for a repository that pins no binary. Pick the order in the gitignored
+`poly.local.toml`; poly tries each channel in turn and runs the first whose `check` succeeds:
 
 ```toml
 [hook_preferences]
-channels = ["system"]
+channels = ["system", "npm"]
 ```
 
-The hook catalog deliberately has no on-demand package-manager fallback: its pinned Git revision
-must not quietly execute a different released CLI. Poly runs the system channel only after
-`command -v ai-rulez` succeeds.
+A machine with a reviewed binary keeps using it, and one without falls back to the npm `latest`
+tag. The npm path executes whatever `latest` resolves to, so list `system` only when a review gate
+must not move with a release. Poly runs a channel only after its `check` succeeds.
 
 Poly does not silently choose a channel when external hook sources are configured.
 A missing preference list or a source with no eligible path is an error. If the
@@ -19381,6 +19382,11 @@ pass_filenames = false
 channel = "system"
 check = "command -v ai-rulez"
 run = "ai-rulez"
+
+[[hooks.paths]]
+channel = "npm"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
 ```
 
 Poly appends the hook's `args` to the selected path's `run` command. `install` is
