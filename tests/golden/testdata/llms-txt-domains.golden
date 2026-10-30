@@ -13,7 +13,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c
-.ai-rulez/.generated-manifest.local.json file 0644 2208 5d985eb94ea56b1a0dadb3890b14bcf7eb657f2fe701d9be481123cacae59198
+.ai-rulez/.generated-manifest.local.json file 0644 2208 fb555a6808f5a8eec0afa74b8cc87012b838340ece199ed6d850a0faf2ddf884
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -179,7 +179,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2208 5d985eb94ea56b1a0dadb3890b14bcf7eb657f2fe701d9be481123cacae59198
+.ai-rulez/.generated-manifest.local.json file 0644 2208 fb555a6808f5a8eec0afa74b8cc87012b838340ece199ed6d850a0faf2ddf884
 >>>>
 {
   "version": "1",
@@ -193,7 +193,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "f4f99aa554ffd50b85d6c6ff8bcac65d4d4ec4760eeb4e793cb1406066552e9d"
+          "b736f4016043569ed063125c3434dea836f238bda0baef804daa45e2c4c769d0"
         ]
       },
       {
@@ -248,7 +248,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
     ]
   },
   "digests": {
-    ".claude/settings.json": "2bd53f881fc34266feefd7b641b9cc078739eec18098bee1244926ec8c093880",
+    ".claude/settings.json": "4958f8ed8998fdb44d0099b5a21ff52142f0a2ea22b2b75f7cbfdd0adb38d8bf",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",

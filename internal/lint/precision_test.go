@@ -136,8 +136,10 @@ func TestUnpinnedExecOwnPackagePrecision(t *testing.T) {
 	}{
 		{"prose naming the project's own tool", "Published on PyPI. Also usable via `uvx gitfluff`.", 0},
 		{"prose naming another tool stays reported", "Also usable via `uvx other-tool`.", 1},
-		{"own tool under a moving tag stays reported", "Run `npx -y gitfluff@latest`.", 1},
-		{"own tool in a fenced shell block stays reported", "```sh\nuvx gitfluff\n```", 1},
+		{"own tool under @latest is exempt", "Run `npx -y gitfluff@latest`.", 0},
+		{"own tool in a fenced shell block is exempt", "```sh\nnpx -y gitfluff@latest generate\n```", 0},
+		{"own tool under another moving tag stays reported", "Run `npx -y gitfluff@next`.", 1},
+		{"another tool under @latest stays reported", "Run `npx -y other-tool@latest`.", 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

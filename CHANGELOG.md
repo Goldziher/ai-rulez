@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.9.6] - 2026-10-30
+
+### Fixed
+
+- **`AR021` no longer flags ai-rulez's own documented invocation.** A rule or skill telling an agent to run
+  `npx -y ai-rulez@latest generate --no-local` was reported as an unpinned package exec, so a repository
+  that runs ai-rulez only through the npm `latest` tag tripped its own linter. The project's own package is
+  now exempt when it is named without a pin or with `@latest`; another package, and another moving tag on
+  its own (`@next`), are still reported
+  ([#528](https://github.com/Goldziher/ai-rulez/issues/528)).
+
 ## [5.9.5] - 2026-10-30
 
 ### Fixed
