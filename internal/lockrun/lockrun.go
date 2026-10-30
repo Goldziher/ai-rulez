@@ -46,6 +46,11 @@ type Request struct {
 	// Names limit the refresh to these remote sources or served skills; the
 	// content pins are then kept as they are.
 	Names []string
+	// RefreshServed recomputes every served skill of each serve view, whatever
+	// Names holds. `update` uses it: moving a pin changes the included content, so
+	// the served digests of the release it moves to are stale even though no
+	// served skill is named in the move (#521).
+	RefreshServed bool
 	// ContentOnly re-pins the authored content and outputs only, offline: the
 	// remote pins are kept.
 	ContentOnly bool
@@ -290,7 +295,7 @@ func Next(ctx context.Context, cfg *config.Config, current *lockfile.File, req *
 	if !remoteRefresh {
 		dynamicKind = lockfile.KindServed
 	}
-	dyn := MergeDynamic(ctx, cfg, current, next, DynamicRun{Kind: dynamicKind, Wanted: wanted, Extras: req.Extras, Strict: req.Strict,
+	dyn := MergeDynamic(ctx, cfg, current, next, DynamicRun{Kind: dynamicKind, Wanted: wanted, AllServed: req.RefreshServed, Extras: req.Extras, Strict: req.Strict,
 		Version: env.Version, Collector: env.Collector, LoadOptions: env.LoadOptions})
 	if problems := dyn.Problems; len(problems) > 0 {
 		if dyn.ScanOnly() {

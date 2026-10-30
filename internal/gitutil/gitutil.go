@@ -180,14 +180,18 @@ func (g Git) IgnoreRulesContext(ctx context.Context, dir string, paths []string)
 	return g.checkIgnore(ctx, dir, nil, paths)
 }
 
-// checkIgnore runs one batched verbose check-ignore in dir.
+// checkIgnore runs one batched verbose check-ignore in dir. The developer's
+// global excludes file is pointed at the null device: the answer decides what the
+// committed .gitignore block carries, and it must not depend on one machine's
+// personal git configuration (#518).
 func (g Git) checkIgnore(ctx context.Context, dir string, gitFlags, paths []string) (map[string]IgnoreMatch, error) {
 	var stdin bytes.Buffer
 	for _, p := range paths {
 		stdin.WriteString(p)
 		stdin.WriteByte(0)
 	}
-	args := append(append([]string{}, gitFlags...), "check-ignore", "--no-index", "-v", "-n", "--stdin", "-z")
+	args := append(append([]string{}, gitFlags...), "-c", "core.excludesFile="+os.DevNull,
+		"check-ignore", "--no-index", "-v", "-n", "--stdin", "-z")
 	out, code, err := g.run(ctx, dir, stdin.Bytes(), args...)
 	if err != nil && code != 1 { // exit status 1 means "none of them is ignored"
 		return nil, err
@@ -239,17 +243,11 @@ func (g Git) IgnoreRulesMirroredContext(ctx context.Context, dir string, paths [
 		return nil, err
 	}
 
-	var flags []string
-	if v, _, cfgErr := g.run(ctx, dir, nil, "config", "--get", "--type=path", "core.excludesFile"); cfgErr == nil {
-		if path := strings.TrimSpace(string(v)); path != "" {
-			flags = []string{"-c", "core.excludesFile=" + path}
-		}
-	}
 	prefixed := make([]string, len(paths))
 	for i, p := range paths {
 		prefixed[i] = prefix + p
 	}
-	rules, err := g.checkIgnore(ctx, mirror, flags, prefixed)
+	rules, err := g.checkIgnore(ctx, mirror, nil, prefixed)
 	if err != nil {
 		return nil, err
 	}
@@ -329,6 +327,11 @@ func copyRewritten(log logger.Logger, src, dst, rel string, rewrite func(rel, co
 	content := string(data)
 	if rewrite != nil {
 		content = rewrite(rel, content)
+	}
+	// Empty content means the caller dropped this file from the evaluation: an
+	// absent ignore file and an empty one hold the same (no) rules.
+	if content == "" {
+		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return oops.Wrapf(err, "create ignore mirror directory")

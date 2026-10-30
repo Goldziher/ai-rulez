@@ -12,7 +12,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1047 65dc88f5bc08b2eefc9f449a62bde3126985c6eeec07fe63fe6f7cdb05b3da53
-.ai-rulez/.generated-manifest.local.json file 0644 2292 20bc5b2c3d5864c103956cd1ae5de2e52dd19536fcb03202057c51da3f332fe0
+.ai-rulez/.generated-manifest.local.json file 0644 2292 7671f51a5989c2dfb8230cd5a558cb78a6759a3885c9a7db225c8e8644acb4f7
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -65,7 +65,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/skills/ship/ dir 0755
 .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
-.gitignore file 0644 410 6a16035384fa0ddf08ab95f3aa773a53c43bb176ab6cea313631727ff95b4d67
+.gitignore file 0644 412 811082c7b6c162b8a23ccfda7ffec4fde1fd8a2d8d737387728a17049625ba62
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 llms-full.txt file 0644 837 c6fd24daa9df4c6c87949f51066ec798db452b52c5f76a7c3919fa2e08e666e1
@@ -166,7 +166,7 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2292 20bc5b2c3d5864c103956cd1ae5de2e52dd19536fcb03202057c51da3f332fe0
+.ai-rulez/.generated-manifest.local.json file 0644 2292 7671f51a5989c2dfb8230cd5a558cb78a6759a3885c9a7db225c8e8644acb4f7
 >>>>
 {
   "version": "1",
@@ -179,8 +179,8 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
+          "073193999a29282d72e9dd698c2d8b15a95f6c1e85829e4a7ff35a931f051c35",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -235,7 +235,7 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
     ]
   },
   "digests": {
-    ".claude/settings.json": "23382e36212770178882efab0c795ebe34866b319e8c4e5035b8a844131d609f",
+    ".claude/settings.json": "5fc45f60aa357c068853b30b25b807e236636dcebb88deddc3021e5ccd61a090",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",
@@ -680,7 +680,7 @@ user-invocable: true
 
 Cut a release.
 <<<<
-.gitignore file 0644 410 6a16035384fa0ddf08ab95f3aa773a53c43bb176ab6cea313631727ff95b4d67
+.gitignore file 0644 412 811082c7b6c162b8a23ccfda7ffec4fde1fd8a2d8d737387728a17049625ba62
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .ai-rulez/.config.local.*
@@ -696,8 +696,8 @@ Cut a release.
 .claude/rules/typescript.md
 .claude/settings.json
 .claude/skills/
-.mcp.json
-CLAUDE.md
+/.mcp.json
+/CLAUDE.md
 # END ai-rulez
 <<<<
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0

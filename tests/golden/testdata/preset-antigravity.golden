@@ -66,7 +66,7 @@ INFO  Generation complete files=16
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 405 dc9815ed55240074848169e87089d4ad2d61f3ef2f7487ea715f1a7bd8385a19
+.gitignore file 0644 407 ecd6faaa821846a93b5e35a5a93be34392861a48c49984e35739500c17f7c27e
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 GEMINI.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755

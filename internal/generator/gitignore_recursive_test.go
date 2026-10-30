@@ -47,7 +47,7 @@ func TestGitignoreSink_WritesOneBlockAtTheToplevel(t *testing.T) {
 
 	// Assert: one block at the toplevel, patterns relative to each root.
 	inside := gitignore.PatternsInsideFence(readGitignore(t, top))
-	assert.Contains(t, inside, "CLAUDE.md")
+	assert.Contains(t, inside, "/CLAUDE.md")
 	assert.Contains(t, inside, ".claude/skills/")
 	assert.Contains(t, inside, "packages/api/CLAUDE.md")
 	assert.Contains(t, inside, "packages/api/.claude/skills/")

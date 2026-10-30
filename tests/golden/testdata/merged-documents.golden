@@ -41,7 +41,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3127 644a594adf8eaf40c4073ebdb7c18a42978b21a868c7ff88fbb58dcebc26fea5
-.ai-rulez/.generated-manifest.local.json file 0644 7976 3e13159c7f89acfa6cafacc1ca2ed886422c5e88d9070ba6fc14a8cd70485446
+.ai-rulez/.generated-manifest.local.json file 0644 7976 920ca6b4aee3bdc9a0cd26a9bf7af9219d47118874179b75fe9f6e0b11dcb00d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -109,7 +109,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1254 9ee3eef9a9bac3c249ff6988dc8c32f80c26c0a8d55a9186deb7e9eacf6ef9d1
-.gitignore file 0644 578 dd238cc20c5a80bbdd4074cc3c6313080508f0ea07a32863a046bdb749006a40
+.gitignore file 0644 581 d304710fd84836066602dead39efd70ef49c9f3d507270ec0dd1652b3061da45
 .mcp.json file 0644 273 ca2c94a13387068c05ab32f8da58ea5d1e6639d3b66ec21429fbf7256053c37a
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
@@ -158,10 +158,10 @@ INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1845 ebeb41701c2b2ba1be19d068b1f0e4fd3c2c5f112bac90196599b4c33a355747
-~ .ai-rulez/.generated-manifest.local.json file 0644 4527 fc87453eadccd464213683085cf676f5f463bdaf5a2f159333671765790e79fc
+~ .ai-rulez/.generated-manifest.local.json file 0644 4527 f0e82ca5602d5079191b915d11dabf41009a52d4e051c08c4e126f997597f60d
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
-~ .gitignore file 0644 489 2615233d61516fda0ff97d1f2d0fe871103e53db4c1697490e03392d6200ab33
+~ .gitignore file 0644 491 33dba552643c8c9d7071b8e916817a6519fea656ebedce0474f2932dcdcd8eb0
 - .agents/ dir 0755
 - .agents/skills/ dir 0755
 - .agents/skills/build/ dir 0755
@@ -300,7 +300,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4527 fc87453eadccd464213683085cf676f5f463bdaf5a2f159333671765790e79fc
+.ai-rulez/.generated-manifest.local.json file 0644 4527 f0e82ca5602d5079191b915d11dabf41009a52d4e051c08c4e126f997597f60d
 >>>>
 {
   "version": "1",
@@ -313,8 +313,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "edd5fa1f1b9179ff85324a43e19bcd118cab1d8f35e27fa758097d0ce7e3491d"
+          "073193999a29282d72e9dd698c2d8b15a95f6c1e85829e4a7ff35a931f051c35",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -922,7 +922,7 @@ model = "mine"
 >>>>
 {"mine": true}
 <<<<
-.gitignore file 0644 489 2615233d61516fda0ff97d1f2d0fe871103e53db4c1697490e03392d6200ab33
+.gitignore file 0644 491 33dba552643c8c9d7071b8e916817a6519fea656ebedce0474f2932dcdcd8eb0
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .ai-rulez/.config.local.*
@@ -941,8 +941,8 @@ model = "mine"
 .opencode/commands/
 .opencode/plugins/ai-rulez-hooks.js
 .opencode/skills/
-AGENTS.md
-CLAUDE.md
+/AGENTS.md
+/CLAUDE.md
 # END ai-rulez
 <<<<
 .mcp.json file 0644 273 ca2c94a13387068c05ab32f8da58ea5d1e6639d3b66ec21429fbf7256053c37a

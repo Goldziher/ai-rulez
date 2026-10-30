@@ -46,7 +46,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-.ai-rulez/.generated-manifest.local.json file 0644 13405 2b03d4fe6a584e4c37c052be634f7b1451c51f6b4109e898ecbddf85e59742c2
+.ai-rulez/.generated-manifest.local.json file 0644 13405 1ed08400889c08e2a707866f104cdcc604300ced07dc1709796b516d33a310e4
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -171,7 +171,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 1232 35a2d8c0ed05d23a1e6fe47fe91eea8527cf5b31cabf5ac4e9acb5fcfee301db
+.gitignore file 0644 1237 0100f60d355a870fa06708395d3d5ae4aeb32c4107b09ca1912cc6d6570cc7e4
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
@@ -232,7 +232,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/migrator/ dir 0755
 + .agents/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
 ~ .ai-rulez/.generated-manifest.json file 0644 5473 f66c86b335b5c633e8f508727bb514c98b34741f03fe3273c31475adf5307f6f
-~ .ai-rulez/.generated-manifest.local.json file 0644 13503 69ffc1749ef3eb9bfa6a6911aef5f23c7ed89833aca0d0877110fd93f4ca8649
+~ .ai-rulez/.generated-manifest.local.json file 0644 13503 cdfc9d309a1f5fa3ddfc76cb4d690d519e7456738237db8018d6df010a2a6548
 + .claude/agents/dba.md file 0644 141 cb3f4ff6ceb1ecbe5b61ed8b8e45ebf8383405f90e30fe2142a0d81309476888
 + .claude/rules/go.md file 0644 233 c7a7097170b9648ceddcee6262e4eccae70e71f46c64369a924c3672295411db
 + .claude/skills/migrator/ dir 0755
@@ -247,7 +247,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .github/instructions/go.instructions.md file 0644 255 03d743dbb6d95a26fce2ce9d5d75fa06f29e3260a3a09143e6639dd7f14ca6b4
 + .github/skills/migrator/ dir 0755
 + .github/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
-~ .gitignore file 0644 1343 a196372f123b2a0e9f5c3c39bd2a833ddd2e844f9df0b60750f892d85a742a2f
+~ .gitignore file 0644 1348 f2c59dbf640ca206d1187f3f476a8c08fa9043cb1d188be4dad7b7250eecbd68
 + .opencode/agents/dba.md file 0644 141 9dfce1bd9757568a1f2cb8a62551dc7ac81097085587808134c9e3b4418e79c8
 + .opencode/skills/migrator/ dir 0755
 + .opencode/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
@@ -288,7 +288,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 ~ .ai-rulez/.generated-manifest.json file 0644 5836 607b038717e0c0373304c8cedb48c6c96044b6d0c8676798ed6393c382d75069
-~ .ai-rulez/.generated-manifest.local.json file 0644 13727 bca8e4d934421ee60cff5e0214422d8a0184f70ce2909ccfbe976e25e3f5c92a
+~ .ai-rulez/.generated-manifest.local.json file 0644 13727 0611334ad82a9e54099ee78f2feb3a95e5ff13eb3436afb1e8e0a66fff31e5d8
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 + .claude/skills/storybook/ dir 0755
 + .claude/skills/storybook/SKILL.md file 0644 178 c09f47a388c3ac12f48f7c195654342ccda0157e1bc08c88cedaf3e2203871d4
@@ -297,7 +297,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .cursor/rules/react.mdc file 0644 266 a31aadc455037e470011b2db33779b7665a1759edd5c45aafa1cb65f004b319f
 + .github/instructions/react.instructions.md file 0644 249 81b9a8fbb7fde7981c2d6c24d3b44585f5d6cdba9164375a8efefd78fb0c5650
 + .github/prompts/storybook.prompt.md file 0644 141 98ff12386550a2c7ad1594211160cb6619b69c12a631314c0fe2bf47bbf86acb
-~ .gitignore file 0644 1469 37b12be443146aec5b4d44a152d5b2f371eeabcd81f8a343dffb9595f2d80cec
+~ .gitignore file 0644 1474 e76ae26af6a6a5e630a8ee369cbc921079e9131f91f34504355da17d13aba6a8
 + .opencode/commands/storybook.md file 0644 141 98ff12386550a2c7ad1594211160cb6619b69c12a631314c0fe2bf47bbf86acb
 ~ AGENTS.md file 0644 913 d438e0dad7b8ca93ce84866dee604c7f9528c48b79ab1ed8d8e986dcfffc0f39
 ~ GEMINI.md file 0644 913 d438e0dad7b8ca93ce84866dee604c7f9528c48b79ab1ed8d8e986dcfffc0f39
@@ -541,7 +541,7 @@ Profiles:
 .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5836 607b038717e0c0373304c8cedb48c6c96044b6d0c8676798ed6393c382d75069
-.ai-rulez/.generated-manifest.local.json file 0644 13727 bca8e4d934421ee60cff5e0214422d8a0184f70ce2909ccfbe976e25e3f5c92a
+.ai-rulez/.generated-manifest.local.json file 0644 13727 0611334ad82a9e54099ee78f2feb3a95e5ff13eb3436afb1e8e0a66fff31e5d8
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -686,7 +686,7 @@ Profiles:
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 1469 37b12be443146aec5b4d44a152d5b2f371eeabcd81f8a343dffb9595f2d80cec
+.gitignore file 0644 1474 e76ae26af6a6a5e630a8ee369cbc921079e9131f91f34504355da17d13aba6a8
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 .opencode/ dir 0755
 .opencode/agents/ dir 0755

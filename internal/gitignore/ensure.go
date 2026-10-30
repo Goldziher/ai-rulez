@@ -3,6 +3,7 @@ package gitignore
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -64,6 +65,7 @@ func allPatterns(content string) map[string]bool {
 // A .gitignore that is a symbolic link is never written through (git would not
 // read it): the entries go to .git/info/exclude instead, see ReplaceViaExclude.
 func EnsureEntries(log logger.Logger, baseDir string, patterns []string) error {
+	baseDir, patterns = repositoryBlockLocation(baseDir, patterns)
 	path := filepath.Join(baseDir, ".gitignore")
 	if IsSymlink(baseDir) {
 		return ensureViaExclude(log, baseDir, patterns)
@@ -87,6 +89,9 @@ func EnsureEntries(log logger.Logger, baseDir string, patterns []string) error {
 	if !changed {
 		return nil
 	}
+	// Sorted, so a block written incrementally (one root at a time) is the same
+	// block the final rewrite produces, even when a later root fails (#519).
+	slices.Sort(entries)
 
 	var block strings.Builder
 	block.WriteString(BeginMarker + "\n")
@@ -142,4 +147,32 @@ func gitignoreMode(path string) os.FileMode {
 		return info.Mode().Perm()
 	}
 	return 0o644
+}
+
+// repositoryBlockLocation moves the managed block to the work tree root of the
+// repository holding baseDir, prefixing the patterns, when baseDir lies below it.
+// One repository keeps one block (#316): a config in a subdirectory, such as a
+// nested plugin directory, must not grow a .gitignore of its own, and the
+// toplevel block has to name its machine-local inputs so a committed overlay
+// stays out of git (#517). A directory that is not in a work tree, or is the
+// root of one, is left alone.
+func repositoryBlockLocation(baseDir string, patterns []string) (dir string, prefixedPatterns []string) {
+	top := (gitutil.Git{}).TopLevel(baseDir)
+	if top == "" || filepath.Clean(top) == filepath.Clean(baseDir) {
+		return baseDir, patterns
+	}
+	rel := gitutil.RepoRelative(top, baseDir)
+	if rel == "" || rel == "." {
+		return baseDir, patterns
+	}
+	prefix := strings.Trim(filepath.ToSlash(rel), "/")
+	prefixed := make([]string, 0, len(patterns))
+	for _, pattern := range patterns {
+		pattern = strings.TrimSpace(pattern)
+		if pattern == "" {
+			continue
+		}
+		prefixed = append(prefixed, prefix+"/"+strings.TrimPrefix(pattern, "/"))
+	}
+	return top, prefixed
 }
