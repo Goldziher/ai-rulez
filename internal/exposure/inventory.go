@@ -51,6 +51,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -294,6 +295,7 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 	files, capped := opts.Files, false
 	if files == nil {
 		files, capped = repoindex.ListFilesCapped(ctx, root)
+		files = withNativeArtifacts(root, files)
 	}
 	files = withRootSettings(root, files)
 	b := &builder{root: root, absRoot: filepath.ToSlash(root), realRoot: realPath(root), files: files}
@@ -500,6 +502,39 @@ func realPath(p string) string {
 		return r
 	}
 	return p
+}
+
+// withNativeArtifacts adds the Claude Code context files a git listing leaves out.
+// Generated CLAUDE.md, AGENTS.md and .claude/ are usually gitignored, yet the
+// session loads them: git decides what is committed, not what is exposed (#522).
+// A file already listed is kept once.
+func withNativeArtifacts(root string, files []string) []string {
+	seen := make(map[string]bool, len(files)+8)
+	for _, file := range files {
+		seen[file] = true
+	}
+	add := func(rel string) {
+		if !seen[rel] {
+			files = append(files, rel)
+			seen[rel] = true
+		}
+	}
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+		if info, err := os.Stat(filepath.Join(root, name)); err == nil && info.Mode().IsRegular() {
+			add(name)
+		}
+	}
+	//nolint:errcheck // an unreadable entry is left out, as in the listing
+	_ = filepath.WalkDir(filepath.Join(root, ".claude"), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return nil //nolint:nilerr // an unreadable entry is left out
+		}
+		if rel, relErr := filepath.Rel(root, path); relErr == nil {
+			add(filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	return files
 }
 
 // withRootSettings adds the root project settings files that exist but are not

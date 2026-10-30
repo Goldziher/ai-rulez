@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.9.5] - 2026-10-30
+
+### Fixed
+
+- **`exposure` counts gitignored native context files.** A generated `CLAUDE.md`, `AGENTS.md` and
+  `.claude/` are normally gitignored, and the git listing the inventory starts from left them out, so a
+  real repository could report zero start tokens and pass its budget while Claude Code still loaded the
+  instructions. The inventory now adds those native artifacts whether or not git ignores them, and this
+  covers `exposure inventory`, leakage and the start budget alike
+  ([#522](https://github.com/Goldziher/ai-rulez/issues/522)).
+
+### Added
+
+- **The poly hook catalog offers an npm execution path.** Every hook now declares a second
+  `[[hooks.paths]]` entry (`channel = "npm"`, `npx -y ai-rulez@latest`) next to `system`, so a repository
+  that runs ai-rulez only through npm can install the hooks. `[hook_preferences] channels = ["system",
+  "npm"]` keeps a reviewed binary first and falls back to the latest release
+  ([#526](https://github.com/Goldziher/ai-rulez/issues/526)).
+
 ## [5.9.4] - 2026-10-30
 
 ### Fixed
