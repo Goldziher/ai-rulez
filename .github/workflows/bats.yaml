@@ -14,7 +14,9 @@ on:
       - "cmd/**"
       - "go.mod"
       - "go.sum"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise.lock"
+      - "mise-tasks/**"
       - ".github/workflows/bats.yaml"
   pull_request:
     branches: [main]
@@ -48,9 +50,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
+        uses: ./.github/actions/go-toolchain
 
       # The suites that check emitted scripts (Cline hooks, the Husky hook, the improve template,
       # the rule docs) render them through a binary built from this commit.
@@ -81,20 +81,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check tests/lib/xberg-bats against the pinned xberg-io/actions commit
-        run: scripts/bats/sync-xberg-bats.sh --check
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      # poly has no engine for .bats, so the suites are linted directly, with the shfmt and
+      # shellcheck mise.toml pins.
+      - name: Install shfmt and shellcheck
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          go-version: "1.27"
+          tools: shfmt shellcheck
 
-      # poly has no engine for .bats, so the suites are linted directly. shfmt is not on the
-      # runner image; pinned to the version used locally.
-      - name: Install shfmt
-        run: |
-          go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
-          echo "$(go env GOPATH)/bin" >>"$GITHUB_PATH"
+      - name: Check tests/lib/xberg-bats against the pinned xberg-io/actions commit
+        run: mise run test:lib:check
 
       - name: Lint the Bats suites
-        run: scripts/bats/lint.sh
+        run: mise run lint:bats

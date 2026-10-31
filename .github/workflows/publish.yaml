@@ -53,10 +53,6 @@ jobs:
       archives_complete: ${{ steps.release_state.outputs.archives_complete }}
       provenance_complete: ${{ steps.release_state.outputs.provenance_complete }}
     steps:
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: "12.14.0"
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -87,10 +83,10 @@ jobs:
           fi
           echo "Dispatching $INPUT_TAG from $REF; provenance will carry the tag identity."
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Setup Node.js and pnpm
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          node-version: "24"
+          tools: node pnpm
 
       - name: Extract version from tag
         id: version
@@ -291,11 +287,12 @@ jobs:
               ''
             }}
 
+      # No cache, as setup-go's `cache: false` had it: a release builds from a fresh toolchain install. ~keep
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          go-version-file: "go.mod"
-          cache: false
+          tools: go
+          cache: "false"
 
       - name: Show C toolchain
         run: |
@@ -557,10 +554,6 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: "12.14.0"
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -572,6 +565,15 @@ jobs:
               ''
             }}
 
+      # Kept for the irreversible npm publish, which runs pnpm exactly as before; 12.15.0 matches mise.toml.
+      # ~keep
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: "12.15.0"
+
+      # Kept for the npm publish: registry-url writes the .npmrc the trusted (OIDC) provenance publish has
+      # always run with, and this job is irreversible. ~keep
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -629,9 +631,9 @@ jobs:
             }}
 
       - name: Setup Python
-        uses: actions/setup-python@v7
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          python-version: "3.14"
+          tools: python
 
       - name: Build Python package
         env:

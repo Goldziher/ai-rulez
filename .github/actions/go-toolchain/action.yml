@@ -1,0 +1,72 @@
+name: Set up Go through mise
+description: >-
+  Install the Go that mise.toml pins (plus any other tools named) through xberg-io/actions/setup-mise, then
+  restore the module and build caches that actions/setup-go's `cache: true` kept, keyed on go.sum. Run after
+  checkout.
+
+inputs:
+  tools:
+    description: Whitespace-separated mise tools to install; must include go.
+    required: false
+    default: go
+  cache:
+    description: '"false" skips the Go module and build cache, as setup-go''s `cache: false` did.'
+    required: false
+    default: "true"
+  restore-keys:
+    description: '"true" also restores the newest cache for this OS, arch and Go version when go.sum changed.'
+    required: false
+    default: "false"
+
+outputs:
+  go-version:
+    description: The installed Go version, e.g. 1.27.3.
+    value: ${{ steps.go.outputs.version }}
+  cache-hit:
+    description: Whether the Go cache was restored from an exact key match.
+    value: ${{ steps.cache.outputs.cache-hit }}
+  cache-key:
+    description: The primary key of the Go cache, for a job that saves it itself after a failure.
+    value: ${{ steps.go.outputs.key }}
+  modules:
+    description: GOMODCACHE.
+    value: ${{ steps.go.outputs.modules }}
+  build:
+    description: GOCACHE.
+    value: ${{ steps.go.outputs.build }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install tools through mise
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        tools: ${{ inputs.tools }}
+
+    - name: Resolve the Go cache paths
+      id: go
+      shell: bash
+      env:
+        GO_SUM_HASH: ${{ hashFiles('**/go.sum') }}
+      run: |
+        set -euo pipefail
+        version="$(go env GOVERSION)"
+        version="${version#go}"
+        {
+          echo "version=$version"
+          echo "modules=$(go env GOMODCACHE)"
+          echo "build=$(go env GOCACHE)"
+          echo "prefix=go-${RUNNER_OS}-${RUNNER_ARCH}-${version}-"
+          echo "key=go-${RUNNER_OS}-${RUNNER_ARCH}-${version}-${GO_SUM_HASH}"
+        } >>"$GITHUB_OUTPUT"
+
+    - name: Cache Go modules and builds
+      if: inputs.cache == 'true'
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          ${{ steps.go.outputs.modules }}
+          ${{ steps.go.outputs.build }}
+        key: ${{ steps.go.outputs.key }}
+        restore-keys: ${{ inputs.restore-keys == 'true' && steps.go.outputs.prefix || '' }}
