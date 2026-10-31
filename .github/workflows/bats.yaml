@@ -45,7 +45,7 @@ jobs:
       matrix:
         # Both: the pre-commit script maps uname per platform and the suites shadow the host's
         # system bins, which differ between the two images.
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-26]
     steps:
       - uses: actions/checkout@v7
 

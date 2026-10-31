@@ -156,7 +156,7 @@ jobs:
     timeout-minutes: 180
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-26]
       fail-fast: false
     steps:
       - name: Checkout code
@@ -230,7 +230,7 @@ jobs:
     timeout-minutes: 180
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-26]
         test-suite: [cli, mcp, integration]
       fail-fast: false
     steps:
@@ -380,7 +380,7 @@ jobs:
     timeout-minutes: 180
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-26]
       fail-fast: false
     steps:
       - name: Checkout code
