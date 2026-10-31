@@ -2,7 +2,7 @@
 # generates for. This is the single source of the numbers; the generator, the
 # lint traps (AR9C8, AR9C9) and the config defaults read it. Every row carries
 # the vendor page, a verbatim quote and the date a maintainer last compared it
-# with the page (`task harness:verify` lists them and fails when they are stale).
+# with the page (`mise run harness:verify` lists them and fails when they are stale).
 # A row must not ship without a quote and a date.
 schema = 1
 

@@ -11,7 +11,7 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
 1. Bump every surface that carries the version, merge the result, and let CI go green:
 
    ```bash
-   task set-version -- 5.4.0
+   mise run set-version 5.4.0
    scripts/release-bump.sh check 5.4.0
    uv lock
    ```
@@ -23,7 +23,7 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
    `scripts/release-bump.sh set 5.4.0-rc.1` to convert the Python wrapper versions to PEP 440 (`5.4.0rc1`).
 
    Date the release's changelog section, review the release notes, update any remaining version examples, and
-   regenerate the CLI and LLM documentation with `task docs:cli` and `task docs:llms`.
+   regenerate the CLI and LLM documentation with `mise run docs:cli` and `mise run docs:llms`.
 
    Then regenerate the goldens: the generated manifest records the tool version, so every golden that lists
    `.ai-rulez/.generated-manifest.local.json` changes.
@@ -140,7 +140,7 @@ checks the packaged binary has no dependency on `liter_llm_ffi` (`otool -L` / `l
 
 Plain `go build` and `go test` need none of this: the liter-llm Go module ships a shared library per platform in its own
 `.lib/` directory and links it with an absolute rpath, which is fine on the machine that built it and wrong for anything
-shipped. `task build` and the CI jobs use the static library as a release does. Get the same environment with:
+shipped. `mise run build` and the CI jobs use the static library as a release does. Get the same environment with:
 
 ```bash
 eval "$(scripts/setup-liter-llm.sh)"          # exports CGO_ENABLED=1 and CGO_LDFLAGS

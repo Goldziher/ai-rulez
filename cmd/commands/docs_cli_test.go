@@ -12,7 +12,7 @@ import (
 )
 
 // The command reference of the docs is generated from the command tree
-// (`task docs:cli`). A command, flag, default, example or description that
+// (`mise run docs:cli`). A command, flag, default, example or description that
 // changes without regenerating the docs fails here, so docs/cli-reference.md and
 // the command index of docs/cli.md cannot drift from the binary.
 func TestGeneratedCLIDocsMatchTheCommandTree(t *testing.T) {
@@ -29,6 +29,6 @@ func TestGeneratedCLIDocsMatchTheCommandTree(t *testing.T) {
 
 	// Assert
 	require.NoError(t, applyErr)
-	assert.Equal(t, wantCLI, string(cliPage), "the command index of docs/cli.md is stale: run `task docs:cli`")
-	assert.Equal(t, clidocs.Reference(root), string(reference), "docs/cli-reference.md is stale: run `task docs:cli`")
+	assert.Equal(t, wantCLI, string(cliPage), "the command index of docs/cli.md is stale: run `mise run docs:cli`")
+	assert.Equal(t, clidocs.Reference(root), string(reference), "docs/cli-reference.md is stale: run `mise run docs:cli`")
 }

@@ -16,6 +16,6 @@ x-ai-rulez:
 
 Run the project's test suite using the standard task runner.
 
-1. Run `task test` to execute all tests
+1. Run `mise run test` to execute all tests
 2. If tests fail, analyze the failures and suggest fixes
 3. Report a summary: total tests, passed, failed, skipped

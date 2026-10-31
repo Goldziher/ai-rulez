@@ -6,7 +6,7 @@
 // malicious samples exist to be flagged and are never executed.
 //
 // The offline half (the tests in this package) runs the verifier and the convention attachment on the
-// corpus without a model. The live half is cmd/judgebench (task bench:judge), which runs the model
+// corpus without a model. The live half is cmd/judgebench (mise run bench:judge), which runs the model
 // pipeline over the corpus and prints precision, recall, the trap false-positive rate, grounding and
 // cost.
 package judgebench

@@ -36,12 +36,12 @@ Install `ai-rulez` using your preferred package manager.
     This builds a local cgo executable using the native library shipped in the Go module.
     It needs a C toolchain and the module cache at runtime; use a release package for distribution.
 
-    For a statically linked build from a clone, use Task to fetch and verify the pinned native library:
+    For a statically linked build from a clone, use mise to fetch and verify the pinned native library:
 
     ```bash
     git clone https://github.com/Goldziher/ai-rulez
     cd ai-rulez
-    task build
+    mise run build
     ./bin/ai-rulez version
     ```
 

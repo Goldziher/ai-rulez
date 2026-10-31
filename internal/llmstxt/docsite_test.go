@@ -111,7 +111,7 @@ func TestClipWords(t *testing.T) {
 }
 
 // TestCheckedInDocsFilesAreFresh fails when docs/llms.txt or docs/llms-full.txt
-// differ from the docs sources. Regenerate with `task docs:llms`.
+// differ from the docs sources. Regenerate with `mise run docs:llms`.
 func TestCheckedInDocsFilesAreFresh(t *testing.T) {
 	root := filepath.Join("..", "..")
 	raw, err := os.ReadFile(filepath.Join(root, "zensical.toml"))
@@ -130,7 +130,7 @@ func TestCheckedInDocsFilesAreFresh(t *testing.T) {
 	for name, want := range map[string]string{"llms.txt": index, "llms-full.txt": full} {
 		have, readErr := os.ReadFile(filepath.Join(docs, name))
 		if readErr != nil || string(have) != want {
-			t.Errorf("docs/%s is stale: run `task docs:llms`", name)
+			t.Errorf("docs/%s is stale: run `mise run docs:llms`", name)
 		}
 	}
 	if fs := Validate([]byte(index)); len(fs) != 0 {

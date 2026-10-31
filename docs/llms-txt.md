@@ -88,8 +88,8 @@ frontmatter, or its first sentence), grouped like the nav. Proposals and the cha
 `docs/`, checked in, and copied to the site root by the build.
 
 ```sh
-task docs:llms          # regenerate after editing the docs or the nav
-task docs:llms:check    # what CI runs: fails when the files are stale
+mise run docs:llms          # regenerate after editing the docs or the nav
+mise run docs:llms:check    # what CI runs: fails when the files are stale
 ```
 
 The docs workflow runs the check before building the site, and a Go test runs it with the rest of the suite, so a

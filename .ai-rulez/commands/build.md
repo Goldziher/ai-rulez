@@ -16,6 +16,6 @@ x-ai-rulez:
 
 Build the project using the standard task runner.
 
-1. Run `task build`
+1. Run `mise run build`
 2. Report any build errors with context
 3. Suggest fixes for any compilation failures

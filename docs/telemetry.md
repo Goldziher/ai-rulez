@@ -439,7 +439,7 @@ The OTLP/HTTP JSON encoder is hand-written, so one opt-in test checks it against
 (`otel/opentelemetry-collector-contrib`, pinned by tag and digest in `internal/telemetry/otelcol_e2e_test.go`):
 
 ```console
-task test:otelcol    # needs docker; sets AI_RULEZ_E2E_OTELCOL=1
+mise run test:otelcol    # needs docker; sets AI_RULEZ_E2E_OTELCOL=1
 ```
 
 The test starts the container with a file exporter, flushes a spool batch through the real exporter (gzip, logs and

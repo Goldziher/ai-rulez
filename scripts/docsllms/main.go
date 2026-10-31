@@ -65,7 +65,7 @@ func run() error {
 		}
 	}
 	if stale {
-		return fmt.Errorf("run `task docs:llms` and commit the result")
+		return fmt.Errorf("run `mise run docs:llms` and commit the result")
 	}
 	return nil
 }

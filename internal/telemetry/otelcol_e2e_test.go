@@ -20,7 +20,7 @@ import (
 
 // The collector end-to-end test sends a batch to a real OpenTelemetry Collector
 // and reads back what its file exporter wrote. It is opt-in: it needs docker and
-// AI_RULEZ_E2E_OTELCOL=1 (task test:otelcol sets both the variable and the -run
+// AI_RULEZ_E2E_OTELCOL=1 (mise run test:otelcol sets both the variable and the -run
 // filter), so the default test run never pulls an image or opens a port.
 const (
 	envE2EOtelcol = "AI_RULEZ_E2E_OTELCOL"
@@ -55,7 +55,7 @@ service:
 func startCollector(t *testing.T) (endpoint, outDir string) {
 	t.Helper()
 	if os.Getenv(envE2EOtelcol) != "1" {
-		t.Skipf("set %s=1 to run the real-collector test (task test:otelcol)", envE2EOtelcol)
+		t.Skipf("set %s=1 to run the real-collector test (mise run test:otelcol)", envE2EOtelcol)
 	}
 	docker, err := exec.LookPath("docker")
 	if err != nil {

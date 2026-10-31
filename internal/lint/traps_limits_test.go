@@ -161,13 +161,13 @@ func TestHarnessTableStale(t *testing.T) {
 	}
 }
 
-// TestHarnessVerify backs `task harness:verify`: it lists every row with its
+// TestHarnessVerify backs `mise run harness:verify`: it lists every row with its
 // source and date and fails when one is older than the allowed age. It never
 // touches the network unless HARNESS_VERIFY_FETCH=1 (then it also checks that
 // each quote is still on its page).
 func TestHarnessVerify(t *testing.T) {
 	if os.Getenv("HARNESS_VERIFY") == "" {
-		t.Skip("set HARNESS_VERIFY=1 (task harness:verify) to run the freshness check")
+		t.Skip("set HARNESS_VERIFY=1 (mise run harness:verify) to run the freshness check")
 	}
 	maxAge := defaultMaxTableAgeDays
 	if n := repoMaxTableAgeDays(); n > 0 {

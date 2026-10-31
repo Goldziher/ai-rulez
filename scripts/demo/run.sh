@@ -28,7 +28,7 @@ record)
     exit 1
   }
   command -v ai-rulez >/dev/null || {
-    echo "ai-rulez must be on PATH (task build, then put bin/ on PATH)" >&2
+    echo "ai-rulez must be on PATH (mise run build, then put bin/ on PATH)" >&2
     exit 1
   }
   for name in $(names "$@"); do

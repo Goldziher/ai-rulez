@@ -76,11 +76,11 @@ fetch_ref="${requested:-$ref}"
 if [[ "$check" -eq 1 ]]; then
   # The recorded digest catches a hand edit even before the network is reached.
   [[ -f "$lib_file" ]] || {
-    echo "sync-xberg-bats: ${lib_file} is missing; run task test:lib:sync" >&2
+    echo "sync-xberg-bats: ${lib_file} is missing; run: mise run test:lib:sync" >&2
     exit 2
   }
   if [[ "$(sha256_of "$lib_file")" != "$(pin_value sha256)" ]]; then
-    echo "sync-xberg-bats: ${lib_file} was edited by hand (sha256 differs from the pin); run task test:lib:sync" >&2
+    echo "sync-xberg-bats: ${lib_file} was edited by hand (sha256 differs from the pin); run: mise run test:lib:sync" >&2
     exit 2
   fi
 fi
@@ -97,7 +97,7 @@ git -C "$work" show "${commit}:${upstream_path}" >"${work}/load.bash" ||
 
 if [[ "$check" -eq 1 ]]; then
   if ! cmp -s "${work}/load.bash" "$lib_file"; then
-    echo "sync-xberg-bats: ${lib_file} differs from ${upstream_path} at ${ref}; run task test:lib:sync" >&2
+    echo "sync-xberg-bats: ${lib_file} differs from ${upstream_path} at ${ref}; run: mise run test:lib:sync" >&2
     diff -u "$lib_file" "${work}/load.bash" >&2 || true
     exit 2
   fi

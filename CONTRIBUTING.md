@@ -6,18 +6,15 @@ Thank you for your interest in contributing! This guide provides everything you 
 
 ### Prerequisites
 
-- **Go 1.27.2+**, matching `go.mod`
+- **[mise](https://mise.jdx.dev)**, which installs every other tool `mise.toml` pins (Go, Node.js, pnpm,
+  Python, uv, Poly, golangci-lint, shfmt, shellcheck, Bats, actionlint) and runs the tasks
 - **A C toolchain and cgo** for the liter-llm native library
-- **[Task](https://taskfile.dev)** for build scripts
-- **Poly** for linting, formatting and Git hooks
-- **Python 3.11+** for governance hook setup (`tomllib`)
-- **The reviewed ai-rulez CLI source build pinned in [CI](.github/workflows/ai-rulez-validation.yml)**, available on `PATH` before installing governance hooks
 
-Node.js 22+ and pnpm are needed when working on the npm wrapper. Documentation builds use Python and uv.
+The governance tasks and hooks run `npx -y ai-rulez@latest` on the pinned Node.js.
 
 ### Setup
 
-Install the prerequisites first. The `setup` task installs golangci-lint, configures governance hooks and downloads Go modules; it does not install Poly, Python or the ai-rulez CLI.
+Install the prerequisites first. The `setup` task installs the `mise.toml` tools, configures governance hooks and downloads Go modules.
 
 ```bash
 # 1. Clone the repository
@@ -25,14 +22,14 @@ git clone https://github.com/Goldziher/ai-rulez.git
 cd ai-rulez
 
 # 2. Run the setup task
-task setup
+mise run setup
 ```
 
 ---
 
 ## Pre-commit hooks
 
-Install the git hooks with `task setup` (or `poly hooks install` directly). On
+Install the git hooks with `mise run setup` (or `poly hooks install` directly). On
 every commit, poly runs lint, format, and file-safety checks; the commit-msg
 hook validates the message. Run all hooks manually with
 `poly hooks run pre-commit --all-files`.
@@ -43,8 +40,8 @@ Author contributor guidance in `.ai-rulez/`. The root `config.toml` selects
 `config.plugins.toml` through `default_layers = ["plugins"]`; the latter holds
 consumer marketplace declarations. The native CLI owns the generated headers and
 machine-local ownership sidecars. Use the reviewed source revision pinned in CI,
-then run `task governance:check` after editing sources. Install its system-channel
-Poly hooks with `task governance:hooks:install`; preserve existing machine preferences.
+then run `mise run governance:check` after editing sources. Install its
+Poly hooks with `mise run governance:hooks:install`; preserve existing machine preferences.
 
 The installable product skill is under `skills/ai-rulez/`, separate from internal
 maintainer skills under `.ai-rulez/skills/`. Audit its CLI examples and resource
@@ -84,23 +81,23 @@ operation, then call that shared implementation from both interfaces where the f
 
 ### Building and Testing
 
-The project uses [Task](https://taskfile.dev) for all build and test operations.
+The project uses [mise](https://mise.jdx.dev) tasks for all build and test operations; `mise tasks` lists them.
 
 ```bash
 # Build the binary to ./bin/ai-rulez, linking liter-llm statically as a release does
 # (downloads and sha256-verifies the library once; needs cgo and a C toolchain)
-task build
+mise run build
 
 # Run all unit tests
-task test
+mise run test
 
 # Run all end-to-end tests
-task test:e2e
+mise run test:e2e
 
 # Run the checks CI runs, before committing
-task lint       # poly fmt --check + poly lint
-task check      # go vet + golangci-lint
-task test:all   # unit + platform + e2e
+mise run lint       # poly fmt --check + poly lint
+mise run check      # go vet + golangci-lint
+mise run test:all   # unit + platform + e2e
 ```
 
 ### Updating golden files
@@ -108,7 +105,7 @@ task test:all   # unit + platform + e2e
 A golden-file test fails with a diff when its output changes on purpose. Rewrite the files, then review the diff before committing:
 
 ```bash
-task test:golden:update
+mise run test:golden:update
 ```
 
 Most packages read `UPDATE_GOLDEN=1`; the task sets it and reruns those packages. The other regeneration switches are per test and documented in the failure message:
@@ -178,7 +175,7 @@ requires a DCO sign-off (`git commit -s`). This does not apply to commits in thi
 1.  Create a feature branch from `main`.
 2.  Make your changes, following the architectural guidelines.
 3.  Add or update unit and E2E tests for your changes.
-4.  Ensure all checks pass by running `task lint`, `task check`, and `task test:all`.
+4.  Ensure all checks pass by running `mise run lint`, `mise run check`, and `mise run test:all`.
 5.  Push your branch and open a pull request with a title that follows the Conventional Commit format.
 
 ---
@@ -188,7 +185,7 @@ requires a DCO sign-off (`git commit -s`). This does not apply to commits in thi
 A version tag push triggers [the publish workflow](.github/workflows/publish.yaml). Follow the complete
 [maintainer release guide](docs/maintainers/release.md), including version synchronization, golden updates and verification.
 
-1. Run `task set-version -- X.Y.Z`, `scripts/release-bump.sh check X.Y.Z` and `uv lock`. Update the changelog and generated documentation, commit the release changes, and wait for CI on `main` to pass.
+1. Run `mise run set-version X.Y.Z`, `scripts/release-bump.sh check X.Y.Z` and `uv lock`. Update the changelog and generated documentation, commit the release changes, and wait for CI on `main` to pass.
 2. Create a signed tag at that verified commit and push it:
 
    ```bash
