@@ -18,3 +18,216 @@ actionlint = "1.7.12"
 golangci-lint = "2.15.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
+
+[tasks.setup]
+description = "Set up the development environment"
+run = ["mise install", { task = "governance:hooks:install" }, "go mod download"]
+
+[tasks.update]
+description = "Update Go modules and the docs lockfile"
+run = ["go get -u all", "go mod tidy", "uv lock --upgrade"]
+
+[tasks."setup:llm"]
+description = "Download, sha256-verify and cache the static liter-llm library; prints the CGO_LDFLAGS export (needs the network once)"
+run = "bash scripts/setup-liter-llm.sh"
+
+[tasks."release:dry-run"]
+description = "Build this platform's release archive locally and check what the wrappers expect (see docs/maintainers/release.md)"
+run = "bash scripts/release-dry-run.sh"
+
+# Tasks with POSIX expansions, quoting or script paths set shell = "bash -c" so a local Windows run does not
+# fall back to cmd. test, test:platform and test:e2e run in the Windows CI jobs and leave it unset: a bare
+# `bash` can resolve to System32's WSL launcher there, and setup-mise's default inline shell names Git Bash by
+# full path. ~keep
+[tasks.test]
+description = "Run unit and integration tests"
+# TEST_TIMEOUT and COMMAND_TEST_LOG_DIR come from the environment, as CI sets them. ~keep
+run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
+run_windows = 'go run ./scripts/testshard -shards 4 -log-dir "${COMMAND_TEST_LOG_DIR:-}" -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
+
+[tasks."schema:local:generate"]
+description = "Derive the local overlay schema from the main schema"
+env = { UPDATE_LOCAL_SCHEMA = "1" }
+run = "go test ./schema -run TestLocalSchemaInSync -count=1"
+
+[tasks."test:gemini-settings"]
+description = "Verify Gemini extension settings schema and native projection"
+run = "go test ./internal/config ./internal/generator/plugin ./schema -count=1"
+
+[tasks."test:golden:update"]
+description = "Rewrite golden files (UPDATE_GOLDEN=1) in every package that has them, then the tokens golden; review the diff"
+env = { UPDATE_GOLDEN = "1" }
+run = [
+  "go test -count=1 ./cmd/commands/ ./internal/lint/ ./internal/evals/evalimport/ ./internal/importer/ ./internal/mcp/ ./internal/okfbridge/ ./internal/generator/... ./internal/publish/... ./internal/migrate/ ./internal/agentplugins/ ./internal/telemetry/ ./internal/ard/ ./internal/policy/ ./tests/golden/ ./tests/archlint/",
+  "go test -count=1 ./internal/generator -run Golden_TokenReportJSON -update-tokens-golden",
+]
+
+[tasks."test:verbose"]
+description = "Run all tests with verbose output"
+run = "go test -v ./..."
+
+[tasks."test:race"]
+description = "Run tests with race detector"
+run = "go test -race ./..."
+
+[tasks."test:e2e"]
+description = "Run all e2e tests"
+run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./tests/e2e/...'
+
+[tasks."test:e2e:cli"]
+description = "Run e2e CLI tests"
+run = "go test ./tests/e2e/cli/..."
+
+[tasks."test:e2e:mcp"]
+description = "Run e2e MCP tests"
+run = "go test ./tests/e2e/mcp/..."
+
+[tasks."test:e2e:integration"]
+description = "Run e2e integration tests"
+run = "go test ./tests/e2e/integration/..."
+
+[tasks."test:otelcol"]
+description = "Send telemetry to a pinned real OpenTelemetry Collector (needs docker)"
+shell = "bash -c"
+env = { AI_RULEZ_E2E_OTELCOL = "1" }
+run = "go test ./internal/telemetry -run 'TestCollector' -count=1 -v"
+
+[tasks."test:platform"]
+description = "Run cross-platform specific tests"
+run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./tests/platform/...'
+
+# Arguments after `--` reach the script: mise appends them to a task with no usage spec. ~keep
+[tasks."test:bats"]
+description = "Run the Bats suites for shell scripts (usage: mise run test:bats -- [bats args or suite path])"
+shell = "bash -c"
+# run.sh sets BATS_LIB_PATH=tests/lib (bats_load_library searches nothing else) and builds ai-rulez once for
+# the suites that render scripts through the binary. ~keep
+run = "scripts/bats/run.sh"
+
+[tasks."test:lib:sync"]
+description = "Refresh tests/lib/xberg-bats from xberg-io/actions (mise run test:lib:sync -- --ref v1 re-pins)"
+shell = "bash -c"
+run = "scripts/bats/sync-xberg-bats.sh"
+
+[tasks."test:lib:check"]
+description = "Fail when tests/lib/xberg-bats has drifted from the pinned xberg-io/actions commit"
+shell = "bash -c"
+run = "scripts/bats/sync-xberg-bats.sh --check"
+
+[tasks."lint:bats"]
+description = "Format-check and lint the Bats suites (poly has no engine for .bats)"
+shell = "bash -c"
+run = "scripts/bats/lint.sh"
+
+[tasks."bench:judge"]
+description = "Run the judge benchmark on Amazon Bedrock: the synthetic corpus of bench/judge through the model pipeline, then precision/recall per code, the trap false-positive rate, grounding and cost. Spends money (hard cap 5 USD by default); pass flags after --, for example: mise run bench:judge -- --max-cost 3 --only mal-s03-a,trap-t01. Uses AWS_PROFILE=default and AWS_REGION=eu-north-1 unless --aws-profile / --aws-region say otherwise"
+run = "go run ./bench/judge/cmd/judgebench"
+
+[tasks."bench:judge:offline"]
+description = "Run the offline half of the judge benchmark: the verifier and the convention attachment on the corpus, no model"
+run = "go test ./bench/judge/... -count=1"
+
+[tasks."test:benchmark"]
+description = "Run Go benchmarks (small and medium synthetic projects)"
+shell = "bash -c"
+run = "go test -bench=. -run='^$' -timeout 30m ./..."
+
+[tasks."test:benchmark:smoke"]
+description = "Run every benchmark once (-benchtime=1x): proves they still run, measures nothing. CI runs this; the regression gate is test:benchmark:regression"
+shell = "bash -c"
+run = "go test -bench=. -benchtime=1x -run='^$' -timeout \"${TEST_TIMEOUT:-15m}\" ./..."
+
+[tasks."test:benchmark:large"]
+description = "Run Go benchmarks including the 2000-file synthetic project (one iteration each)"
+shell = "bash -c"
+env = { AI_RULEZ_BENCH_LARGE = "1" }
+run = "go test -bench=. -benchtime=1x -run='^$' -timeout 60m ./..."
+
+[tasks."test:benchmark:regression"]
+description = "Build and run the curated benchmark subset at the merge base and at HEAD on this machine, interleaved, and fail on a >20% time/op regression that is statistically significant (what CI runs). Pass a ref after --: mise run test:benchmark:regression -- origin/main"
+shell = "bash -c"
+run = "scripts/bench.sh --compare"
+
+[tasks."test:benchmark:baseline:check"]
+description = "Fallback: compare HEAD with the committed scripts/bench-baseline.txt (only meaningful on the CPU model that recorded it)"
+shell = "bash -c"
+run = "scripts/bench.sh"
+
+[tasks."test:benchmark:baseline"]
+description = "Re-record the fallback scripts/bench-baseline.txt on this machine"
+shell = "bash -c"
+run = "scripts/bench.sh --update"
+
+[tasks."test:all"]
+description = "Run all test suites"
+run = [{ task = "test" }, { task = "test:platform" }, { task = "test:e2e" }]
+
+[tasks.lint]
+description = "Run poly formatting and lint checks"
+run = ["poly fmt --check .", "poly lint ."]
+
+[tasks.check]
+description = "Run go vet and golangci-lint"
+run = ["go vet ./...", "golangci-lint run --timeout=5m"]
+
+[tasks.format]
+description = "Format Go code"
+run = "go fmt ./..."
+
+[tasks.generate]
+description = "Generate ai-rulez configuration files"
+run = "go run ./cmd/ai-rulez generate"
+
+[tasks.validate]
+description = "Validate ai-rulez configuration"
+run = "go run ./cmd/ai-rulez validate"
+
+[tasks."docs:cli"]
+description = "Regenerate docs/cli-reference.md and the command index of docs/cli.md from the Cobra command tree"
+run = "go run ./scripts/clidocs"
+
+[tasks."docs:cli:check"]
+description = "Fail when docs/cli-reference.md or the command index of docs/cli.md differ from the command tree"
+run = "go run ./scripts/clidocs --check"
+
+[tasks."docs:llms"]
+description = "Regenerate docs/llms.txt and docs/llms-full.txt from zensical.toml and docs/"
+run = "go run ./scripts/docsllms"
+
+[tasks."docs:llms:check"]
+description = "Fail when docs/llms.txt or docs/llms-full.txt differ from the docs sources"
+run = "go run ./scripts/docsllms --check"
+
+[tasks."harness:verify"]
+description = "List harness trap, limit and built-in name table rows with source and verified_on; fail when older than max_table_age_days (default 90). HARNESS_MAX_AGE_DAYS overrides; HARNESS_VERIFY_FETCH=1 also re-fetches each quote (network)"
+env = { HARNESS_VERIFY = "1" }
+run = "go test ./internal/lint -run TestHarnessVerify -count=1 -v"
+
+[tasks."harness:builtins:test"]
+description = "Run the offline unit tests of tools/harness-builtins (extractor parsers against saved fixtures; needs python3)"
+dir = "{{config_root}}/tools/harness-builtins"
+run = "python3 -I -m unittest discover -s tests -t ."
+
+[tasks."harness:builtins:check"]
+description = "Network: fail when a data file differs from what its pinned registry yields (generate.py --check) or a quote is missing from its page (check_sources.py)"
+run = ["python3 -I tools/harness-builtins/generate.py --check", "python3 -I tools/harness-builtins/check_sources.py"]
+
+[tasks."harness:builtins:refresh"]
+description = "Network, writes nothing: show the names that would change if each pin moved to its latest tag or head (generate.py --bump). Apply one with: python3 -I tools/harness-builtins/generate.py --bump --apply <preset>"
+run = "python3 -I tools/harness-builtins/generate.py --bump"
+
+[tasks."demo:record"]
+description = "Re-record the README terminal demos with vhs (all, or name them: mise run demo:record -- validate); uses the ai-rulez on PATH"
+run = "bash scripts/demo/run.sh record"
+
+[tasks."demo:check"]
+description = "Parse every demo tape and check each committed GIF exists and is at most 1 MiB"
+run = "bash scripts/demo/run.sh check"
+
+[tasks.clean]
+description = "Clean build artifacts"
+shell = "bash -c"
+run = ["rm -rf bin/", "go clean -cache -testcache"]
+
+[task_config]
+includes = ["mise-tasks", "mise-tasks/shared.toml"]
