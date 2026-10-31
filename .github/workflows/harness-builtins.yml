@@ -37,13 +37,12 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          python-version: "3.13"
+          tools: python
 
       - name: Unit tests
-        working-directory: tools/harness-builtins
-        run: python3 -I -m unittest discover -s tests -t .
+        run: mise run harness:builtins:test
 
       - name: Compare data files and quotes with their sources
         id: report
@@ -94,7 +93,7 @@ jobs:
           {
             echo "The weekly check of \`internal/harnessnames/data\` failed: $RUN_URL"
             echo
-            echo "Run \`task harness:builtins:check\` to reproduce and \`python3 -I tools/harness-builtins/generate.py --write <preset>\` to regenerate a data file; a missing quote needs a new verbatim quote or the outcome set to \`unknown\`."
+            echo "Run \`mise run harness:builtins:check\` to reproduce and \`python3 -I tools/harness-builtins/generate.py --write <preset>\` to regenerate a data file; a missing quote needs a new verbatim quote or the outcome set to \`unknown\`."
             echo
             echo '```'
             head -c 50000 report/report.md

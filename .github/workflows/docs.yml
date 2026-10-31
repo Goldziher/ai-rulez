@@ -44,24 +44,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Go
-        uses: actions/setup-go@v7
+      - name: Setup Go, Python and uv
+        uses: ./.github/actions/go-toolchain
         with:
-          go-version: "1.27"
-          cache: false
+          tools: go python uv
+          cache: "false"
 
       - name: Check llms.txt and llms-full.txt are up to date
-        run: go run ./scripts/docsllms --check
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.14"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.2
-        with:
-          enable-cache: true
+        run: mise run docs:llms:check
 
       - name: Install dependencies
         run: uv sync --dev

@@ -21,48 +21,20 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: ./.github/actions/go-toolchain
         with:
-          go-version: "1.27"
-          cache: false
-
-      - name: Cache Go modules
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          restore-keys: "true"
 
       - name: Install dependencies
         run: go mod download
 
-      - name: Cache Task binary
-        uses: actions/cache@v6
-        id: task-cache
-        with:
-          path: |
-            ~/.task
-            ~/bin/task
-          key: ${{ runner.os }}-task-3.x
-          restore-keys: |
-            ${{ runner.os }}-task-
-
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        if: steps.task-cache.outputs.cache-hit != 'true'
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build binary for tests
-        run: task build
+        run: mise run build
 
       - name: Run all e2e tests
         env:
           TEST_TIMEOUT: 180m
-        run: task test:e2e
+        run: mise run test:e2e
 
       - name: Upload comprehensive test results
         if: always()

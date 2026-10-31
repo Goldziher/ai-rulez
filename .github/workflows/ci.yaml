@@ -18,6 +18,17 @@ jobs:
   validate:
     uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1
 
+  toolchain:
+    name: Toolchain baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Check mise.toml against the xberg-io/toolchains baseline
+        uses: xberg-io/actions/check-toolchain@v1
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -27,19 +38,10 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Install dependencies
         run: go mod download
-
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
@@ -57,11 +59,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: go.mod and go.sum are tidy
         run: |
@@ -79,11 +77,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -146,10 +140,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Node 24, as the job name says, not the baseline's newer line; setup-mise installs a version no lock
+      # covers unlocked. ~keep
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          node-version: "24"
+          tools: node=24
 
       - name: Run npm wrapper tests
         run: node --test release/npm/install.test.js
@@ -168,30 +164,13 @@ jobs:
 
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
-
-      - name: Record Windows Go cache paths
-        if: runner.os == 'Windows'
-        id: go-cache-paths
-        shell: bash
-        run: |
-          printf 'modules=%s\n' "$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
-          printf 'build=%s\n' "$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
 
       - name: Install dependencies
         run: go mod download
-
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       # The runner account is an administrator, so symlink creation is allowed;
       # enable Developer Mode too and set AI_RULEZ_REQUIRE_SYMLINKS so the
@@ -213,25 +192,25 @@ jobs:
         env:
           TEST_TIMEOUT: 180m
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
-        run: task test
+        run: mise run test
 
       - name: Run cross-platform specific tests
-        run: task test:platform
+        run: mise run test:platform
 
       # The generator characterization goldens (they skip on Windows).
       - name: Run golden tests
         run: go test ./tests/golden/...
 
-      # setup-go only saves on success. Preserve valid compiled objects after
-      # a test failure too, using the key of the pinned setup-go v7 action.
+      # actions/cache only saves on success. Preserve valid compiled objects
+      # after a test failure too, under the key the Go setup restored from.
       - name: Preserve Windows Go cache after failure
-        if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.go-cache-paths.outcome == 'success'
+        if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.setup-go.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
-            ${{ steps.go-cache-paths.outputs.modules }}
-            ${{ steps.go-cache-paths.outputs.build }}
-          key: setup-go-Windows-x64-go-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('**/go.sum') }}
+            ${{ steps.setup-go.outputs.modules }}
+            ${{ steps.setup-go.outputs.build }}
+          key: ${{ steps.setup-go.outputs.cache-key }}
 
       - name: Upload test results
         if: always()
@@ -259,11 +238,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -271,13 +246,8 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build binary for tests
-        run: task build
+        run: mise run build
 
       - name: Run e2e tests - ${{ matrix.test-suite }}
         run: |
@@ -303,11 +273,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -337,11 +303,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
@@ -359,11 +321,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -371,13 +329,8 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build binary for benchmarks
-        run: task build
+        run: mise run build
 
       # Every benchmark runs once (-benchtime=1x): proves they still run, measures nothing.
       # shell: bash runs with pipefail, so a failing benchmark is not hidden by tee.
@@ -385,7 +338,7 @@ jobs:
         shell: bash
         env:
           TEST_TIMEOUT: 180m
-        run: task test:benchmark:smoke | tee benchmark-results.txt
+        run: mise run test:benchmark:smoke | tee benchmark-results.txt
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v7
@@ -435,19 +388,7 @@ jobs:
 
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
-
-      - name: Record Windows Go cache paths
-        if: runner.os == 'Windows'
-        id: go-cache-paths
-        shell: bash
-        run: |
-          printf 'modules=%s\n' "$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
-          printf 'build=%s\n' "$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -455,30 +396,25 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build binary for tests
-        run: task build
+        run: mise run build
 
       - name: Run all test suites (unit + platform + e2e)
         env:
           TEST_TIMEOUT: 180m
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
-        run: task test:all
+        run: mise run test:all
 
-      # setup-go only saves on success. Preserve valid compiled objects after
-      # a test failure too, using the key of the pinned setup-go v7 action.
+      # actions/cache only saves on success. Preserve valid compiled objects
+      # after a test failure too, under the key the Go setup restored from.
       - name: Preserve Windows Go cache after failure
-        if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.go-cache-paths.outcome == 'success'
+        if: failure() && runner.os == 'Windows' && steps.setup-go.outputs.cache-hit != 'true' && steps.setup-go.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
-            ${{ steps.go-cache-paths.outputs.modules }}
-            ${{ steps.go-cache-paths.outputs.build }}
-          key: setup-go-Windows-x64-go-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('**/go.sum') }}
+            ${{ steps.setup-go.outputs.modules }}
+            ${{ steps.setup-go.outputs.build }}
+          key: ${{ steps.setup-go.outputs.cache-key }}
 
       - name: Upload comprehensive test results
         if: always()
@@ -502,11 +438,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: true
-          cache-dependency-path: "**/go.sum"
+        uses: ./.github/actions/go-toolchain
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm
@@ -514,13 +446,8 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build binary
-        run: task build
+        run: mise run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
