@@ -1,5 +1,5 @@
 # The xberg-io/actions commit tests/lib/xberg-bats/load.bash was copied from.
-# Refresh with `task test:lib:sync` (scripts/bats/sync-xberg-bats.sh); `task test:lib:check` fails on drift.
+# Refresh with `mise run test:lib:sync` (scripts/bats/sync-xberg-bats.sh); `mise run test:lib:check` fails on drift.
 # Edit nothing here by hand: the sync script rewrites this file.
 repo=https://github.com/xberg-io/actions.git
 requested=v1

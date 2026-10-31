@@ -18,7 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/harnessnames"
 )
 
-// defaultMaxTableAgeDays is the age `task harness:verify` allows when neither
+// defaultMaxTableAgeDays is the age `mise run harness:verify` allows when neither
 // HARNESS_MAX_AGE_DAYS nor the repository's [lint.traps] max_table_age_days is set.
 const defaultMaxTableAgeDays = 90
 

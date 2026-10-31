@@ -2,15 +2,15 @@
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
 
 version = 1
-ai_rulez_version = '5.9.2'
+ai_rulez_version = '5.9.8'
 scope = 'all'
-tree = 'sha256:a7b06c07805954d5ab015f34b25eec6cbf640a9b83ebb9c2f4fdbd05957bdd31'
+tree = 'sha256:0982568a2f2e5f77c5e41a3bc7cfe036df45d7446e6d25059217405ec5b6c521'
 
 [[served]]
 name = 'build'
 source = ''
 commit = ''
-digest = 'sha256:f8e2e1a09a08a9ccc8f81e595f7d532e361483acc0682c7b1b5ee809dbd4eb54'
+digest = 'sha256:8bc4075431c85ebb536099089beb5951d86651b1730de5134b2a8d6886247498'
 
 [[served]]
 name = 'capability-delivery-checklist'
@@ -64,7 +64,7 @@ digest = 'sha256:fbc7d452c7171e71341578b6c7a56fc2c87031c0ce15d35884bc3260e04ff68
 name = 'fix'
 source = ''
 commit = ''
-digest = 'sha256:55c099974503689811de0512e5c5f8c9662343cac8f2a193dda9ac4552fbc681'
+digest = 'sha256:94be9cd28128bd7109db74f2385e3581b1853a542b7522836d12c629c721ebcd'
 
 [[served]]
 name = 'go-conventions'
@@ -148,7 +148,7 @@ digest = 'sha256:6086fe4a492fd695490fc26dc917bf8af08046a695a4eba5dc8dbbd1f71bd85
 name = 'test'
 source = ''
 commit = ''
-digest = 'sha256:9a9d32594ba92825816f00ca1c8d9a0ec158e0475ddafd23e788e1ee476cd74d'
+digest = 'sha256:f484159b63430aaf9fd0234d1c421adca814ea7292e0ebad8546355f7ac53c01'
 
 [[served]]
 name = 'test-command'
@@ -184,13 +184,13 @@ digest = 'sha256:734f2cb8cd059b4e06eb05c942beba899ece3701cd023a0a8e94149e601e39b
 kind = 'command'
 id = 'build'
 path = 'commands/build.md'
-digest = 'sha256:0d4a9e84d5a8beecae980295511792f78b9c84ba410e50db7ff7c64a42c92dea'
+digest = 'sha256:b797b7de0ec4bc6c020d32d3426ccfdff1ee8f3aed70e7697c28e81953d0f749'
 
 [[item]]
 kind = 'command'
 id = 'fix'
 path = 'commands/fix.md'
-digest = 'sha256:bb199ef5a59b87c5e7e238452d17563c2dc7c4ea0e7dd722f58b121e6fde525c'
+digest = 'sha256:5c0c22014bd2c75f23223deb1b63e350240b0cf6b1b867d6df6d80f1a0e9b68a'
 
 [[item]]
 kind = 'command'
@@ -208,7 +208,7 @@ digest = 'sha256:648c210627ae92059c93955ab32a78f54bafa057a8461880617535398bddeb1
 kind = 'command'
 id = 'test'
 path = 'commands/test.md'
-digest = 'sha256:543c6b40e649b1c5d773835c5b4182a283d61c06b01d6a6511b0eb08a95b22cf'
+digest = 'sha256:17e22abc7421207e3a4ea6495c4e4d6936b1581399bb06bef5fdc5abdc38faeb'
 
 [[item]]
 kind = 'command'
@@ -256,7 +256,7 @@ digest = 'sha256:e713dc88203189aa6a45a35ca561abcd51e94a5edddf20aaf2feff81beabea5
 kind = 'context'
 id = 'release-and-distribution'
 path = 'context/release-and-distribution.md'
-digest = 'sha256:6b3aea93200a84f70546132079429d6148821916a1967ef6e264988b5bfd805a'
+digest = 'sha256:53812e190e02cdbca4b0b4c5a291f88685c3f8b97628b89b8ca647e11035bed3'
 
 [[item]]
 kind = 'context'

@@ -82,5 +82,5 @@ This generates native configuration for the presets selected during `init`. Shar
 ## Other Platforms
 
 - **Homebrew** (macOS/Linux) – `brew install goldziher/tap/ai-rulez`
-- **Go** – clone the repository and run `task build` for a statically linked executable; see [source installation](https://goldziher.github.io/ai-rulez/installation/).
+- **Go** – clone the repository and run `mise run build` for a statically linked executable; see [source installation](https://goldziher.github.io/ai-rulez/installation/).
 - **npm** (Node.js) – `pnpm add -g ai-rulez`

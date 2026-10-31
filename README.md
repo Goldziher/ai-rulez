@@ -237,7 +237,7 @@ ai-rulez validate --strict
 
 The module path needs `/v5`; without it `@latest` resolves to an old build.
 This local build needs cgo, a C toolchain and the Go module cache at runtime.
-For a statically linked build, use `task build` from a clone; see [source installation](docs/installation.md).
+For a statically linked build, use `mise run build` from a clone; see [source installation](docs/installation.md).
 
 </details>
 

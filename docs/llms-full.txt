@@ -124,12 +124,12 @@ Install `ai-rulez` using your preferred package manager.
     This builds a local cgo executable using the native library shipped in the Go module.
     It needs a C toolchain and the module cache at runtime; use a release package for distribution.
 
-    For a statically linked build from a clone, use Task to fetch and verify the pinned native library:
+    For a statically linked build from a clone, use mise to fetch and verify the pinned native library:
 
     ```bash
     git clone https://github.com/Goldziher/ai-rulez
     cd ai-rulez
-    task build
+    mise run build
     ./bin/ai-rulez version
     ```
 
@@ -9741,8 +9741,8 @@ frontmatter, or its first sentence), grouped like the nav. Proposals and the cha
 `docs/`, checked in, and copied to the site root by the build.
 
 ```sh
-task docs:llms          # regenerate after editing the docs or the nav
-task docs:llms:check    # what CI runs: fails when the files are stale
+mise run docs:llms          # regenerate after editing the docs or the nav
+mise run docs:llms:check    # what CI runs: fails when the files are stale
 ```
 
 The docs workflow runs the check before building the site, and a Go test runs it with the rest of the suite, so a
@@ -11654,12 +11654,12 @@ renaming or moving a file, or choosing `resources`, is a decision.
 
 #### Keeping the table fresh
 
-`task harness:verify` lists every trap and limit row, and the built-in name table of every harness (`internal/harnessnames`, rule AR9U0), with its source URL and `verified_on`, and fails when a row is
+`mise run harness:verify` lists every trap and limit row, and the built-in name table of every harness (`internal/harnessnames`, rule AR9U0), with its source URL and `verified_on`, and fails when a row is
 older than `[lint.traps] max_table_age_days` from the repository config (90 when unset; `HARNESS_MAX_AGE_DAYS`
-overrides). It does not use the network. `HARNESS_VERIFY_FETCH=1 task harness:verify` also fetches each source and
+overrides). It does not use the network. `HARNESS_VERIFY_FETCH=1 mise run harness:verify` also fetches each source and
 fails when a quote, of a trap or of a name table, is no longer on its page. `[lint.traps] max_table_age_days` (AR9C0) also covers the name tables of the harnesses a project writes for.
 
-The name tables are not edited by hand where a harness keeps its built-ins in a public registry. `tools/harness-builtins/generate.py` reads the registry at the tag or commit pinned in `pins.toml` and rewrites the names; `task harness:builtins:check` (network) fails when a data file differs from its pinned source or a quote is gone from its page, `task harness:builtins:refresh` shows what a newer tag would change, and a weekly workflow opens an issue on drift. A harness with no registry to read is recorded as `extractor = "none"` with the reason. See `tools/harness-builtins/README.md`.
+The name tables are not edited by hand where a harness keeps its built-ins in a public registry. `tools/harness-builtins/generate.py` reads the registry at the tag or commit pinned in `pins.toml` and rewrites the names; `mise run harness:builtins:check` (network) fails when a data file differs from its pinned source or a quote is gone from its page, `mise run harness:builtins:refresh` shows what a newer tag would change, and a weekly workflow opens an issue on drift. A harness with no registry to read is recorded as `extractor = "none"` with the reason. See `tools/harness-builtins/README.md`.
 
 #### The traps
 
@@ -15373,7 +15373,7 @@ A harness has built-in commands, bundled skills and agents, and a user item of t
 it replaces the built-in (Claude Code, OpenCode, Qwen Code, Kilo), the built-in stays and the user item is renamed or
 unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). `internal/harnessnames/data/<preset>.toml`
 holds one table per preset: the names and aliases, the page each group was taken from, and, where the harness documents
-the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` regenerates the names from each harness's registry at a pinned tag and `task harness:builtins:check` verifies every quote against its page; a recorded outcome without a verbatim quote is set to `unknown`). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
+the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` regenerates the names from each harness's registry at a pinned tag and `mise run harness:builtins:check` verifies every quote against its page; a recorded outcome without a verbatim quote is set to `unknown`). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
 presets that write it and every harness that reads the directory it lands in, whether or not its preset is enabled
 (`.agents/skills` is read by Amp, Codex, Cursor, Gemini CLI, Goose and others). Names are compared as the harness
 derives them: trimmed, NFKC-normalized and case-folded; the directory or file name and the `name:` frontmatter are both
@@ -24897,7 +24897,7 @@ The OTLP/HTTP JSON encoder is hand-written, so one opt-in test checks it against
 (`otel/opentelemetry-collector-contrib`, pinned by tag and digest in `internal/telemetry/otelcol_e2e_test.go`):
 
 ```console
-task test:otelcol    # needs docker; sets AI_RULEZ_E2E_OTELCOL=1
+mise run test:otelcol    # needs docker; sets AI_RULEZ_E2E_OTELCOL=1
 ```
 
 The test starts the container with a file exporter, flushes a spool batch through the real exporter (gzip, logs and
@@ -27682,7 +27682,7 @@ the report.
 Judge ships with its own evaluation in [`bench/judge/`](https://github.com/Goldziher/ai-rulez/tree/main/bench/judge): a
 synthetic corpus (malicious units for every security code, benign lookalikes, the false-positive traps with a malicious
 twin each, quality defects, a governance fixture repository with nested rules and `CLAUDE.md` files, clean units) with
-labels. `go test ./bench/judge` runs the verifier and the attachment algorithm over it without a model. `task bench:judge`
+labels. `go test ./bench/judge` runs the verifier and the attachment algorithm over it without a model. `mise run bench:judge`
 runs the model pipeline on Bedrock and prints precision, recall and F1 per code and category, the trap false-positive rate,
 the share of malicious twins found, grounding, the adjudicator's effect and the cost. Run it again when the prompt version
 (`judge/v3`) changes.
@@ -27873,7 +27873,7 @@ Each is marked `TODO(liter-llm#NNN)` in the code.
 The binding is cgo over a Rust library, so a build needs `CGO_ENABLED=1`, a C toolchain and the native library. What links depends on who builds:
 
 - **Contributors** run `go build ./...`, `go test ./...` and `golangci-lint` with nothing to set up. The binding's module ships the shared library for every platform in its own `.lib/<platform>/` directory and its cgo directives point there with an absolute rpath, so the result runs on the machine that built it. That binary is not portable and nobody should ship it.
-- **Release builds** link the **static** archive (`libliter_llm_ffi.a`), which makes each binary one self-contained executable with no sidecar library and no cache directory. `scripts/setup-liter-llm.sh` downloads the release asset for the version pinned in `go.mod`, verifies its `.sha256` sidecar (it fails closed), extracts only `libliter_llm_ffi.a` and prints `CGO_LDFLAGS=-L<dir>`; a `-L` that comes first on the link line and holds no shared library makes `-lliter_llm_ffi` resolve to the archive. `task build` and `task test:release` do this, `scripts/package-release.sh` checks the result with `otool -L` / `ldd` (no `liter_llm` dependency), and CI sets it up with `.github/actions/setup-liter-llm`.
+- **Release builds** link the **static** archive (`libliter_llm_ffi.a`), which makes each binary one self-contained executable with no sidecar library and no cache directory. `scripts/setup-liter-llm.sh` downloads the release asset for the version pinned in `go.mod`, verifies its `.sha256` sidecar (it fails closed), extracts only `libliter_llm_ffi.a` and prints `CGO_LDFLAGS=-L<dir>`; a `-L` that comes first on the link line and holds no shared library makes `-lliter_llm_ffi` resolve to the archive. `mise run build` and `mise run test:release` do this, `scripts/package-release.sh` checks the result with `otool -L` / `ldd` (no `liter_llm` dependency), and CI sets it up with `.github/actions/setup-liter-llm`.
 
 A cgo `#cgo LDFLAGS` shim inside the repository cannot replace the environment variable: the binding's own `-L` and `-lliter_llm_ffi` come first on the link line and resolve to the shared library the module ships, so the binary keeps a load command for it (checked on macOS arm64; `-Wl,-dead_strip_dylibs`, which would drop it, is not allowed in `#cgo` flags). That is why `scripts/setup-liter-llm.sh` supplies the static archive through `CGO_LDFLAGS` rather than an in-repo cgo shim.
 
@@ -27937,8 +27937,8 @@ a git repository when the code under test asks git questions. Nothing touches th
 | large  | 2000          | with `AI_RULEZ_BENCH_LARGE=1` |
 
 ```bash
-task test:benchmark                 # every benchmark, small and medium
-task test:benchmark:large           # adds the 2000-file project, one iteration each
+mise run test:benchmark                 # every benchmark, small and medium
+mise run test:benchmark:large           # adds the 2000-file project, one iteration each
 go test ./internal/lint -run '^$' -bench RunFull -benchmem -cpuprofile cpu.out
 go tool pprof -top -cum cpu.out
 ```
@@ -27983,10 +27983,10 @@ A benchmark fails the job only when it is both more than `BENCH_THRESHOLD` perce
 `BENCH_ALPHA` (0.05). A slowdown that is not significant is printed as `slower, not significant`, and a run with
 fewer than 5 samples is refused, because it cannot reach the significance level. The large synthetic sizes stay out of
 the subset; they run only with `AI_RULEZ_BENCH_LARGE=1`. The rest of the benchmarks run once in the job
-(`task test:benchmark:smoke`, `-benchtime=1x`) to prove they still run.
+(`mise run test:benchmark:smoke`, `-benchtime=1x`) to prove they still run.
 
 ```bash
-task test:benchmark:regression                    # HEAD against the merge base, on this machine
+mise run test:benchmark:regression                    # HEAD against the merge base, on this machine
 scripts/bench.sh --compare origin/main            # the same, with an explicit base
 BENCH_THRESHOLD=10 BENCH_COUNT=10 scripts/bench.sh --compare HEAD~3
 ```
@@ -28719,7 +28719,7 @@ Aliases: `generate` → `gen`; `validate` → `val`. (`g`, `clear`, `v` and `che
 
 ##### All Commands
 
-Every command in the binary, generated from the command tree (`task docs:cli`). The flags, defaults and examples of each are in the [Command Reference](cli-reference.md).
+Every command in the binary, generated from the command tree (`mise run docs:cli`). The flags, defaults and examples of each are in the [Command Reference](cli-reference.md).
 
 <!-- BEGIN GENERATED: command-index (go run ./scripts/clidocs) -->
 

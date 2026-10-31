@@ -55,7 +55,7 @@ Aliases: `generate` → `gen`; `validate` → `val`. (`g`, `clear`, `v` and `che
 
 ### All Commands
 
-Every command in the binary, generated from the command tree (`task docs:cli`). The flags, defaults and examples of each are in the [Command Reference](cli-reference.md).
+Every command in the binary, generated from the command tree (`mise run docs:cli`). The flags, defaults and examples of each are in the [Command Reference](cli-reference.md).
 
 <!-- BEGIN GENERATED: command-index (go run ./scripts/clidocs) -->
 

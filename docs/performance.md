@@ -15,8 +15,8 @@ a git repository when the code under test asks git questions. Nothing touches th
 | large  | 2000          | with `AI_RULEZ_BENCH_LARGE=1` |
 
 ```bash
-task test:benchmark                 # every benchmark, small and medium
-task test:benchmark:large           # adds the 2000-file project, one iteration each
+mise run test:benchmark                 # every benchmark, small and medium
+mise run test:benchmark:large           # adds the 2000-file project, one iteration each
 go test ./internal/lint -run '^$' -bench RunFull -benchmem -cpuprofile cpu.out
 go tool pprof -top -cum cpu.out
 ```
@@ -61,10 +61,10 @@ A benchmark fails the job only when it is both more than `BENCH_THRESHOLD` perce
 `BENCH_ALPHA` (0.05). A slowdown that is not significant is printed as `slower, not significant`, and a run with
 fewer than 5 samples is refused, because it cannot reach the significance level. The large synthetic sizes stay out of
 the subset; they run only with `AI_RULEZ_BENCH_LARGE=1`. The rest of the benchmarks run once in the job
-(`task test:benchmark:smoke`, `-benchtime=1x`) to prove they still run.
+(`mise run test:benchmark:smoke`, `-benchtime=1x`) to prove they still run.
 
 ```bash
-task test:benchmark:regression                    # HEAD against the merge base, on this machine
+mise run test:benchmark:regression                    # HEAD against the merge base, on this machine
 scripts/bench.sh --compare origin/main            # the same, with an explicit base
 BENCH_THRESHOLD=10 BENCH_COUNT=10 scripts/bench.sh --compare HEAD~3
 ```

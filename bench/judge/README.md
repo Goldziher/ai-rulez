@@ -20,7 +20,7 @@ adjudicator, with a malicious twin that differs by the one property that makes i
 ## Offline
 
 ```console
-go test ./bench/judge/...        # or: task bench:judge:offline
+go test ./bench/judge/...        # or: mise run bench:judge:offline
 ```
 
 Checks that every label points at text that exists, that the corpus covers every code and trap, that default discovery finds
@@ -31,10 +31,10 @@ repository, that secret units are withheld, and that the scoring code is right.
 ## Live (spends money)
 
 ```console
-task bench:judge -- --max-cost 5                              # everything, hard cap 5 USD
-task bench:judge -- --only mal-s03-a,ben-s03-a,trap-t01,twin-t01
-task bench:judge -- --estimate                                # worst-case cost, sends nothing
-task bench:judge -- --score /path/to/merged.json              # score a stored report again
+mise run bench:judge -- --max-cost 5                              # everything, hard cap 5 USD
+mise run bench:judge -- --only mal-s03-a,ben-s03-a,trap-t01,twin-t01
+mise run bench:judge -- --estimate                                # worst-case cost, sends nothing
+mise run bench:judge -- --score /path/to/merged.json              # score a stored report again
 ```
 
 The runner copies the corpus to a throwaway git repository (so ancestor conventions stop at the corpus root), runs

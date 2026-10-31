@@ -321,7 +321,7 @@ the report.
 Judge ships with its own evaluation in [`bench/judge/`](https://github.com/Goldziher/ai-rulez/tree/main/bench/judge): a
 synthetic corpus (malicious units for every security code, benign lookalikes, the false-positive traps with a malicious
 twin each, quality defects, a governance fixture repository with nested rules and `CLAUDE.md` files, clean units) with
-labels. `go test ./bench/judge` runs the verifier and the attachment algorithm over it without a model. `task bench:judge`
+labels. `go test ./bench/judge` runs the verifier and the attachment algorithm over it without a model. `mise run bench:judge`
 runs the model pipeline on Bedrock and prints precision, recall and F1 per code and category, the trap false-positive rate,
 the share of malicious twins found, grounding, the adjudicator's effect and the cost. Run it again when the prompt version
 (`judge/v3`) changes.

@@ -47,9 +47,9 @@ quote was found.
 Task targets:
 
 ```sh
-task harness:builtins:test      # offline unit tests (also run by go test ./internal/harnessnames when python3 exists)
-task harness:builtins:check     # network: generate.py --check and check_sources.py
-task harness:builtins:refresh   # network: generate.py --bump, writes nothing
+mise run harness:builtins:test      # offline unit tests (also run by go test ./internal/harnessnames when python3 exists)
+mise run harness:builtins:check     # network: generate.py --check and check_sources.py
+mise run harness:builtins:refresh   # network: generate.py --bump, writes nothing
 ```
 
 `.github/workflows/harness-builtins.yml` runs the unit tests and the check every Monday and opens (or updates) one

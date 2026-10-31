@@ -5,7 +5,7 @@ This page is for maintainers. It is not in the site navigation. How the gate mea
 
 ## What the job does
 
-`.github/workflows/ci.yaml`, job `Benchmarks`: full-history checkout, `task test:benchmark:smoke` (every benchmark
+`.github/workflows/ci.yaml`, job `Benchmarks`: full-history checkout, `mise run test:benchmark:smoke` (every benchmark
 once), then `scripts/bench.sh --compare` with the pull request's base commit (`BENCH_BASE`), or the parent of the
 pushed commit. Both revisions are built and measured on the same runner, so a runner with another CPU model never
 invalidates the comparison.
