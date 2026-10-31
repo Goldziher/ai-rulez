@@ -12,6 +12,7 @@
     "start_budget",
     "listing",
     "start_tokens",
+    "start_imports_unmodeled",
     "tokens_by_phase",
     "start_tokens_by_kind",
     "counts_by_phase_and_kind",
@@ -81,6 +82,23 @@
       }
     },
     "start_tokens": { "$ref": "#/definitions/count", "description": "Estimated tokens in context at session start." },
+    "start_imports_unmodeled": {
+      "type": "array",
+      "description": "Start-of-session `@path` imports the inventory could not follow. With a non-zero start_budget any entry fails the budget closed.",
+      "items": {
+        "type": "object",
+        "required": ["artifact", "import", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "artifact": { "type": "string", "description": "The file that writes the import, relative to the root." },
+          "import": {
+            "type": "string",
+            "description": "The directive as written, or the importing file when it was not read."
+          },
+          "reason": { "type": "string" }
+        }
+      }
+    },
     "tokens_by_phase": {
       "type": "object",
       "description": "Estimated tokens of every artifact of a phase, if all of them loaded; only phases that have artifacts.",

@@ -215,6 +215,10 @@ func (s exposureLintSource) StartExposure() *lint.ExposureStart {
 		return nil
 	}
 	rep := exposure.NewReport(inv, exposure.ReportOptions{ContextWindow: s.cfg.Exposure.EffectiveContextWindow(), StartBudget: s.cfg.Exposure.StartBudget})
+	unmodeled := make([]string, 0, len(rep.StartImportsUnmodeled))
+	for _, u := range rep.StartImportsUnmodeled {
+		unmodeled = append(unmodeled, u.Import+" in "+u.Artifact+": "+u.Reason)
+	}
 	return &lint.ExposureStart{
 		ContextWindow:      rep.Listing.ContextWindow,
 		StartArtifacts:     rep.StartArtifacts(),
@@ -223,23 +227,30 @@ func (s exposureLintSource) StartExposure() *lint.ExposureStart {
 		ListingChars:       rep.Listing.Chars,
 		ListingBudgetChars: rep.Listing.BudgetChars,
 		StartPaths:         startPaths(inv),
+		UnmodeledImports:   unmodeled,
 	}
 }
 
-// startPaths are the absolute paths of the files of the start-of-session artifacts of inv, each once, in
-// inventory order.
+// startPaths are the absolute paths of the files of the start-of-session artifacts of inv, and of the files
+// they import, each once, in inventory order.
 func startPaths(inv *exposure.Inventory) []string {
 	root := filepath.FromSlash(inv.Root)
 	seen := map[string]bool{}
 	var out []string
+	add := func(rel string) {
+		if rel == "" || seen[rel] {
+			return
+		}
+		seen[rel] = true
+		out = append(out, filepath.Join(root, filepath.FromSlash(rel)))
+	}
 	start := inv.Start()
 	for i := range start {
 		a := &start[i]
-		if a.Path == "" || seen[a.Path] {
-			continue
+		add(a.Path)
+		for _, im := range a.Imports {
+			add(im.Path)
 		}
-		seen[a.Path] = true
-		out = append(out, filepath.Join(root, filepath.FromSlash(a.Path)))
 	}
 	return out
 }

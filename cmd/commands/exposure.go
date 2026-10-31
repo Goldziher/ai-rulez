@@ -453,10 +453,16 @@ func writeReportText(w io.Writer, rep *exposure.Report) error {
 	lines := []string{fmt.Sprintf("start of session: %d %s, ~%d tokens", start, plural(start, "artifact"), rep.StartTokens)}
 	if rep.StartBudget > 0 {
 		verdict := "within"
-		if rep.OverStartBudget() {
+		switch {
+		case rep.StartTokens > rep.StartBudget:
 			verdict = fmt.Sprintf("OVER by %d:", rep.StartTokens-rep.StartBudget)
+		case len(rep.StartImportsUnmodeled) > 0:
+			verdict = "UNVERIFIED:"
 		}
 		lines = append(lines, fmt.Sprintf("start budget: %s [exposure] start_budget %d", verdict, rep.StartBudget))
+	}
+	for _, u := range rep.StartImportsUnmodeled {
+		lines = append(lines, fmt.Sprintf("unmodeled import: %s in %s: %s", u.Import, u.Artifact, u.Reason))
 	}
 	lines = append(lines, listing, "start tokens by kind:")
 	lines = append(lines, countLines(rep.StartTokensByKind)...)

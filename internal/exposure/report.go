@@ -65,6 +65,11 @@ type Report struct {
 	StartBudget int           `json:"start_budget"`
 	Listing     ListingBudget `json:"listing"`
 	StartTokens int           `json:"start_tokens"`
+	// StartImportsUnmodeled lists the `@path` imports of start-of-session
+	// instruction files that could not be modeled (an absolute or home path, a
+	// path that leaves the root, or an unreadable target). With a start budget
+	// set, any entry fails the budget closed even when StartTokens fits.
+	StartImportsUnmodeled []UnmodeledImport `json:"start_imports_unmodeled"`
 	// TokensByPhase sums the tokens of the phases that have artifacts.
 	TokensByPhase     map[Phase]int `json:"tokens_by_phase"`
 	StartTokensByKind map[Kind]int  `json:"start_tokens_by_kind"`
@@ -82,19 +87,31 @@ type ReportOptions struct {
 	StartBudget int
 }
 
+// UnmodeledImport is a start-of-session `@path` import the inventory could not
+// follow, and why. A configured start budget fails closed on one.
+type UnmodeledImport struct {
+	// Artifact is the file that writes the import, relative to the root.
+	Artifact string `json:"artifact"`
+	// Import is the directive as written, or the artifact path when the file
+	// itself could not be read.
+	Import string `json:"import"`
+	Reason string `json:"reason"`
+}
+
 // NewReport measures the exposure of inv.
 func NewReport(inv *Inventory, opts ReportOptions) *Report {
 	rep := &Report{
-		SchemaVersion:        SchemaReport,
-		Harness:              inv.Harness,
-		Root:                 inv.Root,
-		Plugins:              inv.Plugins,
-		StartBudget:          opts.StartBudget,
-		Listing:              ListingBudget{ContextWindow: opts.ContextWindow, BudgetChars: ListingBudgetChars(opts.ContextWindow)},
-		TokensByPhase:        map[Phase]int{},
-		StartTokensByKind:    map[Kind]int{},
-		CountsByPhaseAndKind: map[Phase]map[Kind]int{PhaseStart: {}, PhaseOnDemand: {}, PhaseManual: {}},
-		Items:                make([]ReportItem, 0, len(inv.Artifacts)),
+		SchemaVersion:         SchemaReport,
+		Harness:               inv.Harness,
+		Root:                  inv.Root,
+		Plugins:               inv.Plugins,
+		StartBudget:           opts.StartBudget,
+		Listing:               ListingBudget{ContextWindow: opts.ContextWindow, BudgetChars: ListingBudgetChars(opts.ContextWindow)},
+		TokensByPhase:         map[Phase]int{},
+		StartTokensByKind:     map[Kind]int{},
+		CountsByPhaseAndKind:  map[Phase]map[Kind]int{PhaseStart: {}, PhaseOnDemand: {}, PhaseManual: {}},
+		Items:                 make([]ReportItem, 0, len(inv.Artifacts)),
+		StartImportsUnmodeled: []UnmodeledImport{},
 	}
 	for i := range inv.Artifacts {
 		a := &inv.Artifacts[i]
@@ -109,6 +126,9 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 		}
 		rep.StartTokens += a.Tokens
 		rep.StartTokensByKind[a.Kind] += a.Tokens
+		for _, p := range a.ImportProblems {
+			rep.StartImportsUnmodeled = append(rep.StartImportsUnmodeled, UnmodeledImport{Artifact: a.Path, Import: p.Path, Reason: p.Reason})
+		}
 		if a.Kind == KindSkill {
 			rep.Listing.Skills++
 			rep.Listing.Chars += a.ListingChars
@@ -121,9 +141,11 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 	return rep
 }
 
-// OverStartBudget reports a start budget that the start tokens exceed.
+// OverStartBudget reports a start budget that the start tokens exceed, or that
+// cannot be verified because a start-of-session instruction import could not be
+// modeled (fail closed).
 func (r *Report) OverStartBudget() bool {
-	return r.StartBudget > 0 && r.StartTokens > r.StartBudget
+	return r.StartBudget > 0 && (r.StartTokens > r.StartBudget || len(r.StartImportsUnmodeled) > 0)
 }
 
 // StartArtifacts counts the artifacts at session start, unknown included.

@@ -37,6 +37,10 @@ type ExposureStart struct {
 	// artifacts, each once: a change to any of them moves the measure, so the
 	// findings on it depend on them under --changed.
 	StartPaths []string
+	// UnmodeledImports lists the start-of-session `@path` imports the inventory
+	// could not follow. With a start_budget set, a non-empty list fails AR9W3
+	// closed even when StartTokens fits.
+	UnmodeledImports []string
 }
 
 // ExposureSource reads the session exposure of the project (the Claude Code
@@ -142,15 +146,25 @@ func checkExposureStartBudget(r *runner) {
 		return
 	}
 	start := r.exposureStart()
-	if start == nil || start.StartTokens <= r.cfg.Exposure.StartBudget {
+	if start == nil {
 		return
 	}
 	budget := r.cfg.Exposure.StartBudget
+	if start.StartTokens <= budget && len(start.UnmodeledImports) == 0 {
+		return
+	}
 	path, line := r.exposureLine("start_budget")
 	before := len(r.findings)
-	r.add(CodeExposureStartBudget, path, line,
-		"a session started at the repository root loads about %d estimated tokens (%d artifacts), %d past the [exposure] start_budget of %d; run `ai-rulez exposure` for the heaviest artifacts",
-		start.StartTokens, start.StartArtifacts, start.StartTokens-budget, budget)
+	switch {
+	case start.StartTokens > budget:
+		r.add(CodeExposureStartBudget, path, line,
+			"a session started at the repository root loads about %d estimated tokens (%d artifacts), %d past the [exposure] start_budget of %d; run `ai-rulez exposure` for the heaviest artifacts",
+			start.StartTokens, start.StartArtifacts, start.StartTokens-budget, budget)
+	default:
+		r.add(CodeExposureStartBudget, path, line,
+			"the start budget of %d cannot be verified: %s; run `ai-rulez exposure` for the unmodeled import",
+			budget, strings.Join(start.UnmodeledImports, "; "))
+	}
 	r.exposureDeps(before, path, start.StartPaths)
 }
 

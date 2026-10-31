@@ -17,8 +17,13 @@
 // listing does not enter them). A file over repoindex.MaxFileBytes is kept
 // unread the same way rather than dropped, its file size standing in for its
 // text in TextBytes and Tokens. A UTF-8 byte order mark is stripped before the
-// frontmatter is parsed and is not part of the text. Not modeled: `@path` imports inside
-// CLAUDE.md and rules, whose text is not counted.
+// frontmatter is parsed and is not part of the text. A CLAUDE.md or rule may
+// include local files with `@path`; those imports are followed recursively
+// through the same read rules (five hops at most, each file once per artifact),
+// and their bodies are counted in the importing artifact's Tokens. An import
+// that cannot be modeled (an absolute or home path, a path that leaves the
+// root, or an unreadable target) is kept as an ImportProblem so a configured
+// start budget fails closed.
 //
 // Known gaps against Claude Code:
 //   - CLAUDE.local.md is not read, though Claude Code loads it at the start of
@@ -199,7 +204,21 @@ type Artifact struct {
 	// TextSHA256 stays the hash of the empty text.
 	TextBytes  int    `json:"text_bytes"`
 	TextSHA256 string `json:"text_sha256"`
-	Tokens     int    `json:"tokens"`
+	// Tokens is the estimate of every text the artifact brings into context: its
+	// own Text and the bodies of the local files it imports (see Imports). A
+	// skill or agent body has no imports.
+	Tokens int `json:"tokens"`
+	// Imports are the local files a CLAUDE.md or rule includes with `@path`,
+	// followed recursively, deduplicated and sorted by path. Their cost is in
+	// Tokens and summed in ImportTokens.
+	Imports []Import `json:"imports,omitempty"`
+	// ImportTokens is the estimated tokens of Imports, included in Tokens.
+	ImportTokens int `json:"import_tokens,omitempty"`
+	// ImportProblems lists imports that could not be modeled: an absolute or
+	// home path, a path that leaves the root, an unreadable target, or an
+	// importing file that was not read. A configured start budget fails closed
+	// on one of these (see Report.StartImportsUnmodeled).
+	ImportProblems []ImportProblem `json:"import_problems,omitempty"`
 	// LineOffset is the number of file lines before the first line of Text (the
 	// frontmatter of a CLAUDE.md or rule), so line n of Text is file line
 	// LineOffset+n.
@@ -313,6 +332,9 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 	all = append(append(all, repo...), plugins...)
 	for i := range all {
 		all[i] = finish(all[i])
+	}
+	for i := range all {
+		b.resolveImports(&all[i])
 	}
 	return &Inventory{
 		SchemaVersion: SchemaInventory,

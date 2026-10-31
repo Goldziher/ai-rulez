@@ -106,7 +106,42 @@
         "tokens": {
           "type": "integer",
           "minimum": 0,
-          "description": "Estimated tokens: text_bytes / 3.9 rounded up, 0 for an empty text."
+          "description": "Estimated tokens the artifact brings into context: its text plus the bodies of the local files it imports, text_bytes / 3.9 rounded up."
+        },
+        "imports": {
+          "type": "array",
+          "description": "Local files a CLAUDE.md or rule includes with @path, followed recursively, deduplicated and sorted by path.",
+          "items": {
+            "type": "object",
+            "required": ["path", "text_bytes", "tokens"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "description": "Relative to the root, slash separated." },
+              "text_bytes": { "type": "integer", "minimum": 0 },
+              "tokens": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "import_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated tokens of imports, included in tokens."
+        },
+        "import_problems": {
+          "type": "array",
+          "description": "Imports that could not be modelled; a configured start budget fails closed on one.",
+          "items": {
+            "type": "object",
+            "required": ["path", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "The directive as written, or the importing file when it was not read."
+              },
+              "reason": { "type": "string" }
+            }
+          }
         },
         "line_offset": { "type": "integer", "minimum": 0 },
         "frontmatter": {

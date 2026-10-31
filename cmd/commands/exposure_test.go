@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -164,6 +165,26 @@ func TestLoadExposureUsesTheConfigFlagsWithRoot(t *testing.T) {
 			assert.Equal(t, tt.wantMap, in.areas != nil)
 		})
 	}
+}
+
+func TestRunExposureReport_RunsOverAnImportedBody(t *testing.T) {
+	// Arrange: the reproduction of #532, a start budget and a CLAUDE.md that
+	// imports a large AGENTS.md.
+	root := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"),
+		[]byte("version = \"5.0\"\nname = \"exposure-repro\"\npresets = [\"claude\"]\n\n[exposure]\nstart_budget = 50\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "CLAUDE.md"), []byte("@AGENTS.md\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "AGENTS.md"),
+		[]byte(strings.Repeat("Always follow these instructions.\n", 100)), 0o600))
+	flags := exposureFlags{harness: config.ExposureHarnessClaude, root: root}
+
+	// Act
+	err := runExposureReport(t.Context(), &bytes.Buffer{}, &flags)
+
+	// Assert: the imported body pushes the start over the budget and exits 2.
+	require.Error(t, err)
+	assert.Equal(t, exitFindings, exitCodeOf(t, err))
 }
 
 func TestRunExposureReportRejectsBadFlags(t *testing.T) {
