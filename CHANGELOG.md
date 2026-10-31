@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.9.8] - 2026-10-31
+
+### Fixed
+
+- **`exposure` counts the files a `CLAUDE.md` imports.** Native exposure/start-budget checks read
+  `@AGENTS.md` as a three-token directive and ignored the imported body, so a canonical Claude preset
+  could report a false-green budget while the session loaded thousands of tokens of instructions. Local
+  `@path` imports of a `CLAUDE.md` or rule are now followed recursively (five hops, as Claude Code does),
+  resolved beside the importing file, deduplicated per artifact and confined to the project root; their
+  bodies are counted in the importing artifact's `tokens`, with `imports` and `import_tokens` naming what
+  was included. An absolute or `~` path, a path that leaves the root, or a target that exists but cannot
+  be read is reported as an `import_problem`, and a configured start budget fails closed on one instead
+  of staying green. `validate` (`AR9W3`) and `exposure` share the same report, so both gate the same way
+  ([#532](https://github.com/Goldziher/ai-rulez/issues/532)).
+- **OKF `index.md` files are recorded as generated.** `generate` refreshed the indexes of a migrated
+  configuration directory but left them out of `.ai-rulez/.generated-manifest.json`, so ownership
+  detection treated them as authored sources and `clean` would not remove them. Every emitted index
+  (the root, each content directory and each nested skill directory) is now recorded in the manifest,
+  including ones that were already current. Entries are emitted as dash bullets, the canonical Markdown
+  `poly fmt` accepts, so formatting the generated tree no longer fights the next `generate`; `*` and `+`
+  bullets are still read
+  ([#533](https://github.com/Goldziher/ai-rulez/issues/533)).
+
+### Changed
+
+- **Dependencies updated.** `go get -u ./...` moved the direct and transitive Go modules to their latest
+  releases (`sigstore-go` 1.4.0, `liter-llm` 2.4.2, `goldmark` 1.8.7, the AWS SDK and sigstore KMS
+  modules, OpenTelemetry and gRPC-adjacent modules); `uv lock --upgrade` refreshed the docs toolchain.
+  No direct dependency publishes a newer usable major module path, so no import path or call site
+  changed. `github.com/yuin/goldmark/v2` was evaluated and held: the v2 line exposes no public
+  constructor and the Markdown formatter ai-rulez uses (`goldmark-markdown`) renders only the v1 tree.
+  `oras.land/oras-go/v3` was evaluated and held: it has no stable release, only a `v3.0.3-dev`
+  pre-release. `github.com/modelcontextprotocol/go-sdk` stays at v1.8.0: the fix it needs is the one
+  tracked by [#385](https://github.com/Goldziher/ai-rulez/issues/385), which is still blocked on an
+  upstream release.
+
 ## [5.9.7] - 2026-10-30
 
 ### Fixed

@@ -43,7 +43,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3484 b77285a1750b3cdcdd6c7f9e0ea2fec98192523e2f32dfcd97d7466e7d2fd67e
-.ai-rulez/.generated-manifest.local.json file 0644 10984 606cbcb8b0246a69a91d699f08a7a1dd1083cff05a6fb0953787aa5c67379ed5
+.ai-rulez/.generated-manifest.local.json file 0644 10984 566d77b9883758ac2042ecabe0a2c2d5dc0c07e2cd9fde9416be6d95b18d5b87
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -419,7 +419,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 11225 78aea26024c9ebf04831555420f05de6c360027d759abeb8fed58cce199d84c0
+.ai-rulez/.generated-manifest.local.json file 0644 11225 70e00ae85f1e488866eb3481a1762521bec4373add9815419340f7299c491fd6
 >>>>
 {
   "version": "1",
@@ -432,8 +432,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "3859a21aff9aa059766a9cf442697281a535dcb77ba173ef9f924a34d4a8f6b0",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "6eb628c61bef6612c4247a02cb89184d78d4f317d41789de965a8b91c9a42fbd"
         ]
       },
       {
@@ -510,8 +510,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "675be0084c57069b5b14f7cfca0a46af2a68529bbcea5f81711fb36be9101f03"
+          "3f06cebc0a401d44b7dae36414ca0b83ff345a29a981cf73c5f3fd88bdfa8200",
+          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa"
         ]
       },
       {
@@ -568,8 +568,8 @@ policy:
           "preToolUse"
         ],
         "elementSums": [
-          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "8e03e6f754854e1660845b21256d05f689bd2cbda118b79e574832316d605a4c"
+          "26e9e6e20c4eb4f979faa72679f6748630eea51287b20fb1091e18501a5f5bf9",
+          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
         ]
       },
       {
@@ -640,8 +640,8 @@ policy:
           "BeforeTool"
         ],
         "elementSums": [
-          "1bec65a904a0db8ce07c1ebd63ccd0b92d026cb61cda7ef76494777644977088",
-          "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136"
+          "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
+          "e927fcf2ddac4f34e157e93ccb7c21de98bafb8063ccec26214564d4a5b2c3d5"
         ]
       },
       {
@@ -786,20 +786,20 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "2805d5b245905b304fd5d63050985c26e65e12d344f04fa0aa4db103bbdd5f4a",
+    ".claude/settings.json": "c6d59d35616cae4592985cdd21a0bef855869ff5ec4a51230d39009f690ace2a",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
-    ".codex/hooks.json": "04b6f871f619f2e867dafe143eab517e5bc1ec907e111d3df21b68db873a2bee",
+    ".codex/hooks.json": "1554e4188add707a75b8a3d814ba4033287aa2929e584eb03076db1c3b05c601",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "c48cdbd66812d9317c585487412310b0bff3a29df078ffd8293f6a85be6b2ef2",
+    ".cursor/hooks.json": "2013c3f166e144ea97c67ef461303b4e0d26c5dcf800c2ffe2b30b6aade8113e",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".gemini/settings.json": "e00d23f1f0e30e4d2c79be8eb93353352112c0e050d5890a8304b010c7f809b6",
+    ".gemini/settings.json": "52343636f81093d1aeedb6427c7d4f2a5aa1b3597b5e213385b96363e48ee688",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
