@@ -79,6 +79,13 @@ func collectConfigDrift(ctx context.Context, cfg *config.Config, sink *generator
 	if err := applyRole(gen); err != nil {
 		return nil, 0, err
 	}
+	// The OKF index.md files are current outputs even though no preset renders
+	// them: mark them so stale cleanup does not report them as orphans (#533).
+	indexes, err := okfIndexPaths(ctx, cfg)
+	if err != nil {
+		return nil, 0, err
+	}
+	gen.AddOwnedFiles(indexes)
 	drift, err := gen.CheckDrift(profile)
 	if err != nil {
 		return nil, 0, err //nolint:wrapcheck // already contextual

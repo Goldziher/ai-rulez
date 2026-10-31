@@ -167,6 +167,24 @@ func (g *Generator) previousManifestFiles() []string {
 	return append(files, g.readManifest(g.localManifestPath()).Files...)
 }
 
+// AddOwnedFiles marks files the caller wrote outside the render plan as this
+// run's generated output: the OKF index.md files of the configuration
+// directory, refreshed before the plan. They count as current in stale cleanup
+// and are written to the committed manifest, so ownership detection and the
+// next generate treat them as ai-rulez's own (#533).
+func (g *Generator) AddOwnedFiles(paths []string) {
+	for _, p := range paths {
+		rel := filepath.ToSlash(g.convertToRelativePath(p))
+		if rel == "" || filepath.IsAbs(filepath.FromSlash(rel)) {
+			g.log().Warn("Not recording a generated file the manifest cannot express", "path", p)
+			continue
+		}
+		g.extraOwned = append(g.extraOwned, rel)
+	}
+	sort.Strings(g.extraOwned)
+	g.extraOwned = slices.Compact(g.extraOwned)
+}
+
 // writeGeneratedManifest records the generated files so the next run can delete
 // the ones that dropped out. Partially owned outputs are deliberately left out:
 // the manifest exists only to drive deletion, and deleting a file ai-rulez
@@ -182,6 +200,10 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 		sharedAssets = restrictAssetsToFiles(sharedAssets, shared)
 	}
+	// Indexes refreshed outside the plan are shared in both modes (see AddOwnedFiles).
+	shared = append(shared, g.extraOwned...)
+	sort.Strings(shared)
+	shared = slices.Compact(shared)
 	defer func() { g.manifests = nil }()
 	// Digests, like claims, are proof only when this machine recorded them: they go
 	// to the machine-local manifest, never the committed one.
@@ -223,6 +245,9 @@ func (g *Generator) manifestEntries(outputs []config.OutputFile) (shared, local 
 			shared = append(shared, rel)
 		}
 	}
+	shared = append(shared, g.extraOwned...)
+	sort.Strings(shared)
+	shared = slices.Compact(shared)
 	return shared, local
 }
 

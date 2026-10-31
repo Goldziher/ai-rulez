@@ -1,4 +1,4 @@
 # Concepts
 
-* [Plain](plain.md)
-* [Testing](testing.md) - How we test
+- [Plain](plain.md)
+- [Testing](testing.md) - How we test

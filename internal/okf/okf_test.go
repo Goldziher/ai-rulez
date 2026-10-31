@@ -213,8 +213,8 @@ func TestBuildIndexesDeterministicAndValid(t *testing.T) {
 	one := BuildIndexes(in, DirLabel{"rules": "the rules"}, "")
 	two := BuildIndexes([]IndexInput{in[3], in[2], in[1], in[0]}, DirLabel{"rules": "the rules"}, "")
 	assert.Equal(t, one, two)
-	assert.Equal(t, "---\nokf_version: \"0.2\"\n---\n\n# Subdirectories\n\n* [rules](rules/index.md) - the rules\n* [skills](skills/index.md)\n", string(one["index.md"]))
-	assert.Equal(t, "# Concepts\n\n* [A](a.md) - first\n* [B](b.md) - second\n", string(one["rules/index.md"]))
+	assert.Equal(t, "---\nokf_version: \"0.2\"\n---\n\n# Subdirectories\n\n- [rules](rules/index.md) - the rules\n- [skills](skills/index.md)\n", string(one["index.md"]))
+	assert.Equal(t, "# Concepts\n\n- [A](a.md) - first\n- [B](b.md) - second\n", string(one["rules/index.md"]))
 
 	files := map[string]string{}
 	for p, d := range one {
@@ -488,7 +488,7 @@ func TestBuildIndexesEscapesDescriptions(t *testing.T) {
 	out := BuildIndexes(in, nil, "")
 
 	// Assert
-	assert.Equal(t, "# Concepts\n\n* [A](a.md) - see \\[x\\](http://evil.example) \\<b\\>bold\\</b\\>\n", string(out["rules/index.md"]))
+	assert.Equal(t, "# Concepts\n\n- [A](a.md) - see \\[x\\](http://evil.example) \\<b\\>bold\\</b\\>\n", string(out["rules/index.md"]))
 }
 
 func TestPruneOnlyRemovesFilesThePreviousExportWrote(t *testing.T) {

@@ -11,7 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Entry is one bullet of an index.md: `* [Title](target) - description`.
+// Entry is one bullet of an index.md: `- [Title](target) - description`.
+// `*` and `+` bullets are read too; emitted indexes use the dash.
 type Entry struct {
 	Title       string
 	Target      string
@@ -227,7 +228,11 @@ func frontmatterIndex(dir string, own []IndexInput, subs []string, labels DirLab
 }
 
 func writeEntry(b *strings.Builder, title, target, desc string) {
-	b.WriteString("* [" + escapeTitle(title) + "](" + escapeTarget(target) + ")")
+	// A dash bullet is canonical Markdown for the formatters that check a
+	// generated tree (Poly/rumdl), and ParseEntries reads it like `*`. The
+	// index must round-trip through `poly fmt` unchanged so regenerating it
+	// does not restart the format/diff cycle (#533).
+	b.WriteString("- [" + escapeTitle(title) + "](" + escapeTarget(target) + ")")
 	if desc = escapeText(oneLine(desc)); desc != "" {
 		b.WriteString(" - " + desc)
 	}

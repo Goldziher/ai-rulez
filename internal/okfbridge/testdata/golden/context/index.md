@@ -1,3 +1,3 @@
 # Concepts
 
-* [Architecture](architecture.md) - System layout
+- [Architecture](architecture.md) - System layout

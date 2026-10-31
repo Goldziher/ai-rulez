@@ -216,7 +216,7 @@ What an export writes, so a bundle can be read without ai-rulez.
 ```text
 docs/okf/
   index.md                      ---\nokf_version: "0.2"\n---  then "# Subdirectories" entries
-  rules/index.md                "# Concepts" entries: * [Title](file.md) - description
+  rules/index.md                "# Concepts" entries: - [Title](file.md) - description
   rules/<id>.md
   context/<id>.md
   skills/index.md
@@ -229,8 +229,14 @@ docs/okf/
 
 - Every directory with a concept gets an `index.md` (SPEC section 8): no frontmatter except `okf_version` at the root,
   entries sorted by path, each with the concept's one-line description. Subdirectories are listed as
-  `[name](name/index.md)`, the shape used by the official `acme_retail` bundle.
+  `[name](name/index.md)`, the shape used by the official `acme_retail` bundle. Entries use dash bullets
+  (`- [Title](file.md) - description`), the canonical Markdown form `poly fmt` accepts, so formatting the generated
+  tree does not rewrite it; `import okf` reads `*` and `+` bullets too.
 - The `index.md` shape depends on `index_style`, see [Index styles](#index-styles). Concept files are identical in both.
+- The `index.md` files of a migrated configuration directory are generated artifacts: `generate` records every one it
+  refreshes (the root, each content directory, and each nested skill directory) in
+  `.ai-rulez/.generated-manifest.json` under `files`, so ownership detection and `clean` treat them as ai-rulez's
+  output, never as authored sources.
 - No `log.md` is written: history is git's, and a log would need timestamps that break determinism.
 - `title` is the item id in words (`code-style` becomes "Code Style") unless an `okf.title` is kept (see below). No
   `generated`, `verified`, `sources` or `timestamp` fields are written, for the same reason.
@@ -249,7 +255,7 @@ nested) differ, every concept file is byte-identical.
 
 | Style | `index_style` | Shape |
 | --- | --- | --- |
-| Body (default) | `"body"` | The OKF 0.2 scheme: no frontmatter except `okf_version` at the root; `# Concepts` and `# Subdirectories` headings with `* [Title](file.md) - description` bullets |
+| Body (default) | `"body"` | The OKF 0.2 scheme: no frontmatter except `okf_version` at the root; `# Concepts` and `# Subdirectories` headings with `- [Title](file.md) - description` bullets (`*` is read too) |
 | Frontmatter | `"frontmatter"` | `title`, `version: 0.1.0` and `entries` (a list of `title`, `path`, `description`) in the frontmatter, no body. The root also keeps `okf_version` so a spec reader still finds the version |
 
 ```yaml

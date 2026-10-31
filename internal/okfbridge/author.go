@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/samber/oops"
@@ -104,14 +105,52 @@ func RefreshIndexes(ctx context.Context, configDir string) error {
 // from configDir are listed (items merged in from includes and builtins are left
 // out), so the tree is not scanned and parsed a second time. A nil tree is scanned.
 func RefreshIndexesFrom(ctx context.Context, configDir string, tree *config.ContentTree) error {
+	_, err := RefreshIndexesFilesFrom(ctx, configDir, tree)
+	return err
+}
+
+// RefreshIndexesFilesFrom is RefreshIndexesFrom, also returning the index.md
+// paths (slash separated, relative to configDir) the bundle now holds and this
+// run owns, whether it wrote them or found them current. A caller that writes a
+// generated manifest records them as generated so ownership detection does not
+// treat the indexes as authored sources (#533).
+func RefreshIndexesFilesFrom(ctx context.Context, configDir string, tree *config.ContentTree) ([]string, error) {
 	idx, items, err := indexInputs(ctx, configDir, tree)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if _, err := writeIndexes(configDir, idx, items, MigrateOptions{Write: true}); err != nil {
-		return err
+	changes, err := writeIndexes(configDir, idx, items, MigrateOptions{Write: true})
+	if err != nil {
+		return nil, err
 	}
-	return removeStaleIndexes(configDir, idx)
+	if err := removeStaleIndexes(configDir, idx); err != nil {
+		return nil, err
+	}
+	owned := make([]string, 0, len(changes))
+	for _, c := range changes {
+		if c.Action != ActionSkipped {
+			owned = append(owned, c.Path)
+		}
+	}
+	sort.Strings(owned)
+	return owned, nil
+}
+
+// IndexPathsFrom lists the index.md paths (slash separated, relative to
+// configDir) RefreshIndexesFilesFrom would own, without writing anything. A
+// caller that only checks drift uses it to mark the indexes as generated.
+func IndexPathsFrom(ctx context.Context, configDir string, tree *config.ContentTree) ([]string, error) {
+	idx, items, err := indexInputs(ctx, configDir, tree)
+	if err != nil {
+		return nil, err
+	}
+	indexes := okf.BuildIndexes(idx, dirLabels(items), okf.StyleBody)
+	paths := make([]string, 0, len(indexes))
+	for p := range indexes {
+		paths = append(paths, p)
+	}
+	sort.Strings(paths)
+	return paths, nil
 }
 
 // IsBundleDir reports whether configDir is an OKF bundle that ai-rulez keeps

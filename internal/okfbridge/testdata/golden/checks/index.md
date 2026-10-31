@@ -1,3 +1,3 @@
 # Concepts
 
-* [No Todo](no-todo.md) - No TODOs
+- [No Todo](no-todo.md) - No TODOs

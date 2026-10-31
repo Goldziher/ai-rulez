@@ -124,6 +124,9 @@ func (g *Generator) currentManifestSet(outputs []config.OutputFile) map[string]b
 		}
 		next[filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))] = true
 	}
+	for _, rel := range g.extraOwned {
+		next[rel] = true
+	}
 	return next
 }
 

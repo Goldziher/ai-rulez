@@ -1,3 +1,3 @@
 # Subdirectories
 
-* [release](release/index.md)
+- [release](release/index.md)

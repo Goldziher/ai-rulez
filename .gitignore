@@ -169,7 +169,7 @@ testing/**/.mcp.json
 .ai-rulez/local/
 .opencode/agents/
 .opencode/commands/
-opencode.json
+/opencode.json
 # END ai-rulez
 
 # Test fixtures hold tool files (CLAUDE.md, .claude/, .mcp.json) that are ignored above; keep them tracked.

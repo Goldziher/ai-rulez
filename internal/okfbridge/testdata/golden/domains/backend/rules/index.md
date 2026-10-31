@@ -1,3 +1,3 @@
 # Concepts
 
-* [Db](db.md) - DB rules
+- [Db](db.md) - DB rules
