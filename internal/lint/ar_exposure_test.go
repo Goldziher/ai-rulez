@@ -221,6 +221,13 @@ func TestExposureStartBudget(t *testing.T) {
 		},
 		{name: "at the budget is clean", table: "[exposure]\nstart_budget = 150\n", start: over, want: 0, measured: true},
 		{
+			name: "an unmodeled import fails closed under the budget", table: "[exposure]\nstart_budget = 150\n",
+			start: &ExposureStart{ContextWindow: 200000, StartArtifacts: 1, StartTokens: 20, ListingBudgetChars: 8000,
+				UnmodeledImports: []string{"@../outside.md in CLAUDE.md: the path resolves outside the repository root"}},
+			want: 1, sev: SeverityError, measured: true,
+			inText: []string{"the start budget of 150 cannot be verified", "unmodeled import"},
+		},
+		{
 			name: "a comment naming the key is not its line", table: "[exposure]\n# start_budget keeps sessions small\nstart_budget = 100\n",
 			start: over, want: 1, sev: SeverityError, measured: true, line: 7,
 		},

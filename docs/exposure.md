@@ -243,7 +243,15 @@ measured separately, on 2.1.312 (see [A gate that cannot be read](#a-gate-that-c
 - A UTF-8 byte order mark at the start of a file is stripped before the frontmatter is parsed: the frontmatter
   after it is read as usual, and the mark is not part of the text, `text_bytes` or `text_sha256`.
 
-Not modeled: `@path` imports, `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents,
+`@path` imports in a `CLAUDE.md` or rule are followed: a local file the directive names (relative to the file that
+writes it) is read through the same rules, recursively, up to five hops, with each file counted once per importing
+artifact. Alongside `imports` and `import_tokens`, the importing artifact's `tokens` includes every imported body, so
+the start budget sees `@AGENTS.md` as the instructions it loads and not as a three-token directive. A missing target
+loads nothing. An import that cannot be modelled - an absolute or `~` path, a path that resolves outside the project
+root, or a target that exists but cannot be read - is listed in `import_problems` (and in the report's
+`start_imports_unmodeled`): with a `start_budget` set, one fails the budget closed.
+
+Not modeled: `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents,
 commands and MCP servers of plugins. A file the inventory cannot read is listed under `problems`.
 
 The JSON follows [`schema/exposure-inventory.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-inventory.v1.schema.json).
@@ -440,7 +448,9 @@ Two checks of `validate` read the start-of-session report, both only with an `[e
 
 - **`AR9W3 exposure-start-budget`** reports start tokens over `[exposure] start_budget`. It is off while
   `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same
-  case, so either can gate CI.
+  case, so either can gate CI. A start-of-session `@path` import that cannot be modelled (an absolute or `~` path, a
+  path that leaves the root, or an unreadable target) also fails the budget closed: the budget cannot be verified, and
+  both report it rather than staying green.
 - **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
   reports a start-of-session skill listing over Claude Code's listing budget, with the claude preset configured.
   `[lint.load_budgets] claude-skill-listing-total = N` replaces the computed budget with a fixed one.

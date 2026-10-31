@@ -297,7 +297,7 @@ func TestBuild_BodyTextAndLineOffset(t *testing.T) {
 		{name: "no frontmatter keeps the file", content: "first\nsecond\n", wantText: "first\nsecond\n"},
 		{name: "CRLF lines are joined by LF", content: "---\na: 1\r\n---\r\nfirst\r\nsecond\r\n", wantText: "first\nsecond", wantOffset: 3},
 		{name: "an unclosed block is body text", content: "---\na: 1\nbody\n", wantText: "---\na: 1\nbody\n"},
-		{name: "imports are not followed", content: "See @docs/big.md\n", wantText: "See @docs/big.md\n"},
+		{name: "an import line stays in the body", content: "See @docs/big.md\n", wantText: "See @docs/big.md\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
