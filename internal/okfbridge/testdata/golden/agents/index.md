@@ -1,3 +1,3 @@
 # Concepts
 
-* [Reviewer](reviewer.md) - Reviews code
+- [Reviewer](reviewer.md) - Reviews code

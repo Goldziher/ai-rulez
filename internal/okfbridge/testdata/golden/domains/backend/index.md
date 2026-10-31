@@ -1,3 +1,3 @@
 # Subdirectories
 
-* [rules](rules/index.md) - Rules of the backend domain
+- [rules](rules/index.md) - Rules of the backend domain

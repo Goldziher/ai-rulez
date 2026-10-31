@@ -425,10 +425,12 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter, sin
 		return 0, nil
 	}
 
-	if err := refreshOKFIndexes(ctx, cfg); err != nil {
+	indexes, err := refreshOKFIndexes(ctx, cfg)
+	if err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
+	gen.AddOwnedFiles(indexes)
 
 	// Generate files
 	written, err := gen.GenerateFiles(profile)

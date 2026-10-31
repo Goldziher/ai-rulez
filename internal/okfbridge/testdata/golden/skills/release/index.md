@@ -1,7 +1,7 @@
 # Concepts
 
-* [Release](SKILL.md) - Cut a release
+- [Release](SKILL.md) - Cut a release
 
 # Subdirectories
 
-* [references](references/index.md)
+- [references](references/index.md)

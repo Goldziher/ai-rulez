@@ -1,3 +1,3 @@
 # Concepts
 
-* [Ship](ship.md) - Ship it
+- [Ship](ship.md) - Ship it

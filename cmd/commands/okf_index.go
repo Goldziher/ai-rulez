@@ -23,14 +23,38 @@ func keepsOKFIndexes(cfg *config.Config) bool {
 // so the titles and descriptions they list follow the content, as the add and
 // remove commands already do. It is part of every write of `generate`, so the
 // edit, generate, commit loop leaves nothing for `migrate okf --check` to report.
-func refreshOKFIndexes(ctx context.Context, cfg *config.Config) error {
+// It returns the index files (absolute paths) the run owns, which the caller
+// records in the generated manifest (#533).
+func refreshOKFIndexes(ctx context.Context, cfg *config.Config) ([]string, error) {
 	if !keepsOKFIndexes(cfg) {
-		return nil
+		return nil, nil
 	}
-	if err := okfbridge.RefreshIndexesFrom(ctx, cfg.ConfigDir, cfg.Content); err != nil {
-		return oops.Hint("Run 'ai-rulez migrate okf' to rebuild the index.md files.").Wrapf(err, "refresh the OKF index.md files")
+	rel, err := okfbridge.RefreshIndexesFilesFrom(ctx, cfg.ConfigDir, cfg.Content)
+	if err != nil {
+		return nil, oops.Hint("Run 'ai-rulez migrate okf' to rebuild the index.md files.").Wrapf(err, "refresh the OKF index.md files")
 	}
-	return nil
+	abs := make([]string, 0, len(rel))
+	for _, p := range rel {
+		abs = append(abs, filepath.Join(cfg.ConfigDir, filepath.FromSlash(p)))
+	}
+	return abs, nil
+}
+
+// okfIndexPaths lists the index files refreshOKFIndexes owns, without writing:
+// the drift check marks them as current outputs so they are not reported stale.
+func okfIndexPaths(ctx context.Context, cfg *config.Config) ([]string, error) {
+	if !keepsOKFIndexes(cfg) {
+		return nil, nil
+	}
+	rel, err := okfbridge.IndexPathsFrom(ctx, cfg.ConfigDir, cfg.Content)
+	if err != nil {
+		return nil, oops.Wrapf(err, "list the OKF index.md files")
+	}
+	abs := make([]string, 0, len(rel))
+	for _, p := range rel {
+		abs = append(abs, filepath.Join(cfg.ConfigDir, filepath.FromSlash(p)))
+	}
+	return abs, nil
 }
 
 // staleOKFIndexes lists the index.md files of an OKF configuration directory that

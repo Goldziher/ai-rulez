@@ -44,6 +44,10 @@ type Generator struct {
 	// the latest writeOutputs pass. They are hand-written, so they stay out of
 	// the generated manifest and the managed .gitignore block.
 	skippedPaths map[string]bool
+	// extraOwned holds project-relative files the caller emitted outside the
+	// render plan (the OKF index.md files, refreshed before the plan). They are
+	// current outputs: stale cleanup keeps them and the manifest records them.
+	extraOwned []string
 	// overwriteUnowned lets generate replace an existing file it cannot prove it
 	// wrote (SetOverwriteUnowned, `generate --force`).
 	overwriteUnowned bool

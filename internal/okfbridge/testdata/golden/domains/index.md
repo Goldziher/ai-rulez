@@ -1,3 +1,3 @@
 # Subdirectories
 
-* [backend](backend/index.md) - Content of the backend domain
+- [backend](backend/index.md) - Content of the backend domain

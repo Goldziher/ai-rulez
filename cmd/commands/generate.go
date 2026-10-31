@@ -172,9 +172,11 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 		return fail(printDryRun(gen, ""))
 	}
 
-	if err := refreshOKFIndexes(ctx, cfg); err != nil {
+	indexes, err := refreshOKFIndexes(ctx, cfg)
+	if err != nil {
 		return fail(err)
 	}
+	gen.AddOwnedFiles(indexes)
 
 	// Generate files
 	written, err := gen.GenerateFiles(profile)
