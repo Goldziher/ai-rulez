@@ -4893,7 +4893,7 @@ What an export writes, so a bundle can be read without ai-rulez.
 ```text
 docs/okf/
   index.md                      ---\nokf_version: "0.2"\n---  then "# Subdirectories" entries
-  rules/index.md                "# Concepts" entries: * [Title](file.md) - description
+  rules/index.md                "# Concepts" entries: - [Title](file.md) - description
   rules/<id>.md
   context/<id>.md
   skills/index.md
@@ -4906,8 +4906,14 @@ docs/okf/
 
 - Every directory with a concept gets an `index.md` (SPEC section 8): no frontmatter except `okf_version` at the root,
   entries sorted by path, each with the concept's one-line description. Subdirectories are listed as
-  `[name](name/index.md)`, the shape used by the official `acme_retail` bundle.
+  `[name](name/index.md)`, the shape used by the official `acme_retail` bundle. Entries use dash bullets
+  (`- [Title](file.md) - description`), the canonical Markdown form `poly fmt` accepts, so formatting the generated
+  tree does not rewrite it; `import okf` reads `*` and `+` bullets too.
 - The `index.md` shape depends on `index_style`, see [Index styles](#index-styles). Concept files are identical in both.
+- The `index.md` files of a migrated configuration directory are generated artifacts: `generate` records every one it
+  refreshes (the root, each content directory, and each nested skill directory) in
+  `.ai-rulez/.generated-manifest.json` under `files`, so ownership detection and `clean` treat them as ai-rulez's
+  output, never as authored sources.
 - No `log.md` is written: history is git's, and a log would need timestamps that break determinism.
 - `title` is the item id in words (`code-style` becomes "Code Style") unless an `okf.title` is kept (see below). No
   `generated`, `verified`, `sources` or `timestamp` fields are written, for the same reason.
@@ -4926,7 +4932,7 @@ nested) differ, every concept file is byte-identical.
 
 | Style | `index_style` | Shape |
 | --- | --- | --- |
-| Body (default) | `"body"` | The OKF 0.2 scheme: no frontmatter except `okf_version` at the root; `# Concepts` and `# Subdirectories` headings with `* [Title](file.md) - description` bullets |
+| Body (default) | `"body"` | The OKF 0.2 scheme: no frontmatter except `okf_version` at the root; `# Concepts` and `# Subdirectories` headings with `- [Title](file.md) - description` bullets (`*` is read too) |
 | Frontmatter | `"frontmatter"` | `title`, `version: 0.1.0` and `entries` (a list of `title`, `path`, `description`) in the frontmatter, no body. The root also keeps `okf_version` so a spec reader still finds the version |
 
 ```yaml
@@ -18445,7 +18451,15 @@ measured separately, on 2.1.312 (see [A gate that cannot be read](#a-gate-that-c
 - A UTF-8 byte order mark at the start of a file is stripped before the frontmatter is parsed: the frontmatter
   after it is read as usual, and the mark is not part of the text, `text_bytes` or `text_sha256`.
 
-Not modeled: `@path` imports, `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents,
+`@path` imports in a `CLAUDE.md` or rule are followed: a local file the directive names (relative to the file that
+writes it) is read through the same rules, recursively, up to five hops, with each file counted once per importing
+artifact. Alongside `imports` and `import_tokens`, the importing artifact's `tokens` includes every imported body, so
+the start budget sees `@AGENTS.md` as the instructions it loads and not as a three-token directive. A missing target
+loads nothing. An import that cannot be modelled - an absolute or `~` path, a path that resolves outside the project
+root, or a target that exists but cannot be read - is listed in `import_problems` (and in the report's
+`start_imports_unmodeled`): with a `start_budget` set, one fails the budget closed.
+
+Not modeled: `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents,
 commands and MCP servers of plugins. A file the inventory cannot read is listed under `problems`.
 
 The JSON follows [`schema/exposure-inventory.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-inventory.v1.schema.json).
@@ -18642,7 +18656,9 @@ Two checks of `validate` read the start-of-session report, both only with an `[e
 
 - **`AR9W3 exposure-start-budget`** reports start tokens over `[exposure] start_budget`. It is off while
   `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same
-  case, so either can gate CI.
+  case, so either can gate CI. A start-of-session `@path` import that cannot be modelled (an absolute or `~` path, a
+  path that leaves the root, or an unreadable target) also fails the budget closed: the budget cannot be verified, and
+  both report it rather than staying green.
 - **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
   reports a start-of-session skill listing over Claude Code's listing budget, with the claude preset configured.
   `[lint.load_budgets] claude-skill-listing-total = N` replaces the computed budget with a fixed one.
@@ -19278,7 +19294,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.9.7"
+revision = "v5.9.8"
 hooks = ["ai-rulez-validate"]
 ```
 
