@@ -34,10 +34,10 @@ Use this skill when:
 
 ```bash
 # npm (no install)
-pnpm dlx ai-rulez@5.7.0
+npx -y ai-rulez@latest
 
 # Python (no install)
-uvx ai-rulez==5.7.0
+uvx ai-rulez
 
 # Source builds (mise; the build task fetches and verifies the pinned native library)
 # Checkout the source revision pinned in this repository's CI, then:
@@ -145,8 +145,8 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 
 [[mcp_servers]]
 name = "ai-rulez"
-command = "pnpm"
-args = ["dlx", "ai-rulez@5.7.0", "mcp"]
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]
 
 [[scopes]]
 path = "packages/web"
