@@ -8,6 +8,7 @@ trim_trailing_whitespace = true
 
 [discovery]
 exclude = [
+  "/adrs/**",
   "**/*.lock",
   ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
@@ -57,6 +58,7 @@ stages = ["pre-commit"]
 
 [hooks.builtin]
 lint = { exclude = [
+  "/adrs/**",
   "**/*.lock",
   ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
@@ -76,6 +78,7 @@ lint = { exclude = [
   "vendor/**",
 ] }
 fmt = { exclude = [
+  "/adrs/**",
   "**/*.lock",
   ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",

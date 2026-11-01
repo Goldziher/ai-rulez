@@ -1,0 +1,44 @@
+# adrlint configuration
+#
+# The ADR directory, relative to this file. ADR files are `NNNN-brief-description.md`.
+[adr]
+dir = "adrs"
+# Additional roots, relative to this file: directories or glob patterns such as "adrs/*".
+# When non-empty they replace `dir`. Pair them with `recursive` (or `--recursive`) to include
+# nested ADR directories, and address one namespace with e.g. `adrlint lint adrs/team-a`.
+# With neither `dir` nor `paths` configured and no `docs/adr`, the project is searched instead.
+paths = []
+# Search the roots for nested ADR logs, as `--recursive` does.
+recursive = false
+# 0 or 1. The base is fixed for the life of the directory; do not change it later. When the key is
+# absent, a log may start at either 0000 or 0001, so zero-configuration discovery accepts both.
+start = 0
+# Only for imported histories that legitimately start with holes.
+allow_gaps = false
+
+# MADR11: request every http(s) link once per run. Off by default because it needs the network and
+# a server's answer can change between runs; findings are warnings unless [rules] sets MADR11.
+# `adrlint lint --check-external-links` / `--no-check-external-links` override this.
+[lint]
+check_external_links = false
+
+# Accepted decisions are immutable once locked. Presence of the manifest is what opts in.
+# Statuses match case-insensitively; MADR's `superseded by ADR-0123` counts as `superseded`.
+[lock]
+enabled = true
+path = "adrlint.lock"
+statuses = ["accepted", "rejected", "superseded", "deprecated"]
+
+# rumdl's Markdown rules run over the same source as the MADR rules.
+[markdown]
+enabled = true
+
+[markdown.rules]
+# ADR prose is reflowed by its authors, so a fixed line length is not enforced.
+MD013 = "off"
+# Decision records legitimately embed HTML tables and other inline markup.
+MD033 = "off"
+
+# Per-rule severity for MADR and ADR codes. Keys match by longest prefix.
+[rules]
+# MADR03 = "warn"
