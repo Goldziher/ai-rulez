@@ -22,6 +22,7 @@ golangci-lint = "2.15.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
 "go:golang.org/x/exp/cmd/gorelease" = "v0.0.0-20261014143641-f0251eb4aa3e"
+"go:golang.org/x/vuln/cmd/govulncheck" = "v1.9.0"
 
 [tools.bats]
 version = "1.14.0"
@@ -40,6 +41,11 @@ run = ["mise install --locked", { task = "governance:hooks:install" }, "go mod d
 shell = "bash -euo pipefail -c"
 description = "Show available tasks"
 run = "mise tasks"
+
+[tasks."audit:go"]
+shell = "bash -euo pipefail -c"
+description = "Check Go dependencies for reachable known vulnerabilities"
+run = "govulncheck ./..."
 
 [tasks."update"]
 shell = "bash -euo pipefail -c"
