@@ -324,8 +324,13 @@ jobs:
       - name: Set up Go
         uses: ./.github/actions/go-toolchain
 
+      - name: Setup locked govulncheck
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: go:golang.org/x/vuln/cmd/govulncheck
+
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+        run: mise run audit:go
 
   benchmarks:
     name: Benchmarks

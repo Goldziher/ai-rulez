@@ -127,6 +127,11 @@ version = "0.0.0-20261014143641-f0251eb4aa3e"
 backend = "go:golang.org/x/exp/cmd/gorelease"
 specifiers = ["v0.0.0-20261014143641-f0251eb4aa3e"]
 
+[[tools."go:golang.org/x/vuln/cmd/govulncheck"]]
+version = "1.9.0"
+backend = "go:golang.org/x/vuln/cmd/govulncheck"
+specifiers = ["v1.9.0"]
+
 [[tools.golangci-lint]]
 version = "2.15.0"
 backend = "aqua:golangci/golangci-lint"
