@@ -779,7 +779,9 @@ description (an item with no matching word is left out), `kind` (`instruction`, 
    "description": "Code style for the whole repository", "uri": "context://./style", "hash": "sha256:..."}]}
 ```
 
-**Rules and skills with `paths`.** A rule or a skill can name the files it applies to. With `path`, `find_context`
+#### Rules and skills with `paths`
+
+A rule or a skill can name the files it applies to. With `path`, `find_context`
 returns such a rule, and `find_skill` such a skill, only when the path matches one of its globs: `paths:` in the
 frontmatter of a Claude Code rule or `SKILL.md` (Claude Code hides a path-gated skill until a matching file is read),
 and `globs:` of a Cursor `.mdc` rule that is not `alwaysApply`. Cursor has no skills, so a skill's `globs:` is not read.
