@@ -52,6 +52,9 @@ runs:
         set -euo pipefail
         version="$(go env GOVERSION)"
         version="${version#go}"
+        # ~keep setup-go put the `go install` target on PATH; jobs that install a tool (gorelease) rely on it.
+        gobin="$(go env GOBIN)"
+        echo "${gobin:-$(go env GOPATH)/bin}" >>"$GITHUB_PATH"
         {
           echo "version=$version"
           echo "modules=$(go env GOMODCACHE)"
