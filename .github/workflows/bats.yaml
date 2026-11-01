@@ -17,6 +17,10 @@ on:
       - "mise.toml"
       - "mise.lock"
       - "mise-tasks/**"
+      - "mise.ci.toml"
+      - "toolchains.toml"
+      - "scripts/mise/**"
+      - ".github/actions/go-toolchain/**"
       - ".github/workflows/bats.yaml"
   pull_request:
     branches: [main]
@@ -29,11 +33,6 @@ concurrency:
 
 permissions:
   contents: read
-
-env:
-  # The version scripts/bats/run.sh is used with locally, passed explicitly so the workflow does not
-  # silently follow a changed action default.
-  BATS_VERSION: "1.14.0"
 
 jobs:
   bats:
@@ -59,10 +58,10 @@ jobs:
           go build -o "$RUNNER_TEMP/ai-rulez" ./cmd/ai-rulez
           echo "AI_RULEZ_BATS_BIN=$RUNNER_TEMP/ai-rulez" >>"$GITHUB_ENV"
 
-      - name: Install Bats
-        uses: xberg-io/actions/install-bats@v1
+      - name: Install locked Bats
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          version: ${{ env.BATS_VERSION }}
+          tools: bats
 
       - name: Run the shell script suites
         uses: xberg-io/actions/run-bats@v1

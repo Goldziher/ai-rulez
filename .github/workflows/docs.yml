@@ -44,14 +44,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Go, Python and uv
+      - name: Setup Go
         uses: ./.github/actions/go-toolchain
         with:
-          tools: go python uv
           cache: "false"
 
       - name: Check llms.txt and llms-full.txt are up to date
         run: mise run docs:llms:check
+
+      - name: Setup locked Python 3.14 runtime
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          mise-env: ci
+          tools: python uv
 
       - name: Install dependencies
         run: uv sync --dev

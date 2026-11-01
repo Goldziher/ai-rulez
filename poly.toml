@@ -9,6 +9,7 @@ trim_trailing_whitespace = true
 [discovery]
 exclude = [
   "**/*.lock",
+  ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
   "**/Cargo.lock",
   "**/go.sum",
@@ -57,6 +58,7 @@ stages = ["pre-commit"]
 [hooks.builtin]
 lint = { exclude = [
   "**/*.lock",
+  ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
   "**/Cargo.lock",
   "**/go.sum",
@@ -75,6 +77,7 @@ lint = { exclude = [
 ] }
 fmt = { exclude = [
   "**/*.lock",
+  ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
   "**/Cargo.lock",
   "**/go.sum",
@@ -94,6 +97,7 @@ fmt = { exclude = [
 commit = { stages = ["commit-msg"] }
 file_safety = { exclude = [
   "**/*.lock",
+  ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
   "**/Cargo.lock",
   "**/go.sum",

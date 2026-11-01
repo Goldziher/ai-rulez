@@ -1,0 +1,4 @@
+# Preserve the existing Node 24 wrapper and Python 3.14 docs/publish coverage. ~keep
+[tools]
+node = "24.22.2"
+python = "3.14.10"

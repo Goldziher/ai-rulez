@@ -83,9 +83,10 @@ jobs:
           fi
           echo "Dispatching $INPUT_TAG from $REF; provenance will carry the tag identity."
 
-      - name: Setup Node.js and pnpm
+      - name: Setup locked Node 24 compatibility runtime
         uses: xberg-io/actions/setup-mise@v1
         with:
+          mise-env: ci
           tools: node pnpm
 
       - name: Extract version from tag
@@ -565,19 +566,14 @@ jobs:
               ''
             }}
 
-      # Kept for the irreversible npm publish, which runs pnpm exactly as before; 12.15.0 matches mise.toml.
-      # ~keep
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - name: Setup locked Node 24 compatibility runtime
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          version: "12.15.0"
-
-      # Kept for the npm publish: registry-url writes the .npmrc the trusted (OIDC) provenance publish has
-      # always run with, and this job is irreversible. ~keep
-      - name: Setup Node.js
+          mise-env: ci
+          tools: node pnpm
+      - name: Configure npm registry authentication
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Copy README
@@ -630,21 +626,20 @@ jobs:
               ''
             }}
 
-      - name: Setup Python
+      - name: Setup locked Python 3.14 runtime
         uses: xberg-io/actions/setup-mise@v1
         with:
-          tools: python
+          mise-env: ci
+          tools: python uv pipx:build
 
       - name: Build Python package
         env:
           RELEASE_VERSION: ${{ needs.meta.outputs.python_version }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install build
           cp README.md LICENSE THIRD_PARTY_NOTICES.md release/pypi/
           cp -R LICENSES release/pypi/LICENSES
           cd release/pypi
-          python -m build
+          pyproject-build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.14.3
@@ -740,6 +735,11 @@ jobs:
         with:
           ref: ${{ needs.meta.outputs.tag }}
           persist-credentials: false
+
+      - name: Setup locked Python
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: python
 
       - name: Test floating tag safety checks
         run: python3 -m unittest discover -s scripts -p 'test_update_action_tag.py' -v

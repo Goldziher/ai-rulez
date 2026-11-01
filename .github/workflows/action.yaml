@@ -40,6 +40,11 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+      - name: Setup locked Python
+        if: runner.os == 'Linux'
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: python
       - name: Test floating tag safety checks
         if: runner.os == 'Linux'
         run: python3 -m unittest discover -s scripts -p 'test_update_action_tag.py' -v

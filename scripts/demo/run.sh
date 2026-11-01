@@ -24,7 +24,7 @@ shift || true
 case "$cmd" in
 record)
   command -v vhs >/dev/null || {
-    echo "vhs is required: brew install vhs" >&2
+    echo "vhs is required: mise install --locked vhs" >&2
     exit 1
   }
   command -v ai-rulez >/dev/null || {
@@ -42,7 +42,7 @@ record)
   ;;
 check)
   command -v vhs >/dev/null || {
-    echo "vhs is required: brew install vhs" >&2
+    echo "vhs is required: mise install --locked vhs" >&2
     exit 1
   }
   status=0
