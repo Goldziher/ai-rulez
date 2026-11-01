@@ -1,0 +1,7 @@
+version = 1
+canonical = 1
+
+[adrs."adrs/0000-make-the-opencode-adapter-sdk-dependency-an-explicit-default-on-option.md"]
+number = 0
+status = "accepted"
+blake3 = "5fe9d6fc52c3d5ec7d0d48829fa7dc01205508965db3b7109f4e0294183cfd37"

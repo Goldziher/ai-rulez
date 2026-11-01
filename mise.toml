@@ -18,6 +18,7 @@ actionlint = "1.7.12"
 node = "26.13.0"
 pnpm = "12.16.1"
 "github:Goldziher/poly" = "0.32.1"
+"github:Goldziher/adrlint" = "0.4.1"
 golangci-lint = "2.15.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
@@ -32,6 +33,11 @@ os = ["linux", "macos"]
 [tools.vhs]
 version = "0.12.1"
 os = ["linux", "macos"]
+
+[tasks."adr:check"]
+shell = "bash -euo pipefail -c"
+description = "Check ADR structure, canonical formatting, and accepted-record locks"
+run = ["adrlint lint", "adrlint format --check", "adrlint lock --check"]
 
 [tasks."setup"]
 shell = "bash -euo pipefail -c"
