@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.10.0] - 2026-11-01
+
+### Added
+
+- Allow SDK-free OpenCode adapters to disable the automatic `@opencode/plugin` dependency with
+  `plugin.opencode_dependency_enabled = false`. Regeneration removes only an unchanged dependency
+  previously owned by the generator; authored dependencies and edited metadata remain intact. (#534)
+- Add an optional packed-plugin regression against the official OpenCode v2 host, checking actual
+  command, skill and agent-instruction registration without provider or model calls.
+
+### Changed
+
+- Manage development and CI tools through locked Mise tasks on the organization toolchain baseline,
+  retaining compatibility lanes and Windows test sharding. Portable version synchronization validates
+  every required release field before writing and preserves latest-channel hook examples.
+- Upgrade Go dependencies, including Liter 2.4.4, and refresh the documentation lockfile.
+
 ## [5.9.8] - 2026-10-31
 
 ### Fixed
