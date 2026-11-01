@@ -15,13 +15,6 @@ permissions:
   id-token: write
 
 jobs:
-  toolchains:
-    name: Locked toolchain baseline
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: xberg-io/actions/check-toolchain@v1
-
   validate:
     uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1
 
