@@ -300,6 +300,12 @@ jobs:
           gcc --version || cc --version
           go version
 
+      - name: Setup Python for Windows ZIP packaging
+        if: matrix.goos == 'windows'
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: python
+
       - name: Package release archive
         env:
           VERSION: ${{ needs.meta.outputs.version }}
