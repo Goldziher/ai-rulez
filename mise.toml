@@ -6,13 +6,13 @@ lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "macos-x64", "w
 
 [tools]
 go = "1.27.3"
-node = "26.12.1"
-pnpm = "12.15.0"
-python = "3.13.18"
+node = "26.13.0"
+pnpm = "12.16.1"
+python = "3.15.2"
 uv = "0.13.6"
 bats = "1.14.0"
 actionlint = "1.7.12"
-"github:Goldziher/poly" = "0.31.2"
+"github:Goldziher/poly" = "0.32.1"
 # Repository-owned: poly probes these on PATH, and scripts/bats/lint.sh needs shfmt and shellcheck. CI's
 # golangci-lint-action pins the same golangci-lint. ~keep
 golangci-lint = "2.15.0"
