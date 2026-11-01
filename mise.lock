@@ -192,6 +192,15 @@ url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-x64.tar.gz"
 checksum = "sha256:dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a"
 url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip"
 
+[[tools."npm:@opencode/cli"]]
+version = "2.2.5"
+aube = { path = ".mise/locks/npm-opencode-cli/2.2.5~009061c2", digest = "sha256:5423c53b1334bf1a0e09a122f05c23b204c2359adc0cce62d1b6270c268bd496" }
+backend = "npm:@opencode/cli"
+specifiers = ["2.2.5"]
+
+[tools."npm:@opencode/cli".options]
+allow_builds = '["@opencode/cli"]'
+
 [[tools."pipx:build"]]
 version = "1.6.1"
 backend = "pipx:build"
