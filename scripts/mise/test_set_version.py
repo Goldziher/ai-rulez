@@ -50,7 +50,7 @@ class VersionFixtures(unittest.TestCase):
         expected = {name: text.replace("1.2.3", "9.8.7") for name, text in FIXTURES.items()}
         self.assertEqual(result["files_checked"], 11)
         self.assertEqual(result["files_changed"], sorted(name for name in FIXTURES if expected[name] != FIXTURES[name]))
-        self.assertEqual(sum(row["replacements"] for row in result["rules"] if row["required"]), 11)
+        self.assertEqual(sum(row["replacements"] for row in result["rules"] if row["required"]), 8)
         self.assertEqual(self.contents(), expected)
         self.assertEqual(json.loads((self.root / "release/npm/package.json").read_text())["version"], "9.8.7")
 
@@ -72,8 +72,8 @@ class VersionFixtures(unittest.TestCase):
         self.assertEqual(before, self.snapshot())
 
     def test_missing_required_field_refuses_before_any_file_write(self) -> None:
-        path = self.root / "docs/poly-hooks.md"
-        path.write_text(path.read_text().replace("revision =", "release_reference ="))
+        path = self.root / "scripts/pre-commit/run-ai-rulez.sh"
+        path.write_text(path.read_text().replace("AI_RULEZ_VERSION", "OTHER_VERSION"))
         before = self.snapshot()
         with self.assertRaisesRegex(ValueError, "expected exactly one release field, found 0"):
             set_version.synchronize(self.root, "9.8.7")
@@ -97,10 +97,23 @@ class VersionFixtures(unittest.TestCase):
             set_version.synchronize(self.root, "9.8.7; unwanted-command")
         self.assertEqual(before, self.snapshot())
 
+    def test_floating_major_examples_and_latest_channels_are_preserved(self) -> None:
+        for name in ["README.md", "docs/poly-hooks.md"]:
+            path = self.root / name
+            path.write_text(path.read_text().replace("v1.2.3", "v5"))
+        path = self.root / "poly-hooks.toml"
+        path.write_text(path.read_text() + "\n# npx -y ai-rulez@5\n")
+        before = self.contents()
+        result = set_version.synchronize(self.root, "9.8.7")
+        for name in ["README.md", "docs/poly-hooks.md", "poly-hooks.toml"]:
+            self.assertEqual(self.contents()[name], before[name])
+        self.assertEqual(json.loads(self.contents()["release/npm/package.json"])["version"], "9.8.7")
+        self.assertEqual(sum(row["replacements"] for row in result["rules"] if row["required"]), 8)
+
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(VersionFixtures)
-    assert suite.countTestCases() == 6
+    assert suite.countTestCases() == 7
     result = unittest.TextTestRunner(verbosity=2).run(suite)
-    assert result.testsRun == 6 and not result.skipped
+    assert result.testsRun == 7 and not result.skipped
     raise SystemExit(0 if result.wasSuccessful() else 1)

@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+PINNED_RELEASE = r"[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*"
+
 RULES = (
     ("cmd/commands/root.go", r'(?m)^(\s*Version\s*=\s*")[^"]+(")', "semver", True),
     ("cmd/ai-rulez/main.go", r'(?m)^(var version = ")[^"]+(")', "semver", True),
@@ -15,13 +17,13 @@ RULES = (
     ("release/pypi/ai_rulez/__init__.py", r'(?m)^(__version__ = ")[^"]+(")', "python", True),
     ("internal/hooks/setup.go", r'(?m)^(\s*officialPreCommitRev\s*=\s*"v)[^"]+(")', "semver", True),
     ("scripts/pre-commit/run-ai-rulez.sh", r'(AI_RULEZ_VERSION="\$\{AI_RULEZ_VERSION:-v)[^}]+(\}")', "semver", True),
-    ("README.md", r"(rev: v)[0-9][0-9A-Za-z.+-]*()", "semver", True),
-    ("README.md", r'(revision = "v)[^"]+(")', "semver", True),
-    ("poly-hooks.toml", r"(ai-rulez@)[0-9][0-9A-Za-z.+-]*()", "semver", False),
-    ("poly-hooks.toml", r"(ai-rulez==)[0-9][0-9A-Za-z.+-]*()", "python", False),
-    ("docs/poly-hooks.md", r"(ai-rulez@)[0-9][0-9A-Za-z.+-]*()", "semver", False),
-    ("docs/poly-hooks.md", r"(ai-rulez==)[0-9][0-9A-Za-z.+-]*()", "python", False),
-    ("docs/poly-hooks.md", r'(revision = "v)[^"]+(")', "semver", True),
+    ("README.md", rf"(rev: v){PINNED_RELEASE}()", "semver", False),
+    ("README.md", rf'(revision = "v){PINNED_RELEASE}(")', "semver", False),
+    ("poly-hooks.toml", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
+    ("poly-hooks.toml", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
+    ("docs/poly-hooks.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
+    ("docs/poly-hooks.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
+    ("docs/poly-hooks.md", rf'(revision = "v){PINNED_RELEASE}(")', "semver", False),
 )
 
 
