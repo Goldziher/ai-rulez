@@ -174,6 +174,9 @@ func piPackageOutput(m *Manifest, baseDir string, pkg piPackage) (config.OutputF
 	case !os.IsNotExist(err):
 		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "read the existing root package.json")
 	}
+	if err := m.reconcileOpenCodeDependency(baseDir, data, merged); err != nil {
+		return config.OutputFile{}, err
+	}
 	fields := piOwnedFields(pkg)
 	if authored, ok := merged[piKeyName].(string); ok && authored != "" && m.PiPackageName == "" {
 		delete(fields, piKeyName)

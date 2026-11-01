@@ -104,7 +104,7 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		Main:           filepath.ToSlash(entrypoint),
 		Exports:        map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
 		Files:          files,
-		Dependencies:   map[string]string{"@opencode/plugin": openCodeDependency(m)},
+		Dependencies:   openCodeDependencies(m),
 	})
 	if err != nil {
 		return nil, err
@@ -240,6 +240,13 @@ func openCodePublishedFiles(m *Manifest, baseDir string, outputs []config.Output
 	}
 	sort.Strings(files)
 	return files, nil
+}
+
+func openCodeDependencies(m *Manifest) map[string]string {
+	if !m.addsOpenCodeDependency() {
+		return map[string]string{}
+	}
+	return map[string]string{"@opencode/plugin": openCodeDependency(m)}
 }
 
 // openCodeDependency returns the "@opencode/plugin" version range: the authored

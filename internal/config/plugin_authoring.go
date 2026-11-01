@@ -139,6 +139,10 @@ type PluginAuthoring struct {
 	// package manager it uses. Empty omits the field.
 	PackageManager string `yaml:"package_manager,omitempty" json:"package_manager,omitempty" toml:"package_manager,omitempty"` //nolint:tagliatelle
 
+	// OpencodeDependencyEnabled controls the automatically added "@opencode/plugin"
+	// dependency. Defaults to true; false is for adapters that do not need the SDK.
+	OpencodeDependencyEnabled *bool `yaml:"opencode_dependency_enabled,omitempty" json:"opencode_dependency_enabled,omitempty" toml:"opencode_dependency_enabled,omitempty"` //nolint:tagliatelle
+
 	// OpencodeDependency overrides the "@opencode/plugin" dependency version in
 	// the OpenCode root package.json. Empty uses the built-in default.
 	OpencodeDependency string `yaml:"opencode_dependency,omitempty" json:"opencode_dependency,omitempty" toml:"opencode_dependency,omitempty"` //nolint:tagliatelle

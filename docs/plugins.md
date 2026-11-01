@@ -339,6 +339,26 @@ dependencies for local `.opencode/plugins/` files, so the import would fail to r
 shared MCP settings in their normal `.ai-rulez` sources; the `opencode` preset writes them to
 `opencode.json`.
 
+By default, the npm manifest declares `@opencode/plugin`; `opencode_dependency` selects its
+version range. For an adapter that does not import or otherwise need that SDK, explicitly disable
+its automatic dependency:
+
+```toml
+[plugin]
+opencode_dependency_enabled = false
+```
+
+Omitting the switch or setting it to `true` preserves the default dependency and any configured
+range. Disabling it does not inspect or rewrite JavaScript and does not remove dependencies
+from an authored Pi `package_json = "merge"` manifest. A former automatic SDK entry is pruned
+only when the previous provenance sidecar owns dependencies and the managed metadata is
+unchanged. Edited or unowned manifests keep their SDK entry. A version edit also changes that
+ownership hash: disable the dependency and regenerate before changing the package version
+when migrating an existing merged package.
+
+Keep the dependency enabled when the adapter requires the SDK, and test npm installation and
+loading in the actual OpenCode host before publishing an SDK-independent adapter.
+
 When the source entrypoint is absent, generation emits a documented module that only registers
 the bundled content. It keeps the plugin loadable and tells you where to create the user-owned
 source; it does not guess tool schemas, subprocess arguments, or business logic.
