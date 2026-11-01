@@ -181,6 +181,9 @@ jobs:
       - name: Verify version synchronization
         run: mise run test:version-sync
 
+      - name: Check benchmark reporter offline controls
+        run: mise run test:benchstat
+
       - name: Set up Go
         id: setup-go
         uses: ./.github/actions/go-toolchain
@@ -346,6 +349,11 @@ jobs:
 
       - name: Set up Go
         uses: ./.github/actions/go-toolchain
+
+      - name: Setup locked benchstat
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: go:golang.org/x/perf/cmd/benchstat
 
       - name: Set up liter-llm (static library, as a release links it)
         uses: ./.github/actions/setup-liter-llm

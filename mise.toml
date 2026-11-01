@@ -23,6 +23,7 @@ shfmt = "3.14.1"
 shellcheck = "0.11.0"
 "go:golang.org/x/exp/cmd/gorelease" = "v0.0.0-20261014143641-f0251eb4aa3e"
 "go:golang.org/x/vuln/cmd/govulncheck" = "v1.9.0"
+"go:golang.org/x/perf/cmd/benchstat" = "v0.0.0-20261009192801-be2c69fb417e"
 
 [tools.bats]
 version = "1.14.0"
@@ -314,3 +315,8 @@ shell = "bash -euo pipefail -c"
 description = "Optional model-free packed-plugin regression in the official OpenCode host"
 tools = { "npm:@opencode/cli" = { version = "2.2.5", allow_builds = ["@opencode/cli"] } }
 run = ["python3 -I scripts/mise/test_opencode_host_isolation.py", "python3 -I scripts/mise/test_opencode_host.py"]
+
+[tasks."test:benchstat"]
+shell = "bash -euo pipefail -c"
+description = "Verify benchmark reporter failures and paths without running benchmarks"
+run = "python3 -I scripts/mise/test_benchstat.py"

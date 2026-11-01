@@ -122,7 +122,7 @@ jobs:
           echo "Python version: $python_version"
 
       # Every surface that carries the version must already equal the tag (bump with
-      # scripts/release-bump.sh set <version> before tagging), and the liter-llm native version
+      # mise run set-version -- <version> before tagging), and the liter-llm native version
       # must resolve unambiguously from go.mod.
       - name: Verify version consistency across all surfaces
         env:

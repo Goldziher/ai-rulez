@@ -16,7 +16,7 @@
 #
 # --compare measures both revisions on one machine in one run, so neither the CPU model nor a stale file
 # matters. A baseline recorded elsewhere is only usable on the same CPU model; otherwise the baseline mode
-# warns and exits 0. The pass/fail decision is made here; benchstat, when installed, prints its report too.
+# warns and exits 0. The timing pass/fail decision is made here; the managed benchstat prints the baseline report.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -73,12 +73,17 @@ median_table() {
 }
 
 show_benchstat() {
-  if command -v benchstat >/dev/null 2>&1; then
-    benchstat "$BASELINE" "$OUT" || true
-  elif command -v curl >/dev/null 2>&1 && curl -fsS --max-time 3 -o /dev/null https://proxy.golang.org; then
-    go run golang.org/x/perf/cmd/benchstat@latest "$BASELINE" "$OUT" || true
+  local status
+  if ! command -v benchstat >/dev/null 2>&1; then
+    echo "benchstat is required: run mise install --locked go:golang.org/x/perf/cmd/benchstat" >&2
+    return 1
+  fi
+  if benchstat "$BASELINE" "$OUT"; then
+    return 0
   else
-    echo "benchstat not installed and offline: skipping its report" >&2
+    status=$?
+    echo "benchstat report failed (exit $status)" >&2
+    return "$status"
   fi
 }
 
