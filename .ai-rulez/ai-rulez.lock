@@ -2,9 +2,9 @@
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
 
 version = 1
-ai_rulez_version = '5.9.8'
+ai_rulez_version = '5.10.0'
 scope = 'all'
-tree = 'sha256:0982568a2f2e5f77c5e41a3bc7cfe036df45d7446e6d25059217405ec5b6c521'
+tree = 'sha256:7f79e439b4ba5f87f5e82c01b02cddf664ec47fb2767bafe5f7a4f30744561dd'
 
 [[served]]
 name = 'build'
@@ -256,7 +256,7 @@ digest = 'sha256:e713dc88203189aa6a45a35ca561abcd51e94a5edddf20aaf2feff81beabea5
 kind = 'context'
 id = 'release-and-distribution'
 path = 'context/release-and-distribution.md'
-digest = 'sha256:53812e190e02cdbca4b0b4c5a291f88685c3f8b97628b89b8ca647e11035bed3'
+digest = 'sha256:4797d068f5f852405a4aab052d99b394c250c3f1409b4518491affcdc931147d'
 
 [[item]]
 kind = 'context'

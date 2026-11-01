@@ -122,6 +122,11 @@ url = "https://dl.google.com/go/go1.27.3.darwin-amd64.tar.gz"
 checksum = "sha256:f26081f438319757f8a1b46d7d0b2c5ec7583d4038e485e0aa725cfde7885fff"
 url = "https://dl.google.com/go/go1.27.3.windows-amd64.zip"
 
+[[tools."go:golang.org/x/exp/cmd/gorelease"]]
+version = "0.0.0-20261014143641-f0251eb4aa3e"
+backend = "go:golang.org/x/exp/cmd/gorelease"
+specifiers = ["v0.0.0-20261014143641-f0251eb4aa3e"]
+
 [[tools.golangci-lint]]
 version = "2.15.0"
 backend = "aqua:golangci/golangci-lint"
@@ -181,6 +186,12 @@ url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-x64.tar.gz"
 [tools.node."platforms.windows-x64"]
 checksum = "sha256:dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a"
 url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip"
+
+[[tools."pipx:build"]]
+version = "1.6.1"
+backend = "pipx:build"
+specifiers = ["1.6.1"]
+uv = { path = ".mise/locks/pipx-build/1.6.1", digest = "sha256:45059e37f83234bdb1684de2542cd4ec10ea47dba8816468a25295ee8a851402" }
 
 [[tools.pnpm]]
 version = "12.16.1"
@@ -351,3 +362,32 @@ checksum = "sha256:a2a8820d5eea32f08ef467ef3b7f66883a9b076d5737a2fc2fbb5f458d1bb
 url = "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-x86_64-pc-windows-msvc.zip"
 url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/679980629"
 provenance = "github-attestations"
+
+[[tools.vhs]]
+version = "0.12.1"
+backend = "aqua:charmbracelet/vhs"
+specifiers = ["0.12.1"]
+
+[tools.vhs."platforms.linux-arm64"]
+checksum = "sha256:0b27029809fcc2ca2c381cceb854cbe03479a0f229b963e9bc3a2f2c36ffd3e7"
+url = "https://github.com/charmbracelet/vhs/releases/download/v0.12.1/vhs_0.12.1_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/vhs/releases/assets/585610198"
+provenance = "cosign"
+
+[tools.vhs."platforms.linux-x64"]
+checksum = "sha256:eb33787a5b1cebf91fe0b18bd231e2d71d36c1ff4babd99ddac1a6ab411efd10"
+url = "https://github.com/charmbracelet/vhs/releases/download/v0.12.1/vhs_0.12.1_Linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/vhs/releases/assets/585610189"
+provenance = "cosign"
+
+[tools.vhs."platforms.macos-arm64"]
+checksum = "sha256:b5b524ed60c949eb80dfb685a18eeb135eb863c97f7279689b4e153363cd27c5"
+url = "https://github.com/charmbracelet/vhs/releases/download/v0.12.1/vhs_0.12.1_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/vhs/releases/assets/585610194"
+provenance = "cosign"
+
+[tools.vhs."platforms.macos-x64"]
+checksum = "sha256:24596d14673251496e37f5cd984ad0a1d864f3d1c4ec1f2eca251f6b9fe6367d"
+url = "https://github.com/charmbracelet/vhs/releases/download/v0.12.1/vhs_0.12.1_Darwin_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/vhs/releases/assets/585610187"
+provenance = "cosign"

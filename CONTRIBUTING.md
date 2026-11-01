@@ -14,7 +14,7 @@ The governance tasks and hooks run `npx -y ai-rulez@latest` on the pinned Node.j
 
 ### Setup
 
-Install the prerequisites first. The `setup` task installs the `mise.toml` tools, configures governance hooks and downloads Go modules.
+Install the prerequisites first. The `setup` task runs `mise install --locked`, configures governance hooks and downloads Go modules. `mise.ci.toml` preserves the locked Node 24 and Python 3.14 compatibility lanes.
 
 ```bash
 # 1. Clone the repository
@@ -185,7 +185,7 @@ requires a DCO sign-off (`git commit -s`). This does not apply to commits in thi
 A version tag push triggers [the publish workflow](.github/workflows/publish.yaml). Follow the complete
 [maintainer release guide](docs/maintainers/release.md), including version synchronization, golden updates and verification.
 
-1. Run `mise run set-version X.Y.Z`, `scripts/release-bump.sh check X.Y.Z` and `uv lock`. Update the changelog and generated documentation, commit the release changes, and wait for CI on `main` to pass.
+1. Run `mise run set-version -- X.Y.Z`, `scripts/release-bump.sh check X.Y.Z` and `uv lock`. Update the changelog and generated documentation, commit the release changes, and wait for CI on `main` to pass.
 2. Create a signed tag at that verified commit and push it:
 
    ```bash

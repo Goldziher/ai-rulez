@@ -15,6 +15,13 @@ permissions:
   id-token: write
 
 jobs:
+  toolchains:
+    name: Locked toolchain baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: xberg-io/actions/check-toolchain@v1
+
   validate:
     uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1
 
@@ -43,12 +50,13 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
+      - name: Setup locked golangci-lint
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          # Pinned, so a local run with the same version matches CI; bump on purpose.
-          version: v2.15.0
-          args: --timeout=180m
+          tools: golangci-lint
+
+      - name: Run golangci-lint
+        run: golangci-lint run --timeout=180m
 
   tidy:
     name: go mod tidy
@@ -91,6 +99,11 @@ jobs:
       # The compatibility gate: pkg/... may only change additively inside a
       # major version. It needs the network (module proxy and tags), so it runs
       # here only; with no v5 release yet there is nothing to compare against.
+      - name: Setup locked API compatibility tool
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: go:golang.org/x/exp/cmd/gorelease
+
       - name: Compatibility with the last v5 release (gorelease)
         run: |
           base=$(git tag --list 'v5.*' --sort=-v:refname | grep -v -- '-' | head -n1 || true)
@@ -98,7 +111,6 @@ jobs:
             echo "::notice::no v5 release to compare pkg/airulez against yet"
             exit 0
           fi
-          go install golang.org/x/exp/cmd/gorelease@v0.0.0-20261014143641-f0251eb4aa3e
           # gorelease passes the deprecated `go get -d`, which Go 1.27 rejects with a
           # message it treats as failure, and its temporary load module omits the `go`
           # directive, so the module graph is not pruned and a broken transitive go.mod
@@ -140,12 +152,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # Node 24, as the job name says, not the baseline's newer line; setup-mise installs a version no lock
-      # covers unlocked. ~keep
-      - name: Set up Node.js
+      - name: Setup locked Node 24 compatibility runtime
         uses: xberg-io/actions/setup-mise@v1
         with:
-          tools: node=24
+          mise-env: ci
+          tools: node
 
       - name: Run npm wrapper tests
         run: node --test release/npm/install.test.js
@@ -161,6 +172,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Setup locked Python for offline version controls
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: python
+
+      - name: Verify version synchronization
+        run: mise run test:version-sync
 
       - name: Set up Go
         id: setup-go

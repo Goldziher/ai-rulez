@@ -11,7 +11,7 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
 1. Bump every surface that carries the version, merge the result, and let CI go green:
 
    ```bash
-   mise run set-version 5.4.0
+   mise run set-version -- 5.4.0
    scripts/release-bump.sh check 5.4.0
    uv lock
    ```
@@ -19,8 +19,7 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
    The task updates both Go version defaults, the npm wrapper, both Python `__init__.py` files, the docs
    `pyproject.toml`, pre-commit defaults and the README and Poly hook version examples. `uv lock` synchronizes
    the docs project's version in its lockfile. The publish workflow's `release-bump.sh check` verifies the
-   distribution versions and the liter-llm pin. For a prerelease such as `5.4.0-rc.1`, also run
-   `scripts/release-bump.sh set 5.4.0-rc.1` to convert the Python wrapper versions to PEP 440 (`5.4.0rc1`).
+   distribution versions and the liter-llm pin. Prerelease versions such as `5.4.0-rc.1` are converted to PEP 440 (`5.4.0rc1`) for Python metadata by the same task.
 
    Date the release's changelog section, review the release notes, update any remaining version examples, and
    regenerate the CLI and LLM documentation with `mise run docs:cli` and `mise run docs:llms`.

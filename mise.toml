@@ -1,44 +1,87 @@
-# Versions follow the xberg-io/toolchains baseline named in toolchains.toml. ai-rulez itself is never pinned
-# here: the governance tasks run `npx -y ai-rulez@latest`. ~keep
+# Development tools follow the public org baseline; CI compatibility lanes are in mise.ci.toml. ~keep
 [settings]
 lockfile = true
-lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "macos-x64", "windows-x64"]
+lockfile_platforms = ["linux-x64", "linux-arm64", "macos-x64", "macos-arm64", "windows-x64"]
+
+[env]
+GOTOOLCHAIN = "local"
+# Keep uv on the interpreter activated by Mise, including compatibility profiles. ~keep
+UV_PYTHON = "python"
+UV_PYTHON_DOWNLOADS = "never"
 
 [tools]
 go = "1.27.3"
-node = "26.13.0"
-pnpm = "12.16.1"
 python = "3.15.2"
 uv = "0.13.6"
-bats = "1.14.0"
 actionlint = "1.7.12"
+"pipx:build" = "1.6.1"
+node = "26.13.0"
+pnpm = "12.16.1"
 "github:Goldziher/poly" = "0.32.1"
-# Repository-owned: poly probes these on PATH, and scripts/bats/lint.sh needs shfmt and shellcheck. CI's
-# golangci-lint-action pins the same golangci-lint. ~keep
 golangci-lint = "2.15.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
+"go:golang.org/x/exp/cmd/gorelease" = "v0.0.0-20261014143641-f0251eb4aa3e"
 
-[tasks.setup]
+[tools.bats]
+version = "1.14.0"
+os = ["linux", "macos"]
+
+[tools.vhs]
+version = "0.12.1"
+os = ["linux", "macos"]
+
+[tasks."setup"]
+shell = "bash -euo pipefail -c"
 description = "Set up the development environment"
-run = ["mise install", { task = "governance:hooks:install" }, "go mod download"]
+run = ["mise install --locked", { task = "governance:hooks:install" }, "go mod download"]
 
-[tasks.update]
+[tasks."default"]
+shell = "bash -euo pipefail -c"
+description = "Show available tasks"
+run = "mise tasks"
+
+[tasks."update"]
+shell = "bash -euo pipefail -c"
 description = "Update Go modules and the docs lockfile"
 run = ["go get -u all", "go mod tidy", "uv lock --upgrade"]
 
+[tasks."upgrade"]
+shell = "bash -euo pipefail -c"
+description = "Upgrade all dependencies to latest then update"
+run = { task = "update" }
+
+[tasks."set-version"]
+shell = "bash -euo pipefail -c"
+description = "Set version across all packages (usage: mise run set-version -- 1.2.3)"
+usage = "arg \"<version>\" help=\"Release version X.Y.Z or X.Y.Z-rc.N\""
+run = "python3 scripts/mise/set_version.py \"$usage_version\""
+
+[tasks."test:version-sync"]
+shell = "bash -euo pipefail -c"
+description = "Verify portable release-version synchronization with offline fixtures"
+run = "python3 -I scripts/mise/test_set_version.py"
+
 [tasks."setup:llm"]
+shell = "bash -euo pipefail -c"
 description = "Download, sha256-verify and cache the static liter-llm library; prints the CGO_LDFLAGS export (needs the network once)"
 run = "bash scripts/setup-liter-llm.sh"
 
+[tasks."build"]
+shell = "bash -euo pipefail -c"
+description = "Build the CLI binary as a release does: liter-llm linked statically (plain `go build` links the shared library the module ships, which only runs on this machine)"
+run = "bash scripts/mise/with-static-liter.sh go build -ldflags=\"-s -w\" -o bin/ai-rulez ./cmd/ai-rulez"
+
+[tasks."test:release"]
+shell = "bash -euo pipefail -c"
+description = "Run the model-layer tests against the static liter-llm library, the way CI does"
+run = "bash scripts/mise/with-static-liter.sh go test ./internal/llm/... ./internal/pricing/... ./internal/tokens/... ./cmd/..."
+
 [tasks."release:dry-run"]
+shell = "bash -euo pipefail -c"
 description = "Build this platform's release archive locally and check what the wrappers expect (see docs/maintainers/release.md)"
 run = "bash scripts/release-dry-run.sh"
 
-# Tasks with POSIX expansions, quoting or script paths set shell = "bash -c" so a local Windows run does not
-# fall back to cmd. test, test:platform and test:e2e run in the Windows CI jobs and leave it unset: a bare
-# `bash` can resolve to System32's WSL launcher there, and setup-mise's default inline shell names Git Bash by
-# full path. ~keep
 [tasks.test]
 description = "Run unit and integration tests"
 # TEST_TIMEOUT and COMMAND_TEST_LOG_DIR come from the environment, as CI sets them. ~keep
@@ -46,27 +89,32 @@ run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/..
 run_windows = 'go run ./scripts/testshard -shards 4 -log-dir "${COMMAND_TEST_LOG_DIR:-}" -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
 
 [tasks."schema:local:generate"]
+shell = "bash -euo pipefail -c"
 description = "Derive the local overlay schema from the main schema"
-env = { UPDATE_LOCAL_SCHEMA = "1" }
+env = { "UPDATE_LOCAL_SCHEMA" = "1" }
 run = "go test ./schema -run TestLocalSchemaInSync -count=1"
 
 [tasks."test:gemini-settings"]
+shell = "bash -euo pipefail -c"
 description = "Verify Gemini extension settings schema and native projection"
 run = "go test ./internal/config ./internal/generator/plugin ./schema -count=1"
 
 [tasks."test:golden:update"]
+shell = "bash -euo pipefail -c"
 description = "Rewrite golden files (UPDATE_GOLDEN=1) in every package that has them, then the tokens golden; review the diff"
-env = { UPDATE_GOLDEN = "1" }
+env = { "UPDATE_GOLDEN" = "1" }
 run = [
   "go test -count=1 ./cmd/commands/ ./internal/lint/ ./internal/evals/evalimport/ ./internal/importer/ ./internal/mcp/ ./internal/okfbridge/ ./internal/generator/... ./internal/publish/... ./internal/migrate/ ./internal/agentplugins/ ./internal/telemetry/ ./internal/ard/ ./internal/policy/ ./tests/golden/ ./tests/archlint/",
   "go test -count=1 ./internal/generator -run Golden_TokenReportJSON -update-tokens-golden",
 ]
 
 [tasks."test:verbose"]
+shell = "bash -euo pipefail -c"
 description = "Run all tests with verbose output"
 run = "go test -v ./..."
 
 [tasks."test:race"]
+shell = "bash -euo pipefail -c"
 description = "Run tests with race detector"
 run = "go test -race ./..."
 
@@ -75,21 +123,24 @@ description = "Run all e2e tests"
 run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./tests/e2e/...'
 
 [tasks."test:e2e:cli"]
+shell = "bash -euo pipefail -c"
 description = "Run e2e CLI tests"
 run = "go test ./tests/e2e/cli/..."
 
 [tasks."test:e2e:mcp"]
+shell = "bash -euo pipefail -c"
 description = "Run e2e MCP tests"
 run = "go test ./tests/e2e/mcp/..."
 
 [tasks."test:e2e:integration"]
+shell = "bash -euo pipefail -c"
 description = "Run e2e integration tests"
 run = "go test ./tests/e2e/integration/..."
 
 [tasks."test:otelcol"]
+shell = "bash -euo pipefail -c"
 description = "Send telemetry to a pinned real OpenTelemetry Collector (needs docker)"
-shell = "bash -c"
-env = { AI_RULEZ_E2E_OTELCOL = "1" }
+env = { "AI_RULEZ_E2E_OTELCOL" = "1" }
 run = "go test ./internal/telemetry -run 'TestCollector' -count=1 -v"
 
 [tasks."test:platform"]
@@ -98,135 +149,155 @@ run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./tests/platform/...'
 
 # Arguments after `--` reach the script: mise appends them to a task with no usage spec. ~keep
 [tasks."test:bats"]
+shell = "bash -euo pipefail -c"
 description = "Run the Bats suites for shell scripts (usage: mise run test:bats -- [bats args or suite path])"
-shell = "bash -c"
-# run.sh sets BATS_LIB_PATH=tests/lib (bats_load_library searches nothing else) and builds ai-rulez once for
-# the suites that render scripts through the binary. ~keep
-run = "scripts/bats/run.sh"
+usage = "arg \"[args]...\" var=#true help=\"Arguments forwarded unchanged to the existing command\""
+run = "eval \"set -- ${usage_args:-}\"; scripts/bats/run.sh \"$@\""
 
 [tasks."test:lib:sync"]
+shell = "bash -euo pipefail -c"
 description = "Refresh tests/lib/xberg-bats from xberg-io/actions (mise run test:lib:sync -- --ref v1 re-pins)"
-shell = "bash -c"
-run = "scripts/bats/sync-xberg-bats.sh"
+usage = "arg \"[args]...\" var=#true help=\"Arguments forwarded unchanged to the existing command\""
+run = "eval \"set -- ${usage_args:-}\"; scripts/bats/sync-xberg-bats.sh \"$@\""
 
 [tasks."test:lib:check"]
+shell = "bash -euo pipefail -c"
 description = "Fail when tests/lib/xberg-bats has drifted from the pinned xberg-io/actions commit"
-shell = "bash -c"
 run = "scripts/bats/sync-xberg-bats.sh --check"
 
 [tasks."lint:bats"]
+shell = "bash -euo pipefail -c"
 description = "Format-check and lint the Bats suites (poly has no engine for .bats)"
-shell = "bash -c"
 run = "scripts/bats/lint.sh"
 
 [tasks."bench:judge"]
+shell = "bash -euo pipefail -c"
 description = "Run the judge benchmark on Amazon Bedrock: the synthetic corpus of bench/judge through the model pipeline, then precision/recall per code, the trap false-positive rate, grounding and cost. Spends money (hard cap 5 USD by default); pass flags after --, for example: mise run bench:judge -- --max-cost 3 --only mal-s03-a,trap-t01. Uses AWS_PROFILE=default and AWS_REGION=eu-north-1 unless --aws-profile / --aws-region say otherwise"
-run = "go run ./bench/judge/cmd/judgebench"
+usage = "arg \"[args]...\" var=#true help=\"Arguments forwarded unchanged to the existing command\""
+run = "eval \"set -- ${usage_args:-}\"; go run ./bench/judge/cmd/judgebench \"$@\""
 
 [tasks."bench:judge:offline"]
+shell = "bash -euo pipefail -c"
 description = "Run the offline half of the judge benchmark: the verifier and the convention attachment on the corpus, no model"
 run = "go test ./bench/judge/... -count=1"
 
 [tasks."test:benchmark"]
+shell = "bash -euo pipefail -c"
 description = "Run Go benchmarks (small and medium synthetic projects)"
-shell = "bash -c"
 run = "go test -bench=. -run='^$' -timeout 30m ./..."
 
 [tasks."test:benchmark:smoke"]
+shell = "bash -euo pipefail -c"
 description = "Run every benchmark once (-benchtime=1x): proves they still run, measures nothing. CI runs this; the regression gate is test:benchmark:regression"
-shell = "bash -c"
 run = "go test -bench=. -benchtime=1x -run='^$' -timeout \"${TEST_TIMEOUT:-15m}\" ./..."
 
 [tasks."test:benchmark:large"]
+shell = "bash -euo pipefail -c"
 description = "Run Go benchmarks including the 2000-file synthetic project (one iteration each)"
-shell = "bash -c"
-env = { AI_RULEZ_BENCH_LARGE = "1" }
+env = { "AI_RULEZ_BENCH_LARGE" = "1" }
 run = "go test -bench=. -benchtime=1x -run='^$' -timeout 60m ./..."
 
 [tasks."test:benchmark:regression"]
+shell = "bash -euo pipefail -c"
 description = "Build and run the curated benchmark subset at the merge base and at HEAD on this machine, interleaved, and fail on a >20% time/op regression that is statistically significant (what CI runs). Pass a ref after --: mise run test:benchmark:regression -- origin/main"
-shell = "bash -c"
-run = "scripts/bench.sh --compare"
+usage = "arg \"[args]...\" var=#true help=\"Arguments forwarded unchanged to the existing command\""
+run = "eval \"set -- ${usage_args:-}\"; scripts/bench.sh --compare \"$@\""
 
 [tasks."test:benchmark:baseline:check"]
+shell = "bash -euo pipefail -c"
 description = "Fallback: compare HEAD with the committed scripts/bench-baseline.txt (only meaningful on the CPU model that recorded it)"
-shell = "bash -c"
 run = "scripts/bench.sh"
 
 [tasks."test:benchmark:baseline"]
+shell = "bash -euo pipefail -c"
 description = "Re-record the fallback scripts/bench-baseline.txt on this machine"
-shell = "bash -c"
 run = "scripts/bench.sh --update"
 
 [tasks."test:all"]
+shell = "bash -euo pipefail -c"
 description = "Run all test suites"
 run = [{ task = "test" }, { task = "test:platform" }, { task = "test:e2e" }]
 
-[tasks.lint]
+[tasks."lint"]
+shell = "bash -euo pipefail -c"
 description = "Run poly formatting and lint checks"
 run = ["poly fmt --check .", "poly lint ."]
 
-[tasks.check]
+[tasks."check"]
+shell = "bash -euo pipefail -c"
 description = "Run go vet and golangci-lint"
 run = ["go vet ./...", "golangci-lint run --timeout=5m"]
 
-[tasks.format]
+[tasks."format"]
+shell = "bash -euo pipefail -c"
 description = "Format Go code"
 run = "go fmt ./..."
 
-[tasks.generate]
+[tasks."generate"]
+shell = "bash -euo pipefail -c"
 description = "Generate ai-rulez configuration files"
 run = "go run ./cmd/ai-rulez generate"
 
-[tasks.validate]
+[tasks."validate"]
+shell = "bash -euo pipefail -c"
 description = "Validate ai-rulez configuration"
 run = "go run ./cmd/ai-rulez validate"
 
 [tasks."docs:cli"]
+shell = "bash -euo pipefail -c"
 description = "Regenerate docs/cli-reference.md and the command index of docs/cli.md from the Cobra command tree"
 run = "go run ./scripts/clidocs"
 
 [tasks."docs:cli:check"]
+shell = "bash -euo pipefail -c"
 description = "Fail when docs/cli-reference.md or the command index of docs/cli.md differ from the command tree"
 run = "go run ./scripts/clidocs --check"
 
 [tasks."docs:llms"]
+shell = "bash -euo pipefail -c"
 description = "Regenerate docs/llms.txt and docs/llms-full.txt from zensical.toml and docs/"
 run = "go run ./scripts/docsllms"
 
 [tasks."docs:llms:check"]
+shell = "bash -euo pipefail -c"
 description = "Fail when docs/llms.txt or docs/llms-full.txt differ from the docs sources"
 run = "go run ./scripts/docsllms --check"
 
 [tasks."harness:verify"]
+shell = "bash -euo pipefail -c"
 description = "List harness trap, limit and built-in name table rows with source and verified_on; fail when older than max_table_age_days (default 90). HARNESS_MAX_AGE_DAYS overrides; HARNESS_VERIFY_FETCH=1 also re-fetches each quote (network)"
-env = { HARNESS_VERIFY = "1" }
-run = "go test ./internal/lint -run TestHarnessVerify -count=1 -v"
+run = "HARNESS_VERIFY=1 go test ./internal/lint -run TestHarnessVerify -count=1 -v"
 
 [tasks."harness:builtins:test"]
+shell = "bash -euo pipefail -c"
 description = "Run the offline unit tests of tools/harness-builtins (extractor parsers against saved fixtures; needs python3)"
-dir = "{{config_root}}/tools/harness-builtins"
+dir = "tools/harness-builtins"
 run = "python3 -I -m unittest discover -s tests -t ."
 
 [tasks."harness:builtins:check"]
+shell = "bash -euo pipefail -c"
 description = "Network: fail when a data file differs from what its pinned registry yields (generate.py --check) or a quote is missing from its page (check_sources.py)"
 run = ["python3 -I tools/harness-builtins/generate.py --check", "python3 -I tools/harness-builtins/check_sources.py"]
 
 [tasks."harness:builtins:refresh"]
+shell = "bash -euo pipefail -c"
 description = "Network, writes nothing: show the names that would change if each pin moved to its latest tag or head (generate.py --bump). Apply one with: python3 -I tools/harness-builtins/generate.py --bump --apply <preset>"
 run = "python3 -I tools/harness-builtins/generate.py --bump"
 
 [tasks."demo:record"]
+shell = "bash -euo pipefail -c"
 description = "Re-record the README terminal demos with vhs (all, or name them: mise run demo:record -- validate); uses the ai-rulez on PATH"
-run = "bash scripts/demo/run.sh record"
+usage = "arg \"[args]...\" var=#true help=\"Arguments forwarded unchanged to the existing command\""
+run = "eval \"set -- ${usage_args:-}\"; bash scripts/demo/run.sh record \"$@\""
 
 [tasks."demo:check"]
+shell = "bash -euo pipefail -c"
 description = "Parse every demo tape and check each committed GIF exists and is at most 1 MiB"
 run = "bash scripts/demo/run.sh check"
 
-[tasks.clean]
+[tasks."clean"]
+shell = "bash -euo pipefail -c"
 description = "Clean build artifacts"
-shell = "bash -c"
 run = ["rm -rf bin/", "go clean -cache -testcache"]
 
 [task_config]
