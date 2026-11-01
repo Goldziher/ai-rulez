@@ -3354,6 +3354,11 @@
           "type": "string",
           "description": "Written as packageManager in the OpenCode and Pi root package.json (for example \"pnpm@9.15.0\"). Empty omits the field. The root package.json is generator-owned."
         },
+        "opencode_dependency_enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically add the @opencode/plugin dependency to the OpenCode npm manifest. Set false only for adapters that do not require the SDK. Authored dependencies in Pi package_json merge mode are preserved."
+        },
         "opencode_dependency": {
           "type": "string",
           "description": "Version range for the \"@opencode/plugin\" dependency in the OpenCode root package.json. Empty uses the built-in default."

@@ -50,6 +50,9 @@ type Manifest struct {
 	// package.json; empty omits the field.
 	PackageManager string
 
+	// OpencodeDependencyEnabled defaults to true; false skips the automatic SDK dependency.
+	OpencodeDependencyEnabled *bool
+
 	// OpencodeDependency overrides the "@opencode/plugin" dependency version in
 	// the OpenCode root package.json; empty uses the built-in default.
 	OpencodeDependency string
@@ -131,6 +134,10 @@ func (m *Manifest) writesProvenanceHeaders() bool {
 	return m == nil || m.ProvenanceHeaders == nil || *m.ProvenanceHeaders
 }
 
+func (m *Manifest) addsOpenCodeDependency() bool {
+	return m.OpencodeDependencyEnabled == nil || *m.OpencodeDependencyEnabled
+}
+
 // piSkillsDir returns the Pi skills directory, defaulting when unset.
 func (m *Manifest) piSkillsDir() string {
 	if m == nil || m.PiSkillsDir == "" {
@@ -146,8 +153,8 @@ func (m *Manifest) mergesPiPackageJSON() bool {
 }
 
 // managedOutputs hashes runtime-owned keys in a merged package.json while
-// allowing author-owned tooling to change. A combined OpenCode package also
-// owns its entrypoint and dependency metadata. ~keep
+// allowing author-owned tooling to change. A combined OpenCode package also owns
+// its entrypoint and, while enabled, automatic dependency metadata. ~keep
 func (m *Manifest) managedOutputs() map[string][]string {
 	if !m.mergesPiPackageJSON() {
 		return nil
@@ -155,6 +162,9 @@ func (m *Manifest) managedOutputs() map[string][]string {
 	keys := piOwnedKeys()
 	if slices.Contains(m.Runtimes, config.PluginRuntimeOpenCode) {
 		keys = append(keys, openCodeOwnedKeys()...)
+		if !m.addsOpenCodeDependency() {
+			keys = slices.DeleteFunc(keys, func(key string) bool { return key == npmDependenciesKey })
+		}
 	}
 	return map[string][]string{"package.json": keys}
 }
@@ -163,7 +173,7 @@ func (m *Manifest) managedOutputs() map[string][]string {
 // beyond Pi's: the only ones the OpenCode manifest may overwrite in the merged
 // file. Every other key must agree between the runtimes.
 func openCodeOwnedKeys() []string {
-	return []string{"type", "main", "exports", "dependencies", "homepage", "license", "packageManager"}
+	return []string{"type", "main", "exports", npmDependenciesKey, "homepage", "license", "packageManager"}
 }
 
 // MarketInfo is the resolved marketplace metadata for the emitted index.
@@ -228,17 +238,18 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Config:      cfg,
 		SourceDir:   cfg.BaseDir,
 
-		IncludeEvals:       p.IncludeEvals,
-		EvalsDir:           evalsDir(cfg, p),
-		Include:            p.Include,
-		SharedResources:    shared,
-		ProvenanceHeaders:  p.ProvenanceHeaders,
-		PackageManager:     p.PackageManager,
-		OpencodeDependency: p.OpencodeDependency,
-		PiSkillsDir:        p.Pi.ResolvedSkillsDir(),
-		PiPackageJSON:      p.Pi.ResolvedPackageJSON(),
-		PiPackageName:      piPackageName(p.Pi),
-		PiSkillsEntry:      p.Pi.ResolvedSkillsEntry(),
+		IncludeEvals:              p.IncludeEvals,
+		EvalsDir:                  evalsDir(cfg, p),
+		Include:                   p.Include,
+		SharedResources:           shared,
+		ProvenanceHeaders:         p.ProvenanceHeaders,
+		PackageManager:            p.PackageManager,
+		OpencodeDependency:        p.OpencodeDependency,
+		OpencodeDependencyEnabled: p.OpencodeDependencyEnabled,
+		PiSkillsDir:               p.Pi.ResolvedSkillsDir(),
+		PiPackageJSON:             p.Pi.ResolvedPackageJSON(),
+		PiPackageName:             piPackageName(p.Pi),
+		PiSkillsEntry:             p.Pi.ResolvedSkillsEntry(),
 	}
 
 	if content != nil {
