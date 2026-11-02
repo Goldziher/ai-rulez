@@ -92,7 +92,7 @@ setup(
     license_files=["LICENSE", "THIRD_PARTY_NOTICES.md", "LICENSES/*"],
     packages=find_packages(),
     install_requires=[],
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     entry_points={
         "console_scripts": [
             "ai-rulez=ai_rulez.cli:main",
@@ -110,7 +110,6 @@ setup(
         "Topic :: Text Processing :: General",
         "Topic :: Utilities",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
