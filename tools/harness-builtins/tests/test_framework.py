@@ -1,12 +1,12 @@
 import copy
 import io
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
 
 import generate
-import tomllib
 from hb import fetch, merge, rustenum, tomlout
 
 from tests import helpers

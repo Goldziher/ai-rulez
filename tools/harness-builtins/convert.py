@@ -15,9 +15,8 @@ against the live page and extra hand-recorded groups.
 
 import re
 import sys
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 ROLLOUT_ERROR = {
     "claude",

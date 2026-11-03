@@ -4,9 +4,8 @@ The layout is fixed so that regenerating an unchanged table yields the same byte
 header keys, then [[source]] tables, then [[group]] tables.
 """
 
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 HEADER_KEYS = ("schema", "preset", "harness_version", "verified_on", "completeness", "severity")
 
