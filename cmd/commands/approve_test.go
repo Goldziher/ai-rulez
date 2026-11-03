@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -260,21 +261,23 @@ func assertHasCode(t *testing.T, findings []lint.ApprovalFinding, code, ref stri
 }
 
 func TestApprove_ExpiryComesFromMaxAgeOrTheFlag(t *testing.T) {
+	// Expiry is judged by the wall clock, so the dates are relative to it.
+	at := time.Now().UTC().AddDate(0, 0, -2)
 	root := approveProject(t, "\nmax_age = \"30d\"\n")
-	approveYes, approveReviewer, approveAt = true, "alice@example.org", "2026-10-05T12:00:00Z"
+	approveYes, approveReviewer, approveAt = true, "alice@example.org", at.Format(time.DateOnly)+"T12:00:00Z"
 	mustApprove(t, "rule:style")
-	assert.Contains(t, lockText(t, root), `expires = "2026-11-04"`)
+	assert.Contains(t, lockText(t, root), `expires = "`+at.AddDate(0, 0, 30).Format(time.DateOnly)+`"`)
 
-	approveExpires = "2026-11-01"
+	approveExpires = at.AddDate(0, 0, 20).Format(time.DateOnly)
 	mustApprove(t, "skill:deploy")
-	assert.Contains(t, lockText(t, root), `expires = "2026-11-01"`)
+	assert.Contains(t, lockText(t, root), `expires = "`+approveExpires+`"`)
 
 	approveExpires = "2099-10-06"
 	code, _, stderr := runApproveCmd(t, "skill:deploy")
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "max_age")
 
-	approveExpires = "2026-10-01"
+	approveExpires = at.AddDate(0, 0, -4).Format(time.DateOnly)
 	code, _, stderr = runApproveCmd(t, "rule:style")
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "past")
