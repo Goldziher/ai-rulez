@@ -1,17 +1,40 @@
 # User-level configuration
 
-`ai-rulez generate` writes inside the project. `ai-rulez generate --user` does the same for a person: it
-renders a user config into the per-user directories each harness reads (`~/.claude`, `~/.agents/skills`,
-`~/.codex`, `~/.gemini`, `~/.config/opencode`, `~/.copilot`, `~/.pi/agent`, and so on for every harness
-that documents one; see [Where things go](#where-things-go)), so personal or role-based
-instructions and skills follow you across every repository, including ones that do not use ai-rulez.
+`ai-rulez generate --user` renders a personal configuration into the per-user directories each harness reads
+(`~/.claude`, `~/.agents/skills`, `~/.codex`, `~/.gemini`, `~/.config/opencode`, `~/.copilot`, `~/.pi/agent`, and the
+others in [Where things go](#where-things-go)). Your own instructions and skills then follow you into every
+repository, including ones that do not use ai-rulez. Nothing is written to the home directory without `--user`.
 
-It is opt-in: nothing is written to the home directory unless you pass `--user`.
+```toml
+# ~/.config/ai-rulez/config.toml
+version = "5.0"
+name = "me"
+presets = ["claude", "codex", "cursor"]
+
+[permissions]
+deny = ["Bash(rm -rf:*)"]
+```
+
+With one rule and one skill in `~/.config/ai-rulez/`:
+
+```console
+$ ai-rulez generate --user --dry-run
+user-level plan (profile default, home /home/me)
+  write:   /home/me/.agents/skills/review/SKILL.md
+  write:   /home/me/.claude/CLAUDE.md
+  write:   /home/me/.claude/rules/small-prs.md
+  write:   /home/me/.claude/skills/review/SKILL.md
+  write:   /home/me/.codex/AGENTS.md
+  write:   /home/me/.codex/rules/ai-rulez.rules
+  merge:   /home/me/.claude/settings.json (ai-rulez keys only)
+  2 project-shaped output(s) have no documented user-level location and are not written
+WARN  cursor reads ~/.agents/skills, ~/.claude/skills, so these skills load twice: review
+```
 
 ## The user config
 
-The user config has the same schema as a project config and lives in `~/.config/ai-rulez/` (or
-`$XDG_CONFIG_HOME/ai-rulez`, or any directory with `--config <dir>`):
+The user config has the same schema as a project config. It lives in `~/.config/ai-rulez/` (or
+`$XDG_CONFIG_HOME/ai-rulez`), or in any directory you pass with `--config <dir>`:
 
 ```text
 ~/.config/ai-rulez/
@@ -19,46 +42,42 @@ The user config has the same schema as a project config and lives in `~/.config/
   rules/        skills/        agents/        domains/
 ```
 
+`presets`, `profiles`, `default`, `builtins`, `includes`, `installed_skills`, `[[hooks]]`, `[permissions]` and
+`[claude.settings.managed]` work as in a project. Project-only features do nothing at user level: MCP servers,
+`[[scopes]]`, `[plugin]`/`[marketplace]`, `agents_md`, the `.local` overlay and gitignore management. A preset with no
+documented user-level location is reported and skipped.
+
+`generate --user` ignores the project in the working directory, except to warn when a skill of the same name exists
+at both levels.
+
+### Profiles and roles per machine
+
+Keep shared content at the top level and one domain per role, then choose the role per machine with `default` in the
+user config, or per run with `--profile`:
+
 ```toml
-version = "5.0"
-name = "me"
-presets = ["claude", "codex", "gemini"]
-default = "backend"          # the role of this machine; see below
+default = "backend"
 
 [profiles]
 backend = ["backend"]
 frontend = ["frontend"]
 ```
 
-`presets`, `profiles`, `default`, `builtins`, `includes`, `installed_skills`, `[[hooks]]`, `[permissions]`
-and `[claude.settings.managed]` work as in a project. The project-only features do nothing at user level:
-MCP servers, `[[scopes]]`, `[plugin]`/`[marketplace]`, `agents_md`, the `.local` overlay and gitignore
-management. A preset with no documented user-level location (see the table) is reported with the reason and
-skipped.
-
-`generate --user` ignores the project in the working directory entirely. It reads it only to warn when a
-skill of the same name exists at both levels.
-
-### Roles
-
-The simplest role is a profile. Keep the shared content at the top level and one domain per role, then choose the
-role per machine with `default` in the user config or per run with `--profile`:
-
 ```bash
 ai-rulez generate --user --profile frontend
 ```
 
-Switching the role removes the files of the old one on the next run (they are in the manifest).
+Switching the role removes the files of the old one on the next run.
 
-For finer control, declare `[[roles]]` in the user config (domains, per-kind `include` / `exclude` selectors,
-inheritance and a per-skill `skill_mode` that becomes `skillOverrides` in `~/.claude/settings.json`) and select one
-with `--role`, which is mutually exclusive with `--profile`:
+For finer control, declare `[[roles]]` (domains, per-kind `include` and `exclude` selectors, inheritance, and a
+per-skill `skill_mode` that becomes `skillOverrides` in `~/.claude/settings.json`) and select one with `--role`, which
+excludes `--profile`:
 
 ```bash
 ai-rulez generate --user --role backend-engineer --yes
 ```
 
-ai-rulez does not decide who holds a role: an external tool picks the name. See [Roles](roles.md), including
+ai-rulez does not decide who holds a role; an external tool picks the name. See [Roles](roles.md) and
 [Integrating an identity tool or UI](roles.md#integrating-an-identity-tool-or-ui).
 
 ## Commands
@@ -70,50 +89,40 @@ ai-rulez generate --user --yes         # no prompt (required in a non-interactiv
 ai-rulez clean --user                  # remove exactly what generate --user wrote
 ```
 
-`--config <dir>` selects another user config. `--user` cannot be combined with `--recursive` or `--plugin`. The full write list is printed before the first write, whatever the flags.
+The write list is printed before the first write, whatever the flags. `--user` cannot be combined with `--recursive`
+or `--plugin`.
 
 ## Safety
 
-- **Only documented locations.** An output is written only where the preset's declared user-level layout
-  (the table below) places it. Anything else a preset renders (project-only rules folders, MCP files)
-  is dropped and counted; `--debug` names each one.
-- **Hand-authored files are never replaced.** A file that exists and was not written by ai-rulez (not in the
-  manifest, no generated banner, not byte-identical to the output) is skipped and listed as `skip:`. A skill
-  directory holding one is skipped whole. `~/.claude/CLAUDE.md` you wrote yourself stays yours; ai-rulez
-  writes nothing at that path.
-- **Shared settings documents are merged, not rewritten.** `~/.claude/settings.json`, `~/.codex/hooks.json`,
-  `~/.cursor/hooks.json` and `~/.gemini/settings.json` get only the keys ai-rulez owns (`hooks`,
-  `permissions.*`, `env`, `skillOverrides` from [Hooks and permissions](settings.md)); every other key
-  survives `generate` and `clean`. The generated-file [`[guard]`](settings.md#guard) is never added: it protects a project, not the home directory.
-- **No symlink escapes.** Every destination, resolved through symlinks, must stay inside the home directory (or the relocated tool home, see below).
-  A `~/.claude` symlinked into `~/dotfiles` is followed; one pointing out of the home directory stops the
-  run before anything is written. A symlinked file is skipped, except for the settings documents above.
-- **Clean removes only what was recorded.** The manifest is `~/.config/ai-rulez/.generated-manifest.json`
-  (plus `.generated-manifest.local.json` for the keys merged into shared documents). `clean --user`,
-  and `generate --user` after you drop content, remove a file only if it is listed there and, for files
-  that carry a generated header, still looks generated. The manifest also records the directories `generate --user` created below your home directory
-  (`~/.cursor`, `~/.claude/skills/<id>`, ...); `clean --user` removes those once empty. A directory that
-  existed before ai-rulez ran is never removed, and neither is one that still holds a file of yours. A
-  manifest written by an older version records no directories, so the first `generate --user` after upgrading
-  starts the record. A relocated tool home is never removed, and the user config is never touched beyond its
-  two manifest files. Keep `~/.config/ai-rulez` in your dotfiles repository if you
-  like, but add the two manifest files to its ignore list.
+- **Only documented locations.** An output is written only where the preset's user-level layout (the table below)
+  places it. Everything else a preset renders (project-only rules folders, MCP files) is dropped and counted;
+  `--debug` names each one.
+- **Your files are never replaced.** A file that exists and was not written by ai-rulez (not in the manifest, no
+  generated banner, not byte-identical to the output) is skipped and listed as `skip:`. A skill directory that holds
+  one is skipped whole. A `~/.claude/CLAUDE.md` you wrote stays yours.
+- **Shared settings documents are merged.** `~/.claude/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json`,
+  `~/.gemini/settings.json` and the other settings documents get only the keys ai-rulez owns (hooks, permissions,
+  `env`, `skillOverrides`; see [Hooks and settings](settings.md) and [Permissions](permissions.md)); every other key
+  survives `generate` and `clean`. The generated-file [`[guard]`](settings.md#guard) and the
+  [`[session_start]`](session-start.md) hook are never added at user level.
+- **No symlink escapes.** Every destination, resolved through symlinks, must stay inside the home directory (or a
+  relocated tool home). A `~/.claude` symlinked into `~/dotfiles` is followed; one that points out of the home
+  directory stops the run before anything is written. A symlinked file is skipped, except for settings documents.
+- **Clean removes only what was recorded.** The manifest is `~/.config/ai-rulez/.generated-manifest.json`, plus
+  `.generated-manifest.local.json` for the keys merged into shared documents. `clean --user`, and `generate --user`
+  after you drop content, remove a file only when it is listed there and, if it carries a generated header, still
+  looks generated. Directories that `generate --user` created (`~/.cursor`, `~/.claude/skills/<id>`, ...) are removed
+  once empty; a directory that existed before, or still holds a file of yours, is never removed. If you keep
+  `~/.config/ai-rulez` in a dotfiles repository, ignore the two manifest files there.
 - **`--dry-run` writes nothing**, not even the manifest.
+- **Only an absolute home is used.** `generate --user` refuses a relative `$HOME`.
 
 ## Where things go
 
-There is no separate table in the code. Each preset declares its user-level layout once, next to its
-project layout: a provider spec in its `[global]` block (plus `global_path` on a settings sidecar), a Go
-preset through `GlobalOutputProvider`. `generate --user` renders the preset as for a project and maps each
-output onto that layout. An output the preset has no user-level location for (MCP files, plugin sidecars,
-a kind of content the tool has no home folder for) is dropped and counted in the plan. The table below is
-generated from those declarations and a test fails when it drifts (`UPDATE_DOCS=1 go test
-./internal/generator/userscope` rewrites it).
-
-Kinds: `instructions` is the root instructions file, `rules` a rules folder, `skills`, `agents` and
-`commands` the matching folders, `settings` a shared config document of the tool. At user level only
-[hooks, permissions and managed settings](settings.md) are merged into a `settings` document, never MCP
-servers, and nothing is written to it when the config has none. Claude Code renders commands as skills, so
+Each preset maps its project outputs onto its user-level layout. Kinds: `instructions` is the root instructions file,
+`rules` a rules folder, `skills`, `agents` and `commands` the matching folders, `settings` a shared config document.
+At user level only [hooks, permissions and managed settings](settings.md) are merged into a `settings` document,
+never MCP servers, and nothing is written to it when the config has none. Claude Code renders commands as skills, so
 they share the `skills` row.
 
 <!-- user-scope-table:start -->
@@ -342,37 +351,40 @@ they share the `skills` row.
 | `zoocode` | commands | `.roo/commands/` | `~/.roo/commands/` |
 <!-- user-scope-table:end -->
 
-Presets not in the table have no documented user-level location for anything `--user` writes, and are
-reported and skipped: `aiassistant`, `baz`, `codebuff` (only an MCP file), `replit` and `xum`.
-
-Only an absolute home is used. `generate --user` refuses a relative `$HOME`.
+Presets not in the table have no documented user-level location for anything `--user` writes, and are reported and
+skipped: `aiassistant`, `baz`, `codebuff`, `replit` and `xum`. User-level MCP servers are not generated.
 
 ### Relocated tool homes
 
-A tool whose home directory an environment variable relocates follows it: when the variable is set to an
-absolute path, every path in the tool's own home moves there. `CODEX_HOME=/data/codex` writes
-`/data/codex/AGENTS.md` and `/data/codex/hooks.json`, while Codex's skills stay in the shared
-`~/.agents/skills`. The variables are `CODEX_HOME`, `HERMES_HOME`, `DEEPAGENTS_HOME`, `KIMI_CODE_HOME`,
-`QWEN_HOME`, `VIBE_HOME`, `DSH_HOME` and the others a preset's `[global] home_env` names. A relative value is
-ignored with a warning and the default location is used. The files stay recorded in the manifest, so
-`clean --user` removes them from the relocated directory, and the symlink and hand-authored-file rules
-apply there too.
+When a tool's home variable is set to an absolute path, every path in that tool's home moves there:
+`CODEX_HOME=/data/codex` writes `/data/codex/AGENTS.md` and `/data/codex/hooks.json`, while Codex's skills stay in the
+shared `~/.agents/skills`.
 
-User-level MCP servers are not generated: Claude Code and the others keep them outside the files above.
+| Variable | Harness |
+| -------- | ------- |
+| `CODEX_HOME` | `codex` |
+| `DEEPAGENTS_HOME` | `deepagents` |
+| `DSH_HOME` | `dsh` |
+| `HERMES_HOME` | `hermes` |
+| `KIMI_CODE_HOME` | `kimi` |
+| `QWEN_HOME` | `qwen` |
+| `VIBE_HOME` | `vibe` |
+
+A relative value is ignored with a warning, and a value that is the filesystem root, the home directory or one of its
+ancestors is refused. The files are recorded in the manifest, so `clean --user` removes them from the relocated
+directory; the symlink and hand-authored-file rules apply there too. A relocated home itself is never removed.
 
 ## Project and user scope together
 
-Both scopes are read by the harness, so the same skill name can load twice. `generate --user` warns about
-both cases:
+Harnesses read both scopes, so the same skill can load twice. `generate --user` warns in two cases.
 
-- **One harness reading several user directories** (reported for the presets you configure). OpenCode reads `~/.config/opencode/skills`,
-  `~/.claude/skills` and `~/.agents/skills`; Cursor reads `~/.agents/skills`, `~/.cursor/skills`,
-  `~/.claude/skills` and `~/.codex/skills`; Gemini CLI, Copilot and Codex read `~/.agents/skills` (plus their
-  own). Generating skills for `claude` and `opencode` therefore installs each skill twice for OpenCode. Keep
-  to presets that share a directory (`codex`, `gemini`, `cursor`, `pi` all use `~/.agents/skills`), or
-  accept the duplicates.
-- **A skill that also exists in the project you run from.** The vendor's documented precedence decides which
-  copy runs:
+**One harness reads several user directories.** OpenCode reads `~/.config/opencode/skills`, `~/.claude/skills` and
+`~/.agents/skills`; Cursor reads `~/.agents/skills`, `~/.cursor/skills`, `~/.claude/skills` and `~/.codex/skills`;
+Gemini CLI, Copilot and Codex read `~/.agents/skills` as well as their own. Generating skills for `claude` and
+`opencode` therefore installs each skill twice for OpenCode. Keep to presets that share a directory (`codex`, `gemini`
+and `cursor` all use `~/.agents/skills`; `pi` uses `~/.pi/agent/skills`), or accept the duplicates.
+
+**A skill also exists in the project you run from.** The harness's documented precedence decides which copy runs:
 
 | Harness | Same name at user and project level |
 | ------- | ----------------------------------- |
@@ -381,6 +393,5 @@ both cases:
 | Codex | both are listed; same-named skills are not merged or overridden |
 | OpenCode, Cursor, Copilot, pi | no precedence is documented; keep names unique |
 
-Instructions files are concatenated by the harnesses rather than overridden (Claude Code and Gemini CLI load
-the user-level file and then the project's; Codex loads the global `AGENTS.md` first), so no warning is
-needed for them.
+Instruction files are concatenated rather than overridden (Claude Code and Gemini CLI load the user-level file, then
+the project's; Codex loads the global `AGENTS.md` first), so no warning is needed for them.

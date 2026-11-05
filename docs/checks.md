@@ -1,66 +1,141 @@
 # Checks
 
-Checks are code-review guidelines: per-topic instructions a review tool applies to a pull or merge request. They are a content kind of their own, next to rules, context, skills, agents and commands.
+A check is a code-review guideline: one topic a review tool (Cursor Bugbot, Kilo Code Reviews, GitLab Duo, Augment,
+Amp, ...) applies to every pull or merge request. You write each check once in `.ai-rulez/checks/`, and `generate`
+writes it into the review file each enabled tool reads.
 
-## Source files
+## Example
 
-```text
-.ai-rulez/checks/<name>.md
-.ai-rulez/domains/<domain>/checks/<name>.md
+```bash
+ai-rulez add check security --severity high --description "Flags common security issues"
 ```
 
-The file name is the check's identity and may contain only letters, digits, `.`, `_` and `-` (`ai-rulez validate` rejects anything else, since the name reaches output paths and section markers).
-
-```md
+```markdown
+<!-- .ai-rulez/checks/security.md -->
 ---
+type: Reference
+title: Security
 description: Flags common security issues
-severity: high
-tools: [Read, Grep]
-targets: [cursor, kilo]
+x-ai-rulez:
+  kind: check
+  id: security
+  metadata:
+    severity: high
 ---
 
 Review the diff for injection vulnerabilities, hardcoded secrets and unsafe
 deserialization. Report each finding with a file and line reference.
 ```
 
-| Key           | Meaning                                                                                  |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `description` | Short summary. Used as the text when the body is empty.                                  |
-| `severity`    | `low`, `medium`, `high` or `critical`. Any other value fails validation.                 |
-| `tools`       | Tool names the check may use. Only Amp has a place for them.                             |
-| `targets`     | Presets the check applies to, like every other content kind. Default: every preset.      |
+```toml
+# .ai-rulez/config.toml
+presets = ["cursor", "kilo", "amp", "augment"]
+```
 
-At render time the names are checked again (includes bring checks that never went through validation): a name outside `[A-Za-z0-9._-]` is skipped with a warning, and two names that differ only in case count as one check (their files would collide on a case-insensitive file system); the one from the higher-precedence source is kept.
+After `ai-rulez generate`, Cursor Bugbot and Kilo get a section in a shared markdown file. If `REVIEW.md` already
+holds your own text, the block is appended below it:
 
-Checks follow profiles like other content: root checks are always included, domain checks when the domain is in the active profile. A root check shadows a domain check of the same name.
+```markdown
+<!-- REVIEW.md -->
+This repository has no review notes yet.
+
+<!-- ai-rulez:checks:begin -->
+<!-- ai-rulez:check:security -->
+
+## security
+
+Review the diff for injection vulnerabilities, hardcoded secrets and unsafe
+deserialization. Report each finding with a file and line reference.
+<!-- ai-rulez:checks:end -->
+```
+
+Amp gets one file per check, with its metadata in the frontmatter (`tools` too, when the check sets them):
+
+```markdown
+<!-- .agents/checks/security.md -->
+---
+description: Flags common security issues
+name: security
+severity-default: high
+---
+
+Review the diff for injection vulnerabilities, hardcoded secrets and unsafe
+deserialization. Report each finding with a file and line reference.
+```
+
+Augment gets an area in its YAML file:
+
+```yaml
+# .augment/code_review_guidelines.yaml
+areas:
+  security:
+    description: Flags common security issues
+    globs:
+      - '**'
+    rules:
+      - description: |-
+          Review the diff for injection vulnerabilities, hardcoded secrets and unsafe
+          deserialization. Report each finding with a file and line reference.
+        id: security
+        severity: high
+```
+
+## Source files
+
+```text
+.ai-rulez/checks/<name>.md
+.ai-rulez/domains/<domain>/checks/<name>.md
+.ai-rulez/local/checks/<name>.md        machine-local, gitignored
+```
+
+The file name is the check's identity. It may contain only letters, digits, `.`, `_` and `-`, since it becomes part
+of output paths and section markers; `validate` rejects anything else. As for [rules](rules.md#rule-files), `type` is
+required in a tree created by `init`; create checks with `ai-rulez add check`, or run `ai-rulez generate` after
+writing one by hand so the `index.md` listings include it. Two names that differ only in case count as
+one check, and the higher-precedence source wins.
+
+Root checks are always included; domain checks are included when the domain is in the active
+[profile](domains.md) or [role](roles.md). A root check shadows a domain check of the same name.
+
+| Key           | Type   | Default      | Meaning                                                                         |
+| ------------- | ------ | ------------ | ------------------------------------------------------------------------------- |
+| `description` | string | none         | Short summary. Used as the text when the body is empty.                         |
+| `severity`    | string | none         | `low`, `medium`, `high` or `critical`. Any other value fails validation.        |
+| `tools`       | list   | none         | Tools the check may use. Only Amp has a place for them.                         |
+| `targets`     | list   | every preset | Presets, paths or globs the check is written to, as for [rules](rules.md#targets). `add check` and `update_check` reject a misspelt preset name. |
 
 ## Managing checks
 
 ```bash
-ai-rulez add check security --description "Security issues"
-ai-rulez add check perf --domain backend
+ai-rulez add check security --description "Security issues" --severity high
+ai-rulez add check sql-injection --domain backend --targets "src/**/*.go"
 ai-rulez list checks [--domain backend] [--format json]
 ai-rulez remove check security [--domain backend] [--yes]
 ```
 
-The MCP server exposes `create_check`, `read_check`, `update_check`, `delete_check` and `list_checks`. An include can import them with `include = ["checks"]`.
+The [MCP server](mcp-server.md) has `create_check`, `read_check`, `update_check`, `delete_check` and `list_checks`.
+`update_check` takes new `content`, fields (`description`, `severity`, `tools`, `targets`), or both. Content without
+frontmatter replaces only the body and keeps the existing frontmatter.
 
-`create_check` and `update_check` write the frontmatter with a YAML encoder, so a description such as `Flags: injection # not a comment` is quoted correctly, and they validate `severity` and `targets` (a preset name, `*`, or a path or glob such as `src/**`; a misspelt preset is rejected instead of selecting nothing). `update_check` needs `content`, at least one field (`description`, `severity`, `tools`, `targets`), or both, and rejects an empty update. Content without frontmatter replaces the body and keeps the check's own frontmatter, comments and unknown keys; fields set on it; content with its own frontmatter replaces the file (the fields are still applied over it).
+An [include](includes.md) can import checks with `include = ["checks"]`.
 
 ## Where they are written
 
-| Preset       | Output                                          | Shape                                               |
-| ------------ | ----------------------------------------------- | --------------------------------------------------- |
-| `cursor`     | `.cursor/BUGBOT.md`                             | one block, one section per check (Bugbot)           |
-| `kilo`       | `REVIEW.md`                                     | one block, one section per check                    |
-| `qwen`       | `.qwen/review-rules.md`                         | one block, one section per check                    |
-| `factory`    | `.factory/skills/review-guidelines/SKILL.md`    | one block in a skill with `name`/`description` frontmatter |
-| `rovodev`    | `.rovodev/.review-agent.md`                     | one block, one section per check                    |
-| `amp`        | `.agents/checks/<name>.md`                      | one file per check                                  |
-| `augment`    | `.augment/code_review_guidelines.yaml`          | merged into the hand-written YAML                   |
-| `gitlab-duo` | `.gitlab/duo/mr-review-instructions.yaml`       | merged into the hand-written YAML                   |
+| Preset       | Output                                       | Shape                                                       |
+| ------------ | -------------------------------------------- | ----------------------------------------------------------- |
+| `cursor`     | `.cursor/BUGBOT.md`                          | one block, one section per check (Bugbot)                   |
+| `kilo`       | `REVIEW.md`                                  | one block, one section per check                            |
+| `qwen`       | `.qwen/review-rules.md`                      | one block, one section per check                            |
+| `rovodev`    | `.rovodev/.review-agent.md`                  | one block, one section per check                            |
+| `factory`    | `.factory/skills/review-guidelines/SKILL.md` | one block in a skill with `name` and `description` frontmatter |
+| `amp`        | `.agents/checks/<name>.md`                   | one file per check                                          |
+| `augment`    | `.augment/code_review_guidelines.yaml`       | one area per check, merged into your YAML                   |
+| `gitlab-duo` | `.gitlab/duo/mr-review-instructions.yaml`    | one `instructions` group per check, merged into your YAML   |
 
-The aggregate files are shared with you. ai-rulez writes only a marker-delimited block:
+### Shared markdown files
+
+ai-rulez owns only the block between `<!-- ai-rulez:checks:begin -->` and `<!-- ai-rulez:checks:end -->`. Each check
+in it is a `<!-- ai-rulez:check:<name> -->` marker, a `## <name>` heading and the check text:
 
 ```md
 <!-- ai-rulez:checks:begin -->
@@ -72,24 +147,42 @@ Review the diff for injection vulnerabilities...
 <!-- ai-rulez:checks:end -->
 ```
 
-Everything outside the two marker lines is yours and is kept: a hand-written `REVIEW.md` gets the block appended after a blank line, text above and below an existing block survives every `generate`, and `clean` (or removing the last check) takes back only the block. A file ai-rulez created that holds nothing else is deleted with its block; one that holds your text is never deleted, never git-ignored, and `generate` fails with an error rather than touch a file whose markers do not pair up. Do not edit inside the block (the next `generate` rewrites it) or put the marker lines in a check's text. For `factory` the `name`/`description` frontmatter is written once, when the file is created.
+- Text outside the block is yours and survives every `generate`. An existing file gets the block appended.
+- `clean`, or removing the last check, removes only the block. A file that held nothing else is deleted; a file with
+  your text is never deleted or gitignored.
+- Do not edit inside the block (the next `generate` rewrites it) and do not put the marker lines in a check's text.
+  `generate` fails rather than touch a file whose markers do not pair up.
+- Severity and tools have no equivalent in these files and are not written.
+- For `factory`, the skill frontmatter is written once, when the file is created. A skill of your own named
+  `review-guidelines` collides with it, and `generate` fails until one is renamed.
 
-Each check is a marker line `<!-- ai-rulez:check:<name> -->`, a `## <name>` heading and the check text (the description when the text is empty). They take no other metadata: severity and tools have no equivalent in those tools. The Cursor file is not written by `generate --user`: no per-user Bugbot file is documented.
+### Augment and GitLab Duo YAML
 
-Amp files carry `name`, `description`, `severity-default` (from `severity`) and `tools` in the frontmatter.
+Both files are documented as hand-written, so ai-rulez merges into them. It owns only the areas (Augment) or groups
+(GitLab Duo) named after its checks, keeps everything else (`file_paths_to_ignore`, your own entries, comments and key
+order), and removes its entries when a check is deleted.
 
-Augment gets one area per check, keyed by the check name, with the text as the rule description and `globs: ["**"]`. Augment's severity scale stops at `high`, so `critical` is written as `high` and an unset severity as `medium`. GitLab Duo gets one `instructions` group per check (`name`, `instructions`), with no file filter.
+- An entry you wrote under a check's name is yours: it is never replaced, the check is not written there, and
+  `generate` warns. Rename one of them.
+- An entry ai-rulez wrote becomes yours once you edit it.
+- Augment's severity scale stops at `high`: `critical` is written as `high`, and an unset severity as `medium`. Every
+  area gets `globs: ["**"]`.
+- GitLab Duo groups have `name` and `instructions` only, with no file filter.
 
-Both YAML files are documented as hand-written, so ai-rulez merges: it owns only the areas or groups it renders (matched by name), keeps everything else, including `file_paths_to_ignore` and any other key, and removes its own entries when a check disappears. An area or group you wrote under a check's name is yours: it is never replaced or removed, the check of that name is not written there, and `generate` warns (rename one of them). An entry ai-rulez wrote earlier is updated while it still equals what was written; once you edit it, it is yours too. Comments, key order and quoting of the groups and areas you wrote survive: an unchanged GitLab group keeps its source text byte for byte, and only changed or new groups are re-rendered (an area ai-rulez writes is rendered fresh).
+## Tool notes
 
-Not generated: Augment area grouping and per-area globs, GitLab `fileFilters`, Takt quality gates, Hermes pre-verify specs, and JetBrains AI Assistant (its self-review path is a per-user IDE setting).
+- **Commit the outputs.** A hosted reviewer reads only committed files, usually from the base branch of the pull
+  request. Check outputs are never added to the managed `.gitignore` block, even with `gitignore = true`.
+- **Kilo** reads `REVIEW.md` only when **Use REVIEW.md** is enabled in the Kilo web app, and truncates it at 10,000
+  characters. `generate` warns when the file, your text included, is longer.
+- **Bugbot** also reads nested `<dir>/.cursor/BUGBOT.md` files, which ai-rulez does not generate. `generate --user`
+  writes no Bugbot file.
+- **Amp**: the format follows the rulesync documentation, since Amp's own manual does not describe it. Verify it
+  against your Amp version.
+- **Local checks** (`.ai-rulez/local/checks/`) are written only for presets with one file per check (Amp), as a
+  gitignored file. Shared files never take a local check, and a warning names the presets that skipped it. A local
+  check may not share a name with a shared one.
+- `ai-rulez doctor` and `ai-rulez tokens` include the check files.
 
-## Notes per tool
-
-- Kilo reads `REVIEW.md` from the pull request base branch, only once **Use REVIEW.md** is on in the Kilo web app, and truncates it at 10,000 characters. `generate` warns when the file (your text and the block) is longer.
-- Qwen Code `/review` and Bugbot also read these files from the base branch. Bugbot additionally reads nested `<dir>/.cursor/BUGBOT.md` files, which ai-rulez does not generate.
-- A hosted reviewer only sees files that are committed. Check outputs are never added to the managed `.gitignore` block, even with `gitignore = true`, so commit them. An entry an earlier version added is removed on the next `generate`.
-- The Amp format is taken from the rulesync documentation; Amp's own manual does not describe it, so verify it against your Amp version.
-- A skill named `review-guidelines` collides with the Factory output; `generate` fails with an error until one of them is renamed.
-- Machine-local checks (`.ai-rulez/local/checks/`) get a gitignored file of their own only for presets that write one file per check (Amp); the shared aggregate and YAML files never take a local check, and a warning names the presets that could not write it. A local check may not share a name with a shared one.
-- `ai-rulez doctor` and `ai-rulez tokens` include the check files; the token report lists them as surface whose loading ai-rulez does not model.
+Not generated: Augment per-area globs, GitLab `fileFilters`, Takt quality gates, Hermes pre-verify specs, and
+JetBrains AI Assistant (its self-review path is a per-user IDE setting).
