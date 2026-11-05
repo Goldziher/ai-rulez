@@ -31,3 +31,17 @@ func TestNewReport_McpSchemasAreCountedPerStartServer(t *testing.T) {
 	assert.Equal(t, 702, rep.StartTokens, "102 from the files plus 600 estimated")
 	assert.True(t, rep.OverStartBudget())
 }
+
+func TestNewReport_McpSchemasAreInTheByKindBreakdown(t *testing.T) {
+	rep := NewReport(mcpInventory(), ReportOptions{ContextWindow: 200000, McpServerTokens: 300})
+
+	assert.Equal(t, 600, rep.StartTokensByKind[KindMCPSchemas])
+	sum := 0
+	for _, n := range rep.StartTokensByKind {
+		sum += n
+	}
+	assert.Equal(t, rep.StartTokens, sum)
+
+	off := NewReport(mcpInventory(), ReportOptions{ContextWindow: 200000})
+	assert.NotContains(t, off.StartTokensByKind, KindMCPSchemas)
+}

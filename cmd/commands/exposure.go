@@ -36,10 +36,11 @@ type exposureFlags struct {
 	plugins       string
 	harness       string
 	contextWindow int
-	// mcpServerTokens is --mcp-server-tokens; 0 defers to [exposure] mcp_server_tokens.
-	mcpServerTokens int
-	asJSON          bool
-	withText        bool
+	// mcpServerTokens is --mcp-server-tokens; unless mcpServerTokensSet it defers to [exposure] mcp_server_tokens.
+	mcpServerTokens    int
+	mcpServerTokensSet bool
+	asJSON             bool
+	withText           bool
 }
 
 // exposureInput is what an exposure command reads: the inventory and, when one
@@ -96,6 +97,7 @@ violation or a stale acceptance.`,
   ai-rulez exposure leakage --format json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			f.mcpServerTokensSet = cmd.Flags().Changed("mcp-server-tokens")
 			return fail(runExposureReport(cmd.Context(), cmd.OutOrStdout(), &f))
 		},
 	}
@@ -158,7 +160,7 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 	if f.mcpServerTokens < 0 {
 		return oops.Errorf("--mcp-server-tokens must not be negative, got %d", f.mcpServerTokens)
 	}
-	in, err := loadExposure(ctx, f)
+	in, err := loadExposureFor(ctx, f, true)
 	if err != nil {
 		return err
 	}
@@ -170,7 +172,7 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 		window = in.exp.EffectiveContextWindow()
 	}
 	mcpTokens := f.mcpServerTokens
-	if mcpTokens == 0 && in.exp != nil {
+	if !f.mcpServerTokensSet && mcpTokens == 0 && in.exp != nil {
 		mcpTokens = in.exp.McpServerTokens
 	}
 	rep := exposure.NewReport(in.inv, exposure.ReportOptions{
@@ -227,8 +229,14 @@ func runExposureAreas(ctx context.Context, w io.Writer, f *exposureFlags) error 
 }
 
 // loadExposure resolves the repository, the plugin mode and the area map, and
-// builds the inventory.
+// builds the Claude Code inventory (or the one --harness names).
 func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error) {
+	return loadExposureFor(ctx, f, false)
+}
+
+// loadExposureFor is loadExposure; with harnessFromConfig an unset --harness
+// falls back to [exposure] harness, which only the start-of-session report honors.
+func loadExposureFor(ctx context.Context, f *exposureFlags, harnessFromConfig bool) (*exposureInput, error) {
 	if f.plugins != "" && !exposure.PluginMode(f.plugins).Valid() {
 		return nil, oops.Errorf("unknown --plugins %q (use none, enabled or all)", f.plugins)
 	}
@@ -257,7 +265,10 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 	}
 	in.harness = f.harness
 	if in.harness == "" {
-		in.harness = exp.EffectiveHarness()
+		in.harness = config.ExposureHarnessClaude
+		if harnessFromConfig {
+			in.harness = exp.EffectiveHarness()
+		}
 	}
 	if in.inv, err = exposure.Build(ctx, exposure.Options{Root: root, AreaBase: base, Plugins: mode, Harness: in.harness}); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual

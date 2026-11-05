@@ -36,7 +36,7 @@ func ListingBudgetCharsFor(harness string, contextWindow int) int {
 // McpSchemas is the estimate of the tool schemas of the MCP servers configured
 // for a session's start. Schemas need running servers, so the figure is the
 // configured per-server token estimate times the start-of-session servers; it
-// is added to StartTokens and absent unless the estimate is turned on.
+// is added to StartTokens (and to StartTokensByKind as KindMCPSchemas) and absent unless the estimate is turned on.
 type McpSchemas struct {
 	Servers         int `json:"servers"`
 	TokensPerServer int `json:"tokens_per_server"`
@@ -174,6 +174,7 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 	if opts.McpServerTokens > 0 {
 		rep.McpSchemas = &McpSchemas{Servers: mcpServers, TokensPerServer: opts.McpServerTokens, Tokens: mcpServers * opts.McpServerTokens}
 		rep.StartTokens += rep.McpSchemas.Tokens
+		rep.StartTokensByKind[KindMCPSchemas] = rep.McpSchemas.Tokens
 	}
 	rep.Listing.OverBudgetChars = max(0, rep.Listing.Chars-rep.Listing.BudgetChars)
 	return rep

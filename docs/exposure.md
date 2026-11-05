@@ -454,9 +454,10 @@ Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, se
 
 - **`AGENTS.md`** (kind `agents_md`). Codex starts at the project root and walks down to the working directory, includes
   at most one file per directory, and checks `AGENTS.override.md` before `AGENTS.md`; an `AGENTS.md` beside an override
-  is left out. The root file is in context at start, one in a subdirectory waits (phase `on_demand`). The combined size
-  is capped at 32 KiB (`project_doc_max_bytes`), so a root file past it counts only those bytes and is marked
-  `truncated`. Sources: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+  is left out. Only listed (non-ignored) files are seen, so an override that `.gitignore` or `[discovery]` hides does not
+  shadow its `AGENTS.md`. The root file is in context at start, one in a subdirectory waits (phase `on_demand`). The
+  32 KiB cap (`project_doc_max_bytes`) is applied per file, not to the combined chain: a file past it counts only those
+  bytes and is marked `truncated`, while Codex counts the chain's combined size. Sources: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
 - **Skills** from `.agents/skills/<name>/SKILL.md` (kind `skill`), the repository location the skills page names. The
   start list holds each skill's name, description and file path (the path is part of the counted listing line); no
   `paths:` or `disable-model-invocation` gate applies and the description is not cut at Claude's 1536-character cap.
@@ -468,8 +469,8 @@ Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, se
 Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, user-level (`~/.codex`,
 `~/.agents/skills`) and admin (`/etc/codex`) files, the skill policy in `agents/openai.yaml`, and `.codex/skills`
 (the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
-`AR9W3` and the other `validate` rules, and the `leakage` and `collisions` subcommands, still read the Claude Code
-inventory.
+`AR9W3` and the other `validate` rules, and the `inventory`, `areas`, `leakage` and `collisions` subcommands, still read
+the Claude Code inventory: only the start-of-session report honors the harness.
 
 ## MCP tool schemas
 
@@ -482,8 +483,10 @@ product to `start_tokens` and the budget check, and prints its own line:
 mcp tool schemas (estimated): 2 servers x 400 = 800 tokens, included in the start tokens
 ```
 
-The JSON carries it as `mcp_schemas` (`servers`, `tokens_per_server`, `tokens`). It is off by default (0), and then no
-number changes and `mcp_schemas` is absent. There is no built-in estimate: measure a server's tool list once and set
+The JSON carries it as `mcp_schemas` (`servers`, `tokens_per_server`, `tokens`) and as an `mcp_schemas` entry of
+`start_tokens_by_kind` (also in the text breakdown), so the breakdown still sums to `start_tokens`. It is off by
+default (0), and then no number changes and both are absent. An explicit `--mcp-server-tokens 0` turns a configured
+estimate off for one run. `AR9W3` counts the same estimate, so `validate` and `exposure` agree on the Claude budget. There is no built-in estimate: measure a server's tool list once and set
 the number.
 
 ## Start-of-session budgets

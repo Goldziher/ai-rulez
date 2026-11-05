@@ -114,6 +114,9 @@ const (
 	KindMCPServer Kind = "mcp_server"
 	KindPlugin    Kind = "plugin"
 	KindSettings  Kind = "settings"
+	// KindMCPSchemas is not an artifact: it is the by-kind entry of the
+	// estimated MCP tool schema tokens in Report.StartTokensByKind.
+	KindMCPSchemas Kind = "mcp_schemas"
 )
 
 // Source is where an artifact comes from.

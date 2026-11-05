@@ -39,6 +39,11 @@ type loadBudget struct {
 
 const loadBudgetsChecked = "2026-10-05"
 
+// The codex-skill-listing row is the documented 8,000 characters for an unknown
+// context window; the page's default is 2% of a known one, which the exposure
+// report derives (harnesslimits codex.skill_listing_percent). AR964 applies the
+// fixed figure, a stable estimate that does not depend on the model.
+
 // loadBudgetClaudeListingTotal is the row of the whole Claude skill listing. Its
 // limit scales with the context window, so the run takes it from the exposure
 // measure (WithExposure) and the row's Limit is the figure at 200000 tokens.
@@ -48,7 +53,7 @@ var loadBudgets = []loadBudget{
 	{ID: "claude-skill-listing", Presets: []string{presetClaude}, Scope: "listing", Unit: unitChars, Limit: 1536, Source: "https://code.claude.com/docs/en/skills", Checked: loadBudgetsChecked, Verified: true},
 	{ID: loadBudgetClaudeListingTotal, Presets: []string{presetClaude}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://code.claude.com/docs/en/skills", Checked: "2026-10-28", Verified: true},
 	{ID: "codex-agents-chain", Presets: []string{presetCodex}, Scope: scopeChain, Unit: unitBytes, Limit: 32768, Source: "https://learn.chatgpt.com/docs/agent-configuration/agents-md", Checked: loadBudgetsChecked, Verified: true},
-	{ID: "codex-skill-listing", Presets: []string{presetCodex}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://learn.chatgpt.com/docs/agent-configuration/skills", Checked: loadBudgetsChecked},
+	{ID: "codex-skill-listing", Presets: []string{presetCodex}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://learn.chatgpt.com/docs/build-skills", Checked: "2026-11-05", Verified: true},
 	{ID: "windsurf-rule-file", Label: "Windsurf (devin preset)", Presets: []string{"devin"}, Scope: scopeFile, Unit: unitChars, Limit: 12000, Source: "https://docs.devin.ai/desktop/cascade/memories", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "cursor-rule-lines", Presets: []string{presetCursor}, Scope: scopeFile, Unit: unitLines, Limit: 500, Source: "https://cursor.com/docs/context/rules", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "agent-skills-body", Scope: scopeFile, Unit: unitLines, Limit: 500, Source: "https://agentskills.io/specification", Checked: loadBudgetsChecked, CoveredBy: CodeSizeLines},

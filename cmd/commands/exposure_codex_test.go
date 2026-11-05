@@ -46,3 +46,26 @@ func TestRunExposureReport_CodexUsesItsOwnBudget(t *testing.T) {
 	require.NoError(t, runExposureReport(t.Context(), &out, &exposureFlags{harness: "claude", root: root}))
 	assert.Contains(t, out.String(), "[exposure] start_budget 5000")
 }
+
+func TestRunExposureReport_HarnessFollowsTheConfigUnlessTheFlagIsGiven(t *testing.T) {
+	root := codexRepo(t, "harness = \"codex\"\n")
+
+	var out bytes.Buffer
+	require.NoError(t, runExposureReport(t.Context(), &out, &exposureFlags{root: root}))
+	assert.Contains(t, out.String(), "agents_md")
+
+	out.Reset()
+	require.NoError(t, runExposureReport(t.Context(), &out, &exposureFlags{harness: "claude", root: root}))
+	assert.Contains(t, out.String(), "claude_md")
+	assert.NotContains(t, out.String(), "agents_md")
+}
+
+func TestRunExposureInventory_StaysOnTheClaudeInventoryWhateverTheConfigHarness(t *testing.T) {
+	root := codexRepo(t, "harness = \"codex\"\n")
+
+	var out bytes.Buffer
+	require.NoError(t, runExposureInventory(t.Context(), &out, &exposureFlags{root: root}))
+
+	assert.Contains(t, out.String(), "claude_md")
+	assert.NotContains(t, out.String(), "agents_md")
+}
