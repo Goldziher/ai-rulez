@@ -1,67 +1,167 @@
 # LLM access
 
-`internal/llm.Client` is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place. Its consumers are [`judge`](judge.md) (the three reviewers and the adjudicator), the rubric grader of `eval run`, `review --semantic`, `review calibrate`, `review fix` and `review explain`, the LLM-backed `[[verifiers]]` and `verifiers suggest`, the `review-fix` adapter of `improve run`, the embeddings behind `search` (skill search index), and the diagnostics `llm doctor` (and its `--ping`) and the `llm` section of `ai-rulez doctor`.
+The `[llm]` table configures the one model connection every model-backed ai-rulez feature shares: the provider and
+model, the spend caps, the response cache and the privacy rules. Nothing calls a model unless you turn it on:
+`allow_network` defaults to `false`, and every call is refused with a message that names the setting.
 
-**Nothing calls a model unless you turn it on.** `allow_network` defaults to `false`; every call is refused with a message that names the setting.
+These features use it:
+
+| Feature | What it sends |
+| --- | --- |
+| [`judge`](judge.md) | the agent configuration files it reviews, plus the rules and instruction files that apply to them |
+| [`review --semantic`](review.md), `review calibrate`, `review fix` | skill, agent and command descriptions (and bodies with `--content full`) |
+| [`eval run --grader builtin`](evals.md#the-built-in-grader) | the rubric and the transcript an eval runner returned |
+| [`improve --with builtin:review-fix`](improve.md#bundled-adapters) | the `SKILL.md` being improved |
+| LLM-backed [`[[verifiers]]`](verifiers.md) and `verifiers suggest` | the verifier's prompt and inputs |
+| [`search`](search.md) embeddings | skill text, with `embedding_model` set |
+| `llm doctor --ping` | a one-token `ping` |
+
+## Example
+
+Opt in once in your **user** config file (`$XDG_CONFIG_HOME/ai-rulez/config.toml`, else
+`~/.config/ai-rulez/config.toml`):
+
+```toml
+# ~/.config/ai-rulez/config.toml
+[llm]
+provider      = "anthropic"
+model         = "claude-haiku-4-5"
+api_key_env   = "ANTHROPIC_API_KEY"   # the NAME of the variable, never the key
+allow_network = true
+max_cost_usd  = 1.00
+```
+
+Check what ai-rulez would use, and what a prompt costs, without calling anything:
+
+```console
+$ ai-rulez llm doctor
+liter-llm:       v2.4.4
+model:           anthropic/claude-haiku-4-5
+embedding model: (none)
+base_url host:   (provider default)
+api key env:     ANTHROPIC_API_KEY (set: true)
+network allowed: true
+cache:           /home/dev/.cache/ai-rulez/llm/0b2e76eb32b753f0
+limits:          max_cost_usd=1 max_tokens=0 max_calls=0 (0 = unlimited)
+
+$ ai-rulez llm estimate .ai-rulez/skills/deploy-staging/SKILL.md
+model:         anthropic/claude-haiku-4-5
+file bytes:    277
+prompt tokens: ~100
+max output:    1024
+worst-case cost: <= $0.005220
+(approximate; nothing was sent)
+```
+
+`ai-rulez llm doctor --ping` makes one 1-token call to confirm the key and endpoint work.
+
+## Providers
+
+ai-rulez reaches models through [liter-llm](https://github.com/xberg-io/liter-llm), which routes on a
+`provider/model` name. Set `provider` and a bare `model`, or put the prefix in `model` (`openai/gpt-4o-mini`).
+
+| Provider | `provider` | Example model | Credentials |
+| --- | --- | --- | --- |
+| OpenAI | `openai` | `gpt-4o-mini` | `OPENAI_API_KEY`, or the variable `api_key_env` names |
+| Anthropic | `anthropic` | `claude-haiku-4-5` | `ANTHROPIC_API_KEY`, or `api_key_env` |
+| Google Gemini | `gemini` | `gemini-2.5-flash` | `GEMINI_API_KEY`, or `api_key_env` |
+| Google Vertex AI | `vertex_ai` | `gemini-2.5-flash` | the provider's credentials, or `api_key_env` |
+| Amazon Bedrock | `bedrock` | `global.anthropic.claude-sonnet-5-5` | the AWS credential chain, see [Amazon Bedrock](#amazon-bedrock) |
+| OpenAI-compatible gateway (LiteLLM proxy, vLLM, Ollama, Azure OpenAI or Bedrock gateways) | `openai`, or the gateway's provider | the gateway's model name | `api_key_env` for the gateway credential, with `base_url` |
+
+liter-llm supports further providers under their own prefixes; the ones above are the supported providers.
+With a `base_url`, a named provider keeps its own wire format, so a Gemini or Vertex model behind a gateway still
+speaks the Gemini protocol.
+
+When no `api_key_env` is set, the provider's own key variable is read.
 
 ## Configuration
 
 ```toml
-# .ai-rulez/config.toml   (allow_network, base_url and api_key_env below only take effect from user scope, see "Trust rule")
 [llm]
-provider        = "openai"                 # provider prefix; liter-llm routes on provider/model
+provider        = "openai"
 model           = "gpt-4o-mini"
-base_url        = "https://llm-gateway.internal.example/v1"   # optional; see "Data egress"
-api_key_env     = "OPENAI_API_KEY"         # the NAME of an environment variable, never a key
 embedding_model = "text-embedding-3-small"
-max_cost_usd    = 2.00                     # stop before the estimate would exceed this
-max_tokens      = 500000                   # prompt + completion, whole run
+max_cost_usd    = 2.00
+max_tokens      = 500000
 max_calls       = 200
-cache           = true                     # default true
-allow_network   = false                    # default false; nothing is sent unless true
+cache           = true
+
+# User scope only (see "Trust rule"):
+allow_network   = false
+base_url        = "https://llm-gateway.acme.example/v1"
+api_key_env     = "OPENAI_API_KEY"
 ```
 
-Other keys: `timeout_seconds` (default 60, covers the retries, at most 3600), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below). An override prices only the model you set in user scope (`model` in the user config file or `AI_RULEZ_LLM_MODEL`); a model a repository picks, or a per-request model, is priced from the built-in table and, under a cost limit, refused when the table does not know it. Costs and prices must be finite: TOML's `nan` and `inf` are an `AR9L0` error, and a non-finite repository cap never replaces yours.
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `provider` | string | none | Provider prefix for `provider/model` routing. |
+| `model` | string | none | Chat model, bare or with a `provider/` prefix. |
+| `embedding_model` | string | none | Embedding model for search. |
+| `allow_network` | bool | `false` | Allow any provider call. User scope only. |
+| `base_url` | string | the provider's endpoint | Gateway or model-server URL. No credentials or query string. User scope only. |
+| `api_key_env` | string | the provider's variable | Name of the environment variable that holds the key. User scope only. |
+| `max_cost_usd` | float | `0` (unlimited) | Stop before the worst-case estimate would exceed this. |
+| `max_tokens` | int | `0` (unlimited) | Prompt plus completion tokens for the whole run. |
+| `max_calls` | int | `0` (unlimited) | Provider calls for the whole run. |
+| `cache` | bool | `true` | Use the response cache. |
+| `timeout_seconds` | int | `60` | Time limit per call including retries; at most 3600. |
+| `max_retries` | int | `3` | Retries of transient failures; `-1` disables, at most 10. |
+| `price_input_per_mtok`, `price_output_per_mtok` | float | built-in price table | USD per million tokens for the model you set in user scope. Needed for a cost cap on a model the table does not know. User scope only. |
+| `allow_plain_http`, `plain_http_hosts` | bool, list | `false`, `[]` | Send a key over plain http to the listed hosts; see [Plain-http gateways](#plain-http-gateways). User scope only. |
+
+Individual commands add their own caps on top (`judge --max-cost`, `review --max-cost`, `eval run --grader-max-cost`).
+Whichever limit is reached first stops the run.
+
+### Environment variables
+
+Precedence, highest first: environment, user config file, repository config, defaults. An unparsable value is an
+`AR9L0` error, not a silent default.
+
+| Variable | Meaning |
+| --- | --- |
+| `AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_EMBEDDING_MODEL` | Routing and models. |
+| `AI_RULEZ_LLM_ALLOW_NETWORK`, `_BASE_URL`, `_API_KEY_ENV` | The user-scope keys of the same name. |
+| `AI_RULEZ_LLM_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE` | Limits and cache. |
+| `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP`, `_PLAIN_HTTP_HOSTS` | Plain-http opt-in; hosts comma-separated. |
+| `AI_RULEZ_LLM_PRICE_INPUT_PER_MTOK`, `_PRICE_OUTPUT_PER_MTOK` | Price override for the model named by `AI_RULEZ_LLM_MODEL`. |
+| `AI_RULEZ_LLM_TEMPERATURE=omit` | Leave `temperature` out of every request, for a model that rejects it. Environment only. |
+
+The [GitHub Action](github-actions.md) accepts matching `llm-*` inputs. Keep credentials in the job's environment.
 
 ### Trust rule
 
-A committed repository config is attacker-controlled input: cloning a repository must not switch on network use, choose the host a prompt goes to, or pick which environment variable is sent as a credential. So, like `[telemetry]`:
+A committed repository config is input from whoever wrote it: cloning a repository must not switch on network use,
+choose the host a prompt goes to, or pick which of your keys is sent.
 
-| Key | Repository config and `config.local.*` | User config file / `AI_RULEZ_LLM_*` |
+| Key | Repository config and `config.local.*` | User config file and `AI_RULEZ_LLM_*` |
 | --- | --- | --- |
-| `allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `ai-rulez doctor` and strict finding `AR9L1` | honoured |
-| `provider`, `model`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honoured, with one exception for provider routing (below) | honoured |
-| `max_cost_usd`, `max_tokens`, `max_calls` | honoured, but can only tighten: the lower non-zero value of repository and user wins | honoured |
+| `allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, `price_input_per_mtok`, `price_output_per_mtok` | ignored, reported by `llm doctor`, `ai-rulez doctor` and `AR9L1` | honored |
+| `provider`, `model`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honored, except for provider routing (below) | honored |
+| `max_cost_usd`, `max_tokens`, `max_calls` | can only tighten: the lower non-zero value wins | honored |
 
-**Provider routing and the key.** The `provider` (or a `provider/` prefix in `model`) decides which service receives the request, and with it the API key. So when the key variable comes from user scope but the provider or model prefix comes only from the repository config, ai-rulez refuses to start (`AR9L0`) and `llm doctor` reports it; set `provider` and `model` in the user config file or `AI_RULEZ_LLM_PROVIDER` / `AI_RULEZ_LLM_MODEL`. The check also applies when you have no user config file at all and configure the key only through `AI_RULEZ_LLM_*`: a repository `provider` or `model` prefix is still repository-chosen routing unless `AI_RULEZ_LLM_PROVIDER` / `AI_RULEZ_LLM_MODEL` set it. A repository `model` whose prefix equals the provider you configured in user scope is fine. A repository `embedding_model` with a `provider/` prefix is repository-chosen routing too. The refusal holds without `api_key_env` as well: liter-llm then reads the routed provider's own key variable (`OPENAI_API_KEY`, ...), so the repository would still pick which of your keys is sent and billed. The same rule covers a per-request model (a verifier's `llm.model`, `[search.embeddings] model`): ai-rulez sends a prefixed request model only when its prefix is the configured provider, pins a bare one to that provider, and otherwise refuses the call with `AR9L0` before anything is sent.
+The local overlay lives in the checkout, so it counts as repository scope.
 
-See the [trust model](trust-model.md) for every knob that reaches the network or runs a process.
-
-The local overlay lives in the checkout, so it counts as repository scope. Opt in once on your machine in the user config file (`$XDG_CONFIG_HOME/ai-rulez/config.toml`, else `~/.config/ai-rulez/config.toml`):
-
-```toml
-[llm]
-allow_network = true
-base_url      = "https://llm-gateway.internal.example/v1"
-api_key_env   = "OPENAI_API_KEY"
+```console
+$ ai-rulez llm doctor
+...
+warning:         repository [llm] keys ignored (user scope only: set them in the user config file ~/.config/ai-rulez/config.toml or via AI_RULEZ_LLM_*): base_url
 ```
 
-or export `AI_RULEZ_LLM_ALLOW_NETWORK=1` (and `_BASE_URL`, `_API_KEY_ENV`). Precedence, highest first: environment, user config file, repository config, defaults.
+**Provider routing and the key.** The provider decides which service receives the request, and with it your key. When
+the provider (or a `provider/` prefix in `model` or `embedding_model`) comes only from the repository config, ai-rulez
+refuses to send a key (`AR9L0`), whether the key comes from `api_key_env` or from the provider's own variable. Set
+`provider` and `model` in the user config file, or with `AI_RULEZ_LLM_PROVIDER` and `AI_RULEZ_LLM_MODEL`. A repository
+`model` whose prefix matches the provider you set is fine. A per-request model (a verifier's `llm.model`, a search
+embedding model) is held to the same rule: a bare name is pinned to your provider, and a prefix that names another
+provider is refused before anything is sent.
 
-### Environment overrides
-
-`AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_BASE_URL`, `_API_KEY_ENV`, `_EMBEDDING_MODEL`, `_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE`, `_ALLOW_NETWORK`, `_ALLOW_PLAIN_HTTP`, `_PLAIN_HTTP_HOSTS` (comma-separated), `_PRICE_INPUT_PER_MTOK`, `_PRICE_OUTPUT_PER_MTOK` (the price override for the model named by `_MODEL`) and `_TEMPERATURE` (`omit` leaves `temperature` out of every request; env only, no config key; a Claude 5.x model never gets one, whatever the setting). An environment value wins over the config file. An unparsable value is an `AR9L0` error, not a silent default.
-
-The [official GitHub Action](github-actions.md) accepts matching `llm-*` inputs and exports them
-for later command steps. Credentials belong in the command step's or job's environment.
-
-### Validation: `AR9L0 llm-config-invalid`
-
-`validate`, the JSON schema and `ai-rulez doctor` reject a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`; see "Plain-http gateways" for the explicit opt-in), `allow_plain_http` without `plain_http_hosts`, a `max_retries` above 10, a `timeout_seconds` above 3600, and negative or non-finite (`nan`, `inf`) limits and prices. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9L1`.
+See the [trust model](trust-model.md) for every setting that reaches the network or runs a process.
 
 ### Plain-http gateways
 
-A gateway on a private network that terminates TLS in a sidecar or service mesh may only speak `http://`. By default a key is never sent over plain http except to a loopback host. The explicit opt-in, honoured only in user scope (the user config file or the environment, never a committed repository config, where it is ignored and reported as `AR9L1`):
+By default a key is never sent over plain http except to a loopback host (`localhost`, `127.0.0.1`, `::1`). For a
+private gateway that only speaks http, opt in from user scope and list the host exactly as it appears in `base_url`:
 
 ```toml
 # ~/.config/ai-rulez/config.toml
@@ -69,132 +169,95 @@ A gateway on a private network that terminates TLS in a sidecar or service mesh 
 base_url         = "http://gateway.internal:8080/v1"
 api_key_env      = "GATEWAY_KEY"
 allow_plain_http = true
-plain_http_hosts = ["gateway.internal:8080"]   # required; matched exactly against base_url's host as written
+plain_http_hosts = ["gateway.internal:8080"]
 ```
 
-or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway.internal:8080`. A key is sent only to a host on the list. The match is exact and case-insensitive on `host` or `host:port` as it appears in `base_url`: an entry `gateway.internal` does not cover `http://gateway.internal:8080`, and `gateway.internal:8080` does not cover another port. An HTTP redirect is refused rather than followed (see "Data egress"). `llm doctor` prints a warning while the opt-in is in use (the same warning is in `ai-rulez doctor`). The trade-off: the key and every prompt cross that network segment unencrypted, so anyone on the path can read or replay them. Prefer `https`, or a loopback tunnel (`ssh -L 8080:gateway.internal:8080`, then `base_url = "http://127.0.0.1:8080/v1"`, which needs no opt-in).
+The match is exact and case-insensitive on `host` or `host:port`: `gateway.internal` does not cover
+`gateway.internal:8080`. `llm doctor` warns while the opt-in is in use. The key and every prompt cross that network
+unencrypted, so prefer https, or a loopback tunnel (`ssh -L 8080:gateway.internal:8080`, then
+`base_url = "http://127.0.0.1:8080/v1"`, which needs no opt-in).
 
-## Commands
+## What happens on every call
 
-```text
-ai-rulez llm doctor [--ping] [--format json]   liter-llm version, model, base_url host (never the key),
-                                        whether the key variable is set, network gate, cache dir, limits
-ai-rulez llm estimate <file>            approximate tokens and worst-case cost of sending the file; no call
-```
-
-`llm doctor` is also a section of `ai-rulez doctor` (check `llm`, silent when there is no `[llm]` table). `--ping` makes one 1-token call and refuses unless `allow_network` is true.
-
-`llm doctor` requires a project configuration; `llm estimate` can use only the user configuration
-and environment when no project exists.
-
-## What it does for every call
-
-Outermost first: network gate and timeout, cache, budget, liter-llm (which retries inside the call).
-
-- **Budget, fail closed.** Before each provider call the guard reserves its worst case (estimated prompt plus completion cap) against `max_cost_usd`, `max_tokens` and `max_calls` in one atomic step, counting what calls still in flight hold, so concurrent calls cannot jointly overshoot a limit; it refuses if the worst case does not fit. When the call ends the reservation is replaced by the actual usage. A request without `max_tokens` gets a 1024-token completion cap while a budget is active. If a provider reports no usage, the worst case is charged. Thinking tokens count as completion: a reply is charged at least its `total_tokens` (Gemini leaves its thinking out of `completion_tokens` but bills it), and `completion_tokens_details.reasoning_tokens` larger than the completion is added to it. liter-llm 2.2.0 and later (upstream #253) report Gemini's thinking tokens in `completion_tokens` and `total_tokens` on all three Gemini routes (`gemini/`, `google_ai/`, `vertex_ai/`), so a call settles on the real reported usage like any other; only a successful reply with no usage at all is charged the worst case. Older liter-llm builds drop `thoughtsTokenCount` and under-report Gemini spend, so keep the pin at v2.2.0 or later. A call is priced by the model you requested, never by the model name the provider reports (a reported name can only raise the price). With `max_cost_usd` set and no known price for the requested model, the call is refused. A rejection the provider documents as unbilled (HTTP 400, 401, 403, 404, 422, or an auth, config or budget error raised before anything was sent) releases its tokens and cost and keeps only the call count. Everything else may have run upstream, so the worst case stays charged: a 429, any 5xx (including a 504 gateway timeout), a timeout, a transport failure, an undecodable reply, a cancelled context. liter-llm's own retries happen inside one call: the budget reserves the worst case once, counts one call and settles on the usage of the reply that came back (an attempt the provider rejected is not billed; one that timed out may have been, which is why `max_retries` is capped at 10 and a timeout charges the worst case). Cache hits cost nothing. Token counts are estimates from UTF-8 length (one token per three bytes), deliberately high: liter-llm's own `CountTokens` downloads a tokenizer from the network on first use, so it is not used for a spend gate. Cached prompt tokens reported by the provider are priced at the cache-read rate.
-- **Cache.** Keyed by an endpoint identity (provider, base URL scheme, host and path, the name of the key variable, never its value, and the price table version or override), the model, the request and its `PromptVersion`, so changing the gateway, key variable, prices, model or prompt version misses. Entries hold model output only. They live outside the repository, in the user cache directory `~/.cache/ai-rulez/llm/<project hash>/` (mode 0700, files 0600, written atomically), so nothing a checkout contains can plant one. Every entry carries an HMAC-SHA256 over identity, key and payload, computed with a per-user secret (`$XDG_CONFIG_HOME/ai-rulez/llm-cache.key`, else `~/.config/ai-rulez/llm-cache.key`; 32 random bytes, mode 0600, created on first use; the file must be a regular 0600 file in a directory that is not group- or world-writable, and a loose or symlinked file is replaced or refused; `XDG_CONFIG_HOME` is read from the environment, so do not set it from an untrusted `.envrc`). A modified, truncated, oversized, symlinked or planted entry fails the check, counts as a miss and is deleted; entry reads are size-capped. A missing or damaged secret is regenerated, which invalidates every older entry; if no secret can be stored the cache is off, never unauthenticated. A cache restored from CI (another job, an untrusted branch) is only valid when the secret matches, so a restored cache from a different secret simply misses. Opt out with `cache = false`, `AI_RULEZ_LLM_CACHE=0` or `NoCache` (on the options or a request).
-- **Retry.** liter-llm retries 429, 500, 502, 503, 504 and 529 and transport failures up to `max_retries` times (default 3) with jittered exponential backoff, honouring `Retry-After` on 429 and 529. Authentication, context-length, budget and config errors, other 4xx rejections and malformed replies are never retried. A persistent 503 costs exactly 1 + `max_retries` requests (`retry_test.go`).
-- **Error classification.** liter-llm returns typed errors (variant sentinels, HTTP status, a transient flag, `Retry-After`); one method (`literLLM.classify`) maps them to `llm.Error` kinds by sentinel, never by message text, and a corpus test (`classify_test.go`) pins the behaviour through a local server so a changed upstream shape fails CI. An exhausted quota (`lit.ErrProviderQuotaExceeded`) is a permanent rate-limit error, and an over-long prompt is a context-length error. A failure that is not a liter-llm error is a permanent provider error, and an error is never written to the cache. An empty reply with no error is a permanent error, never a success.
-- **Typed errors.** `errors.Is(err, llm.ErrRateLimit | ErrAuth | ErrContextLength | ErrProvider | ErrBudget | ErrNetworkDisabled | ErrConfig | ErrTimeout)`; `*llm.Error` carries the HTTP status and `Retry-After`.
-- **Redaction.** Logs (`llm.WithLogging`) and dry-run output carry counts, sizes, a short content hash, usage and cost, never prompt or completion text and never keys. Provider error text is scrubbed before it enters an error: the configured key is removed by value, key-looking text is masked and a URL loses its query string. liter-llm redacts the configured secret from a provider error body and drops the URL from a network error, but a provider can still echo a bare key-shaped token or a URL with a query (`TODO(liter-llm#259)`, still missing in v2.2.3). A value that is, in its entirety, an environment lookup (`os.environ["X"]`, `os.Getenv("X")`, `process.env.X`, `$X`, `${X}`) names a secret without holding one and is not masked; a lookup that carries a literal, such as `${X:-sk-...}`, is.
-- **Dry run.** `Options.DryRun` returns a client that prints what would be sent (model, sizes, estimated tokens and cost; message text only with `ShowContent`) and returns `llm.ErrDryRun`.
-
-## Data egress and residency
-
-When `allow_network` is true, the prompt text of each feature is sent to the configured endpoint. What that is depends on the caller. `llm doctor --ping` sends a one-token `ping`. [`judge`](judge.md) sends the files it reviews (and, for governance, the rules and `CLAUDE.md` files that apply to them) and says so first, with the egress host and the models, and only with `--allow-llm`. A rubric grader sends a transcript of an agent session, which can contain source code, file paths, tool output and anything a user typed. ai-rulez adds no other data, and never sends config files, keys or environment.
-
-To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI gateway in your VPC, Ollama or vLLM on an internal host) and use `api_key_env` for the gateway credential. `llm doctor` shows the host so a reviewer can check it. liter-llm 2.2.2 and later refuse HTTP redirects: a gateway that answers 307 or 308 surfaces as a provider error and the prompt is never re-sent to the redirect target (`TestRedirectsAreNotFollowed`). Only point `base_url` at a host you trust. `base_url` must not embed credentials or a query string (`AR9L0`). The default endpoint (used only when `provider` is `openai` or empty and no `base_url` is set) is `https://api.openai.com/v1`. A key is sent only as an `Authorization: Bearer` header to that host, and only over `https` unless the host is loopback. `base_url`, `allow_network` and `api_key_env` are honoured only from user scope (see the trust rule above).
-
-Model-side retention and training terms are the provider's; check them before sending transcripts that contain private code.
-
-### Amazon Bedrock
-
-A `bedrock/...` model is signed with AWS credentials, resolved through the AWS SDK's default chain for **every** command that calls a model (`judge`, `eval`, `verifiers`, `review`, `improve`, `search`): environment variables, `AWS_PROFILE` and the shared config (SSO and assume-role profiles included), web identity (`AWS_WEB_IDENTITY_TOKEN_FILE`), and container and instance roles. A Bedrock API key (`AWS_BEARER_TOKEN_BEDROCK`) or a key pair already in the environment is used as it is. The SDK's credential cache renews temporary credentials before they expire, ai-rulez puts the current keys where liter-llm reads them before each call (calls in flight finish first), and a call refused as unauthenticated renews the credentials and is tried once more, so a run longer than a session does not fail halfway. The region comes from `AWS_REGION`, `AWS_DEFAULT_REGION` or the `AWS_PROFILE` profile, and the egress host is `bedrock-runtime.<region>.amazonaws.com`. A Claude 5.x model on Bedrock takes no `temperature`: it is left out of the request up front, not retried after a 400.
+- **Budget, fail closed.** Before each call, the worst case (estimated prompt plus completion cap) is reserved against
+  `max_cost_usd`, `max_tokens` and `max_calls`; a call that does not fit is refused. Afterwards the reservation is
+  replaced by the reported usage. Tokens are estimated at one per three UTF-8 bytes, deliberately high. Thinking tokens
+  count as completion. A rejection the provider does not bill (400, 401, 403, 404, 422) releases its cost; a 429, 5xx,
+  timeout or transport failure keeps the worst case charged, since it may have run upstream. With `max_cost_usd` set,
+  a model with no known price is refused.
+- **Prices** come from liter-llm's model catalog plus a few fixed entries (the `haiku`, `sonnet` and `opus` short names
+  eval cases use, and the Claude families). A Bedrock id is reduced to the model it names before the lookup. Set
+  `price_input_per_mtok` and `price_output_per_mtok` for any other model. Reported costs are estimates, not a bill.
+- **Cache.** Answers are cached in `~/.cache/ai-rulez/llm/<project hash>/`, outside the repository, keyed by the
+  endpoint (provider, base URL, key variable name, never its value), the model, the request and the feature's prompt
+  version. Every entry is authenticated with a per-user secret (`$XDG_CONFIG_HOME/ai-rulez/llm-cache.key`, mode 0600):
+  a modified or planted entry is discarded, and a cache restored from another machine simply misses. A cache hit costs
+  nothing. Turn it off with `cache = false` or `AI_RULEZ_LLM_CACHE=0`.
+- **Retry.** 429, 500, 502, 503, 504, 529 and transport failures are retried up to `max_retries` times with jittered
+  backoff, honoring `Retry-After`. Authentication, context-length and other 4xx errors are not retried.
+- **Redaction.** Logs and estimates carry counts, sizes, hashes and cost, never prompt or completion text and never
+  keys. Provider error text has the configured key and key-shaped tokens masked, and URLs lose their query string.
+- **Temperature** is left out for models that reject it (Claude 5.x, OpenAI reasoning models), and a request rejected
+  for its temperature is retried once without it.
 
 ### Cost controls
 
-Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). Prices come from liter-llm's embedded model catalog (`GetModelInfo` and `CompletionCostWithCache`, with context tiers and cache-read rates), which is approximate and only for budget estimates; `internal/pricing` adds a few fail-closed floors (see "Price floors"). Set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
+Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops, and run the feature's estimate first:
+`judge --estimate`, `review --estimate`, `eval run --dry-run`, or `ai-rulez llm estimate <file>` for a single prompt
+(`--max-output N` sets the completion tokens to assume; default 1024). Use `--format json` on `llm` commands for
+machine-readable output.
 
-## liter-llm
+## Data egress and residency
 
-ai-rulez reaches every provider through [liter-llm](https://github.com/xberg-io/liter-llm), a Rust client with one interface for 174 providers (`provider/model` names, keys from the provider's environment variable). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`. It is a normal dependency of the root module and the only provider backend: there is no build tag, no nested module and no hand-written HTTP client. An OpenAI-compatible gateway, Ollama or vLLM is a `base_url`; liter-llm keeps a named provider's own transform (Gemini, Vertex, Bedrock, Anthropic, Azure) under it and falls back to a generic OpenAI-compatible one only for an unlisted provider, stripping the `provider/` prefix from the model it sends.
+With `allow_network` on, each feature sends the text listed in the table at the top of this page to the configured
+endpoint, and nothing else: no config files, keys or environment. `judge` prints the egress host and models before it
+sends anything, and only runs with `--allow-llm`. An eval grader sends a transcript of an agent session, which can
+contain source code, file paths, tool output and anything a user typed.
 
-### What liter-llm does and what ai-rulez keeps
+To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI
+gateway in your VPC, vLLM or Ollama on an internal host) and use `api_key_env` for its credential. `llm doctor` shows
+the host so a reviewer can check it. HTTP redirects are refused, never followed, so a prompt is never re-sent to
+another host. A key is sent only to the configured host and only over https, except to a loopback host or a listed
+plain-http host.
 
-| Responsibility | Owner | Where |
-| --- | --- | --- |
-| Providers, routing by `provider/model`, wire formats, auth headers | liter-llm | `client.go` builds a typed `ChatCompletionRequest` |
-| Chat, embeddings, structured output (`response_format`) | liter-llm | JSON-schema output is native on OpenAI and Anthropic (upstream #265) |
-| Streaming, rate limits, in-flight limits, cooldown, tracing, cost tracking | liter-llm provides them | unused: ai-rulez makes sequential calls and keeps its own accounting |
-| Retries, jittered backoff, `Retry-After` | liter-llm (`max_retries`) | `classify` carries a reported `Retry-After` onto `llm.Error` |
-| Error taxonomy (typed variants, status, transient flag) | liter-llm | `classify` maps each variant sentinel to an `llm.Error` kind |
-| Usage: prompt, completion, total, reasoning and cached tokens | liter-llm | right, including Gemini thinking tokens from 2.2.0 (#253) and Gemini and Anthropic cache accounting (#254, #255); `usageOf` charges the largest of the reported figures |
-| Price catalog, `GetModelInfo`, context tiers, cache-read rate | liter-llm | `internal/pricing` calls it first; floors only where the catalog has no row (below) |
-| Per-response cost | partly | the Go binding has `CompletionCostWithCache` only; `Pricing.Cost` applies a `price_*_per_mtok` override first |
-| Token counting | liter-llm provides `CountTokens`, but it downloads a tokenizer from the network on first use and fails for Gemini | not used: `internal/tokens` stays (offline, deterministic cl100k_base counts for reports; a conservative byte estimate for the spend gate) |
-| Budget | ai-rulez policy | liter-llm's budget is USD-only and charges after the fact; ours reserves the worst case on cost, tokens and calls and fails closed |
-| Response cache | ai-rulez policy | outside the repository, HMAC-authenticated per user (liter-llm's cache is in-memory or OpenDAL) |
-| Network gate, trust model (user-scope-only keys), routing/key check, dry run, judge, prompt redaction, `AR9L0` validation | ai-rulez policy | `gate.go`, `trust.go`, `redact.go`, `config.go` |
-| Response size limit | liter-llm (cap: ai-rulez) | the cap is passed as `max_response_bytes` (32 MiB) through `lit.CreateClientWithOptions`; the body is refused while it is read |
-| Redirect refusal | liter-llm | refused since v2.2.2; a 307/308 surfaces as a provider error, see "Data egress" |
+Retention and training terms are the provider's; check them before sending transcripts that contain private code.
 
-### Price floors
+### Amazon Bedrock
 
-`GetModelInfo` is the price source. `internal/pricing` consults its own table only for a model the catalog has no entry for: the short names `haiku`, `sonnet` and `opus` that eval cases use, and the `claude-haiku`, `claude-sonnet` and `claude-opus` families (upstream #262, still missing in v2.2.3). It also reduces a Bedrock model id to the model it names (the `global.`, `us.`, `eu.`, `apac.` ... inference-profile prefix, the `anthropic.`/`amazon.` vendor prefix, the `-v1:0` revision and a trailing date) before the catalog and floor lookup, and drops a provider prefix before the lookup, since `gemini/`, `google_ai/` and `vertex_ai/` names are not found by the catalog (#260). The catalog now matches a model only on its exact name, so an unlisted realtime, audio, tts or transcribe variant is unpriced rather than silently charged at its base model's rate (#260). Each correction carries a `TODO(liter-llm#NNN)` and is deleted when the catalog covers it. A model nothing prices is unpriced, so a cost limit refuses it unless you set `price_input_per_mtok` and `price_output_per_mtok`; a paid model the catalog lists at 0/0 is unpriced too, because `GetModelInfo` reports it as not `PriceKnown` (#276). The price source is `literllm-<version>+floors-<revision>` (`floorsRevision` is `3`) and is part of the cache identity.
+A `bedrock/...` model is signed with AWS credentials from the AWS SDK's default chain: environment variables,
+`AWS_PROFILE` and the shared config (SSO and assume-role profiles included), web identity
+(`AWS_WEB_IDENTITY_TOKEN_FILE`), and container and instance roles. A Bedrock API key (`AWS_BEARER_TOKEN_BEDROCK`) or a
+key pair in the environment is used as is. Temporary credentials are renewed before they expire, and a call refused as
+unauthenticated renews them and is tried once more, so a long run does not fail halfway.
 
-### Shims that remain
+The region comes from `AWS_REGION`, `AWS_DEFAULT_REGION` or the profile, and the egress host is
+`bedrock-runtime.<region>.amazonaws.com`. Inference-profile ids (`global.anthropic.claude-...`, `us.`, `eu.`, ...) are
+priced.
 
-Each is marked `TODO(liter-llm#NNN)` in the code.
-
-- `internal/llm/client.go`: `scrub` removes a key-shaped token or a URL query a provider can still echo (#259, still missing in v2.2.3); `needsMaxCompletionTokens` sends `max_completion_tokens` to a reasoning model behind a `base_url` (#264, partial: liter-llm renames the field for its own openai and azure providers only).
-- `internal/pricing/pricing.go`: the floors for the Claude families and the short names (#262); `bare()` drops a provider prefix before the lookup (#260).
-
-### Linking and distribution
-
-The binding is cgo over a Rust library, so a build needs `CGO_ENABLED=1`, a C toolchain and the native library. What links depends on who builds:
-
-- **Contributors** run `go build ./...`, `go test ./...` and `golangci-lint` with nothing to set up. The binding's module ships the shared library for every platform in its own `.lib/<platform>/` directory and its cgo directives point there with an absolute rpath, so the result runs on the machine that built it. That binary is not portable and nobody should ship it.
-- **Release builds** link the **static** archive (`libliter_llm_ffi.a`), which makes each binary one self-contained executable with no sidecar library and no cache directory. `scripts/setup-liter-llm.sh` downloads the release asset for the version pinned in `go.mod`, verifies its `.sha256` sidecar (it fails closed), extracts only `libliter_llm_ffi.a` and prints `CGO_LDFLAGS=-L<dir>`; a `-L` that comes first on the link line and holds no shared library makes `-lliter_llm_ffi` resolve to the archive. `mise run build` and `mise run test:release` do this, `scripts/package-release.sh` checks the result with `otool -L` / `ldd` (no `liter_llm` dependency), and CI sets it up with `.github/actions/setup-liter-llm`.
-
-A cgo `#cgo LDFLAGS` shim inside the repository cannot replace the environment variable: the binding's own `-L` and `-lliter_llm_ffi` come first on the link line and resolve to the shared library the module ships, so the binary keeps a load command for it (checked on macOS arm64; `-Wl,-dead_strip_dylibs`, which would drop it, is not allowed in `#cgo` flags). That is why `scripts/setup-liter-llm.sh` supplies the static archive through `CGO_LDFLAGS` rather than an in-repo cgo shim.
-
-Verification history for liter-llm (the current pin is v2.3.0; earlier platform checks retain their tested versions):
-
-| Platform | Result | Verified on |
-| --- | --- | --- |
-| macOS arm64 | static link; `internal/llm` and `internal/evals` tests, race checks on `internal/llm` and `llm doctor` pass, and the binary has no load command for the shared library | v2.3.0 |
-| macOS arm64 | static link; full Go tests, race checks and a live OpenAI smoke test pass | v2.2.4 |
-| Linux arm64 (glibc, Debian bookworm container) | release archive and smoke test pass; static liter-llm link, `ldd` lists libm, libgcc_s and libc only; highest required symbol is `GLIBC_2.34` | v2.2.4 |
-| Linux x86_64, macOS x86_64 | native release builds and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#platform-matrix) | v2.2.3 |
-| Windows x86_64 | archive packaging and smoke tests passed in the [v5.3.0 publish run](maintainers/release.md#windows); packaging can fall back to `liter_llm_ffi.dll` beside `ai-rulez.exe` when static linking fails | v2.2.3 |
-| Windows arm64, Linux musl | liter-llm v2.2.3 now ships `windows-aarch64` and `linux-*-musl` assets (#267 closed), and its release workflow builds and tests each; ai-rulez has not linked or verified them, and its release matrix stays the five platforms above (Linux glibc only; musl-based images are unsupported) | not verified |
-
-Binary size grows by about 35 MB per platform. The release workflow, glibc floor and the wrappers (npm, PyPI, Homebrew) are described in [maintainers/release.md](maintainers/release.md).
-
-### Licensing
-
-liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). Every release binary now bundles that code: ship the MIT notice and the third-party notices of the library with it.
-
-Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.3.0` in `go.mod`. v2.2.0 or later is required for exact Gemini thinking-token accounting (`module_test.go` pins that floor).
-
-### Testing
-
-The `internal/llm` tests run the real liter-llm client against local `httptest` servers: no network and no key. With a `base_url` liter-llm keeps the named provider's transform, so the Gemini (native and Vertex) and OpenAI request and usage mappings are asserted offline against a local server (`TestProviderTransformIsKeptWithABaseURL`); Bedrock is liter-llm's own tests' job. The live tests (`AI_RULEZ_LIVE_LLM=1`, `GEMINI_API_KEY`) cover Gemini end to end and are not part of PR CI; the `live-llm` job in `.github/workflows/live.yml` runs `go test ./internal/llm/... ./internal/evals/...` on `workflow_dispatch` and a weekly schedule. It needs the `GEMINI_API_KEY` repository secret (and optionally `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, unused by the current tests), writes its transcripts to `AI_RULEZ_LIVE_OUT` and uploads them with the test log as an artifact.
-
-Verified live on 2026-10-10 against liter-llm v2.2.3: `AI_RULEZ_LIVE_LLM=1` with `GEMINI_API_KEY`, chat model `gemini-2.5-flash-lite` and embedding model `gemini-embedding-001`; `go test ./internal/llm/... ./internal/evals/...` passes. Thinking-token settlement charged the reply's reported `total_tokens` (prompt 35, completion 414). That run also exposed a live-only test bug, since fixed: `TestLiveBudgetMaxCallsAndUnknownPriceWithCostCap` used a priced model for its unknown-price branch, so the branch never exercised an unpriced model.
-
-On 2026-10-16, the statically linked v2.2.4 build passed the full Go suite, race checks and a live OpenAI smoke test. On 2026-10-20, the statically linked v2.3.0 build passed the `internal/llm` and `internal/evals` tests, race checks on `internal/llm` and `llm doctor` on macOS arm64; the other platforms are verified by the release workflow.
-
-## Using it from a feature
-
-```go
-lc, err := cfg.ResolvedLLM()            // cfg is the loaded *config.Config; env overrides applied
-if err != nil { return err }
-client, err := llm.New(lc, llm.Options{ConfigDir: cfg.ConfigDir})
-if err != nil { return err }            // AR9L0; a disabled network surfaces on the first call
-defer client.Close()
-
-v, err := llm.Judge(ctx, client, rubric, transcript)   // v.Score in [0,1], v.Rationale
+```bash
+export AWS_PROFILE=acme-dev AWS_REGION=eu-north-1
+export AI_RULEZ_LLM_ALLOW_NETWORK=1
+ai-rulez judge --allow-llm --estimate      # Bedrock is judge's default provider
 ```
 
-`llm.Judge` uses structured output at temperature 0 (omitted for an OpenAI reasoning model, which rejects any temperature but its default, for a Claude 5.x model, when `AI_RULEZ_LLM_TEMPERATURE=omit` is set, and, after one retry, once a provider answers HTTP 400 about `temperature`) and `llm.JudgePromptVersion` as the cache version. It asks for at least `llm.DefaultJudgeCompletionTokens` (2048) completion tokens, because a reasoning model spends its thinking out of that budget before the verdict (`JudgeOptions.MinCompletionTokens` raises it). Change the judge prompt or schema and bump that constant. The transcript is sent as data between two marker lines that carry a token derived from the request's own content (so the transcript cannot predict or close it), and the system prompt tells the model to ignore instructions inside it. The reply must be exactly one JSON object with both `score` (in [0,1]) and `rationale`; anything else is a provider error, and a reply that fails that check is never written to the cache (a cached one is treated as a miss). Before sending, the rubric and transcript are scanned for secret-looking text (bearer tokens, `sk-...`, `AKIA...`, `api_key=...`, and every credential shape the security scan `AR001` recognises, such as `AIza...`, `ghp_...`, `xoxb-...` and private key blocks); `Judge` refuses when it finds any, and `llm.JudgeWith(..., llm.JudgeOptions{RedactSecrets: true})` sends them masked instead. The scan is a pattern match, not a guarantee. A feature must treat `errors.Is(err, llm.ErrNetworkDisabled)` as "refuse with a clear message" and `llm.ErrDryRun` as "skipped". In tests use `llm.NewFake()` (deterministic, no network) and `llm.Wrap(fake, cfg, opts)` to get the real middleware around it.
+## Validation: AR9L0 and AR9L1
+
+| Code | Name | Severity | Finds |
+| --- | --- | --- | --- |
+| `AR9L0` | `llm-config-invalid` | error | A literal secret where a variable name belongs (`api_key = ...`, or a key-shaped `api_key_env` such as `sk-proj-...`); credentials or a query in `base_url`; plain `http://` to a non-loopback host when a key is sent; `allow_plain_http` without `plain_http_hosts`; `max_retries` above 10; `timeout_seconds` above 3600; negative or non-finite limits and prices; provider routing chosen by the repository. |
+| `AR9L1` | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets a key only user scope honors. |
+
+`validate`, the JSON schema, `llm doctor` and `ai-rulez doctor` report them. A message never repeats the offending
+value.
+
+```console
+$ ai-rulez validate
+.ai-rulez/config.toml:12: warning AR9L1 llm-untrusted-key: llm: repository [llm] keys ignored (user scope only: ...): base_url
+```
+
+## Commands
+
+| Command | Meaning |
+| --- | --- |
+| `ai-rulez llm doctor [--ping]` | Print the liter-llm version, model, `base_url` host (never the key), whether the key variable is set, the network gate, cache directory and limits. `--ping` makes one 1-token call and needs `allow_network`. Needs a project configuration. Also a section of `ai-rulez doctor`. |
+| `ai-rulez llm estimate <file> [--max-output N]` | Approximate tokens and worst-case cost of sending the file as a prompt. No call. Works with only the user configuration. |

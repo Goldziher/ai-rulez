@@ -1,339 +1,112 @@
-# Monorepos and Large Projects
+# Monorepos and large projects
 
-For large projects with multiple teams, organize your `.ai-rulez/` configuration using domains and profiles to provide relevant context while avoiding overwhelming AI assistants with irrelevant information.
+A large repository needs each agent to see the instructions for the code it is working on, and not much more.
+ai-rulez gives you three tools, which you can combine:
 
-This guide outlines best practices for managing AI context at scale.
+| Tool | Use it when | What you get |
+| --- | --- | --- |
+| [Domains and profiles](domains.md) | Teams or services share one repository and one configuration | One set of root files, with the content of the selected domains |
+| [`[[scopes]]`](#scopes) | Packages need their own instructions, loaded when an agent works there | Root files plus `<package>/AGENTS.md`, `<package>/CLAUDE.md`, ... and path-scoped rule files |
+| [Nested configurations](#nested-configurations) | Packages are owned separately and keep their own `.ai-rulez/` | One independent project per directory, generated with `--recursive` |
 
 <p align="center">
   <img src="assets/monorepo.gif" alt="ai-rulez generate --recursive over two nested roots, recursive validation, and a token budget check" width="820" />
 </p>
 
----
+## Example
 
-## The Core Strategy: Domain-Based Organization
-
-The most effective strategy for large projects is to organize related rules, context, and skills into domains. Each domain represents a team, service, or feature area.
-
-!!! success "The Goal: High-Relevance, Low-Token Context"
-
-    By organizing into domains and using profiles, you provide your AI assistant with only the context it needs for the task at hand. A developer working on the frontend gets frontend-specific rules and context, while the backend developer gets API patterns and database standards. This results in faster, more accurate, and more relevant AI responses.
-
-!!! info "Domains and Profiles"
-    - **Domains** organize content by team, service, or feature (`backend`, `frontend`, `mobile`)
-    - **Profiles** select which domains are included in generation (`full`, `backend-team`, etc.)
-
-A typical layout might look like this:
+A repository with shared rules, an `api` and a `web` domain, and one scope per package:
 
 ```text
-my-project/
-└── .ai-rulez/
-    ├── config.toml              # ⬅️ Main config: presets, profiles, domains
-    ├── rules/                   # ⬅️ Shared rules (all teams)
-    ├── context/                 # ⬅️ Shared context (all teams)
-    ├── skills/                  # ⬅️ Shared skills (all teams)
-    └── domains/
-        ├── backend/             # ⬅️ Backend team content
-        │   ├── rules/
-        │   ├── context/
-        │   └── skills/
-        ├── frontend/            # ⬅️ Frontend team content
-        │   ├── rules/
-        │   ├── context/
-        │   └── skills/
-        └── qa/                  # ⬅️ QA team content
-            └── rules/
+.ai-rulez/
+  config.toml
+  rules/security.md                    # every package
+  domains/api/rules/errors.md          # packages/api only
+  domains/api/rules/go-style.md        # paths: ["**/*.go"]
+  domains/web/rules/components.md      # packages/web only
+packages/api/
+packages/web/
 ```
 
-When you run `ai-rulez generate --profile backend`, it includes root content plus backend-specific content.
+```toml
+# .ai-rulez/config.toml
+version = "5.0"
+name = "acme"
+presets = ["claude", "cursor", "codex"]
 
----
+default = "api"
 
-## Best Practice: Root Configuration
+[profiles]
+api = ["api"]
+web = ["web"]
 
-Your root `.ai-rulez/` should contain high-level, cross-cutting concerns that apply to all teams.
+[[scopes]]
+path = "packages/api"
+profile = "api"                  # presets default to codex and claude
 
-!!! tip "What to put in Root Content"
+[[scopes]]
+path = "packages/web"
+profile = "web"
+presets = ["claude", "cursor"]
+```
 
-    - **System Architecture:** High-level overview of the tech stack and service interactions
-    - **Cross-Cutting Concerns:** Rules that apply everywhere (security, logging, error handling)
-    - **General Standards:** Code quality, testing, git workflow, deployment processes
-    - **Base Skills:** Shared AI skills used by all teams
+`ai-rulez generate` writes:
 
-**`.ai-rulez/config.toml`:**
+```text
+AGENTS.md                                  # root: security
+CLAUDE.md                                  # @AGENTS.md
+packages/api/AGENTS.md                     # errors, go-style
+packages/api/CLAUDE.md                     # @AGENTS.md
+packages/web/AGENTS.md                     # components
+packages/web/CLAUDE.md
+.claude/rules/packages-api/go-style.md     # paths: [packages/api/**/*.go]
+...
+```
+
+Each scope file holds only the scope's own content: tools load a nested `AGENTS.md` or `CLAUDE.md` on top of the root
+file, so repeating the root rules would load them twice.
+
+## Domains and profiles
+
+Put cross-cutting content (architecture, security, git workflow) at the root of `.ai-rulez/`, and team- or
+service-specific content in `domains/<name>/`. A profile selects domains:
 
 ```toml
-version = "5.0"
-name = "My Full-Stack Project"
-description = "Microservices project with React frontend and Go backend"
-
-presets = ["claude", "cursor", "gemini"]
 default = "full"
-gitignore = true
 
 [profiles]
 full = ["backend", "frontend", "qa"]
 backend = ["backend", "qa"]
 frontend = ["frontend", "qa"]
-qa = ["qa"]
 ```
-
-**`.ai-rulez/context/architecture.md`:**
-
-```markdown
-# System Architecture
-
-This is a microservices project with:
-
-- Go backend services
-- React web frontend
-- PostgreSQL databases
-- Kubernetes orchestration
-```
-
-**`.ai-rulez/rules/security.md`:**
-
-```markdown
----
-priority: critical
----
-
-# Security Standards
-
-- All secrets use environment variables
-- Validate all user input
-- Use HTTPS for external APIs
-```
-
-**`.ai-rulez/rules/git-workflow.md`:**
-
-```markdown
----
-priority: high
----
-
-# Git Workflow
-
-- Feature branches from main
-- Squash commits before merge
-- All PRs require code review
-```
-
-## Best Practice: Domain-Specific Content
-
-Domain directories contain specific, detailed context for that team or service.
-
-!!! tip "What to put in Domain Content"
-
-    - **Technology Patterns:** Concrete examples for frameworks and libraries
-    - **Domain Logic:** Business rules specific to that service or feature
-    - **Domain Skills:** Specialized AI prompts for that team's expertise
-
-**`.ai-rulez/domains/backend/rules/database.md`:**
-
-```markdown
----
-priority: critical
----
-
-# Database Standards
-
-- Use prepared statements to prevent SQL injection
-- Always add migrations for schema changes
-- Index foreign keys
-```
-
-**`.ai-rulez/domains/backend/rules/api-design.md`:**
-
-```markdown
----
-priority: high
----
-
-# API Design
-
-- Follow RESTful principles
-- Use consistent error responses
-- Version APIs from the start
-```
-
-**`.ai-rulez/domains/backend/context/architecture.md`:**
-
-```markdown
-# Backend Architecture
-
-## Services
-
-- API Gateway (Go, port 8000)
-- User Service (Go, port 8001)
-- Product Service (Go, port 8002)
-- Order Service (Go, port 8003)
-
-## Database
-
-- PostgreSQL 14+
-- Replication enabled
-- Automated daily backups
-```
-
-**`.ai-rulez/domains/backend/skills/database-expert/SKILL.md`:**
-
-```markdown
----
-priority: high
-description: "Database design and optimization specialist"
----
-
-# Database Expert
-
-You are an expert in PostgreSQL with knowledge of:
-
-- Schema design and normalization
-- Query optimization
-- Performance tuning
-```
-
-**`.ai-rulez/domains/frontend/rules/components.md`:**
-
-```markdown
----
-priority: high
----
-
-# Component Guidelines
-
-- One component per file
-- Use TypeScript for type safety
-- Write unit tests for all components
-- Use composition over inheritance
-```
-
-**`.ai-rulez/domains/frontend/context/design-system.md`:**
-
-```markdown
-# Design System
-
-## Color Palette
-
-- Primary: #3B82F6
-- Secondary: #8B5CF6
-- Neutral: #6B7280
-
-## Typography
-
-- Headings: Inter Bold
-- Body: Inter Regular
-```
-
-## Best Practice: Profile Selection
-
-Design profiles to match your team structure and workflows.
-
-```toml
-[profiles]
-# Full platform: all content
-full = ["backend", "frontend", "qa", "devops"]
-
-# Team-specific
-backend-team = ["backend", "qa"]
-frontend-team = ["frontend", "qa"]
-qa-team = ["qa"]
-devops-team = ["devops"]
-
-# Full-stack developers
-full-stack = ["backend", "frontend", "qa"]
-
-# CI/QA environment
-ci-cd = ["backend", "frontend", "qa", "devops"]
-```
-
-## Best Practice: For Monorepos
-
-If using multiple `.ai-rulez/` directories in a monorepo, use the `--recursive` flag:
 
 ```bash
-# Process all .ai-rulez/ directories recursively
-ai-rulez generate --recursive
+ai-rulez generate --profile backend      # root content plus backend and qa
 ```
 
-### Speed on large repositories
+See [Domains and profiles](domains.md) for the layout and [Roles](roles.md) to select content per kind of task
+rather than per team.
 
-`generate --recursive`, `generate --check --recursive` and `validate --recursive` process the roots concurrently, on at most one worker per CPU (`GOMAXPROCS`; `validate --recursive --external` checks one root at a time, because the scanners share the terminal and one baseline file). `generate --check --recursive` and `validate --recursive` report results in path order whatever the finishing order, so the output and the exit code are the same on every run. Each root prints a `[3/12] svc/.ai-rulez/config.toml (1.2s)` line on stderr as it is reported; `--quiet` and `--format json` silence it. In those two commands each root collects the warnings its work raises (refused symlinked content, `--gitignore` notices, policy warnings, configuration-load log lines) and the run prints them with that root's result, so their order is the root order on every run. `generate --recursive`, which writes files, shows a progress bar instead of the `[n/N]` lines, and a root's load warnings (for example the legacy layout notice) are logged as they happen, so they can interleave between roots.
+## Scopes
 
-A read-only recursive check (`generate --check`, `validate`) also shares one listing of the git index between the roots of a repository, instead of asking git whether each root's config is tracked once per root. The cost of a git call grows with the number of tracked files, so this matters most in repositories with tens of thousands of them. Pass `--debug` to see where time goes; `ai-rulez doctor --debug` logs the duration of each check.
+A `[[scopes]]` entry writes a second set of root files in a subdirectory, from its own profile:
 
-**Root configuration** (`/.ai-rulez/config.toml`):
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `name` | | Label used in messages |
+| `path` | required | Directory relative to the project root; no glob characters |
+| `profile` | the active profile | Profile whose domains the scope renders |
+| `presets` | `["codex", "claude"]` | Presets that write files in the scope |
 
-```toml
-version = "5.0"
-name = "Monorepo Platform"
+A domain the root output already contains is not repeated in a scope, and a scope left with nothing writes no files.
+See [`scopes`](configuration.md#scopes) for the full reference.
 
-presets = ["claude", "cursor"]
-default = "full"
+### Scoped rule files
 
-[profiles]
-full = ["shared"]
-```
-
-**Service-specific** (`/backend/.ai-rulez/config.toml`):
-
-```toml
-version = "5.0"
-name = "Backend Service"
-
-presets = ["claude"]
-default = "backend"
-
-[profiles]
-backend = ["api", "database"]
-```
-
-By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.
-
-### Plugin-authoring roots
-
-A nested root that only builds a plugin (it declares `[plugin]` or plugin definitions and no preset, for example
-`plugin/.ai-rulez/`) is built as a bundle by `generate --recursive`, as `generate --plugin` would in that root, and is
-skipped by `generate --check --recursive`; use `verify --plugin` for it. See [Plugins](plugins.md).
-
-### The shared `.gitignore` block
-
-With `gitignore = true`, a recursive run writes one managed block at the toplevel of each git repository, holding the
-patterns of the roots inside it (`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check`
-verifies each block once after the last root. A root's patterns go only to the `.gitignore` of its own repository: a
-nested directory with its own `.git` gets its own block, and a repository whose root sets `gitignore = false` never has
-its `.gitignore` written for other roots, which matters for a parent checkout holding several independent repositories. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
-root. To commit generated files instead, list them in each root's [`gitignore_exclude`](configuration.md#gitignore_exclude);
-a root applies its list to its own outputs, so a project that commits everything repeats
-`gitignore_exclude = ["**/AGENTS.md", "**/CLAUDE.md", ".claude/"]` in each config. When the block hides a file git
-tracks (a root-anchored `!.claude/rules/*.md` of yours does not reach a nested root's `svc/.claude/rules/x.md`),
-`generate` warns once for the whole recursive block and names the nested path.
-
-
----
-
-## Nested Instructions Over MCP
-
-A repository can keep `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.agents/` or `skills/` in any package, and a harness
-loads them only once it works there. A planner at the root, or an agent changing several packages, can ask the MCP
-server what applies to a path: `ai-rulez mcp --serve-skills --discover-skills` indexes the repository by scope, and
-`find_skill`, `find_context` and `load_context` take a `path` or a `scope`. The nearest scope wins a skill name, and the
-index reads the files that already exist, so it needs no `generate` run. See
-[Monorepos: scopes and nested context](mcp-server.md#monorepos-scopes-and-nested-context).
-
-On a large repository the index is kept between runs: summaries of the indexed files and the scan verdicts of clean
-content live in the user cache (`[mcp] index_cache = "user" | "repo" | "off"`), so a warm start takes about a tenth of a
-cold one, and `ai-rulez cache status` / `ai-rulez cache clear` show and drop it
-([The index cache](mcp-server.md#the-index-cache)). While the server runs, a file watcher refreshes the index when a
-nested `AGENTS.md` or `.claude/skills` directory appears, changes or goes, and the server sends
-`resources/list_changed` ([Live refresh](mcp-server.md#live-refresh-of-the-index)). An agent can also add a skill where
-a harness will load it, with `create_skill` and `scope`, behind `allow_write`
-([Writing a skill into a scope](mcp-server.md#writing-a-skill-into-a-scope)).
-
----
-
-## Scoped Rule Files
-
-For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder. Rules-folder nesting is not uniform across presets: Copilot reads its instructions at the repository root only, while Claude Code discovers `.claude/rules/*.md` recursively — a nested `<dir>/.claude/rules/` rule loads, with its `paths` resolved relative to `<dir>` — and Antigravity reads `.agents/rules/` at any directory level. Nesting in the other presets is not verified. Writing every scope's rules to the root folder gives one placement that every preset with a rules folder reads, and the scope path as a qualifier and glob prefix keeps file names unique and each rule limited to the scope's files:
+Root files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, ...) are written in the scope directory, but rule files of a scope
+go to the **root** rules folder, with the scope path as a qualifier and glob prefix. Not every tool reads a nested
+rules folder (Copilot reads only the repository root), so this is the one placement that every preset with a rules
+folder reads.
 
 | Preset | Scoped rule file for `packages/api`, rule `style` |
 | --- | --- |
@@ -343,12 +116,92 @@ For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such
 | Devin, Cline, Junie | `<rules dir>/packages-api--style.md` |
 | Antigravity | `.agents/rules/packages-api--style.md` |
 
-Globs in a scope's rules are relative to the scope root: a rule with `paths: ["**/*.go"]` gets `packages/api/**/*.go`, and a rule without globs applies to `packages/api/**`. A rule with only negated globs also gets `packages/api/**`. A glob that climbs out of the scope with `..` (also inside braces) skips that rule for the scope with a warning. `auto` and `manual` rules keep their mode. With `[rules] mode = "inline"` only path-scoped items move to the root folder; everything else stays in the scope's root file. Two files that map to the same path (names compare case-insensitively) do not fail: the source that sorts later is written as `<id>-<6 hex>` with a warning (see [File names](rules.md#file-names)). Generation fails only when two scopes produce the same qualifier (for example `packages/api` and `packages-api`); rename one of the scope paths.
-
-Emitting a scope's `claude` rules into the scope's own `<dir>/.claude/rules/` instead of the root folder is a possible future change; today the root placement is uniform, because not every preset reads a nested rules folder.
+- Globs are relative to the scope: `paths: ["**/*.go"]` becomes `packages/api/**/*.go`, and a rule without globs
+  (or with only negated globs) gets `packages/api/**`.
+- A glob that leaves the scope with `..` skips that rule for the scope, with a warning.
+- `auto` and `manual` rules keep their mode, so they are not limited to the scope; `generate` warns once per scope.
+- With `[rules] mode = "inline"`, only path-scoped items move to the root folder; the rest stays in the scope's root
+  file.
+- Two rules that map to the same file get a `-<6 hex>` suffix with a warning (see [File names](rules.md#file-names)).
+  Two scopes that produce the same qualifier (`packages/api` and `packages-api`) fail; rename one.
 
 Limitations:
 
-- Root files left in a scope (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, ...) are read by tools that load nested files. Copilot (`.github/copilot-instructions.md`) reads its instructions at the repository root only, so rules or context that stay inline in a scope's copy are never loaded; generation warns and names them. Use path-scoped rules or `[rules] mode = "split"` for that preset.
-- Domains the root run already renders are not repeated in a scope.
-- Presets without split rule files (custom provider specs with a non-split `outputs.rules`) keep a scope's rules in the scope directory; generation warns.
+- Copilot (`.github/copilot-instructions.md`) and Junie read their root instruction file at the repository root
+  only, so content left inline in a scope's copy never reaches them, and `generate` warns. Use path-scoped rules or
+  `[rules] mode = "split"` for those presets.
+- Custom presets whose rules output is not split keep a scope's rules in the scope directory, with a warning.
+
+## Nested configurations
+
+When a package keeps its own `.ai-rulez/` (or `.agents/ai-rulez.toml`), it is an independent project. Process every
+configuration below the current directory with `--recursive`:
+
+```text
+$ ai-rulez generate --recursive
+...
+✅ Total: Generated 18 file(s) from 2 config(s)
+
+$ ai-rulez generate --check --recursive
+[1/2] .ai-rulez/config.toml (47ms)
+[2/2] services/billing/.ai-rulez/config.toml (42ms)
+INFO  Generated files are up to date roots=2
+
+$ ai-rulez validate --recursive
+[2/2] services/billing/.ai-rulez/config.toml (79ms)
+validation: no findings in 2 root(s)
+```
+
+```toml
+# services/billing/.ai-rulez/config.toml
+version = "5.0"
+name = "billing"
+presets = ["claude", "gemini"]
+```
+
+- Roots are processed concurrently, one worker per CPU. `generate --check --recursive` and `validate --recursive`
+  report in path order, so output and exit code are the same on every run; `--quiet` and `--format json` silence
+  the `[n/N]` progress lines.
+- A root that authors a plugin or marketplace and configures no preset is built as a bundle, as
+  `generate --plugin` would, and skipped by `generate --check --recursive`; check it with `verify --plugin`. See
+  [Authoring plugins](plugins.md).
+- Use `--debug` to see where time goes on a large repository.
+
+### The shared `.gitignore` block
+
+With `gitignore = true`, a recursive run writes one managed block in the `.gitignore` at the top of each git
+repository, holding the patterns of every root inside it (`svc/CLAUDE.md`, `svc/.claude/skills/`, ...).
+`generate --recursive --check` verifies each block once.
+
+- A nested directory with its own `.git` gets its own block; a repository whose root sets `gitignore = false` is
+  never written for other roots.
+- The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match nested roots' files.
+- To commit generated files, list them in each root's [`gitignore_exclude`](configuration.md#gitignore_exclude),
+  for example `gitignore_exclude = ["**/AGENTS.md", "**/CLAUDE.md", ".claude/"]`. Each root applies its list to its
+  own outputs only.
+
+## Nested instructions over MCP
+
+Packages often already hold `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.agents/` or `skills/`, and a harness loads them
+only once it works in that directory. An agent planning at the root, or changing several packages, can ask the MCP
+server what applies to a path:
+
+```bash
+ai-rulez mcp --serve-skills --discover-skills
+```
+
+`find_skill`, `find_context` and `load_context` then take a `path` or `scope`; the nearest scope wins a skill name.
+The index reads the files that exist, so it needs no `generate` run. It is cached between runs
+(`[mcp] index_cache`), refreshed while the server runs, and an agent can add a skill to a scope with `create_skill`
+when `allow_write` is on. See:
+
+- [Monorepos, scopes and nested context](mcp-server.md#monorepos-scopes-and-nested-context)
+- [The index cache](mcp-server.md#the-index-cache)
+- [Live refresh of the index](mcp-server.md#live-refresh-of-the-index)
+- [Writing a skill into a scope](mcp-server.md#writing-a-skill-into-a-scope)
+
+## See also
+
+- [AGENTS.md and .agents/skills](agents-md.md#scopes-local-files-and-hashes): what a scope's `AGENTS.md` contains per
+  preset
+- [Glob-scoped rules and AGENTS.md](rules.md#glob-scoped-rules-and-agentsmd)

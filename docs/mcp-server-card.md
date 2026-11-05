@@ -1,74 +1,131 @@
 # MCP server cards
 
-ai-rulez can write an [MCP Server Card](https://modelcontextprotocol.io/seps/2127-mcp-server-cards) (SEP-2127, Final) for
-each remote MCP server of the project: a small JSON document a client reads before it connects, naming the server and the
-endpoints to connect to.
+The `mcp-server-card` emitter writes an [MCP Server Card](https://modelcontextprotocol.io/seps/2127-mcp-server-cards)
+(SEP-2127) for each remote MCP server of your project. A card is a small JSON document that a client or registry reads
+before it connects: it names the server and lists the endpoints and the headers the client must supply.
 
-!!! warning "The schema comes from an experimental extension"
-    The card schema is `schema.json` of the experimental
-    [server-card extension](https://github.com/modelcontextprotocol/experimental-ext-server-card), generated from
-    `schema.ts`. ai-rulez pins it at commit `526201b` (Apache-2.0), vendored under `tests/conformance/schemas/mcp-server-card`,
-    and the conformance tests check every card against it. The shape can change before a versioned schema is published.
+!!! warning "Experimental schema"
+    The card schema comes from the experimental
+    [server-card extension](https://github.com/modelcontextprotocol/experimental-ext-server-card) and can change before a
+    versioned schema is published. ai-rulez pins it at commit `526201b`.
 
-## Generate
-
-```bash
-ai-rulez publish --emit mcp-server-card              # dist/emit/mcp-server-card/<server>.json, in the release
-ai-rulez publish emit mcp-server-card --output-dir cards   # only the cards, without a release
-```
-
-The emitter is also available as `[[publish.emitters]] name = "mcp-server-card"`.
+## Example
 
 ```toml
+# .ai-rulez/config.toml
+version = "5.0"
+name = "acme-tools"
+
+[plugin]
+name = "acme-tools"
+version = "1.2.0"
+description = "Code review skills and an MCP server for Acme repositories."
+repository = "https://github.com/acme/acme-tools"
+runtimes = ["claude"]
+
+[plugin.author]
+name = "Acme Tooling"
+
 [[mcp_servers]]
-name = "docs"
-description = "Search the docs."
+name = "acme-search"
+description = "Search Acme documentation."
 transport = "http"
 url = "https://docs.acme.example/mcp"
 headers = { Authorization = "Bearer ${DOCS_TOKEN}" }
 ```
 
-becomes `docs.json`:
+```bash
+ai-rulez publish emit mcp-server-card --output-dir cards
+```
+
+```text
+wrote cards/acme-search.json
+```
+
+`cards/acme-search.json`:
 
 ```json
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
-  "name": "io.github.acme/docs",
-  "description": "Search the docs.",
-  "version": "1.4.0",
+  "name": "io.github.acme/acme-search",
+  "description": "Search Acme documentation.",
+  "version": "1.2.0",
   "remotes": [
     {
       "type": "streamable-http",
       "url": "https://docs.acme.example/mcp",
-      "headers": [{ "name": "Authorization", "isRequired": true, "isSecret": true }]
+      "headers": [
+        {
+          "name": "Authorization",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
     }
   ]
 }
 ```
 
+The header value (`Bearer ${DOCS_TOKEN}`) is not in the card; the card only says the client must send an
+`Authorization` header and that it is a secret.
+
+## Generate
+
+| Command | Output |
+| --- | --- |
+| `ai-rulez publish emit mcp-server-card [--output-dir DIR]` | only the cards, in `DIR` (default `emit/mcp-server-card/`); no release is built |
+| `ai-rulez publish --emit mcp-server-card` | the cards in `dist/emit/mcp-server-card/`, as part of a [release](publish.md) |
+
+Both run the [publish preflight](publish.md#pipeline) first, so the project must be committed and locked
+(`ai-rulez lock`), and its plugin bundle up to date. To run the emitter on every publish, declare it in the configuration:
+
+```toml
+[[publish.emitters]]
+name = "mcp-server-card"
+options = { namespace = "com.acme", version = "2.0.0" }   # both optional
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `namespace` | see [Name](#what-a-card-holds) | the reverse-DNS prefix of each card's `name` |
+| `version` | the `[plugin]` version, else `0.0.0` | the `version` of every card |
+
+The emitter reads the enabled servers of `[[mcp_servers]]` and `[[plugin.mcp]]`. It fails when none of them has a URL.
+
 ## What a card holds
 
-- **Remote servers only.** A card describes endpoints, not commands, so a stdio server gets no card; the emitter reports
-  each one it skips. A server with `transport = "http"` (or a `url` and no transport) is `streamable-http`; `sse` stays `sse`.
-- **No secrets.** Header values and environment values are never written. Each header becomes a required input named after
-  the header, marked `isSecret` when its name is credential-like (such as `Authorization`), it is listed as secret, or its
-  value is a `${VAR}` reference. A URL with credentials is refused. A server whose URL has a query, a fragment or an
-  unresolved `${...}` placeholder is skipped with a note. The URL path is otherwise published as written, so a key
-  carried in it is a leak: a path segment that looks like a credential (a prefix such as `sk-`, `ghp_` or `AKIA`, a
-  shape the security scan knows, or an opaque token of 32 or more letters and digits, which includes a UUID) also
-  skips the server, and the note never repeats the URL.
-- **Name.** `<namespace>/<server>`, where the server part has any character outside letters, digits, `.`, `_` and `-`
-  replaced by `-`. The namespace is the emitter option `namespace`, else the reversed `[ard]` publisher (`acme.example`
-  is `example.acme`), else derived from the repository (`owner/name` and `github.com/owner/name` are `io.github.owner`; `host/owner/name` on another host is the reversed host followed by the owner, such as `test.acme.git.acme`).
-- **Version.** The emitter option `version`, else the plugin version, else `0.0.0`.
-- **Description.** The server's description cut to the schema's 100 characters, or `MCP server <name>` without one.
+| Field | Value |
+| --- | --- |
+| `name` | `<namespace>/<server>`. Characters outside letters, digits, `.`, `_` and `-` in the server name become `-`. The namespace is the `namespace` option, else the reversed `[ard] publisher` (`acme.example` gives `example.acme`), else derived from the repository: `github.com/acme/...` gives `io.github.acme`, another host such as `git.acme.test/team/...` gives `test.acme.git.team` |
+| `description` | the server's `description`, cut to 100 characters, or `MCP server <name>` without one |
+| `version` | the `version` option, else the plugin version, else `0.0.0` |
+| `remotes[].type` | `streamable-http` for `transport = "http"` (or a `url` with no transport); `sse` for `transport = "sse"` |
+| `remotes[].url` | the server URL, as written |
+| `remotes[].headers` | one required input per header, by name. `isSecret` is set when the name looks like a credential (such as `Authorization`), or the value is a `${VAR}` placeholder, including one resolved from `.env` |
+
+`title`, `icons`, `repository`, `websiteUrl`, URL variables, `supportedProtocolVersions` and `_meta` are not generated.
+
+## Skipped servers
+
+A card is public, so the emitter never writes a value and skips servers that could leak one. Each skipped server is
+reported as a warning; the note never repeats a URL.
+
+| Server | Result |
+| --- | --- |
+| stdio (a `command`, no `url`) | skipped: a card describes remote endpoints only |
+| URL with a query string or a fragment | skipped |
+| URL with an unresolved `${...}` placeholder | skipped |
+| URL path segment that looks like a credential (a prefix such as `sk-`, `ghp_` or `AKIA`, a known token shape, or an opaque string of 32 or more letters and digits, including a UUID) | skipped |
+| URL with credentials (`https://user:pass@host`) | refused with an error |
+
+Environment values are never read into a card.
 
 ## With ARD
 
-The [ARD](ard.md) manifest lists each remote server as an `application/mcp-server-card+json` entry whose `data` is the same
-card, built by the same code; ARD additionally requires an `https` URL. Stdio servers are left out of the manifest.
+The [Agentic Resource Discovery](ard.md) manifest lists each remote server as an `application/mcp-server-card+json`
+entry whose `data` is the same card. ARD additionally requires an `https` URL.
 
-## Not generated
+## See also
 
-`title`, `icons`, `repository`, `websiteUrl`, URL variables, `supportedProtocolVersions` and `_meta` are not generated
-yet, and `validate` does not read cards back; the conformance tests are the check.
+- [Publish](publish.md): the release pipeline and the other emitters.
+- [Agentic Resource Discovery](ard.md).

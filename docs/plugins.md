@@ -1,561 +1,245 @@
-# Authoring Plugins
+# Authoring plugins
 
-`ai-rulez generate --plugin` packages your `.ai-rulez/` project into distributable
-**plugin bundles** and a **marketplace index** for the Claude, Cursor, Codex, Gemini,
-Kimi, OpenCode, Factory, and Hermes runtimes, plus opt-in Pi, Copilot, and Agent Plugins packages.
-Where the normal `generate` writes in-repo
-assistant config, `--plugin` produces installable artifacts other people can add to
-their own tools — reaching users who never run ai-rulez.
+`ai-rulez generate --plugin` packages the skills, commands, agents, MCP servers and hooks of your `.ai-rulez/` project
+as installable **plugin bundles** for Claude Code, Cursor, Codex, Gemini CLI, Kimi, OpenCode, Factory, Hermes, Pi,
+GitHub Copilot and [Agent Plugins](agent-plugins.md) clients, plus a **marketplace index**. Where plain `generate`
+configures assistants inside your repository, a plugin bundle is something other people install into their own tools,
+without running ai-rulez.
 
-Your skills, commands, and agents are the payload; the `[plugin]` block adds the
-packaging metadata.
-
-<p align="center">
-  <img src="assets/plugin-drift.gif" alt="ai-rulez verify --plugin reporting changed and extra files in a plugin bundle, then generate --plugin restoring it" width="820" />
-</p>
+The `[plugin]` block carries the packaging metadata; the content comes from your existing skills, commands and agents.
+To turn a bundle into a release archive and upload it, see [Publish](publish.md).
 
 !!! note "Authoring vs. installing"
-The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
-(authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
-arrays, which are the **consumer** side. Neither array writes an output file:
-`[[plugins]]` is still accepted but `generate` warns that it has no effect, and
-`[[marketplaces]]` is recorded only. To enable plugins, use
-`[claude.settings] manage = true` with `enable_plugins` for Claude Code and
-`[plugins."name@marketplace"] enabled = true` in `.codex/config.toml` for Codex. See
-[Consumer plugins](configuration.md#plugins) for the fields.
-
-To turn a generated bundle into a checksummed release archive and upload it to a GitHub release, see
-[Publish](publish.md) (`ai-rulez publish`).
+    This page covers the producer side: `[plugin]`, `[[plugins_authoring]]` and `[marketplace]`. To install or enable
+    someone else's plugin, see [Installed plugins](installed-plugins.md) and
+    [Enable a plugin from another marketplace](#enable-a-plugin-from-another-marketplace).
 
 ## Quick start
 
 ```toml
 # .ai-rulez/config.toml
 version = "5.0"
-name = "my-tool"
-description = "My project."
+name = "acme-tools"
 
 [plugin]
-name = "my-tool"
-description = "What my tool does."
-version = "1.0.0"
+name = "acme-tools"
+version = "1.2.0"
+description = "Code review skills and an MCP server for Acme repositories."
 license = "MIT"
-homepage = "https://github.com/me/my-tool"
-keywords = ["mcp", "tooling"]
+repository = "https://github.com/acme/acme-tools"
+keywords = ["review", "mcp"]
+runtimes = ["claude", "cursor", "codex", "gemini"]
 
 [plugin.author]
-name = "Jane Doe"
-email = "jane@example.com"
+name = "Acme Tooling"
+email = "tooling@acme.example"
 
 [[plugin.mcp]]
-name = "my-tool"
+name = "acme-docs"
 command = "${PLUGIN_ROOT}/scripts/mcp-launch.sh"
 args = ["serve"]
+
+# Codex requires an interface block
+[plugin.interface]
+display_name = "Acme Tools"
+short_description = "Acme code review."
+long_description = "Review skills and a docs MCP server for Acme repositories."
+developer_name = "Acme Tooling"
+category = "Developer Tools"
+capabilities = ["Read"]
+default_prompt = ["Review this pull request"]
 ```
+
+The project also has a skill in `.ai-rulez/skills/review-pr/` (`SKILL.md`, `index.md` and `scripts/lint.sh`, in the
+[OKF](okf.md) layout), a command `.ai-rulez/commands/triage.md`, and the
+launcher `scripts/mcp-launch.sh` at the repository root. A skill directory is bundled whole.
 
 ```bash
-ai-rulez generate --plugin          # write the bundles
-ai-rulez generate --plugin --dry-run  # preview what would be written
+ai-rulez generate --plugin --dry-run   # list what would be written
+ai-rulez generate --plugin
 ```
 
-## What gets generated
+```text
+plugin bundle:
+write-file: .claude-plugin/plugin.json
+write-file: skills/review-pr/SKILL.md
+write-file: skills/review-pr/index.md
+write-file: skills/review-pr/scripts/lint.sh
+write-file: commands/triage.md
+write-file: .cursor-plugin/plugin.json
+write-file: .cursor-plugin/skills/review-pr/SKILL.md
+write-file: .cursor-plugin/skills/review-pr/index.md
+write-file: .cursor-plugin/skills/review-pr/scripts/lint.sh
+write-file: .cursor-plugin/commands/triage.md
+write-file: .codex-plugin/plugin.json
+write-file: .mcp.json
+write-file: gemini-extension.json
+write-file: .claude-plugin/marketplace.json
+write-file: .ai-rulez-generated.json
+```
 
-| Runtime  | Manifest                                                | Notes                                                            |
-| -------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
-| Claude   | `.claude-plugin/plugin.json`                            | skills/commands/agents auto-discovered from top-level dirs       |
-| Cursor   | `.cursor-plugin/plugin.json` (+ `hooks/hooks.json`)     | bundles its own `skills/`, `commands/`                           |
-| Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`)             | MCP referenced via external file; rich `interface` block         |
-| Gemini   | `gemini-extension.json`                                 | inline MCP + hooks, context file reference                       |
-| Kimi     | `kimi.plugin.json`                                      | `sessionStart`, `skillInstructions`, `interface`                 |
-| OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`, `.opencode/ai-rulez-content.js`, bundled `.opencode/{skills,commands,agents}/`) | OpenCode v2 `{ id, setup }` adapter; copies the authored entrypoint or emits a scaffold that registers the bundled content |
-| Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
-| Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
-| Pi | `package.json`, `.pi/skills/`, `.pi/prompts/` | skills and rendered prompt templates; opt-in |
-| Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
-| Copilot  | `plugin.json`, `skills/`, `mcp.json`, `com.github.copilot/agents/<name>.agent.md`, `.github/plugin/marketplace.json` | GitHub Copilot plugin in the Agent Plugins 1.0 layout; opt-in |
+A single-plugin repository is its own bundle: the files land at the repository root, and the marketplace index lists
+the plugin with `"source": "./"`. `.claude-plugin/plugin.json`:
 
-The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside when `claude` is
-among the bundle's runtimes. (A monorepo root also emits a Codex index at
-`.agents/plugins/marketplace.json`; see the monorepo section.) The `copilot` runtime writes its own
-index, and the Codex and Cursor indexes for a single-plugin repository are opt-in, see below.
+```json
+{
+  "name": "acme-tools",
+  "description": "Code review skills and an MCP server for Acme repositories.",
+  "version": "1.2.0",
+  "author": {
+    "name": "Acme Tooling",
+    "email": "tooling@acme.example"
+  },
+  "repository": "https://github.com/acme/acme-tools",
+  "license": "MIT",
+  "keywords": ["review", "mcp"],
+  "mcpServers": {
+    "acme-docs": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launch.sh",
+      "args": ["serve"]
+    }
+  }
+}
+```
 
-### Runtime coverage
+The same server is `./scripts/mcp-launch.sh` in `.mcp.json` (Codex) and `.cursor-plugin/plugin.json`, and
+`${extensionPath}/scripts/mcp-launch.sh` in `gemini-extension.json`.
 
-What each runtime bundles, checked against the vendors' documentation on 2026-10-04. A dash means
-ai-rulez does not emit it: either the runtime has no such component, or the vendor documents no file
-format for it (ai-rulez does not guess formats).
+Commit the bundle and keep it in sync:
 
-| Runtime | Skills | Commands | Agents | Hooks | MCP | Marketplace index | Vendor documentation |
-| ------- | :----: | :------: | :----: | :---: | :-: | :---------------: | -------------------- |
-| Claude | yes | yes | yes | yes | yes | yes | [plugins](https://code.claude.com/docs/en/plugins), [marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) |
-| Cursor | yes | yes | - | yes | manifest | opt-in (`[plugin.cursor] marketplace`, `[marketplace] cursor_index`) | [plugins](https://cursor.com/docs/plugins), [reference](https://cursor.com/docs/reference/plugins) |
-| Codex | yes | - | - | - | yes | monorepo roots; single plugin opt-in (`[plugin.codex] marketplace`) | [build plugins](https://developers.openai.com/codex/plugins/build) |
-| Copilot | yes | - | yes | - | yes | yes (`.github/plugin/marketplace.json`) | [CLI plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference) |
-| Gemini | - | opt-in (`[plugin.gemini] commands`) | - | yes | yes | - | [extension reference](https://geminicli.com/docs/extensions/reference/), [custom commands](https://geminicli.com/docs/cli/custom-commands/) |
-| Pi | yes | prompt templates | - | - | - | - | [packages](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) |
-| Agent Plugins | yes | - | - | - | yes | - | [agent-plugins.org](https://agent-plugins.org) |
+```bash
+ai-rulez verify --plugin      # exit 2 when a bundle file was edited, removed or added by hand
+ai-rulez validate             # manifest, root-component and version checks
+```
 
-Kimi, OpenCode, Factory and Hermes are unchanged. Known gaps, all because the format is undocumented
-or outside the runtime: Codex and Copilot commands and hooks, Copilot rules and LSP, Gemini agents,
-policies and `hooks/hooks.json` (hooks are inlined in `gemini-extension.json`), Cursor
-agents/rules.
+The root-component (`AR9T0`) and version-drift (`AR961`) findings are warnings; `validate --strict` makes them fail.
 
-### Codex: root `plugin.json`
+```text
+Drifted plugin outputs:
+  changed      .claude-plugin/plugin.json
+  extra        skills/review-pr/notes.md
 
-Codex documents a root `plugin.json` in the Agent Plugins format as the preferred manifest for new
-packages and keeps `.codex-plugin/plugin.json` as a compatibility fallback. The Codex `interface`
-block moves under `extensions.com.openai`, skills live in the fixed `skills/` directory and MCP servers
-in a root `mcp.json` whose entries need a transport `type` (a renamed `.mcp.json` is not enough).
-The default stays the legacy layout so existing bundles do not change:
+Error: generated plugin output is stale
+
+Hint: Run ai-rulez generate --plugin and commit the regenerated output
+```
+
+Users then add the repository as a marketplace or extension in their tool (for Claude Code,
+`claude plugin marketplace add acme/acme-tools`; Gemini CLI, `gemini extensions install <url>`; for Cursor and Codex,
+see the vendor's plugin documentation linked from [Supported Harnesses](harnesses.md)). Another ai-rulez project can
+install it with [Installed plugins](installed-plugins.md).
+
+## Runtimes
+
+`runtimes` selects the bundles. Without it, the eight default runtimes are generated; `pi`, `copilot` and
+`agent-plugins` are opt-in and must be listed.
+
+| Runtime | Default | Manifest | Bundles |
+| --- | --- | --- | --- |
+| `claude` | yes | `.claude-plugin/plugin.json` | skills, commands, agents, hooks, MCP, statusline; writes the marketplace index |
+| `cursor` | yes | `.cursor-plugin/plugin.json` | skills, commands, hooks (`.cursor-plugin/hooks/hooks.json`), MCP |
+| `codex` | yes | `.codex-plugin/plugin.json` and `.mcp.json`, or a root `plugin.json` ([layouts](#codex)) | skills, MCP |
+| `gemini` | yes | `gemini-extension.json` | MCP and hooks inline; commands opt-in |
+| `kimi` | yes | `kimi.plugin.json` | skills, MCP, interface |
+| `opencode` | yes | `.opencode/plugins/<name>.js` and `package.json` | skills, commands, agents, MCP ([adapter](#opencode)) |
+| `factory` | yes | `.factory-plugin/plugin.json` | metadata only |
+| `hermes` | yes | `.hermes/plugins/<name>/` and `.hermes/package/` | skills, commands, agents ([adapter](#hermes)) |
+| `pi` | opt-in | `package.json`, `.pi/skills/`, `.pi/prompts/` | skills, commands as prompt templates |
+| `copilot` | opt-in | root `plugin.json`, `mcp.json`, `.github/plugin/marketplace.json` | skills, agents, MCP |
+| `agent-plugins` | opt-in | root `plugin.json`, `mcp.json` | skills, MCP ([Agent Plugins](agent-plugins.md)) |
+
+A component a runtime has no documented format for is not generated, and `generate` warns when you configured one
+(for example commands or hooks for `copilot`, or MCP servers for `pi`).
+
+Skills and their supporting files are copied verbatim. Commands are converted where the runtime needs another format
+(Gemini TOML, Pi prompt templates). Content written in [Open Knowledge Format](okf.md) gets native frontmatter in the
+bundle: `type`, `title` and `x-ai-rulez` are removed and the entries of `x-ai-rulez.metadata` move to the top level.
+
+## Plugin metadata
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `name` | string | required | Lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`. Becomes a directory and file name in every runtime. `agent-plugins`, `copilot` and the Codex root layout also require at most 64 characters, an alphanumeric last character, and no `_` or `--` |
+| `description` | string | required | One-line description |
+| `version` | string | required | A semantic version. Clients that install from git keep their cached copy until it changes, see [Version drift](#version-drift) |
+| `version_from` | string | none | `package.json`, `pyproject.toml` (`project.version`) or `Cargo.toml` (`package.version`) to read the version from; excludes `version` |
+| `display_name` | string | none | Human-readable name |
+| `homepage`, `repository`, `license` | string | none | Copied into the manifests |
+| `category`, `keywords`, `tags` | string, string list | none | Marketplace metadata |
+| `brand_color`, `icon`, `logo` | string | none | UI metadata |
+| `runtimes` | string list | the eight defaults | Bundles to generate |
+| `content_root` | string | the config directory | Project-relative directory holding plugin-only `skills/`, `commands/` and `agents/`, to keep the shipped payload apart from your repository's own content |
+| `include_domains` | string list | none | Domains (names or globs) whose content is bundled too, see [Domain content](#domain-content-and-per-domain-plugins) |
+| `include_evals` | bool | `false` | Bundle each skill's `evals/` and the project's `.ai-rulez/evals/`, see [Evals](evals.md) |
+| `include` | string list | none | Globs of extra files for the Agent Plugins package, see [Bundling files](agent-plugins.md#bundling-files) |
+| `shared_resources` | string list | none | Directories copied into every bundled skill, see [Shared resources](#shared-resources-across-skills) |
+| `provenance_headers` | bool | `true` | Write the generated-file header into bundled Markdown, JS, TS and Python files |
+| `skills_dir_owned` | bool | `false` | Treat the bundle's skills directory as fully generated, see [Drift](#drift-and-cleanup) |
+| `spec` | string | `1.0.0` | Agent Plugins version (`1.0.0` or `1.1.0`) for `agent-plugins`, `copilot` and the Codex root layout |
+| `package_manager` | string | none | `packageManager` of the OpenCode and Pi `package.json`, such as `pnpm@9.15.0` |
+| `opencode_dependency` | string | `^2.0.26` | Version range of the `@opencode/plugin` dependency |
+| `opencode_dependency_enabled` | bool | `true` | `false` drops the `@opencode/plugin` dependency |
+
+| Table | Keys |
+| --- | --- |
+| `[plugin.author]` | `name`, `email`, `url`. `name` is required for the Claude marketplace index (its `owner`) and for Codex |
+| `[[plugin.mcp]]` | `name`, `command`, `args`, `env`, `transport`, `url`, see [MCP servers](#mcp-servers) |
+| `[[plugin.hooks]]` | `event`, `matcher`, `[[plugin.hooks.hooks]]`, see [Hooks](#hooks) |
+| `[plugin.statusline]` | `script`, `command`; Claude Code only |
+| `[plugin.interface]` | the Codex and Kimi UI block, see [Codex](#codex) |
+| `[plugin.codex]`, `[plugin.cursor]`, `[plugin.gemini]`, `[plugin.kimi]`, `[plugin.hermes]`, `[plugin.pi]` | see [Runtime-specific settings](#runtime-specific-settings) |
+
+A version bump can live in one place with `version_from`:
 
 ```toml
-[plugin.codex]
-manifest = "root"      # legacy (default) | root | both
-marketplace = true     # also write .agents/plugins/marketplace.json for this single-plugin repo
+[plugin]
+name = "acme-tools"
+description = "Code review skills and an MCP server for Acme repositories."
+version_from = "package.json"
 ```
 
-`both` writes the two manifests side by side. The root layout needs an Agent Plugins plugin name
-(lowercase alphanumerics, `-` and `.`). When `codex` and `agent-plugins` (or `copilot`) are bundled
-together they share one root `plugin.json`; the Codex overlay is only written when the `codex` runtime
-is part of the bundle. The single-plugin Codex index uses `source = { source = "local", path = "./" }`.
-Codex documents that a marketplace may list one plugin and that paths start with `./` and stay inside
-the marketplace root; `./` itself as the plugin path was not exercised against a running Codex.
-With `source = "agents"` the `.agents` directory belongs to the project: `generate --plugin` skips
-`.agents/plugins/marketplace.json` with a warning instead of writing it (see
-[.agents as a source](agents-source.md#what-generate-writes)).
+The resolved version replaces `version` in every manifest and in `ai-rulez.lock`, so a bump in `package.json` shows as
+drift until you regenerate. `validate` reports a missing file or version key.
 
-### Copilot
+## MCP servers
 
-`runtimes = ["copilot"]` (opt-in) emits the Agent Plugins 1.0 layout that Copilot CLI and the cloud
-agent read: a root `plugin.json` with the standard's `$schema`, `skills/<name>/`, a root `mcp.json`,
-custom agents at `com.github.copilot/agents/<name>.agent.md` (copied verbatim) and a single-plugin
-marketplace at `.github/plugin/marketplace.json` (`name`, `owner`, `metadata`, `plugins[]`, which
-Copilot searches after a root `marketplace.json`). Copilot lists `com.github.copilot/commands/` and
-`com.github.copilot/hooks/hooks.json` but documents neither file format, so commands and hooks are not
-emitted and a warning says so. Enabling plugins (`enabledPlugins` in `.github/copilot/settings.json`) is
-not generated: the vendor page does not show the settings syntax.
+`[[plugin.mcp]]` declares the plugin's MCP servers. When the plugin declares none, the project's enabled
+`[[mcp_servers]]` are bundled instead.
 
-### Cursor marketplace
+Write launch paths once with `${PLUGIN_ROOT}`; each runtime gets its own form:
 
-Cursor documents `.cursor-plugin/marketplace.json` for multi-plugin repositories (`name`, `owner.name`,
-optional `metadata`, `plugins[]` with `name` and a relative `source` directory). It is opt-in:
-`[plugin.cursor] marketplace = true` for a single-plugin repository (`source` is `.`), and
-`[marketplace] cursor_index = true` next to the Claude index for members and domain plugins.
+| Runtime | `${PLUGIN_ROOT}/scripts/run.sh` becomes |
+| --- | --- |
+| Claude | `${CLAUDE_PLUGIN_ROOT}/scripts/run.sh` |
+| Gemini | `${extensionPath}/scripts/run.sh` |
+| Cursor, Codex, Kimi, Agent Plugins, Copilot | `./scripts/run.sh` |
+| OpenCode | `${PLUGIN_ROOT}/scripts/run.sh`, expanded by the adapter at load time |
 
-### Gemini extension settings
+- Remote servers use `transport = "http"` (or `"sse"`) and a `url`.
+- Header values are never bundled; `generate` warns when a server has `headers`.
+- A disabled server is carried as `disabled: true` into the OpenCode bundle; the other runtimes have no such flag, so
+  it is bundled enabled and `generate` warns.
+- Files the command points at must exist in the installed plugin. In a single-plugin repository the plugin root is the
+  repository root, so keep the launcher there (`scripts/mcp-launch.sh` above).
 
-Gemini filters sensitive host environment variables before launching extensions. Declare the
-values your MCP server needs as settings; Gemini supplies the values at runtime and stores
-`sensitive = true` values in its keychain. Never put credential values or defaults in source.
+For Gemini, declare the environment variables a server needs as extension settings; Gemini prompts for them and
+stores `sensitive` values in its keychain:
 
 ```toml
 [[plugin.gemini.settings]]
-name = "Provider key"
-description = "Credential for the provider used by this MCP server."
-env_var = "OPENAI_API_KEY"
+name = "Docs token"
+description = "Token for the Acme docs server."
+env_var = "ACME_DOCS_TOKEN"
 sensitive = true
 ```
 
-The generated manifest uses native `settings[].envVar` keys. Names and environment variables
-must be unique; environment variable names use letters, digits and underscores. Gemini's
-`extensions install ./plugin --skip-settings` skips installation prompts. Configure the chosen
-provider later with `gemini extensions config <plugin-name>`, before making provider requests.
-There is no authored credential value, default, or required flag.
-See the [Gemini extension settings reference](https://geminicli.com/docs/extensions/reference/#extension-settings).
+Setting names and environment variables must be unique; environment variable names use letters, digits and
+underscores.
 
-### Gemini commands
+## Hooks
 
-`[plugin.gemini] commands = true` also bundles each command as `commands/<name>.toml` (a required
-`prompt`, an optional `description`); the Claude-style `$ARGUMENTS` becomes Gemini's `{{args}}`. Shell
-(`!{...}`) and file (`@{...}`) injections are not translated.
-
-Skills and their supporting assets are copied **verbatim** from your source. Commands are converted
-where the runtime needs another format, including Gemini commands and Pi prompt templates. The one exception
-is content written in Open Knowledge Format (frontmatter with `type:` and an `x-ai-rulez:` block): in every
-runtime's bundle the `SKILL.md`, command or agent file gets native frontmatter instead, with `type`, `title`
-and `x-ai-rulez` removed and the entries of `x-ai-rulez.metadata` (`name`, `description`, `license`, ...) at the
-top level, so the host can read them. The body and your source file are not changed.
-
-### Pi packages
-
-Pi is opt-in; the eight default plugin runtimes are unchanged. Add it explicitly to your plugin:
-
-```toml
-[plugin]
-name = "my-tool"
-version = "1.0.0"
-description = "Skills and prompts for my tool."
-repository = "https://github.com/acme/my-tool"
-runtimes = ["pi"]
-```
-
-```bash
-ai-rulez generate --plugin
-ai-rulez verify --plugin
-pi install git:github.com/acme/my-tool
-```
-
-The package contains `.pi/skills/<name>/` with each skill's supporting assets and
-`.pi/prompts/<name>.md` rendered from authored commands, preserving supported Pi front matter.
-Its root `package.json` lists each generated skill directory and prompt file explicitly and includes
-the `pi-package` keyword. The npm `files` list includes the generated payload, so unrelated contributor
-files under `.pi/` or `.opencode/` are not bundled or loaded as Pi resources. For a
-GitHub repository, the generated name is `@<owner>/pi-<plugin-name>` (`@acme/pi-my-tool` above).
-Commit the generated bundle before installing it through Git; local packages also need no registry.
-
-The layout is configurable through `[plugin.pi]`:
-
-```toml
-[plugin.pi]
-skills_dir = "skills"     # default: .pi/skills
-package_json = "merge"    # default: generate
-package_name = "ghost-library-skills"  # default: @<owner>/pi-<plugin-name>
-skills_entry = "directory"             # default: each
-```
-
-`skills_dir` writes each bundled skill once, into that tree, and points `pi.skills` at it. Set it to
-`skills` when the repository already ships a root `skills/` tree for Claude, Codex and OpenCode: every
-runtime then writes the same copy instead of Pi carrying a second one under `.pi/skills/`. Prompt
-templates stay under `.pi/prompts/` either way.
-
-`package_json = "merge"` updates only the root `package.json` keys ai-rulez owns — `name`, `version`,
-`description`, `author`, `repository`, `keywords`, `pi` and `files` — and keeps every other key, so a
-repository whose `package.json` also holds `devDependencies`, `scripts` or `packageManager` does not
-lose them. An authored `name` is kept unless `package_name` is set. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
-the whole file as before.
-
-In a combined Pi and OpenCode bundle the OpenCode runtime also owns `type`, `main`, `exports`, `dependencies`
-(its `@opencode/plugin` entry is added to the authored ones), `homepage`, `license` and `packageManager`, and
-refreshes them on every run; `ai-rulez verify --plugin` checks them too. It overwrites nothing else: if the two
-runtimes render a different `name`, `version`, `description` or any other shared key, generation fails with
-"runtime npm manifests disagree".
-
-`package_name` sets the npm `name` explicitly (a lowercase npm name, scoped or not) instead of
-`@<owner>/pi-<plugin-name>`; it also wins in a combined Pi and OpenCode package.
-
-`skills_entry = "directory"` writes the skills directory once: `pi.skills` becomes `["./skills"]`
-(Pi resolves the directory to the skills inside it) and `files` gets `"skills/"` instead of every
-skill file, so adding a skill does not change `package.json`. The default, `each`, lists every skill.
-`files` lists `README.md` and `assets/` only when they exist in the bundle.
-
-With `runtimes = ["pi", "opencode"]`, both runtimes share one `package.json`: its name remains
-`@<owner>/opencode-<plugin-name>`, OpenCode's entry points and dependencies are retained, and Pi's
-resource metadata is added. Runtime order does not change the output.
-
-The Pi plugin generator bundles skills and prompts only. It does not generate extensions, MCP
-integration, agents, hooks, or statuslines; configured unsupported components produce a warning.
-The Pi project preset is separate and does not create an installable package.
-
-For npm distribution, the [publisher](publish.md#npm) uses `<configured-scope>/<plugin-name>`,
-replacing the generated name. For example:
-
-```bash
-ai-rulez publish --to npm --npm-scope @acme --public --dry-run
-# After reviewing the plan and completing publishing prerequisites:
-ai-rulez publish --to npm --npm-scope @acme --public --execute --yes
-pi install npm:@acme/my-tool
-```
-
-Publication to npm with `pi-package` enables discovery in the [Pi package catalog](https://pi.dev/packages).
-Git installation needs no registry. No Pi marketplace JSON is generated; Pi-only multi-plugin
-publishing is not supported by the current publisher, which requires a Claude marketplace index.
-
-### Symlinks in a skill directory
-
-A skill directory is copied whole into the bundle, and a symlink inside it follows the same policy as plain
-`generate` (see [Symlinks in content](configuration.md#symlinks-in-content)): a link whose resolved target is
-inside the project is followed and its content copied, with the target's mode; any other link is skipped with a
-warning that names the link and the reason. A link is never dropped silently.
-
-### Shared resources across skills
-
-Skills in one plugin often share the same reference docs and templates. `[plugin] shared_resources`
-lists directories (relative to the plugin's content root — `[plugin] content_root` when set, otherwise
-the config directory) that are copied into **every** bundled skill, for every runtime:
-
-```toml
-[plugin]
-name = "acme.tools"
-version = "1.0.0"
-description = "Acme review tooling."
-shared_resources = ["references", "templates"]
-```
-
-Each directory lands inside the skill at `skills/<name>/references/…`, so a skill still works once it
-is installed on its own. The copies are recorded in `.ai-rulez-generated.json` like the skill's own
-files, so `verify --plugin` reports a changed or missing copy as drift. A relative link from `SKILL.md`
-that climbs out of the skill to the shared directory (`../../references/x.md`) is rewritten to the copy
-(`references/x.md`); a link that resolves inside the skill already (`references/x.md`) is left alone.
-A name clash between a shared file and a file the skill already has is an error, not a silent
-overwrite.
-
-### OpenCode adapter
-
-The adapter targets OpenCode v2, whose plugin API differs from v1: a plugin default-exports
-a definition `{ id, setup(ctx) }` (`Plugin.define` from `@opencode/plugin` is the identity
-helper for it), and v1 plugins (an exported function that returns hooks) do not run. Put
-OpenCode-specific tools and hooks in `.ai-rulez/opencode/index.js`. The generator copies that
-source verbatim to `.opencode/plugins/<plugin-name>.js`, generates the `package.json` metadata
-(`main` and `exports` point at that file; it depends on `@opencode/plugin`), and bundles the
-plugin's skills, commands, and agents under `.opencode/`.
-
-OpenCode only scans its own config directories, so it never discovers the `.opencode/skills`,
-`commands` and `agents` of an npm-installed plugin. The generated entrypoint therefore calls
-`registerBundledContent(ctx)` from the generated `.opencode/ai-rulez-content.js`, which
-registers the bundled content through the skill, command, agent and MCP transforms. The helper
-reads `.opencode/ai-rulez-bundle.json`, which holds the plugin's MCP servers and the agent
-settings resolved at generation time.
-
-- **MCP servers** become OpenCode `local` (command array plus `environment`) or `remote`
-  (`url`) servers. At runtime `${PLUGIN_ROOT}` expands to the installed plugin directory and
-  `${NAME}` to `process.env.NAME` (empty when unset), so no install path or secret is written
-  into the package. Remote `headers` are not bundled, as for the other runtimes. Any top-level
-  source path an MCP server references as `${PLUGIN_ROOT}/<path>` (command, args, env or url),
-  such as `scripts/` for `${PLUGIN_ROOT}/scripts/run.sh`, is added to the generated
-  `package.json` `files` list when it exists in the plugin source; a missing one is warned
-  about and not listed. The other runtimes publish the repository tree or have no file list, so
-  they have no equivalent gap.
-- **Agents** take their model through the same resolution as the `opencode` preset
-  (`opencode_model`, then `defaults.model_by_preset.opencode`, then `model`). A
-  `provider/model` id passes through, and `#variant` (or the effort tier) becomes the model
-  variant. A bare alias such as `sonnet` is omitted with one warning so the agent inherits the
-  session model. `description`, `mode` (default `all`), `hidden`, `temperature` and `top_p` are
-  mapped too; `tools` and `permission` are not carried by ai-rulez agents and so are not mapped. If you supply
-your own `.ai-rulez/opencode/index.js` and the plugin bundles content, call it from `setup`:
-
-```js
-import { registerBundledContent } from "../ai-rulez-content.js";
-
-export default {
-  id: "my-plugin",
-  async setup(ctx) {
-    await registerBundledContent(ctx);
-  },
-};
-```
-
-The generated entrypoint does not import `@opencode/plugin` at runtime: OpenCode installs no
-dependencies for local `.opencode/plugins/` files, so the import would fail to resolve. Keep
-shared MCP settings in their normal `.ai-rulez` sources; the `opencode` preset writes them to
-`opencode.json`.
-
-By default, the npm manifest declares `@opencode/plugin`; `opencode_dependency` selects its
-version range. For an adapter that does not import or otherwise need that SDK, explicitly disable
-its automatic dependency:
-
-```toml
-[plugin]
-opencode_dependency_enabled = false
-```
-
-Omitting the switch or setting it to `true` preserves the default dependency and any configured
-range. Disabling it does not inspect or rewrite JavaScript and does not remove dependencies
-from an authored Pi `package_json = "merge"` manifest. A former automatic SDK entry is pruned
-only when the previous provenance sidecar owns dependencies and the managed metadata is
-unchanged. Edited or unowned manifests keep their SDK entry. A version edit also changes that
-ownership hash: disable the dependency and regenerate before changing the package version
-when migrating an existing merged package.
-
-Keep the dependency enabled when the adapter requires the SDK, and test npm installation and
-loading in the actual OpenCode host before publishing an SDK-independent adapter.
-
-When the source entrypoint is absent, generation emits a documented module that only registers
-the bundled content. It keeps the plugin loadable and tells you where to create the user-owned
-source; it does not guess tool schemas, subprocess arguments, or business logic.
-
-#### Using the generated plugin
-
-Checked against OpenCode 2.0.20 with a local server. These routes load the plugin; `<name>` is the
-plugin name and `<bundle>` the directory `generate --plugin` wrote into.
-
-1. **Copy it into a project.** OpenCode loads every plugin in a project's `.opencode/plugins/`.
-   From `<bundle>`, copy into the consuming project:
-   `.opencode/plugins/<name>.js`, `.opencode/ai-rulez-content.js`, `.opencode/ai-rulez-bundle.json`,
-   `.opencode/skills/`, `.opencode/commands/` and `.opencode/agents/` (keeping those paths), plus every
-   top-level directory an MCP server reaches through `${PLUGIN_ROOT}` (for example `scripts/`) at the
-   project root: `${PLUGIN_ROOT}` is the parent of the `.opencode` directory that holds
-   `ai-rulez-content.js`. Restart OpenCode or reload its configuration.
-2. **Point `opencode.json` at a directory.** Add `"plugins": ["<dir>"]` (an absolute path, a path
-   starting `./` or `../`, or a `file://` URL) where `<dir>` is a copy of `<bundle>` that also has
-   an `index.js` at its root:
-
-   ```js
-   export { default } from "./.opencode/plugins/<name>.js";
-   ```
-
-   OpenCode loads the directory's root `index.js`. It ignores `main` and `exports` of the generated
-   `package.json`, so a bare `<bundle>` is not loaded, and a path to a file is refused
-   (`configured plugin path must be a directory`).
-3. **Put it in a project as a directory plugin.** Copy the bundle's files as in route 1, but
-   save the entrypoint as `.opencode/plugins/<name>/index.js` and change its helper import to
-   `../../ai-rulez-content.js`.
-
-The generated `package.json` (`main`, `exports`, `files`) exists for publishing to npm. Installing
-from npm was not exercised for this release, so follow the OpenCode plugin documentation for that route.
-
-Two properties of the bundled MCP servers are worth knowing before you install a third-party plugin:
-
-- `${NAME}` in a server's command, arguments, environment or URL is expanded from the OpenCode
-  process environment when the plugin loads. A plugin runs inside that process and can read all of its
-  environment variables, so install only plugins you trust and do not treat `${VAR}` as a boundary.
-- Remote `headers` are never bundled (generation warns), and a project server with `enabled = false`
-  is carried into the OpenCode bundle as `disabled: true`. The other runtimes have no such flag in
-  their bundles, so a disabled server is bundled enabled for them and generation warns about it.
-
-#### v1 plugin warning and migration
-
-OpenCode v2 does not run v1 plugins, and it only logs the refusal to its server log
-(`Plugin must export a default definition with an id and an effect or setup function`). ai-rulez
-therefore warns, once per file and without failing generation, when it finds a v1-shaped plugin:
-
-- the authored `.ai-rulez/opencode/index.js` while generating a plugin bundle;
-- any file in the project's `.opencode/plugin/` or `.opencode/plugins/` directories, and any
-  local path in the `plugin`/`plugins` array of `opencode.json(c)` (npm package names are never
-  fetched), while generating the `opencode` preset.
-
-A file counts as v1 when it default-exports a function, exports an `async` function or arrow
-function, or imports the v1 `@opencode-ai/plugin` package, and has no v2 marker
-(`Plugin.define(...)`, or an `id` property, written with any value or shorthand, together with
-`setup`/`effect`). Comments are removed before the check, but text inside string literals is kept,
-so a glob such as `"src/**/*.js"` does not hide the code after it. To migrate, rename `plugin`
-to `plugins` in the config, move the file to `.opencode/plugins/`, and replace the exported
-function with a default export `{ id, async setup(ctx) { ... } }` that registers hooks and
-transforms on `ctx`. See the official
-[V1 plugin migration guide](https://opencode.ai/v2/docs/build/plugins/migrate-v1) and the
-[plugins guide](https://opencode.ai/v2/docs/build/plugins).
-
-The `opencode` preset itself is separate from plugin authoring. It emits `AGENTS.md`,
-`.opencode/skills/`, and `.opencode/agents/`, and — only when `[[mcp_servers]]` are configured — a
-native `opencode.json` owning `$schema` and the `mcp.<name>` entries, merged so any other keys in a
-hand-authored `opencode.json` are preserved.
-
-### Hermes adapter
-
-Put Hermes-specific registrations in `.ai-rulez/hermes/index.py`. The generator
-copies it to `.hermes/plugins/<plugin-name>/hermes.py`, writes a compatible
-`__init__.py` plus `plugin.yaml`, and
-bundles the plugin's skills, commands, and agents. The same adapter and content are
-packaged under `.hermes/package/src/<name>_hermes_plugin/`; its generated
-`pyproject.toml` publishes as `<name>-hermes-plugin`. If the source is absent, it emits
-a documented no-op `register(ctx)` scaffold. Hermes project plugins are trusted code
-and require `HERMES_ENABLE_PROJECT_PLUGINS=true`.
-
-To reuse another canonical adapter instead of `.ai-rulez/hermes/index.py`, configure
-a safe project-relative source:
-
-```toml
-[plugin.hermes]
-source = "plugin/hermes.py"
-```
-
-Declare Python dependencies in the same authoring block:
-
-```toml
-[plugin.hermes]
-dependencies = ["example-tool[cli]", "httpx>=0.28; python_version >= '3.11'"]
-```
-
-Each entry must be a valid PEP 508 requirement that names a package from an index.
-Package extras, version constraints, and environment markers are supported.
-Direct references (`name @ url`) are rejected, because Hermes does not install them
-for directory plugins. Invalid requirements are rejected during configuration validation,
-before generation.
-The generator preserves the authored strings in the wheel's `project.dependencies`
-and in `python_dependencies` in both Hermes plugin manifests.
-An omitted or empty list leaves the outputs dependency-free.
-
-Installing the built wheel lets the Python installer resolve these dependencies.
-For a directory plugin, Hermes handles the manifest's dependency declaration through
-its normal dependency-consent flow. Neither generation nor importing the adapter
-installs packages. A Python dependency does not install browser binaries, credentials,
-or other external prerequisites; document those separately.
-
-By default, plugin payload comes from the resolved ai-rulez content tree. To keep
-distributable content separate from developer governance, set a safe project-relative
-content root containing `skills/`, `commands/`, and `agents/`:
-
-```toml
-[plugin]
-content_root = "plugin"
-```
-
-### Generated-file provenance
-
-Generated JavaScript, TypeScript, Python, and Markdown files include an ai-rulez warning plus
-deterministic BLAKE3 `Content-Hash` value (and `Source-Hash` with `[header] hashes = "full"`). Markdown headers follow
-YAML frontmatter so skill discovery remains valid.
-
-Set `[plugin] provenance_headers = false` to write those files byte-identical to their sources
-instead, the way `[plugin] include` files are already copied. The `.ai-rulez-generated.json`
-sidecar still records every output's content hash, so `verify --plugin`, obsolete pruning and
-`publish --emit agent-plugins` keep working. A header-less file ai-rulez did not record stays
-treated as hand-written.
-
-Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
-sidecar without modifying or regenerating the package.
-
-The sidecar also records whether each output is executable (`"mode": "0755"`, else `"0644"`), and `verify --plugin` reports a
-file whose executable bit differs as drift of kind `mode`, so a bundled script that lost it (a zip round trip,
-`core.fileMode=false`) is caught before it ships and fails with "permission denied". A sidecar written by an
-earlier release records no modes; it still verifies, and the next `generate --plugin` adds them. A sidecar written on
-Windows records no modes either, because its file systems have no executable bit; regenerate on Linux or macOS if
-the bundle ships scripts.
-
-Reusable hook catalogs can run plugin checks across mixed repositories with
-`ai-rulez generate --recursive --plugin --if-configured` and
-`ai-rulez verify --recursive --plugin --if-configured`. Both commands exit successfully
-without doing work when the configuration has neither a producer `[plugin]`
-block nor a `[marketplace]` block with members.
-
-Recursive commands treat a marketplace root as one producer. The root processes
-its members and aggregate indexes; member configs are not processed again in
-parallel. Standalone `[plugin]` producers are still processed individually.
-Consumer-only `[[plugins]]` and `[[marketplaces]]` declarations are skipped.
-`--if-configured` does not suppress generation or verification errors.
-
-A plugin-authoring root is one that authors a plugin or marketplace (a `[plugin]` block, `[[plugins_authoring]]`,
-`[[marketplaces_authoring]]` or a marketplace with members, inline or from a `config.<name>.toml` layer) and configures
-no preset. It exists to build a bundle, so a plain `generate --recursive` builds it in plugin mode, the same output as
-`generate --plugin` in that root, instead of writing harness files and `.gitignore` entries into the shipped tree.
-`generate --check --recursive` skips such a root with an info line; check its bundle with `verify --plugin`. The
-`ai-rulez` MCP server that generation adds by default is never added to a plugin-authoring root, whatever the mode. A
-root that keeps a preset generates normally, and builds its bundle with `generate --plugin`.
-
-See [Poly Hooks](poly-hooks.md) to add non-mutating plugin verification to a
-repository's pre-commit stage.
-
-Strict JSON manifests and binary assets cannot safely contain comments. Each plugin
-therefore includes `.ai-rulez-generated.json`, which records the same source hash and
-a sorted content-hash entry for every generated output. Monorepo roots include a
-separate sidecar covering the aggregate marketplace files. Validators can recompute
-these hashes without adding unsupported fields to runtime manifests.
-
-### MCP launch variable
-
-Write MCP launch commands once with the canonical `${PLUGIN_ROOT}`; each runtime
-rewrites it to the form it expects — `${CLAUDE_PLUGIN_ROOT}` (Claude),
-`${extensionPath}` (Gemini), plugin-relative `./` (Cursor, Codex, Kimi, Agent Plugins), or
-the canonical variable unchanged (OpenCode, Factory).
-
-### Hooks
-
-Declare lifecycle hooks once; they render into each runtime's hook format with the
-correct root variable (`${CURSOR_PLUGIN_ROOT:-.}` for Cursor hooks, and so on).
-
-Each hook action requires exactly one of `command` or `script`:
-
-- **`command`**: An executable that already exists in the consumer's environment. Passed through verbatim.
-- **`script`**: A project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The bundled script is addressable as `${PLUGIN_ROOT}/hooks/<basename>` and survives a fresh clone before generation has run. Without `args` the command is written double-quoted (`"${CLAUDE_PLUGIN_ROOT}/hooks/<basename>"`) so an install path with a space does not split it; with `args` the handler is exec form and the path is written bare. Use `script` for self-contained bootstrap hooks.
-
-Additional fields:
-
-- **`args`**: Array of arguments passed to the command/script. When set, the runtime spawns the executable directly (no shell).
-- **`timeout`**: Handler timeout in seconds; zero uses the runtime default.
-- **`async`**: Whether the handler runs asynchronously (default: false).
-- **`if`**: Restricts the handler to matching tool calls, in permission-rule syntax — one rule such as `"Bash(git *)"` or `"Edit(*.ts)"`, with no boolean operators and no expression language. Claude Code evaluates it **only** on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` and `PermissionDenied`; on any other event a handler carrying `if` never runs at all, so it cannot be used to make a bootstrap hook conditional. `validate` warns when `if` appears on an event that ignores it.
-- **`status_message`**: Message shown to the user while the handler runs (useful for blocking bootstrap scripts). Rendered as `statusMessage` in the runtime's hook file.
-
-Example with bundled script. A bootstrap hook decides for itself whether its work is already done — there is no declarative guard for `SessionStart`:
+Hooks are declared once and rendered into each runtime's hook format (Claude `hooks/hooks.json`, Cursor
+`.cursor-plugin/hooks/hooks.json`, Gemini inline in `gemini-extension.json`).
 
 ```toml
 [[plugin.hooks]]
@@ -563,227 +247,375 @@ event = "SessionStart"
 matcher = "startup"
 
 [[plugin.hooks.hooks]]
-script = "scripts/bootstrap.sh"
-args = ["--check"]
+script = "scripts/bootstrap.sh"        # relative to the project root; copied to hooks/bootstrap.sh
 timeout = 30
-status_message = "Bootstrapping plugin on first use..."
-async = false
-```
+status_message = "Preparing acme-tools..."
 
-Example with external command:
-
-```toml
 [[plugin.hooks]]
 event = "PreToolUse"
+matcher = "Bash"
 
 [[plugin.hooks.hooks]]
-command = "my-tool validate"
-async = true
+command = "acme-guard check"           # must exist on the user's machine
+if = "Bash(git push *)"
 ```
 
-Event names must match a Claude Code lifecycle event (`SessionStart`, `Setup`, `PreToolUse`, `PostToolUse`, etc.). An unknown event produces a warning rather than an error, so a config written for a newer Claude Code keeps working on an older ai-rulez. Events in `HookEventsWithoutMatcher` (such as `UserPromptSubmit`, `PostToolBatch`, `Stop`) have no matchable subject, so a declared matcher is silently ignored at runtime.
+The Claude rendering of the first hook:
 
-### Restricting runtimes
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/bootstrap.sh\"",
+            "timeout": 30,
+            "async": false,
+            "statusMessage": "Preparing acme-tools..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `event` | A Claude Code lifecycle event: `SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, ... An unknown event is a warning, not an error |
+| `matcher` | The event's matcher. Events without a subject (`UserPromptSubmit`, `Stop`, `PostToolBatch`, ...) ignore it, and `validate` warns |
+| `type` | Handler type; default `command` |
+| `command` | An executable already on the user's machine, passed through verbatim |
+| `script` | A project file bundled into the plugin's `hooks/` directory and run from there. Exactly one of `command` and `script` |
+| `args` | Arguments; with `args` the executable is spawned directly, without a shell |
+| `timeout` | Seconds; `0` uses the runtime default |
+| `async` | Run without blocking (default `false`) |
+| `if` | One permission rule such as `"Bash(git *)"` or `"Edit(*.ts)"`. Claude Code evaluates it only on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` and `PermissionDenied`; on other events a handler with `if` never runs, and `validate` warns |
+| `status_message` | Shown while the handler runs (`statusMessage`) |
+
+A `SessionStart` hook has no declarative guard: a bootstrap script must check for itself whether its work is done.
+
+## Shared resources across skills
+
+Skills in one plugin often link to the same reference docs or templates. `shared_resources` copies directories
+(relative to the content root) into **every** bundled skill, for every runtime, so a skill still works when installed
+on its own:
 
 ```toml
 [plugin]
-# ...
-runtimes = ["claude", "cursor"]   # omit to emit the eight default runtimes
+shared_resources = ["references", "templates"]
 ```
 
-The `pi`, `copilot`, and `agent-plugins` runtimes are **opt-in**. The default set remains
-Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes. Enable Agent Plugins explicitly:
+- `references/style.md` lands at `skills/<name>/references/style.md` in each skill.
+- A `SKILL.md` link that climbs out to the shared directory (`../../references/style.md`) is rewritten to the copy
+  (`references/style.md`).
+- A shared file that clashes with a file the skill already has is an error.
+- The copies are recorded like the skill's own files, so `verify --plugin` reports changes.
+
+A symlink inside a skill directory follows the same policy as plain `generate`
+([Symlinks in content](configuration.md#symlinks-in-content)): a link to a target inside the project is copied, any
+other link is skipped with a warning.
+
+## Runtime-specific settings
+
+### Codex
+
+Codex requires `[plugin.author] name` and a `[plugin.interface]` block with `display_name`, `short_description`,
+`long_description`, `developer_name`, `category`, `capabilities` and `default_prompt`. Optional interface keys:
+`website_url`, `privacy_policy_url`, `terms_of_service_url`, `brand_color`, `composer_icon`, `logo`, `logo_dark`,
+`screenshots`. Kimi reads the same block.
+
+```toml
+[plugin.codex]
+manifest = "root"     # legacy (default) | root | both
+marketplace = true    # also write .agents/plugins/marketplace.json for a single-plugin repository
+```
+
+| `manifest` | Writes |
+| --- | --- |
+| `legacy` | `.codex-plugin/plugin.json` with the `interface` block, and `.mcp.json` |
+| `root` | the Agent Plugins layout Codex prefers: a root `plugin.json` with the interface under `extensions["com.openai"]`, `skills/` and a root `mcp.json` |
+| `both` | both manifests |
+
+The root layout follows `[plugin] spec` and the Agent Plugins name rules, and shares the root `plugin.json` with the
+`agent-plugins` and `copilot` runtimes. With [`source = "agents"`](agents-source.md#what-generate-writes),
+`.agents/` belongs to the project and the Codex marketplace index is skipped with a warning.
+
+### Copilot
+
+`runtimes = ["copilot"]` writes the Agent Plugins layout that Copilot CLI and the Copilot cloud agent read: a root
+`plugin.json`, `skills/<name>/`, a root `mcp.json`, custom agents at `com.github.copilot/agents/<name>.agent.md`, and a
+single-plugin marketplace at `.github/plugin/marketplace.json`. Copilot documents no file format for plugin commands
+or hooks, so they are not written.
+
+### Cursor
+
+`[plugin.cursor] marketplace = true` also writes `.cursor-plugin/marketplace.json` for a single-plugin repository
+(`source` is `.`). For marketplaces with several plugins, set `[marketplace] cursor_index = true`. To publish a Cursor
+team marketplace, see the [`cursor-team-marketplace` emitter](publish.md#emitters).
+
+### Gemini
+
+| Key | Meaning |
+| --- | --- |
+| `[plugin.gemini] context_file_name` | `contextFileName` of the extension (default `GEMINI.md`) |
+| `[plugin.gemini] commands` | `true` bundles each command as `commands/<name>.toml`; `$ARGUMENTS` becomes `{{args}}`. Shell (`!{...}`) and file (`@{...}`) injections are not translated |
+| `[[plugin.gemini.settings]]` | `name`, `description`, `env_var`, `sensitive`, see [MCP servers](#mcp-servers) |
+
+### Kimi
+
+`[plugin.kimi]` takes `skill_instructions` and `session_start_skill`, written to `kimi.plugin.json`.
+
+### Pi packages
 
 ```toml
 [plugin]
-runtimes = ["agent-plugins"]
+name = "acme-tools"
+version = "1.2.0"
+description = "Skills and prompts for Acme repositories."
+repository = "https://github.com/acme/acme-tools"
+runtimes = ["pi"]
 ```
 
-It emits a root `plugin.json`, a root `skills/` directory, and (when the plugin
-declares MCP servers) a root `mcp.json`, matching the Agent Plugins standard
-(1.0.0, or 1.1.0 with `spec = "1.1.0"`). The package is built and validated by the
-spec-validated library described in [Agent Plugins](agent-plugins.md). The plugin `name` must satisfy the standard's naming rules (1–64
-lowercase alphanumerics/`-`/`.`, alphanumeric ends, no `--` or `..`). Commands,
-agents, hooks, and marketplaces are outside Agent Plugins v1 and are not emitted
-for this runtime.
+```bash
+ai-rulez generate --plugin
+pi install git:github.com/acme/acme-tools
+```
+
+The package holds `.pi/skills/<name>/` and `.pi/prompts/<name>.md` (rendered from your commands) and a root
+`package.json` with the `pi-package` keyword, the generated files in `files`, and a `pi` block listing the skills and
+prompts. On GitHub its name is `@<owner>/pi-<plugin-name>` (`@acme/pi-acme-tools`). Pi packages carry skills and
+prompts only; MCP servers, hooks and agents are skipped with a warning.
+
+| `[plugin.pi]` key | Default | Meaning |
+| --- | --- | --- |
+| `skills_dir` | `.pi/skills` | Where skills are written. Set `skills` to reuse the root `skills/` tree the Claude, Codex and Agent Plugins bundles write, instead of a second copy |
+| `skills_entry` | `each` | `directory` lists the skills directory once in `pi.skills` and `files`, so adding a skill does not change `package.json` |
+| `package_name` | `@<owner>/pi-<plugin-name>` | Explicit npm name |
+| `package_json` | `generate` | `merge` updates only the keys ai-rulez owns (`name`, `version`, `description`, `author`, `repository`, `keywords`, `pi`, `files`) and keeps the rest (`devDependencies`, `scripts`, ...); an authored `name` is kept unless `package_name` is set. `verify --plugin` then checks only the owned keys |
+
+With `runtimes = ["pi", "opencode"]` both share one `package.json`, named `@<owner>/opencode-<plugin-name>`, with
+OpenCode's entry points and Pi's resources. If the two would render a different shared key, generation fails with
+"runtime npm manifests disagree".
+
+To publish on npm (which also lists the package in the [Pi package catalog](https://pi.dev/packages)), see
+[Publish: npm](publish.md#npm); the published name is `<scope>/<plugin-name>`:
+
+```bash
+ai-rulez publish --to npm --npm-scope @acme --public --execute --yes
+pi install npm:@acme/acme-tools
+```
+
+### OpenCode
+
+The OpenCode bundle is a v2 plugin, a default export `{ id, setup(ctx) }`:
+
+| File | Content |
+| --- | --- |
+| `.opencode/plugins/<name>.js` | your adapter `.ai-rulez/opencode/index.js`, copied verbatim; without one, a generated module that only registers the bundled content |
+| `.opencode/ai-rulez-content.js` | `registerBundledContent(ctx)`, which registers the bundled skills, commands, agents and MCP servers |
+| `.opencode/ai-rulez-bundle.json` | the MCP servers and agent settings resolved at generation time |
+| `.opencode/skills/`, `commands/`, `agents/` | the content |
+| `package.json` | `main` and `exports` pointing at the plugin, and a dependency on `@opencode/plugin` |
+
+OpenCode does not discover the content directories of an installed plugin, so a hand-written adapter must call the
+helper from `setup`:
+
+```js
+import { registerBundledContent } from "../ai-rulez-content.js";
+
+export default {
+  id: "acme-tools",
+  async setup(ctx) {
+    await registerBundledContent(ctx);
+  },
+};
+```
+
+- **MCP servers** become OpenCode `local` (command array and `environment`) or `remote` (`url`) servers. At load time
+  `${PLUGIN_ROOT}` expands to the plugin directory and `${NAME}` to `process.env.NAME` (empty when unset). A plugin runs
+  inside OpenCode and can read its whole environment, so install only plugins you trust. Top-level directories an MCP
+  server reaches through `${PLUGIN_ROOT}/...` are added to `package.json` `files`.
+- **Agents** take their model as the `opencode` preset resolves it (`opencode_model`, then
+  `defaults.model_by_preset.opencode`, then `model`). A bare alias such as `sonnet` is omitted with a warning, so the
+  agent inherits the session model.
+- **SDK dependency.** For an adapter that does not import `@opencode/plugin`, set
+  `[plugin] opencode_dependency_enabled = false`.
+
+To use the bundle:
+
+1. **Copy it into a project.** Copy `.opencode/plugins/<name>.js`, `.opencode/ai-rulez-content.js`,
+   `.opencode/ai-rulez-bundle.json` and the `.opencode/skills/`, `commands/` and `agents/` directories, plus any
+   top-level directory an MCP server uses (such as `scripts/`), keeping their paths. Restart OpenCode.
+2. **Point `opencode.json` at a directory.** Add `"plugins": ["./vendor/acme-tools"]`, where the directory is a copy of
+   the bundle with an `index.js` at its root: `export { default } from "./.opencode/plugins/acme-tools.js";`. OpenCode
+   loads a directory's `index.js` and ignores `package.json` `main`.
+
+`generate` warns, without failing, when it finds a v1 OpenCode plugin (an exported function that returns hooks, or an
+import of `@opencode-ai/plugin`) in `.ai-rulez/opencode/index.js`, in `.opencode/plugin(s)/`, or in a local path of
+`opencode.json`. OpenCode v2 does not run v1 plugins; see the
+[v1 migration guide](https://opencode.ai/v2/docs/build/plugins/migrate-v1).
+
+### Hermes
+
+Put Hermes registrations in `.ai-rulez/hermes/index.py` (or point `[plugin.hermes] source` at another
+project-relative file). The generator copies it to `.hermes/plugins/<name>/hermes.py`, writes `__init__.py` and
+`plugin.yaml`, and bundles the skills, commands and agents. The same content is packaged as a Python project under
+`.hermes/package/`, published as `<name>-hermes-plugin`. Without a source file, a no-op `register(ctx)` is generated.
+Hermes loads project plugins only with `HERMES_ENABLE_PROJECT_PLUGINS=true`.
+
+```toml
+[plugin.hermes]
+source = "plugin/hermes.py"
+requires_python = ">=3.11"
+dependencies = ["httpx>=0.28", "example-tool[cli]; python_version >= '3.11'"]
+```
+
+`dependencies` are PEP 508 requirements from a package index; direct references (`name @ url`) are rejected. They are
+written to the wheel's `project.dependencies` and to `python_dependencies` in both Hermes manifests. Nothing is
+installed at generation time.
 
 ## Single plugin vs. monorepo
 
-A repo with one `[plugin]` block publishes a **single-plugin** marketplace whose sole
-entry has `source: "./"`.
+A repository with one `[plugin]` block is a **single-plugin** marketplace whose only entry has `source: "./"`. The
+bundle root is the repository root, so every path a host loads from a plugin root ships to each user. `validate`
+and `verify --plugin` warn (`AR9T0 root-component-shipped`) about such a path that exists at the root but is
+not part of the bundle: `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, a root `plugin.json`,
+and the other Claude Code and Codex plugin paths. A maintainer's own `.mcp.json` would otherwise be installed for
+everyone. Set `[plugin] content_root`, or move the plugin into a member directory.
 
-For a **monorepo** hosting several plugins, the root config declares only a
-`[marketplace]` with `members`; each member is its own ai-rulez project:
+For a **monorepo** with several plugins, each its own ai-rulez project, the root declares a `[marketplace]` with
+`members`:
 
 ```toml
-# root .ai-rulez/config.toml
+# .ai-rulez/config.toml at the repository root
 [marketplace]
 name = "acme"
 description = "Curated Acme plugins."
-members = ["plugins/alpha", "plugins/beta"]
+members = ["plugins/review", "plugins/notify"]
 
 [marketplace.owner]
-name = "Acme Inc"
-email = "dev@acme.example"
+name = "Acme Tooling"
+email = "tooling@acme.example"
 ```
 
-Each member (`plugins/alpha/.ai-rulez/config.toml`, …) defines its own `[plugin]`
-block. `generate --plugin` renders every member's bundle under its directory and
-emits a single root marketplace index — `.claude-plugin/marketplace.json` (and the Codex
-index at `.agents/plugins/marketplace.json`) — listing each with `source: "./plugins/<name>"`.
-Members do not emit their own marketplace index.
-
-A single-plugin repo's bundle root is the repository root, so every path a host
-loads by default from a plugin root ships to each user who installs it. `validate
---strict` and `verify --plugin` warn with `AR9T0 root-component-shipped` about
-each such path that exists at the root and is not part of the bundle —
-`.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, and the
-other Claude Code and Codex plugin paths — naming the host that loads it. A
-maintainer's own development `.mcp.json` or `agents/` directory would otherwise be
-installed for everyone. Set `[plugin] content_root` to keep the authored payload
-separate, or move the plugin into a monorepo member (`plugins/<name>/`) so its
-root is not the repository root.
-
-The check looks only under the plugin's own root, never in a parent directory. A
-root `plugin.json` is on the list (Codex prefers it as the manifest); a root
-`CLAUDE.md` was considered and is not, because Claude Code does not load a
-`CLAUDE.md` from a plugin root as context.
-
-The `agent-plugins` and `copilot` runtimes write the shared root `plugin.json` (and the root `mcp.json` when the
-plugin declares MCP servers), which Codex also reads. `AR9T0` therefore treats those two runtimes like the Codex
-`root` layout: with either of them in `runtimes`, a root `plugin.json` or `mcp.json` that ai-rulez writes is
-recognized as part of the bundle and not reported, even when Codex is on the `legacy` layout (before, only the Codex
-`root` layout counted, so these files were reported as shipped by accident).
+Each member (`plugins/review/.ai-rulez/config.toml`, ...) has its own `[plugin]` block. `generate --plugin` at the root
+renders every member's bundle in its directory and writes one root index, `.claude-plugin/marketplace.json` (and
+`.agents/plugins/marketplace.json` for Codex), listing each member as `source: "./plugins/<dir>"`. Members write no
+index of their own.
 
 ## Several plugins from one root
 
-One root can define any number of plugins, each selecting its own skills, commands, agents,
-MCP servers and hooks from the root's sources, and `generate --plugin` and `verify --plugin`
-process them all in one run. The nested-root layout above is not needed for this; use it only
-when each plugin should be its own ai-rulez project.
+One project can also define several plugins that each select part of the root's content, without separate member
+projects:
 
 ```toml
 # .ai-rulez/config.toml
 [[plugins_authoring]]
-name = "macos-notifications"
+name = "acme-review"
 version = "1.2.0"
-description = "Desktop notifications."
-runtimes = ["claude"]
-skills = ["notify-*"]            # root content, by name or glob
-commands = ["notify"]
-mcp_servers = ["moon-ear"]       # names of root [[mcp_servers]]; none by default
+description = "Code review skills."
+runtimes = ["claude", "cursor"]
+skills = ["review-*"]            # by name or glob
+commands = ["triage"]
+
 [plugins_authoring.author]
-name = "Tooling"
+name = "Acme Tooling"
 
 [[plugins_authoring]]
-name = "moon-ear"
-runtimes = ["claude", "codex"]
-skills = ["moon-*"]
-agents = ["helper"]
-domains = ["audio"]              # a domain's skills, commands and agents
+name = "acme-notify"
+version = "0.3.0"
+description = "Desktop notifications."
+runtimes = ["claude"]
+skills = ["notify-*"]
 ```
 
-An entry bundles **only** what it selects: an empty selector means nothing, so no skill is
-copied into every plugin by accident. Fields: `name`, `description`, `version`, `category`,
-`keywords`, `default_enabled`, `runtimes`, `skills`, `commands`, `agents`, `domains`,
-`mcp_servers`, `hooks` (the `[[hooks]]` shape), `author`, `license`, `homepage`,
-`repository` and `relevance`. Every plugin is written to `plugins/<name>/` (under the
-marketplace's `output_dir`) and listed in a marketplace index, named after the project when
-no marketplace is declared; see [Several marketplaces](#several-marketplaces-from-one-root).
-
-`[[marketplace.plugins]]` entries are the same definition, nested in the `[marketplace]`
-block, and accept the same fields. Use one spelling per plugin. `[plugin]` (one bundle of the
-whole root) cannot be combined with `[[plugins_authoring]]`: move its metadata into an entry
-that selects the root content (`skills = ["*"]`).
-
-To give each definition its own file, and its own CODEOWNERS entry, put it in
-`.ai-rulez/plugins/<name>.toml` with the entry's keys at the top level. The file loads by
-default; `name` may be omitted, and when present it must equal the file name:
-
-```toml
-# .ai-rulez/plugins/moon-ear.toml
-runtimes = ["claude", "codex"]
-skills = ["moon-*"]
+```text
+.claude-plugin/marketplace.json
+.ai-rulez-generated.json
+plugins/acme-notify/.claude-plugin/plugin.json
+plugins/acme-notify/skills/notify-desktop/SKILL.md
+plugins/acme-review/.claude-plugin/plugin.json
+plugins/acme-review/.cursor-plugin/plugin.json
+plugins/acme-review/commands/triage.md
+plugins/acme-review/skills/review-pr/SKILL.md
+...
 ```
 
-A key the entry does not know, or a `plugins/` or `marketplaces/` path that cannot be listed, fails the load
-with an error naming the file. A plugin defined both inline and in a file is an error. A layer (`config.<name>.toml`, see
-[Layered configuration](configuration.md#layered-configuration)) can add an entry, override
-one by `name`, or drop it with `remove = true` without restating the others; the same holds
-for `[[marketplace.plugins]]`.
+The index is named after the project and lists `./plugins/acme-notify` and `./plugins/acme-review`.
 
-Selecting one plugin: `generate --plugin --plugin-name moon-ear` writes only that plugin's
-bundle and leaves the marketplace indexes alone (a partial index would not match the full
-one); `verify --plugin --plugin-name moon-ear` checks only it. `verify --plugin --format json`
-adds a `plugins` array with each plugin's status, and each entry of `drift` names its
-`plugin` and `marketplace`.
+An entry bundles **only** what it selects; an empty selector selects nothing. A selector that matches nothing is a
+warning (`AR9T1`).
 
-Not available per definition yet: the runtime-specific tables of `[plugin]` (`[plugin.codex]`,
-`[plugin.pi]`, `[plugin.interface]`, ...), `include`, `shared_resources` and `content_root`.
-A plugin that needs them stays a `[plugin]` in its own nested root.
+| Key | Meaning |
+| --- | --- |
+| `name`, `description`, `version`, `author`, `license`, `homepage`, `repository`, `category`, `keywords` | metadata, as in `[plugin]` |
+| `runtimes` | bundles to write |
+| `skills`, `commands`, `agents` | root content, by name or glob |
+| `domains` | domains whose skills, commands and agents are bundled |
+| `mcp_servers` | names of root `[[mcp_servers]]`; none by default |
+| `hooks` | hook groups, as `[[plugin.hooks]]` |
+| `default_enabled`, `relevance` | marketplace entry fields, see [Marketplace entries](#marketplace-entries) |
+
+The runtime tables (`[plugin.codex]`, `[plugin.interface]`, `[plugin.pi]`, ...), `include`, `shared_resources` and
+`content_root` are not available per definition; a plugin that needs them stays a `[plugin]` in its own member
+project. `[plugin]` cannot be combined with `[[plugins_authoring]]`.
+
+Each definition can live in its own file, `.ai-rulez/plugins/<name>.toml`, with the entry's keys at the top level
+(`name` may be omitted and must equal the file name when present). A
+[layer](configuration.md#layered-configuration) can add, override (by `name`) or remove (`remove = true`) an entry.
+
+| Command | Effect |
+| --- | --- |
+| `generate --plugin --plugin-name acme-review` | writes only that plugin; the indexes are left alone |
+| `verify --plugin --plugin-name acme-review` | checks only that plugin |
+| `verify --plugin --format json` | adds a `plugins` array with each plugin's status |
 
 ### Several marketplaces from one root
 
-Each `[[marketplaces_authoring]]` entry is one marketplace index that lists plugin definitions
-by name, so one plugin can be offered by several marketplaces:
+Each `[[marketplaces_authoring]]` entry is one marketplace that lists plugin definitions by name, so a plugin can be
+offered in several:
 
 ```toml
 [[marketplaces_authoring]]
 name = "acme-public"
 description = "Published plugins"
-plugins = ["macos-notifications", "moon-ear"]   # names of plugin definitions; empty lists nothing
+plugins = ["acme-review", "acme-notify"]
 output_dir = "marketplaces/public"
 
 [[marketplaces_authoring]]
 name = "acme-internal"
-plugins = ["moon-ear"]
+plugins = ["acme-review"]
 output_dir = "marketplaces/internal"
 cursor_index = true
 ```
 
-`generate --plugin` writes, per marketplace, `<output_dir>/.claude-plugin/marketplace.json` (plus
-the Codex index when a listed plugin targets Codex, and the Cursor index with `cursor_index`),
-its own provenance sidecar, and `<output_dir>/plugins/<name>/` for each plugin it lists, so
-each directory can be published on its own. A plugin listed by two marketplaces is written
-into both. `output_dir` must be unique and no marketplace's directory may sit inside another's (an empty
-`output_dir` is the project root, which holds every other directory); two marketplaces, or two plugins, writing one path
-is an error. `[marketplace]` and `[[marketplaces_authoring]]` cannot be combined. With only
-`[[plugins_authoring]]` and no marketplace, one index named after the project lists them all.
+Each marketplace gets `<output_dir>/.claude-plugin/marketplace.json` (plus the Codex index when a listed plugin targets
+Codex, and the Cursor index with `cursor_index`), its own provenance sidecar, and `<output_dir>/plugins/<name>/` for
+each plugin, so each directory can be published on its own. `output_dir` values must be unique and not nested inside
+each other. `[marketplace]` and `[[marketplaces_authoring]]` cannot be combined. Use
+`--marketplace-name NAME` with `generate --plugin` and `verify --plugin` to work on one marketplace. A marketplace can
+also live in `.ai-rulez/marketplaces/<name>.toml`.
 
-`generate --plugin --marketplace-name acme-public` renders one marketplace with its plugins,
-and `verify --plugin --marketplace-name acme-public` checks it. `verify --plugin --format json`
-adds `plugins` and `marketplaces` arrays with a status for each, and the `drift` entries name
-both, so a failing run says which marketplace drifted.
-
-One file per marketplace works like it does for plugins: `.ai-rulez/marketplaces/<name>.toml`
-holds the entry's keys at the top level, and the file name must equal `name`. A layer adds,
-overrides or removes (`remove = true`) a marketplace by `name`.
-
-`publish` reads the Claude index closest to the project root, so with several marketplaces it
-publishes only that one (see [Not yet implemented](#not-yet-implemented)).
+[`publish`](publish.md#several-plugins) releases only the Claude index closest to the project root.
 
 ## Domain content and per-domain plugins
 
-A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins
-without hand-made member projects. Everything here is opt-in; a config without these keys
-generates exactly what it did before.
+A project that keeps content in `.ai-rulez/domains/<name>/` can ship it as plugins.
 
-### Bundle domain content into the `[plugin]` bundle
-
-A `[plugin]` bundle holds the root skills, commands and agents only. List domains in
-`include_domains` (names or globs) to bundle theirs too:
+To add domain content to the `[plugin]` bundle, list the domains:
 
 ```toml
 [plugin]
-name = "acme-conventions"
-version = "1.0.0"
 include_domains = ["backend", "ui"]   # or ["*"]
 ```
 
-On a name collision the root item wins, then the domain earlier in name order. Builtin
-domains are never bundled.
+On a name collision the root item wins, then the domain earlier in name order. Builtin domains are never bundled.
 
-### One plugin per domain
+To ship **one plugin per domain**:
 
 ```toml
 [marketplace]
@@ -795,240 +627,117 @@ output_dir = "tools/acme-marketplace"   # default: the project root
 name_prefix = "acme-"        # plugin "acme-backend" from domains/backend
 exclude = ["scratch"]        # include defaults to every domain
 version = "1.0.0"            # default: the [plugin] version, else 1.0.0
-default_enabled = false      # marketplace entry defaultEnabled
-runtimes = ["claude"]        # default: the [plugin] runtimes, else all
+default_enabled = false
+runtimes = ["claude"]        # default: the [plugin] runtimes, else the defaults
 ```
 
-`generate --plugin` writes `<output_dir>/plugins/<name>/` for each domain (skills, commands
-and agents, plus the runtime manifests and a provenance sidecar) and one
-`<output_dir>/.claude-plugin/marketplace.json` whose entries use `source: "./plugins/<name>"`,
-relative to the marketplace root as Claude Code requires. The Codex index
-(`.agents/plugins/marketplace.json`) is written only when some plugin targets `codex`.
-Domain names are lower-cased to form the plugin name; a name that still is not valid is an
-error (use `exclude`). A domain without bundleable content is skipped with a warning.
-`verify --plugin` checks the marketplace root and every plugin directory.
+`generate --plugin` writes `<output_dir>/plugins/<name>/` for each domain and one
+`<output_dir>/.claude-plugin/marketplace.json` with `source: "./plugins/<name>"` entries (and the Codex index when a
+plugin targets `codex`). A domain without bundleable content is skipped with a warning. When a domain disappears, the
+next `generate --plugin` deletes the files it generated for that plugin.
 
-When a plugin's domain disappears (or its declaration is removed), the next
-`generate --plugin` deletes the files it generated for that plugin and the directories they
-leave empty. A directory counts as generated only when it carries ai-rulez's provenance
-sidecar, so a hand-made directory under `plugins/` is never touched, and a file inside a stale
-directory that ai-rulez did not generate is kept (with a warning). `generate --plugin --dry-run`
-lists each removal as `delete-stale:`, and `verify --plugin` fails while a stale generated
-directory exists. Removing the whole `[marketplace]` domain-plugin configuration cannot be
-detected, because the output root is no longer known; delete that tree by hand.
+In this mode the `[plugin]` block is optional and only supplies defaults (author, license, homepage, repository,
+version, category, keywords, runtimes). `owner` falls back to the `[plugin]` author. `members` and domain plugins can
+be combined only when `output_dir` is unset.
 
-#### Obsolete files inside a bundle
+### Marketplace entries
 
-When a skill, command or agent is removed from the sources, the next `generate --plugin` also
-deletes the files it generated in every bundle that stays (for every runtime), then the
-directories they leave empty. The previous run's `.ai-rulez-generated.json` is the record: only a
-file it lists, that the new plan no longer contains, and whose content still matches the recorded
-hash is deleted. An obsolete file you edited since, or one reached through a symlink that leaves
-the project, is kept with a warning, and a file the sidecar never listed is never touched.
-`generate --plugin --dry-run` prints `delete-stale: <path>` for each deletion and
-`keep-obsolete: <path>` for each kept file, and `verify --plugin` fails with
-`obsolete generated plugin file` while such a file exists. A kept file keeps its ownership
-record in the sidecar (its `obsolete` map), so later `generate` and `verify` runs still recognise
-and report it until you reconcile it into the sources or delete it by hand.
-
-#### Unrecorded files inside a generated skill directory
-
-A file inside a generated skill directory that the plan does not write (a stray `notes.md`, a
-leftover from an editor) ships to everyone who installs the bundle. The next `generate --plugin`
-removes it, the same way it removes obsolete recorded files; `--dry-run` prints
-`delete-stale: <path>`. Only directories holding a generated `SKILL.md` are searched: a
-hand-made skill directory, and the config directory and `[plugin] content_root` (your sources),
-are never touched. `verify --plugin` reports such a file as drift of kind `extra`, and a recorded
-output that is a symlink (even one whose target has the recorded content) as kind `symlink`.
-`generate --plugin` (and `--dry-run`) refuses to write through a symlink, whether the output file
-or any parent directory of it is the link, and fails with an error naming the link; the target is
-never changed. `verify --plugin` reports a symlinked directory on an output path as drift of kind
-`symlink` too. Replace the link with a regular file or directory.
-
-When the bundle's skills directory (for example `skills/` or `.pi/skills`) holds nothing but the
-bundle, declare it owned:
-
-```toml
-[plugin]
-skills_dir_owned = true
-```
-
-The skills directory is then the parent of each generated skill directory, and everything in it the
-bundle does not generate is unrecorded: `verify --plugin` reports a skill directory left over from a
-rename, a hand-added one, or a stray file directly under it as drift of kind `extra`, and
-`generate --plugin` removes it. The default is `false`: a skill directory or file the bundle does
-not generate is never touched. A Pi `skills_dir` inside the config directory or `content_root` is
-rejected with `skills_dir_owned`, since that tree holds your sources.
-
-Whenever `generate --plugin` deletes an unrecorded file it also removes the directories that leaves
-empty, deepest first, and stops at the first directory that still holds anything.
-
-#### Linked git worktrees
-
-With `[claude.settings] manage = true` the generated `extraKnownMarketplaces` entry defaults to a
-relative `directory` source (`./<output_dir>`). Claude Code's documentation does not describe how
-such a source resolves in a linked worktree (`git worktree add`); the behaviour reported for it,
-and assumed by the generator's own source comment, is that it resolves against the main checkout.
-Vendor documentation that does cover worktrees says project-local settings follow the main
-checkout, so treat edits to plugin content in a linked worktree as not visible to Claude Code until
-they reach the main checkout, unless you point the marketplace somewhere absolute. `ai-rulez
-validate` prints one warning when the directory source is relative and the project is in a linked
-worktree (detected with `git rev-parse --git-dir` versus `--git-common-dir`). To test plugin changes
-from a worktree, set `[claude.settings.marketplace_source]` to an absolute `directory` path or a
-`github`/`git` source. The warning is advisory: nothing fails. This behaviour was not verified
-against a running Claude Code; it is phrased as a caveat for that reason.
-
-#### Placement report
-
-`ai-rulez list --placement` (`--profile`, `--format json`) prints every skill and command of the profile
-with its destination: `core` (written to the assistants' own directories) or `plugin` (kept out of
-them by `[placement]`), the domain it came from, and the plugins that bundle it. A plugin-only item
-is flagged when no plugin bundles it, or when none of its plugins is enabled through
-`[claude.settings] enable_plugins` and no `[marketplace.catalog_skill]` lists it, because then
-nothing tells anyone the plugin exists.
-
-#### Version drift
-
-Claude Code's documentation says a client that installed a plugin from a git-hosted marketplace
-keeps its cached copy until the plugin's version string changes (a plugin that declares no version
-is tracked by commit, and a plugin loaded in place from a local marketplace is not controlled by
-`version`). `ai-rulez validate` therefore reports `AR961 plugin-version-drift` (warning)
-when a generated plugin's content differs from its committed provenance sidecar at `HEAD` while the
-version in its manifest is unchanged. Bump `version`, or omit it to track commits.
-
-#### Version source
-
-`version_from` takes the version from a project-relative manifest instead of a literal `version`,
-so a release bump lives in one place:
-
-```toml
-[plugin]
-name = "my-tool"
-description = "What my tool does."
-version_from = "package.json"   # version, pyproject.toml -> project.version, Cargo.toml -> package.version
-```
-
-The resolved value replaces `version` in every generated manifest, in `ai-rulez.lock`, and in the
-comparison `verify --plugin` and `PluginVersionDrift` make, so a bump in the source manifest shows
-as drift until the bundle is regenerated. `version` and `version_from` are mutually exclusive;
-`ai-rulez validate` reports a missing file, a missing version key, or both set at once.
-
-The `[plugin]` block is optional in this mode. When present it supplies defaults (author,
-license, homepage, repository, version, category, keywords, runtimes) and is not bundled on
-its own; declare a plugin for the root content with `[[marketplace.plugins]]` instead.
-`owner` falls back to the `[plugin]` author. `members` and domain plugins may be combined,
-but then `output_dir` must be unset.
-
-Hand-declared plugins mix domains and root content, and replace a derived plugin of the
-same name:
+`[[marketplace.plugins]]` declares a plugin by hand, mixing root content and domains; it replaces a derived plugin of
+the same name and takes the same keys as `[[plugins_authoring]]`:
 
 ```toml
 [[marketplace.plugins]]
 name = "acme-essentials"
-skills = ["development-standards", "personal-*"]   # root content, by name or glob
-domains = []                                       # domains, by name or glob
+skills = ["development-standards", "personal-*"]
+domains = []
 default_enabled = true
 
-[marketplace.plugins.relevance]                    # when Claude Code suggests the plugin
+[marketplace.plugins.relevance]        # when Claude Code suggests the plugin
 topic = "Terraform"
+
 [marketplace.plugins.relevance.signals]
 cli = ["terraform"]
 files_read = ["**/*.tf"]
 ```
 
-Entries carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance`
-(`cwd`, `cli`, `hosts`, `files_read`, `manifest_deps` signals, at least one). These are the
-fields Claude Code documents for a marketplace entry; `claude plugin validate` accepts the output.
-Monorepo `members` entries stay minimal.
+Entries carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance` (signals `cwd`, `cli`, `hosts`,
+`files_read`, `manifest_deps`; at least one).
 
 ### Keep a skill out of `.claude/skills`
 
-By default every root and domain skill and command is written to `.claude/skills`. The
-`[placement]` block moves some to plugin-only:
+By default every skill and command is also written to `.claude/skills` by the `claude` preset. `[placement]` makes
+some plugin-only:
 
 ```toml
 [placement]
-default = "core"                          # core (today) or plugin
+default = "core"                          # core or plugin
 plugin = ["domains/*"]                    # names or globs; "domains/<domain>/<name>" also matches
 core = ["domains/backend/python-conventions", "git-*"]
-honor_targets = true                      # skills: apply frontmatter `targets`, as commands always do
+honor_targets = true                      # skills whose frontmatter `targets` omit claude are kept out too
 ```
 
-An item's frontmatter `placement: core|plugin` wins, then `core`, then `plugin`, then `default`.
-The key is removed from the generated frontmatter. Placement changes only the Claude preset's
-`.claude/skills` output; plugin bundles always contain the item, so a plugin-only skill stays
-reachable through the plugin that bundles it. Agents are not affected, and other presets
-keep writing every skill. With `honor_targets` a skill whose `targets` do not name `claude`
-is not written to `.claude/skills`.
+An item's frontmatter `placement: core|plugin` wins, then `core`, then `plugin`, then `default`. Placement only changes
+the Claude preset's `.claude/skills` output: plugin bundles always contain the item, and other presets write every
+skill.
+
+`ai-rulez list --placement` prints each skill and command with its destination, its domain and the plugins that bundle
+it, and flags a plugin-only item that no enabled or catalogued plugin bundles.
 
 ### Register the marketplace in `.claude/settings.json`
 
 ```toml
 [claude.settings]
-manage = true                       # default false
-register_marketplace = true         # default when managing: extraKnownMarketplaces.<marketplace.name>
-enable_plugins = ["acme-essentials"]    # enabledPlugins."acme-essentials@acme": true
-disable_plugins = []                    # ... : false
+manage = true                          # default false
+register_marketplace = true            # default when managing: extraKnownMarketplaces.<marketplace name>
+enable_plugins = ["acme-essentials"]   # enabledPlugins."acme-essentials@acme": true
+disable_plugins = []                   # ...: false
 # marketplace_source = { source = "github", repo = "acme/skills" }   # default: a directory source at output_dir
 # auto_update = true
 ```
 
-Only those entries are owned, with the same machinery as `mcpServers`: every other key, marketplace
-and plugin entry in the file survives byte-for-byte, an entry dropped from the config is removed
-on the next `generate`, and `clean` removes what was written. A hand-written entry with the same
-key is replaced by the configured value. The default `directory` source is the marketplace
-root relative to the repository (`"./tools/acme-marketplace"`); Claude Code resolves it against the
-main checkout. `extraKnownMarketplaces` takes effect only after the user trusts the folder.
-Relative-path plugins listed in `enabledPlugins` load from the marketplace without an install
-step; the key cannot force an install of a plugin from an external source.
+Only these entries are owned: every other key in the file is kept, an entry removed from the config is removed on the
+next `generate`, and `clean` removes what was written. The default source is a `directory` relative to the repository
+(`"./tools/acme-marketplace"`). Claude Code applies `extraKnownMarketplaces` only after the user trusts the folder.
 
-`enable_plugins` and `disable_plugins` take either a bare plugin name, qualified with the `[marketplace]`
-name as above, or a fully qualified `name@marketplace` id, which is written as given. A block that lists
-only qualified ids needs no `[marketplace]` and registers no local marketplace; set
-`register_marketplace = true` explicitly to require one. To enable a plugin from another marketplace for
-more than Claude Code, use `[[enabled_plugins]]`.
+`enable_plugins` and `disable_plugins` take a bare plugin name (qualified with the `[marketplace]` name) or a full
+`name@marketplace` id. A block with only full ids needs no `[marketplace]`.
+
+In a linked git worktree, Claude Code resolves a relative `directory` source against the main checkout, so plugin edits
+in the worktree are not visible to it; `validate` warns about this. Set `marketplace_source` to an absolute
+`directory` or a `github`/`git` source to test from a worktree.
 
 ### Enable a plugin from another marketplace
 
-`[[enabled_plugins]]` switches on a plugin this project does not author, for the Claude Code, Codex and
-OpenCode presets, from one declaration:
+`[[enabled_plugins]]` switches on a plugin this project does not author, for the Claude Code, Codex and OpenCode
+presets at once:
 
 ```toml
 [[enabled_plugins]]
-id = "basemind@basemind"                    # <name>@<marketplace>, required
-marketplace = { name = "basemind", source = "Goldziher/basemind", type = "github" }   # optional
-opencode = "basemind-opencode"              # optional npm package for OpenCode
+id = "lint-kit@acme-market"                 # <name>@<marketplace>, required
+marketplace = { name = "acme-market", source = "acme/plugins", type = "github" }   # optional
+opencode = "@acme/lint-kit-opencode"        # optional npm package for OpenCode
 ```
 
 | Preset | File | Written |
-| ------ | ---- | ------- |
-| `claude` | `.claude/settings.json` | `enabledPlugins."<id>": true`, and with `marketplace` `extraKnownMarketplaces.<name>` with the source in Claude Code's own shape (`{"source": "github", "repo": "Goldziher/basemind"}`) |
+| --- | --- | --- |
+| `claude` | `.claude/settings.json` | `enabledPlugins."<id>": true`, and with `marketplace`, `extraKnownMarketplaces.<name>` |
 | `codex` | `.codex/config.toml` | `[plugins."<id>"]` with `enabled = true` |
 | `opencode` | `opencode.json` | the `opencode` package appended to `plugin`, only when `opencode` is set |
 
-`marketplace.type` is `github` (`source` is `owner/repo`), `git` (an `https://` or `ssh://` URL, or
-`git@host:path`), `url` (an `https://` URL) or `directory` (a project-relative path); `ref` pins a branch or
-tag of a `github` or `git` source. `marketplace.name` must equal the marketplace part of `id`, and two
-entries that name the same marketplace must agree on its source. Leave `marketplace` out when the harness
-already knows it. `id`, the marketplace fields and the npm package are validated at load against allowlisted
-formats; `http://` and `git://` sources are rejected. `generate` lists the marketplace registration, the
-plugin and the npm package as commands to acknowledge, like hooks.
+| `marketplace` key | Meaning |
+| --- | --- |
+| `name` | must equal the marketplace part of `id` |
+| `type` | `github` (`source` is `owner/repo`), `git` (an `https://` or `ssh://` URL, or `git@host:path`), `url` (an `https://` URL) or `directory` (a project-relative path) |
+| `source` | the location, in the form `type` requires; `http://` and `git://` are rejected |
+| `ref` | a branch or tag, for `github` and `git` |
 
-Only the entries written here are owned, with the machinery of the other settings files: every other key,
-marketplace, plugin and `plugin` element in the files survives, an entry dropped from the config is removed
-on the next `generate`, `clean` removes what was written, and a value you already had stays yours. The
-declaration needs no `[claude.settings] manage`. With `generate --user` the same entries land in the user's
-`~/.claude/settings.json`, `~/.codex/config.toml` and OpenCode config. Presets other than these three have no
-equivalent and skip the declaration; `generate` warns when none of the three is active. Claude Code still asks
-the user to trust the marketplace folder, and `enabledPlugins` cannot install a plugin Claude Code has not
-fetched.
+Leave `marketplace` out when the harness already knows it. Only the written entries are owned, as for
+`[claude.settings]`, and the declaration needs no `[claude.settings] manage`. With `generate --user` the entries go to
+the user-level files; a `directory` marketplace is an error there. `generate` lists the marketplace registration and
+the plugin as items to acknowledge, like hooks.
 
-Conflicts are rejected at load. An id in `[[enabled_plugins]]` and in `[claude.settings] disable_plugins` is an
-error (bare names are compared as `<name>@<marketplace>` with the project's own `[marketplace]`); an id also in
-`enable_plugins` is redundant and warned about. A `marketplace` whose `name` is the project's own
-`[marketplace].name`, while `[claude.settings]` registers it, is an error because it would replace that
-registration: leave `marketplace` out of the entry. In the user config (`generate --user`) a `directory`
-marketplace is an error, since its path is relative to a project; use `github`, `git` or `url`.
+Conflicts are errors at load: an id in both `[[enabled_plugins]]` and `disable_plugins`, or a `marketplace` that would
+replace the project's own registered `[marketplace]`.
 
 ### Catalog skill
 
@@ -1038,38 +747,70 @@ enabled = true                 # default false
 name = "plugin-catalog"
 ```
 
-Generates a skill listing each plugin, its default state, the skills it bundles and how to
-install or enable it (`claude plugin marketplace add`, `claude plugin install`,
-`enabledPlugins`). It is written like a root skill to the preset skill outputs and is never bundled into a plugin. A
-root skill with the same name wins.
+Generates a skill listing each plugin, its default state, the skills it bundles and how to install or enable it. It is
+written like a root skill to the preset outputs and is never bundled into a plugin. A root skill with the same name
+wins.
 
-## Not yet implemented
+## Drift and cleanup
 
-- Publishing each marketplace separately: `publish` writes only the Claude index closest to the project root.
+<p align="center">
+  <img src="assets/plugin-drift.gif" alt="ai-rulez verify --plugin reporting changed and extra files in a plugin bundle, then generate --plugin restoring it" width="820" />
+</p>
 
-## Field reference
+Every bundle has a `.ai-rulez-generated.json` sidecar that records a content hash and file mode for each generated
+file. Bundled Markdown, JavaScript, TypeScript and Python files also carry a generated-file header after their
+frontmatter (turn it off with `provenance_headers = false`; the sidecar still records the hashes).
 
-`[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
-becomes a directory and file name in every runtime), `version` (required unless `version_from` is set);
-`version_from` (project-relative manifest whose version replaces `version`: `package.json`,
-`pyproject.toml` or `Cargo.toml`), `display_name`, `description`, `homepage`,
-`repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`, `skills_dir_owned` (declare the skills directory fully owned by the bundle), `spec` (Agent Plugins version, `1.0.0` or `1.1.0`), `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
-`skills/`, `commands/`, and `agents/`), `provenance_headers` (write the generated-file header into
-bundled Markdown/JS/TS/PY outputs; default `true`), `shared_resources` (directories relative to the
-content root copied into every bundled skill, see [Shared resources across skills](#shared-resources-across-skills)).
-Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
-`[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
-`[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
-(Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
-(`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
-(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`, `package_name`, `skills_entry`; see
-[Pi packages](#pi-packages)).
+`ai-rulez verify --plugin` compares the bundle with the sidecar and its sources without writing anything, and exits 2
+on drift:
 
-`[[plugins_authoring]]`: one plugin definition (see [Several plugins from one root](#several-plugins-from-one-root));
-`[[marketplaces_authoring]]`: `name`, `description`, `owner`, `plugins` (names), `output_dir`, `cursor_index`.
+| Drift kind | Meaning |
+| --- | --- |
+| `changed` | a generated file was edited |
+| `missing` | a generated file was deleted |
+| `stale-source` | the sources changed since the bundle was generated |
+| `obsolete` | a file an earlier run generated that the sources no longer produce, kept because you edited it |
+| `extra` | an unrecorded file inside a generated skill directory (or, with `skills_dir_owned`, anywhere in the skills directory) |
+| `mode` | a file's executable bit differs from the record, for example after a zip round trip. A sidecar written on Windows records no modes; regenerate on Linux or macOS if the bundle ships scripts |
+| `symlink` | a generated output path is a symlink |
 
-`[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
-`[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see
-[Domain content and per-domain plugins](#domain-content-and-per-domain-plugins)). Related top-level
-tables: `[placement]` and `[claude.settings]`.
+`generate --plugin` repairs drift:
+
+- It deletes generated files whose source was removed, then the directories they leave empty. An obsolete file you
+  edited is kept with a warning, and `verify --plugin` fails until you remove it.
+- It deletes unrecorded files inside generated skill directories (a stray `notes.md`). Your sources (the config
+  directory and `content_root`) are never touched.
+- It refuses to write through a symlink.
+- `generate --plugin --dry-run` lists each deletion as `delete-stale: <path>` and each kept file as
+  `keep-obsolete: <path>`.
+
+`skills_dir_owned = true` declares the skills directory (`skills/`, `.pi/skills`, ...) fully generated: a leftover skill
+directory from a rename, or any stray file there, is reported as `extra` and removed. A Pi `skills_dir` that points
+into your sources cannot be owned.
+
+### Version drift
+
+A client that installed a plugin from a git-hosted marketplace keeps its cached copy until the plugin's version
+changes. `ai-rulez validate` reports `AR961 plugin-version-drift` (warning) when a plugin's generated content differs
+from its committed sidecar at `HEAD` while its version is unchanged. Bump `version` with every content change.
+
+### CI and hooks
+
+```bash
+ai-rulez generate --recursive --plugin --if-configured
+ai-rulez verify --recursive --plugin --if-configured
+```
+
+`--if-configured` succeeds without doing anything in a project that has no `[plugin]` or marketplace authoring
+configuration, so a shared hook catalog can run on every repository; it does not hide errors. A marketplace root is
+processed once with its members. See [Poly hooks](poly-hooks.md) for a pre-commit setup and the
+[`check` action](github-actions.md#governance-gate-check) (`plugin: true`) for CI.
+
+A plugin-only root (no preset) is built in plugin mode by plain `generate --recursive`; see
+[Nested configurations](monorepo.md#nested-configurations).
+
+## See also
+
+- [Agent Plugins](agent-plugins.md)
+- [Publish](publish.md)
+- [Installed plugins](installed-plugins.md)

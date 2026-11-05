@@ -1,44 +1,24 @@
 # GitHub Actions
 
-The official action is `Goldziher/ai-rulez` at the repository root. It installs a release binary,
-checks its SHA-256 against the release's `checksums.txt`, caches the download by OS, architecture
-and version, and adds `ai-rulez` to `PATH`. It supports Linux and macOS on amd64/arm64 and Windows
-on amd64. No Go, Node or Python installation is needed by the action. Linux requires glibc 2.36
-or newer; Alpine/musl and Windows arm64 are unsupported.
+ai-rulez ships three composite actions:
 
-The action sets up the CLI and optional LLM configuration. Run commands in subsequent steps;
-installation does not generate files, validate content or call a model.
+| Action | What it does |
+| --- | --- |
+| `Goldziher/ai-rulez@v5` | installs the CLI and, optionally, exports LLM settings for later steps |
+| `Goldziher/ai-rulez/check@v5` | installs the CLI and runs the full governance gate on every configuration root |
+| `Goldziher/ai-rulez/update@v5` | installs the CLI, moves version-range pins with `ai-rulez update`, and opens a pull request |
 
-The action honors the requested binary version even when another `ai-rulez` is already on `PATH`.
-Windows archives that need `liter_llm_ffi.dll` retain it beside the executable.
+All three download a release binary, verify its SHA-256 against the release's `checksums.txt`, cache it by OS,
+architecture and version, and put `ai-rulez` on `PATH`. They need no Go, Node or Python.
 
-## Action ref and binary version
+| Platform | Supported |
+| --- | --- |
+| Linux amd64, arm64 | yes (glibc 2.36 or newer; Alpine/musl is not supported) |
+| macOS amd64, arm64 | yes |
+| Windows amd64 | yes |
+| Windows arm64 | no |
 
-These are two independent choices:
-
-- `uses: Goldziher/ai-rulez@v5` selects the action implementation from the floating **v5 tag**,
-  an annotated tag that the publish workflow moves to the commit of each successfully published
-  stable 5.x release, after GitHub, npm, PyPI and Homebrew publication. The tag is derived from
-  the release's major version. Release candidates never move it, and rerunning an older release
-  cannot move it backward.
-- `with: version: 5.9.2` selects the **CLI binary**. Accepts `X.Y.Z`, `vX.Y.Z`, a release
-  candidate `X.Y.Z-rc.N`, or `latest` (the default). `latest` follows GitHub's
-  `releases/latest` redirect, which names the newest published stable release (never a draft or a
-  release candidate), and the download is then checked against that release's `checksums.txt`.
-  `version: v5` is unsupported: the floating tag is an action ref, not a binary release. Omitting
-  `version` downloads the latest release, even when the action ref is pinned.
-
-To follow every 5.x release with no per-release edits, combine the two floating choices:
-
-```yaml
-- uses: Goldziher/ai-rulez@v5
-  with:
-    version: latest
-```
-
-Pin a reviewed full release tag or commit SHA for reproducible action code, and set `version` too
-for a reproducible binary. `@v5` intentionally receives compatible action updates; `latest` may
-eventually install a newer major CLI. The full `vX.Y.Z` release tags remain unchanged.
+## Quick start
 
 ```yaml
 name: Check agent configuration
@@ -55,21 +35,56 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.9.2
+          version: 5.10.0
       - run: ai-rulez generate --check
       - run: ai-rulez validate --strict
       - run: ai-rulez lock --check
 ```
 
-See [lock checks in CI](lockfile.md#ci-usage) for the distinction between lock drift and generated
-output drift. Command arguments, including `--config`, `--profile`, `--format` and judge-specific
-flags, belong on the following `run:` command. The action does not interpret or execute an argument string.
+The setup action only installs the CLI; it does not generate, validate or call a model. Put every command and its
+flags (`--config`, `--profile`, `--format`, ...) in later `run:` steps. See [lock checks in CI](lockfile.md#ci-usage)
+for the difference between lock drift and generated-output drift.
+
+## Action ref and CLI version
+
+`uses:` and `with: version` are independent choices:
+
+- **Action ref** (`@v5`): the action code. `v5` is a floating tag that moves to each stable 5.x release once it is
+  fully published. Release candidates never move it. Pin a full release tag (`@v5.10.0`) or a commit SHA for
+  reproducible action code.
+- **`version`**: the CLI binary. Accepts `X.Y.Z`, `vX.Y.Z`, a release candidate `X.Y.Z-rc.N`, or `latest` (the
+  default). `latest` resolves to the newest published stable release, never a draft or release candidate. `v5` is not
+  a valid `version`: it is an action ref, not a release.
+
+Omitting `version` installs the latest release even when the action ref is pinned, and `latest` may eventually install
+a newer major version. Set `version` for a reproducible binary.
+
+The action installs the requested version even when another `ai-rulez` is already on `PATH`.
+
+### Inputs and outputs of the setup action
+
+| Input | Default | Meaning |
+| --- | --- | --- |
+| `version` | `latest` | CLI version to install |
+| `llm-*` | empty | LLM settings exported to later steps; see [LLM configuration inputs](#llm-configuration-inputs) |
+
+| Output | Meaning |
+| --- | --- |
+| `version` | the installed CLI version, without the leading `v` |
+| `path` | absolute path to the installed binary |
+
+Give the step an `id` to read them:
+
+```yaml
+- id: setup
+  uses: Goldziher/ai-rulez@v5
+- run: echo "ai-rulez ${{ steps.setup.outputs.version }} at ${{ steps.setup.outputs.path }}"
+```
 
 ## Governance gate: `check`
 
-`Goldziher/ai-rulez/check@v5` installs the CLI the same way as the root action (the same
-resolve, cache and checksum-verified download scripts) and runs the full gate, so a workflow does
-not have to assemble it from single commands:
+`Goldziher/ai-rulez/check@v5` installs the CLI the same way and runs the whole gate, so a workflow does not have to list
+the commands:
 
 ```yaml
 name: ai-rulez
@@ -86,52 +101,57 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez/check@v5
         with:
-          version: 5.9.2
-          expected-config-count: "2" # the root and one module
+          version: 5.10.0
+          expected-config-count: "2"   # the root and one module
+          plugin: "true"
 ```
 
-For every configuration root, in order, it runs:
+For every configuration root, in its own directory, it runs:
 
-1. `ai-rulez migrate okf --check` (skipped for a `source = "agents"` project, which has no
-   `.ai-rulez` content tree to convert);
+1. `ai-rulez migrate okf --check` (skipped for a `source = "agents"` project);
 2. `ai-rulez validate --strict --no-local`;
 3. `ai-rulez lock --check`, when the root has an `ai-rulez.lock`;
 4. `ai-rulez generate --strict-config --no-local`, then `ai-rulez generate --check --strict-config --no-local`;
-5. `ai-rulez verify --plugin` with `plugin: true`, and `ai-rulez tokens --budget N --no-local` with
-   `token-budget: N`.
+5. `ai-rulez verify --plugin`, with `plugin: true`;
+6. `ai-rulez tokens --budget N --no-local`, with `token-budget: N`.
 
-Then `git diff --exit-code HEAD` must be clean and generation must have left no new untracked file.
-The gate fails when the checkout has no tracked files, so an empty or wrong checkout cannot pass. It
-stops at the first failing command and writes a job summary listing every command with its result,
-the number of roots checked and the number of tracked files examined.
+Then `git diff --exit-code HEAD` must be clean and generation must have left no new untracked file. The gate stops at
+the first failing command, and fails when the checkout has no tracked files, so an empty or wrong checkout cannot pass.
+It writes a job summary listing each command and its result.
 
 | Input | Default | Meaning |
 | --- | --- | --- |
-| `version` | `latest` | CLI version, as for the root action |
+| `version` | `latest` | CLI version, as for the setup action |
 | `config-directories` | discover | Newline-separated configuration directories (`.ai-rulez`, `.agents`, `.config/ai-rulez`, or the project root holding one), relative to the workspace. Empty discovers every **tracked** `.ai-rulez/config.toml`, `.config/ai-rulez/config.toml` and `.agents/ai-rulez.toml` |
-| `expected-config-count` | none | Fail unless exactly this many roots are checked, so a renamed or deleted module fails instead of silently checking fewer roots |
+| `expected-config-count` | none | Fail unless exactly this many roots are checked, so a renamed or deleted module fails instead of silently checking fewer |
 | `plugin` | `false` | Also run `verify --plugin` |
 | `strict` | `true` | `false` drops `--strict` from `validate` and `--strict-config` from `generate` |
 | `local` | `false` | `true` reads the machine-local overlay; `false` passes `--no-local` |
 | `token-budget` | none | Run `tokens --budget N`: fail when the always-loaded token count exceeds `N` |
 
-Booleans accept only `true` or `false`, counts only positive integers, and directories only
-relative paths without `..`. Outputs: `version`, `roots` (the number checked) and
-`files-examined`. Each command runs in its project root with configuration discovery, as a local
-run there would. `tokens --budget` is a single ceiling on the headline always-loaded count; a
-per-harness budget (`claude=N,codex=N`) and the MCP tool-schema cost are not measured.
+Booleans accept only `true` or `false`, counts only positive integers, and directories only relative paths without
+`..`.
+
+| Output | Meaning |
+| --- | --- |
+| `version` | the installed CLI version |
+| `roots` | the number of configuration roots checked |
+| `files-examined` | the number of tracked files the clean-checkout check examined |
+
+`token-budget` is one ceiling on the always-loaded count. A per-harness budget and the MCP tool-schema cost are not
+measured; run `ai-rulez tokens` in a step for those.
 
 ## Scheduled pin updates: `update`
 
-`ai-rulez update` moves version-range pins (`version = "^1.2"`) of includes, installed skills,
-skill sources, marketplaces and plugins, and nothing runs it on its own; Dependabot and Renovate do
-not read `ai-rulez.lock`. `Goldziher/ai-rulez/update@v5` runs it on a schedule:
+Dependabot and Renovate do not read `ai-rulez.lock`, and nothing runs `ai-rulez update` on its own.
+`Goldziher/ai-rulez/update@v5` runs it on a schedule and moves the version-range pins (`version = "^1.2"`) of includes,
+installed skills, skill sources, marketplaces and plugins:
 
 ```yaml
 name: ai-rulez update
 on:
   schedule:
-    - cron: "17 6 * * 1" # Mondays
+    - cron: "17 6 * * 1"   # Mondays
   workflow_dispatch:
 permissions:
   contents: write
@@ -143,112 +163,114 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez/update@v5
         with:
-          version: 5.9.2
+          version: 5.10.0
 ```
 
-In order, it:
+The action:
 
-1. runs `ai-rulez lock --outdated --format json` and stops with a notice (`updated: false`) when no
-   source has an update its constraint allows;
-2. runs `ai-rulez update`. The pre-pin security scan applies: a refused source fails the job with
-   its `AR` code and nothing is committed;
-3. runs `ai-rulez generate --no-local`, then `ai-rulez lock --content-only`;
-4. commits every change in the project as `github-actions[bot]` and, by default, pushes it to
-   `branch` and opens a pull request into the checked-out branch, or refreshes the open one. The
-   PR body holds the outdated table (kind, name, source, locked tag, new tag). With `direct: true`
-   it pushes the commit to the checked-out branch instead, with the same list in the commit message.
+1. runs `ai-rulez lock --outdated --format json`, and stops with a notice (`updated: false`) when no source has an
+   update its constraint allows;
+2. runs `ai-rulez update`. The pre-pin security scan applies: a refused source fails the job with its `AR` code and
+   nothing is committed;
+3. runs `ai-rulez generate --no-local`, then `ai-rulez lock --content-only`, and stops with a notice when nothing
+   changed;
+4. commits every change as `github-actions[bot]`, pushes it to `branch`, and opens a pull request into the checked-out
+   branch (or refreshes the open one). The pull request body lists each source with its kind, locked tag and new tag.
+   With `direct: true` it pushes the commit to the checked-out branch instead.
 
 | Input | Default | Meaning |
 | --- | --- | --- |
-| `version` | `latest` | CLI version, as for the root action |
-| `names` | all | Sources to update, separated by spaces or newlines (passed to `lock --outdated` and `update`) |
+| `version` | `latest` | CLI version, as for the setup action |
+| `names` | all | Sources to update, separated by spaces or newlines |
 | `kind` | all | `include`, `skill`, `source`, `marketplace` or `plugin` |
 | `direct` | `false` | `true` pushes to the checked-out branch instead of opening a pull request |
-| `branch` | `ai-rulez/update` | Pull request branch. The action owns it: each run replaces it with `--force-with-lease` from the value it read, so a push by someone else in between fails the run instead of being lost |
-| `token` | `github.token` | Token for `git push` and `gh`. It reaches git through `GIT_CONFIG_*` environment variables and `gh` through `GH_TOKEN`, never the command line or a file. When `GITHUB_TOKEN` is unset it is also exported as `GITHUB_TOKEN`, which `ai-rulez` uses only for github.com release dates (`min_release_age`) |
+| `branch` | `ai-rulez/update` | Pull request branch. The action owns it and replaces it on each run with `--force-with-lease`, so a push by someone else in between fails the run instead of being lost |
+| `token` | `github.token` | Token for `git push` and `gh`. It reaches git and `gh` through environment variables, never the command line. When `GITHUB_TOKEN` is unset it is also exported as `GITHUB_TOKEN`, which `ai-rulez` uses to read github.com release dates for `min_release_age` |
 | `working-directory` | `.` | Project root holding the configuration, relative to the workspace |
 
-Outputs: `version`, `updated` (`true` when a commit was pushed), `commit` and
-`pull-request-url`. The job needs `contents: write`, and `pull-requests: write` for the pull
-request mode. The checkout must be on a branch (not detached) with no uncommitted changes. A
-pull request opened with the default `GITHUB_TOKEN` does not start other workflows; pass a GitHub
-App or fine-grained token as `token` when the pull request must run CI. There is no
-`min-release-age` input: `ai-rulez update` has no such flag, and each source's `min_release_age`
-in the configuration already holds back tags that are too new (`AR733`).
+| Output | Meaning |
+| --- | --- |
+| `version` | the installed CLI version |
+| `updated` | `true` when a commit was pushed |
+| `commit` | SHA of the pushed commit |
+| `pull-request-url` | URL of the opened or refreshed pull request (pull request mode only) |
+
+Requirements and caveats:
+
+- The job needs `contents: write`, plus `pull-requests: write` in pull request mode.
+- The checkout must be on a branch (not a detached HEAD) with no uncommitted changes.
+- A pull request opened with the default `GITHUB_TOKEN` does not start other workflows. Pass a GitHub App or
+  fine-grained token as `token` when the pull request must run CI.
+- To hold back tags that are too new, set `min_release_age` on each source in the configuration; the action has no
+  input for it.
 
 ## LLM configuration inputs
 
-All LLM inputs are optional and default to an empty string. A nonempty input sets its corresponding
-`AI_RULEZ_LLM_*` variable for later steps in the same job using GitHub's environment file. Empty
-inputs preserve existing environment configuration. Inputs are passed as literal values, never
-executed or printed. The CLI validates values when an LLM-aware command reads them; setup itself
-does not contact a provider or test credentials.
+The setup action can export LLM settings for later steps in the same job. Every input is optional. A nonempty input sets
+its `AI_RULEZ_LLM_*` variable through `GITHUB_ENV`; an empty input leaves the existing environment alone. Values are
+passed literally, never executed or printed. The action does not contact a provider; the CLI validates the values when
+an LLM-aware command reads them.
 
 | Input | Environment variable | Value |
 | --- | --- | --- |
 | `llm-provider` | `AI_RULEZ_LLM_PROVIDER` | Provider, for example `openai` or `bedrock` |
 | `llm-model` | `AI_RULEZ_LLM_MODEL` | Model, optionally prefixed with `provider/` |
-| `llm-base-url` | `AI_RULEZ_LLM_BASE_URL` | Optional trusted gateway URL |
-| `llm-api-key-env` | `AI_RULEZ_LLM_API_KEY_ENV` | **Name** of the variable holding the key; never the key itself |
+| `llm-base-url` | `AI_RULEZ_LLM_BASE_URL` | Gateway or local model server URL |
+| `llm-api-key-env` | `AI_RULEZ_LLM_API_KEY_ENV` | The **name** of the variable holding the key, never the key itself |
 | `llm-embedding-model` | `AI_RULEZ_LLM_EMBEDDING_MODEL` | Embedding model for search |
-| `llm-max-cost-usd` | `AI_RULEZ_LLM_MAX_COST_USD` | Nonnegative USD limit for a run |
-| `llm-max-tokens` | `AI_RULEZ_LLM_MAX_TOKENS` | Nonnegative total token limit |
-| `llm-max-calls` | `AI_RULEZ_LLM_MAX_CALLS` | Nonnegative provider call limit |
-| `llm-timeout-seconds` | `AI_RULEZ_LLM_TIMEOUT_SECONDS` | Timeout including retries, at most 3600 seconds |
+| `llm-max-cost-usd` | `AI_RULEZ_LLM_MAX_COST_USD` | Maximum estimated spend in USD per run; `0` is unlimited |
+| `llm-max-tokens` | `AI_RULEZ_LLM_MAX_TOKENS` | Maximum total prompt and completion tokens; `0` is unlimited |
+| `llm-max-calls` | `AI_RULEZ_LLM_MAX_CALLS` | Maximum provider calls; `0` is unlimited |
+| `llm-timeout-seconds` | `AI_RULEZ_LLM_TIMEOUT_SECONDS` | Per-call timeout including retries, at most 3600 |
 | `llm-cache` | `AI_RULEZ_LLM_CACHE` | `true` or `false` |
-| `llm-allow-network` | `AI_RULEZ_LLM_ALLOW_NETWORK` | `true` explicitly permits model requests; default remains disabled |
-| `llm-allow-plain-http` | `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP` | Explicit plain-HTTP gateway opt-in |
-| `llm-plain-http-hosts` | `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS` | Comma-separated exact allowed gateway hosts/ports |
-| `llm-price-input-per-mtok` | `AI_RULEZ_LLM_PRICE_INPUT_PER_MTOK` | Nonnegative USD per million input tokens for the configured model |
-| `llm-price-output-per-mtok` | `AI_RULEZ_LLM_PRICE_OUTPUT_PER_MTOK` | Nonnegative USD per million output tokens for the configured model |
+| `llm-allow-network` | `AI_RULEZ_LLM_ALLOW_NETWORK` | `true` permits model requests; unset leaves them disabled |
+| `llm-allow-plain-http` | `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP` | `true` allows credentials over plain HTTP to the hosts in `llm-plain-http-hosts` |
+| `llm-plain-http-hosts` | `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS` | Comma-separated `host` or `host:port` allowlist for plain HTTP |
+| `llm-price-input-per-mtok` | `AI_RULEZ_LLM_PRICE_INPUT_PER_MTOK` | Input price override, USD per million tokens |
+| `llm-price-output-per-mtok` | `AI_RULEZ_LLM_PRICE_OUTPUT_PER_MTOK` | Output price override, USD per million tokens |
 | `llm-temperature` | `AI_RULEZ_LLM_TEMPERATURE` | `omit` to leave temperature out of requests |
 
-For defaults, budget semantics and provider routing, see [LLM access](llm.md). There is no
-`AI_RULEZ_LLM_BACKEND` or `AI_RULEZ_LLM_MAX_RETRIES` override; configure `max_retries` in the user
-configuration file. Network and credential settings in a repository config cannot enable requests.
+There is no input for retries; set `max_retries` in the user configuration. Network and credential settings in a
+repository configuration cannot enable requests. For defaults, budgets and provider routing, see [LLM access](llm.md).
 
-## Credentials and environment variables
+## Credentials
 
-Set provider credentials through GitHub secrets on the **command step** or job, or use an OIDC
-credential action before running the command. Setting `env:` only on the setup action does not
-persist it into a later command step. Job environment variables are inherited by all steps; a
-later step's own `env:` can override a variable exported by the action.
+Set the provider key on the **command step** (or the job), not on the setup action: `env:` on the setup step does not
+reach later steps.
 
 ```yaml
 steps:
   - uses: actions/checkout@v7
     with:
-      fetch-depth: 2
+      fetch-depth: 2                 # history for --changed=HEAD~1
   - uses: Goldziher/ai-rulez@v5
     with:
-      version: 5.9.2
+      version: 5.10.0
       llm-provider: openai
       llm-model: gpt-4o-mini
       llm-api-key-env: OPENAI_API_KEY
-      llm-allow-network: 'true'
-      llm-max-cost-usd: '2.00'
-      llm-max-calls: '20'
+      llm-allow-network: "true"
+      llm-max-cost-usd: "2.00"
+      llm-max-calls: "20"
   - name: Review agent configuration
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     run: ai-rulez judge --allow-llm --changed=HEAD~1 --format json
 ```
 
-Fetch enough Git history for the comparison you choose (for example `fetch-depth: 2` on checkout
-for `HEAD~1`). `judge` additionally requires `--allow-llm`; the action does not grant that consent.
-Only run credentialed model reviews on changes you trust. GitHub does not normally provide secrets
-to pull requests from forks.
+- `judge` also needs `--allow-llm`; the action does not grant that consent.
+- Run credentialed model reviews only on changes you trust. GitHub does not normally give secrets to pull requests from
+  forks.
+- Job-level `env:` reaches every step; a step's own `env:` overrides a variable the action exported.
 
-You can skip the LLM inputs and use the same variables directly:
-
-Run `llm doctor` from a repository with an ai-rulez project configuration. Unlike `judge`, this
-diagnostic requires a project; `llm estimate` can run without one.
+You can skip the `llm-*` inputs and set the variables directly. `llm doctor` checks the configuration without making a
+request; it must run in a repository with an ai-rulez configuration.
 
 ```yaml
 - uses: Goldziher/ai-rulez@v5
   with:
-    version: 5.9.2
-- name: Inspect LLM configuration without a request
+    version: 5.10.0
+- name: Inspect LLM configuration
   env:
     AI_RULEZ_LLM_PROVIDER: openai
     AI_RULEZ_LLM_MODEL: gpt-4o-mini
@@ -257,18 +279,12 @@ diagnostic requires a project; `llm estimate` can run without one.
   run: ai-rulez llm doctor
 ```
 
-For [Bedrock](llm.md#amazon-bedrock), configure AWS credentials using the AWS SDK credential chain
-(including GitHub OIDC), supply `AWS_REGION` on the command step or job, and set
-`llm-model: bedrock/<model-or-inference-profile-id>`. No `llm-base-url` or `llm-api-key-env` is
-needed for normal AWS authentication. Use ordinary `env:` for provider-specific settings such as
-AWS region, profile and bearer-token variables.
+For [Bedrock](llm.md#amazon-bedrock), configure AWS credentials through the AWS SDK credential chain (GitHub OIDC
+works), set `AWS_REGION` on the command step or job, and use `llm-model: bedrock/<model-or-inference-profile-id>`.
+`llm-base-url` and `llm-api-key-env` are not needed.
 
-## Outputs
+## See also
 
-| Output | Meaning |
-| --- | --- |
-| `version` | Resolved installed CLI version, without the leading `v` |
-| `path` | Absolute path to the installed binary |
-
-Give the action step `id: setup` to read `${{ steps.setup.outputs.version }}` and
-`${{ steps.setup.outputs.path }}`. The CLI is also available by name in later steps.
+- [Lock file](lockfile.md#ci-usage)
+- [Strict validation](strict-validation.md)
+- [Publish](publish.md), for building release artifacts in CI

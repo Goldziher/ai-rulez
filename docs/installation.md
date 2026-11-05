@@ -1,73 +1,87 @@
 # Installation
 
-Install `ai-rulez` using your preferred package manager.
+`ai-rulez` is a single binary, distributed through Homebrew, npm, PyPI and Go. Install it with the package manager you
+already use, or run it without installing.
 
-## Package Managers
+```bash
+brew install goldziher/tap/ai-rulez
+ai-rulez version
+```
 
-=== "Homebrew (macOS/Linux)"
+```text
+ai-rulez version 5.10.0
+```
+
+## Package managers
+
+=== "Homebrew (macOS, Linux)"
     ```bash
     brew install goldziher/tap/ai-rulez
     ```
 
 === "npm"
     ```bash
+    npm install -g ai-rulez
+    # or
     pnpm add -g ai-rulez
     ```
 
-=== "pip"
+    Requires Node.js 22 or newer. The package downloads the binary for your platform on first run and checks it
+    against the release checksums.
+
+=== "pip / pipx"
     ```bash
+    pipx install ai-rulez
+    # or
     pip install ai-rulez
     ```
 
-=== "uv tool"
+    Requires Python 3.11 or newer.
+
+=== "uv"
     ```bash
     uv tool install ai-rulez
     ```
 
-!!! note "Go"
-    The module path is `github.com/Goldziher/ai-rulez/v5`, and the binary is the
-    `cmd/ai-rulez` package. Install it with the `/v5` path (a path without it
-    resolves to an old 1.x build):
+Release binaries are built for Linux and macOS (amd64 and arm64) and Windows (amd64). Linux binaries need glibc 2.36 or
+newer; Alpine (musl) is not supported.
 
-    ```bash
-    go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
-    ```
+## Run without installing
 
-    This builds a local cgo executable using the native library shipped in the Go module.
-    It needs a C toolchain and the module cache at runtime; use a release package for distribution.
+```bash
+npx ai-rulez@latest generate
+pnpm dlx ai-rulez@latest generate
+uvx ai-rulez generate
+```
 
-    For a statically linked build from a clone, use mise to fetch and verify the pinned native library:
+Pin a version (`npx ai-rulez@5.10.0`, `uvx --from ai-rulez==5.10.0 ai-rulez`) when a script or hook must not change
+behavior between releases.
 
-    ```bash
-    git clone https://github.com/Goldziher/ai-rulez
-    cd ai-rulez
-    mise run build
-    ./bin/ai-rulez version
-    ```
+## Go
 
-## Run Without Installing
+```bash
+go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
+```
 
-You can also run `ai-rulez` directly without a permanent installation.
+The module path must include `/v5`; without it, `@latest` resolves to an old 1.x release.
 
-=== "Python"
-    ```bash
-    uvx ai-rulez --help
-    ```
+`go install` builds with cgo and links the native library shipped in the Go module dynamically, so it needs a C
+toolchain to build and the Go module cache to stay in place at run time. For a binary you distribute, use a release
+package, or build a statically linked binary from a clone with [mise](https://mise.jdx.dev):
 
-=== "Node.js"
-    ```bash
-    pnpm dlx ai-rulez@latest --help
-    ```
+```bash
+git clone https://github.com/Goldziher/ai-rulez
+cd ai-rulez
+mise run build
+./bin/ai-rulez version
+```
 
-## Shell Completion (Recommended)
+To embed ai-rulez as a library instead, see [Embedding (Go API)](embedding.md).
 
-Enable tab completion for your shell to see all available commands and flags interactively.
-
-!!! tip "Highly Recommended"
-    Setting up shell completion is a one-time step that makes the CLI much faster and easier to use. You'll be able to discover all commands just by pressing the `<Tab>` key.
+## Shell completion
 
 === "Bash"
-    Add to `~/.bashrc` or `~/.bash_profile`:
+    Add to `~/.bashrc`:
 
     ```bash
     source <(ai-rulez completion bash)
@@ -94,16 +108,80 @@ Enable tab completion for your shell to see all available commands and flags int
     ai-rulez completion powershell | Out-String | Invoke-Expression
     ```
 
-## Verify Installation
+## Git hooks
 
-Check that the installation was successful:
+Run `generate` and `validate` before each commit so the generated files never drift from `.ai-rulez/`.
 
-```bash
-ai-rulez version
+When you create a project, `ai-rulez init --setup-hooks` detects an existing pre-commit, Lefthook or Husky
+configuration and adds ai-rulez to it; with none present it does nothing. `--setup-hooks` is an `init` flag, so in an
+existing project add the hooks by hand:
+
+=== "pre-commit / prek"
+    Add to `.pre-commit-config.yaml`:
+
+    ```yaml
+    repos:
+      - repo: https://github.com/Goldziher/ai-rulez
+        rev: v5.10.0
+        hooks:
+          - id: ai-rulez-recursive
+          - id: ai-rulez-validate
+    ```
+
+    The hooks run only when a file under a `.ai-rulez/` directory changes. They use the `ai-rulez` on `PATH`, or
+    download and cache a checksum-verified release binary when there is none.
+
+    | Hook id | Runs |
+    | ------- | ---- |
+    | `ai-rulez-generate` | `generate` for the root `.ai-rulez/` |
+    | `ai-rulez-recursive` | `generate --recursive` for every nested `.ai-rulez/` |
+    | `ai-rulez-validate` | `validate --recursive` |
+    | `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` |
+    | `ai-rulez-plugin-verify` | `verify --recursive --plugin --if-configured` |
+
+    Add the two plugin hooks if the repository publishes plugin bundles; `--if-configured` makes them do nothing in a
+    repository without a `[plugin]` or `[marketplace]` block.
+
+=== "Lefthook"
+    Add to `lefthook.yml`:
+
+    ```yaml
+    pre-commit:
+      commands:
+        ai-rulez:
+          glob: ".ai-rulez/**"
+          run: ai-rulez generate --recursive --no-local
+        ai-rulez-validate:
+          glob: ".ai-rulez/**"
+          run: ai-rulez validate --recursive --no-local
+    ```
+
+=== "Poly"
+    See [Poly hooks](poly-hooks.md).
+
+The shipped pre-commit hooks do not pass `--no-local`, so they read a developer's gitignored `config.local.toml` and
+`.ai-rulez/local/` content like any local run. To check only the shared configuration, pass `--no-local` as the
+Lefthook example does; with pre-commit, override the hook's arguments (`args: [validate, --recursive, --no-local]`). See
+[Machine-local configuration in hooks](poly-hooks.md#machine-local-configuration-in-hooks).
+
+## CI
+
+The `Goldziher/ai-rulez` GitHub Action installs a checksum-verified, cached binary with no Go, Node or Python setup:
+
+```yaml
+steps:
+  - uses: actions/checkout@v7
+  - uses: Goldziher/ai-rulez@v5
+    with:
+      version: 5.10.0
+  - run: ai-rulez generate --check
+  - run: ai-rulez validate
 ```
 
----
+`validate` fails on errors; add `--strict` to fail on warnings too.
 
-## Next Steps
+See [GitHub Actions](github-actions.md) for version pinning, the governance gate and scheduled updates.
 
-- **[Quick Start Guide](quick-start.md)**: Get up and running in minutes.
+## Next steps
+
+Follow the [Quick start](quick-start.md) to create a configuration and generate your first files.

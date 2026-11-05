@@ -1,331 +1,315 @@
-# Installed Skills
+# Installed skills
 
-Install named skills from external repositories. Skills are fetched dynamically at generate time and included in your outputs — no local copy needed.
+An `[[installed_skills]]` entry pulls one or more [Agent Skills](https://agentskills.io) from a git repository or a
+local directory and writes them into every harness's skills folder, as if they were your own. Use it to ship a
+library's usage guide with the library, or to share team skills across repositories without a full
+[include](includes.md).
 
-## Overview
+## Example
 
-Installed skills let you pull specialized AI instructions from any git repository or local path. Unlike [includes](includes.md) (which import `.ai-rulez/` content), installed skills expect a simpler structure: a `skills/<name>/SKILL.md` file at the repository root.
+```bash
+ai-rulez skill install ai-rulez --source Goldziher/ai-rulez --trust warn
+ai-rulez generate
+ai-rulez lock
+```
 
-Use installed skills to:
+`skill install` adds the entry to `.ai-rulez/config.toml`:
 
-- Add library-specific instructions (e.g., how to use a framework or SDK)
-- Share team skills across projects without full includes
-- Distribute AI guidance alongside your library
+```toml
+[[installed_skills]]
+name = 'ai-rulez'
+source = 'Goldziher/ai-rulez'
+trust = 'warn'
+```
+
+`trust = 'warn'` is needed for this skill because its text runs `npx ai-rulez@latest`, which the security scan
+reports as an unpinned package run (`AR021`). Without it, `generate` still writes the skill, but `ai-rulez lock`
+leaves it out of the served-skill pins and exits 3 (see [Security](#security)).
+
+`generate` fetches `skills/ai-rulez/` from the repository and writes it, with its bundled files, to each preset's
+skills folder. With `presets = ["claude", "copilot"]`:
+
+```text
+.agents/skills/ai-rulez/SKILL.md
+.agents/skills/ai-rulez/references/cli-reference.md
+...
+.claude/skills/ai-rulez/SKILL.md
+.claude/skills/ai-rulez/references/cli-reference.md
+...
+```
+
+`ai-rulez lock` pins the commit (see [Pinning](#pinning)).
 
 !!! tip "No `.ai-rulez/` folder needed"
-    A repository with hand-written `CLAUDE.md` and `AGENTS.md` can declare `[[installed_skills]]` in a single root-level `ai-rulez.toml` (create it with `ai-rulez init --minimal`). `skill install` and `skill remove` edit that file. See [Config without a .ai-rulez folder](config-without-folder.md).
+    A project that keeps hand-written `CLAUDE.md` and `AGENTS.md` can declare `[[installed_skills]]` in a root
+    `ai-rulez.toml` (`ai-rulez init --minimal`). See [Config without a .ai-rulez folder](config-without-folder.md)
+    and [Managing only remote skills](managing-remote-skills.md).
 
 ## Installed skills vs skill sources
 
-ai-rulez can reach a skill in another repository two ways, and they differ in *what lands where*.
+ai-rulez reaches skills in another repository in two ways:
 
 | | Installed skill (`[[installed_skills]]`) | Skill source (`[[skill_sources]]`) |
 | --- | --- | --- |
-| What it is | One named skill fetched at generate time | A repository whose skills are served on demand |
-| Where it goes | Written into the harness skill trees, like a local skill | Never written; served over MCP and found with `find_skill` |
-| Reaches the project as | A content file, so profiles and roles scope it | A served skill, so the [skills server](mcp-server.md#dynamic-skill-loading) and a role's `delivery` scope it |
-| Use it for | A skill the agent should always have in context | A catalog of skills the agent should find on demand |
+| What happens | The skill is fetched and written into the harness skill folders | The repository is served over MCP; nothing is written |
+| How the agent sees it | Like a local skill, listed up front | Found on demand with `find_skill` |
+| Scoped by | Profiles, roles, `domain`, `profiles` | `domain`, the [skills server](mcp-server.md#dynamic-skill-loading) and a role's `delivery` |
+| Use it for | A few skills the agent should always have | A large catalog the agent should search instead of paying its tokens up front |
 
-Both are pinned in `ai-rulez.lock` and scanned before they are used. Reach for an **installed skill** when the
-skill belongs in the agent's static context (a library's usage guide), and for a **skill source** when you want many
-skills available without paying their tokens up front (a vendor's whole skill catalog). Both select several skills
-from one repository (`include`/`exclude`), namespace their names (`name_prefix`) and set the scan level of what
-they import (`trust`).
+Both are pinned in `ai-rulez.lock`, scanned before use, and accept `include`, `exclude`, `name_prefix` and `trust`.
+`ai-rulez skill install`, `list`, `update` and `remove` manage installed skills; skill sources are declared by hand
+in `config.toml` (they use `url` instead of `source`). See [Skill sources](mcp-server.md#skill-sources).
 
-`ai-rulez skill install`, `list`, `update` and `remove` manage installed skills; skill sources are declared in
-`[[skill_sources]]` in `config.toml`.
+## Several skills from one repository
 
-## Quick Start
+When `path` names a directory of skill directories, one entry installs several skills. `include` and `exclude` match
+directory names; `name_prefix` keeps the names apart from your own:
 
 ```bash
-# Install a skill
-ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
-
-# List installed skills
-ai-rulez skill list
-
-# Generate — the skill is fetched and included automatically
-ai-rulez generate
-
-# Remove when no longer needed
-ai-rulez skill remove kreuzberg
+ai-rulez skill install vendor --source ./vendor/acme-skills --include 'db-*' --name-prefix acme-
 ```
+
+```toml
+[[installed_skills]]
+name = 'vendor'
+source = './vendor/acme-skills'
+include = ['db-*']
+name_prefix = 'acme-'
+```
+
+With `vendor/acme-skills/skills/{db-migrate,db-seed,api-style}/SKILL.md` and `presets = ["cursor", "codex"]`,
+`generate` writes:
+
+```text
+.agents/skills/acme-db-migrate/SKILL.md
+.agents/skills/acme-db-migrate/cli.md
+.agents/skills/acme-db-migrate/references/notes.md
+.agents/skills/acme-db-seed/SKILL.md
+.agents/skills/acme-db-seed/references/notes.md
+```
+
+`name` is then only the entry's label: `skill list` and `skill remove` use it.
 
 ## Configuration
 
-Installed skills are defined in `.ai-rulez/config.toml`:
-
 ```toml
-[[installed_skills]]
-name = "kreuzberg"
-source = "https://github.com/kreuzberg-dev/kreuzberg"
-
 [[installed_skills]]
 name = "ai-rulez"
 source = "https://github.com/Goldziher/ai-rulez"
-ref = "main"
+version = "^5"                # newest tag in this range, moved by `ai-rulez update`
 
 [[installed_skills]]
-name = "custom-skill"
-source = "https://github.com/org/repo"
-path = "custom/skill/path"    # defaults to skills/<name>
-
-# One entry can install several skills from one repository.
-[[installed_skills]]
-name = "vendor"
-source = "https://github.com/org/skills"
-path = "skills"               # a directory of skill directories
-include = ["db-*", "api"]     # keep only these directory names
-exclude = ["*-wip"]           # drop these; exclude wins over include
-name_prefix = "vendor-"       # every resolved skill is named, and written to, vendor-<dir>
-trust = "warn"                # only error-severity scan findings block generate
+name = "my-lib"
+source = "acme/my-lib"
+path = "libs/my-lib/skill"    # default: skills/<name>
+ref = "v2.0.1"
+domain = "backend"            # selected by profiles and roles like backend content
+trust = "warn"
 ```
 
-### Fields
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `name` | string | required | Entry name. For a single-skill entry, also the skill name and the default directory `skills/<name>` |
+| `source` | string | required | Where the skills come from; see [Source forms](#source-forms) |
+| `path` | string | `skills/<name>`, or `skills` with `include`/`exclude` | Directory in the source holding the skill, or a directory of skills |
+| `ref` | string | default branch | Branch, tag or commit |
+| `version` | string | | Semver range of the source's tags (`^1.2`, `~2.1.0`), instead of `ref` |
+| `tag_prefix` | string | | With `version`: only tags with this prefix (`v`, `skills/`) |
+| `include_prerelease` | bool | `false` | With `version`: let pre-release tags match |
+| `min_release_age` | string | | With `version`: skip tags younger than this (`7d`, `12h`) |
+| `include` | list of globs | all | Keep skill directories whose name matches |
+| `exclude` | list of globs | none | Drop matching directories; wins over `include` |
+| `name_prefix` | string | | Prepended to every skill name and output directory (`acme-db-migrate/`) |
+| `domain` | string | root | Put the skills in a [domain](domains.md) |
+| `profiles` | list | all | Include the skills only in these profiles |
+| `resources` | list of patterns | whole directory | What is bundled besides `references/`, `scripts/`, `assets/`; see [below](#what-is-bundled-with-a-skill) |
+| `local_override` | string | | A local checkout used instead of the source; see [Local development](#local-development) |
+| `trust` | `error` \| `warn` | unset | Scan level of the imported skills; see [Security](#security) |
 
-| Field            | Required | Description                                                      |
-| ---------------- | -------- | ---------------------------------------------------------------- |
-| `name`           | Yes      | Unique skill name                                                |
-| `source`         | Yes      | Where the skill comes from; see [Source forms](#source-forms)    |
-| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
-| `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
-| `version`        | No       | Version range of the source's tags (`^1.2`), instead of `ref` |
-| `tag_prefix`     | No       | With `version`, only consider tags that start with this prefix (`v`, `skills/`) |
-| `include_prerelease` | No   | With `version`, let pre-release tags match. Default `false`      |
-| `min_release_age` | No      | With `version`, skip tags younger than this (`7d`), so a brand-new release is not picked up at once |
-| `local_override` | No       | Local path override for development                              |
-| `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
-| `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
-| `include`        | No       | Keep only skills whose directory name matches one of these globs. Empty keeps every skill below `path` |
-| `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
-| `name_prefix`    | No       | Prepend this to every resolved skill name and output directory (`.claude/skills/vendor-<dir>/`), so two entries cannot collide |
-| `resources`      | No       | What is bundled from each skill directory besides `references/`, `scripts/` and `assets/`. The default is the whole directory (see below); setting it replaces that default |
-| `trust`          | No       | Scan level of the imported skills: `error` (every finding counts, the default) or `warn` (only error-severity findings block) |
-
-One entry resolves to one skill when the directory `path` names holds a `SKILL.md`, and to the
-`SKILL.md`-bearing subdirectories of `path` otherwise, selected by `include`/`exclude` and named with
-`name_prefix`. A single-skill entry behaves exactly as it did before these fields existed.
-
-### What is bundled with a skill
-
-An installed skill arrives whole. Besides `references/`, `scripts/` and `assets/`, every file in the skill directory
-is bundled: documents beside `SKILL.md` (`cli.md`), folders of any name (`rules/`, `templates/`) and their
-subfolders. Documents are listed under References in the generated `Resources` section of `SKILL.md`, interpreter
-scripts under Scripts and everything else under Assets; each is written at its path below the skill directory, so the
-links in `SKILL.md` keep working. Four things are left out: `SKILL.md` itself, `evals/` (eval cases cost context),
-`agents/` (tool display metadata such as `openai.yml`) and hidden files. Files that git ignores, `node_modules`,
-`.venv` and the other [`bundle_exclude`](configuration.md#bundle_exclude) defaults are skipped as for any skill.
-
-`resources` replaces that default for the entry. A pattern is a name, a path or a glob; a name such as `rules`
-matches that file or directory at any depth, and a leading `!` removes what an earlier pattern added:
-
-```toml
-resources = ["*", "!docs", "!templates", "!evals", "!agents", "!.*"]  # everything but docs/ and templates/
-resources = ["rules"]                                                  # only rules/, plus the canonical folders
-resources = ["*"]                                                      # also evals/, agents/ and hidden files
-```
-
-Whatever `resources` says, an installed skill never bundles credential-like files (`id_rsa*`, `id_ed25519*`,
-`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.keystore`, `credentials.json`, `*.tfstate`, `.env.*`), symlinks, or special
-files. Each skipped credential file is named in a warning. A single file over 8 MiB is skipped with a warning naming it.
-A skill that bundles more than 2000 files or 16 MiB in total fails with an error naming the limit; narrow it with
-`resources`, for example `["*", "!docs", "!evals", "!agents", "!.*"]`.
-
-All the skills one `installed_skills` entry resolves together may bundle at most 20000 files and 64 MiB; past that the
-entry fails with an error naming the limit. Select fewer skills with `include` / `exclude`, or narrow what each bundles
-with `resources`.
-
-A project's own skills under `.ai-rulez/skills/` keep the canonical layout; only installed skills are bundled whole.
+An entry is a single skill when the directory at `path` holds a `SKILL.md`, and a directory of skills otherwise.
 
 ## Source forms
 
-`source` accepts what a harness would install from:
-
 | Form | Example | Notes |
 | --- | --- | --- |
-| Git URL | `https://github.com/org/repo`, `git@github.com:org/repo.git` | `https`, `ssh` and scp-style; plain `http://` is refused |
-| GitHub shorthand | `org/repo`, `github:org/repo` | Expands to `https://github.com/org/repo`, so the lock records the full URL. A bare `org/repo` that names an existing directory in the project stays a local path; `github:` is always a repository |
-| `file://` URL | `file:///srv/skills` | A git repository is cloned; any other directory is read as a local path |
+| Git URL | `https://github.com/acme/skills`, `git@github.com:acme/skills.git` | `https` and `ssh`; `http://` is refused |
+| GitHub shorthand | `acme/skills`, `github:acme/skills` | Recorded in the lock as `https://github.com/acme/skills`. A bare `acme/skills` that names an existing directory in the project is a local path; `github:` is always GitHub |
+| `file://` URL | `file:///srv/skills` | A git repository is cloned; any other directory is read in place |
 | Local directory | `./vendor/skills`, `/abs/path` | Read in place |
-| Home directory | `~`, `~/skills` | Local, expanded to your home directory |
+| Home directory | `~/skills` | Local, expanded to your home directory (`~user/` is not supported) |
 
-A local path (including `file://` and `~`) in the committed project config must resolve inside the project, symlinks
-resolved, the same rule as local includes and `[[skill_sources]]`. A path outside it is allowed only from
-`config.local.toml` (or `skill install --local`) and from the user config used by `generate --user`; in a committed
-config it fails with a hint. `~user/path` is not supported. Set `AI_RULEZ_ALLOW_FILE_URLS=1` to let a `file://` git
-source leave the project.
-
-## Discovery
-
-The entry root is `path` (default `skills/<name>`, or `skills` when `include`/`exclude` is set). Below it, every
-directory that holds a `SKILL.md` is a skill, to six levels deep; a skill directory is not searched further.
-Symlinks, hidden directories and `node_modules` are never entered. Two skills with the same directory name keep the
-shallowest and the other is skipped with a warning. An entry may resolve to at most 200 skills. The search itself
-stops after 5000 skill directories (in name order) with a warning; narrow the entry with `path`. A skill whose
-`SKILL.md` cannot be read is skipped with a warning and the rest of the entry still resolves.
-
-When the entry sets no `path` and nothing is at the default location, the source is searched where harnesses keep
-skills: a `SKILL.md` at the root is one skill named after the entry; otherwise `skills/`, `.claude/skills/`,
-`.agents/skills/`, `.codex/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/` and `.opencode/skills/`,
-in that order. Without `include`/`exclude` the entry names one skill, the directory called `name`; with them, every
-match across those directories. A git source is fetched whole for this search only when the default location is empty.
-
-## CLI Commands
-
-### `ai-rulez skill install <name> --source <url> [flags]`
-
-Install a named skill.
-
-**Flags:**
-
-- `--source <url>` (required): Git URL or local path
-- `--path <dir>` (optional): Path within repo to skill directory
-- `--ref <ref>` (optional): Git ref (branch, tag, commit)
-- `--include <glob>`, `--exclude <glob>` (optional, repeatable): Select skills from a directory of skills
-- `--name-prefix <prefix>` (optional): Prefix added to every skill name
-- `--trust error|warn` (optional): Scan level of the imported skills
-- `--resources <pattern>` (optional, repeatable): What is bundled besides the canonical folders
-- `--version <range>` (optional): Version range of the source's tags, instead of `--ref`
-- `--tag-prefix <prefix>`, `--include-prerelease`, `--min-release-age <age>` (optional): Tag filter and release age gate for `--version`
-- `--domain <name>` (optional): Place the skills in a domain, so a profile or role selects them by domain
-- `--profile <name>` (optional, repeatable): Restrict the skills to these profiles
-- `--local-override <dir>` (optional): Directory used instead of the source while it exists
-- `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
-
-`skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
-writing it would commit the secret to `config.toml` in clear. Keep the URL free of secrets and authenticate with the
-git credential helper or the `AI_RULEZ_GIT_TOKEN` environment variable; `validate`/`scan` report an already committed
-credentialed source as `AR035` (see [Strict validation](strict-validation.md)).
-
-**Examples:**
+A local path in the committed config must resolve inside the project, symlinks included. A path outside it works
+only from `config.local.toml` (`skill install --local`) or from the [user config](user-scope.md):
 
 ```bash
-# From a git repo (skill at skills/kreuzberg/)
-ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
-
-# With explicit path and ref
-ai-rulez skill install my-lib --source https://github.com/org/repo --path libs/my-lib --ref v2.0
-
-# GitHub shorthand, several skills with a prefix
-ai-rulez skill install vendor --source org/skills --include 'db-*' --name-prefix vendor-
-
-# From a local path inside the project
-ai-rulez skill install local-skill --source ./vendor/my-other-repo
-
-# From outside the project: machine-local only
-ai-rulez skill install mine --source ~/skills --local
+ai-rulez skill install lint --source ~/skills --local
 ```
 
-### `ai-rulez skill remove <name> [flags]`
+Set `AI_RULEZ_ALLOW_FILE_URLS=1` to let a `file://` source point outside the project.
 
-Remove an installed skill from the configuration.
+Never put a token in the URL: `skill install` refuses `https://user:token@host/...`, and `validate` reports a
+committed one as `AR035`. Authenticate with your git credential helper or `AI_RULEZ_GIT_TOKEN`.
 
-**Flags:**
+## How skills are found
 
-- `--yes`, `-y` (optional): Skip confirmation prompt
-- `--local` (optional): Remove through the overlay. A skill defined in the shared config is hidden on this machine by writing `remove = true` to the overlay; the shared config is not changed
+Below the entry's `path`, every directory holding a `SKILL.md` is a skill, up to six levels deep. Hidden directories,
+`node_modules` and symlinks are skipped. If two skills share a directory name, the shallower one wins and the other
+is skipped with a warning. One entry resolves to at most 200 skills. A skill whose `SKILL.md` cannot be read is
+skipped with a warning, and a missing `description` only warns (the skill name is used instead); set it anyway, since
+the description is how an agent decides when to load the skill.
 
-### `ai-rulez skill list [flags]`
+When `path` is not set and nothing is at `skills/<name>`, the source is searched where harnesses keep skills: a
+`SKILL.md` at the root (one skill named after the entry), then `skills/`, `.claude/skills/`, `.agents/skills/`,
+`.codex/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/` and `.opencode/skills/`, in that order.
+So a repository that keeps its skills in `.claude/skills/review/` installs with:
 
-List all installed skills.
-
-**Flags:**
-
-- `--format text|json` (optional, default `text`): `json` prints JSON
-
-## How It Works
-
-1. During `ai-rulez generate`, each installed skill is fetched from its source
-2. The skill directory (`SKILL.md` + optional `references/`) is read
-3. `references/`, `scripts/` and `assets/` are kept as separate files beside the generated `SKILL.md`
-4. The skill is added to the root-level content tree
-5. If a local skill has the same name, the local skill wins (installed skill is skipped with a warning)
-
-## Skill Directory Structure
-
-Installed skills expect this layout in the source repository:
-
-```text
-repo-root/
-  skills/
-    my-skill/
-      SKILL.md              # Required: main skill content
-      references/            # Optional: additional reference docs
-        api-reference.md
-        configuration.md
+```bash
+ai-rulez skill install review --source acme/tools
 ```
 
-### SKILL.md Format
+A local skill with the same name always wins; the installed one is skipped with
+`Installed skill name conflicts with local skill, skipping`. Use `name_prefix` to keep both.
 
-```yaml
----
-name: my-library
-description: >-
-  Brief description of what this skill covers.
-license: MIT
-metadata:
-  author: your-org
-  version: "1.0"
-  repository: https://github.com/your-org/your-repo
----
-# My Library
+## What is bundled with a skill
 
-Instructions for AI assistants working with your library...
-```
+An installed skill arrives whole: every file in its directory is bundled, including documents beside `SKILL.md`
+(`cli.md`) and folders of any name (`rules/`, `templates/`). `generate` lists them in a `Resources` section of the
+generated `SKILL.md` (documents under References, scripts under Scripts, the rest under Assets) and writes each at
+its relative path, so links in `SKILL.md` keep working:
 
-A missing `description` produces a warning rather than an error; the skill name is used as a fallback. Set it anyway — the description is how the assistant decides when to load the skill.
+```markdown
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
 
 ### References
 
-Files in `references/` (like `scripts/` and `assets/`) are kept as separate files next to the generated `SKILL.md`, for both path and git sources; they are not appended to the skill body. This lets you separate detailed API docs, configuration guides, etc. from the main skill instructions, and the assistant loads them on demand.
+- [`cli.md`](cli.md) — cli doc
+- [`references/notes.md`](references/notes.md) — ref
+```
 
-## Pinning with a lock file
+Left out by default: `evals/`, `agents/` (tool display metadata such as `openai.yml`) and hidden files. Git-ignored
+files and the [`bundle_exclude`](configuration.md#bundle_exclude) defaults (`node_modules`, `.venv`, ...) are
+skipped as for any skill. Your own skills under `.ai-rulez/skills/` keep the canonical layout; only installed
+skills are bundled whole.
 
-`ref` defaults to the repository's default branch (`HEAD`), which moves. Run `ai-rulez lock` (or `ai-rulez skill update <name>`) to record the resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`. Later `generate` runs fetch exactly that commit and fail if the files do not match the digest; `generate --locked` fails when a skill is not covered, and `--frozen` never uses the network. A skill read from a local directory is pinned too, as a `local-skill` item holding the tree digest of the skill directory (like a [local include](lockfile.md)); editing a file in it makes `lock --check` and `generate --locked` fail until `ai-rulez lock` is rerun. See the [Lock Command](cli.md#lock-command). Imported skill text is instruction text: with `[lint.security] scan_imports`, it is also scanned for secrets, hidden characters and risky commands before it is written ([Security checks](strict-validation.md#security-checks)).
-
-To serve a repository of skills over MCP instead of writing them into the skill trees, use `[[skill_sources]]`
-or `ai-rulez mcp --serve-skills --source`; they are pinned in the same lock (kind `source`). See
-[Dynamic skill loading](mcp-server.md#skill-sources).
-
-## Local Override
-
-For development workflows, use `local_override` to point to a local checkout instead of fetching from git:
+`resources` replaces the default. A pattern is a name, a path or a glob; a bare name matches at any depth, and `!`
+removes what an earlier pattern added. `references/`, `scripts/` and `assets/` are always bundled.
 
 ```toml
+resources = ["*", "!docs", "!templates", "!evals", "!agents", "!.*"]  # everything except docs/ and templates/
+resources = ["rules"]                                                  # only rules/ besides the canonical folders
+resources = ["*"]                                                      # also evals/, agents/ and hidden files
+```
+
+Limits that `resources` cannot lift:
+
+- Credential-like files (private keys, `*.pem`, `*.key`, `.env.*`, `credentials.json`, Terraform state, ...),
+  symlinks and special files are never bundled; each skipped credential file is named in a warning.
+- A file over 8 MiB is skipped with a warning.
+- One skill may bundle at most 2000 files and 16 MiB; one entry at most 20000 files and 64 MiB. Past that, the entry
+  fails with an error. Narrow it with `include`/`exclude` or `resources`.
+
+## Pinning
+
+`ref` defaults to the moving default branch. `ai-rulez lock` records the resolved commit and a content digest in
+`ai-rulez.lock`:
+
+```toml
+[[skill]]
+name = 'ai-rulez'
+source = 'https://github.com/Goldziher/ai-rulez'
+path = 'skills/ai-rulez'
+commit = '99407aa72968580a77a949258e399686acfa31d9'
+digest = 'sha256:af3882d30acc484af8ff29699eb914891317ea06ec76440ec158982298e763cc'
+```
+
+Later runs fetch exactly that commit and fail if the content does not match the digest. A skill read from a local
+directory is pinned as a `local-skill` item with the directory's tree digest, so editing it makes `lock --check` and
+`generate --locked` fail until you run `ai-rulez lock` again.
+
+| Command | Effect |
+| --- | --- |
+| `ai-rulez lock` | Pin every unpinned entry |
+| `ai-rulez skill update [name...]` | Re-pin entries to the current commit of their `ref` |
+| `ai-rulez update` | Move `version` entries to the newest allowed tag |
+| `ai-rulez generate --locked` | Fail when an entry is missing from the lock or does not match |
+| `ai-rulez generate --frozen` | Same, and never use the network |
+
+See [Lock file](lockfile.md).
+
+## Security
+
+Imported skill text is instruction text, so it is scanned for secrets, hidden characters, risky commands and
+unpinned package runs ([Security checks](strict-validation.md#security-checks)) at three points:
+
+| When | What blocks |
+| --- | --- |
+| `ai-rulez lock`, before pinning a new tree | Error findings refuse the pin (exit 2) unless you pass `--accept-findings` |
+| `generate` | An error finding stops the run before anything is written. `trust = "error"` makes every finding an error, `trust = "warn"` every finding a warning; unset, [`[lint.security] scan_imports`](strict-validation.md#security-checks) decides (by default each finding keeps its own severity) |
+| The [skills server](mcp-server.md#security-scan) and its `[[served]]` lock pins | `error`, or unset: any finding refuses the skill. `warn`: only findings that are errors in their own right. Unset, `[lint.security] scan_imports = "warn"` lowers the default to `warn` |
+
+When the served view refuses a skill, `lock` still writes the lock, leaves that skill unpinned and exits 3
+(`1 served skill(s) were left unpinned because the security scan refuses them`). Fix the finding, set
+`trust = "warn"`, or pass `--refuse-findings` to fail without writing instead.
+
+## Local development
+
+`local_override` points an entry at a local checkout while you work on the skill:
+
+```toml
+# .ai-rulez/config.local.toml
 [[installed_skills]]
 name = "my-lib"
-source = "https://github.com/org/my-lib"
+source = "acme/my-lib"
 local_override = "../my-lib"
 ```
 
-If the local path exists and contains the skill, it's used. If it doesn't exist, the skill is skipped (not fetched from git).
+The override is the checkout root; `path` (default `skills/<name>`) is resolved inside it. If that directory has no
+`SKILL.md`, the skill is skipped, not fetched from the source. Set it in `config.local.toml`: a `local_override` in
+the committed config fails whenever the lock is enforced (an `ai-rulez.lock` exists, or under `--locked` or
+`--frozen`).
 
-## MCP Tools
+## Commands
 
-The MCP server exposes three tools for managing installed skills:
+| Command | Purpose |
+| --- | --- |
+| `ai-rulez skill install <name> --source <src> [flags]` | Add an entry. Every key above has a flag (`--path`, `--ref`, `--version`, `--include`, `--name-prefix`, `--resources`, `--trust`, `--domain`, `--profile`, `--local-override`, ...) |
+| `ai-rulez skill install ... --local` | Write the entry to the gitignored `config.local.toml` instead |
+| `ai-rulez skill list [--format json]` | List entries |
+| `ai-rulez skill remove <name> [--yes]` | Remove an entry. With `--local`, a shared entry is hidden on this machine (`remove = true` in the overlay) |
+| `ai-rulez skill update [name...]` | Re-pin in `ai-rulez.lock` |
 
-- `install_skill` — Install a skill (params: `name`, `source`, `path`, `ref`, `local`)
-- `uninstall_skill` — Remove a skill (params: `name`, `local`)
-- `list_installed_skills` — List all installed skills (shared layer only; takes no `local`)
+```text
+$ ai-rulez skill list
+Installed skills:
+  • vendor [local]
+    Source: ./vendor/acme-skills
+    Path: skills
+```
 
-`local: true` writes to the `config.local.*` overlay instead of the shared config.
+The MCP server offers the same operations as `install_skill` (the same fields as `skill install`, plus `local`),
+`uninstall_skill` and `list_installed_skills`. Full flag tables: [CLI reference](cli-reference.md#ai-rulez-skill-install).
 
-## Creating Distributable Skills
+## Publishing a skill
 
-To make your project's skill installable by others:
+To make a skill installable from your repository:
 
-1. Create `skills/<project-name>/SKILL.md` at your repository root
-2. Add YAML frontmatter with `name`, `description`, and optional `metadata`
-3. Write comprehensive instructions in the skill body
-4. Optionally add `references/*.md` for detailed reference documentation
-5. Users install with: `ai-rulez skill install <name> --source <your-repo-url>`
+1. Put it at `skills/<name>/SKILL.md`, with `name` and `description` frontmatter (see [Skills](skills.md)).
+2. Add `references/`, `scripts/` or `assets/` as needed; any other files beside `SKILL.md` are bundled too.
+3. Tag releases so consumers can use `version = "^1"`.
 
-## Comparison with Includes
+Consumers then run `ai-rulez skill install <name> --source <owner>/<repo>`.
 
-| Feature          | Includes                                               | Installed Skills                          |
-| ---------------- | ------------------------------------------------------ | ----------------------------------------- |
-| Content types    | Rules, context, skills, agents, commands               | Skills only                               |
-| Source structure | A `.ai-rulez/` directory or a bare layout (`rules/`, `skills/`, ...), see [Repository Structure Support](includes.md#repository-structure-support) | Requires `skills/<name>/SKILL.md` |
-| Merge strategy   | Configurable (local-override, include-override, error) | Local skills always win                   |
-| Domain support   | Can install to specific domains                        | Root level, or a domain through the `domain` field |
-| Use case         | Share full governance configs                          | Add library/tool-specific AI instructions |
+## Compared with includes
+
+| | [Includes](includes.md) | Installed skills |
+| --- | --- | --- |
+| Imports | Rules, context, skills, agents, commands | Skills only |
+| Source layout | A `.ai-rulez/` directory or a bare layout | A directory with `SKILL.md`, or a directory of them |
+| Name conflicts | Configurable merge strategy | The local skill wins |
+| Domains | Into a chosen domain | Root, or the `domain` key |
+| Use for | Sharing a whole governance setup | Adding skills for a library or tool |
+
+To import a whole harness plugin (skills, agents, commands, hooks and MCP servers), see
+[Installed plugins](installed-plugins.md).
