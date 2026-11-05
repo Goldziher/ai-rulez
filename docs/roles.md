@@ -1,101 +1,165 @@
 # Roles
 
-A **profile** picks domains for a project. A **role** maps a *job* to the slice of the shared content a person
-needs: which domains, which skills, rules, agents and commands, and how Claude Code should surface each skill.
-Profiles answer "what does this repository ship"; roles answer "what does a backend engineer, a data analyst or
-a support agent get on their machine".
+A role maps a job to the slice of the shared content a person needs: which domains, which skills, rules, agents,
+commands and checks, and how each skill is surfaced. `generate --role <name>` renders that slice, for the project or
+with `--user` for one person's machine. Use roles when one repository serves people with different jobs, such as
+backend engineers, release managers and support agents.
 
-!!! note "ai-rulez never does identity"
-    ai-rulez has no notion of users, groups, authentication or the network. A role is a name. Something else (an
-    identity-provider integration, a web UI, a wrapper script) decides which person holds which role and runs
-    `ai-rulez generate --user --role <name>`. The `match` hints on a role are inert strings that tool may read
-    from `roles.json`; ai-rulez stores and republishes them and never interprets them.
+!!! note "ai-rulez does not do identity"
+    A role is a name. ai-rulez has no notion of users, groups or authentication. Something else (an identity-provider
+    integration, a web UI, a wrapper script) decides who holds which role and runs `ai-rulez generate --role <name>`.
+    The `match` hints on a role are strings for that tool; ai-rulez never interprets them.
 
-## Profiles vs roles
-
-Both select a slice of the same content, so it is fair to ask whether profiles are still worth having. They are,
-because they answer different questions.
-
-| | Profile | Role |
-| --- | --- | --- |
-| Question | "what does this repository ship?" | "what does this person's job need?" |
-| Scope | the project or team | a person (identity decided elsewhere) |
-| Selected by | `--profile`, `[profiles]`, the default profile | `--role` |
-| Extra knobs | — | `skill_mode`, `delivery`, `match`, `pin` |
-| Compared by | `tokens --compare-profiles` | `tokens --by-role` |
-
-Reach for a profile when one checkout must emit several *project* variants — a backend service, a frontend app, a
-QA bundle — and that choice belongs in the repository. Reach for a role when the same content must be tailored to
-*different people* — a backend engineer, an on-call responder, a support agent — and the choice is made at
-generation time for that person. A profile is about what the artifact contains; a role is about what one holder
-sees. Many projects keep a profile for the repository's default and layer roles for the per-person variants.
-
-Each axis will meet where it should: **domains** are the shared vocabulary, profiles group domains for a project
-and roles group domains for a person. A profile also selects [installed skills](installed-skills.md) and MCP
-servers by their `profiles` field.
-
-## Defining roles
-
-Roles are a `[[roles]]` array in `config.toml`. The optional manifest switch lives in a separate
-`[role_manifest]` table, because TOML cannot use `roles` as both an array and a table.
+## Example
 
 ```toml
+# .ai-rulez/config.toml
+presets = ["claude", "cursor", "copilot"]
+
 [role_manifest]
-enabled = true                       # write .ai-rulez/roles.json on generate
+enabled = true                  # write .ai-rulez/roles.json on generate
 
 [[roles]]
 name = "engineer"
 description = "Everyone who writes code"
-domains = ["shared", "backend"]      # same meaning as a profile's list; "builtin:<name>" works too
+domains = ["backend"]
 
 [roles.skills]
-exclude = ["deploy-*", "backend/release"]   # ids or path.Match globs; "domain/id" matches one domain
+exclude = ["deploy-*"]
 
 [roles.skill_mode]
-"review-*" = "name-only"             # on | name-only | user-invocable-only | off
-deploy = "user-invocable-only"
+"review-*" = "name-only"
 
 [roles.match]
-groups = ["okta:eng", "okta:eng-platform"]  # free-form hints for an external identity tool
+groups = ["okta:eng"]
 
 [[roles]]
 name = "release-manager"
-extends = "engineer"                 # one level only
+extends = "engineer"
 domains = ["release"]
 
 [roles.skill_mode]
-deploy = "on"                        # child wins over the parent's "user-invocable-only"
+deploy = "user-invocable-only"
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `name` | Lowercase letters, digits, `-` and `_`. What `--role` takes. Must be unique. |
-| `description` | Free text shown by `roles list`. |
-| `domains` | Domains the role selects. Root content, globally active builtins and included domains are always kept, exactly as for a profile. |
-| `skills`, `rules`, `agents`, `commands`, `checks` | `include` and `exclude` lists. An entry is an item id or a [`path.Match`](https://pkg.go.dev/path#Match) glob; an entry containing `/` is matched against `domain/id`. An empty `include` keeps everything the domains provide; `exclude` always wins. There is no selector for `context`: context files stay. |
-| `skill_mode` | Skill id or glob to a Claude Code `skillOverrides` state. |
-| `delivery` | Skill id or glob to `static`, `served` or `both`: how the skill reaches this role's agent (see [Delivery](#delivery)). |
-| `pin` | `true` records the digest of the role's rendered outputs in `ai-rulez.lock`. Not inherited. |
-| `extends` | The name of one parent role. |
-| `match` | `groups`: hint strings for an external tool. Not inherited. |
+The `backend` domain has the skills `review-pr` and `deploy-staging`; the `release` domain has `deploy`.
+
+```bash
+ai-rulez roles resolve release-manager
+```
+
+```text
+role release-manager: 4 item(s), 895 bytes, ~237 tokens (cl100k_base)
+KIND   DOMAIN   ID               MODE                 DELIVERY  BYTES  TOKENS
+rule   -        commit-messages  -                    -         153    42
+rule   backend  database         -                    -         156    43
+skill  backend  review-pr        name-only            static    289    78
+skill  release  deploy           user-invocable-only  static    297    74
+
+skill_mode not honored on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):
+  backend/review-pr = name-only: not applied on copilot, cursor; the skill stays listed there
+```
+
+`deploy-staging` is excluded by the parent role. `ai-rulez generate --role release-manager` writes the two skills
+and sets their modes for each tool. Claude Code gets them as `skillOverrides` in `.claude/settings.json`:
+
+```json
+{
+  "skillOverrides": {
+    "deploy": "user-invocable-only",
+    "review-pr": "name-only"
+  }
+}
+```
+
+Cursor and Copilot read the shared `.agents/skills/`, where `user-invocable-only` becomes a frontmatter key:
+
+```markdown
+<!-- .agents/skills/deploy/SKILL.md -->
+---
+name: deploy
+description: "Use when deploying to production."
+disable-model-invocation: true
+---
+```
+
+`name-only` has no equivalent there, so `review-pr` stays fully listed and `generate` warns.
+
+## Profiles vs roles
+
+Both select a slice of the same content, but they answer different questions.
+
+|              | Profile                            | Role                                       |
+| ------------ | ---------------------------------- | ------------------------------------------ |
+| Question     | what does this repository ship?    | what does this person's job need?          |
+| Scope        | the project or team                | a person (identity decided elsewhere)      |
+| Selected by  | `--profile`, `default`             | `--role`                                   |
+| Extra knobs  | none                               | per-kind selectors, `skill_mode`, `delivery`, `match`, `pin` |
+| Compared by  | `tokens --compare-profiles`        | `tokens --by-role`                         |
+
+Use a [profile](domains.md) when one checkout emits several project variants (a backend service, a frontend app) and
+that choice belongs in the repository. Use a role when the same content is tailored to different people at
+generation time. Domains are the shared vocabulary: profiles group domains for a project, roles group domains for a
+person. Many projects keep a `default` profile for the repository and add roles for per-person variants.
+
+## Defining roles
+
+Roles are a `[[roles]]` array in `config.toml`. Manifest settings live in a separate `[role_manifest]` table, because
+TOML cannot use `roles` as both an array and a table.
+
+| Key                                               | Type   | Meaning                                                                                                   |
+| ------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
+| `name`                                            | string | Lowercase letters, digits, `-` and `_`; unique. What `--role` takes.                                     |
+| `description`                                     | string | Shown by `roles list`.                                                                                    |
+| `domains`                                         | list   | Domains the role selects, as in a profile (`builtin:<name>` works too). Root content, globally enabled builtins and include-sourced domains are always kept. |
+| `skills`, `rules`, `agents`, `commands`, `checks` | table  | `include` and `exclude` lists of item ids or [`path.Match`](https://pkg.go.dev/path#Match) globs. An entry with `/` matches `domain/id`. An empty `include` keeps everything the domains provide; `exclude` always wins. Context has no selector: context files always stay. |
+| `skill_mode`                                      | table  | Skill id or glob to `on`, `name-only`, `user-invocable-only` or `off`.                                    |
+| `delivery`                                        | table  | Skill id or glob to `static`, `served` or `both`; see [Delivery](#delivery).                              |
+| `extends`                                         | string | One parent role.                                                                                          |
+| `match`                                           | table  | `groups`: hint strings for an external tool. Not inherited.                                              |
+| `pin`                                             | bool   | Record the digest of the role's rendered outputs in `ai-rulez.lock`. Not inherited.                       |
+
+| `[role_manifest]` key | Default | Meaning                                                                              |
+| --------------------- | ------- | ------------------------------------------------------------------------------------ |
+| `enabled`             | `false` | write `.ai-rulez/roles.json` on `generate`; see [The roles manifest](#the-roles-manifest) |
+| `skill_mode_fallback` | `drop`  | what `off` does where a tool cannot hide a skill; see [`skill_mode` on other harnesses](#skill_mode-on-other-harnesses) |
+
+Roles can be overlaid in `config.local.toml` like profiles: entries merge by `name`, and `remove = true` drops a
+shared role on your machine.
+
+!!! warning "A role is a content filter, not an access boundary"
+    A role narrows the rules, skills, agents, commands and checks that are rendered or served, and sets skill modes.
+    It does not narrow hooks, `[permissions]`, `[[mcp_servers]]` or context files: those are rendered for every role.
+    Do not use a role to withhold a tool or a credential; the outputs are plain files the holder can read and edit.
 
 ### `skill_mode` precedence
 
-For one skill, every matching key competes: an exact id beats a glob, a longer glob beats a shorter one, and ties
-go to the lexically first pattern. The answer never depends on map order. A skill no key matches keeps the
-default, which is to render it with no override.
+For one skill, every matching key competes: an exact id beats a glob, a longer glob beats a shorter one, and a tie
+goes to the lexically first pattern. A skill no key matches keeps the default, `on`.
 
-Claude Code's `skillOverrides` is one flat map keyed by skill id, so two kept skills with the same id in different
-domains share one entry. When a role resolves them to different modes (for example `backend/deploy = "off"` while
-`frontend/deploy` has no mode), `validate` reports `AR971`; give both the same mode (a bare `deploy` key does)
-or exclude one of them.
+Claude Code's `skillOverrides` is keyed by skill id, so two kept skills with the same id in different domains share
+one entry. When the role gives them different modes, `validate` reports `AR971`; give both the same mode (a bare id
+key does) or exclude one.
+
+### Inheritance
+
+`extends` is one level deep: a role whose parent extends another role is an error. The child is merged over the
+parent:
+
+| Field                    | Merge                                                 |
+| ------------------------ | ----------------------------------------------------- |
+| `domains`                | union, parent first                                   |
+| `exclude` lists          | union                                                 |
+| `include` lists          | union when both set one, otherwise whichever is set   |
+| `skill_mode`, `delivery` | merged; the child wins per key                        |
+| `description`            | the child's, else the parent's                        |
+| `match`, `pin`           | not inherited                                         |
 
 ### Delivery
 
-`[roles.delivery]` decides, per skill, whether the role's agent gets the skill as a file in the harness skill
-tree (`static`), only on demand from the [skills server](mcp-server.md#dynamic-skill-loading) (`served`), or both.
-The keys follow the `skill_mode` rules (ids, globs, `domain/id`, the most specific key wins) and the entries are
-inherited through `extends` with the child winning.
+`[roles.delivery]` decides per skill whether the role's agent gets it as a file in the tool's skill folder (`static`),
+only on demand from the [skills server](mcp-server.md#dynamic-skill-loading) (`served`), or both. Keys follow the
+`skill_mode` rules, and entries are inherited with the child winning.
 
 ```toml
 [[roles]]
@@ -103,57 +167,25 @@ name = "backend"
 domains = ["backend"]
 
 [roles.delivery]
-"deploy-*" = "served"      # not listed in the backend agent's context, found with find_skill
+"deploy-*" = "served"          # not listed in the agent's context; found with find_skill
 "backend/runbooks" = "both"
 ```
 
-Precedence for one skill: its own `delivery` frontmatter, then the role, then `[domains.<name>] delivery`, then
+For one skill, the first that is set wins: its own `delivery` frontmatter, the role, `[domains.<name>] delivery`,
 `[skills] delivery`, then `static`. Everything that renders or serves a role uses it:
 
-- `generate --role backend` leaves the served skills out of the static trees and adds the `dynamic-skills` stub;
-- `tokens --role backend` does not count served skills in the listing and names them (`served_skills`);
-- `ai-rulez mcp --serve-skills --role backend` serves those skills and `find_skill` is scoped to the role;
-- `roles resolve`, `roles.json` (`items[].delivery`, `totals.served_skills`, `totals.served_tokens`, `delivery`)
-  and `catalog` (`items[].delivery`, `items[].role_delivery`) report it.
-
-`ai-rulez lock` pins the served skills of every role, so `[lock] enforce` covers them.
-
-### Inheritance
-
-`extends` is one level deep: a role that extends a role that itself extends another is an error. The child is
-merged over the parent as follows.
-
-| Field | Merge |
-| --- | --- |
-| `domains` | union, parent first |
-| `exclude` lists | union |
-| `include` lists | union when both roles set one, otherwise whichever is set |
-| `skill_mode`, `delivery` | merged, the child wins per key |
-| `description` | the child's, else the parent's |
-| `match` | **not** inherited: it identifies who holds *this* role |
-
-`Validate()` fails hard only on a bad name, a duplicate name, an invalid `skill_mode` value or an invalid `delivery` value. Inheritance
-problems (unknown parent, cycle, depth greater than one) are logged as warnings there so that
-`validate` can report them as [AR972](strict-validation.md). A role with broken inheritance is left out of
-`roles.json` with a warning.
-
-Roles are overlayable in `config.local.toml` the same way profiles are: entries merge by `name`, and an entry with
-`remove = true` drops a shared role. The local overlay schema includes `roles`.
-
-!!! warning "A role is a content filter, not an access boundary"
-    A role narrows the rules, skills, agents, commands and checks that are rendered or served, and sets skill
-    modes. It does not narrow hooks, `[permissions]`, `[[mcp_servers]]` or context files: those are rendered for
-    every role. Do not use a role to withhold a tool or a credential from someone; the file-based outputs are
-    plain files the holder can read and edit.
+- `generate --role backend` leaves served skills out of the skill folders and adds the `dynamic-skills` skill;
+- `tokens --role backend` does not count served skills in the listing and names them;
+- `ai-rulez mcp --serve-skills --role backend` serves them, with `find_skill` scoped to the role;
+- `roles resolve`, `roles.json` and `catalog` report each skill's delivery;
+- `ai-rulez lock` pins the served skills of every role, so `[lock] enforce` covers them.
 
 ## Commands
 
 ```bash
 ai-rulez roles list [--format json]           # every role with item counts and token estimates
 ai-rulez roles show <name> [--format json]    # as declared, and with the parent merged in
-ai-rulez roles resolve <name> [--format json] # the items the role keeps, with sizes and skill modes
-
-# <name> may be a comma-separated composition (see Composing roles below)
+ai-rulez roles resolve <name> [--format json] # the items the role keeps, with sizes, modes and delivery
 
 ai-rulez generate --role engineer             # project outputs for the role
 ai-rulez generate --user --role engineer      # user-level outputs (~/.claude, ~/.codex, ...)
@@ -161,114 +193,103 @@ ai-rulez generate --check --role engineer     # drift check against the role's o
 
 ai-rulez tokens --role engineer               # token surface of the role
 ai-rulez tokens --by-role                     # one comparison column per role
-ai-rulez catalog --format json                # items, owners, versions, roles, lock status
 ```
 
-`--role` and `--profile` are mutually exclusive, and `--role` cannot be combined with `--plugin` (plugin bundles
-are built from the full content). A role replaces profile selection: the content tree is narrowed by the role's
-domains and selectors through the same selection path profiles use, so everything downstream in the same run (outputs, the token
-report, the usage index) sees the role's slice. Installed skills scoped to profiles are not filtered by
-a role, and the machine-local `local/` tree is not narrowed.
+- `--role` replaces profile selection and cannot be combined with `--profile` or `--plugin`. Everything in the run
+  (outputs, token report, usage index) sees the role's slice.
+- Installed skills scoped to profiles are not filtered by a role, and the machine-local `local/` tree is not
+  narrowed.
+- `generate --role` prints the role's `AR971` findings as warnings before it writes anything, so a typo in a domain or
+  an `exclude` entry is visible.
 
 ## Composing roles
 
 `--role` takes a comma-separated list, as do `roles show`, `roles resolve`, `tokens --role` and
-`mcp --serve-skills --role`. A composition is the **union** of its members: the domains, skills, rules, agents and
-commands they keep are combined, and that union is what is rendered, served and counted.
+`mcp --serve-skills --role`. A composition is the union of its members: the domains and items they keep are combined,
+and that union is rendered, served and counted.
 
 ```bash
 ai-rulez generate --role engineer,oncall
 ai-rulez roles resolve engineer,oncall
 ```
 
-Where two members set `skill_mode` or `delivery` for the same skill, the [within-role precedence](#skill_mode-precedence)
-applies first — a more specific key (an exact id, then a longer glob) wins — and when two keys are equally
-specific the role **listed last** wins. Order therefore matters, and a composition is named after its order:
-`engineer,oncall` and `oncall,engineer` are different, and reversing the list can change a mode.
+Where two members set `skill_mode` or `delivery` for the same skill, the [precedence](#skill_mode-precedence) applies
+first (the more specific key wins); between equally specific keys, the role listed last wins. So `engineer,oncall`
+and `oncall,engineer` can differ.
 
-A composition is a value, not a `[[roles]]` entry: it cannot be extended, it need not be declared, and every member
-must exist (`validate` reports one that does not as `AR971`). A composition is **pinnable**:
-`ai-rulez lock --role engineer,oncall` records the union's rendered outputs under the canonical name
-`engineer,oncall`, and `generate --locked --role engineer,oncall` (or `lock --check`) compares them. Pinning one
-member with `pin = true` does not pin every composition that contains it, and pinning a composition does not pin
-its members.
+A composition is a value, not a `[[roles]]` entry: it cannot be extended, need not be declared, and every member must
+exist (`AR971` otherwise). It can be pinned: `ai-rulez lock --role engineer,oncall` records the union's outputs under
+the name `engineer,oncall`, and `generate --locked --role engineer,oncall` compares them. Pinning a member does not
+pin the compositions that contain it, and the reverse.
 
 ## `skill_mode` becomes Claude Code `skillOverrides`
 
-For every skill the role keeps and gives a mode, `generate` writes `skillOverrides.<skill>` in
-`.claude/settings.json` (or `~/.claude/settings.json` with `--user`) through the same per-key ownership as
-[`[claude.settings.managed]`](settings.md): only the listed skill ids are owned, every skill id the role does not
-list is left alone, `clean` takes back exactly what was recorded, and a second run changes nothing. A skill id the
-role lists is the role's while the role renders. If you had written a different value for it by hand,
-`generate --role` warns, replaces it, and remembers yours in `<config dir>/local/.role-skill-overrides.json`
-(machine-local, always gitignored); a plain `generate`, or a role that no longer lists the skill, puts your value
-back. This holds for every run that writes the settings: `generate`, each regeneration of `generate --watch --role`,
-and `generate --user`; `mcp --serve-skills --role` only serves skills and never writes `.claude/settings.json`, so it
-changes nothing there. A value you changed after the role wrote it is yours and is left alone. Switching from one role
-to another removes the first role's entries and writes the second's. A role's modes win over the same skill in
-`[claude.settings.managed] skill_overrides`.
+| Mode                  | Claude Code behavior                                         |
+| --------------------- | ------------------------------------------------------------ |
+| `on`                  | listed with its description (the default)                   |
+| `name-only`           | listed by name only, saving description tokens               |
+| `user-invocable-only` | hidden from the model; you can still run it as `/name`      |
+| `off`                 | hidden from the model and from you                           |
 
-| Mode | Claude Code behavior |
-| --- | --- |
-| `on` | listed with its description; the default |
-| `name-only` | listed by name only, saving description tokens |
-| `user-invocable-only` | hidden from the model; the user can still run it as `/name` |
-| `off` | hidden from the model and the user |
+For every kept skill with a mode, `generate` writes `skillOverrides.<skill>` in `.claude/settings.json` (or
+`~/.claude/settings.json` with `--user`) with the same per-key ownership as
+[`[claude.settings.managed]`](settings.md):
+
+- Only the skill ids the role lists are owned; other entries are left alone, and `clean` removes exactly what was
+  written. A role's modes win over the same skill in `[claude.settings.managed] skill_overrides`.
+- If you had set a different value for one of those ids by hand, `generate --role` warns, replaces it, and keeps
+  yours in `<config dir>/local/.role-skill-overrides.json` (machine-local, gitignored). A plain `generate`, or a role
+  that no longer lists the skill, restores your value.
+- A value you change after the role wrote it is yours and is left alone.
+- Switching roles removes the first role's entries and writes the second's. `mcp --serve-skills --role` never writes
+  the settings file.
 
 ## `skill_mode` on other harnesses
 
-Only Claude Code has a per-skill settings key. For the other harnesses ai-rulez renders a mode where the vendor
-documents an equivalent and says so where it does not. One content tree is rendered for every preset of the run,
-so a mode is written into the skill's `SKILL.md` frontmatter (or, for Codex, `agents/openai.yaml`) and each harness
-reads what it understands. A key you set in the skill's own frontmatter is never overwritten.
+Only Claude Code has a per-skill settings key. For other tools, ai-rulez writes the mode into the skill's `SKILL.md`
+frontmatter (or Codex's `agents/openai.yaml`) where the vendor documents an equivalent. A key you set in the skill's
+own frontmatter is never overwritten.
 
-| Preset | `user-invocable-only` | `off` | `name-only` | Source (read 2026-10-06) |
-| --- | --- | --- | --- | --- |
-| `claude` | `skillOverrides` | `skillOverrides` | `skillOverrides` | [Claude Code skills](https://code.claude.com/docs/en/skills) |
-| `cursor` | `disable-model-invocation: true` | no documented setting | no | [Cursor skills](https://cursor.com/docs/context/skills) |
-| `codex` | `agents/openai.yaml` `policy.allow_implicit_invocation: false` | documented (`[[skills.config]] enabled = false`) but needs an absolute path, not rendered | no | [Codex skills](https://developers.openai.com/codex/skills) |
-| `copilot` | `disable-model-invocation: true` | `disable-model-invocation: true` and `user-invocable: false` | no | [VS Code agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills) |
-| `opencode` | no | documented (`permission.skill` = `deny` in `opencode.json`), not rendered | no | [OpenCode skills](https://opencode.ai/docs/skills/) |
-| `gemini` | no | only the `/skills disable` command is documented, no settings key | no | [Gemini CLI skills](https://geminicli.com/docs/cli/skills/) |
-| every other preset | not documented | not documented | not documented | not checked |
+| Preset          | `user-invocable-only`                                            | `off`                                                         | `name-only` |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- | ----------- |
+| `claude`        | `skillOverrides`                                                 | `skillOverrides`                                              | `skillOverrides` |
+| `cursor`        | `disable-model-invocation: true`                                 | no documented setting                                         | no          |
+| `codex`         | `agents/openai.yaml` `policy.allow_implicit_invocation: false`   | not rendered (Codex needs an absolute path)                   | no          |
+| `copilot`       | `disable-model-invocation: true`                                 | `disable-model-invocation: true` and `user-invocable: false`  | no          |
+| `opencode`      | no                                                               | not rendered (`permission.skill` in `opencode.json`)          | no          |
+| `gemini`        | no                                                               | no settings key (only the `/skills disable` command)          | no          |
+| other presets   | not documented                                                   | not documented                                                | not documented |
 
-`on` is every harness's default. A cell that says "no" or "not documented" means ai-rulez writes nothing for it and
-the skill stays listed on that harness for `user-invocable-only` and `name-only`.
+Where a cell says "no" or "not documented", the skill stays listed on that tool. `roles resolve` and `doctor` list
+every skill and tool where a mode is not honored, and `generate` warns.
 
-For `off`, a skill is hidden only when every configured preset can hide it. Otherwise `generate --role` follows
+`off` hides a skill only when every configured tool can hide it. Otherwise `generate --role` follows
 `skill_mode_fallback`:
 
 ```toml
 [role_manifest]
-skill_mode_fallback = "drop"   # drop (default) or serve
+skill_mode_fallback = "drop"   # drop (default) | serve
 ```
 
-`drop` leaves the skill out of the role's render; `serve` moves it to [served delivery](#delivery), reachable with
-`find_skill` on harnesses that can call MCP. The setting lives in `[role_manifest]` because TOML cannot use `roles` as
-both an array and a table. Because one tree is rendered, the fallback applies to every harness of the run, Claude Code
-included (its `skillOverrides` entry is then not written for a dropped skill). Each skill and harness that is not
-honoured is named in a warning. `ai-rulez roles resolve <name>` lists them (`skill_modes` in `--format json`), and
-`ai-rulez doctor` reports them.
+`drop` leaves the skill out of the role's render for every tool of the run, Claude Code included. `serve` switches it
+to [served delivery](#delivery), so tools that can call MCP find it with `find_skill`.
 
 ## Strict validation
 
-`generate --role <name>` prints the AR971 findings of that role as warnings before it writes anything, so a typo in a
-domain or in an `exclude` entry is not silent.
+| Code                                                    | Meaning                                                                                                                          |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [`AR971`](strict-validation.md) `role-reference-unknown` | A domain that does not exist, or a selector, `skill_mode` or `delivery` entry that matches no item (or only items in a domain the role does not select). |
+| [`AR972`](strict-validation.md) `role-extends-invalid`   | Unknown parent, cycle, or inheritance deeper than one level. Such a role is left out of `roles.json`.                           |
+| [`AR973`](strict-validation.md) `role-unreachable-dependency` | An item the role keeps names, in its `skills:` frontmatter, a skill the role drops or hides with `off` or `user-invocable-only`. |
 
-| Code | Meaning |
-| --- | --- |
-| [AR971](strict-validation.md) `role-reference-unknown` | A role lists a domain that does not exist, or a selector / `skill_mode` / `delivery` entry that matches no item (or only matches in a domain the role does not select). |
-| [AR972](strict-validation.md) `role-extends-invalid` | Unknown parent, cycle, or inheritance deeper than one level. |
-| [AR973](strict-validation.md) `role-unreachable-dependency` | An item the role keeps names a skill in its `skills:` frontmatter that the role drops, or hides from the model with `off` / `user-invocable-only`. Prose references are not analysed. |
+A bad name, a duplicate name or an invalid `skill_mode` or `delivery` value fails loading outright.
 
 ## The roles manifest
 
-With `[role_manifest] enabled = true`, `generate` writes `<config dir>/roles.json`. `roles list --format json`
-prints the same document. It is deterministic (no timestamps; roles sorted by name, items by kind, domain and id),
-so it is safe to commit, and it is versioned by `schema_version`. It is built from the shared sources only: roles
-declared in `config.local.toml` and items under `local/` never appear in it, so the committed file is the same on every
-machine and `generate --check` does not report it as drifted. Local roles still work with `generate --role` and
-`roles list`. The JSON schema is
+With `[role_manifest] enabled = true`, `generate` writes `.ai-rulez/roles.json`; `roles list --format json` prints the
+same document. It has no timestamps and is sorted (roles by name, items by kind, domain and id), so it is safe to
+commit. It is built from the shared sources only: roles from `config.local.toml` and items under `local/` never
+appear in it, so the file is the same on every machine. The schema is
 [`schema/roles-manifest.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-manifest.schema.json).
 
 ```json
@@ -280,62 +301,57 @@ machine and `generate --check` does not report it as drifted. Local roles still 
       "name": "engineer",
       "description": "Everyone who writes code",
       "match": { "groups": ["okta:eng"] },
-      "domains": ["shared", "backend"],
+      "domains": ["backend"],
       "skill_modes": { "review-pr": "name-only" },
-      "delivery": { "deploy-*": "served" },
       "items": [
-        {
-          "kind": "skill", "id": "review-pr", "domain": "shared",
-          "path": "domains/shared/skills/review-pr/SKILL.md", "mode": "name-only", "delivery": "static",
-          "owner": "platform", "version": "1.2.0", "bytes": 2210, "tokens": 540
-        }
+        { "kind": "rule", "id": "commit-messages", "path": "rules/commit-messages.md", "bytes": 153, "tokens": 42 },
+        ...
       ],
-      "totals": { "items": 1, "bytes": 2210, "tokens": 540, "by_kind": { "skill": 1 }, "served_skills": 0, "served_tokens": 0 }
+      "totals": {
+        "items": 3, "bytes": 598, "tokens": 163, "by_kind": { "rule": 2, "skill": 1 },
+        "served_skills": 0, "served_tokens": 0
+      }
     }
   ]
 }
 ```
 
-`bytes` is the size of the item's source files on disk (a skill counts its resources). `tokens` is an estimate for
-the primary file (`SKILL.md`, the rule file, ...) and is an approximation, like every figure of `ai-rulez tokens`.
-`delivery` (skills only) is how the skill reaches the role's agent; `served_skills` and `served_tokens` total the
-skills that are served only, which cost no listing tokens until `load_skill` runs.
-`owner` and `version` come from the item's frontmatter when present.
+| Field                            | Meaning                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `items[].bytes`                  | size of the item's source files on disk (a skill counts its resources)                        |
+| `items[].tokens`                 | estimate for the primary file (`SKILL.md`, the rule file), like every `ai-rulez tokens` figure |
+| `items[].mode`, `items[].delivery` | the skill's resolved mode and delivery                                                       |
+| `items[].owner`, `items[].version` | from the item's frontmatter, when set                                                        |
+| `delivery`                       | the role's `[roles.delivery]` table                                                           |
+| `totals.served_skills`, `totals.served_tokens` | skills that are served only, which cost no listing tokens until loaded             |
 
 ## Integrating an identity tool or UI
 
-Everything a tool needs is reachable from `--format json` output and versioned documents. ai-rulez never calls the
-network, and an integration never needs to parse config files.
+Everything an integration needs is in versioned `--format json` output. ai-rulez never calls the network, and an
+integration never parses config files.
 
-1. **Discover the roles.** Read `roles.json` (committed) or run `ai-rulez roles list --format json`. Each role has
-   its `name`, its `description`, and `match.groups`, the hints you put there for your tool.
-2. **Map a person to a role.** This is your tool's job. For example, an `acli` command can read a person's
-   identity-provider groups, find the role whose `match.groups` contains one of them (choosing by your own
-   precedence when several match), and print the role name. ai-rulez does not look at `match`.
-3. **Preview.** `ai-rulez roles resolve <name> --format json` lists exactly the items the role keeps, with owner,
-   version, bytes and tokens. `ai-rulez tokens --role <name> --format json` reports the token surface.
+1. **Discover the roles.** Read the committed `roles.json`, or run `ai-rulez roles list --format json`. Each role has
+   its `name`, `description` and `match.groups`.
+2. **Map a person to a role.** This is your tool's job: for example, read the person's identity-provider groups and
+   pick the role whose `match.groups` contains one of them, by your own precedence when several match.
+3. **Preview.** `ai-rulez roles resolve <name> --format json` lists the items the role keeps, with owner, version,
+   bytes and tokens. `ai-rulez tokens --role <name> --format json` reports the token surface.
 4. **Apply.** Run `ai-rulez generate --user --role <name> --yes` (user level) or `ai-rulez generate --role <name>`
    (project level). Exit code 0 means the files were written.
-5. **Show the whole catalog.** `ai-rulez catalog --format json` lists every item with its owner, version, size,
-   sha256 digest, the roles that keep it, a summary of each role and the lock status. Its schema is
-   [`schema/catalog.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.v1.schema.json)
-   (`--schema-version 2` adds load cost, lint and excerpts; see [Catalog](catalog.md)).
-6. **Audit.** [`ai-rulez lock --diff --format json`](lockfile.md) reports what changed between the committed lock
-   and the working tree ([`schema/lock-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-diff.schema.json)).
+5. **Show the catalog.** `ai-rulez catalog --format json` lists every item with owner, version, size, digest, the
+   roles that keep it and the lock status. See [Catalog](catalog.md) and
+   [`schema/catalog.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.v1.schema.json).
+6. **Audit.** [`ai-rulez lock --diff --format json`](lockfile.md) reports what changed between the committed lock and
+   the working tree.
 
-Every JSON document carries `schema_version`; a consumer should refuse a version it does not know. A UI needs no
-other interface: lists come from `roles.json` / `catalog`, previews from `roles resolve`, the action is one
-`generate` command.
+Every JSON document carries `schema_version`; refuse a version you do not know.
 
 ## Roles and the lock file
 
-The [lock file](lockfile.md) pins each role declaration as an item (`kind = "role"`), so adding a role, or
-changing what a role includes, shows up in the lock diff and is caught by `lock --check`. The lock pins the
-default rendering; a role's rendered outputs are pinned, as one digest per role, when the role sets `pin = true`
-(or with `lock --roles`). `lock --check [--role <name>]` and `generate --check --locked --role <name>` then
-catch a change in what the role renders that leaves the sources alone, for example a new `skill_mode` entry or a
-generator release; see [Composing with roles](lockfile.md#composing-with-roles). Roles without a pin are
-unchanged, and `generate --locked --role <name>` still verifies that the *sources* match the lock. Skills a role delivers as `served` are
-pinned as `[[served]]` entries (see [Served skills and skill sources](lockfile.md#served-skills-and-skill-sources)),
-so `[lock] enforce` holds for a server started with `--role`. Checks are a role-selectable kind and are pinned like
-rules.
+The [lock file](lockfile.md) pins each role declaration (`kind = "role"`), so adding a role or changing what it
+includes shows up in `lock --diff` and fails `lock --check`. A role's rendered outputs are pinned, as one digest per
+role, when the role sets `pin = true` or with `lock --roles`. `lock --check --role <name>` and
+`generate --check --locked --role <name>` then catch a change in what the role renders even when the sources are the
+same (a new `skill_mode` entry, a new ai-rulez release); see [Composing with roles](lockfile.md#composing-with-roles).
+Without a pin, `generate --locked --role <name>` still verifies that the sources match the lock. Served skills are
+pinned as `[[served]]` entries; see [Served skills and skill sources](lockfile.md#served-skills-and-skill-sources).

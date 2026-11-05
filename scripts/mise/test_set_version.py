@@ -23,13 +23,14 @@ FIXTURES = {
     "README.md": 'rev: v1.2.3\nrevision = "v1.2.3"\n',
     "poly-hooks.toml": 'command = "npx ai-rulez@latest && uvx ai-rulez==latest"\n',
     "docs/poly-hooks.md": 'revision = "v1.2.3"\nnpx ai-rulez@latest\nuvx ai-rulez==latest\n',
+    "docs/installation.md": 'ai-rulez version 1.2.3\nrev: v1.2.3\nnpx ai-rulez@latest\nuvx --from ai-rulez==latest ai-rulez\n',
 }
 PYTHON_METADATA = {"pyproject.toml", "release/pypi/__init__.py", "release/pypi/ai_rulez/__init__.py"}
 
 
 class VersionFixtures(unittest.TestCase):
     def setUp(self) -> None:
-        self.assertEqual(len(FIXTURES), 11)
+        self.assertEqual(len(FIXTURES), 12)
         self.assertEqual(sorted(FIXTURES), sorted({row[0] for row in set_version.RULES}))
         temporary = tempfile.TemporaryDirectory(prefix="ai-rulez-version-fixture-")
         self.addCleanup(temporary.cleanup)
@@ -48,7 +49,7 @@ class VersionFixtures(unittest.TestCase):
     def test_stable_release_checks_all_surfaces_and_preserves_latest_channels(self) -> None:
         result = set_version.synchronize(self.root, "9.8.7")
         expected = {name: text.replace("1.2.3", "9.8.7") for name, text in FIXTURES.items()}
-        self.assertEqual(result["files_checked"], 11)
+        self.assertEqual(result["files_checked"], 12)
         self.assertEqual(result["files_changed"], sorted(name for name in FIXTURES if expected[name] != FIXTURES[name]))
         self.assertEqual(sum(row["replacements"] for row in result["rules"] if row["required"]), 8)
         self.assertEqual(self.contents(), expected)
@@ -68,7 +69,7 @@ class VersionFixtures(unittest.TestCase):
         before = self.snapshot()
         result = set_version.synchronize(self.root, "9.8.7")
         self.assertEqual(result["files_changed"], [])
-        self.assertEqual(result["files_checked"], 11)
+        self.assertEqual(result["files_checked"], 12)
         self.assertEqual(before, self.snapshot())
 
     def test_missing_required_field_refuses_before_any_file_write(self) -> None:
@@ -80,11 +81,11 @@ class VersionFixtures(unittest.TestCase):
         self.assertEqual(before, self.snapshot())
 
     def test_legacy_pinned_hook_examples_update_without_pinning_latest(self) -> None:
-        for name in ["poly-hooks.toml", "docs/poly-hooks.md"]:
+        for name in ["poly-hooks.toml", "docs/poly-hooks.md", "docs/installation.md"]:
             path = self.root / name
             path.write_text(path.read_text() + "\n# npx ai-rulez@1.2.3; uvx ai-rulez==1.2.3\n")
         set_version.synchronize(self.root, "9.8.7-rc.2")
-        for name in ["poly-hooks.toml", "docs/poly-hooks.md"]:
+        for name in ["poly-hooks.toml", "docs/poly-hooks.md", "docs/installation.md"]:
             text = (self.root / name).read_text()
             self.assertIn("ai-rulez@9.8.7-rc.2", text)
             self.assertIn("ai-rulez==9.8.7rc2", text)
