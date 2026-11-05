@@ -33,6 +33,16 @@ func ListingBudgetCharsFor(harness string, contextWindow int) int {
 	return ListingBudgetChars(contextWindow)
 }
 
+// McpSchemas is the estimate of the tool schemas of the MCP servers configured
+// for a session's start. Schemas need running servers, so the figure is the
+// configured per-server token estimate times the start-of-session servers; it
+// is added to StartTokens and absent unless the estimate is turned on.
+type McpSchemas struct {
+	Servers         int `json:"servers"`
+	TokensPerServer int `json:"tokens_per_server"`
+	Tokens          int `json:"tokens"`
+}
+
 // ListingBudget is the skill listing of a session against Claude Code's budget.
 // Over budget, Claude Code keeps every skill name but drops descriptions, the
 // text that carries the trigger words.
@@ -79,6 +89,9 @@ type Report struct {
 	StartBudget int           `json:"start_budget"`
 	Listing     ListingBudget `json:"listing"`
 	StartTokens int           `json:"start_tokens"`
+	// McpSchemas is the estimated MCP tool schema cost counted in StartTokens;
+	// nil when ReportOptions.McpServerTokens is 0.
+	McpSchemas *McpSchemas `json:"mcp_schemas,omitempty"`
 	// StartImportsUnmodeled lists the `@path` imports of start-of-session
 	// instruction files that could not be modeled (an absolute or home path, a
 	// path that leaves the root, or an unreadable target). With a start budget
@@ -99,6 +112,9 @@ type ReportOptions struct {
 	ContextWindow int
 	// StartBudget is the most start tokens allowed, 0 for no limit.
 	StartBudget int
+	// McpServerTokens is the estimated tool schema tokens of one configured MCP
+	// server at start; 0 leaves MCP schemas out of the count.
+	McpServerTokens int
 }
 
 // UnmodeledImport is a start-of-session `@path` import the inventory could not
@@ -127,6 +143,7 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 		Items:                 make([]ReportItem, 0, len(inv.Artifacts)),
 		StartImportsUnmodeled: []UnmodeledImport{},
 	}
+	mcpServers := 0
 	for i := range inv.Artifacts {
 		a := &inv.Artifacts[i]
 		rep.Items = append(rep.Items, ReportItem{Kind: a.Kind, Name: a.QualifiedName, Path: a.Path, Scope: a.Scope, Phase: a.Phase, Tokens: a.Tokens, Area: a.Area})
@@ -143,6 +160,9 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 		for _, p := range a.ImportProblems {
 			rep.StartImportsUnmodeled = append(rep.StartImportsUnmodeled, UnmodeledImport{Artifact: a.Path, Import: p.Path, Reason: p.Reason})
 		}
+		if a.Kind == KindMCPServer {
+			mcpServers++
+		}
 		if a.Kind == KindSkill {
 			rep.Listing.Skills++
 			rep.Listing.Chars += a.ListingChars
@@ -150,6 +170,10 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 				rep.Listing.DescriptionsCapped++
 			}
 		}
+	}
+	if opts.McpServerTokens > 0 {
+		rep.McpSchemas = &McpSchemas{Servers: mcpServers, TokensPerServer: opts.McpServerTokens, Tokens: mcpServers * opts.McpServerTokens}
+		rep.StartTokens += rep.McpSchemas.Tokens
 	}
 	rep.Listing.OverBudgetChars = max(0, rep.Listing.Chars-rep.Listing.BudgetChars)
 	return rep

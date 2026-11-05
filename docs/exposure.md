@@ -34,6 +34,7 @@ plugins = "enabled"                # none | enabled (default) | all: plugin skil
 areas_file = "tools/context/areas.toml"   # optional: the map in its own file
 start_budget = 0                   # most estimated start tokens; 0 (default) is off
 codex_start_budget = 0             # the same for --harness codex; 0 (default) is off
+mcp_server_tokens = 0              # estimated tool schema tokens per MCP server; 0 (default) leaves them out
 collision_min_score = 0            # AR9W2 word overlap between areas; 0 (default) is off
 
 [[exposure.areas]]
@@ -54,7 +55,7 @@ Every key is optional. `plugins`, `context_window` and `start_budget` are read b
 `validate` (see [Start-of-session budgets](#start-of-session-budgets)); `collision_min_score` turns on `AR9W2` and is
 the default `--min-score` of `exposure collisions`; `plugins` is also the default `--plugins` of the subcommands.
 `codex_start_budget` is `start_budget` for the codex harness, so one repository can gate both (`start_budget = 5350`,
-`codex_start_budget = 5800`).
+`codex_start_budget = 5800`); `mcp_server_tokens` is described under [MCP tool schemas](#mcp-tool-schemas).
 `declare` is read by context evals, which arrive in a later release, and is validated now so a table written today
 keeps working.
 
@@ -170,6 +171,7 @@ cannot be found names `[exposure]`), `2` (`exposure` only) the start tokens exce
 | `--root DIR` | all | Directory to inspect, as a session started there sees it; default the project root, else the working directory |
 | `--context-window N` | `exposure` | Model context window in tokens, for the skill listing budget; default `[exposure] context_window`, else 200000 |
 | `--harness claude\|codex` | `exposure` | Harness whose load model applies; default `[exposure] harness`, else `claude`. `codex` budgets against `[exposure] codex_start_budget` |
+| `--mcp-server-tokens N` | `exposure` | Estimated tool schema tokens per configured MCP server, added to the start count; default `[exposure] mcp_server_tokens`, else 0 (left out) |
 | `--with-text` | `inventory` | Include each artifact's text in the JSON (`--format json` only; with text output it is an error) |
 | `--min-score N` | `collisions` | Lowest score reported, 0 to 1; default `[exposure] collision_min_score` when set, else 0.1 |
 | `--limit N` | `collisions` | Pairs printed, highest score first (default 20); 0 prints every pair |
@@ -468,6 +470,21 @@ Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, use
 (the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
 `AR9W3` and the other `validate` rules, and the `leakage` and `collisions` subcommands, still read the Claude Code
 inventory.
+
+## MCP tool schemas
+
+The start count omits the tool schemas a harness loads from its MCP servers, which need running servers to know. To
+count them anyway, give a per-server estimate: `--mcp-server-tokens N` or `[exposure] mcp_server_tokens = N`. The report
+multiplies it by the MCP servers configured at start (Claude: `.mcp.json`; Codex: `.codex/config.toml`), adds the
+product to `start_tokens` and the budget check, and prints its own line:
+
+```text
+mcp tool schemas (estimated): 2 servers x 400 = 800 tokens, included in the start tokens
+```
+
+The JSON carries it as `mcp_schemas` (`servers`, `tokens_per_server`, `tokens`). It is off by default (0), and then no
+number changes and `mcp_schemas` is absent. There is no built-in estimate: measure a server's tool list once and set
+the number.
 
 ## Start-of-session budgets
 

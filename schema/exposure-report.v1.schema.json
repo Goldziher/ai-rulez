@@ -82,6 +82,17 @@
       }
     },
     "start_tokens": { "$ref": "#/definitions/count", "description": "Estimated tokens in context at session start." },
+    "mcp_schemas": {
+      "type": "object",
+      "description": "The estimated tool schema tokens of the MCP servers configured at start, already included in start_tokens. Present only when a per-server estimate is configured (--mcp-server-tokens or [exposure] mcp_server_tokens).",
+      "required": ["servers", "tokens_per_server", "tokens"],
+      "additionalProperties": false,
+      "properties": {
+        "servers": { "$ref": "#/definitions/count", "description": "MCP servers configured at start." },
+        "tokens_per_server": { "$ref": "#/definitions/count" },
+        "tokens": { "$ref": "#/definitions/count", "description": "servers times tokens_per_server." }
+      }
+    },
     "start_imports_unmodeled": {
       "type": "array",
       "description": "Start-of-session `@path` imports the inventory could not follow. With a non-zero start_budget any entry fails the budget closed.",

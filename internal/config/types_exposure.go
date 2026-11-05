@@ -49,6 +49,9 @@ type ExposureConfig struct {
 	StartBudget int `yaml:"start_budget,omitempty" json:"start_budget,omitempty" toml:"start_budget,omitempty"`
 	// CodexStartBudget is StartBudget for the codex harness (`exposure --harness codex`); 0 turns the check off.
 	CodexStartBudget int `yaml:"codex_start_budget,omitempty" json:"codex_start_budget,omitempty" toml:"codex_start_budget,omitempty"`
+	// McpServerTokens is the estimated tokens of the tool schemas one configured MCP server loads at start. Schemas
+	// need running servers, so the estimate is yours; 0 (default) leaves MCP schemas out of the start count.
+	McpServerTokens int `yaml:"mcp_server_tokens,omitempty" json:"mcp_server_tokens,omitempty" toml:"mcp_server_tokens,omitempty"`
 	// CollisionMinScore is the word overlap (0 to 1) at which two listings of different areas collide; 0 is off.
 	CollisionMinScore float64 `yaml:"collision_min_score,omitempty" json:"collision_min_score,omitempty" toml:"collision_min_score,omitempty"`
 	// Areas is the inline area map.
@@ -102,6 +105,9 @@ func (c *ExposureConfig) Validate() []string {
 	}
 	if c.CodexStartBudget < 0 {
 		problems = append(problems, "exposure.codex_start_budget must not be negative")
+	}
+	if c.McpServerTokens < 0 {
+		problems = append(problems, "exposure.mcp_server_tokens must not be negative")
 	}
 	if s := c.CollisionMinScore; s < 0 || s > 1 || math.IsNaN(s) {
 		problems = append(problems, fmt.Sprintf("exposure.collision_min_score must be between 0 and 1, got %v", s))

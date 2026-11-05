@@ -801,6 +801,11 @@
           "enum": ["claude", "codex"],
           "type": "string"
         },
+        "mcp_server_tokens": {
+          "description": "Estimated tool schema tokens of one configured MCP server at session start, added to the start count; 0 (default) leaves MCP schemas out.",
+          "minimum": 0,
+          "type": "integer"
+        },
         "plugins": {
           "description": "Plugin skills counted at session start: none, enabled (default) or all.",
           "enum": ["none", "enabled", "all"],
