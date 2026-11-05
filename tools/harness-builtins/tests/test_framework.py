@@ -145,6 +145,34 @@ class RustEnumTest(unittest.TestCase):
 
 
 class FetchTest(unittest.TestCase):
+    def test_a_transient_failure_is_retried_and_a_permanent_one_is_not(self):
+        # Arrange
+        calls = []
+
+        def flaky(url):
+            calls.append(url)
+            if len(calls) < 3:
+                raise fetch.FetchError("HTTP 429", transient=True)
+            return "page"
+
+        # Act
+        with mock.patch.object(fetch, "_get_once", side_effect=flaky), mock.patch.object(fetch.time, "sleep"):
+            got = fetch.http_get("https://example.com/x")
+        # Assert
+        self.assertEqual((got, len(calls)), ("page", 3))
+        with mock.patch.object(fetch, "_get_once", side_effect=fetch.FetchError("HTTP 404")) as once:
+            with self.assertRaises(fetch.FetchError):
+                fetch.http_get("https://example.com/x")
+        self.assertEqual(once.call_count, 1)
+
+    def test_a_failure_that_never_clears_is_raised_after_the_attempts(self):
+        # Arrange / Act / Assert
+        err = fetch.FetchError("HTTP 503", transient=True)
+        with mock.patch.object(fetch, "_get_once", side_effect=err) as once, mock.patch.object(fetch.time, "sleep"):
+            with self.assertRaises(fetch.FetchError):
+                fetch.http_get("https://example.com/x")
+        self.assertEqual(once.call_count, fetch.ATTEMPTS)
+
     def test_only_plain_https_urls(self):
         for url in ("http://example.com/x", "file:///etc/passwd", "https://user:pw@example.com/x"):
             with self.subTest(url), self.assertRaises(fetch.FetchError):

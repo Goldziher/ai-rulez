@@ -1,7 +1,7 @@
 schema = 1
 preset = "junie"
 harness_version = "Junie CLI release 3844.1 (docs built 2026-10-15)"
-verified_on = "2026-10-18"
+verified_on = "2026-11-05"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://junie.jetbrains.com/docs/slash-commands.html"
-verified_on = "2026-10-18"
+verified_on = "2026-11-05"
 
 [[group]]
 kind = "command"
@@ -54,6 +54,7 @@ names = [
   "settings",
   "skills",
   "stats",
+  "themes",
   "title",
   "update",
   "voice",
@@ -74,6 +75,8 @@ aliases = { "compress" = [
   "credits",
   "quota",
   "usage",
+], "themes" = [
+  "theme",
 ], "title" = [
   "rename",
 ], "voice" = [
