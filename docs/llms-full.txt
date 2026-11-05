@@ -18703,10 +18703,15 @@ skills that load. An artifact of unknown phase ([a gate that cannot be read](#a-
 start: the check fails closed. An artifact whose file was not read has no text to check; `exposure leakage` lists it
 as unchecked, and `validate` does not report it.
 
+The text of a file that a `CLAUDE.md` or rule imports with `@path` (up to five hops, as Claude Code follows them) loads
+with it, so it is scanned the same way it is counted in the start budget: the leak is reported against the imported
+file and its own line, once per file. A repository whose `CLAUDE.md` is just `@AGENTS.md` is therefore checked through
+`AGENTS.md`. A file that is itself a start-of-session artifact (an imported rule) is scanned as that artifact.
+
 - **`AR9W0 exposure-area-term`** (error): a term of an area that is not `shared`, on a non-blank line, outside path
   literals (see [Matching terms](#matching-terms)). Each line reports each term once per area that lists it, in line
   order, and the terms of a line by term and then area map order. The line is the file line of a `CLAUDE.md` or rule
-  line (frontmatter counted), and `1` for a listing line, a server name or a plugin key.
+  line (frontmatter counted) and the file line of an imported file, and `1` for a listing line, a server name or a plugin key.
 - **`AR9W1 exposure-area-term-ambiguous`** (warning): a skill or agent listing that names no term at all (a shared
   area's included) but some ambiguous words; one finding per word, on line `1`, its area every area that uses the
   word, sorted and joined by `/` (`billing/search`).

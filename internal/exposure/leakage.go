@@ -128,24 +128,49 @@ func Leaks(start []Artifact, m *areas.Map) []Leak {
 	if m == nil {
 		return nil
 	}
+	artifacts := map[string]bool{}
+	for i := range start {
+		artifacts[start[i].Path] = true
+	}
+	scanned := map[string]bool{}
 	var out []Leak
 	for i := range start {
 		a := &start[i]
 		out = append(out, violations(a, m)...)
+		// The text of a file a CLAUDE.md or rule imports loads with it: scanned on its own lines and
+		// reported against its path, once per file; an imported start artifact is scanned as itself.
+		for _, im := range a.Imports {
+			if im.Text == "" || artifacts[im.Path] || scanned[im.Path] {
+				continue
+			}
+			scanned[im.Path] = true
+			out = append(out, importViolations(a, &im, m)...)
+		}
 		out = append(out, warnings(a, m)...)
 	}
 	return out
 }
 
 func violations(a *Artifact, m *areas.Map) []Leak {
+	return lineViolations(a, a.Path, a.Text, a.LineOffset, m)
+}
+
+// importViolations scans the text of a file the artifact imports; its lines are the file's own.
+func importViolations(a *Artifact, im *Import, m *areas.Map) []Leak {
+	return lineViolations(a, im.Path, im.Text, 0, m)
+}
+
+func lineViolations(a *Artifact, filePath, text string, offset int, m *areas.Map) []Leak {
 	var out []Leak
-	for i, line := range splitLines(a.Text) {
+	for i, line := range splitLines(text) {
 		if strings.TrimFunc(line, pyIsSpace) == "" {
 			continue
 		}
 		for _, match := range m.Find(line) {
 			if !match.Ambiguous && !m.IsShared(match.Area) {
-				out = append(out, leak(LeakViolation, match.Area, match.Term, a, a.LineOffset+i+1, line))
+				l := leak(LeakViolation, match.Area, match.Term, a, offset+i+1, line)
+				l.Path = filePath
+				out = append(out, l)
 			}
 		}
 	}

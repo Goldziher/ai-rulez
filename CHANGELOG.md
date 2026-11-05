@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- `exposure leakage` and `AR9W0` scan the text of files a `CLAUDE.md` or rule imports with `@path`, as the start
+  budget already counts it, and report a leak against the imported file and its line. A `CLAUDE.md` of
+  `@AGENTS.md` is no longer exempt from the leakage checks. (#536)
+
 ### Changed
 
 - Python 3.11 is now the minimum supported version; Python 3.10 reached end of life.
