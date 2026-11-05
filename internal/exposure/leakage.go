@@ -50,9 +50,12 @@ type Leak struct {
 	Excerpt string `json:"excerpt"`
 	// Reason is the reason of the acceptance of an accepted leak.
 	Reason string `json:"reason"`
-	// ImportedBy is the path of the start-of-session artifact that imports Path with `@path`, for a leak in an
-	// imported file; empty otherwise.
-	ImportedBy string `json:"imported_by,omitempty"`
+	// ImportedBy are the paths of the start-of-session artifacts that import Path with `@path`, in inventory
+	// order, for a leak in an imported file; empty otherwise.
+	ImportedBy []string `json:"imported_by,omitempty"`
+	// ImportChain is every file the leak depends on: the importing artifacts and everything they import. It
+	// is not printed; `--changed` keeps the leak when any of them changed.
+	ImportChain []string `json:"-"`
 }
 
 // Message is the finding message of the leak. It is a public contract: a
@@ -173,6 +176,7 @@ func CheckLeaksFrom(start []Artifact, m *areas.Map, rel string) (leaks []Leak, s
 	for i := range start {
 		artifacts[start[i].Path] = true
 	}
+	importers := importerIndex(start, artifacts)
 	scanned := map[string]bool{}
 	for i := range start {
 		a := &start[i]
@@ -183,8 +187,9 @@ func CheckLeaksFrom(start []Artifact, m *areas.Map, rel string) (leaks []Leak, s
 			}
 			scanned[im.Path] = true
 			found := importViolations(a, &im, m)
+			by, chain := importerPaths(start, importers[im.Path])
 			for j := range found {
-				found[j].ImportedBy = a.Path
+				found[j].ImportedBy, found[j].ImportChain = by, chain
 			}
 			leaks = append(leaks, found...)
 		}
@@ -203,6 +208,40 @@ func CheckLeaksFrom(start []Artifact, m *areas.Map, rel string) (leaks []Leak, s
 		}
 	}
 	return leaks, stale
+}
+
+// importerIndex maps each imported file that is scanned as imported text (not itself a start-of-session
+// artifact) to the indexes of the artifacts of start that import it.
+func importerIndex(start []Artifact, artifacts map[string]bool) map[string][]int {
+	importers := map[string][]int{}
+	for i := range start {
+		for _, im := range start[i].Imports {
+			if im.Text != "" && !artifacts[im.Path] {
+				importers[im.Path] = append(importers[im.Path], i)
+			}
+		}
+	}
+	return importers
+}
+
+// importerPaths are the paths of the artifacts at the given indexes of start, and with them every file those
+// artifacts import: what a leak found through them depends on.
+func importerPaths(start []Artifact, idx []int) (by, chain []string) {
+	seen := map[string]bool{}
+	add := func(p string) {
+		if !seen[p] {
+			seen[p] = true
+			chain = append(chain, p)
+		}
+	}
+	for _, i := range idx {
+		by = append(by, start[i].Path)
+		add(start[i].Path)
+		for _, im := range start[i].Imports {
+			add(im.Path)
+		}
+	}
+	return by, chain
 }
 
 func violations(a *Artifact, m *areas.Map) []Leak {

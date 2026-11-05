@@ -3,6 +3,7 @@ package lint
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
@@ -69,9 +70,12 @@ type ExposureLeak struct {
 	Message   string
 	// AcceptReason is the reason of the [[accept]] entry of the areas file that covers the leak, "" for none.
 	AcceptReason string
-	// ImportedBy is the path (relative to Root) of the artifact that imports Path, "" for a leak in the
+	// ImportedBy are the paths (relative to Root) of the artifacts that import Path, none for a leak in the
 	// artifact's own text.
-	ImportedBy string
+	ImportedBy []string
+	// ImportChain are the paths (relative to Root) of every file the finding depends on besides Path: the
+	// importing artifacts and the files they import.
+	ImportChain []string
 }
 
 // ExposureSkillArea is a skill_areas entry.
@@ -178,8 +182,8 @@ func checkExposureLeakage(r *runner) {
 			continue
 		}
 		var via []string
-		if l.ImportedBy != "" {
-			via = append(via, filepath.Join(root, filepath.FromSlash(l.ImportedBy)))
+		for _, p := range append(slices.Clone(l.ImportedBy), l.ImportChain...) {
+			via = append(via, filepath.Join(root, filepath.FromSlash(p)))
 		}
 		r.exposureDeps(before, abs, via)
 		if l.AcceptReason != "" && !r.refuseSuppression(code, routeAreasAccept) {

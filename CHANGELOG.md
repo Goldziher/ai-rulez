@@ -12,7 +12,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   org `xberg-io` against the term `xberg`). An areas file gains `[[accept]]` tables (`term`, `path`, `reason`,
   optional `area`) that record known occurrences at session start; an entry that accepts nothing is reported as
   `AR9I0` and fails `exposure leakage`. An area's `exclude` also applies to classification, and `exposure areas`
-  prints it. (#537)
+  prints it. The `exposure areas` report gains the optional `exclude` key of an area, and `exposure leakage` the
+  optional `imported_by` key of a finding in an imported file (#536); both appear only when used, so a consumer of
+  schema v1 that sets `additionalProperties: false` sees new optional keys. (#537)
 
 ### Fixed
 

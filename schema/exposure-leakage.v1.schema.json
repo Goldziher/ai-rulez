@@ -70,8 +70,10 @@
             "description": "The reason of the [[lint.accept]] or [[accept]] entry of an accepted finding, else empty."
           },
           "imported_by": {
-            "type": "string",
-            "description": "For a finding in a file a start-of-session CLAUDE.md or rule imports with @path, the path of that artifact; absent otherwise."
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "description": "For a finding in a file start-of-session CLAUDE.md files or rules import with @path, the paths of those artifacts in inventory order; absent otherwise."
           }
         }
       }

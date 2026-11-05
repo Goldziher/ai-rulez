@@ -12,7 +12,7 @@ import (
 func importedLeak() ExposureLeak {
 	return ExposureLeak{
 		Area: "billing", Term: "invoice", Kind: "claude_md", Name: "CLAUDE.md", Path: "AGENTS.md", Scope: ".", Line: 2,
-		Excerpt: "The invoice flow.", Message: leakMessage("claude_md", "CLAUDE.md", "invoice", "billing"), ImportedBy: "CLAUDE.md",
+		Excerpt: "The invoice flow.", Message: leakMessage("claude_md", "CLAUDE.md", "invoice", "billing"), ImportedBy: []string{"CLAUDE.md"}, ImportChain: []string{"CLAUDE.md", "AGENTS.md"},
 	}
 }
 
@@ -136,6 +136,67 @@ func TestExposureLeakageStaleAreasFileAccept(t *testing.T) {
 			view := rep.Leakage()
 			require.NotNil(t, view)
 			assert.Equal(t, []string{wantMessage}, view.Stale, "the view keeps the stale entry whether or not AR9I0 is reported")
+		})
+	}
+}
+
+// CLAUDE.md imports a.md, which imports m.md, which imports x.md: a change to the middle file alone decides
+// whether x.md is reached at all.
+func TestExposureLeakageImportChainUnderChanged(t *testing.T) {
+	tests := []struct {
+		name    string
+		changed []string
+		want    int
+	}{
+		{name: "the leaking file changed", changed: []string{"x.md"}, want: 1},
+		{name: "the root changed", changed: []string{"CLAUDE.md"}, want: 1},
+		{name: "the first hop changed", changed: []string{"a.md"}, want: 1},
+		{name: "the intermediate importer changed", changed: []string{"m.md"}, want: 1},
+		{name: "an unrelated file changed", changed: []string{"README.md"}, want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := leakProject(t, "")
+			writeFiles(t, root, map[string]string{"a.md": "@m.md\n", "m.md": "@x.md\n", "x.md": "The invoice flow.\n"})
+			gitAdd(t, root)
+			leak := ExposureLeak{
+				Area: "billing", Term: "invoice", Kind: "claude_md", Name: "CLAUDE.md", Path: "x.md", Scope: ".", Line: 1,
+				Excerpt: "The invoice flow.", Message: leakMessage("claude_md", "CLAUDE.md", "invoice", "billing"),
+				ImportedBy: []string{"CLAUDE.md"}, ImportChain: []string{"CLAUDE.md", "a.md", "m.md", "x.md"},
+			}
+			rep := leakRun(t, root, WithExposure(leakSource(root, leak)))
+
+			NarrowToChanged(rep, tt.changed, "HEAD")
+
+			assert.Len(t, codeFindings(rep.Findings, CodeExposureAreaTerm), tt.want, dump(rep.Findings))
+		})
+	}
+}
+
+// AR9I0 belongs to the config analyzer, so a stale areas-file [[accept]] shows only with it selected.
+func TestExposureLeakageStaleAreasFileAcceptFollowsTheAnalyzerSelection(t *testing.T) {
+	stale := ExposureStaleAccept{Index: 1, Term: "ledger", Path: "gone.md", Line: 7}
+	tests := []struct {
+		name      string
+		analyzers []string
+		want      int
+	}{
+		{name: "exposure alone: AR9I0 belongs to the config analyzer", analyzers: []string{AnalyzerExposure}, want: 0},
+		{name: "config alone", analyzers: []string{AnalyzerConfig}, want: 1},
+		{name: "both", analyzers: []string{AnalyzerExposure, AnalyzerConfig}, want: 1},
+		{name: "no selection", want: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := leakProject(t, "")
+			cfg := loadNoRemote(t, root)
+			tree, err := LoadTree(root)
+			require.NoError(t, err)
+
+			rep, err := RunWith(cfg, tree, Options{Cwd: root, Analyzers: tt.analyzers}, WithExposure(staleSource(root, stale)))
+
+			require.NoError(t, err)
+			assert.Len(t, codeFindings(rep.Findings, CodeAcceptUnused), tt.want, dump(rep.Findings))
 		})
 	}
 }

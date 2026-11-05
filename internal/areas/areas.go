@@ -174,8 +174,8 @@ func normalizeArea(index int, def *config.ExposureArea) (Area, []Problem) {
 		switch {
 		case slices.Contains(words, e):
 			add(keyExclude, quoted(e), "area %q exclude %q is a term or ambiguous word of the area itself, so it would disable it; an exclude must be a longer compound", def.Name, e)
-		case !slices.ContainsFunc(words, func(t string) bool { return strings.Contains(e, t) }):
-			add(keyExclude, quoted(e), "area %q exclude %q contains none of the terms or ambiguous words of the area, so it excludes nothing", def.Name, e)
+		case len(newMatcher([]Area{{Name: def.Name, Terms: area.Terms, Ambiguous: area.Ambiguous}}).find(e)) == 0:
+			add(keyExclude, quoted(e), "area %q exclude %q contains none of the terms or ambiguous words of the area as a whole word, so it excludes nothing", def.Name, e)
 		}
 	}
 	if why := badDeclare(def.Declare); why != "" {

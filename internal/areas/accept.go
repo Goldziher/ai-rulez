@@ -73,8 +73,8 @@ func normalizeAccepts(accepts []Accept, known map[string]bool) ([]Accept, []Prob
 		switch {
 		case strings.TrimSpace(a.Path) == "":
 			add("path", "accept %d: path is empty; name the file the acceptance covers", i+1)
-		case strings.HasPrefix(a.Path, "/") || strings.Contains(a.Path, `\`) || strings.HasPrefix(a.Path, "../"):
-			add("path", "accept %d: path %q must be a repository-relative, forward-slash path", i+1, a.Path)
+		case strings.HasPrefix(strings.TrimPrefix(strings.TrimSpace(a.Path), "./"), "../"):
+			add("path", "accept %d: path %q must be repository-relative; it leaves the root", i+1, a.Path)
 		default:
 			g, ok := pathglob.New(a.Path)
 			if !ok || pathglob.Malformed(a.Path) {

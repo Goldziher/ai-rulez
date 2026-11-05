@@ -40,9 +40,10 @@ type exposureCache struct {
 }
 
 // exposureLintOptions hands the exposure rules the project's session exposure when it has an [exposure] table.
-// The plugin analyzer reads it too: AR964 claude-skill-listing-total is one of its rows.
+// The plugin analyzer reads it too: AR964 claude-skill-listing-total is one of its rows, and the config analyzer
+// reports AR9I0 for a stale [[accept]] of the areas file.
 func exposureLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option {
-	if cfg == nil || cfg.Exposure == nil || !lint.AnalyzerSelected(sel, lint.AnalyzerExposure, lint.AnalyzerPlugin) {
+	if cfg == nil || cfg.Exposure == nil || !lint.AnalyzerSelected(sel, lint.AnalyzerExposure, lint.AnalyzerPlugin, lint.AnalyzerConfig) {
 		return nil
 	}
 	return []lint.Option{lint.WithExposure(exposureLintSource{ctx: ctx, cfg: cfg, cache: &exposureCache{}})}
@@ -158,7 +159,7 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 		l := &leaks[i]
 		out.Leaks = append(out.Leaks, lint.ExposureLeak{
 			Ambiguous: l.Severity == exposure.LeakWarning, Area: l.Area, Term: l.Term, Kind: string(l.Kind), Name: l.Name,
-			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(), AcceptReason: l.Reason, ImportedBy: l.ImportedBy,
+			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(), AcceptReason: l.Reason, ImportedBy: l.ImportedBy, ImportChain: l.ImportChain,
 		})
 	}
 	if s.judgesAcceptances() {

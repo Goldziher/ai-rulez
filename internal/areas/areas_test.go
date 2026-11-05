@@ -554,7 +554,7 @@ func TestInvalidAcceptancesAreRejected(t *testing.T) {
 		{"blank reason", "term = \"x\"\npath = \"a.md\"\nreason = \"  \"\n", "reason is required"},
 		{"no term", "path = \"a.md\"\nreason = \"r\"\n", "term is empty"},
 		{"no path", "term = \"x\"\nreason = \"r\"\n", "path is empty"},
-		{"absolute path", "term = \"x\"\npath = \"/a.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"outside the root", "term = \"x\"\npath = \"../a.md\"\nreason = \"r\"\n", "repository-relative"},
 		{"malformed glob", "term = \"x\"\npath = \"[a.md\"\nreason = \"r\"\n", "malformed"},
 		{"unknown area", "term = \"x\"\narea = \"nope\"\npath = \"a.md\"\nreason = \"r\"\n", `names no area`},
 		{"unknown key", "term = \"x\"\npath = \"a.md\"\nreason = \"r\"\nwhy = \"r\"\n", `unknown key "accept.why"`},
@@ -641,6 +641,53 @@ func TestAcceptPathsFollowTheLintAcceptGlobs(t *testing.T) {
 			_, ok := m.Accepting("a", "x", tt.file)
 
 			assert.Equal(t, tt.want, ok)
+		})
+	}
+}
+
+func TestAcceptPathsNormalizeLikeLintAccept(t *testing.T) {
+	tests := []struct {
+		pattern, file string
+		want          bool
+	}{
+		{"/CLAUDE.md", "CLAUDE.md", true},
+		{"./docs/a.md", "docs/a.md", true},
+		{"./docs/", "docs/x/a.md", true},
+		{`docs/\*.md`, "docs/a.md", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern+" vs "+tt.file, func(t *testing.T) {
+			body := "[[area]]\nname = \"a\"\nterms = [\"x\"]\n\n[[accept]]\nterm = \"x\"\npath = '" + tt.pattern + "'\nreason = \"r\"\n"
+			m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", body))
+			require.Empty(t, problems)
+			_, ok := m.Accepting("a", "x", tt.file)
+			assert.Equal(t, tt.want, ok)
+		})
+	}
+}
+
+func TestExcludeWithTheTermOnlyInsideAWordIsRejected(t *testing.T) {
+	tests := []struct {
+		name    string
+		exclude string
+		ok      bool
+	}{
+		{"inside a longer word", "researchers", false},
+		{"glued letters", "mysearch", false},
+		{"as a whole word of a compound", "search-engine", true},
+		{"after punctuation", "web.search", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, problems := New([]config.ExposureArea{{Name: "a", Terms: []string{"search"}, Exclude: []string{tt.exclude}}}, nil)
+			if tt.ok {
+				require.Empty(t, problems)
+				assert.NotNil(t, m)
+				return
+			}
+			assert.Nil(t, m)
+			require.Len(t, problems, 1)
+			assert.Contains(t, problems[0].Message, "as a whole word")
 		})
 	}
 }

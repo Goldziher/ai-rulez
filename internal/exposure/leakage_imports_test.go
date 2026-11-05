@@ -144,5 +144,27 @@ func TestLeaks_ImportedByNamesTheImporter(t *testing.T) {
 	require.Len(t, leaks, 2)
 	assert.Empty(t, leaks[0].ImportedBy)
 	assert.Equal(t, "AGENTS.md", leaks[1].Path)
-	assert.Equal(t, "CLAUDE.md", leaks[1].ImportedBy)
+	assert.Equal(t, []string{"CLAUDE.md"}, leaks[1].ImportedBy)
+}
+
+func TestLeaks_ImportedByListsEveryImporterAndTheChain(t *testing.T) {
+	// Arrange: CLAUDE.md reaches c.md through a.md and m.md; an unconditional rule imports c.md directly.
+	root := writeRepo(t, map[string]string{
+		"CLAUDE.md":          "@a.md\n",
+		"a.md":               "@m.md\n",
+		"m.md":               "@c.md\n",
+		"c.md":               "the ranker\n",
+		".claude/rules/r.md": "@../../c.md\n",
+	})
+
+	// Act
+	leaks := Leaks(build(t, root).Start(), leakMap(t))
+
+	// Assert: both importers, in inventory order, and every file on the way to the leak.
+	require.Len(t, leaks, 1)
+	assert.Equal(t, "c.md", leaks[0].Path)
+	assert.Equal(t, []string{"CLAUDE.md", ".claude/rules/r.md"}, leaks[0].ImportedBy)
+	assert.Equal(t, KindClaudeMD, leaks[0].Kind)
+	assert.Equal(t, "CLAUDE.md", leaks[0].Name)
+	assert.Subset(t, leaks[0].ImportChain, []string{"CLAUDE.md", "a.md", "m.md", "c.md", ".claude/rules/r.md"})
 }

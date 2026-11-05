@@ -18621,6 +18621,10 @@ the reason (for an import, under the importing artifact's kind and name), and as
 `unchecked:` line of the text output; it is not a finding and does not change the exit code. Read it, or bring it
 under the limit, to have it checked.
 
+A finding in an imported file has `path` of that file and `imported_by`, the paths of the start-of-session artifacts
+that import it (in inventory order; the key is absent for a leak in an artifact's own text); `kind` and `name` are
+those of the first importer.
+
 The command fails (exit `2`) on a violation or a stale acceptance. Without an area map it fails (exit `1`). The JSON
 follows
 [`schema/exposure-leakage.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-leakage.v1.schema.json):
@@ -18639,6 +18643,9 @@ follows
     {"severity": "violation", "code": "AR9W0", "area": "billing", "term": "invoice", "kind": "claude_md",
      "name": "CLAUDE.md", "path": "CLAUDE.md", "scope": ".", "line": 12,
      "excerpt": "Run the invoice reconciler before a release.", "reason": ""},
+    {"severity": "violation", "code": "AR9W0", "area": "billing", "term": "invoice", "kind": "claude_md",
+     "name": "CLAUDE.md", "path": "AGENTS.md", "scope": ".", "line": 3, "imported_by": ["CLAUDE.md"],
+     "excerpt": "The invoice flow.", "reason": ""},
     {"severity": "warning", "code": "AR9W1", "area": "billing/search", "term": "account", "kind": "skill",
      "name": "lookup", "path": ".claude/skills/lookup/SKILL.md", "scope": ".", "line": 1,
      "excerpt": "lookup: Looks up an account.", "reason": ""}
@@ -18781,7 +18788,10 @@ way an `AR701` duplicate depends on the other file of the pair. Every exposure f
 shape the session: the areas file, the configuration file, `.claude/settings.json`, `.claude/settings.local.json` and
 the repository marketplace. Besides those:
 
-- A leak finding (`AR9W0`, `AR9W1`) sits on its artifact and is kept when that file changed.
+- A leak finding (`AR9W0`, `AR9W1`) sits on its file and is kept when that file changed. A leak in an imported
+  file also depends on every file on the import chain: the importing artifacts and everything they import, so
+  editing an intermediate importer (`CLAUDE.md` imports `a.md`, `a.md` imports `m.md`, `m.md` is edited to import the
+  leaking `x.md`) keeps it.
 - `AR9W3` and the `AR964` `claude-skill-listing-total` finding sit on the configuration and depend on every
   start-of-session artifact, so the change that pushes a session past the budget keeps them.
 - An `AR9W2` finding sits on the first listing of its pair and depends on the second, so editing either listing into
@@ -18792,7 +18802,9 @@ the repository marketplace. Besides those:
 A dependency belongs to a file, not to one finding: while `AR9W3`, the listing total or the `AR9W2` summary stands,
 any other finding on the configuration is kept too when a start-of-session artifact changed. `AR9I0` sits on the
 configuration file and, as for every rule, is kept only when the configuration changed, so a change that fixes the
-last finding an entry accepted shows the stale entry only in a full run.
+last finding an entry accepted shows the stale entry only in a full run. A stale `[[accept]]` of the areas file has the
+same limitation: `AR9I0` sits on the areas file and is kept only when that file (or another file that shapes the
+session) changed.
 
 #### Validation
 
