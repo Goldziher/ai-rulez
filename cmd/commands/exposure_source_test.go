@@ -73,3 +73,19 @@ func TestExposureLintSourceWithoutAnInventory(t *testing.T) {
 
 	assert.Nil(t, src.StartExposure())
 }
+
+func TestExposureLintSourceStartExposure_BuildsTheConfiguredHarnessInventory(t *testing.T) {
+	root := codexRepo(t, "harness = \"codex\"\n")
+	cfg := &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{Harness: config.ExposureHarnessCodex}}
+	codex := exposureLintSource{ctx: t.Context(), cfg: cfg, cache: &exposureCache{}}
+	claude := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{}}, cache: &exposureCache{}}
+
+	codexStart, claudeStart := codex.StartExposure(), claude.StartExposure()
+
+	require.NotNil(t, codexStart)
+	require.NotNil(t, claudeStart)
+	assert.Greater(t, codexStart.StartTokens, claudeStart.StartTokens, "AGENTS.md is far larger than the short CLAUDE.md")
+	inv, err := codex.inventoryFor(codex.mode(), config.ExposureHarnessCodex)
+	require.NoError(t, err)
+	assert.Equal(t, config.ExposureHarnessCodex, inv.Harness)
+}

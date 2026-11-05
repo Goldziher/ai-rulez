@@ -469,8 +469,9 @@ Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, se
 Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, user-level (`~/.codex`,
 `~/.agents/skills`) and admin (`/etc/codex`) files, the skill policy in `agents/openai.yaml`, and `.codex/skills`
 (the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
-`AR9W3` and the other `validate` rules, and the `inventory`, `areas`, `leakage` and `collisions` subcommands, still read
-the Claude Code inventory: only the start-of-session report honors the harness.
+`AR9W3` follows the harness (see [Start-of-session budgets](#start-of-session-budgets)); the other `validate` rules and
+the `inventory`, `areas`, `leakage` and `collisions` subcommands still read the Claude Code inventory. Codex has no
+marketplace plugins, so `--plugins enabled` or `all` under the codex harness is an error; `--plugins none` is accepted.
 
 ## MCP tool schemas
 
@@ -486,19 +487,23 @@ mcp tool schemas (estimated): 2 servers x 400 = 800 tokens, included in the star
 The JSON carries it as `mcp_schemas` (`servers`, `tokens_per_server`, `tokens`) and as an `mcp_schemas` entry of
 `start_tokens_by_kind` (also in the text breakdown), so the breakdown still sums to `start_tokens`. It is off by
 default (0), and then no number changes and both are absent. An explicit `--mcp-server-tokens 0` turns a configured
-estimate off for one run. `AR9W3` counts the same estimate, so `validate` and `exposure` agree on the Claude budget. There is no built-in estimate: measure a server's tool list once and set
-the number.
+estimate off for one run. `AR9W3` counts the same estimate, so `validate` and `exposure` agree on the budget. The
+estimate is also in `tokens_by_phase` for `start`, so that figure equals `start_tokens`. There is no built-in
+estimate: measure a server's tool list once and set the number.
 
 ## Start-of-session budgets
 
 Two checks of `validate` read the start-of-session report, both only with an `[exposure]` table, both computed as
 `ai-rulez exposure` computes them with `[exposure] plugins` and `context_window`:
 
-- **`AR9W3 exposure-start-budget`** reports Claude Code start tokens over `[exposure] start_budget`. It is off while
-  `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same
-  case, so either can gate CI; `exposure --harness codex` exits `2` over `codex_start_budget` the same way, and `AR9W3` does not read it. A start-of-session `@path` import that cannot be modelled (an absolute or `~` path, a
-  path that leaves the root, or an unreadable target) also fails the budget closed: the budget cannot be verified, and
-  both report it rather than staying green.
+- **`AR9W3 exposure-start-budget`** reports start tokens over the budget of the `[exposure] harness`: `start_budget`
+  for Claude Code (the default), `codex_start_budget` for `harness = "codex"`. The inventory is the one that harness
+  loads, and the finding names the harness and the key. It is off while that budget is 0 (the default); setting it
+  turns the rule on at error, so under codex a `start_budget` alone leaves it off. `ai-rulez exposure` exits `2` in
+  the same case (`exposure --harness codex` against `codex_start_budget`), so either can gate CI; `validate` takes the
+  harness from `[exposure] harness` only, not from a flag. A start-of-session `@path` import that cannot be modelled
+  (an absolute or `~` path, a path that leaves the root, or an unreadable target) also fails the budget closed: the
+  budget cannot be verified, and both report it rather than staying green.
 - **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
   reports a start-of-session skill listing over Claude Code's listing budget, with the claude preset configured.
   `[lint.load_budgets] claude-skill-listing-total = N` replaces the computed budget with a fixed one.

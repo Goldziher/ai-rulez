@@ -69,3 +69,25 @@ func TestRunExposureInventory_StaysOnTheClaudeInventoryWhateverTheConfigHarness(
 	assert.Contains(t, out.String(), "claude_md")
 	assert.NotContains(t, out.String(), "agents_md")
 }
+
+func TestRunExposureReport_PluginsAreRejectedUnderCodex(t *testing.T) {
+	root := codexRepo(t, "")
+
+	for _, plugins := range []string{"enabled", "all"} {
+		var out bytes.Buffer
+		err := runExposureReport(t.Context(), &out, &exposureFlags{harness: "codex", plugins: plugins, root: root})
+
+		require.Error(t, err, plugins)
+		assert.Contains(t, err.Error(), "--plugins")
+		assert.Contains(t, err.Error(), "codex")
+		assert.Empty(t, out.String())
+	}
+
+	var out bytes.Buffer
+	require.NoError(t, runExposureReport(t.Context(), &out, &exposureFlags{harness: "codex", plugins: "none", root: root}))
+	require.NoError(t, runExposureReport(t.Context(), &out, &exposureFlags{harness: "claude", plugins: "all", root: root}))
+
+	cfgRoot := codexRepo(t, "harness = \"codex\"\n")
+	err := runExposureReport(t.Context(), &out, &exposureFlags{plugins: "enabled", root: cfgRoot})
+	require.Error(t, err, "the harness from [exposure] counts too")
+}

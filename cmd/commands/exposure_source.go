@@ -28,13 +28,19 @@ type exposureLintSource struct {
 	cache     *exposureCache
 }
 
-// exposureCache holds the inventories an exposureLintSource built, by plugin mode, for the rules of one run.
-// The key is the mode alone because the source that owns the cache fixes the directory and the overrides; a
+// exposureCache holds the inventories an exposureLintSource built, by plugin mode and harness, for the rules of one run.
+// The key is the mode and harness because the source that owns the cache fixes the directory and the overrides; a
 // cache shared across sources would need them in the key. The area map is not cached: each rule that reads it
 // loads it again (AR9W5, the leakage and collision rules), which costs an areas_file read each.
 type exposureCache struct {
 	mu   sync.Mutex
-	invs map[exposure.PluginMode]*exposure.Inventory
+	invs map[exposureInvKey]*exposure.Inventory
+}
+
+// exposureInvKey is what an inventory of a source varies by.
+type exposureInvKey struct {
+	mode    exposure.PluginMode
+	harness string
 }
 
 // exposureLintOptions hands the exposure rules the project's session exposure when it has an [exposure] table.
@@ -106,6 +112,11 @@ func (s exposureLintSource) mode() exposure.PluginMode {
 // inventory builds the inventory of the source's directory in mode, once per mode when the source has a cache.
 // The path claims of the area map read the scopes relative to the project root.
 func (s exposureLintSource) inventory(mode exposure.PluginMode) (*exposure.Inventory, error) {
+	return s.inventoryFor(mode, config.ExposureHarnessClaude)
+}
+
+// inventoryFor is inventory for a harness's load model.
+func (s exposureLintSource) inventoryFor(mode exposure.PluginMode, harness string) (*exposure.Inventory, error) {
 	root, err := s.inventoryRoot()
 	if err != nil {
 		return nil, err
@@ -114,13 +125,14 @@ func (s exposureLintSource) inventory(mode exposure.PluginMode) (*exposure.Inven
 	if err != nil {
 		return nil, err
 	}
-	opts := exposure.Options{Root: root, AreaBase: base, Plugins: mode}
+	opts := exposure.Options{Root: root, AreaBase: base, Plugins: mode, Harness: harness}
 	if s.cache == nil {
 		return exposure.Build(s.ctx, opts) //nolint:wrapcheck // already contextual
 	}
+	key := exposureInvKey{mode, harness}
 	s.cache.mu.Lock()
 	defer s.cache.mu.Unlock()
-	if inv, ok := s.cache.invs[mode]; ok {
+	if inv, ok := s.cache.invs[key]; ok {
 		return inv, nil
 	}
 	inv, err := exposure.Build(s.ctx, opts)
@@ -128,9 +140,9 @@ func (s exposureLintSource) inventory(mode exposure.PluginMode) (*exposure.Inven
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	if s.cache.invs == nil {
-		s.cache.invs = map[exposure.PluginMode]*exposure.Inventory{}
+		s.cache.invs = map[exposureInvKey]*exposure.Inventory{}
 	}
-	s.cache.invs[mode] = inv
+	s.cache.invs[key] = inv
 	return inv, nil
 }
 
@@ -209,12 +221,13 @@ func (s exposureLintSource) Inputs() []string {
 // [exposure] context_window, and the files of its start-of-session artifacts; nil when the inventory cannot be
 // built.
 func (s exposureLintSource) StartExposure() *lint.ExposureStart {
-	inv, err := s.inventory(s.mode())
+	harness := s.cfg.Exposure.EffectiveHarness()
+	inv, err := s.inventoryFor(s.mode(), harness)
 	if err != nil {
 		logger.Warn("Skipped the session exposure checks", "error", err)
 		return nil
 	}
-	rep := exposure.NewReport(inv, exposure.ReportOptions{ContextWindow: s.cfg.Exposure.EffectiveContextWindow(), StartBudget: s.cfg.Exposure.StartBudget, McpServerTokens: s.cfg.Exposure.McpServerTokens})
+	rep := exposure.NewReport(inv, exposure.ReportOptions{ContextWindow: s.cfg.Exposure.EffectiveContextWindow(), StartBudget: s.cfg.Exposure.EffectiveStartBudget(harness), McpServerTokens: s.cfg.Exposure.McpServerTokens})
 	unmodeled := make([]string, 0, len(rep.StartImportsUnmodeled))
 	for _, u := range rep.StartImportsUnmodeled {
 		unmodeled = append(unmodeled, u.Import+" in "+u.Artifact+": "+u.Reason)

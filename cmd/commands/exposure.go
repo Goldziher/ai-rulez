@@ -150,7 +150,8 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	return group
 }
 
-func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error {
+// checkExposureReportFlags rejects an unknown --harness and a negative --context-window or --mcp-server-tokens.
+func checkExposureReportFlags(f *exposureFlags) error {
 	if f.harness != "" && !slices.Contains(exposure.Harnesses(), f.harness) {
 		return oops.Errorf("unknown --harness %q (%s)", f.harness, "claude or codex")
 	}
@@ -160,9 +161,19 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 	if f.mcpServerTokens < 0 {
 		return oops.Errorf("--mcp-server-tokens must not be negative, got %d", f.mcpServerTokens)
 	}
+	return nil
+}
+
+func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error {
+	if err := checkExposureReportFlags(f); err != nil {
+		return err
+	}
 	in, err := loadExposureFor(ctx, f, true)
 	if err != nil {
 		return err
+	}
+	if in.harness == config.ExposureHarnessCodex && f.plugins != "" && f.plugins != string(exposure.PluginsNone) {
+		return oops.Errorf("--plugins %s has no effect under the codex harness, which has no marketplace plugins; drop it or use --plugins none", f.plugins)
 	}
 	if in.areas != nil {
 		in.inv.Classify(in.areas)
