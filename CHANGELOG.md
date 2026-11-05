@@ -10,15 +10,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - **`exposure` supports the Codex harness.** `ai-rulez exposure --harness codex` (or `[exposure] harness = "codex"`)
   models Codex's start context instead of Claude Code's: the root `AGENTS.md` or `AGENTS.override.md` (one file per
-  directory, override first, capped at the 32 KiB `project_doc_max_bytes`), the `.agents/skills` listing with each
+  directory, override first, each file capped at the 32 KiB `project_doc_max_bytes`), the `.agents/skills` listing with each
   skill's path against Codex's 2% listing budget, and the MCP servers of `.codex/config.toml`. Claude-specific
   artifacts do not count. The budget is its own key, `[exposure] codex_start_budget`, so one repository can gate both
   harnesses ([#538](https://github.com/Goldziher/ai-rulez/issues/538)).
 - **`exposure` can count MCP tool schemas in the start budget.** `--mcp-server-tokens N` or
   `[exposure] mcp_server_tokens = N` adds a fixed per-server estimate for each MCP server configured at start to
-  `start_tokens` and the budget check, reported on its own `mcp tool schemas` line and as `mcp_schemas` in the JSON.
-  Off by default, so existing numbers do not change
+  `start_tokens` and the budget check, reported on its own `mcp tool schemas` line and as `mcp_schemas` in the JSON and the by-kind breakdown. `AR9W3`
+  counts it too, and an explicit `--mcp-server-tokens 0` turns a configured estimate off. Off by default, so existing
+  numbers do not change
   ([#539](https://github.com/Goldziher/ai-rulez/issues/539)).
+
+### Fixed
+
+- The `exposure` subcommands other than the report (`inventory`, `areas`, `collisions`, `leakage`) stay on the Claude
+  Code inventory when `[exposure] harness = "codex"` is set; only the start-of-session report honors the harness.
+- The `codex-skill-listing` load budget now cites the Codex skills page that states it (8,000 characters when the
+  context window is unknown) and is marked verified.
 
 ### Changed
 

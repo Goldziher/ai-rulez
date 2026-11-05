@@ -97,8 +97,11 @@ func TestLoadBudgetMessagesNameTheHarnessAndMarkUnverifiedFigures(t *testing.T) 
 		t.Errorf("the devin-preset rule-file budget should name Windsurf: %q", msg)
 	}
 	skill := "---\nname: bad\ndescription: Use when " + strings.Repeat("abcdefgh ", 1000) + "\n---\nx\n"
-	if msg := budgetMessages(t, ruleCase{presets: `"codex"`, skill: skill}); !strings.Contains(msg, "unverified") {
-		t.Errorf("an unverified figure should say so: %q", msg)
+	if msg := budgetMessages(t, ruleCase{presets: `"codex"`, skill: skill}); strings.Contains(msg, "unverified") {
+		t.Errorf("the codex skill listing figure is verified against the skills page: %q", msg)
+	}
+	if got := (loadBudget{ID: "x", Presets: []string{presetCodex}}).presetLabel(); !strings.Contains(got, "unverified") {
+		t.Errorf("an unverified figure should say so: %q", got)
 	}
 }
 

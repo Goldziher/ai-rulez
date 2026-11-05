@@ -214,7 +214,7 @@ func (s exposureLintSource) StartExposure() *lint.ExposureStart {
 		logger.Warn("Skipped the session exposure checks", "error", err)
 		return nil
 	}
-	rep := exposure.NewReport(inv, exposure.ReportOptions{ContextWindow: s.cfg.Exposure.EffectiveContextWindow(), StartBudget: s.cfg.Exposure.StartBudget})
+	rep := exposure.NewReport(inv, exposure.ReportOptions{ContextWindow: s.cfg.Exposure.EffectiveContextWindow(), StartBudget: s.cfg.Exposure.StartBudget, McpServerTokens: s.cfg.Exposure.McpServerTokens})
 	unmodeled := make([]string, 0, len(rep.StartImportsUnmodeled))
 	for _, u := range rep.StartImportsUnmodeled {
 		unmodeled = append(unmodeled, u.Import+" in "+u.Artifact+": "+u.Reason)
