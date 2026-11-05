@@ -55,9 +55,9 @@ verified acme-tools 1.2.0: 4 files match SHA256SUMS, the manifest and the archiv
     - `verify --plugin`;
     - a secret scan of every bundle file, using the security scan's patterns.
 
-    A symlink in the bundle is an error, and the machine-local overlay is never loaded. When the bundle holds an
-    [Agent Plugins](agent-plugins.md) package, it is checked against the specification (`AR9O0`-`AR9O5`), in
-    `--dry-run` as well.
+   A symlink in the bundle is an error, and the machine-local overlay is never loaded. When the bundle holds an
+   [Agent Plugins](agent-plugins.md) package, it is checked against the specification (`AR9O0`-`AR9O5`), in
+   `--dry-run` as well.
 3. **Policy gates** from [`[publish]`](#configuration): `require_signature` (`AR9N7`) and `require_approved`
    (`AR9N8`).
 4. **Build** the dist directory, signing the archive when asked.
