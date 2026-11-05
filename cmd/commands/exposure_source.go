@@ -217,11 +217,10 @@ func (s exposureLintSource) Inputs() []string {
 	return out
 }
 
-// StartExposure implements lint.ExposureSource: the start-of-session report of `ai-rulez exposure` with the
+// StartExposure implements lint.ExposureSource: the start-of-session report of `ai-rulez exposure` for harness with the
 // [exposure] context_window, and the files of its start-of-session artifacts; nil when the inventory cannot be
 // built.
-func (s exposureLintSource) StartExposure() *lint.ExposureStart {
-	harness := s.cfg.Exposure.EffectiveHarness()
+func (s exposureLintSource) StartExposure(harness string) *lint.ExposureStart {
 	inv, err := s.inventoryFor(s.mode(), harness)
 	if err != nil {
 		logger.Warn("Skipped the session exposure checks", "error", err)

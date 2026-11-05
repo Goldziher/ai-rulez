@@ -57,9 +57,11 @@ type ExposureSource interface {
 	// and the marketplace. The findings of the exposure rules depend on them
 	// under --changed.
 	Inputs() []string
-	// StartExposure is the start-of-session exposure (AR9W3, AR964
-	// claude-skill-listing-total); nil when the inventory cannot be built.
-	StartExposure() *ExposureStart
+	// StartExposure is the start-of-session exposure of a session of harness
+	// (config.ExposureHarnessClaude or config.ExposureHarnessCodex), as AR9W3
+	// and AR964 claude-skill-listing-total read it; nil when the inventory
+	// cannot be built.
+	StartExposure(harness string) *ExposureStart
 	// Collisions are the pairs at or over minScore, highest score first; none
 	// when the area map cannot be used (AR9W5 reports it).
 	Collisions(minScore float64) []ExposureCollision
@@ -71,13 +73,13 @@ type ExposureSource interface {
 // WithExposure hands the exposure rules the session exposure of the project.
 func WithExposure(src ExposureSource) Option { return func(r *runner) { r.exposure = src } }
 
-// exposureStart is the start-of-session exposure, nil without an [exposure]
-// table or a source.
-func (r *runner) exposureStart() *ExposureStart {
+// exposureStart is the start-of-session exposure of a session of harness, nil
+// without an [exposure] table or a source.
+func (r *runner) exposureStart(harness string) *ExposureStart {
 	if r.cfg == nil || r.cfg.Exposure == nil || r.exposure == nil {
 		return nil
 	}
-	return r.exposure.StartExposure()
+	return r.exposure.StartExposure(harness)
 }
 
 // exposureRoot is the absolute directory the exposure source's paths are
@@ -155,7 +157,7 @@ func checkExposureStartBudget(r *runner) {
 	if harness == config.ExposureHarnessCodex {
 		key, session, label = "codex_start_budget", "a codex session", "the codex start budget"
 	}
-	start := r.exposureStart()
+	start := r.exposureStart(harness)
 	if start == nil {
 		return
 	}

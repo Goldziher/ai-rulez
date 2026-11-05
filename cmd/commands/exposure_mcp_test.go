@@ -103,7 +103,7 @@ func TestExposureLintSourceStartExposureCountsMcpSchemas(t *testing.T) {
 	root := codexRepo(t, "")
 	tokens := func(exp *config.ExposureConfig) int {
 		src := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: exp}, cache: &exposureCache{}}
-		start := src.StartExposure()
+		start := src.StartExposure(config.ExposureHarnessClaude)
 		require.NotNil(t, start)
 		return start.StartTokens
 	}

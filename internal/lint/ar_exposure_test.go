@@ -153,11 +153,11 @@ type noExposure struct{}
 
 func (noExposure) Root() string                                { return "" }
 func (noExposure) Inputs() []string                            { return nil }
-func (noExposure) StartExposure() *ExposureStart               { return nil }
+func (noExposure) StartExposure(string) *ExposureStart         { return nil }
 func (noExposure) Collisions(float64) []ExposureCollision      { return nil }
 func (noExposure) Leakage() (leakage ExposureLeakage, ok bool) { return ExposureLeakage{}, false }
 
-func (f fakeExposure) StartExposure() *ExposureStart {
+func (f fakeExposure) StartExposure(string) *ExposureStart {
 	*f.calls++
 	return f.start
 }
@@ -336,8 +336,8 @@ type fakeStart struct {
 	inputs []string
 }
 
-func (f fakeStart) StartExposure() *ExposureStart { return f.start }
-func (f fakeStart) Inputs() []string              { return f.inputs }
+func (f fakeStart) StartExposure(string) *ExposureStart { return f.start }
+func (f fakeStart) Inputs() []string                    { return f.inputs }
 
 // Under --changed, AR9W3 and the AR964 listing total sit on the config, but the change that moves them is in a
 // start-of-session artifact or an input, so they depend on those.

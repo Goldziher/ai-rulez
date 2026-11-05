@@ -204,7 +204,7 @@ func TestExposureLintSourceBelowTheProjectRoot(t *testing.T) {
 	// Act
 	leakage, ok := src.Leakage()
 	collisions := src.Collisions(0.1)
-	start := src.StartExposure()
+	start := src.StartExposure(config.ExposureHarnessClaude)
 
 	// Assert
 	require.True(t, ok)
