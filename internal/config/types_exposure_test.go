@@ -47,11 +47,11 @@ func TestExposureTableLoads(t *testing.T) {
 	}
 }
 
-func TestExposureConfig_CodexKeys(t *testing.T) {
-	assert.Empty(t, (&ExposureConfig{Harness: "codex", CodexStartBudget: 5800}).Validate())
+func TestExposureConfig_CodexAndMcpKeys(t *testing.T) {
+	assert.Empty(t, (&ExposureConfig{Harness: "codex", CodexStartBudget: 5800, McpServerTokens: 400}).Validate())
 	assert.Equal(t,
-		[]string{"exposure.codex_start_budget must not be negative"},
-		(&ExposureConfig{CodexStartBudget: -1}).Validate())
+		[]string{"exposure.codex_start_budget must not be negative", "exposure.mcp_server_tokens must not be negative"},
+		(&ExposureConfig{CodexStartBudget: -1, McpServerTokens: -1}).Validate())
 	assert.Contains(t, (&ExposureConfig{Harness: "gemini"}).Validate()[0], "must be")
 
 	c := &ExposureConfig{StartBudget: 5350, CodexStartBudget: 5800}

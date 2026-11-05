@@ -14,6 +14,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   skill's path against Codex's 2% listing budget, and the MCP servers of `.codex/config.toml`. Claude-specific
   artifacts do not count. The budget is its own key, `[exposure] codex_start_budget`, so one repository can gate both
   harnesses ([#538](https://github.com/Goldziher/ai-rulez/issues/538)).
+- **`exposure` can count MCP tool schemas in the start budget.** `--mcp-server-tokens N` or
+  `[exposure] mcp_server_tokens = N` adds a fixed per-server estimate for each MCP server configured at start to
+  `start_tokens` and the budget check, reported on its own `mcp tool schemas` line and as `mcp_schemas` in the JSON.
+  Off by default, so existing numbers do not change
+  ([#539](https://github.com/Goldziher/ai-rulez/issues/539)).
 
 ### Changed
 

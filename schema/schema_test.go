@@ -456,7 +456,7 @@ func TestExposureSection(t *testing.T) {
 	}{
 		{"full table", head + "[exposure]\nharness = \"claude\"\ncontext_window = 200000\nplugins = \"enabled\"\nstart_budget = 0\ncollision_min_score = 0.2\n" + area + "[exposure.skill_areas]\ndeploy = \"billing\"\n", false},
 		{"areas file", head + "[exposure]\nareas_file = \"tools/areas.toml\"\n", false},
-		{"codex harness", head + "[exposure]\nharness = \"codex\"\ncodex_start_budget = 5800\n", false},
+		{"codex harness", head + "[exposure]\nharness = \"codex\"\ncodex_start_budget = 5800\nmcp_server_tokens = 400\n", false},
 		{"unknown harness", head + "[exposure]\nharness = \"gemini\"\n", true},
 		{"unknown plugins mode", head + "[exposure]\nplugins = \"some\"\n", true},
 		{"score above one", head + "[exposure]\ncollision_min_score = 2\n", true},

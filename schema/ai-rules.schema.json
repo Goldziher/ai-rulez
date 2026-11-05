@@ -2452,6 +2452,11 @@
           "minimum": 0,
           "description": "start_budget for the codex harness (exposure --harness codex); 0 (default) turns the check off."
         },
+        "mcp_server_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated tool schema tokens of one configured MCP server at session start, added to the start count; 0 (default) leaves MCP schemas out."
+        },
         "collision_min_score": {
           "type": "number",
           "minimum": 0,

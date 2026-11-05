@@ -36,8 +36,10 @@ type exposureFlags struct {
 	plugins       string
 	harness       string
 	contextWindow int
-	asJSON        bool
-	withText      bool
+	// mcpServerTokens is --mcp-server-tokens; 0 defers to [exposure] mcp_server_tokens.
+	mcpServerTokens int
+	asJSON          bool
+	withText        bool
 }
 
 // exposureInput is what an exposure command reads: the inventory and, when one
@@ -66,7 +68,8 @@ only when the user runs it), and which area of the [exposure] area map it belong
 offline, free and deterministic; see docs/exposure.md.
 
 --harness codex applies Codex's load model (AGENTS.md, .agents/skills, .codex/config.toml MCP servers) and checks
-[exposure] codex_start_budget.
+[exposure] codex_start_budget. --mcp-server-tokens (or [exposure] mcp_server_tokens) adds an estimated tool schema
+cost per configured MCP server to the start tokens, on its own line; it is off by default.
 
 Without a subcommand, exposure prints the start-of-session report: the estimated tokens a session loads
 before it touches a file, by kind, the skill listing against Claude Code's listing budget (1% of
@@ -136,6 +139,7 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	pf.StringVar(&f.plugins, "plugins", "", "Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled)")
 	group.Flags().IntVar(&f.contextWindow, "context-window", 0, "Model context window in tokens, for the skill listing budget (default: [exposure] context_window, else 200000)")
 	group.Flags().StringVar(&f.harness, "harness", "", "Harness whose load model applies: claude or codex (default: [exposure] harness, else claude)")
+	group.Flags().IntVar(&f.mcpServerTokens, "mcp-server-tokens", 0, "Estimated tool schema tokens per configured MCP server, added to the start count (default: [exposure] mcp_server_tokens, else 0, which leaves MCP schemas out)")
 	addJSONFormat(group.Flags(), &f.asJSON, "")
 	addJSONFormat(inventory.Flags(), &f.asJSON, "")
 	addJSONFormat(areasCmd.Flags(), &f.asJSON, "")
@@ -151,6 +155,9 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 	if f.contextWindow < 0 {
 		return oops.Errorf("--context-window must not be negative, got %d", f.contextWindow)
 	}
+	if f.mcpServerTokens < 0 {
+		return oops.Errorf("--mcp-server-tokens must not be negative, got %d", f.mcpServerTokens)
+	}
 	in, err := loadExposure(ctx, f)
 	if err != nil {
 		return err
@@ -162,7 +169,13 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 	if window == 0 {
 		window = in.exp.EffectiveContextWindow()
 	}
-	rep := exposure.NewReport(in.inv, exposure.ReportOptions{ContextWindow: window, StartBudget: in.exp.EffectiveStartBudget(in.harness)})
+	mcpTokens := f.mcpServerTokens
+	if mcpTokens == 0 && in.exp != nil {
+		mcpTokens = in.exp.McpServerTokens
+	}
+	rep := exposure.NewReport(in.inv, exposure.ReportOptions{
+		ContextWindow: window, StartBudget: in.exp.EffectiveStartBudget(in.harness), McpServerTokens: mcpTokens,
+	})
 	if f.asJSON {
 		err = jsondoc.Write(w, rep)
 	} else {
@@ -477,6 +490,9 @@ func writeReportText(w io.Writer, rep *exposure.Report) error {
 	}
 	for _, u := range rep.StartImportsUnmodeled {
 		lines = append(lines, fmt.Sprintf("unmodeled import: %s in %s: %s", u.Import, u.Artifact, u.Reason))
+	}
+	if m := rep.McpSchemas; m != nil {
+		lines = append(lines, fmt.Sprintf("mcp tool schemas (estimated): %d %s x %d = %d tokens, included in the start tokens", m.Servers, plural(m.Servers, "server"), m.TokensPerServer, m.Tokens))
 	}
 	lines = append(lines, listing, "start tokens by kind:")
 	lines = append(lines, countLines(rep.StartTokensByKind)...)
