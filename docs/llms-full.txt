@@ -11463,7 +11463,8 @@ reason = "the skill runs git and gh; narrowing would break step 3"
   in the file whose message contains `match` is accepted, so pick a specific one.
 - An accepted finding does not count toward the exit code or a ratchet. The JSON report keeps it with
   `"accepted": true` and the reason as `accept_reason`; `--update-baseline` does not write it.
-- An entry that accepts nothing is reported as `AR9I0` (`accept-unused`, warning) on `config.toml`, unless the run
+- An entry that accepts nothing is reported as `AR9I0` (`accept-unused`, warning) on `config.toml` (a stale
+  `[[accept]]` of an areas file on that file), unless the run
   could not have produced the finding (the rule is off, its analyzer was not selected, or the run linted only named
   files that do not match).
 
