@@ -84,15 +84,10 @@ nav = [
   ] },
   { "Reference" = [
     { "Architecture" = "architecture.md" },
-    { "Standards Conformance" = "standards.md" },
     { "CLI Commands" = "cli.md" },
     { "CLI Command Reference" = "cli-reference.md" },
     { "Schema" = "schema.md" },
     { "Embedding (Go API)" = "embedding.md" },
-  ] },
-  { "Proposals" = [
-    { "Agent Extends" = "proposals/agent-extends.md" },
-    { "Agent Extends Docs" = "proposals/agent-extends-docs.md" },
   ] },
   { "Changelog" = "CHANGELOG.md" },
 ]
