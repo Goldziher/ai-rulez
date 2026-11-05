@@ -1,743 +1,301 @@
-# Includes System
+# Includes
 
-Reuse configurations across multiple projects through inheritance and composition.
+An include pulls rules, context, skills, agents, commands and checks from another directory or git repository into
+your project, so an organization's standards are written once and shared by many repositories. Included content is
+merged with your own before `generate` renders it, and your own content wins on a name collision.
 
-## Overview
-
-Includes work through configuration inheritance:
-
-1. Define common rules once in a shared configuration
-2. Share rules, context, skills, agents, and commands across projects
-3. Mix and match includes to create project-specific configurations
-4. Track changes through version control
-
-## How Includes Work
-
-Includes allow one `.ai-rulez/` configuration to inherit content from other configurations. Use for:
-
-- Organization-wide coding standards
-- Framework-specific guidelines (React, Go, Python)
-- Consistent security policies
-- Team-specific workflows
-
-## Basic Example
-
-### Creating a Shared Configuration
-
-Create a `.ai-rulez/` directory that others can include:
-
-**`shared-rules/.ai-rulez/config.toml`:**
+## Example
 
 ```toml
+# .ai-rulez/config.toml
 version = "5.0"
-name = "shared-rules"
-description = "Organization-wide AI rules"
+name = "web"
+presets = ["claude", "cursor", "codex"]
 
-presets = []
-
-[profiles]
-default = []
+[[includes]]
+name = "standards"
+source = "https://github.com/acme/ai-standards"
+ref = "v1.2.0"
+include = ["rules", "skills"]
 ```
 
-**`shared-rules/.ai-rulez/rules/security.md`:**
+The repository holds plain content folders, no configuration needed:
+
+```text
+ai-standards/
+├── rules/
+│   └── security.md
+└── skills/
+    └── security-review/
+        └── SKILL.md
+```
 
 ```markdown
+<!-- ai-standards/rules/security.md -->
 ---
 priority: critical
 ---
 
-# Security Standards
-
-- Always validate user input
-- Use parameterized queries
-- Never hardcode secrets
-- Rotate credentials regularly
+Never hardcode secrets. Validate all user input.
 ```
 
-### Including in Your Project
-
-In your project's `.ai-rulez/config.toml`, reference the shared rules:
-
-```toml
-version = "5.0"
-name = "my-project"
-
-# Include rules from another directory
-includes = [
-  { name = "shared-rules", source = "../shared-rules/.ai-rulez" }
-]
-
-presets = ["claude", "cursor"]
-
-[profiles]
-default = []
+```bash
+ai-rulez lock       # pin v1.2.0 to its commit
+ai-rulez generate
 ```
 
-Now your project includes all content from the shared configuration.
+The included rule lands in the shared `AGENTS.md` like one of your own:
 
-## Include Paths
+```markdown
+<!-- AGENTS.md -->
+# web
 
-Includes can be:
+## Rules
 
-1. Relative paths: `../shared-rules/.ai-rulez`, `./team-guidelines/.ai-rulez`
-2. Absolute paths: `/etc/ai-rulez-standards/.ai-rulez`
-3. Git URLs: `https://github.com/org/shared-rules.git`, `git@github.com:org/shared-rules.git`
+### security
+
+**Priority:** critical
+
+Never hardcode secrets. Validate all user input.
+```
+
+and the skill is written to `.claude/skills/security-review/` and `.agents/skills/security-review/` (Cursor and
+Codex). If you add your own `.ai-rulez/rules/security.md`, it replaces the included one.
+
+## Include options
+
+| Key                  | Type   | Default            | Meaning                                                                                       |
+| -------------------- | ------ | ------------------ | --------------------------------------------------------------------------------------------- |
+| `name`               | string | required           | identifies the include in the lock, the cache and messages                                    |
+| `source`             | string | required           | a git URL or a local directory; see [Sources](#sources)                                       |
+| `path`               | string | source root        | subdirectory of the source to read (`modules/core`); a missing path fails the load            |
+| `ref`                | string | the default branch | git branch, tag or commit                                                                     |
+| `version`            | string | none               | git only: a semver range (`^1.2`, `~2.1.0`) resolved against tags, instead of `ref`; see [Version constraints](lockfile.md#version-constraints) |
+| `tag_prefix`         | string | none               | with `version`: the tag prefix to match (`v`, `rules-`)                                       |
+| `include_prerelease` | bool   | `false`            | with `version`: allow prerelease tags                                                         |
+| `min_release_age`    | string | none               | with `version`: skip tags younger than this (`"7d"`)                                          |
+| `include`            | list   | every kind         | kinds to import: `rules`, `context`, `skills`, `agents`, `commands`, `checks`                 |
+| `install_to`         | string | root               | import the content into this domain instead of the root                                       |
+| `merge_strategy`     | string | `local-override`   | who wins a name collision; see [Precedence](#precedence)                                      |
+| `local_override`     | string | none               | a local directory used instead of `source`, for developing the include; see below             |
+| `format`             | string | ai-rulez layout    | `okf` reads the source as an [OKF bundle](okf.md#okf-bundles-as-includes)                     |
+
+- `include` filters content kinds, not domains: domains of an include are always carried over.
+- MCP servers, hooks and other configuration are not imported, and an include's own `includes` are ignored. To
+  combine several layers, list each one in your project.
+- `local_override` is resolved against the project directory, with `path` appended. If the directory does not exist,
+  the include is skipped with an info line; the remote source is not used instead. Because it bypasses the lock, it is
+  honored only from `config.local.toml` or when no lock is enforced: `generate --locked`, `--frozen` and an enforced
+  lock fail on a `local_override` in the committed config.
+
+`ai-rulez include add|list|remove` edits the list:
+
+```bash
+ai-rulez include add standards https://github.com/acme/ai-standards --ref v1.2.0 --include rules,skills
+ai-rulez include add mine ../my-rules --local      # into config.local.toml, for your machine only
+ai-rulez include list
+```
+
+`--local` (and `local: true` on the MCP tool `add_include`) writes the include to `config.local.toml`. Overlay
+entries merge with the shared list by `name`, and `remove = true` hides a shared include on your machine; see
+[Local configuration](local-overrides.md).
+
+## Sources
+
+| Form                | Example                                                             |
+| ------------------- | ------------------------------------------------------------------- |
+| HTTPS git           | `https://github.com/acme/ai-standards.git` (`.git` optional)        |
+| SSH git             | `git@github.com:acme/ai-standards.git`, `ssh://git@host/acme/repo.git` |
+| `git+` prefix       | `git+https://host/acme/repo` (same include and cache as without it) |
+| local git repository| `file:///srv/git/ai-standards`                                      |
+| local directory     | `./shared/standards`, `vendor/rules`                                |
+
+Plain `http://` and `git://` remotes are rejected. SSH URLs use your git and SSH agent setup, which works for private
+and self-hosted servers.
 
 !!! warning "Local paths must stay inside the project"
-    A local path (or `local_override`) in the project's committed config must resolve inside the project, after
-    symlinks are resolved: a repository could otherwise name `../victim` or `~/.config` and have that content
-    written into its generated outputs. A path outside the project stops loading with an error naming it (it is not skipped with a warning). Set it in the
-    machine-local overlay (`config.local.toml`) or declare the include in your user config (`generate --user`). The
-    examples below that use `../` or an absolute path need one of these.
+    A local `source`, `path` or `local_override` in the project's committed config must resolve inside the project,
+    symlinks included; otherwise loading stops with an error naming the path. This stops a repository from pulling
+    `../victim` or `~/.config` into its generated files. For a directory elsewhere on your machine, declare the include
+    in `config.local.toml` (`include add --local`) or in your user config (`generate --user`). The same holds for a
+    `file://` URL; set `AI_RULEZ_ALLOW_FILE_URLS=1` in your environment to allow one in a project config.
 
-    A `file://` git URL is a local path too and follows the same rule, for includes and `skill_sources`: it must name
-    a repository inside the project, unless it comes from the machine-local overlay or the user config. A remote git
-    URL (`https://`, `ssh://`, `git@host:path`) is not affected. To let a project config use `file://` repositories
-    elsewhere on your machine, set `AI_RULEZ_ALLOW_FILE_URLS=1` in your own environment.
+### Repository structure support
 
-### Examples
+An include source can be laid out two ways, and ai-rulez detects which:
 
-**Sibling directory:**
-
-```toml
-[[includes]]
-name = "shared-rules"
-source = "../shared-rules"
-include = ["rules", "context"]
-merge_strategy = "local-override"
-```
-
-**Subdirectory:**
-
-```toml
-[[includes]]
-name = "team-config"
-source = "./config/shared"
-include = ["rules", "skills"]
-merge_strategy = "local-override"
-```
-
-**Git repository (HTTPS):**
-
-```toml
-[[includes]]
-name = "org-standards"
-source = "https://github.com/myorg/shared-rules.git"
-ref = "main"
-include = ["rules", "context", "skills", "agents"]
-merge_strategy = "local-override"
-```
-
-**Git repository (SSH):**
-
-```toml
-[[includes]]
-name = "company-policies"
-source = "git@github.com:company/ai-rulez.git"
-ref = "v1.2.3"
-include = ["rules", "context"]
-merge_strategy = "local-override"
-```
-
-**Multiple includes:**
-
-```toml
-[[includes]]
-name = "team-guidelines"
-source = "../team-guidelines"
-include = ["rules", "context"]
-merge_strategy = "local-override"
-
-[[includes]]
-name = "org-standards"
-source = "git@gitlab.com:org/standards.git"
-ref = "main"
-include = ["rules", "skills"]
-merge_strategy = "local-override"
-
-[[includes]]
-name = "security-policies"
-source = "./security-policies"
-include = ["rules"]
-merge_strategy = "local-override"
-```
-
-### Supported Git URL Formats
-
-- **HTTPS:** `https://github.com/owner/repo.git`
-- **SSH:** `git@github.com:owner/repo.git`
-- **SSH protocol:** `ssh://git@github.com/owner/repo.git`
-- **GitLab:** `https://gitlab.com/owner/repo.git`, `git@gitlab.com:owner/repo.git`
-- **`git+` prefix:** accepted, as for skill sources and `--source`: `git+https://host/org/repo` is the same include as `https://host/org/repo` and shares its cache. The lock records the source as you wrote it.
-- **Self-hosted GitLab:** `git@git.example.com:owner/repo.git`, `https://git.example.com/owner/repo.git`
-
-### SSH Cloning for Private Repositories
-
-For private repositories that require SSH authentication, ai-rulez automatically uses `git clone` when it detects SSH URLs (`git@...` or `ssh://...`). This leverages your existing SSH key configuration.
-
-**Benefits of SSH cloning:**
-
-- Works with private repositories without needing access tokens
-- Uses your configured SSH keys and agent
-- Supports self-hosted Git servers (GitLab, Gitea, Gogs, etc.)
-- Ideal for local development and multi-repo setups
-
-**Example with SSH:**
-
-```toml
-[[includes]]
-name = "private-rules"
-source = "git@git.example.com:company/ai-rulez.git"
-ref = "main"
-include = ["rules", "context"]
-merge_strategy = "local-override"
-```
-
-**Requirements:**
-
-- Git must be installed and available in your PATH
-- SSH keys must be configured for the git host
-- SSH agent should be running (for passphrase-protected keys)
-
-### Repository Structure Support
-
-An include source does **not** have to wrap its content in a `.ai-rulez/` folder. ai-rulez
-supports both a wrapped and a bare (flattened) layout and auto-detects which one a source uses.
-
-1. **Wrapped structure**: Content lives inside a `.ai-rulez/` subdirectory
+1. **Bare**: the directory has `rules/`, `context/`, `skills/`, `agents/`, `commands/` or `checks/` directly, at the
+   root or under `path`. This is the simplest layout for a shared module.
 
    ```text
-   my-repo/
-   ├── .ai-rulez/
-   │   ├── config.toml
-   │   ├── rules/
-   │   ├── context/
-   │   ├── skills/
-   │   └── agents/
-   └── other files...
-   ```
-
-2. **Bare / flattened structure** (recommended for shared-module repos): the directory exposes
-   `rules/`, `context/`, `skills/`, and `agents/` directly — no `.ai-rulez/` wrapper needed. This
-   works at the repository root **or** at any sub-path:
-
-   ```text
-   my-repo/
+   shared-modules/
    └── modules/
        └── core/
            ├── rules/
-           ├── context/
-           ├── skills/
-           └── agents/
+           └── skills/
    ```
-
-   Point an include at the sub-path with the `path` field:
 
    ```toml
    [[includes]]
    name = "core"
-   source = "https://github.com/org/shared-modules.git"
-   path = "modules/core"     # resolves modules/core/rules, modules/core/skills, ...
-   include = ["rules", "skills"]
-   merge_strategy = "local-override"
+   source = "https://github.com/acme/shared-modules.git"
+   path = "modules/core"
    ```
 
-ai-rulez detects the layout automatically: it first looks for a `.ai-rulez/` directory (at the
-source root or under `path`), and otherwise treats a directory that contains any of `rules/`,
-`context/`, `skills/`, `agents/`, or `commands/` as a bare ai-rulez structure. The flat layout keeps
-shared modules — especially skill-first modules that ship mostly `skills/<id>/SKILL.md` — clean and
-free of boilerplate wrapping.
+2. **Wrapped**: the content is in a `.ai-rulez/` folder, as in a project that uses ai-rulez itself.
 
-!!! note
-    `ai-rulez include add` with a **local** path validates that the directory contains a `.ai-rulez/`
-    subdirectory, so a bare/flattened *local* source is rejected by the CLI even though the resolver
-    accepts it. Add a bare local include by editing `config.toml` directly (git sources are not
-    restricted this way).
+ai-rulez looks for a `.ai-rulez/` folder first (at the source root or under `path`), then for the bare folders.
 
-### Private Repository Authentication (HTTPS)
+`ai-rulez include add` with a local path accepts only the wrapped layout. Add a bare local directory by editing
+`config.toml`.
 
-When working with private Git repositories in includes, you can authenticate using an access token.
+## Precedence
 
-#### Using Environment Variable (Recommended)
+Your own content always wins. Includes are folded in the order they are declared, each with its own
+`merge_strategy`:
 
-Set the `AI_RULEZ_GIT_TOKEN` environment variable with your access token:
+| `merge_strategy`           | On a name collision with what is already merged             |
+| -------------------------- | ----------------------------------------------------------- |
+| `local-override` (default) | the existing content wins: your project, then earlier includes |
+| `include-override`         | this include wins, also over your project content           |
+| `error`                    | `generate` fails, naming the include                        |
+
+```toml
+[[includes]]
+name = "org"
+source = "https://github.com/acme/org-rules"      # wins over "team" by default
+
+[[includes]]
+name = "team"
+source = "https://github.com/acme/team-rules"
+merge_strategy = "include-override"               # wins over "org" and over your own files
+```
+
+An item that collides across layers (for example a root rule from one include and a domain rule from an
+`install_to` include) is collapsed by [name deduplication](configuration.md#deduplication-by-name): root wins over
+domains, and `generate` warns with both paths:
+
+```text
+WARN  Duplicate rule collapsed name=security kept=shared/standards/rules/security.md dropped=shared/team/rules/security.md
+```
+
+## Private repositories
+
+Over SSH, your SSH keys and agent are used. Over HTTPS, set a token:
 
 ```bash
-export AI_RULEZ_GIT_TOKEN="ghp_your_github_token_here"
+export AI_RULEZ_GIT_TOKEN="ghp_..."     # or pass --token on the command line
 ai-rulez generate
 ```
 
-This is the recommended approach for CI/CD environments and automation scripts.
-
-#### Which hosts receive the token
-
-The token is sent only to `github.com` by default. To use it with another host, list the hosts in the environment
-(a project file cannot widen this):
+The token is sent only to `github.com` unless you list other hosts in the environment (a project file cannot widen
+this):
 
 ```bash
 export AI_RULEZ_GIT_TOKEN_HOSTS="github.com,gitlab.example.com"
 ```
 
-The list replaces the default. An include that names any other HTTPS host is fetched without the token and logs a
-warning. The token is passed to git as a header scoped to the host, not embedded in the URL, so it does not appear in
-process arguments or in the cached clone's `.git/config`. Plain `http://` and `git://` remotes are rejected.
+The list replaces the default. An include on any other host is fetched without the token, with a warning. The token
+is passed to git as a header for that host, so it does not appear in process arguments or in the cached clone's
+`.git/config`. Grant it read-only repository access (`repo` on GitHub classic tokens, `read_repository` on GitLab).
 
-#### Using CLI Flag
+Never put credentials in the URL: `include add` refuses `https://user:token@host/...`, and `validate` reports an
+already committed credentialed source as `AR035`.
 
-Pass the token directly via the `--token` flag:
-
-```bash
-ai-rulez generate --token "ghp_your_github_token_here"
-```
-
-#### Creating Access Tokens
-
-**GitHub:**
-
-1. Go to Settings → Developer settings → Personal access tokens
-2. Click "Generate new token (classic)"
-3. Select scopes:
-   - `repo` - Required for accessing private repositories
-4. Generate and copy the token
-
-**GitLab:**
-
-1. Go to User Settings → Access Tokens
-2. Click "Add new token"
-3. Select scopes:
-   - `read_repository` - Required for reading private repositories
-4. Create token and copy it
-
-**Other Git Hosts:**
-
-Most Git hosting platforms that support Bearer token authentication will work with ai-rulez. The token is sent as a Bearer token in the Authorization header when fetching repository archives.
-
-#### Security Best Practices
-
-- **Never commit tokens** to your repository or configuration files
-- **Keep credentials out of the URL**: `ai-rulez include add` and `skill install` refuse a source like
-  `https://user:token@host/org/repo.git`, because it would be written in clear into `config.toml`. Use
-  `AI_RULEZ_GIT_TOKEN` or the git credential helper instead; `validate`/`scan` report an already committed
-  credentialed source as `AR035` (see [Strict validation](strict-validation.md))
-- **Use environment variables** in CI/CD pipelines (GitHub Actions secrets, GitLab CI/CD variables, etc.)
-- **Store tokens securely** using secret management systems (AWS Secrets Manager, HashiCorp Vault, etc.)
-- **Rotate tokens regularly** to limit exposure from potential leaks
-- **Use minimal permissions** - only grant the token access to what's needed (read-only repository access)
-- **Use organization-level tokens** when possible to manage access centrally
-
-#### Example: CI/CD Integration
-
-**GitHub Actions:**
+In CI:
 
 ```yaml
-name: Generate AI Rules
-on: [push]
-jobs:
-  generate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Generate
-        env:
-          AI_RULEZ_GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
-        run: npx ai-rulez@latest generate
+# GitHub Actions
+- name: Generate
+  env:
+    AI_RULEZ_GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+  run: npx ai-rulez@latest generate --check
 ```
 
-**GitLab CI:**
-
 ```yaml
+# GitLab CI
 generate:
   script:
     - export AI_RULEZ_GIT_TOKEN="$CI_JOB_TOKEN"
-    - ai-rulez generate
+    - ai-rulez generate --check
 ```
 
-### Include Options
+## Pinning and caching
 
-- **`name`**: Unique identifier for the include
-- **`source`**: Path or Git URL to the configuration
-- **`path`**: (Optional) Sub-path within the source to resolve (e.g. `modules/core`). Supports the bare/flattened layout described above; defaults to the source root. It applies to git and local sources alike: for a local `source` the include reads `<source>/<path>`, which must stay inside the project like `source` itself. A `path` that does not exist fails the load (it is not ignored), and `..` segments that leave the source are refused. `ai-rulez lock` pins a local include's `<source>/<path>` tree
-- **`ref`**: (Git only) Branch, tag, or commit SHA. Defaults to the remote's default branch (`HEAD`), not necessarily `main`.
-- **`version`**: (Git only) A semantic-version range such as `^1.2` or `~2.1.0`, resolved against the repository's tags and pinned in the lock; instead of `ref` (not both). `tag_prefix` and `include_prerelease` refine it, and `min_release_age = "7d"` holds back tags younger than that. Only `ai-rulez update` moves the pin. See [Version constraints](lockfile.md#version-constraints).
-- **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`, `commands`. MCP servers are not importable from an include.
-- **`install_to`**: (Optional) Import the included content into a specific domain instead of the root.
-- **`local_override`**: (Optional) A local path used **instead of** `source` (for example a checkout you are developing). It is resolved against the project directory, and `path` is appended to it. If the directory does not exist, the include is skipped silently (an info line is logged); the remote source is not used as a fallback. `local_override` bypasses the lock, so it is honoured only when set in the machine-local overlay (`config.local.toml`) or when no lock is enforced: `generate --locked`, `--frozen` and an enforced lock fail on a `local_override` in the committed config.
-- **`merge_strategy`**: How to handle conflicts:
-  - `local-override`: local content takes precedence (default)
-  - `include-override`: the included content takes precedence
-  - `error`: fail generation on a conflict
+A git include without `ref` follows the default branch, so two machines can render different output. `ai-rulez lock`
+records each git include's resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`; later runs fetch that
+commit and verify the digest. A branch or tag that is not locked is reported as `AR010`.
 
-Each include carries its own strategy. Includes are not recursive: an include contributes its own
-content, and any `includes` declared in the included configuration are ignored. Domains from an
-include are always carried over; `include` filters content kinds, not domains.
+| Command                        | Behavior                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| `ai-rulez lock`                | pin every include (and your own content) in `ai-rulez.lock`              |
+| `ai-rulez update`              | move `version` pins to the newest matching tag                            |
+| `ai-rulez generate --locked`   | fail on a source the lock does not cover (use in CI)                      |
+| `ai-rulez generate --frozen`   | use only the cache, never the network, and verify it against the lock     |
+| `ai-rulez generate --offline`  | use cached content; an include that cannot be resolved is skipped with a warning |
 
-An include that cannot be created, fetched or merged is an error: the command exits `1` and names the
-include. A remote include that is unreachable falls back to its cached copy when one exists; with no cache there
-is nothing to render. This holds for `generate`, `generate --check`, `validate`, `doctor` and every other command
-that loads the configuration, so a CI gate cannot pass on a checkout that renders without the include. Under
-`--offline` (cached content only) an include that cannot be resolved is logged as a warning and skipped instead,
-and `ai-rulez lock` reports it as a problem of its own.
+Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash>/` (mode `0700`), one tree per URL, path,
+ref and pinned commit, so two checkouts that pin different commits never share a tree. See [Lock file](lockfile.md).
 
-An `[[installed_skills]]` entry follows the same rule: a skill that cannot be fetched, found (no `SKILL.md` at its
-path) or scanned fails the load instead of being dropped, which would have removed its generated outputs as stale.
-`--offline`, `lock`, `sbom` and the CRUD commands keep the warning. A `local_override` that names a missing
-directory skips the skill with a notice, as it does an include.
+## Errors and safety
 
-Included content never follows symlinks: a symlinked file or directory (a rule, skill, agent, command, context or
-check file, `rules/`, `skills/` and so on, domains, or the include's `.ai-rulez/` itself) is skipped with a warning
-naming it, so an include cannot point at an arbitrary local file. Replace the link with the real file or directory.
-An installed skill whose `SKILL.md` is a symlink fails to resolve, with an error naming the link, and a symlinked path inside its clone is skipped with a warning naming it. (Your own project's
-`.ai-rulez/` may use symlinks that stay inside the project; see [Configuration](configuration.md#symlinks-in-content).)
-Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path` (`http://` and `git://` are then rejected);
-anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash>`
-with mode `0700`. The hash identifies the normalized URL, configured path, and requested ref or version
-constraint, and — for an include `ai-rulez.lock` pins — the commit it pins: the cache holds one tree per locked
-commit, so two checkouts on one machine that pin different commits of the same include never read (or overwrite)
-each other's content, and an offline `lock --check` or `mcp` start reads the commit its own lock records. A cache
-written under the ref alone (by an older ai-rulez, or by the `lock` run that wrote the pin) is still read while it
-holds exactly the pinned commit, and is replaced by a per-commit tree otherwise. Modules at different paths keep
-independent caches. Installed skills keep their ref-keyed scheme under `~/.cache/ai-rulez/skills/`.
+- An include that cannot be fetched or merged is an error for `generate`, `generate --check`, `validate`, `doctor`
+  and every other command that loads the configuration. An unreachable remote falls back to its cached copy when one
+  exists. Only `--offline` turns a missing include into a warning.
+- Included content never follows symlinks: a symlinked file or folder is skipped with a warning naming it.
 
-This replaces the earlier URL-only cache namespace. The first online load populates the new cache;
-existing cache files remain untouched. An offline or frozen run still requires a populated cache for
-its configured source and verifies it against the lock.
+## Patterns
 
-### Machine-local includes and offline runs
-
-- `ai-rulez include add <name> <source> --local` (and the MCP `add_include` with `local: true`) writes
-  the include to your gitignored `config.local.*` overlay instead of the shared config, so a personal
-  checkout can be included without affecting teammates. Overlay includes merge by name with the shared
-  list; `remove = true` hides a shared include on your machine. See
-  [Local Configuration](local-overrides.md).
-- `ai-rulez generate --offline` skips network fetches and uses cached content for remote includes.
-  CRUD commands that validate a change (including the `--local` ones) read remote includes from cache
-  only.
-
-### Pinning remote includes
-
-A git include without a `ref` follows the repository's default branch, so two machines can generate different output from the same config. `ai-rulez lock` records each remote include's resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`; later `generate` runs fetch that commit and verify the digest. `generate --locked` (CI) fails on a source the lock does not cover, and `--frozen` never uses the network. `ai-rulez.lock` also pins your own authored content (`sha256` per rule, skill, hook and role, plus the generated outputs); see the [Lock file](lockfile.md) and the [Lock Command](cli.md#lock-command).
-
-## Include Priority
-
-Resolution starts from your local content and folds each include in declaration order, using that
-include's strategy (default `local-override`, which means *the existing base wins*):
-
-1. Your local configuration has the highest priority.
-2. The first include's content becomes part of the base and therefore beats later includes of the same name.
-3. A later include only wins where its `merge_strategy` is `include-override`.
+**Organization standards in one repository**, included everywhere:
 
 ```toml
 [[includes]]
-name = "base"
-source = "../base-rules/.ai-rulez"   # loaded first
-
-[[includes]]
-name = "team"
-source = "../team-rules/.ai-rulez"   # only overrides "base" with merge_strategy = "include-override"
-merge_strategy = "include-override"
+name = "org"
+source = "https://github.com/acme/org-standards"
+version = "^2.0"
 ```
 
-If `base` and `team` both define `rules/security.md`, `base` wins unless `team` sets
-`merge_strategy = "include-override"`. Your own `rules/` directory always wins.
-
-## Common Patterns
-
-### Organization-Wide Standards
-
-Create a central repository with baseline rules:
-
-**Repository structure:**
-
-```text
-org-standards/
-└── .ai-rulez/
-    ├── config.toml
-    ├── rules/
-    │   ├── security.md
-    │   ├── code-quality.md
-    │   └── git-workflow.md
-    └── context/
-        └── company-values.md
-```
-
-**Each project includes it:**
+**Several layers.** Includes do not nest, so list each layer, most general first:
 
 ```toml
 [[includes]]
-name = "standards"
-source = "https://github.com/myorg/standards.git"
-path = ".ai-rulez"
-```
-
-### Framework-Specific Rules
-
-Create separate includes for each framework:
-
-```text
-frameworks/
-├── go-backend/
-│   └── .ai-rulez/
-│       ├── config.toml
-│       └── rules/
-│           ├── project-layout.md
-│           ├── error-handling.md
-│           └── testing.md
-├── react-frontend/
-│   └── .ai-rulez/
-│       └── rules/
-│           ├── component-guidelines.md
-│           ├── hooks-patterns.md
-│           └── styling.md
-└── python-ml/
-    └── .ai-rulez/
-        └── rules/
-            ├── numpy-conventions.md
-            └── ml-best-practices.md
-```
-
-**Your project uses them:**
-
-```toml
-presets = ["claude", "cursor"]
+name = "org"
+source = "https://github.com/acme/org-standards"
 
 [[includes]]
-name = "go-backend"
-source = "../../frameworks/go-backend/.ai-rulez"
+name = "go"
+source = "https://github.com/acme/go-guidelines"
 
 [[includes]]
-name = "react-frontend"
-source = "../../frameworks/react-frontend/.ai-rulez"
-
-[profiles]
-backend = ["backend"]
-frontend = ["frontend"]
-full = ["backend", "frontend"]
+name = "payments-team"
+source = "https://github.com/acme/payments-rules"
+install_to = "payments"     # imported as the payments domain
 ```
 
-### Monorepo with Shared and Team-Specific Rules
+**A monorepo** keeps shared content in a folder of the repository and includes it from each project's config, or
+uses [`[[scopes]]`](monorepo.md) to render nested outputs from one configuration.
 
-**Repository structure:**
-
-```text
-monorepo/
-├── shared-rules/.ai-rulez/     # Used by all teams
-├── backend-team/
-│   └── .ai-rulez/              # Includes shared + backend-specific
-├── frontend-team/
-│   └── .ai-rulez/              # Includes shared + frontend-specific
-└── mobile-team/
-    └── .ai-rulez/              # Includes shared + mobile-specific
-```
-
-**`backend-team/.ai-rulez/config.toml`:**
+**Developing an include** next to its consumers: point `local_override` at your checkout in `config.local.toml`, so
+the committed config keeps its pinned source:
 
 ```toml
-version = "5.0"
-name = "backend-api"
-
-includes = [
-  { name = "shared-rules", source = "../shared-rules/.ai-rulez" }
-]
-
-presets = ["claude", "cursor"]
-
-[profiles]
-default = []
-```
-
-## Flat Composition
-
-Includes do not nest. To combine several layers, list each one in the project's own `includes`:
-
-```text
-org-base/.ai-rulez/       rules/security.md
-go-framework/.ai-rulez/   rules/testing.md
-team-standards/.ai-rulez/ rules/review.md
-my-project/.ai-rulez/     config.toml with one [[includes]] entry per directory above
-```
-
-An `includes` list inside `go-framework`'s own `config.toml` is ignored when `my-project` includes it,
-so `org-base` must be listed in `my-project` too. Includes fold in declaration order (see
-[Include Priority](#include-priority)).
-
-## Collision Handling
-
-When includes define the same file:
-
-```text
-shared-rules/.ai-rulez/rules/testing.md
-go-framework/.ai-rulez/rules/testing.md
-my-project/.ai-rulez/rules/testing.md
-```
-
-Under the default `local-override` strategy the earliest source wins, and your own content beats every
-include:
-
-1. `my-project/rules/testing.md` (your project content, highest priority)
-2. `shared-rules/rules/testing.md` (first include becomes part of the base)
-3. `go-framework/rules/testing.md` (only wins if it sets `merge_strategy = "include-override"`)
-
-The losing copy is dropped; `generate` and `validate` log a `Duplicate rule collapsed` warning naming
-the kept and dropped paths (see [Deduplication by Name](configuration.md#deduplication-by-name)). With
-`merge_strategy = "error"`, the conflict fails generation instead.
-
-## Best Practices
-
-### Organize by Specificity
-
-```text
-org-wide-rules/           Applies to everything
-team-rules/               Team-specific
-framework-rules/          Technology-specific
-project-rules/            Project-specific
-```
-
-### Use Clear Naming
-
-Good:
-
-- `org-standards/.ai-rulez`
-- `react-best-practices/.ai-rulez`
-- `backend-security/.ai-rulez`
-
-Bad:
-
-- `rules/.ai-rulez` (ambiguous)
-- `base/.ai-rulez` (unclear scope)
-
-### Document Includes
-
-Add comments to your config explaining why includes are needed:
-
-```toml
-version = "5.0"
-name = "my-backend"
-
-# Organization-wide coding standards
-# Go-specific conventions
-# Backend team standards
-includes = [
-  { name = "org-standards", source = "../org-standards/.ai-rulez" },
-  { name = "go-guidelines", source = "../go-guidelines/.ai-rulez" },
-  { name = "backend-team", source = "../backend-team/.ai-rulez" }
-]
-
-presets = ["claude", "cursor"]
-```
-
-### Keep Includes Focused
-
-Each include should have a single purpose:
-
-```text
-Good:
-security-policies/       Rules for security
-error-handling/          Rules for error handling
-code-style/              Rules for code style
-
-Bad:
-everything/              Security, errors, style, testing, etc.
-```
-
-### Version Your Includes
-
-Tag releases and reference specific versions:
-
-```bash
-git tag v1.0.0 org-standards/
-```
-
-```toml
+# .ai-rulez/config.local.toml
 [[includes]]
-name = "standards"
-source = "https://github.com/org/standards/.ai-rulez"
-ref = "v1.0.0"
+name = "org"
+local_override = "../org-standards"
 ```
+
+`generate` then refuses to write tracked shared files (such as `AGENTS.md`) that the local override would change.
+Pass `--allow-local-drift` to write them while you test, or `--no-local` to render the committed view. See
+[Local configuration](local-overrides.md).
 
 ## Troubleshooting
 
-### Include Path Not Found
-
-```bash
-ls -la ../shared-rules/.ai-rulez/config.toml
-```
-
-```toml
-# Or point at an absolute path
-[[includes]]
-name = "shared"
-source = "/path/to/shared-rules/.ai-rulez"
-```
-
-### Include Skipped or Nested Includes Ignored
-
-Includes are not recursive, so cycles cannot occur. Give each include a unique name: duplicate names are
-not rejected and are processed independently.
-
-If an include's content is missing from the output, run `ai-rulez validate --debug`: a failed
-include is logged as `Failed to process include` and skipped (an error under `--locked`, `--frozen` or an enforced
-lock), and a `local_override` path that does not exist skips the include silently.
-
-### Conflicting Rules
-
-Use project-level rules to override, or change which include wins with `merge_strategy`:
-
-```toml
-[[includes]]
-name = "stricter"
-source = "../stricter-rules/.ai-rulez"   # loads first, wins by default
-
-[[includes]]
-name = "lenient"
-source = "../lenient-rules/.ai-rulez"
-merge_strategy = "include-override"       # makes this one win instead
-```
-
-Your `.ai-rulez/rules/security.md` overrides every include.
-
-### Content Not Merging
-
-```bash
-cat .ai-rulez/config.toml | grep includes
-ls -la ../shared-rules/.ai-rulez/
-ai-rulez validate --debug
-```
-
-## Migration Path
-
-If you're currently using separate configurations:
-
-1. **Extract common rules** into a shared include:
-
-   ```bash
-   mkdir -p ../shared-rules/.ai-rulez/rules
-   # Move common rules there
-   ```
-
-2. **Add include** to your config:
-
-   ```toml
-   [[includes]]
-   name = "shared"
-   source = "../shared-rules/.ai-rulez"
-   ```
-
-3. **Regenerate** and test:
-
-   ```bash
-   ai-rulez validate
-   ai-rulez generate
-   ```
-
-4. **Commit** the include:
-
-   ```bash
-   git add ../shared-rules/
-   git commit -m "chore: extract shared rules"
-   ```
-
-## Next Steps
-
-- **[Configuration Reference](configuration.md)**: Advanced config options
-- **[Domains & Profiles](domains.md)**: Team organization
-- **[Quick Start](quick-start.md)**: Getting started
+| Symptom                                            | Cause and fix                                                                                   |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `local path ... is outside the project`            | Move the include to `config.local.toml` or the user config, or copy the content into the project. |
+| `conflict detected in rules between base and include` | An include with `merge_strategy = "error"` has an item with an existing name. Rename one.     |
+| Included item is missing                           | Your own item, or an earlier include, has the same name; or `include` leaves the kind out.      |
+| `Directory must contain .ai-rulez/ subdirectory`   | `include add` with a bare local directory; add the entry to `config.toml` by hand.               |
+| Output differs between machines                    | The include follows a branch. Run `ai-rulez lock` and commit `ai-rulez.lock`.                    |
+| Include ignored, no error                          | A `local_override` that names a missing directory skips the include; run with `--debug`.        |

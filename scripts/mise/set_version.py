@@ -24,6 +24,10 @@ RULES = (
     ("docs/poly-hooks.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
     ("docs/poly-hooks.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
     ("docs/poly-hooks.md", rf'(revision = "v){PINNED_RELEASE}(")', "semver", False),
+    ("docs/installation.md", rf"(ai-rulez version ){PINNED_RELEASE}()", "semver", False),
+    ("docs/installation.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
+    ("docs/installation.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
+    ("docs/installation.md", rf"(rev: v){PINNED_RELEASE}()", "semver", False),
 )
 
 

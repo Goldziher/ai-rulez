@@ -1,22 +1,41 @@
-# Configuration Schema
+# Schema
 
-The `ai-rulez` configuration is validated against a formal JSON Schema to provide editor support like autocompletion and real-time validation.
+ai-rulez publishes JSON Schemas for its configuration file and for every JSON document its commands print. Use the
+configuration schema for editor completion and validation; use the report schemas to parse `--format json` output in
+scripts and CI.
 
-## Config schema
+## Configuration schema
 
-The schema is embedded in the CLI. `ai-rulez validate` validates the raw
-config file against it (converting TOML to JSON first) and then runs the structural checks, so edit
-your `.ai-rulez/config.toml` and run `ai-rulez validate`.
+`schema/ai-rules.schema.json` describes `.ai-rulez/config.toml` (and a root `ai-rulez.toml`). The schema is embedded
+in the CLI: `ai-rulez validate` converts the TOML to JSON, validates it against the schema, then runs the structural
+checks.
 
 ```toml
 # .ai-rulez/config.toml
 version = "5.0"
-name = "My Project"
+name = "billing"
+presets = ["cursor", "codex"]
+preset = "claude"
 ```
 
-Most modern editors support TOML schema references. Add this to enable autocompletion (for VS Code with TOML extension):
+```bash
+ai-rulez validate
+```
 
-Add a `.vscode/settings.json` to reference the schema:
+```text
+Error: configuration has 1 unknown or invalid key(s) in .../.ai-rulez/config.toml
+
+Validation errors:
+  - .../.ai-rulez/config.toml: unknown key "preset" (did you mean "presets"?)
+
+Hint: Fix the keys above; a "did you mean" names the closest known key
+```
+
+The schema sets `additionalProperties: false` at the top level, so a misspelled key is an error, not a silent no-op.
+
+### Editor support
+
+With the Even Better TOML extension in VS Code, associate the file with the schema in `.vscode/settings.json`:
 
 ```json
 {
@@ -26,215 +45,220 @@ Add a `.vscode/settings.json` to reference the schema:
 }
 ```
 
----
+The `main` URL tracks the development tip. To match the CLI you run, replace `main` with the release tag. The
+configuration also accepts a `schema` key (the TOML spelling of `$schema`), so a file that carries a schema reference
+still validates.
 
-## Validation Rules
+### Required keys
 
-### Required Fields
+| Key | Type | Constraint |
+| --- | ---- | ---------- |
+| `version` | string | Must be `"5.0"`. An older version fails with a hint to run `ai-rulez migrate v5`. |
+| `name` | string | Project name, non-empty. |
 
-- **`version`**: Must be `"5.0"`
-- **`name`**: Project name (required, non-empty string)
+### Top-level keys
 
-### Optional Fields
+Every other key is optional. The table lists each key once; the linked page has the details.
 
-- **`description`**: Project description
-- **`presets`**: List of tool presets (e.g., `claude`, `cursor`, `gemini`)
-- **`profiles`**: Named profiles specifying which domains to include
-- **`default`**: Default profile name
-- **`schema`**: URL of the JSON Schema, for editor support
-- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `scoped_fallback`, `scoped_fallback_group`, `baz_scoped`, `baz_default`, `baz.include`, `baz_rest`, `baz_unscoped`, `baz_dedupe`, `baz_dedupe_max`, `baz_budget`; see [Rules](rules.md#rules-mode))
-- **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
-- **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
-- **`includes`**: External content sources to merge
-- **`installed_skills`**: Skills to install from external repositories
-- **`header`**: Header `style`, `timestamp`, `hashes`, `text`, `mcp_line` and `nested` for generated files
-- **`defaults`**: Global `effort` and per-preset `effort_by_preset` / `model_by_preset`
-- **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
-- **`compact`**: Omit per-rule priority annotations from inline sections
-- **`source`**: Where the content is read from: `ai-rulez` (default, the `.ai-rulez` tree) or `agents` (`AGENTS.md` and `.agents/`; see [.agents as a source](agents-source.md))
-- **`agents_md_split`**: With the agents source, read `AGENTS.md` as one context item per `##` heading (default `false`); see [Splitting AGENTS.md](agents-source.md#splitting-agentsmd)
-- **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
-- **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`, `serve_skills`, `discover_skills`, `index_cache`, `read_only`, `daemon`, `daemon_idle_timeout`, `authoring`, `serve_user_invoked_skills`, `no_watch`, `allow`, `deny`, `tools`, `exclude`)
-- **`plugins`**: Array of plugin installs from a marketplace (consumer side)
-- **`marketplaces`**: Array of marketplace sources
-- **`plugin`**: Producer-side authoring block for a distributable plugin bundle
-- **`marketplace`**: Producer-side marketplace index authoring block
-- **`placement`**: Whether skills and commands are `core` (written to the harness trees) or `plugin`-only; see [Plugins](plugins.md)
-- **`claude`**: Claude Code options: `[claude.settings]` (`manage`, `managed` entries of `.claude/settings.json`) and `[claude.skills]` (`hide_from_menu`)
-- **`codex`**: Codex options, such as `project_doc_max_bytes` for the `AGENTS.md` size warning
-- **`codex_skills_dir`**: Directory the `codex` preset writes skills to (default `.agents/skills`)
-- **`gitignore_exclude`**: Patterns kept out of the managed `.gitignore` block, for outputs you commit; see [Configuration](configuration.md#gitignore_exclude)
-- **`bundle_exclude`**: Extra patterns left out when skill and command resources are copied or listed
-- **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
-- **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)
-- **`guard`**: `[guard] generated = true` adds a PreToolUse hook that blocks agent edits to generated files (`version`, `command` tune how it launches); see [Settings](settings.md#guard)
-- **`session_start`**: `[session_start]` (on by default for Claude Code) adds a `SessionStart` hook that runs `ai-rulez session-start` in remote sessions (`generate`, `when`, `mode`, `timeout`, `version`, `command`, `prompt`, `prompt_text`); see [Run generate when a remote session starts](session-start.md)
-- **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
-- **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
-- **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
-- **`delivery`**: `[delivery.stub]` `description`, `body`, `body_file`: customises the generated `dynamic-skills` stub; see [Configuration](configuration.md#deliverystub)
-- **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
-- **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
-- **`catalog`**: `[catalog]` defaults for `ai-rulez catalog` (`title`, `include_excerpt`, `exclude_owners`, `indexable`, `max_items_per_page`, `render_markdown`); see [Catalog](catalog.md)
-- **`governance`**: `[governance]` approval policy (`require_approval`, `exempt`, `min_approvers`, `approvers`, `approvers_from`, `teams`, `min_assurance`, `forbid_self_approval`, `max_age`, `enforce`); see [Approvals](approvals.md)
-- **`lock`**: `[lock]` content pinning (`enforce`, `include_outputs`, `scope`); see [Lock file](lockfile.md)
-- **`lint`**: `[lint]` strict-validation settings (severities, ignores, budgets, `tolerate`, `security`, `evals`, `traps`, `metadata`, `external` scanners); see [Strict validation](strict-validation.md)
-- **`verifiers`**: `[[verifiers]]` deterministic repository checks run by `ai-rulez verifiers run`; see [Verifiers](verifiers.md)
-- **`okf`**: `[okf]` bundle options (`dir`, `include`, `index_style`, `spec`); see [OKF](okf.md)
-- **`usage`**: `[usage] skills_index` writes `skills-index.json` for usage reports; see [Usage telemetry](usage-telemetry.md)
-- **`llm`**: `[llm]` model access (`backend`, `model`, `base_url`, `api_key_env`, budgets, `allow_network`, ...); network and credential keys are honoured only from user scope; see [LLM access](llm.md)
-- **`telemetry`**: `[telemetry]` item-load telemetry and OTLP export; egress keys, `service_name` and `resource` are honoured only from user scope; see [Telemetry](telemetry.md)
+| Key | Purpose | See |
+| --- | ------- | --- |
+| `description` | Project description | [Configuration](configuration.md) |
+| `presets` | Harnesses to generate for (built-in names or custom preset objects) | [Supported harnesses](harnesses.md), [Custom presets](profiles.md) |
+| `default`, `profiles` | Named domain combinations and the default one | [Domains & profiles](domains.md) |
+| `default_layers` | `config.<name>.toml` layers always merged over this file | [Configuration](configuration.md) |
+| `scopes` | Extra output roots, such as a subfolder `AGENTS.md` or `CLAUDE.md` | [Monorepo](monorepo.md) |
+| `recursive_exclude` | Directories `generate --recursive` never searches | [Monorepo](monorepo.md) |
+| `source` | Where content is read from: `ai-rulez` (default) or `agents` | [.agents as a source](agents-source.md) |
+| `agents_md`, `agents_md_split` | Shared `AGENTS.md` and `.agents/skills` output; split `AGENTS.md` by heading | [AGENTS.md](agents-md.md), [.agents as a source](agents-source.md) |
+| `rules`, `compact` | How rules are written (`split` or `inline`) and whether priority labels are shown | [Rules](rules.md) |
+| `header` | Header of generated files | [Configuration](configuration.md) |
+| `defaults` | Global and per-preset effort and model | [Configuration](configuration.md) |
+| `builtins` | Built-in domains (`true`, `false`, or a list with `!` exclusions) | [Configuration](configuration.md) |
+| `gitignore`, `gitignore_exclude` | Managed `.gitignore` block (off by default) and patterns kept out of it | [Configuration](configuration.md) |
+| `skip_outputs` | Output kinds ai-rulez never writes, overwrites or deletes | [Configuration](configuration.md) |
+| `codex_skills_dir`, `codex` | Codex skill directory and options | [Configuration](configuration.md) |
+| `claude` | Claude Code options (`[claude.settings]`, `[claude.skills]`) | [Configuration](configuration.md) |
+| `bundle_exclude` | Files left out of skill and command resource bundles | [Configuration](configuration.md) |
+| `includes` | Content sources (git or local) to merge | [Includes](includes.md) |
+| `installed_skills` | Skills installed from other repositories | [Installed skills](installed-skills.md) |
+| `installed_marketplaces`, `installed_plugins`, `enabled_plugins` | Plugins the project imports or enables | [Installed plugins](installed-plugins.md) |
+| `plugins`, `marketplaces` | Declarations only; no output is written for them | [Configuration](configuration.md) |
+| `plugin`, `plugins_authoring`, `marketplace`, `marketplaces_authoring`, `placement` | Authoring distributable plugin bundles and marketplace indexes | [Authoring plugins](plugins.md) |
+| `mcp_servers` | MCP server definitions written into each harness's MCP file | [Configuration](configuration.md#mcp_servers) |
+| `mcp` | ai-rulez's own MCP entry and the settings of `ai-rulez mcp` | [MCP server](mcp-server.md#settings-in-the-configuration) |
+| `skills`, `domains`, `delivery`, `skill_sources` | Dynamic skill loading: delivery defaults, the `dynamic-skills` stub, served skill sources | [MCP server](mcp-server.md#dynamic-skill-loading) |
+| `search` | Ranking of `ai-rulez search` and `find_skill` | [Skill search](search.md) |
+| `hooks`, `permissions`, `guard` | Hooks, permission rules and the generated-file guard | [Hooks and settings](settings.md), [Permissions](permissions.md) |
+| `session_start` | `SessionStart` hook that runs generate in remote sessions | [Run generate in remote sessions](session-start.md) |
+| `roles`, `role_manifest` | Roles and the `roles.json` manifest | [Roles](roles.md) |
+| `lock` | Content pinning in `ai-rulez.lock` | [Lock file](lockfile.md) |
+| `governance` | Which pinned content needs an approval | [Approvals](approvals.md) |
+| `signing` | Who may sign the lock | [Signing](signing.md) |
+| `catalog` | Defaults of `ai-rulez catalog` | [Catalog](catalog.md) |
+| `lint` | Strict-validation settings | [Strict validation](strict-validation.md) |
+| `verifiers`, `verifiers_settings` | Deterministic repository checks and their limits | [Verifiers](verifiers.md) |
+| `exposure` | Session exposure and the area map | [Session exposure and areas](exposure.md) |
+| `okf` | Open Knowledge Format bundle | [OKF](okf.md) |
+| `llms_txt` | `llms.txt` output | [llms.txt](llms-txt.md) |
+| `ard` | Agentic Resource Discovery manifest | [Agentic resource discovery](ard.md) |
+| `publish` | What `ai-rulez publish` ships | [Publish](publish.md) |
+| `usage` | Usage telemetry | [Usage telemetry](usage-telemetry.md) |
+| `telemetry` | Item-load telemetry and OTLP export | [Item-load telemetry](telemetry.md) |
+| `llm` | Model access for features that call a language model | [LLM access](llm.md) |
+| `review`, `judge`, `improve` | Settings of `ai-rulez review`, `judge` and `improve` | [Review](review.md), [Judge](judge.md), [Improve](improve.md) |
+| `$schema`, `schema`, `$comment` | Schema reference and a free-form note; ignored by generation | |
 
-Which of these a repository may set, and which only the user config file or the environment may enable, is in the [trust model](trust-model.md).
+Some keys are honoured only from the user configuration or the environment, never from a repository (for example
+the network and credential keys of `[llm]` and `[telemetry]`). The [trust model](trust-model.md) lists them.
 
-### Field Constraints
+### Content frontmatter
 
-- **`version`**: Must be `"5.0"`
-- **`name`**: Non-empty string
-- **`priority`** (in markdown frontmatter): One of `critical`, `high`, `medium`, `low`, `minimal`
-- **`targets`** (in markdown frontmatter): Selects output files, as preset names (`claude`), root files (`CLAUDE.md`), paths or base names, directory prefixes (`.cursor/rules/`), globs (`.cursor/rules/*`), or `*`. See [Targets](rules.md#targets)
-- **`mcp_servers[].name`**: Unique identifier for each server
-- **`mcp_servers[].description`**: Human-readable description
-- **`mcp_servers[].command`**: Command to execute for local `stdio` servers (npx, uvx, ai-rulez, etc.)
-- **`mcp_servers[].args`**: Command arguments for local servers
-- **`mcp_servers[].profiles`**: Restrict the server to the named profiles
-- **`mcp_servers[].domain`**: Restrict the server to a domain; it is included only when the active profile or role selects that domain
-- **`mcp_servers[].transport`**: `stdio`, `http`, or `sse` (default: `stdio`)
-- **`mcp_servers[].url`**: Remote MCP URL for `http` or `sse` transports
-- **`mcp_servers[].headers`**: HTTP headers for `http`/`sse` servers; values may contain `${VAR}` placeholders resolved by `generate`
-- **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
-- **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
-- **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
-- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name and output directory
-- **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
-- **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
+Rule, context and skill files are markdown with optional YAML frontmatter. Two keys are constrained:
 
-MCP placeholder names must match `[A-Za-z_][A-Za-z0-9_]*`. Generation resolves them from
-`--env KEY=VALUE`, process env, then dotenv files. Secret-bearing MCP outputs must be gitignored
-before generated configs are written.
-
-### File Structure
-
-Configuration is TOML; content is markdown files with optional YAML frontmatter:
-
-```toml
-# config.toml
-version = "5.0"
-name = "My Project"
-
-[[mcp_servers]]
-name = "ai-rulez"
-command = "npx"
-args = ["-y", "ai-rulez@latest", "mcp"]
-```
-
-Content files use markdown with optional YAML frontmatter:
+| Key | Values |
+| --- | ------ |
+| `priority` | `critical`, `high`, `medium` (default), `low`, `minimal` |
+| `targets` | Preset names (`claude`), root files (`CLAUDE.md`), paths or base names, directory prefixes (`.cursor/rules/`), globs (`.cursor/rules/*`) or `*`. See [Targets](rules.md#targets). |
 
 ```markdown
 ---
 priority: high
-targets: ["CLAUDE.md"]
-custom_field: value
+targets: ["cursor", "CLAUDE.md"]
 ---
 
-# Title
+# Money types
 
-Content here
+Store amounts as integer cents.
 ```
 
----
+## Local overlay schema
 
-## Available Schemas
+`schema/ai-rules-local.schema.json` describes the machine-local `config.local.toml`. It accepts the same keys as the
+main schema without requiring `version` and `name`, and adds the overlay-only markers: `remove = true` on a named list
+entry and `"!name"` in `presets`. `ai-rulez validate`, `ai-rulez local set` and the MCP `validate_config` tool check
+the overlay against it. See [Local configuration](local-overrides.md#config-overlay).
 
-The schema files are available in the repository:
+## Report and file schemas
 
-| File                              | Format      | Version | Notes                                               |
-| --------------------------------- | ----------- | ------- | --------------------------------------------------- |
-| `schema/ai-rules.schema.json`     | JSON Schema | v5      | Config schema; accepts `version` `"5.0"` only |
-| `schema/ai-rules-local.schema.json` | JSON Schema | V4    | Machine-local `config.local.toml` overlay; used by `validate`, `local set` and the MCP `validate_config` tool |
-| `schema/provider.schema.json`     | JSON Schema | V4      | Declarative provider spec referenced by `[[presets]] provider = "..."`; see [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity) |
-| `schema/roles-manifest.schema.json` | JSON Schema | v1    | `roles.json` and `roles list --format json`; see [Roles](roles.md#the-roles-manifest) |
-| `schema/catalog.schema.json`      | JSON Schema | v2      | `ai-rulez catalog --format json --schema-version 2` and the `catalog.json` of `catalog --html`; see [Catalog](catalog.md) |
-| `schema/catalog-diff.schema.json` | JSON Schema | v1      | `ai-rulez catalog diff --format json`; see [Catalog](catalog.md#comparing-catalogs) |
-| `schema/catalog.v1.schema.json`   | JSON Schema | v1      | `ai-rulez catalog --format json` (the default until the next minor release) |
-| `schema/plan.schema.json`         | JSON Schema | v1      | `ai-rulez generate --emit-plan FILE` and `generator.PlanOutputs`: every file a run would write, merge or remove, with digests and no secrets; see [Embedding the plan](cli.md#embedding-the-plan) |
-| `schema/validate-report.schema.json` | JSON Schema | v1   | `ai-rulez validate --format json` and `scan --format json` |
-| `schema/cost-report.schema.json`  | JSON Schema | v1      | `ai-rulez cost --format json` |
-| `schema/telemetry-doctor.schema.json` | JSON Schema | v1  | `ai-rulez telemetry doctor --format json` |
-| `schema/eval-report.schema.json`  | JSON Schema | v1      | `ai-rulez eval run --format json` |
-| `schema/judge-report.schema.json` | JSON Schema | v2      | `ai-rulez judge --format json`: per unit the verified findings, scores, attached conventions and coverage, or what `--estimate` would send; see [Judge](judge.md) |
-| `schema/okf-validate.schema.json` | JSON Schema | v1      | `ai-rulez okf validate --format json` |
-| `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json` |
-| `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
-| `schema/cache-status.schema.json` | JSON Schema | v1     | `ai-rulez cache status --format json`: where the index cache is, its size and entry counts, and warnings |
-| `schema/cache-clear.schema.json` | JSON Schema | v1     | `ai-rulez cache clear --format json`: the cache directories removed |
-| `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
-| `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
-| `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
-| `schema/verify-attestation.schema.json` | JSON Schema | v1 | `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock |
-| `schema/approve-list.schema.json` | JSON Schema | v1      | `ai-rulez approve --list --format json`: the `[governance]` policy and the approval status of pinned content; see [Approvals](approvals.md) |
-| `schema/verify-approvals.schema.json` | JSON Schema | v1 | `ai-rulez verify --approvals --format json`: the re-check of signed and review-linked approvals; see [Approvals](approvals.md#verifying-approvals) |
-| `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
-| `schema/exposure-report.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure --format json`: the start-of-session tokens, the skill listing against its budget, and the artifacts by phase and kind; see [Session exposure](exposure.md#ai-rulez-exposure) |
-| `schema/exposure-inventory.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure inventory --format json`: every native Claude Code artifact with its phase, visibility and parse status; see [Session exposure](exposure.md#commands) |
-| `schema/exposure-areas.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure areas --format json`: the area map as loaded and the area of every artifact, with how it was decided |
-| `schema/exposure-collisions.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure collisions --format json`: skills and agents listed at session start, of different areas, ranked by the word overlap of their listings; see [Session exposure](exposure.md#ai-rulez-exposure-collisions) |
-| `schema/exposure-leakage.v1.schema.json` | JSON Schema | v1 | `ai-rulez exposure leakage --format json`: the area terms in start-of-session text (AR9W0, AR9W1) with their acceptance, the start-of-session artifacts that could not be read, and the stale acceptances (AR9I0); see [Session exposure](exposure.md#ai-rulez-exposure-leakage) |
-| `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query (lexical or hybrid) |
-| `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--output` writes |
-| `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json`: every input construct as mapped, approximated or dropped |
-| `schema/publish-manifest.schema.json` | JSON Schema | v1    | `<name>-<version>.manifest.json` written by `ai-rulez publish`: the bundle's files, source, lock and digests |
-| `schema/publish-plan.schema.json` | JSON Schema | v1    | `publish-plan.json` (and `ai-rulez publish --format json`): artifacts with digests and the argv `--execute` would run |
-| `schema/eval-case.schema.json`    | JSON Schema | v1      | `*.eval.yaml` / `.yml` / `.json` skill eval cases under `skills/<name>/` |
-| `schema/eval-activation.v1.schema.json` | JSON Schema | v1 | `ai-rulez eval run --mode activation --format json`: activation rates, intervals and the confusion matrix; see [Activation mode](evals.md#activation-mode) |
-| `schema/improve-report.schema.json` | JSON Schema | v1    | `report.json` of an experimental `ai-rulez improve` run (`improve-report/1`) |
-| `schema/verifiers-report.schema.json` | JSON Schema | v1  | `ai-rulez verifiers run --format json` and the MCP `run_verifiers` result; see [Verifiers](verifiers.md) |
-| `schema/verifiers-spec.schema.json` | JSON Schema | v1    | `.ai-rulez/verifiers/*.toml` declaration files; see [Verifiers](verifiers.md#rule-linked-verifiers) |
-| `schema/doctor-report.schema.json` | JSON Schema | v1 | `ai-rulez doctor --format json`: the findings by check and severity |
-| `schema/tokens-report.schema.json` | JSON Schema | v1 | `ai-rulez tokens --format json`: the cost of the generated files per runtime and domain |
-| `schema/scanners-list.schema.json` | JSON Schema | v1 | `ai-rulez scanners list --format json`: the configured external scanners |
-| `schema/scanners-doctor.schema.json` | JSON Schema | v1 | `ai-rulez scanners doctor --format json`: as `scanners list` plus the probed version |
-| `schema/roles-show.schema.json` | JSON Schema | v1 | `ai-rulez roles show <name> --format json`: the declared role, the effective role and its chain |
-| `schema/roles-resolve.schema.json` | JSON Schema | v1 | `ai-rulez roles resolve <name> --format json`: what a person holding the role gets |
-| `schema/sbom-report.schema.json` | JSON Schema | v1 | `ai-rulez sbom --format json` when the run reports instead of printing the document (a failed gate, `--check`, `-o`) |
-| `schema/verify-plugin.schema.json` | JSON Schema | v1 | `ai-rulez verify --plugin --format json`: whether the plugin bundles match their provenance |
-| `schema/publish-verify.schema.json` | JSON Schema | v1 | `ai-rulez publish verify --format json`: one result per dist directory |
-| `schema/publish-emit.schema.json` | JSON Schema | v1 | `ai-rulez publish emit <emitter> --format json`: the files the emitter wrote |
-| `schema/verifiers-list.schema.json` | JSON Schema | v1 | `ai-rulez verifiers list --format json`: the declared verifiers |
-| `schema/verifiers-test.schema.json` | JSON Schema | v1 | `ai-rulez verifiers test --format json`: the outcome of the self-test examples |
-| `schema/verifiers-explain.schema.json` | JSON Schema | v1 | `ai-rulez verifiers explain <name> --format json`: what one verifier checks |
-| `schema/export-okf.schema.json` | JSON Schema | v1 | `ai-rulez export okf --format json`: the files written, or the drift of `--check` |
-| `schema/sign-report.schema.json` | JSON Schema | v1 | `ai-rulez sign --format json`: what the run signed |
-| `schema/change-result.schema.json` | JSON Schema | v1 | `add`, `remove`, `edit`, `domain`, `profile`, `include`, `skill install\|remove` with `--format json`: what changed and where |
-| `schema/error-document.schema.json` | JSON Schema | v1 | What every command with a `--format` flag prints on stdout when it fails before it has a report; see [the CLI reference](cli.md#json-contracts) |
-| `schema/policy.schema.json` | JSON Schema | v1 | An organization policy file (`--policy`, `AI_RULEZ_POLICY`, managed path); see [Organization policy](policy.md) |
-| `schema/policy-effective.schema.json` | JSON Schema | v1 | `ai-rulez validate --show-policy --format json`: the policy layers, the effective policy with the origin of every value, and what the repository tried to loosen |
+The documents carry a `schema_version` field (`schema` in the plan document) where the Version column gives a
+number. The schemas below describe those documents and the files ai-rulez reads or writes. A failure that happens
+before a command has a report prints the error document instead; see [JSON contracts](cli.md#json-contracts).
 
-Access them at (versioned to the release; `main` is the tip):
+### Configuration and declarations
 
-- Main schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json`
-- Local overlay schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-local.schema.json`
-- Provider schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/provider.schema.json`
-- Roles manifest schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/roles-manifest.schema.json`
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/ai-rules.schema.json` | config `"5.0"` | `.ai-rulez/config.toml` and `ai-rulez.toml` |
+| `schema/ai-rules-local.schema.json` | config `"5.0"` | `config.local.toml` overlay |
+| `schema/provider.schema.json` | none | Declarative provider spec of a custom preset; see [Custom presets](profiles.md) |
+| `schema/policy.schema.json` | `policy_version` | Organization policy file (`--policy`, `AI_RULEZ_POLICY`, the managed path); see [Organization policy](policy.md) |
+| `schema/verifiers-spec.schema.json` | none | `.ai-rulez/verifiers/*.toml` declaration files; see [Verifiers](verifiers.md) |
+| `schema/eval-case.schema.json` | 1 | `*.eval.yaml`, `.yml` and `.json` skill eval cases; see [Evals](evals.md) |
 
-The local overlay schema accepts the same keys as the main schema without the requirement that
-`version` and `name` be present, and adds the overlay-only markers (`remove = true` on named-list
-entries, `"!name"` in `presets`). See [Local Configuration](local-overrides.md#config-overlay).
+### Generation, validation and cost
 
----
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/plan.schema.json` | 1 | `generate --emit-plan FILE` and `Plan.JSON()` of the [Go API](embedding.md): every file a run would write, merge or remove, with digests; see [Embedding the plan](cli.md#embedding-the-plan) |
+| `schema/validate-report.schema.json` | 1 | `validate --format json` and `scan --format json` |
+| `schema/doctor-report.schema.json` | 1 | `doctor --format json` |
+| `schema/convert-report.schema.json` | 1 | `convert --format json`: each input construct as mapped, approximated or dropped |
+| `schema/change-result.schema.json` | 1 | `add`, `remove`, `edit`, `domain`, `profile`, `include`, `skill install` and `skill remove` with `--format json` |
+| `schema/tokens-report.schema.json` | 1 | `tokens --format json` |
+| `schema/cost-report.schema.json` | 1 | `cost --format json` |
+| `schema/cache-status.schema.json` | 1 | `cache status --format json`: where the index cache is, its size and entry counts |
+| `schema/cache-clear.schema.json` | 1 | `cache clear --format json`: the cache directories removed |
+| `schema/error-document.schema.json` | 1 | What a `--format json` command prints when it fails before it has a report |
 
-## Validation Commands
+### Lock, approvals and signing
 
-Use the `ai-rulez validate` command to check your configuration against the schema at any time:
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/lock-diff.schema.json` | 1 | `lock --diff --format json` and `lock --check --format json`; see [Lock file](lockfile.md) |
+| `schema/lock-outdated.schema.json` | 1 | `lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
+| `schema/lock-subject.schema.json` | 1 | `lock --subject --format json`: the digest a signature commits to |
+| `schema/update.schema.json` | 1 | `update --format json`: the pins that move, or would with `--dry-run` |
+| `schema/approve-list.schema.json` | 1 | `approve --list --format json`; see [Approvals](approvals.md) |
+| `schema/verify-approvals.schema.json` | 1 | `verify --approvals --format json` |
+| `schema/verify-attestation.schema.json` | 1 | `verify --attestation --format json` |
+| `schema/sign-report.schema.json` | 1 | `sign --format json`; see [Signing](signing.md) |
+| `schema/policy-effective.schema.json` | 1 | `validate --show-policy --format json`: the policy layers, the origin of every value and what the repository tried to loosen |
+| `schema/sbom-report.schema.json` | 1 | `sbom --format json` when the run reports instead of printing the SBOM (a failed gate, `--check`, `-o`); see [SBOM](sbom.md) |
+
+### Roles and catalog
+
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/roles-manifest.schema.json` | 1 | `roles.json` and `roles list --format json`; see [Roles](roles.md) |
+| `schema/roles-show.schema.json` | 1 | `roles show <name> --format json` |
+| `schema/roles-resolve.schema.json` | 1 | `roles resolve <name> --format json` |
+| `schema/catalog.v1.schema.json` | 1 | `catalog --format json` (the default) |
+| `schema/catalog.schema.json` | 2 | `catalog --format json --schema-version 2` and the `catalog.json` of `catalog --html`; see [Catalog](catalog.md) |
+| `schema/catalog-diff.schema.json` | 1 | `catalog diff --format json` |
+
+### Skills, evals and review
+
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/search.v1.schema.json` | 1 | `search <query> --format json`; see [Skill search](search.md) |
+| `schema/search-eval.v1.schema.json` | 1 | `search --eval <cases.yaml> --format json`, also the file `--output` writes |
+| `schema/eval-report.schema.json` | 1 | `eval run --format json` |
+| `schema/eval-activation.v1.schema.json` | 1 | `eval run --mode activation --format json`; see [Activation mode](evals.md#activation-mode) |
+| `schema/review-report.schema.json` | 1 | `review --format json`; see [Review](review.md) |
+| `schema/judge-report.schema.json` | 2 | `judge --format json`; see [Judge](judge.md) |
+| `schema/improve-report.schema.json` | 1 | `report.json` of an `improve` run; see [Improve](improve.md) |
+| `schema/okf-validate.schema.json` | 1 | `okf validate --format json`; see [OKF](okf.md) |
+| `schema/export-okf.schema.json` | 1 | `export okf --format json`: the files written, or the drift of `--check` |
+
+### Session exposure
+
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/exposure-report.v1.schema.json` | 1 | `exposure --format json`; see [Session exposure and areas](exposure.md) |
+| `schema/exposure-inventory.v1.schema.json` | 1 | `exposure inventory --format json` |
+| `schema/exposure-areas.v1.schema.json` | 1 | `exposure areas --format json` |
+| `schema/exposure-collisions.v1.schema.json` | 1 | `exposure collisions --format json` |
+| `schema/exposure-leakage.v1.schema.json` | 1 | `exposure leakage --format json` |
+
+### Verifiers, scanners and telemetry
+
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/verifiers-report.schema.json` | none | `verifiers run --format json` and the MCP `run_verifiers` result; see [Verifiers](verifiers.md) |
+| `schema/verifiers-list.schema.json` | 1 | `verifiers list --format json` |
+| `schema/verifiers-test.schema.json` | 1 | `verifiers test --format json` |
+| `schema/verifiers-explain.schema.json` | 1 | `verifiers explain <name> --format json` |
+| `schema/scanners-list.schema.json` | 1 | `scanners list --format json` |
+| `schema/scanners-doctor.schema.json` | 1 | `scanners doctor --format json` |
+| `schema/telemetry-doctor.schema.json` | 1 | `telemetry doctor --format json`; see [Item-load telemetry](telemetry.md) |
+
+### Publishing and plugins
+
+| File | Version | Describes |
+| ---- | ------- | --------- |
+| `schema/publish-manifest.schema.json` | 1 | `<name>-<version>.manifest.json` written by `publish`: the bundle's files, source, lock and digests; see [Publish](publish.md) |
+| `schema/publish-plan.schema.json` | 1 | `publish-plan.json` and `publish --format json` |
+| `schema/publish-verify.schema.json` | 1 | `publish verify --format json` |
+| `schema/publish-emit.schema.json` | 1 | `publish emit <emitter> --format json` |
+| `schema/verify-plugin.schema.json` | 1 | `verify --plugin --format json`; see [Authoring plugins](plugins.md) |
+
+Each schema's `$id` is its URL on the `main` branch, for example
+`https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/validate-report.schema.json`.
+
+## Validating
 
 ```bash
-# Validate current directory
-ai-rulez validate
-
-# Validate a specific config.toml
-ai-rulez -C .ai-rulez/config.toml validate
-
-# Debug output
-ai-rulez validate --debug
+ai-rulez validate                              # the configuration found from the current directory
+ai-rulez -C .ai-rulez/config.toml validate     # a specific file
+ai-rulez validate --strict                     # also fail on warnings
 ```
+
+A configuration with an unsupported `version` fails before any other check:
+
+```text
+Error: config version "4.0" is no longer supported: run `ai-rulez migrate v5`
+
+Hint: Run `ai-rulez migrate v5` to rewrite this configuration for v5 (add --dry-run to preview the change list)
+```
+
+See [Strict validation](strict-validation.md) for the content checks and their codes.

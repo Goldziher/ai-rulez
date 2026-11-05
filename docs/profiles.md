@@ -1,66 +1,98 @@
-# Custom Presets
+# Custom presets
 
-Set `presets` in `.ai-rulez/config.toml` to control which tools ai-rulez generates for. Most projects
-use only built-in presets; custom presets cover a tool ai-rulez does not ship.
+`presets` in `.ai-rulez/config.toml` lists the tools ai-rulez generates for. Most projects use only built-in presets
+(`claude`, `cursor`, `copilot`, `codex`, `gemini`, ...; all 52 are listed in [Supported harnesses](harnesses.md)). A
+custom preset writes your rules to a file or folder of your choice, for a tool or a document ai-rulez does not ship.
 
-## Built-in Presets
+Looking for profiles (named sets of domains)? See [Domains and profiles](domains.md).
 
-| Preset         | Output                                             |
-| -------------- | -------------------------------------------------- |
-| `claude`       | `CLAUDE.md` and `.claude/` (`rules/`, `skills/`, `agents/`) |
-| `cursor`       | `.cursor/rules/`, `.cursor/commands/`, `.agents/`  |
-| `gemini`       | `GEMINI.md`, `.gemini/`, `.agents/`                |
-| `copilot`      | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/{skills,agents,commands}/` |
-| `devin`        | `.devin/`                                          |
-| `cline`        | `.clinerules/`, `.cline/`                          |
-| `codex`        | `AGENTS.md`, `.agents/skills/` and `.codex/`       |
-| `amp`          | `AGENTS.md` and `.agents/` (`.amp/settings.json` when an effort resolves) |
-| `junie`        | `AGENTS.md` and `.junie/` (`rules/`, `skills/`, `agents/`) |
-| `opencode`     | `AGENTS.md`, `.opencode/`, `opencode.json` (when MCP servers are set) |
-| `hermes`       | `.hermes.md`                                       |
-| `antigravity`  | `.agents/` (`rules/`, `skills/`, `agents/`), `GEMINI.md` |
-| `xum`          | `AGENTS.md` and `.xum/`                            |
-| `pi`           | `AGENTS.md`, `.agents/skills/`, `.pi/agents/`, `.pi/mcp.json` |
-| `baz`          | `AGENTS.md` (root and nested), `.agents/skills/`, `.claude/agents/` (see [Baz](baz.md)) |
-
-Under the default `[rules] mode = "split"` each rule is written to the tool's rules folder
-(`.claude/rules/`, `.github/instructions/`, `.junie/rules/`, `.agents/rules/`, ...) and the root file
-keeps context. See [Rules](rules.md#rules-mode) for the per-preset behaviour in each mode.
-
-`mcp` is a shared utility preset (the generic `.mcp.json`) invoked automatically when MCP servers are
-configured; you normally do not name it.
-
-## Custom Presets
-
-A custom preset is an inline table in the `presets` array (you can mix it with built-in names). It
-has a `name`, a `type` (`markdown`, `directory`, or `json`), and a `path`:
+## Example
 
 ```toml
+# .ai-rulez/config.toml
 presets = [
   "claude",
-  { name = "my-tool", type = "markdown", path = "docs/MY_TOOL.md" },
+  "cursor",
+  { name = "review-bot", type = "markdown", path = "docs/REVIEW_BOT.md", template = """
+# {{ .Name }} conventions
+{{ range .Rules }}
+## {{ .Name }}{{ if .Priority }} ({{ .Priority }}){{ end }}
+
+{{ .Content }}
+{{ end }}""" },
+  { name = "rules-dir", type = "directory", path = ".mytool/rules" },
+  { name = "rules-json", type = "json", path = "build/rules.json" },
 ]
 ```
 
-A config that defines only custom presets can use `[[presets]]` instead:
+With two rules, `commit-messages` (`priority: high`) and `typescript` (`priority: medium`), `ai-rulez generate`
+writes the built-in outputs plus:
 
-```toml
-[[presets]]
-name = "my-tool"
-type = "markdown"
-path = "docs/MY_TOOL.md"
+```markdown
+<!-- docs/REVIEW_BOT.md -->
+# acme conventions
+
+## commit-messages (high)
+
+Use Conventional Commits.
+
+
+## typescript (medium)
+
+No `any`.
 ```
 
+```text
+.mytool/rules/
+├── commit-messages.md
+└── typescript.md
+```
+
+`build/rules.json`:
+
+```json
+{
+  "Context": [],
+  "Description": "",
+  "Domains": {},
+  "Name": "acme",
+  "Rules": [
+    { "Content": "Use Conventional Commits.\n", "Name": "commit-messages", "Priority": "high" },
+    { "Content": "No `any`.\n", "Name": "typescript", "Priority": "medium" }
+  ],
+  "Skills": [],
+  "Version": "5.0"
+}
+```
+
+## Preset keys
+
+A custom preset is an inline table in the `presets` array, mixed freely with built-in names. A config with only
+custom presets can also use `[[presets]]` tables.
+
+| Key        | Type   | Meaning                                                                                  |
+| ---------- | ------ | ---------------------------------------------------------------------------------------- |
+| `name`     | string | required; identifies the preset in messages; a template can match it against a rule's `Targets` |
+| `type`     | string | `markdown`, `directory` or `json`                                                        |
+| `path`     | string | output file (`markdown`, `json`) or folder (`directory`), relative to the project root   |
+| `template` | string | optional Go template for `markdown` and `json`; see [Templates](#templates)              |
+| `provider` | string | path to a provider spec instead of `type` and `path`; see below                          |
+
+`path` must stay inside the project; see [Output paths](#output-paths).
+
 !!! note "For a full tool, use a provider spec"
-    The `markdown`/`directory`/`json` types are intentionally small. If the tool needs skills, agents,
-    commands, per-agent frontmatter, effort/model, or an MCP sidecar — the same feature set as a
-    built-in preset — reference a declarative **provider spec** with `provider = "…"` instead. See
-    [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity).
+    The `markdown`, `directory` and `json` types render rules and context only. If the tool needs skills, agents,
+    commands, per-file frontmatter, model or effort settings, or an MCP file, the same feature set as a built-in
+    preset, point `provider = "..."` at a declarative provider spec instead. See
+    [Provider-backed presets](configuration.md#provider-backed-presets-full-parity).
 
-### Preset types
+## Preset types
 
-**`markdown`** — renders one file at `path`. Without a `template`, ai-rulez renders a default
-document with a title and the rule and context sections.
+| Type        | Writes                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------- |
+| `markdown`  | one file at `path`. Without a `template`: a title, the project description, and the rule, context and skill sections. |
+| `directory` | one `<id>.md` file per rule in the folder `path`, with a `# <id>` heading and the priority line. Only rules are written. |
+| `json`      | one file at `path`. Without a `template`: the [template data](#template-data) as indented JSON.      |
 
 ```toml
 [[presets]]
@@ -69,112 +101,79 @@ type = "markdown"
 path = "docs/AI_DEVELOPMENT_GUIDE.md"
 ```
 
-**`directory`** — creates `path` and writes one markdown file per rule, named after the sanitized
-rule name (`<name>.md`). Rules are the only content kind this type emits.
+## Templates
 
-```toml
-[[presets]]
-name = "agent-rules"
-type = "directory"
-path = ".my-tool/rules"
-```
+`markdown` and `json` presets take a `template` in Go's [`text/template`](https://pkg.go.dev/text/template) syntax.
+Only the built-in template functions are available (`len`, `printf`, `eq`, `index`, `and`, `or`, `not`, ...) and the
+actions `range`, `if` and `with`. Any other function fails the run:
 
-**`json`** — renders one JSON file at `path`. Without a `template`, ai-rulez marshals the template
-data (below) as indented JSON.
-
-```toml
-[[presets]]
-name = "config-json"
-type = "json"
-path = "config/rules.json"
-```
-
-### Templates
-
-`markdown` and `json` presets accept a `template`, parsed with Go's
-[`text/template`](https://pkg.go.dev/text/template). **Only Go's built-in template functions are
-available** (`len`, `printf`, `eq`, `index`, `range`, `with`, `if`, …) — there is no extra function
-library, so helpers such as `where`, `truncate`, `sortByPriority`, or `now` are not defined and a
-template using them fails to parse.
-
-```toml
-[[presets]]
-name = "my-tool"
-type = "markdown"
-path = "docs/MY_TOOL.md"
-template = """
-# {{ .Name }}
-
-{{ range .Rules }}
-## {{ .Name }}{{ if .Priority }} ({{ .Priority }}){{ end }}
-
-{{ .Content }}
-{{ end }}
-"""
+```text
+Error: generate presets: generate preset review-bot: parse template: template: custom:1: function "now" not defined
 ```
 
 ### Template data
 
-The template receives:
+| Field          | Contents                                                                  |
+| -------------- | ------------------------------------------------------------------------- |
+| `.Name`        | project name                                                              |
+| `.Description` | project description                                                       |
+| `.Version`     | config version                                                            |
+| `.Rules`       | rules of the active profile, root and domains together, in priority order |
+| `.Context`     | context files, likewise                                                   |
+| `.Skills`      | skills, likewise                                                          |
+| `.Domains`     | map of domain name to `{ Name, Rules, Context, Skills }`                  |
 
-| Field         | Contents                                                        |
-| ------------- | --------------------------------------------------------------- |
-| `.Name`       | Project name                                                    |
-| `.Description`| Project description                                             |
-| `.Version`    | Config version                                                  |
-| `.Rules`      | Root rules                                                      |
-| `.Context`    | Root context                                                    |
-| `.Skills`     | Root skills                                                     |
-| `.Domains`    | Map of domain name → `{ Name, Rules, Context, Skills }`         |
+Each rule and context entry has `Name` and `Content`, plus `Priority` and `Targets` when the frontmatter sets them
+(`Priority` is left out with `compact = true`). A skill entry also has `Body` (the instructions only), `Resources`
+(each with `Kind`, `RelPath`, `Content`, `Description`) and its other frontmatter keys; its `Content` includes the
+inlined reference files.
 
-Each rule/context/skill entry is a map with `Name` and `Content`, plus `Priority` and `Targets` when
-the source frontmatter sets them.
+## Output paths
 
-## Targeting content at a preset
+The same rules apply to every output path a configuration names: a custom preset `path`, a provider spec's
+`root.file`, `outputs.*.dir`, `sidecars[].path` and `directories`, `okf.dir`, `marketplace.output_dir` and
+`codex_skills_dir`. `validate` and `generate` reject:
 
-Content is filtered to a preset with the file's frontmatter `targets`, not with inline config. A rule
-with `targets: ["CLAUDE.md"]` is only rendered into outputs matching that target, including rules
-folders and every root file; a rule with no `targets` goes to every output. A target can be a preset
-name, root file, path, directory prefix, glob, or `*`; see [Targets](rules.md#targets).
+- an empty, absolute or drive- or UNC-prefixed path, and any `..` segment;
+- a `.git` segment anywhere in the path (including the Windows spellings `.git.` and `git~1`);
+- a path under `.ai-rulez/`, `.config/ai-rulez/`, `.hg/` or `.svn/`.
 
-```markdown
----
-priority: high
-targets: ["CLAUDE.md", ".cursor/rules/*"]
----
-
-Guidance that only Claude and Cursor should see.
-```
+A preset may write a file that CI or a developer tool runs (`.github/workflows/`, `Makefile`, `.vscode/tasks.json`);
+the `generate` summary lists it as `exec-file` before writing.
 
 ## Ordering
 
-Rules and context render in priority order (critical → high → medium → low → minimal) within each
-section, with name order breaking ties. Pinning a `priority` in frontmatter is the supported way to
-influence it.
+Rules and context are ordered by priority (`critical`, `high`, `medium`, `low`, `minimal`), then by name. Set
+`priority` in a rule's frontmatter to move it.
 
-## Combining built-in and custom
+## Targeting content at a preset
 
-Because `presets` is one array, list built-ins and custom presets together:
+Frontmatter [`targets`](rules.md#targets) limits a rule to some outputs of the built-in presets. The `markdown`,
+`directory` and `json` presets do not apply it: they receive every rule of the active profile. A template can filter
+on the `Targets` field itself:
 
-```toml
-presets = [
-  "claude",
-  "cursor",
-  { name = "internal-guide", type = "markdown", path = "docs/INTERNAL.md" },
-]
+```text
+{{ range .Rules }}{{ $bot := false }}{{ range .Targets }}{{ if eq . "review-bot" }}{{ $bot = true }}{{ end }}{{ end }}
+{{ if or (not .Targets) $bot }}## {{ .Name }}
+
+{{ .Content }}{{ end }}{{ end }}
 ```
+
+## Built-in presets and rules folders
+
+Under the default `[rules] mode = "split"`, built-in presets with a rules folder (`.claude/rules/`,
+`.cursor/rules/`, `.github/instructions/`, ...) get one file per rule, and with `agents_md = true` (the default) the
+always-on rules go to the shared `AGENTS.md`. See [Rules](rules.md#rules-mode) for each preset in each mode, and
+[AGENTS.md and .agents/skills](agents-md.md).
+
+`mcp` is a utility preset that writes the generic `.mcp.json`. It runs automatically when MCP servers are
+configured; you do not need to list it.
 
 ## Troubleshooting
 
-**Template fails to parse.** A referenced function is not one of Go's built-ins (see above). Remove
-it or rewrite the logic with `range`/`if`.
-
-**Output path is wrong.** `path` is relative to the project root and must stay inside it.
-
-**Content is empty.** Rules may be filtered out by `targets`; remove the frontmatter for a rule that
-should appear everywhere.
-
-## Next Steps
-
-- **[Configuration](configuration.md)**: full config reference, including provider specs
-- **[Domains & Profiles](domains.md)**: organizing content by team or service
+| Symptom                                   | Cause and fix                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------------ |
+| `function "..." not defined`              | The template uses a function that is not a Go built-in. Rewrite it with `range`/`if`. |
+| `has an unsafe 'path'`                    | `path` leaves the project or points into a control directory; see [Output paths](#output-paths). |
+| The output is missing a rule              | The rule's domain is not in the active profile, or the template filters it out.     |
+| A warning that hooks are not generated    | Custom presets have no hook support; hooks are written for built-in presets only.    |

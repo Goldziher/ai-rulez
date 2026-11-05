@@ -1,79 +1,84 @@
-# AI-Rulez Documentation
+# AI-Rulez
 
 <p align="center">
   <img src="assets/ai-rulez-banner.svg" alt="AI-Rulez" width="820" />
 </p>
 
-AI-Rulez is a standards-compliant lifecycle tool for agent knowledge and capabilities. Keep your rules, context, skills,
-agents, commands, hooks, permissions and MCP servers in one source of truth, `.ai-rulez/`, and take them through every
-stage:
+AI-Rulez keeps the instructions for your AI coding assistants in one place, `.ai-rulez/`, and generates the native
+files of 52 assistants from it. You edit one source; `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`,
+`.github/instructions/`, skill folders, MCP and settings files follow. AI-Rulez also validates that content, pins and
+signs it, and packages it as plugins.
 
-```text
-author  ->  generate  ->  bundle  ->  lint / validate  ->  govern  ->  publish
+## How it works
+
+You write rules, context, skills, agents and commands as Markdown files and list the tools you use in
+`.ai-rulez/config.toml`:
+
+```toml
+version = "5.0"
+name = "acme"
+presets = ["claude", "cursor", "codex", "copilot", "gemini"]
 ```
 
-The claim is "standards compliant": each format ai-rulez names is checked against that standard's own schema or rules.
-[Standards](standards.md) lists the pinned spec versions, the conformance tests and the known gaps.
+`ai-rulez generate` renders each tool's own layout from that one source:
 
-## The lifecycle
+```text
+acme/
+├── .ai-rulez/              # the source you edit
+│   ├── config.toml
+│   ├── rules/
+│   ├── context/
+│   └── skills/
+├── AGENTS.md               # read by Codex, Cursor, Copilot and Gemini CLI
+├── CLAUDE.md               # imports @AGENTS.md
+├── .agents/skills/         # skills for tools that read .agents/skills
+├── .claude/skills/         # skills for Claude Code
+├── .gemini/settings.json   # points Gemini CLI at AGENTS.md
+├── .mcp.json, .cursor/mcp.json, .vscode/mcp.json, .codex/config.toml
+└── ...
+```
 
-| Section | What you do | Start with |
-| ------- | ----------- | ---------- |
-| **Author** | Write rules, context, skills, agents and checks as markdown; organize them with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice; `ai-rulez migrate okf` converts it. | [Configuration](configuration.md), [Rules](rules.md), [Skill frontmatter](skills.md) |
-| **Generate** | Render native files for 52 harnesses, per project or per user, with hooks and permissions translated for each. | [Supported harnesses](harnesses.md), [AGENTS.md](agents-md.md), [User-level configuration](user-scope.md) |
-| **Bundle and publish** | Package plugin bundles, Agent Plugins and ARD manifests, then release them to GitHub, npm, OCI and marketplaces. | [Authoring plugins](plugins.md), [Agent Plugins](agent-plugins.md), [ARD](ard.md), [Publish](publish.md) |
-| **Validate** | Lint configured projects or existing harness files without a config; run content and security checks with stable `AR` codes, deterministic verifiers and per-standard validators. Review changed units with evidence-verified security, governance and quality findings. Report what a Claude Code session loads at its start and check it against an area map. | [Strict validation](strict-validation.md), [Verifiers](verifiers.md), [Judge](judge.md), [Session exposure](exposure.md) |
-| **Govern** | Pin content in a lock, record reviewer approvals, sign with Sigstore, set an organization policy and ship an SBOM. | [Trust model](trust-model.md), [Lock file](lockfile.md), [Signing](signing.md), [SBOM](sbom.md) |
-| **Operate** | Serve configuration and skills over MCP, search the catalog, export telemetry, run evals and improve skills. | [MCP server](mcp-server.md), [Search](search.md), [Telemetry](telemetry.md), [Evals](evals.md), [Improve](improve.md) |
-| **Embed** | Load projects, validate, plan or apply generated files and manage locks through the Go API, with directory, memory and Git snapshot workspaces. | [Embedding (Go API)](embedding.md) |
+Change the source, run `generate` again, and every tool stays in sync. `ai-rulez generate --check` fails in CI when
+the committed files drift from the source.
 
 ## Get started
 
-1. [Install](installation.md) ai-rulez (`pnpm dlx ai-rulez@latest` needs no install).
-2. Follow the [Quick Start](quick-start.md): `ai-rulez init`, pick presets, `ai-rulez generate`.
-3. Run `ai-rulez validate --strict`, then commit `.ai-rulez/` together with the generated files.
+1. [Install](installation.md) the CLI, or run it with `npx ai-rulez@latest` or `uvx ai-rulez`.
+2. Follow the [Quick start](quick-start.md): `init`, choose presets, add a rule, `generate`.
+3. Commit `.ai-rulez/` together with the generated files.
 
-```bash
-ai-rulez init "my-project"
-ai-rulez generate
-ai-rulez validate --strict
-```
+Already have a `CLAUDE.md`, `AGENTS.md` or `.cursor/rules/`? `ai-rulez init --from auto` imports them. Upgrading a
+4.x project? See [Migrating to v5](migration-v5.md).
 
-Coming from 4.x? Run `ai-rulez migrate v5 --dry-run` and read [Migrating to v5](migration-v5.md).
+## What you can do
 
-## Project layout
+| Area | What you do | Start with |
+| ---- | ----------- | ---------- |
+| **Author** | Write rules, context, skills, agents, commands and review checks; organize them with domains, profiles, roles and shared includes. | [Configuration](configuration.md), [Rules](rules.md), [Skill frontmatter](skills.md), [Domains and profiles](domains.md) |
+| **Generate** | Render native files for 52 assistants, per project or in your home directory, with hooks, permissions and MCP servers translated for each. | [Supported harnesses](harnesses.md), [AGENTS.md](agents-md.md), [Hooks and settings](settings.md) |
+| **Bundle and publish** | Package plugins and marketplaces, Agent Plugins and ARD manifests, and release them to GitHub, npm or OCI. | [Authoring plugins](plugins.md), [Publish](publish.md) |
+| **Validate** | Lint configured projects, or plain `AGENTS.md`, `SKILL.md` and `.claude/` files with no configuration, using stable `AR` rule codes; catch harness traps; run repository verifiers in CI and git hooks. | [Strict validation](strict-validation.md), [Harness traps](harness-traps.md), [Verifiers](verifiers.md), [GitHub Actions](github-actions.md) |
+| **Govern** | Pin sources and content in a lock file, record reviewer approvals, sign with Sigstore, enforce an organization policy and produce an SBOM. | [Trust model](trust-model.md), [Lock file](lockfile.md), [Signing](signing.md) |
+| **Operate** | Serve configuration and skills over MCP, search skills, run evals, improve skills, review changes with a model and export telemetry. | [MCP server](mcp-server.md), [Evals](evals.md), [Review](review.md), [Judge](judge.md) |
 
-```text
-project-root/
-├── .ai-rulez/
-│   ├── config.toml           # Presets, profiles, lifecycle settings
-│   ├── rules/                # Mandatory constraints
-│   ├── context/              # Reference documentation
-│   ├── skills/               # Skills (SKILL.md)
-│   ├── agents/, commands/    # Subagents and slash commands
-│   ├── checks/               # Code-review guidelines
-│   └── domains/              # Team or subsystem content
-├── CLAUDE.md                 # Generated for Claude (rules go to .claude/rules/)
-├── .cursor/rules/            # Generated for Cursor
-├── GEMINI.md                 # Generated for Gemini
-└── .github/copilot-instructions.md
-```
-
-Generated files are committed by default. Set `gitignore = true` to keep them out of git through a managed
-`.gitignore` block instead.
+The formats ai-rulez writes (AGENTS.md, Agent Skills, Agent Plugins, OKF, llms.txt, CycloneDX, SPDX, in-toto and
+others) are checked against each standard's own schema or rules; [Standards conformance](standards.md) lists the
+versions and known gaps.
 
 ## Reference
 
-- [CLI commands](cli.md): every command and flag; `ai-rulez --help` and `ai-rulez <command> --help` are authoritative.
-- [Schema](schema.md): the JSON schemas of the configuration and of every `--format json` document.
-- [Embedding (Go API)](embedding.md): use ai-rulez as a library.
+- [CLI commands](cli.md) and the generated [CLI command reference](cli-reference.md).
+- [Schema](schema.md): JSON schemas of the configuration and of every `--format json` report.
+- [Architecture](architecture.md): how a source becomes generated files, and the package layout.
+- [Standards conformance](standards.md): the open formats ai-rulez writes and how each is checked.
+- [Embedding (Go API)](embedding.md): load, validate, plan and apply generation from Go.
 - [Changelog](CHANGELOG.md).
 
 ## Getting help
 
-- **CLI help**: `ai-rulez --help`, `ai-rulez generate --help`, and so on.
-- **Rule explanations**: `ai-rulez validate --explain AR001`.
-- **Diagnostics**: `ai-rulez doctor` reports drift, removed presets and missing tools without changing anything.
-- **Issues**: report problems on [GitHub](https://github.com/Goldziher/ai-rulez/issues).
+- `ai-rulez --help` and `ai-rulez <command> --help` describe every command and flag.
+- `ai-rulez validate --explain AR001` explains a rule code and how to suppress it.
+- `ai-rulez doctor` diagnoses a project (drift, removed presets, missing tools) without changing anything.
+- Report problems on [GitHub](https://github.com/Goldziher/ai-rulez/issues).
 
-This documentation covers **ai-rulez v5** (`version = "5.0"` in `config.toml`).
+This documentation covers ai-rulez v5 (`version = "5.0"` in `config.toml`).

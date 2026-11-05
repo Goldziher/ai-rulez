@@ -1,73 +1,189 @@
 # Agentic Resource Discovery (ard.json)
 
-ai-rulez can publish your skills, MCP servers and plugin for discovery through
-[Agentic Resource Discovery](https://agenticresourcediscovery.org/) (ARD): one `ard.json` manifest that a registry or an
-agent fetches from `https://<domain>/.well-known/ard.json`.
+The `ard` emitter publishes your skills, remote MCP servers and plugin for discovery through
+[Agentic Resource Discovery](https://agenticresourcediscovery.org/) (ARD): one `ard.json` manifest that registries and
+agents fetch from `https://<domain>/.well-known/ard.json`.
 
 !!! warning "The specification is a proposal"
-    ARD is still a proposal. ai-rulez implements **spec v0.91** and validates the manifest against the entry schema of
-    [ards-project/ard-spec](https://github.com/ards-project/ard-spec) commit `b76f235`, vendored under `internal/ard/schema`.
-    The media type registry and the term names can change; the version is pinned in `ard.SpecVersion`.
+    ai-rulez implements ARD **spec v0.91** and validates the manifest against the entry schema of
+    [ards-project/ard-spec](https://github.com/ards-project/ard-spec) at commit `b76f235`. Media types and field names
+    can still change.
 
-## Configure
+## Example
 
 ```toml
+# .ai-rulez/config.toml
+version = "5.0"
+name = "acme-tools"
+
+[plugin]
+name = "acme-tools"
+version = "1.2.0"
+description = "Code review skills and an MCP server for Acme repositories."
+repository = "https://github.com/acme/acme-tools"
+keywords = ["review", "mcp"]
+runtimes = ["agent-plugins", "claude"]
+
+[plugin.author]
+name = "Acme Tooling"
+
+[[mcp_servers]]
+name = "acme-search"
+description = "Search Acme documentation."
+transport = "http"
+url = "https://docs.acme.example/mcp"
+headers = { Authorization = "Bearer ${DOCS_TOKEN}" }
+
 [ard]
-publisher = "acme.example"   # the domain that serves /.well-known/ard.json (an FQDN)
-namespace = "conventions"    # colons separate sub-segments: "team:tools"
-# base_url = "https://acme.example/ard"   # where skills/<name>/SKILL.md is served (optional)
-# plugin_type = "application/vnd.example.plugin+json"
-# [ard.queries]                            # representative queries by resource name (optional)
-# docs = ["search the acme docs", "find the api reference"]
+publisher = "acme.example"
+namespace = "tools"
+
+[ard.queries]
+acme-search = ["search the acme docs", "find the acme api reference"]
 ```
 
-An identifier is `urn:air:<publisher>:<namespace>:<name>`; `validate` rejects a publisher that is not a fully qualified
-domain name and a namespace or name outside letters, digits, `.`, `_` and `-`.
+With one skill, `review-pr`, in `.ai-rulez/skills/`:
+
+```bash
+ai-rulez publish emit ard --output-dir ard
+```
+
+```text
+WARN  ard: AR9S3 urn:air:acme.example:tools:acme-tools: no representativeQueries: ...
+WARN  ard: AR9S3 urn:air:acme.example:tools:review-pr: no representativeQueries: ...
+wrote ard/ard.json
+```
+
+`ard/ard.json` (trimmed):
+
+```json
+{
+  "entries": [
+    {
+      "identifier": "urn:air:acme.example:tools:acme-search",
+      "displayName": "acme-search",
+      "type": "application/mcp-server-card+json",
+      "data": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+        "description": "Search Acme documentation.",
+        "name": "example.acme/acme-search",
+        "remotes": [ ... ],
+        "version": "1.2.0"
+      },
+      "description": "Search Acme documentation.",
+      "representativeQueries": ["search the acme docs", "find the acme api reference"],
+      "updatedAt": "2026-11-05T16:23:33Z"
+    },
+    {
+      "identifier": "urn:air:acme.example:tools:acme-tools",
+      "displayName": "acme-tools",
+      "type": "application/vnd.ai-rulez.plugin+json",
+      "url": "https://github.com/acme/acme-tools/releases/download/v1.2.0/acme-tools-1.2.0.tar.gz",
+      "description": "Code review skills and an MCP server for Acme repositories.",
+      "tags": ["agent-plugins", "mcp", "review"],
+      "version": "1.2.0",
+      "updatedAt": "2026-11-05T16:23:33Z"
+    },
+    {
+      "identifier": "urn:air:acme.example:tools:review-pr",
+      "displayName": "review-pr",
+      "type": "application/ai-skill+md",
+      "url": "https://raw.githubusercontent.com/acme/acme-tools/v1.2.0/.ai-rulez/skills/review-pr/SKILL.md",
+      "description": "Review a pull request against Acme conventions. Use when asked to review a diff or PR.",
+      "updatedAt": "2026-11-05T16:23:33Z"
+    }
+  ]
+}
+```
+
+The `AR9S3` warnings say the skill and the plugin have no representative queries; see
+[Representative queries](#representative-queries) for where they come from.
+
+## Configuration
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `publisher` | string | required | The fully qualified domain name that serves `/.well-known/ard.json` |
+| `namespace` | string | required | A short name for this project's resources; colons separate sub-segments (`team:tools`) |
+| `base_url` | string | none | An `https` URL where the skill files are served. When set, skill entries point at `<base_url>/skills/<name>/SKILL.md` and the emitter writes those files next to `ard.json` |
+| `plugin_type` | string | `application/vnd.ai-rulez.plugin+json` | The media type of the plugin entry |
+| `[ard.queries]` | table of string lists | none | Representative queries by resource name; replaces the derived queries of that resource |
+
+Every identifier is `urn:air:<publisher>:<namespace>:<name>`. Configuration loading rejects a publisher that is not a
+fully qualified domain name, and a namespace or name with characters outside letters, digits, `.`, `_` and `-`.
 
 ## Generate
 
-```bash
-ai-rulez publish --emit ard          # dist/emit/ard/ard.json, in the release
-ai-rulez publish emit ard --output-dir ard  # only the manifest, without a release
+| Command | Output |
+| --- | --- |
+| `ai-rulez publish emit ard [--output-dir DIR]` | only the manifest (and skill files with `base_url`), in `DIR` (default `emit/ard/`) |
+| `ai-rulez publish --emit ard` | `dist/emit/ard/ard.json`, as part of a [release](publish.md) |
+
+Add `[[publish.emitters]] name = "ard"` to run it on every publish. Both commands run the
+[publish preflight](publish.md#pipeline) first, so the project must be committed and locked, with the plugin bundle
+generated.
+
+## Entries
+
+| Resource | `type` | Location |
+| --- | --- | --- |
+| Root skill | `application/ai-skill+md` | `url`: with `base_url`, `<base_url>/skills/<name>/SKILL.md`; otherwise the raw `SKILL.md` on GitHub at the release tag `v<version>` |
+| Remote MCP server (enabled `[[mcp_servers]]` or `[[plugin.mcp]]` with a URL) | `application/mcp-server-card+json` | `data`: the [MCP server card](mcp-server-card.md) |
+| Plugin | `plugin_type` | `url`: the release archive on the repository's releases page, or `<base_url>/<archive>` when there is no repository |
+
+- Only root skills are listed; domain skills are not.
+- Stdio MCP servers are left out, because a server card describes remote endpoints. A remote server whose URL is not
+  `https` is an error (`AR9S2`). Servers whose URL could carry a secret are skipped the same way as for [server cards](mcp-server-card.md#skipped-servers). Header and environment
+  values never reach the manifest.
+- Raw skill URLs are only known for github.com. For another host, set `base_url`.
+- A plugin built with the [Agent Plugins](agent-plugins.md) runtime is tagged `agent-plugins`.
+
+| Field | Source |
+| --- | --- |
+| `displayName` | the resource name |
+| `description` | the skill's or server's description, or the plugin description |
+| `version` | a skill's `metadata.version` frontmatter; the plugin version |
+| `tags` | skill `keywords` frontmatter; plugin `keywords` |
+| `capabilities` | the plugin `category` |
+| `updatedAt` | the release time: `SOURCE_DATE_EPOCH`, else the commit time. The same commit always gives the same bytes |
+
+## Representative queries
+
+Registries build their search index from `representativeQueries`. Each entry needs 2 to 5; outside that range is a
+warning (`AR9S3`). For a skill they are taken, in order, from:
+
+1. the frontmatter list `representative_queries`;
+2. the prompts of the skill's eval cases that expect it to trigger (`expect_trigger: true`), excluding near misses;
+3. the frontmatter list `triggers`.
+
+A plugin takes the first query of each of its skills, then the second, and so on. An MCP server has nothing to derive
+queries from, so list them under `[ard.queries]`. An `[ard.queries]` entry replaces the derived queries of that
+resource.
+
+```markdown
+---
+name: review-pr
+description: Review a pull request against Acme conventions. Use when asked to review a diff or PR.
+representative_queries:
+  - review this pull request
+  - check my diff against the acme conventions
+---
 ```
 
-The emitter is also available as `[[publish.emitters]] name = "ard"`. Needs a committed project and a release tag, as every
-publish does.
+## Validation
 
-| Resource | `type` | `url` or `data` |
+`validate` builds the manifest in memory and checks it against the pinned schema. `publish` runs the same
+check and prints the emitter's warnings in `--dry-run` too.
+
+| Code | Severity | Meaning |
 | --- | --- | --- |
-| Root skill | `application/ai-skill+md` | `url`: the raw `SKILL.md` at the release tag (GitHub), or `<base_url>/skills/<name>/SKILL.md` |
-| MCP server (`[[mcp_servers]]`, `[[plugin.mcp]]`, enabled) | `application/mcp-server-card+json` | `data`: an [MCP server card](mcp-server-card.md); stdio servers are left out, since a card describes remote servers only |
-| Plugin | `application/vnd.ai-rulez.plugin+json` (override with `plugin_type`) | `url`: the release archive |
+| [AR9S0](strict-validation.md#ar9s0-ard-manifest-invalid) | error | the manifest fails the schema |
+| [AR9S1](strict-validation.md#ar9s1-ard-identifier-invalid) | error | an identifier breaks the `urn:air` grammar, or two resources share one |
+| [AR9S2](strict-validation.md#ar9s2-ard-entry-invalid) | error | an entry has both or neither of `url` and `data`, or a non-https `url` |
+| [AR9S3](strict-validation.md#ar9s3-ard-queries-out-of-range) | warning | fewer than 2 or more than 5 representative queries |
+| [AR9S4](strict-validation.md#ar9s4-ard-not-declared) | error | the `ard` emitter is requested without an `[ard]` table |
 
-Exactly one of `url` and `data` is set. Environment values and header values of an MCP server never reach the manifest (a card lists header names only), and a
-server URL with credentials or without https is refused. A server whose URL has a query, a fragment or an unresolved `${...}` placeholder is skipped with a warning, because such a URL is published verbatim and often carries a key; so is one whose path has a segment that looks like a credential (the path is otherwise published as written). With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
-`ard.json`, so hosting is a copy of the output directory. Only root skills are listed.
-
-The spec registers no plugin type, so the plugin type is ai-rulez's own vendor type until one exists; the conformance tool
-accepts it as an extension type. A plugin that builds an [Agent Plugins](agent-plugins.md) package is tagged `agent-plugins`.
-
-**Fields.** `displayName` defaults to the name; `description`, `version` (a skill's `metadata.version`, a plugin's
-version), `tags` (skill `keywords`, plugin keywords) and `capabilities` (the plugin category) come from the sources.
-`updatedAt` is the release time (the commit time, or `SOURCE_DATE_EPOCH`), never the clock, so the same release always
-produces the same bytes.
-
-**Representative queries** (2 to 5 per entry) are taken, in order, from the skill frontmatter `representative_queries`,
-the prompts of eval cases that expect the skill to trigger (`expect_trigger: true`, near misses excluded), then the
-frontmatter `triggers`. A plugin takes one query from each of its skills in turn. An MCP server has nothing to derive them
-from: list them under `[ard.queries]`. `[ard.queries]` replaces the derived queries of the named resource.
-
-## Validate
-
-`validate --strict` builds the manifest in memory with a placeholder location and checks it against the pinned schema:
-[AR9S0](strict-validation.md#ar9s0-ard-manifest-invalid) (schema),
-[AR9S1](strict-validation.md#ar9s1-ard-identifier-invalid) (identifier),
-[AR9S2](strict-validation.md#ar9s2-ard-entry-invalid) (url or data),
-[AR9S3](strict-validation.md#ar9s3-ard-queries-out-of-range) (queries, a warning) and
-[AR9S4](strict-validation.md#ar9s4-ard-not-declared) (emitter without `[ard]`). `publish` runs the same gate, and prints
-the warnings of the emitter in `--dry-run` too.
-
-## Host the file
+## Hosting
 
 Serve the manifest at `https://<publisher>/.well-known/ard.json` with:
 
@@ -75,21 +191,19 @@ Serve the manifest at `https://<publisher>/.well-known/ard.json` with:
 - `Content-Type: application/json`;
 - `Access-Control-Allow-Origin: *`, so browser-based agents can read it.
 
-## Discovery besides `/.well-known`
+With `base_url`, copy the whole output directory (`ard.json` and `skills/`) to the host.
 
-- **HTML link.** A page can point at the manifest with `<link rel="ard" href="https://acme.example/ard.json">` in its
-  `<head>`; consumers must honour `rel="ard"`.
-- **DNS (optional).** If you cannot serve the well-known path, a DNS record can point at the file. The specification and the
-  how-to guide disagree: the spec (section 5.1) speaks of Service Binding records with the example name
-  `_entries._agents.example.com` and defines no record layout, while the guide shows a TXT record at
-  `_catalog._agents.yourdomain.com` with the value `"url=https://host/ard.json"`. ai-rulez publishes no DNS record; pick
-  one after checking the current spec.
+Other ways to point consumers at the manifest:
 
-## Why there is no `trustManifest`
+- **HTML link.** Add `<link rel="ard" href="https://acme.example/ard.json">` to a page's `<head>`.
+- **DNS.** The specification describes DNS-based discovery but does not settle the record format yet. ai-rulez
+  writes no DNS record; check the current specification before adding one.
 
-The optional `trustManifest` binds an entry to a verifiable identity. The spec (section 4.5.1) requires that identity to be
-a credential whose trust domain is the identifier's publisher, and leaves verification to a trust framework the manifest
-names. ai-rulez signs with Sigstore keyless DSSE bundles, whose identity is a CI workflow or an OIDC account rather than a
-credential issued by your domain, and no trust framework has been chosen. An emitted `trustManifest` would claim a binding
-nobody can check, so it is left out. The signature of the release itself (`--sign-keyless`) is unaffected. The pinned schema
-also spells the term `TrustManifest` while the spec text says `trustManifest`, so the name is unsettled.
+## Not generated
+
+The optional `trustManifest` is not written: no trust framework can verify a Sigstore identity as a domain credential.
+
+## See also
+
+- [MCP server cards](mcp-server-card.md)
+- [Publish](publish.md)

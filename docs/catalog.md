@@ -1,107 +1,138 @@
 # Catalog
 
-`ai-rulez catalog` describes everything a repository defines: rules, context, skills, agents, commands and
-checks, with owner, version, size, the digest `ai-rulez.lock` pins, the roles that keep each item and the lock
-status. It prints a table, JSON for tools, or a static website.
+`ai-rulez catalog` lists everything a project defines (rules, context, skills, agents, commands and checks) with
+owner, version, token cost, lock digest, the roles that keep each item and its lint status. It prints a table, JSON
+for tools, or a static website you can publish for reviewers. `ai-rulez catalog diff` compares two catalogs, for
+example in a pull request.
+
+## Example
+
+```text
+$ ai-rulez catalog
+KIND     DOMAIN  ID             OWNER  VERSION  TOKENS  ROLES
+context  -       architecture   -      -        122     0
+rule     -       code-quality   -      -        88      0
+skill    -       ai-rulez       -      -        540     0
+skill    -       code-reviewer  -      -        148     0
+
+4 item(s), 0 role(s); lock: none
+```
+
+```text
+$ ai-rulez catalog --html site/
+wrote 14 files to site/ (4 items, 0 roles, 0 MCP servers)   catalog digest sha256:e5ed17e3...
+lint: 0 errors, 0 warnings   lock: none
+```
+
+`OWNER` and `VERSION` come from the items' frontmatter; `ROLES` counts the [roles](roles.md) that keep the item.
 
 ## JSON
 
 ```bash
-ai-rulez catalog --format json                      # version 1 (default)
-ai-rulez catalog --format json --schema-version 2   # version 2
+ai-rulez catalog --format json                      # schema version 1 (default)
+ai-rulez catalog --format json --schema-version 2
 ```
 
 Version 1 ([`schema/catalog.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.v1.schema.json))
-stays the default for one minor release so existing consumers keep working. Version 2
-([`schema/catalog.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.schema.json)) is a
-strict superset of the version 1 fields, plus:
+is the default and what the MCP `catalog` tool returns. Version 2
+([`schema/catalog.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.schema.json)) contains
+every version 1 field plus:
 
 | Field | Meaning |
-| ----- | ------- |
-| `generated_by`, `project` | tool name and version; project name, description and lock tree digest |
-| `items[].ref` | stable key `kind/domain/id` (domain `-` when none); a repeated key gets `#2`, `#3` |
-| `items[].description`, `source` | description from the frontmatter (verbatim; a consumer escapes it); `local` or `include` |
-| `items[].load_cost` | `listing_tokens` (what the harness always lists: skill name and description), `body_tokens` (loaded on use), `resource_tokens` and `resources` (bundled files) |
+| --- | --- |
+| `generated_by`, `project` | Tool name and version; project name, description and lock tree digest |
+| `items[].ref` | Stable key `kind/domain/id` (domain `-` for root), such as `skill/-/code-reviewer`; a repeated key gets `#2`, `#3` |
+| `items[].description` | From the frontmatter, verbatim (escape it when you render it) |
+| `items[].source` | `{"type": "local"}` or `{"type": "include"}` |
+| `items[].load_cost` | `listing_tokens` (what a harness always lists, such as a skill's name and description), `body_tokens` (loaded on use), `resource_tokens` and `resources` (bundled files) |
 | `items[].lint` | `status` (`ok`, `warn`, `error`), counts and findings, from the same engine as `validate`; absent when lint could not run |
-| `items[].excerpt` | first 2 KiB of the body, plain text; off with `--include-excerpt=false` |
-| `items[].approval` | `null`, or `{required, status, reviewers, assurance, expires}` when `[governance]` requires approval of the item or the lock records one; see [Approvals](approvals.md) |
-| `items[].eval`, `items[].usage` | with `--with-eval` / `--with-usage`: a skill's recorded eval result and use count, see [Eval and usage](#eval-and-usage) |
-| `mcp_servers` | the project's MCP servers: `ref`, `name`, `transport`, `command_basename`, `enabled`, `profiles`, `pinned` (exact version or digest in a package-runner launch; `null` when not applicable), and the *names* of `env` and `headers` entries, each marked `literal` or with the variable it references (`ref`); `warnings` flags an unpinned launch or a credential written as a literal |
-| `edges` | dependencies between items: `{from, to, kind: "uses"}`, where `from` names the skill `to` in its `skills:` frontmatter (both are item refs); roles are not edges, see `items[].roles` |
-| `lint` | project totals, counts per code, and the findings no item owns |
-| `notes` | why a section is missing or narrowed |
+| `items[].excerpt` | First 2 KiB of the body as plain text; off with `--include-excerpt=false` |
+| `items[].approval` | `null`, or `{required, status, reviewers, assurance, expires}`; see [Approvals](approvals.md) |
+| `items[].eval`, `items[].usage` | With `--with-eval` / `--with-usage`; see [Eval and usage](#eval-and-usage) |
+| `mcp_servers` | Each server's `ref`, `name`, `transport`, `command_basename`, `enabled`, `profiles`, `pinned`, and the names of its `env` and `headers` entries, marked `literal` or with the variable they reference; `warnings` flags an unpinned launch or a literal credential |
+| `edges` | `{from, to, kind: "uses"}`: item `from` names skill `to` in its `skills:` frontmatter |
+| `lint` | Project totals, counts per code, and findings no item owns |
+| `notes` | Why a section is missing or narrowed |
 
-MCP servers never expose arguments, URLs, env values or header values: a catalog is published, and those carry launch
-secrets and internal hostnames. Only the executable's file name and the names of env and header entries appear.
+A catalog never contains MCP arguments, URLs, env values or header values, which can hold secrets and internal
+hostnames. Paths are relative to the configuration directory. A consumer should refuse a `schema_version` it does not
+know.
 
-Paths are relative to the configuration directory; no absolute path of the machine appears. A consumer must refuse
-a `schema_version` it does not know. The MCP `catalog` tool prints version 1, equal to the CLI default.
+```json
+{
+  "ref": "skill/-/code-reviewer",
+  "kind": "skill",
+  "id": "code-reviewer",
+  "path": "skills/code-reviewer/SKILL.md",
+  "description": "Specialized agent for code review and quality assurance",
+  "delivery": "static",
+  "source": {"type": "local"},
+  "bytes": 685,
+  "tokens": 148,
+  "digest": "sha256:67cd967c...",
+  "load_cost": {"listing_tokens": 13, "body_tokens": 148, "resource_tokens": 0, "resources": 0},
+  "lint": {"status": "ok", "counts": {"error": 0, "warning": 0, "info": 0}, "findings": []},
+  "approval": null,
+  "roles": []
+}
+```
 
 ## Eval and usage
 
 ```bash
 ai-rulez catalog --format json --schema-version 2 --with-eval --with-usage
-ai-rulez catalog --html site/ --with-eval=path/to/eval-results.json --with-usage=path/to/usage.jsonl
+ai-rulez catalog --html site/ --with-eval=results/eval-results.json --with-usage=logs/usage.jsonl
 ```
 
-Both are off by default. Without a value they read the project's own files, `eval-results.json` in the configuration
-directory and `local/usage.jsonl` (the log the usage hooks write); `--with-eval=FILE` / `--with-usage=FILE` name
-another file (a file called `default` needs `./default`). A missing file is not an error: the catalog's `notes`
-say `eval-results.json not found: eval fields are omitted`, and nothing is invented. A file that cannot be parsed is
-an error.
+Both are off by default. Without a value they read `eval-results.json` in the configuration directory (written by
+[evals](evals.md)) and `local/usage.jsonl` (written by the [usage hooks](usage-telemetry.md)). A missing file is
+noted in `notes` and the fields are omitted; a file that cannot be parsed is an error. To name a file literally
+called `default`, write `./default`.
 
-Only an allowlist of aggregates is copied:
+Only aggregates are copied:
 
-- `eval`: `cases` (scored), `pass_rate`, `passing`, `ablation_delta`, `trigger_precision`, `trigger_recall`, `stale`
-  (the skill's lock digest differs from the one the run recorded), `verified` (the record carries a valid signature
-  of this machine's key; a result committed from another machine is shown but unverified) and `date`.
-- `usage`: `invocations` and `last_seen` (a day). Sessions, harnesses, outcomes, feedback and notes never enter the
-  catalog.
+- `eval`: `cases`, `pass_rate`, `passing`, `ablation_delta`, `trigger_precision`, `trigger_recall`, `stale` (the
+  skill changed since the run), `verified` (signed by this machine's key) and `date`.
+- `usage`: `invocations` and `last_seen` (a day). Sessions, harnesses, outcomes and feedback never enter the catalog.
 
-The log names a skill by id only, so the use of two skills that share an id is left out rather than guessed (the
-notes say so). The overview table gains an Eval and a Uses column when any skill has the data; each item page gets
-an Eval and a Usage table.
-
-## Dependency graph
-
-The site has a `graph.html` page: items that name a skill in their `skills:` frontmatter (agents, skills, rules)
-drawn as an SVG, left to right, so an item sits to the left of the skills it uses (longest path layering; roles
-are drawn in a first column with the items they keep). It is a hand-laid, deterministic drawing: integer
-coordinates, no script, no external library, no `url()` references, and the same bytes for the same catalog. Every
-node links to its item page. The same edges are listed in a table below the drawing, which is the accessible
-alternative to the picture.
-
-A name resolves to the skill of the same domain, else to the root skill, else to the only skill of that name. A name
-that matches nothing, or several skills in other domains, is left out and said in `notes`: it is never guessed. A
-dependency loop is drawn dashed and listed. A graph over 150 items is shown as the table only, and role edges are left
-out past 300.
+Two skills that share an id cannot be told apart in the usage log, so their usage is left out (and said in `notes`).
+The site gains Eval and Uses columns and per-item Eval and Usage tables.
 
 ## Comparing catalogs
 
 ```bash
-ai-rulez catalog diff main                       # a revision against the current project
-ai-rulez catalog diff v5.0.0 HEAD --format json
+ai-rulez catalog diff main                         # a revision against the working tree
+ai-rulez catalog diff v5.10.0 HEAD --format json
 ai-rulez catalog diff before.json after.json --exit-code
 ```
 
-Prints what was added, removed or changed between two catalogs: items (matched by `ref`; a change lists the fields
-that differ: digest, description, owner, version, path, source, delivery, listing/body/resource tokens, lint status,
-approval status, roles), MCP servers (transport, command, pin status, env and header names), roles, dependency edges
-and the lint totals. JSON output validates against `schema/catalog-diff.schema.json`.
+```text
+$ ai-rulez catalog diff HEAD
+catalog diff: HEAD (404870d64340) -> working tree
+totals: 4 -> 5 items   listing tokens 37 -> 37   body tokens 898 -> 901
+items: 1 added, 0 removed, 0 changed
+  + rule/-/naming   (3 tokens)
+lint: 0 errors, 0 warnings, 0 infos -> 0 errors, 2 warnings, 1 infos
+```
 
-Each argument is a catalog JSON file (`catalog --format json --schema-version 2`, or a site's `catalog.json`;
-a `schema_version` other than 2 is refused) or a git revision. A revision is read without touching the working
-tree: `git archive` writes the tracked files of the configuration directory at that commit into a temporary
-directory (bounded in file count and size, extracted through a root so nothing lands outside it, symlinks reported
-and skipped) and a catalog is built from it. With one argument the other side is the current project. Both sides are
-built from the shared configuration only: the machine-local overlay is left out, and remote includes and installed
-skills are not resolved (no network), so compare two `catalog.json` files to cover them. Untracked and ignored files
-are not part of a revision. Both sides are linted against the working tree's repository, so a path the content names
-(`AR401`) is checked the same way on each side, and the plugin version drift check (`AR961`), which compares with
-outputs generated on disk, is left out of both.
+The diff covers items (matched by `ref`; a change lists the fields that differ, such as digest, description, owner,
+tokens, lint or approval status, roles), MCP servers, roles, dependency edges and lint totals. JSON output follows
+[`schema/catalog-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog-diff.schema.json).
 
-Exit code `0` unless the command could not run (`1`); `--exit-code` makes it `2` when the catalogs differ. Text output
-escapes control and bidirectional characters from the (possibly third-party) JSON.
+Each argument is a catalog JSON file (version 2, or a site's `catalog.json`) or a git revision. With one argument the
+other side is the working tree. A revision is read from git without touching your checkout, and both sides are built
+from the shared configuration only:
+
+- the machine-local overlay is left out;
+- remote includes and installed skills are not resolved (no network), so compare two `catalog.json` files to cover
+  them;
+- untracked and ignored files are not part of a revision.
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Done (also when the catalogs differ, unless `--exit-code`) |
+| `1` | The command could not run |
+| `2` | With `--exit-code`: the catalogs differ |
 
 ## Static website
 
@@ -110,70 +141,34 @@ ai-rulez catalog --html site/
 ai-rulez catalog --html site/ --role backend --clean
 ```
 
-Writes a directory with an overview (search by name, domain, owner, kind and lint status), one page per item and
-per role, the MCP servers, the dependency graph, the lock status, the lint findings, an About page, `catalog.json` (the version 2 document the pages are
-rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
+The site has an overview (filter by name, domain, owner, kind and lint status), a page per item and per role, the
+MCP servers, a dependency graph, the lock status, the lint findings, an About page, `catalog.json` (the version 2
+document) and `robots.txt`.
 
-- **Offline.** All links are relative, so the site works from `file://` and under any URL path. Nothing is fetched:
-  no fonts, CDN, analytics or `fetch`. Every page is complete without JavaScript; the script only adds filtering and
-  copy buttons.
-- **Reproducible.** The same input gives the same bytes: no timestamps, no absolute paths, sorted everywhere. The
-  footer shows the tool version and the sha256 of `catalog.json`, not a date. Regenerate and diff to detect a
-  tampered hosted copy.
-- **Escaped.** Every string from the repository goes through `html/template` contextual escaping. Links are built
-  from slugged keys, never from source text; source URLs are text. Invisible and direction-changing characters
-  (bidi controls, zero-width characters) are replaced with U+FFFD and the item is marked "contains hidden
-  characters". Bodies are shown as plain text in `<pre>`, never rendered.
-- **Content-Security-Policy.** Each page carries `default-src 'none'; img-src 'self' data:; style-src 'self';
-  script-src 'self'; base-uri 'none'; form-action 'none'` in a meta tag, and no inline script or style. A host
-  should send the same as response headers plus `frame-ancestors 'none'`, which a meta tag cannot set.
-- **Output directory.** It must be new, empty or contain the marker `.ai-rulez-catalog` (written by an earlier run,
-  listing each file it wrote with its SHA-256). `--clean` removes only a listed file that has the shape of a
-  site file (`index.html`, `items/`, `roles/`, `assets/`, `catalog.json`, ...) and still holds the recorded bytes;
-  without the marker the run is refused, so `--html .` cannot overwrite a project, and a directory with a `.git` or
-  `.ai-rulez` folder is always refused. The marker is written before the files, so an interrupted run leaves the
-  directory marked. Writes never follow a symlink out of the directory.
-- **Secrets.** The run is refused when the secret scanner (`AR001`) flagged an item and the site would publish its
-  excerpt or description; remove the secret, or pass `--allow-findings AR001` (discouraged). The published description and excerpt are also scanned
-  directly, so a lint that did not run, a baselined finding or an inline ignore does not let a secret through.
+- **Self-contained.** Links are relative, so it works from `file://` or any URL path. Nothing is fetched (no fonts,
+  CDN or analytics), and every page works without JavaScript; the script only adds filtering, paging and copy
+  buttons.
+- **Reproducible.** The same input gives the same bytes. The footer shows the tool version and the SHA-256 of
+  `catalog.json` instead of a date, so you can regenerate and compare to detect a tampered hosted copy.
+- **Safe to render.** Every string is HTML-escaped; links are built from slugs, never from source text. Invisible
+  and direction-changing characters are replaced with U+FFFD and the item is marked "contains hidden characters".
+  Bodies are shown as plain text unless you enable [Markdown excerpts](#markdown-excerpts).
+- **Strict Content-Security-Policy.** Each page carries `default-src 'none'; img-src 'self' data:; style-src 'self';
+  script-src 'self'; base-uri 'none'; form-action 'none'`. Send the same as a response header from your host, plus
+  `frame-ancestors 'none'`.
+- **Protected output directory.** The directory must be new, empty, or hold the `.ai-rulez-catalog` marker an
+  earlier run wrote. A directory with `.git` or `.ai-rulez` is always refused. `--clean` removes only files the
+  marker lists that still hold the recorded bytes.
+- **No secrets.** The run is refused when an item the site would publish has a secret finding (`AR001`) in its
+  excerpt or description. Remove the secret, or pass `--allow-findings AR001`.
 
-### Configuration and pages
+The dependency graph (`graph.html`) draws the items that name skills in their `skills:` frontmatter, left to right,
+as a static SVG with the same edges listed in a table. A name resolves to the skill in the same domain, else the root
+skill, else the only skill with that name; anything ambiguous or unresolved is left out and listed in `notes`. Above
+150 items only the table is shown.
 
-```toml
-[catalog]
-title = "Acme catalog"       # site title (--base-title)
-include_excerpt = true       # body excerpts (--include-excerpt); default on, off when indexable
-exclude_owners = false       # leave owner names out of the JSON and the site (--no-owners)
-indexable = false            # let search engines in (--indexable)
-max_items_per_page = 200     # overview rows per page (--max-items-per-page); 0 means 200
-render_markdown = false      # render excerpts as sanitized Markdown (--render-markdown)
-```
-
-Every key is optional and a flag that is given wins. `include_excerpt` and `exclude_owners` also apply to
-`--format json --schema-version 2`. The `[catalog]` table can be overridden in the machine-local config.
-
-The overview lists `max_items_per_page` rows per page. All rows are in the one `index.html` (one `<tbody>` per page),
-so browsing, find-in-page and the no-JavaScript view show everything; the script shows one page at a time with
-Previous/Next buttons and shows every page while a filter is active. The page size does not change `catalog.json`.
-
-### Markdown excerpts
-
-`--render-markdown` (or `render_markdown = true`) shows each item's excerpt as formatted Markdown instead of plain
-text. The renderer is a sanitizer by construction, not by filtering: the text is parsed as CommonMark and turned into
-a tree whose nodes are only paragraphs, headings (shifted to `h3`-`h6`, below the page's own headings), lists, quotes,
-code blocks, emphasis, code spans, line breaks and rules. The tree has no field that holds markup, and the page is
-built from it by `html/template`, so every character of the body is escaped.
-
-- Raw HTML (block or inline, comments included) is shown as literal text, never interpreted.
-- Links are not anchors: the label is kept and the destination is shown as text after it, so a `javascript:`,
-  `data:` or remote URL never becomes an `href`. Images show their alt text and the destination as text; nothing is
-  loaded.
-- Depth is capped at 12 levels and the tree at 4,000 nodes (a notice says so), so a hostile body cannot recurse or
-  inflate the page.
-- The Content-Security-Policy stays as strict as before; the Markdown view needs no script and no new source.
-
-The excerpt is still the first 2 KiB of the body, so a long document is cut mid-structure. Excerpts are off with
-`--indexable` unless asked for.
+A published catalog exposes names, descriptions, owners, token costs and lint findings: publish it only where the
+configuration itself may be read.
 
 ### Freshness check
 
@@ -181,48 +176,64 @@ The excerpt is still the first 2 KiB of the body, so a long document is cut mid-
 ai-rulez catalog --html site/ --check
 ```
 
-Renders the site in memory and compares it with the directory without writing anything. Exit `0` when every file
-matches and nothing else is there, `2` when a file is changed, missing or unexpected (the differences are listed),
-`1` when the check could not run. A directory that does not exist is drift. Because the output is reproducible, the
-same gate detects a tampered hosted copy. Use it in CI to keep a committed site current; `--check` and `--clean` do
-not combine. Files are read through the directory only: a symlink in it is reported, never followed.
+Renders the site in memory and compares it with the directory, writing nothing:
 
-Flags: `--role R` (items role `R` keeps), `--include-excerpt` (default on), `--indexable` (no `robots.txt`, no
-`noindex`; excerpts default off), `--clean`, `--base-title T`, `--allow-findings`, `--render-markdown`, `--max-items-per-page`, `--no-owners`, `--check`, `--with-eval[=FILE]`, `--with-usage[=FILE]`.
+```text
+site/ differs from the catalog site that would be generated:
+  unexpected  items/extra.html
+run `ai-rulez catalog --html site/` to regenerate it
+Error: catalog site is out of date
+```
 
-A published catalog exposes names, descriptions, owners, token costs and lint findings: treat it like the
-configuration directory it describes.
+Exit `0` when the directory matches, `2` when a file is changed, missing or unexpected (or the directory does not
+exist), `1` when the check could not run. Use it in CI to keep a committed site current. `--check` and `--clean`
+cannot be combined.
 
-## Browser tests
+### Markdown excerpts
 
-`go test ./internal/catalogsite` also runs the site in a real headless Chrome or Chromium when one is installed
-(`AI_RULEZ_CHROME` names the executable; `-short` skips them; they skip on their own when no browser is found or it
-does not start). The harness speaks the DevTools protocol over `--remote-debugging-pipe`, so it needs no module and no
-WebSocket. It opens every page of a rich and of a hostile fixture site from `file://` and requires zero
-Content-Security-Policy violations (recorded by a `securitypolicyviolation` listener the protocol injects), no console
-error or warning, no uncaught exception, no JavaScript dialog, no inline script or style, and no request outside the
-file system. It then filters, pages and navigates (overview, item, graph, MCP pages), and a control test injects an
-inline script to prove the policy blocks it, so a zero count is not vacuous. The client itself is also tested against a
-fake browser on every machine.
+`--render-markdown` (or `render_markdown = true`) shows excerpts as formatted Markdown: paragraphs, headings (shifted
+to `h3`-`h6`), lists, quotes, code, emphasis and rules. It stays safe:
 
-## Design decisions
+- raw HTML is shown as text;
+- links and images are not followed: the label or alt text is kept and the destination is shown as text;
+- nesting and size are capped.
 
-- **Builder stays in `internal/govview`.** The issue names `internal/catalog`; the builder already lives in
-  `internal/govview` next to the roles and lock views that the CLI and the MCP tools share, and renaming would touch
-  every caller for no behaviour change. The renderer is a separate package, `internal/catalogsite`.
-- **Dual emit.** Version 1 is the default and `--schema-version 2` opts in (the issue's proposed answer). The HTML
-  command always builds version 2.
-- **Excerpt default.** On locally, off with `--indexable` (the issue's proposal); `--include-excerpt` overrides.
-- **Secret check reuses `AR001`.** No new rule code.
-- **Lint at the configured level.** Findings come from the in-process lint engine with the project's `[lint]`
-  settings, not the strict level.
-- **No `catalog-data.js`.** The pages are server-rendered and the filter reads the table rows, so a second copy of the
-  data is not needed; `catalog.json` is the machine contract.
-- **Approval.** The overview has an Approval column (the status, or `not required`); the item page shows the status with
-  `(required)`, the reviewers, their assurance level and the expiry, escaped like every other value.
-- **Pagination is presentational.** All rows are in `index.html` in groups of `max_items_per_page`; the script pages them. Real per-page files would break filtering across pages and find-in-page.
+The excerpt is still the first 2 KiB of the body, so a long document may be cut mid-structure.
 
-## Not yet implemented
+## Configuration
 
-These are not available: the flags `--no-lint-messages`, `--link-sources` and `--single-file`, an HTML page for
-`catalog diff` (the command prints text or JSON only), and approval or signature attestations in the diff.
+```toml
+[catalog]
+title = "Acme catalog"       # site title (--base-title)
+include_excerpt = true       # body excerpts (--include-excerpt)
+exclude_owners = false       # leave owner names out (--no-owners)
+indexable = false            # let search engines index the site (--indexable)
+max_items_per_page = 200     # overview rows per page (--max-items-per-page)
+render_markdown = false      # Markdown excerpts (--render-markdown)
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `title` | `AI-Rulez catalog` | Site title |
+| `include_excerpt` | `true`, `false` when `indexable` | Include body excerpts (site and version 2 JSON) |
+| `exclude_owners` | `false` | Leave owner names out of the site and version 2 JSON |
+| `indexable` | `false` | Drop `robots.txt` and `noindex` |
+| `max_items_per_page` | `200` (`0` means 200) | Rows per overview page; all rows stay in `index.html`, so find-in-page and the no-JavaScript view show everything |
+| `render_markdown` | `false` | Render excerpts as Markdown |
+
+Every key is optional; a flag overrides it. The table can also be set in `config.local.toml`.
+
+## Flags
+
+| Flag | Meaning |
+| --- | --- |
+| `--format text\|json`, `--schema-version 1\|2` | Output format |
+| `--html <dir>` | Write the site |
+| `--role <name>` | With `--html`: only the items this role keeps |
+| `--check`, `--clean` | With `--html`: compare without writing; remove files the site no longer has |
+| `--base-title`, `--include-excerpt`, `--no-owners`, `--indexable`, `--max-items-per-page`, `--render-markdown` | See [Configuration](#configuration) |
+| `--allow-findings <codes>` | With `--html`: publish despite these findings |
+| `--with-eval[=FILE]`, `--with-usage[=FILE]` | Add eval and usage aggregates |
+| `--no-local` | Ignore the machine-local overlay |
+
+See the [CLI reference](cli-reference.md#ai-rulez-catalog).

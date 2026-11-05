@@ -1,210 +1,256 @@
 # Agent Plugins
 
-ai-rulez packages a project's skills and MCP servers as an [Agent Plugins](https://agent-plugins.org) plugin directory, so
-any client that conforms to the standard can load them. The same code builds the package, validates it and reads it back
-(`internal/agentplugins`); it checks `plugin.json` and `mcp.json` against the official JSON Schemas, which are vendored and
-pinned for each supported version.
+The `agent-plugins` plugin runtime packages your skills and MCP servers as an [Agent Plugins](https://agent-plugins.org)
+directory: a root `plugin.json`, a `skills/` tree and an `mcp.json`, which any client that implements the standard can
+load. ai-rulez validates the package against the official JSON Schemas of the spec version you choose, and drops (and
+reports) anything a conformant client would skip.
 
 | Spec | Status | `$schema` of `plugin.json` |
 | --- | --- | --- |
-| 1.0.0 | published, the default | `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json` |
-| 1.1.0 | working draft | `https://agent-plugins.org/schemas/1.1.0/plugin.schema.json` |
+| `1.0.0` | published; the default | `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json` |
+| `1.1.0` | working draft | `https://agent-plugins.org/schemas/1.1.0/plugin.schema.json` |
 
-`mcp.json` carries the matching `mcp.schema.json` identifier. The two files always name the same version.
+`mcp.json` carries the matching `mcp.schema.json`. The `copilot` runtime and the `codex` runtime with
+`[plugin.codex] manifest = "root"` write the same package and follow the same `spec` (see
+[Authoring plugins](plugins.md#runtime-specific-settings)).
 
-## Enable it
+## Example
 
 ```toml
+# .ai-rulez/config.toml
+version = "5.0"
+name = "acme-tools"
+
 [plugin]
-name = "acme.tools"
+name = "acme-tools"
 version = "1.2.0"
-description = "Acme review tooling."
+description = "Code review skills and an MCP server for Acme repositories."
+license = "MIT"
+repository = "https://github.com/acme/acme-tools"
+keywords = ["review", "mcp"]
 runtimes = ["agent-plugins"]
-spec = "1.1.0"          # optional; 1.0.0 when unset
+include = ["scripts/**"]          # ship .ai-rulez/scripts/ in the package
+# spec = "1.1.0"                  # optional; 1.0.0 when unset
+
+[plugin.author]
+name = "Acme Tooling"
+email = "tooling@acme.example"
+
+[[plugin.mcp]]
+name = "acme-docs"
+command = "${PLUGIN_ROOT}/scripts/mcp-launch.sh"
+args = ["serve"]
+env = { ACME_TOKEN = "${ACME_TOKEN}" }
 ```
+
+The source tree holds `.ai-rulez/skills/review-pr/` (a `SKILL.md` and `scripts/lint.sh`) and
+`.ai-rulez/scripts/mcp-launch.sh`.
 
 ```bash
-ai-rulez generate --plugin     # writes plugin.json, skills/ and mcp.json at the project root
-ai-rulez verify --plugin       # fails when a generated file was edited or no longer matches its sources
-ai-rulez validate --strict     # AR9O0-AR9O5 for anything a conformant client would skip
+ai-rulez generate --plugin
 ```
 
-The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the same package, so they follow `spec` too.
+```text
+WARN  Agent Plugins: env ACME_TOKEN = "${ACME_TOKEN}" is dropped: Agent Plugins expands no environment placeholder, so the client must supply ACME_TOKEN itself ...
+INFO  Plugin generation complete files=...
+```
+
+The package is written at the project root:
+
+```text
+plugin.json
+mcp.json
+skills/review-pr/SKILL.md
+skills/review-pr/scripts/lint.sh
+scripts/mcp-launch.sh
+.ai-rulez-generated.json
+```
+
+`plugin.json`:
+
+```json
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "acme-tools",
+  "version": "1.2.0",
+  "description": "Code review skills and an MCP server for Acme repositories.",
+  "author": {
+    "name": "Acme Tooling",
+    "email": "tooling@acme.example"
+  },
+  "repository": "https://github.com/acme/acme-tools",
+  "license": "MIT",
+  "keywords": ["review", "mcp"]
+}
+```
+
+`mcp.json`:
+
+```json
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "acme-docs": {
+      "type": "stdio",
+      "command": "./scripts/mcp-launch.sh",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+The `${PLUGIN_ROOT}/` command became `./`, and the `ACME_TOKEN` forward was dropped: the client must provide that
+variable itself. The drop is reported as `AR9O3`, so `validate --strict` exits 2 until you remove the `env` line.
+
+Check the package:
+
+```bash
+ai-rulez verify --plugin      # fails when a generated file was edited or no longer matches its sources
+ai-rulez validate --strict    # AR9O0-AR9O5 for anything a conformant client would skip
+```
 
 ## Field mapping
 
 | ai-rulez | Package | Notes |
 | --- | --- | --- |
 | `[plugin] name` | `plugin.json` `name` | 1-64 characters from `a-z0-9.-`, starting and ending alphanumeric, no `--` or `..` |
-| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | `version` may come from `version_from` (`package.json`, `pyproject.toml`, `Cargo.toml`) instead |
-| `[plugin.author]` `name`, `email`, `url` | `author` | an empty author is omitted |
+| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | `version` may come from `version_from` |
+| `[plugin.author]` `name`, `email`, `url` | `author` | omitted when empty |
 | `[plugin] spec` | `$schema` of `plugin.json` and `mcp.json` | |
-| `[plugin.interface]` (codex root layout) | `extensions["com.openai"].interface` | keys are written sorted |
-| skills (`.ai-rulez/skills/<name>/`) | `skills/<name>/SKILL.md`, with `scripts/`, `references/` and other files | `SKILL.md` is copied byte for byte; only the immediate children of `skills/` are read by clients |
-| `[[mcp_servers]]` or `[[plugin.mcp]]`, stdio | `mcp.json` `mcpServers.<name>` with `type = "stdio"`, `command`, `args`, `env` | see [MCP servers](#mcp-servers) |
-| `[[mcp_servers]]` or `[[plugin.mcp]]`, `transport = "http"` | `type = "streamable-http"`, `url` | `url` must be HTTPS, or HTTP to localhost |
-| `transport = "sse"` | `type = "sse"`, `url` | only when configured explicitly |
-| `enabled = false` | not packaged | the format has no flag; reported as `AR9O4` |
-| `headers` | `headers` (remote servers) | plugin bundles do not carry project server headers today |
-| agents, commands, hooks | not written | they belong in a client's extension namespace, see [Extensions](#extensions) |
-| rules, context | not written | the `io.github.goldziher.ai-rulez` namespace is read on import |
-| `[plugin] include` | the matched files, at their relative path | globs relative to the content root; see [Bundling files](#bundling-files) |
-
-## OpenCode and Pi packages
-
-The `opencode` and `pi` runtimes write a root `package.json`. By default ai-rulez fully owns it:
-`verify --plugin` compares it byte for byte, so a hand edit to any field is reported as drift. Two
-`[plugin]` keys tune the fields a consumer cannot otherwise change, and every other field (`name`,
-`version`, `description`, `repository`, `files`, `exports`, the Pi `pi` block, ...) is derived from
-the manifest.
-
-| ai-rulez | `package.json` | Notes |
-| --- | --- | --- |
-| `[plugin] package_manager` | `packageManager` | e.g. `"pnpm@9.15.0"`; omitted when unset |
-| `[plugin] opencode_dependency` | `dependencies["@opencode/plugin"]` | OpenCode only; unset uses the built-in default (`^2.0.26`) |
-| `[plugin.pi] skills_dir` | the `pi.skills` paths | Pi only; default `.pi/skills`, `skills` reuses the tree the other runtimes write |
-| `[plugin.pi] package_json` | ownership of the file | Pi only; `merge` updates only the identity keys and keeps the rest |
-
-`[plugin.pi] package_json = "merge"` opts the Pi runtime out of full ownership: ai-rulez updates only
-the keys it owns (`name`, `version`, `description`, `author`, `repository`, `keywords`, `pi`, `files`)
-and keeps every other key (`devDependencies`, `scripts`, `packageManager`, ...). `verify --plugin`
-then reports drift only on those owned keys.
-
-```toml
-[plugin]
-name = "acme.tools"
-version = "1.2.0"
-description = "Acme review tooling."
-runtimes = ["opencode"]
-package_manager = "pnpm@9.15.0"
-opencode_dependency = "^2.1.0"
-```
-
-## Bundling files
-
-The specification lets a package carry arbitrary files beside `plugin.json`, `mcp.json` and `skills/` (§4.2), and a stdio
-`command` may be a `./`-relative path into them (§7.2.1). `[plugin] include` is how ai-rulez ships such a file:
-
-```toml
-[plugin]
-name = "basemind"
-version = "0.19.2"
-description = "Code-map MCP server."
-runtimes = ["agent-plugins"]
-include = ["scripts/**"]
-
-[[plugin.mcp]]
-name = "basemind"
-command = "./scripts/mcp-launch.sh"
-args = ["serve"]
-```
-
-Each glob is matched against the plugin's content root — `[plugin] content_root` when set, otherwise the config directory
-(`.ai-rulez/`). `**` crosses directories, `*` and `?` do not, and a trailing `/` matches everything below the directory.
-A matched file is copied verbatim, keeping its relative path and its executable bit, and is recorded with its
-`Content-Hash` in `.ai-rulez-generated.json` like a skill, so `verify --plugin` reports a changed or missing included file
-as drift and `publish --emit agent-plugins` carries it. The manifest, `mcp.json`, the `skills/` tree and the provenance
-sidecar are never matched, so a broad glob cannot clobber the package. A glob that escapes the content root — absolute, a
-drive letter, or containing `..` — is refused at configuration load.
-
-Once an included file resolves a `./`-relative `command`, `validate --strict` stops reporting `AR9O2` for it; a command
-with no matching file keeps the warning.
-
-`[plugin] shared_resources` is the per-skill variant: instead of copying a directory once at the package root, it copies
-it into **every** bundled skill, at `skills/<name>/<directory>/…`, so a skill keeps its reference docs and templates when
-installed on its own. A relative `SKILL.md` link that climbs out of the skill to the shared directory
-(`../../references/x.md`) is rewritten to the copy (`references/x.md`), the copies are recorded in `.ai-rulez-generated.json`
-like the skill's own files, and a name clash with a file the skill already has is an error rather than a silent overwrite.
-
-By default the bundled `SKILL.md` and other comment-safe files carry the ai-rulez generated-file
-header. Set `[plugin] provenance_headers = false` to write them byte-identical to their sources
-instead; the sidecar still records each file's `Content-Hash`, so `verify --plugin` and
-`publish --emit agent-plugins` behave the same.
+| `[plugin.interface]` (codex root layout only) | `extensions["com.openai"].interface` | keys sorted |
+| skills (`.ai-rulez/skills/<name>/`) | `skills/<name>/`, with `SKILL.md`, `scripts/`, `references/` and other files | a skill without a `description`, or whose `name` differs from its directory, is not packaged |
+| `[[plugin.mcp]]`, or `[[mcp_servers]]` when the plugin declares none | `mcp.json` `mcpServers.<name>` | see [MCP servers](#mcp-servers) |
+| `enabled = false` on a server | not packaged | the format has no disabled flag; reported as `AR9O4` |
+| `[plugin] include` | the matched files, at their relative path | see [Bundling files](#bundling-files) |
+| agents, commands, hooks | not written | outside the standard; see [Extensions](#extensions) |
+| rules, context | not written | read back on [import](#import) only |
 
 ## MCP servers
 
-The specification expands only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, and only in `args`, `env` values and `cwd`.
+| Server | `mcp.json` entry |
+| --- | --- |
+| stdio (`command`) | `type = "stdio"`, `command`, `args`, `env` |
+| `transport = "http"` | `type = "streamable-http"`, `url`; the URL must be HTTPS, or HTTP to localhost |
+| `transport = "sse"` | `type = "sse"`, `url` |
 
-- `command` is one token: a bare name (`npx`) or a `./` path inside the plugin. A `${PLUGIN_ROOT}/bin/server` command is
-  rewritten to `./bin/server` (a lossless rewrite, reported as info). A `./` path that is not in the package is a warning
-  (`AR9O2`); ship the file with `[plugin] include` (see [Bundling files](#bundling-files)).
-- An `env` entry that only forwards a variable of the same name (`API_KEY = "${API_KEY}"`) is left out: no client
-  expands it, so the client has to supply `API_KEY` itself. This is reported as `AR9O3` (warning).
-- Any other `${VAR}` (in `args`, `env`, `url`, `headers`) is rejected: the server is not packaged and the finding is an
-  error (`AR9O3`). `generate --plugin` logs it, `validate --strict` fails on it and `publish` stops.
-- `PLUGIN_ROOT` and `PLUGIN_DATA` may not be set in `env`: the client supplies them.
+Clients expand only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, and only in `args`, `env` values and `cwd`. ai-rulez
+applies these rules:
+
+- `command` is one token: a bare name (`npx`) or a `./` path inside the package. `${PLUGIN_ROOT}/bin/server` is
+  rewritten to `./bin/server`. A `./` path that is not in the package is a warning (`AR9O2`); ship the file with
+  [`include`](#bundling-files).
+- An `env` entry that only forwards a variable of the same name (`API_KEY = "${API_KEY}"`) is left out, with a
+  warning (`AR9O3`). The client has to supply `API_KEY`.
+- Any other `${VAR}` in `args`, `env`, `url` or `headers` is an error (`AR9O3`): the server is not packaged,
+  `validate` fails and `publish` stops.
+- `PLUGIN_ROOT` and `PLUGIN_DATA` may not be set in `env`; the client supplies them.
+
+## Bundling files
+
+A package may carry arbitrary files beside `plugin.json`, `mcp.json` and `skills/`, and a stdio `command` may point
+into them. `[plugin] include` lists globs of files to copy:
+
+- Globs are matched against the content root: `[plugin] content_root` when set, otherwise the config directory
+  (`.ai-rulez/`). The matches are written at the same relative path at the package root, so
+  `.ai-rulez/scripts/mcp-launch.sh` becomes `scripts/mcp-launch.sh`. For the other runtimes, which have no `include`,
+  keep such a file at the repository root yourself (see [Authoring plugins](plugins.md#mcp-servers)).
+- `**` crosses directories, `*` and `?` do not, and a trailing `/` matches everything below a directory.
+- Matched files are copied verbatim, keeping their relative path and executable bit, and are recorded in
+  `.ai-rulez-generated.json`, so `verify --plugin` reports a changed or missing copy.
+- `plugin.json`, `mcp.json`, `skills/` and the provenance sidecar are never matched, so a broad glob cannot overwrite
+  them.
+- A glob that is absolute or contains `..` is rejected when the configuration loads.
+
+`include` applies to the packages this page describes (`agent-plugins`, `copilot`, and `codex` with the root layout).
+For copying shared reference files into every skill, see
+[Shared resources across skills](plugins.md#shared-resources-across-skills).
 
 ## Extensions
 
-Content that only one client understands lives under a reverse-domain namespace, either as manifest data
-(`plugin.json` `extensions.<namespace>`) or as files (`<namespace>/`). Clients ignore namespaces they do not implement.
+Content only one client understands goes under a reverse-domain namespace, either as manifest data
+(`plugin.json` `extensions.<namespace>`) or as files (`<namespace>/...`). Clients ignore namespaces they do not
+implement.
 
-| Namespace | Content |
-| --- | --- |
-| `com.anthropic.claude-code` | `agents/<name>.md`, `commands/<name>.md`, `hooks/hooks.json` |
-| `com.openai` | the Codex `interface` block (manifest data) |
-| `io.github.goldziher.ai-rulez` | `rules/<name>.md`, `context/<name>.md` |
-| `com.github.copilot` | `agents/<name>.agent.md` (the `copilot` runtime) |
+| Namespace | Content | Written by `generate --plugin` |
+| --- | --- | --- |
+| `com.openai` | the Codex `interface` block (manifest data) | with the `codex` root layout |
+| `com.github.copilot` | `agents/<name>.agent.md` | with the `copilot` runtime |
+| `com.anthropic.claude-code` | `agents/<name>.md`, `commands/<name>.md`, `hooks/hooks.json` | no; read on import |
+| `io.github.goldziher.ai-rulez` | `rules/<name>.md`, `context/<name>.md` | no; read on import |
 
-`generate --plugin` writes the Codex block and the Copilot agents; the other namespaces are read on import and written by
-the library when a caller supplies them.
+## Validation
 
-## Determinism and verification
-
-The package is sorted, has no timestamps and is rendered with two-space JSON and a trailing newline. Every generated file
-is recorded with its `Content-Hash` in `.ai-rulez-generated.json`, so `generate --check` and `verify --plugin` cover
-`plugin.json`, `mcp.json` and the skills, and `publish` pins the whole bundle in its manifest and `SHA256SUMS`.
-
-## Validation and the AR9O codes
-
-`validate --strict` builds the package in memory and validates it as a client loads it. `publish` runs the same check on
-the bundle it packages, in `--dry-run` as well, and fails with the first error's code and exit status 2.
+`validate` builds the package in memory and checks it as a client would load it. `publish` runs the same check
+on the bundle it packages, in `--dry-run` as well, and stops with exit status 2 on the first error. Only single-plugin
+projects are checked by `validate`; marketplace members are checked when they are published.
 
 | Code | Meaning |
 | --- | --- |
-| `AR9O0` | `plugin.json` is missing or invalid, the spec is unsupported, or an extension namespace is invalid |
+| `AR9O0` | `plugin.json` is missing or invalid, the spec version is unsupported, or an extension namespace is invalid |
 | `AR9O1` | a skill breaks the Agent Skills rules (name, description, frontmatter) or is not at `skills/<name>/SKILL.md` |
-| `AR9O2` | `mcp.json` or a server entry fails the schema or the rules for `command`, `url` and headers |
+| `AR9O2` | `mcp.json` or a server fails the schema or the rules for `command`, `url` and headers |
 | `AR9O3` | an unsupported `${VAR}` placeholder |
-| `AR9O4` | a field or server that cannot be packaged was left out |
-| `AR9O5` | a path or link that resolves outside the plugin root, or a file that cannot be read |
+| `AR9O4` | a field or server that cannot be packaged was left out (warning) |
+| `AR9O5` | a path or link resolves outside the package root, or a file cannot be read |
 
-`validate --explain AR9O3` prints the rule. Only single-plugin projects are checked by `validate --strict`; the members of
-a marketplace are checked when they are published.
+`ai-rulez validate --explain AR9O3` prints the rule with examples.
 
-## Publish
+Every generated file is recorded with its `Content-Hash` in `.ai-rulez-generated.json`, so `verify --plugin` covers `plugin.json`, `mcp.json`, the skills and included files. The output is deterministic: sorted,
+no timestamps, two-space JSON with a trailing newline.
 
-The specification defines no archive, registry or signature. ai-rulez reuses its [publish](publish.md) pipeline: the
-bundle with the `agent-plugins` runtime travels in the release archive, the npm package or the OCI artifact, and is signed
-with the rest of the release (`--sign-key`, `--sign-keyless`). These distribution steps sit outside the specification.
+## Publishing
 
-`--emit agent-plugins` (or `[[publish.emitters]] name = "agent-plugins"`) writes each plugin as a clean directory,
-`emit/agent-plugins/<name>/`, holding only the Agent Plugins files (no `.claude-plugin/`, no other runtime). The directory
-is read back and written again by the library, so anything a client would skip is reported rather than shipped. The option
-`spec` converts the package to another version: `options = { spec = "1.1.0" }`.
+The standard defines no archive, registry or signature. The package travels in the regular [publish](publish.md)
+outputs (release archive, npm package or OCI artifact) and is signed with the rest of the release.
+
+To get a directory that holds only the Agent Plugins files, without the other runtimes' manifests, use the
+`agent-plugins` emitter:
+
+```bash
+ai-rulez publish emit agent-plugins --output-dir out
+```
+
+```text
+out/acme-tools/plugin.json
+out/acme-tools/mcp.json
+out/acme-tools/scripts/mcp-launch.sh
+out/acme-tools/skills/review-pr/SKILL.md
+out/acme-tools/skills/review-pr/scripts/lint.sh
+```
+
+Like every `publish` command, `publish emit` runs the [publish preflight](publish.md#pipeline) first: the project must
+be committed and locked (`ai-rulez lock`), and the bundle up to date. The emitter reads the generated package back,
+validates it and writes it again, one directory per plugin. To convert
+the package to another spec version, set the `spec` option:
+
+```toml
+[[publish.emitters]]
+name = "agent-plugins"
+options = { spec = "1.1.0" }
+```
 
 ## Import
 
+`ai-rulez convert` reads an Agent Plugins directory into an `.ai-rulez/` tree:
+
 ```bash
-ai-rulez convert --from agent-plugins ./some-plugin --write
+ai-rulez convert --from agent-plugins --source ./some-plugin --into "$PWD/.ai-rulez" --write
 ```
 
-`convert` reads an Agent Plugins directory into `.ai-rulez/`: `plugin.json` becomes the `[plugin]` block (with
-`runtimes = ["agent-plugins"]` and `spec` when it is not 1.0.0), skills keep their `scripts/` and `references/`, `mcp.json`
-becomes `[[mcp_servers]]`, and the Claude Code, Copilot and ai-rulez namespaces become agents, commands and rules. The
-report lists what has no equivalent: bundled root files, unknown namespaces, `hooks/hooks.json` and a server `cwd`. A
-manifest without `version` or `description` cannot form a `[plugin]` block, so none is written and the report says so. The
-provenance header ai-rulez writes into generated Markdown is removed on import.
+`--into` is relative to `--source` unless absolute; without it the tree is written to `./some-plugin/.ai-rulez/`.
 
-Export, import and export again give identical bytes; a test pins this for 1.0.0 and 1.1.0.
+| Package | Becomes |
+| --- | --- |
+| `plugin.json` | the `[plugin]` block, with `runtimes = ["agent-plugins"]` (and `spec` when not 1.0.0) |
+| `skills/<name>/` | skills, with their `scripts/`, `references/` and other files |
+| `mcp.json` | `[[mcp_servers]]` |
+| `com.anthropic.claude-code`, `com.github.copilot`, `io.github.goldziher.ai-rulez` | agents, commands and rules |
 
-## Differences from earlier output
+The report lists what has no equivalent: other files at the package root, unknown namespaces, `hooks/hooks.json` and a
+server `cwd`. A manifest without `version` or `description` cannot form a `[plugin]` block, so none is written and the
+report says so. The generated-file header ai-rulez writes into Markdown is removed on import.
 
-The `agent-plugins` runtime used to write the manifest without checking it. Building with the library changes the output
-only where the specification requires:
+## See also
 
-- A skill without a `description`, or whose `name` differs from its directory, is not packaged (clients skip it).
-- An MCP server with a `${VAR}` placeholder other than `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` is not packaged.
-- A disabled server is not packaged (it used to be bundled enabled).
-- A `env` entry `KEY = "${KEY}"` is left out.
-- The Codex `interface` block is written with sorted keys.
+- [Authoring plugins](plugins.md): all plugin runtimes and the `[plugin]` block.
+- [Publish](publish.md)

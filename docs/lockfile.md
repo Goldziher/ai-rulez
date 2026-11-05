@@ -1,124 +1,123 @@
-# Lock File
+# Lock file
 
-`ai-rulez.lock` (in the configuration directory, committed) is the record of exactly what your AI configuration
-is made of. It pins three things:
+`ai-rulez.lock` records exactly what your AI configuration is made of: every remote source by commit and digest, every
+authored rule, skill, hook and role by content digest, and every generated file by output digest. Commit it, and CI
+fails whenever any of it changes without a reviewed lock update.
 
-1. **Remote sources**: every git include and installed skill, by commit and tree digest (as before), and every installed marketplace (`[[marketplace]]`) and plugin (`[[plugin]]`, see [Installed Plugins](installed-plugins.md#lock-update-and-refresh)).
-2. **Authored content**: a `sha256` digest of every rule, context file, skill (with its resources), agent,
-   command, hook and role, with its `id`, `domain`, `owner` and `version` when the frontmatter has them.
-3. **Generated outputs**: a digest of each generated file, so a change to what agents are actually told shows up
-   in review even when nobody touched a source.
+## Example
 
-One file, one `tree` digest over all of it, under **one hashing scheme** for every kind (authored items, outputs,
-remote includes, installed skills, skill sources, OKF includes and served skills). Lock `version = 1`, or `version = 2`
-when the lock holds role output pins (`[roles]` `pin = true`); `lock` writes 2 only then, so a lock without role pins stays
-readable by older builds. A lock with any other version is refused with an instruction to run `ai-rulez lock` again.
-A build that predates version 2 refuses a version 2 lock the same way, rather than reading a role pin as a default output
-with no path; do not run `ai-rulez lock` with that older build, it would write the lock without the role pins.
+```bash
+ai-rulez generate
+ai-rulez lock               # writes .ai-rulez/ai-rulez.lock
+git add .ai-rulez/ai-rulez.lock
+```
 
-## Threat model
+```toml
+# .ai-rulez/ai-rulez.lock (excerpt)
+version = 1
+ai_rulez_version = '5.10.0'
+scope = 'all'
+outputs_pinned = true
+tree = 'sha256:4dd87fd5ae23b632928921220800a83b679b58a58cd0e2fa3127cd5196dfcbee'
 
-Skills, rules and hooks are instructions an agent follows and, for hooks and skill scripts, code it runs. That makes
-them a supply chain:
+[[item]]
+kind = 'hook'
+id = 'PreToolUse:Bash:0'
+digest = 'sha256:b99ff8c5372c10a70d8862804dbbbc53d26999e3a78f97ebfea20b4cd1312fd3'
 
-- a **remote include or skill** can move (a branch is force-pushed, a maintainer account is compromised);
-- a **skill resource** (a script under `scripts/`, a file under `assets/`) can change without its `SKILL.md`
-  changing, and a `SKILL.md` diff may be a small part of a large pull request;
-- a **merge** or a **dependency bump** can alter the rendered output in a way nobody read.
+[[item]]
+kind = 'skill'
+id = 'deploy'
+path = 'skills/deploy'
+digest = 'sha256:70094bee730997ae05d11499b29571a05dde6cb5f17a4af98ed29465ba50d855'
+owner = 'platform'
+version = '1.2.0'
 
-What the lock gives you:
+[[output]]
+path = '.claude/skills/deploy/scripts/run.sh'
+digest = 'sha256:e1bc260327c43375d60e256fc3326b836570497802c043c40572acbc921831a4'
 
-| It detects | How |
-| --- | --- |
-| A remote source serving different bytes than you reviewed | commit and tree digest |
-| An added, removed or edited rule / skill / resource / hook / role | per-item digest, named in the check output |
-| An executable bit added to a script | the file mode is part of the digest |
-| A change in what gets generated, by any cause | output digests |
-| An accidentally edited or truncated lock | the `tree` digest no longer matches the pins, or is missing |
-| A lock replaced by one without content pins (a downgrade) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate` fail |
+[[output]]
+path = 'AGENTS.md'
+digest = 'sha256:2f8b8a8663f9f37c61f43723c6588bcf0b0191d90a558f59bce03ea24727d3e9'
+...
+```
 
-The `tree` digest is an integrity check, not a signature: whoever can edit the lock can recompute it (`ai-rulez
-lock` does exactly that). It catches accidental edits and merge mistakes; a deliberate change to the pins is caught
-by review of the lock diff and by CI running `lock --check` against the sources, not by the digest.
+Someone then edits a skill script and adds a rule. The check names each difference and exits `2`:
 
-What it does **not** do: it does not say *who* published a change, it does not sandbox anything, and it cannot
-tell a malicious edit from a good one. It makes every change explicit and reviewable; a human still reviews it
-(see [Reviewing lock diffs](#reviewing-lock-diffs)). Pair it with `ai-rulez scan` / `validate` for the
-content itself. ai-rulez does not sign or verify signatures itself; [Signing the lock](#signing-the-lock) shows
-how to do it with `cosign`.
+```console
+$ ai-rulez lock --check
+ai-rulez.lock does not match /work/acme/.ai-rulez:
+  ...
+  source added    rule security (rules/security.md)
+  source changed  skill deploy (skills/deploy)
+  output changed  output .agents/skills/deploy/scripts/run.sh
+  output changed  output .claude/skills/deploy/scripts/run.sh
+  output changed  output AGENTS.md
+run `ai-rulez lock` to refresh it (after reviewing the change with `ai-rulez lock --diff`)
+```
+
+Review the change, then accept it with `ai-rulez lock`. `generate` never writes the lock; accepting a change is always
+an explicit `ai-rulez lock`.
 
 ## What is pinned
 
-| `kind` | id | Pinned files |
+| `kind` | id | What the digest covers |
 | --- | --- | --- |
-| `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them); for an agent, skill or command whose frontmatter declares `hooks`, also each project script those hooks run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
+| `rule`, `context`, `agent`, `command`, `check` | the item name | the source file; a command's resources; the project scripts that frontmatter `hooks` run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
 | `skill` | the skill directory name | `SKILL.md`, every loaded resource (`references/`, `scripts/`, `assets/`) and the project scripts its frontmatter `hooks` run |
-| `local-skill` | the skill name | the directory of a skill that an `installed_skills` entry reads from a local source (`SKILL.md` and bundled files) |
-| `local-marketplace`, `local-plugin` | the entry name | the whole directory tree (hooks, scripts and all) of an `installed_marketplaces` or `installed_plugins` entry whose `source` is a local directory; a plugin of a local marketplace is covered by the marketplace item |
-| `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`, `verifiers`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
-| `settings` | `permissions`, `claude-managed`, `mcp-servers`, `verifiers-settings` | the `[permissions]`, `[claude.settings.managed]`, `[[mcp_servers]]` and `[verifiers_settings]` sources (MCP servers as written, placeholders unresolved) |
-| `verifier` | the verifier id (`name` of a flat or inline entry) | the declaration as written: a `[[verifiers]]` entry of `config.toml`, or one table of `.ai-rulez/verifiers/*.toml` (`path` names the file). Lowering a `severity`, widening an `exclude` or deleting a verifier changes the pin. Verifiers imported through an include are covered by the include's own pin |
-| `rubric` | the rubric directory name | every file under `.ai-rulez/rubrics/<id>/` (`rubric.toml`, `system.md`, golden cases and fixtures, `calibration.json`); `path` is `rubrics/<id>`. Editing a rubric, its prompt or its labels, or re-calibrating, changes the pin ([Review](review.md#rubrics)). A symlink in the directory is a lock problem |
+| `settings` | `permissions`, `claude-managed`, `mcp-servers`, `verifiers-settings` | the `[permissions]`, `[claude.settings.managed]`, `[[mcp_servers]]` (placeholders unresolved) and `[verifiers_settings]` tables |
+| `verifier` | the verifier name | the declaration as written, in `config.toml` or `.ai-rulez/verifiers/*.toml`; lowering a `severity`, widening an `exclude` or deleting a verifier changes the pin |
+| `rubric` | the rubric directory name | every file under `.ai-rulez/rubrics/<id>/`, including golden cases and `calibration.json` ([Review](review.md#rubrics)) |
+| `local-include` | the include name | the content directories of an include whose `source` is a local path; an OKF include is pinned whole |
+| `local-skill` | the skill name | the directory of an `[[installed_skills]]` entry with a local source |
+| `local-marketplace`, `local-plugin` | the entry name | the whole tree of an `[[installed_marketplaces]]` or `[[installed_plugins]]` entry with a local source |
 
-Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
-configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through
-the output pins, so with `include_outputs = false` (or `scope = "skills"`) it is not covered. Keep output pins on
-when you rely on the lock for these.
+Remote sources have their own tables, pinned by commit and tree digest: `[[include]]`, `[[skill]]` (installed skills),
+`[[source]]` (skill sources), `[[marketplace]]` and `[[plugin]]`
+([Installed plugins](installed-plugins.md#lock-update-and-refresh)).
+Built-in packs are pinned by the ai-rulez version.
 
-Content from remote includes and built-in packs is not listed item by item: includes are pinned by their own
-digest, built-ins by the ai-rulez version. A local-path include is pinned as one `local-include` item over its
-content directories, wherever it lives (inside the repository or outside it). A missing path cannot be pinned:
-`lock` warns and `lock --check` fails until it is fixed. A symlink inside the pinned tree is never followed: it is
-pinned as its own entry, by link target (see below), and the loader does not read it. A `local_override` path is a
-development shortcut and is not pinned.
+**Outputs** (`[[output]]`) are pinned from the in-memory rendering with the `Content-Hash`, `Source-Hash` and
+`Generated:` header lines removed, so the digests do not depend on `[header]` settings. Not pinned: machine-local
+outputs, outputs that may carry resolved secrets, and merged documents in which you own some keys (their ai-rulez
+sources are pinned instead).
 
-The lock file itself is never followed through a symlink. `lock` replaces a symlinked `ai-rulez.lock` with a
-regular file on write (it never writes through the link), and every command that only reads the lock refuses a
-symlinked one with an error, so a link cannot point the pins at another file. Delete the link and run
-`ai-rulez lock` to recreate it.
+**Not pinned at the source**: profiles, `include` configuration, scoped (monorepo) configuration, plugin and
+marketplace authoring, and the machine-local overlay. A change there shows up only through the output pins, so keep
+`include_outputs` on if you rely on the lock for them. A `local_override` path is a development shortcut and is not
+pinned.
 
-Outputs are pinned from the in-memory rendering, before the hash lines (`Content-Hash`, and `Source-Hash` with `hashes = "full"`) are injected and
-with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
-not `[header] timestamp` is on. Not pinned: machine-local outputs, outputs that may carry resolved secrets, and
-documents that are partly yours, that is, a merged document in which the consumer owns some keys. A plain
-`.claude/settings.json` that only ai-rulez writes is pinned like any other output. When the document is partly
-yours it is not pinned as a whole; its sources (the hooks, permissions, managed settings, MCP servers and roles
-above) are.
+A hook script outside the project cannot be pinned: `lock --check` reports it until it moves inside the project. A
+symlink inside a pinned tree is never followed; it is pinned by its target string. A symlinked `ai-rulez.lock` is
+refused by every command that reads it, and `lock` replaces it with a regular file.
 
-```toml
-version = 1
-ai_rulez_version = "5.0.0"
-scope = "all"
-outputs_pinned = true
-tree = "sha256:6cd1d810fce0e91263b3ebfa3610821a820a07b415a8f2a4b9415de191b6c24e"
+## File format
 
-[[include]]
-name = "shared"
-source = "https://github.com/acme/ai-rules"
-ref = "main"
-commit = "0f3e…"
-digest = "sha256:…"
+| Key or table | Meaning |
+| --- | --- |
+| `version` | Lock format: `1`, or `2` when the lock holds role output pins. Any other version is refused with a request to run `ai-rulez lock` |
+| `ai_rulez_version` | The release that wrote the content pins. A different running version is a note, not a failure |
+| `profile` | The profile the output pins were rendered for, when not the default |
+| `scope`, `outputs_pinned` | The `[lock]` settings the pins were written with; `lock --check` reports a mismatch, so a changed `[lock]` table cannot silently weaken the check |
+| `tree` | One digest over every pin and remote entry. It catches accidental edits and bad merges; it is not a signature (see [Signing the lock](#signing-the-lock)) |
+| `[[include]]`, `[[skill]]`, `[[source]]`, `[[marketplace]]`, `[[plugin]]` | Remote sources: `name`, `source`, `path`, `ref`, `commit`, `digest`, and with a [version constraint](#version-constraints) `tag`, `tag_object`, `released`, `released_from` |
+| `[[served]]` | Skills the MCP skills server serves ([Served skills](#served-skills-and-skill-sources)) |
+| `[[item]]` | Authored content: `kind`, `id`, `domain`, `path`, `digest`, and `owner` and `version` from frontmatter |
+| `[[output]]` | Generated files: `path` and `digest`, or `role` and `digest` for a [role pin](#composing-with-roles) |
+| `[[approval]]`, `[[deny]]` | Reviewer approvals and denied digests ([Approvals](approvals.md)); outside `tree` |
+| `[[scan]]` | External scanner results ([Scan records](#scan-records)); outside `tree` |
 
-[[item]]
-kind = "skill"
-id = "deploy"
-domain = "backend"
-path = "domains/backend/skills/deploy"
-digest = "sha256:262d721306783b4c3b554a1345253c266f6f991733dad6a347e1b55d5e57ac05"
-owner = "platform"
-version = "1.2.0"
-
-[[output]]
-path = ".claude/skills/deploy/SKILL.md"
-digest = "sha256:…"
-```
+The file is deterministic: entries sorted, no timestamps, no machine paths. A skill that comes from an include is
+recorded as `include:<name>/<path>`. Running `lock` twice produces the same bytes, and the digests are the same on
+every operating system as long as git records the executable bit of your scripts (see [Hashing scheme](#hashing-scheme)).
 
 ### Scan records
 
-`lock` also writes one `[[scan]]` record per staged `egress = false` external scanner that has a cached result for the
-current content (`scan --external` fills the cache; `lock` starts no program):
+`lock` writes one `[[scan]]` record per `egress = false` [external scanner](strict-validation.md#lock-records) that has
+a cached result for the current content. `scan --external` fills the cache; `lock` starts no program.
 
 ```toml
 [[scan]]
@@ -127,237 +126,318 @@ version = "skill-scanner 1.2.0"
 tree = "sha256:…"          # digest of the content staged for the scanner
 findings = 2               # before the scanner baseline
 max_severity = "warning"
-result = "pass"            # fail when a finding reaches [lint.scanner_policy] fail_on (error by default)
+result = "pass"            # fail when a finding reaches [lint.scanner_policy] fail_on
 ```
 
-A reviewer sees what was scanned at lock time and with what outcome. The records are outside the tree digest, like
-approvals: they do not make `lock --check` fail, and a scanner with no cached result for the content has no record
-(`lock` logs it). See [External scanners](strict-validation.md#lock-records).
+Records tell a reviewer what was scanned at lock time. They do not make `lock --check` fail, and a scanner with no
+cached result for the content has no record.
 
-The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order or on the
-machine, as far as the content is: the `source` recorded for a skill that comes from an `[[includes]]` entry is
-`include:<name>/<path inside the include>`, never a path in your home directory or cache. A lock written before
-this recorded an absolute path for such skills; `lock --check` compares digests, not that field, so it still
-passes, and the next `ai-rulez lock` rewrites the entry once. Digests are the same on every operating system when the repository records the executable bit (see
-[File modes](#hashing-scheme)); a script that is executable on disk but not recorded in git digests differently
-on Windows.
+## Commands
 
-## Served skills and skill sources
+```bash
+ai-rulez lock                 # pin remotes (network), content and outputs
+ai-rulez lock --content-only  # re-pin authored content and outputs only; offline, remote pins kept
+ai-rulez lock shared          # re-pin one source by name; other pins stay as they are
+ai-rulez lock --kind skill    # re-pin one kind: include, skill, source, marketplace, plugin or served
+ai-rulez lock --check         # verify everything offline; exit 2 on any difference
+ai-rulez lock --diff          # what `ai-rulez lock` would change; always exit 0
+ai-rulez lock --subject       # the digest a signature over the lock covers
+ai-rulez lock --outdated      # sources whose constraint allows a newer tag (network)
+ai-rulez update --dry-run     # what moving the range pins would change
+ai-rulez generate --locked    # fail when a source or output differs from the lock
+ai-rulez generate --frozen    # --locked without the network
+```
 
-Served skill files are always digested at mode `100644`: the executable bit of a served file is not part of its
-digest and is not preserved over MCP (unlike a tracked script, see [File modes](#hashing-scheme)).
+`lock` pins outputs for `--profile`, else the profile recorded in the lock, else the configured default. `lock` runs
+the security scan over every remote tree it pins to something new and refuses error findings unless you pass
+`--accept-findings` after reviewing them. `ai-rulez skill update` is `lock --kind skill`.
 
-The same file carries the entries of [dynamic skill loading](mcp-server.md#dynamic-skill-loading), so one `lock`
-pins everything and one `lock --check` verifies everything:
+| `lock` exit code | Meaning |
+| --- | --- |
+| `0` | written, or `--check`: in sync |
+| `1` | the command could not run; `--check` with no `ai-rulez.lock` |
+| `2` | `--check`: differences; `lock`: a refused pin (scan findings, a moved tag, a denied digest, a policy violation) |
+| `3` | written, but served skills the security scan refuses were left unpinned; `--refuse-findings` makes this exit `2` and write nothing |
+
+With `--recursive` the most severe code over all roots wins: `1`, then `2`, then `3`.
+
+### `lock --check`
+
+Offline. It renders the outputs in memory, then compares the remote pins with the local cache, every authored item
+with its pin, and every output with its pin. `source` lines say an authored item changed; `output` lines say what
+your assistants see changed. An output can change alone (a new ai-rulez release, a different include revision), which
+is worth a look too.
+
+It also fails (exit `2`) on a lock that pins no content, whatever `enforce` says, so stripping the content pins
+cannot switch the check off. If remote includes are configured but not in the local cache, it compares sources only and
+says so in a note, or fails under `enforce`.
+
+### `lock --diff`
+
+The same comparison for a pull request description or a bot, always exit `0`. `--format json` follows
+[`schema/lock-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-diff.schema.json):
+
+```json
+{
+  "schema_version": 1,
+  "in_sync": false,
+  "lock_version": 1,
+  "lock_ai_rulez_version": "5.10.0",
+  "ai_rulez_version": "5.10.0",
+  "changes": [
+    {
+      "scope": "source",
+      "change": "changed",
+      "kind": "skill",
+      "id": "deploy",
+      "path": "skills/deploy",
+      "old": "sha256:1741f834511e63e2a855dbcf0510ff822543f127b3735f786971099bc5ba87e6",
+      "new": "sha256:015acba08ec153ad3737ab523d24b647112572b129555371a5dccc4b0f566359"
+    },
+    {
+      "scope": "output",
+      "change": "changed",
+      "path": ".claude/skills/deploy/scripts/run.sh",
+      "old": "sha256:e1bc2603…",
+      "new": "sha256:b9bd9b58…"
+    }
+  ]
+}
+```
+
+| `scope` | Meaning |
+| --- | --- |
+| `source` | an authored item was added, removed or changed |
+| `output` | a generated file differs from its pin |
+| `remote` | a remote source's cached tree no longer matches its pin |
+| `served` | a served skill differs from its pin, or is no longer served |
+| `lock` | the lock itself: hand-edited pins, or written with different `[lock]` settings |
+| `approval` | content whose [approval](approvals.md) is missing, stale or insufficient |
+
+`lock --check --format json` prints the same document and exits `2` on any difference.
+
+## Configuration
 
 ```toml
-[[source]]            # one per [[skill_sources]] entry: the commit its ref resolved to and the tree digest
-name = "vendor"
-source = "https://github.com/acme/skills"
-ref = "v1.2.0"
-path = "skills"
-commit = "0f3e…"
-digest = "sha256:…"
-
-[[served]]            # one per skill the skills server serves, in the default view and in every other view
-name = "deploy"
-source = ".ai-rulez/skills/deploy/SKILL.md"
-commit = ""
-digest = "sha256:…"   # the served-skill digest below
-
-[[served]]            # the same skill in another view: `view` is only written for a view other than the default
-name = "deploy"
-view = "role:backend"
-source = ".ai-rulez/skills/deploy/SKILL.md"
-commit = ""
-digest = "sha256:…"
+[lock]
+enforce = true
+include_outputs = true
+scope = "all"
+min_release_age = "7d"
+min_release_age_source = "auto"
+verify_tags = false
+refresh_on_generate = false
 ```
 
-A served entry is keyed by name and `view`. The view is the way the skills server is started: `role:<name>` for
-`--role`, `profile:<name>` for `--profile`, `targets:<preset>` for `--targets`, `static` for `--include-static`, and `source:<name>` for each `--source`,
-joined by `+` (`role:backend+static`). The default view has no `view` key, so a project that uses no roles or view
-flags writes the same lock as before. A plain `ai-rulez lock` pins the default view, every role and every view the
-lock already records; `lock --role`, `--profile`, `--targets`, `--include-static` and `--source` add the view they name. The
-server and `lock --check` read the pins of the view they run with. A pin without a `view` also covers every view
-(locks written before views existed), but its digest must still match. `lock --refuse-findings` fails (exit 2, nothing written) when the security scan
-refuses a served skill; without it the skill is left unpinned, the rest is pinned and `lock` exits 3.
-A plugin source with no preset (a `[plugin]` configuration such as a marketplace member, whose skills ship in the
-bundles `generate --plugin` writes) has nothing to serve: `lock` pins its content and no served skills, and `lock -r`
-locks it alongside the marketplace root.
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `enforce` | bool | `true` when `ai-rulez.lock` exists | `validate` reports drift (`AR981`, `AR982`), `AR010` is an error so `generate` refuses an unpinned remote source, `lock --check` fails on a missing lock, `generate --locked` requires content pins, and the skills server refuses unpinned or changed skills. `false` opts out |
+| `include_outputs` | bool | `true` | `false` pins sources only |
+| `scope` | string | `"all"` | `"skills"` pins only skills, remote includes and installed skills (implies no output pins) |
+| `min_release_age` | string | none | Default [minimum release age](#minimum-release-age) for sources with a version constraint |
+| `min_release_age_source` | string | `"auto"` | Where a tag's release time comes from: `auto`, `forge`, `first-seen` or `commit` |
+| `verify_tags` | bool | `false` | `generate` and `lock --check` [ask the remotes](#checking-pinned-tags-online) whether a pinned tag moved |
+| `refresh_on_generate` | bool | `false` | `generate` [refreshes the lock](#refreshing-on-generate) before writing outputs |
 
-A served skill is a tree digest in the scheme below with the kind `served-skill` (`ai-rulez/served-skill/v1`), over
-the files the server returns, with the lines of the generated header that change without the skill changing left
-out (the project-wide `Source-Hash`, the per-file `Content-Hash`, which hashes raw bytes and so moves with a CRLF-only edit that the digest's text normalisation ignores, and the `Generated:` stamp; comment lines in the first 40 lines only). It
-cannot collide with the digest of the authored skill of the same name. There is one implementation
-(`contentlock.ServedDigest`); the skills server, `lock`, `lock --check`/`--diff` and `[lock] enforce` all use it,
-and the per-file and whole-skill digests the server reports (`digest`) are the same scheme over the bytes as served.
-A fetched source tree, a remote include, an OKF include and an installed skill are digested with the same scheme
-(`contentlock.DigestDir`: the regular files below the directory as one tree, kinds `include`, `okf-include`,
-`installed-skill` and `skill-source`, with `.git` and the root `.cache_meta.json` bookkeeping left out; files are
-streamed, not read whole); all entries are covered by `tree`. A symlink in such a tree is never followed and no
-longer an error: it is a leaf of its own, `sha256(lp("ai-rulez/symlink/v1") || lp(path) || lp(target))` with the
-link target string from `readlink` (`/`-separated), so retargeting the link changes the digest while what it points
-at is not read. A non-regular entry that is not a symlink (a Windows junction, a socket, a device) is the leaf
-`sha256(lp("ai-rulez/irregular/v1") || lp(path))` and is never read. Trees without such entries digest exactly as
-before. The `tree` digest also covers the `source`, `ref` and `path` of every remote entry and the serve `view` of a
-served entry, so editing or swapping them is detected even when the content digests do not change.
+With `enforce` on, `validate` adds:
 
-`lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
-change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
-`validate` report served-skill mismatches as `AR995` and makes the server refuse them. `lock --kind
-source|served` refreshes one kind, `generate --frozen`/`mcp --serve-skills --frozen` never use the network, and
-`lock --content-only` recomputes authored content and the served digests of local skills offline while keeping the
-remote pins.
+| Code | Meaning |
+| --- | --- |
+| `AR981` `lock-source-drift` | An authored item was added, removed or changed since the lock was written; or the lock has no content pins, or cannot be read or compared |
+| `AR982` `lock-output-drift` | A generated output differs from its pinned digest |
+
+Both default to `error` and can be tuned in `[lint.severity]`.
+
+## CI usage
+
+```yaml
+- run: ai-rulez lock --check          # pins match: sources, outputs, remote cache
+- run: ai-rulez generate --check      # the committed output matches the sources
+- run: ai-rulez generate --locked     # fail if a source changed without a lock update
+```
+
+`generate --check` asks "was the output regenerated after the sources changed?". `lock --check` asks "was the change
+accepted?": a source edit, a new skill or a moved include must come with a lock update, which is a separate, small,
+reviewable diff. Paste `ai-rulez lock --diff` into the pull request description.
+
+### Scheduled outdated report
+
+A scheduled job reports sources that fall behind. It reads tags only and writes nothing. It also records every tag it
+sees in the machine's `first-seen` history (`~/.cache/ai-rulez/observed-tags.toml`), which a
+[minimum release age](#minimum-release-age) can use. That history is local to the machine: on a hosted runner it is lost
+after the job unless you cache it, and it never helps a `lock` or `update` that runs on another machine.
+
+```yaml
+name: ai-rulez outdated
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  outdated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Goldziher/ai-rulez@v5
+        with:
+          version: 5.10.0
+      - uses: actions/cache@v4                    # keep the first-seen history between runs
+        with:
+          path: ~/.cache/ai-rulez/observed-tags.toml
+          key: ai-rulez-observed-tags-${{ github.run_id }}
+          restore-keys: ai-rulez-observed-tags-
+      - name: Report outdated sources
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # release dates; sent only to github.com
+        run: ai-rulez lock --outdated --format json --fail-on-outdated | tee outdated.json
+      - name: Verify pinned tags did not move
+        run: ai-rulez lock --check --verify-tags
+```
+
+`--fail-on-outdated` turns the job red until someone runs `ai-rulez update` and merges the lock. To have CI open the
+update pull request itself, use the [`update` sub-action](github-actions.md#scheduled-pin-updates-update). To report
+updatable sources as findings instead, enable `AR734`:
+
+```toml
+[lint.severity]
+AR734 = "warning"     # "error" also makes lock --outdated exit 2
+```
+
+## Reviewing lock diffs
+
+One block per item, sorted by kind, domain and id, so `git diff ai-rulez.lock` reads like a change list:
+
+- a new `[[item]]` is a new rule, skill, hook or role: open the file at `path`;
+- a changed `digest` with an unchanged `version` means the content moved but nobody bumped the version;
+- a changed `owner` is a change of responsibility;
+- a new or changed `kind = "hook"` item, or a skill script, is code that runs on developers' machines: read it;
+- `[[output]]` churn with no `[[item]]` change means the rendering changed (a release, an include): find out why.
+
+The digest tells you *that* something changed, not what. Read it next to the source diff; a lock change with no
+matching source change deserves a question.
 
 ## Version constraints
 
-A remote include, installed skill or skill source can ask for a range of versions instead of a ref. ai-rulez
-resolves the range against the repository's semantic-version git tags, records the exact tag, its commit and the tree
-digest in the lock, and never moves the pin on its own.
+A remote include, installed skill or skill source can ask for a range of versions instead of a ref. ai-rulez resolves
+the range against the repository's semantic-version tags, records the exact tag, its commit and the tree digest, and
+never moves the pin on its own.
 
 ```toml
 [[includes]]
 name = "shared"
-source = "https://github.com/example-org/ai-rules"
-version = "^1.2"                 # npm-style constraint
+source = "https://github.com/acme/ai-rules"
+version = "^1.2"
 tag_prefix = "v"                 # optional; default accepts "1.2.3" and "v1.2.3"
-include_prerelease = false       # optional; default false
-min_release_age = "7d"           # optional; hold back tags younger than this (see below)
+include_prerelease = false       # optional
+min_release_age = "7d"           # optional, see below
 
 [[installed_skills]]
 name = "deploy"
-source = "https://github.com/example-org/skills"
+source = "https://github.com/acme/skills"
 version = "~2.1.0"
 tag_prefix = "deploy/v"          # monorepo tags such as deploy/v2.1.3
 
 [[skill_sources]]
-name = "acme"
-url = "https://github.com/example-org/skills"
+name = "vendor"
+url = "https://github.com/acme/skills"
 version = ">=1.4.0 <2.0.0"
 ```
 
-- **Syntax.** `^1.2`, `~2.1.0`, `>=1.4.0 <2.0.0` (a space is AND), `1.x`, `1.2.*`, `1 - 2`, `1.x || 3`, `*`.
-  `^0.2.3` stays below `0.3.0` and `^0.0.3` below `0.0.4`, as in npm. The parser is part of ai-rulez
-  (`internal/semver`), with a conformance table in its tests.
-- **`ref` shorthand.** `ref = "^1.2"` means `version = "^1.2"` when the value contains `^`, `~`, `*` or a space,
-  because git forbids those characters in ref names. `ref = "1.2"` or `ref = ">=1"` stay plain refs (legal branch
-  names). Set `ref` or `version`, not both (`AR731`). A plain ref, a branch or a full commit SHA behaves exactly as
-  before.
-- **Which tags count.** A tag is a version tag when it is a plain version or one after a single `v`, or, with
-  `tag_prefix`, when it starts with the prefix and the rest is a plain version. Other tags are ignored. Annotated and
-  lightweight tags are both accepted; an annotated tag is peeled to its commit. The highest tag the constraint allows
-  wins; `1.2.3` and `v1.2.3` naming one version is reported and the tag that sorts first is used.
-- **Prereleases** follow npm: `1.3.0-rc.1` is skipped unless the constraint names a prerelease of the same
-  `major.minor.patch` (`^1.3.0-rc.1`) or `include_prerelease = true`. Build metadata is ignored.
-- **Nothing resolves a range implicitly.** With a lock, `generate` fetches the pinned commit and never resolves a
-  range. Without a lock covering the source, `generate` resolves the range once (as it resolves a branch), so pin it
-  with `ai-rulez lock`. `generate --locked`/`--frozen` fail on a range the lock does not cover. `ai-rulez lock` resolves a range for a source
-  the lock does not cover and **keeps** a pin that still satisfies its constraint (no silent upgrade).
-  `ai-rulez update` is the only command that moves a range pin.
-
-The lock records the constraint as the requested ref plus what it resolved to; a lock entry written by an older
-ai-rulez has no `tag` and is simply not covered:
+The lock records the constraint as `ref` and what it resolved to:
 
 ```toml
 [[include]]
-name = "shared"
-source = "https://github.com/example-org/ai-rules"
-ref = "^1.2"                     # the constraint, as written
-tag = "v1.2.4"                   # the resolved tag
-tag_object = "7a9c..."           # the annotated tag object id; absent for a lightweight tag
-commit = "0f3e..."               # the peeled commit
-digest = "sha256:..."            # tree digest, unchanged scheme
-released = "2026-09-28T10:00:00Z"  # only with min_release_age: when the tag was released
-released_from = "forge"          # where that time came from: forge, first-seen or commit
+name = 'shared'
+source = 'https://github.com/acme/ai-rules'
+ref = '^1.2'                          # the constraint, as written
+tag = 'v1.2.4'                        # the resolved tag
+tag_object = '7a9c…'                  # annotated tag object; absent for a lightweight tag
+commit = '0f3e…'                      # the peeled commit
+digest = 'sha256:…'                   # tree digest
+released = '2026-09-28T10:00:00Z'     # only with min_release_age
+released_from = 'forge'               # forge, first-seen or commit
 ```
 
-The pin covers the config while `source`, `path` and `ref` match **and** the recorded tag still satisfies the
-constraint and the `tag_prefix`, so editing the constraint invalidates the pin until `ai-rulez lock`. `tag` and
-`tag_object` are part of the `tree` digest; entries without a tag hash exactly as before. `released` and
-`released_from` are informational: they are not part of the digest and `lock --check` never compares them.
+| Topic | Behavior |
+| --- | --- |
+| Syntax | npm-style: `^1.2`, `~2.1.0`, `>=1.4.0 <2.0.0` (a space is AND), `1.x`, `1.2.*`, `1 - 2`, `1.x \|\| 3`, `*`. `^0.2.3` stays below `0.3.0` |
+| `ref` shorthand | `ref = "^1.2"` means `version = "^1.2"` when the value contains `^`, `~`, `*` or a space (git forbids those in ref names). Setting both `ref` and `version` is `AR731` |
+| Version tags | a plain version, one after a single `v`, or with `tag_prefix` the prefix plus a plain version. Annotated tags are peeled to their commit. The highest allowed tag wins |
+| Prereleases | skipped unless the constraint names a prerelease of the same version (`^1.3.0-rc.1`) or `include_prerelease = true`. Build metadata is ignored |
+| Who resolves | `lock` resolves a range the lock does not cover yet, and keeps a pin that still satisfies its constraint. `generate` uses the pinned commit; without a pin it resolves once, like a branch. `generate --locked`/`--frozen` fail on an unpinned range. Only `update` moves a range pin |
+| Pin validity | a pin covers the config while `source`, `path` and `ref` match and the recorded tag still satisfies the constraint and `tag_prefix`. Edit the constraint and the pin is stale until `lock` |
+
+`released` and `released_from` are informational: they are outside `tree` and `lock --check` never compares them.
 
 ### Minimum release age
 
-A tag published a moment ago may be a compromised release. `min_release_age` makes `lock` and `update` take the
-newest tag the constraint allows that has existed for at least that long:
+A tag published a moment ago may be a compromised release. `min_release_age` makes `lock` and `update` take the newest
+allowed tag that has existed for at least that long:
 
 ```toml
 [lock]
 min_release_age = "7d"             # default for every source with a version constraint
-min_release_age_source = "auto"    # auto | forge | first-seen | commit
+min_release_age_source = "auto"
 
 [[includes]]
 name = "shared"
-source = "https://github.com/example-org/ai-rules"
+source = "https://github.com/acme/ai-rules"
 version = "^1.2"
 min_release_age = "3d"             # per source; "0" turns the gate off for it
 ```
 
-Ages are a whole number with `h`, `d` or `w` (`12h`, `7d`, `2w`), at most 3650 days. A tag the gate holds back is
-reported as `AR733` (info) by `lock`, `update` and `lock --outdated`, and the next older tag that passes is used.
-The pinned tag is exempt: a gate never rolls a pin back, and `lock` keeps a pin that still satisfies its constraint
-without looking up any time. If every allowed tag is too young and the source is not pinned yet, there is nothing to
-pin: `AR730`, with the date the newest tag becomes eligible. Age is measured at the time of the run; `lock --check`
-does not re-evaluate it (the decision is in the lock, with `released` and `released_from`).
+Ages are a whole number with `h`, `d` or `w` (`12h`, `7d`, `2w`), at most 3650 days. A tag held back is reported as
+`AR733` (info) and the next older tag that passes is used. The pinned tag is exempt: the gate never rolls a pin back.
+If every allowed tag is too young and the source is not pinned yet, the result is `AR730` with the date the newest tag
+becomes eligible. `lock --check` does not re-evaluate ages.
 
-The release time comes from the first source that answers, in order of trust (`min_release_age_source = "auto"`):
+The release time comes from:
 
-1. `forge`: the publish time of the GitHub release of the tag ([Forge client](forge.md)). A committer cannot forge
-   it, but a release keeps that time when its tag is force-pushed later, so the time counts only for the commit that
-   was released. When the release records its commit (`target_commitish` is a commit id, as release tooling usually
-   sets it), a tag that now points elsewhere is refused and the next source applies. When it names a branch, the
-   forge cannot say which commit it released: the release time is then the later of the publish time and the
-   first-seen time of the commit below, so a moved tag counts as new (with no first-seen record, `forge` fails
-   closed). A tag without a release has none, so the next source applies. The token is read from `GITHUB_TOKEN`,
-   `GH_TOKEN` or `gh auth token` and sent only to allowlisted hosts.
-2. `first-seen`: when this machine first saw the tag at that commit, kept in `~/.cache/ai-rulez/observed-tags.toml`
-   (local, uncommitted, bounded). A tag never seen before is "seen now", so it is **held back, not waved through**
-   on a date anyone who can push could forge. `lock --outdated` on a daily CI job records every tag it sees, which
-   builds that history. A tag that moves to another commit counts as new. The record is capped (5000 tags, 1000 per
-   source, under 1 MiB), oldest dropped first. When it cannot be read or written, `auto` warns and holds the tag back.
-3. `commit`: the tagger date of an annotated tag or the committer date of the commit, read from a one-commit fetch.
-   Anyone who can push can forge it, so `auto` never uses it; set `min_release_age_source = "commit"` to use it
-   directly. It protects against accidental adoption only.
+| `min_release_age_source` | Release time | Notes |
+| --- | --- | --- |
+| `forge` | the publish time of the tag's GitHub release ([Forge client](forge.md)) | a committer cannot forge it. When the release names a commit and the tag now points elsewhere, the time does not count. When the release names a branch, the time is the later of the publish time and the commit's first-seen time (no first-seen record: held back). A tag without a release has no time |
+| `first-seen` | when this machine first saw the tag at that commit (`~/.cache/ai-rulez/observed-tags.toml`) | a tag never seen before counts as released now, so it is held back. A tag that moves counts as new |
+| `commit` | the tagger or committer date | anyone who can push can forge it; protects against accidental adoption only |
+| `auto` (default) | `forge`, then `first-seen` | never falls back to `commit`; when the first-seen record cannot be read or written, it warns and holds the tag back |
 
-`forge`, `first-seen` and `commit` select one source and fail closed: a tag whose time cannot be found is held back.
-Consequence worth knowing: on a first run with a non-GitHub source and `auto`, every tag is "seen now", so a new
-project cannot lock a range until the age passes; use `commit` for such a source if that is acceptable, or pin a
-commit SHA.
+Every source fails closed: a tag whose time cannot be found is held back. With `auto` and a non-GitHub source, a new
+project cannot lock a range until the age passes, because every tag is "seen now". The first-seen history only helps
+on the machine that recorded it: run `lock --outdated` regularly on the same machine that later runs `lock` or `update`
+(a self-hosted runner, or a hosted runner that caches `~/.cache/ai-rulez/observed-tags.toml`), use `commit` if that is
+acceptable for the source, or pin a commit SHA.
 
 ### `lock --outdated`
 
 ```console
 $ ai-rulez lock --outdated
-SOURCE  KIND     CONSTRAINT  LOCKED  ALLOWED  LATEST  NOTE
-shared  include  ^1.2        v1.2.4  v1.3.1   v2.0.0  update available; newer major available
-deploy  skill    ~2.1.0      v2.1.3  v2.1.3   v2.2.0  up to date within the constraint
+SOURCE  KIND     CONSTRAINT  LOCKED         ALLOWED        LATEST         NOTE
+shared  include  ^1.2        v1.2.4         v1.3.1         v2.0.0         update available; newer major available
+deploy  skill    ~2.1.0      deploy/v2.1.3  deploy/v2.1.3  deploy/v2.2.0  up to date within the constraint
 2 source(s): 1 updatable, 1 with a newer major, 0 moved tag(s), 0 error(s)
 ```
 
-It lists tags only (one `git ls-remote` per repository, no content is fetched) and writes nothing. `--format json`
-follows [`schema/lock-outdated.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-outdated.schema.json).
-Each source has a `status`: `up-to-date`, `updatable`, `not-locked`, `tag-moved` (`AR732`), `tag-missing` (`AR735`),
-`unsatisfiable` (`AR730`), `invalid` (`AR731`), `downgrade-only`, or `locked-non-version` (the pinned tag is not a
-version, e.g. a constraint was added to a source pinned by an arbitrary ref; `update` moves it only with
-`--allow-downgrade`). Names and `--kind include|skill|source` limit
-the report; a name that matches no source with a version constraint is an error (exit `1`), as with `update`. Tags that differ only
-in build metadata (`v1.2.3+a`, `v1.2.3+b`) have equal precedence: the first by name is used and a note says so.
-With a [minimum release age](#minimum-release-age) the `ALLOWED` column is the newest tag that is old enough, the held
-tags are listed as `AR733` in the note (`held_back` in JSON) and counted in the summary. `[lint.severity] AR734 =
-"warning"|"error"` reports every updatable source as an `AR734` finding (`code` and `severity` in JSON); `error` also
-exits `2`. Off by default. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
-update, and always `2` for a moved or deleted tag (`AR735`) or an unsatisfiable constraint, `1` when it could not run. It needs the
-network: `--offline` (or `--offline`) refuses with a hint, and `lock --check` stays the offline verification. A
-scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
+It lists tags only (one `git ls-remote` per repository) and writes nothing. Limit it with source names or
+`--kind` (`include`, `skill`, `source`, `marketplace` or `plugin`). With a minimum release age, `ALLOWED` is the newest tag that is old enough. `--format json`
+follows [`schema/lock-outdated.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-outdated.schema.json),
+with a `status` per source: `up-to-date`, `updatable`, `not-locked`, `tag-moved` (`AR732`), `tag-missing` (`AR735`),
+`unsatisfiable` (`AR730`), `invalid` (`AR731`), `downgrade-only` or `locked-non-version`.
+
+Exit codes: `0`, also when updates exist; `2` with `--fail-on-outdated` when any source has an allowed update, and
+always for a moved or deleted tag or an unsatisfiable constraint; `1` when it could not run. It needs the network:
+`--offline` refuses. `lock --check` is the offline verification.
 
 ### `update`
 
 ```console
 $ ai-rulez update --dry-run
 include shared: v1.2.4 -> v1.3.1 (b21c0f3e1a9d)
+  released 2026-10-20T08:00:00Z (forge)
   M  rules/security.md
   A  skills/deploy/scripts/run.sh
   tree sha256:... -> sha256:...
+  scan: 0 findings
   run `ai-rulez generate`, then `ai-rulez lock` (it refreshes the output pins and the served-skill pins, which stay stale until then)
 would update 1 source(s)
 
@@ -365,45 +445,24 @@ $ ai-rulez update shared          # rewrites the lock only
 $ ai-rulez update --kind skill    # only installed skills
 ```
 
-`update [name...] [--kind include|skill|source] [--dry-run] [--allow-downgrade] [--accept-moved-tag]
-[--accept-findings] [--major [--write-config]] [--format json]` moves the named range sources (all of them without
-names) to the newest allowed tag and records the tag, commit and tree digest. It edits `config.toml` only with
-`--major --write-config`. `--dry-run` fetches the new trees (into the cache) to
-digest and compare them, and writes no lock. `--format json` follows
+`update [name...]` moves range pins to the newest allowed tag and rewrites the lock; it edits `config.toml` only with
+`--major --write-config`. Output pins are not recomputed: run `generate` and `lock` afterwards. `--format json` follows
 [`schema/update.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/update.schema.json).
-The file list compares the old cached tree with the new one; it is omitted when the old tree is not cached. Output
-pins and content pins of other items are not recomputed (as with `lock <name>`): run `generate` and `lock` after.
 
-- **Moved tags (`AR732`).** A tag that now points to another commit than the pinned one is refused with exit `2`
-  and nothing is written; `lock` refuses it too. Review the new commit, then `update --accept-moved-tag` re-pins that
-  tag at its new commit. A tag that was deleted (`AR735`) only warns in `lock`/`update` (the pinned commit is still used), but
-  `lock --outdated` counts it as an error.
-- **Downgrades.** `update` never selects a tag with lower precedence than the pinned one (a truncated tag list, a
-  mirror, an attacker can roll a pin back) unless `--allow-downgrade`. Withheld newer tags are undetectable;
-  `--outdated` can only compare what the remote advertises.
-- **Unsatisfiable (`AR730`).** No tag satisfies the constraint, or the repository has no version tags: exit `2`.
-- **Held back (`AR733`).** With a [minimum release age](#minimum-release-age) the newest tag that is old enough is
-  chosen; the held tags are listed per update (`held_back` in JSON) and the release time is recorded in the lock.
-- **Scan before pinning.** The new tree gets the security scan (`AR001`-`AR009`, the one `approve` and served skills
-  use, no inline ignore comments) before the lock is written. Error findings refuse the pin (exit `2`, nothing is
-  written, `scan.refused` in JSON); review them, then `--accept-findings`. Warnings are listed. `--dry-run` runs the
-  scan too and exits the same way. A tree over the file or size limits, or not in the cache, says so in `scan.note`.
-  `ai-rulez lock` runs the same scan over every remote tree it pins to something new (a new entry, or a changed
-  commit or digest; unchanged pins were scanned when pinned) and takes the same `--accept-findings`.
+| Situation | Behavior | Override after review |
+| --- | --- | --- |
+| A pinned tag now points to another commit (`AR732`) | refused, exit `2`, nothing written; `lock` refuses it too | `--accept-moved-tag` |
+| The pinned tag was deleted (`AR735`) | warning; the pinned commit is still used | |
+| The only newer tag has lower precedence | never selected (a truncated tag list or a mirror could roll a pin back) | `--allow-downgrade` |
+| No tag satisfies the constraint (`AR730`) | exit `2` | fix the constraint |
+| A tag is younger than `min_release_age` (`AR733`) | the newest old-enough tag is chosen | |
+| The new tree has error-level security findings | refused, exit `2`, nothing written | `--accept-findings` |
 
-#### From an MCP client
-
-The MCP server has a tool for each read of this section: `lock_outdated` (`lock --outdated`), `update_plan`
-(`update --dry-run`) and `lock_diff` (`lock --diff`), and one that moves pins, `update`. They run the same code, so
-the scan before pinning and the refusals above apply, and a refusal comes back as an error result carrying the update
-document with nothing written. Consent (`--accept-moved-tag`, `--accept-findings`, `--allow-downgrade`, `--major`) is
-not a tool argument: it stays on the command line. A read-only server lists all but `update`. See
-[Pin Tools](mcp-server.md#pin-tools-lock_outdated-update_plan-update).
+`--dry-run` fetches and scans the new trees and writes nothing. The MCP server exposes the same operations as the tools
+`lock_outdated`, `update_plan`, `lock_diff` and `update`; overrides such as `--accept-findings` stay on the command line
+([Pin tools](mcp-server.md#pin-tools-lock_outdated-update_plan-update)).
 
 #### Taking a new major version
-
-`update --major` looks at the sources that have a newer major version than their constraint allows, and prints the
-constraint that takes it (`version = "^2.0"` for `v2.3.1`):
 
 ```console
 $ ai-rulez update --major
@@ -411,98 +470,218 @@ include shared: newer major v2.0.0: version = "^2.0" (now "^1.2"); `update --maj
 $ ai-rulez update --major --write-config shared
 ```
 
-Without `--write-config` nothing is written. With it, ai-rulez rewrites **only the `version = "..."` value** of that
-entry in `config.toml` (or its `ref` shorthand; comments, key order and layout stay, and the patched file is checked
-to differ from the original in that one value), then moves the pin to the newest tag the new constraint allows,
-with the same refusals as a plain `update`. If anything is refused (a moved tag, scan findings) or fails, `config.toml`
-is restored byte for byte. The source must be a `[[includes]]`, `[[installed_skills]]` or `[[skill_sources]]` table of
-the project's own `config.toml` with a `name` key; any other form (an inline array, a duplicate name, a source that
-comes from an include or the local overlay) is refused with a hint to edit by hand. Other sources are untouched by
-`--major`; `--dry-run` never writes the config. `--write-config` without `--major` is an error.
+`--write-config` rewrites only the `version` value of that entry in `config.toml` (comments and layout stay), then
+moves the pin with the same refusals as a plain `update`. If anything is refused, `config.toml` is restored byte for
+byte. The entry must be a `[[includes]]`, `[[installed_skills]]` or `[[skill_sources]]` table with a `name` in the
+project's own `config.toml`; anything else is refused with a hint to edit by hand.
 
-#### Checking pinned tags online
+### Checking pinned tags online
 
-`lock --check` and `generate` stay offline. When you want the remote's word that the pinned tags did not move,
-opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true` for both. One `git
-ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
-`AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
-used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline` and `--frozen`;
-the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
+`lock --check` and `generate` stay offline. To ask the remotes whether the pinned tags moved, use
+`lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true`. One `git ls-remote` per
+repository compares each locked tag with its pinned commit: a moved tag is `AR732` (exit `2`, `generate` writes
+nothing), a deleted one `AR735` (warning). An unreachable remote is exit `1`. The config key is skipped under
+`--offline` and `--frozen`; the flag with them is an error.
 
-#### Refreshing on generate
+### Refreshing on generate
 
 `generate --refresh-remote` (or `[lock] refresh_on_generate = true`) runs a lock refresh before the outputs are
-written: every remote include, installed skill and skill source moves to the newest version its constraint allows (a
-plain `ref` follows its tip), `ai-rulez.lock` is rewritten, and generation continues from the new pins. The refresh
-is `ai-rulez lock` with every source advanced, so its defenses apply: the pre-pin security scan refuses a tree with
-error findings, a tag that moved (`AR732`) or a lower version is refused, and `min_release_age` holds back young
-tags. Any refusal ends the run before an output is written and leaves the lock as it was; after reviewing the findings,
-`generate --refresh-remote --accept-findings` pins the trees anyway, as `lock --accept-findings` does. The import gate
-(`[lint.security] scan_imports`) then scans the refreshed content as it does on every generate. Without the flag or
-key nothing changes. It needs the network and is rejected with `--check`, `--dry-run`, `--emit-plan`, `--locked`,
-`--frozen`, `--offline`, `--watch`, `--recursive`, `--user` and `--plugin`; the config key is skipped in those runs.
+written: every remote source moves to the newest version its constraint allows (a plain `ref` follows its tip),
+`ai-rulez.lock` is rewritten, and generation continues from the new pins. All the defenses of `lock` apply: the
+security scan, moved-tag and downgrade refusals, and `min_release_age`. Any refusal ends the run before an output is
+written and leaves the lock unchanged; after review, `generate --refresh-remote --accept-findings` pins the trees anyway.
 
-`ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
-pins as they are. Use `update --kind skill` to move range pins.
+It needs the network and cannot be combined with `--check`, `--dry-run`, `--emit-plan`, `--locked`, `--frozen`,
+`--offline`, `--watch`, `--recursive`, `--user` or `--plugin`; the config key is skipped in those runs.
 
-### Design decisions
+## Served skills and skill sources
 
-- `version` is the constraint key; `ref` is accepted for it only with `^`, `~`, `*` or a space (the issue's
-  proposal). The constraint grammar is hand-written in `internal/semver` rather than a library, so prerelease
-  behavior is ours and tested. The lock `ref` holds the constraint text, so a binary from before this feature sees
-  a pin it cannot match and asks for `ai-rulez lock`.
-- The moved-tag check needs the remote, so it runs in `lock`, `update` and `lock --outdated`; `lock --check` and
-  `generate` stay offline by default and run it only with `--verify-tags` or `[lock] verify_tags = true`.
-- `lock --outdated` consults the forge only when a `min_release_age` is set (the question 4 of the design: lookups
-  only when the answer is used). `--major` suggests `^MAJOR.0`, the design's `^2.0`, not the exact latest.
-- The first-seen source treats an unseen tag as released now (held back), and `auto` never falls back to the commit
-  date: when the record cannot be kept the tag is held back with a warning, so a forgeable answer never loosens the gate.
-- Rule codes: `AR730` unsatisfiable, `AR731` invalid or both `ref` and `version`, `AR732` tag moved, `AR733` tag held
-  back by `min_release_age` (info), `AR734` source outdated (off; enable it in `[lint.severity]`, see below),
-  `AR735` pinned tag missing.
+The same lock pins [dynamic skill loading](mcp-server.md#dynamic-skill-loading), so one `lock` pins everything and one
+`lock --check` verifies everything:
+
+```toml
+[[source]]            # one per [[skill_sources]] entry
+name = 'vendor'
+source = 'https://github.com/acme/skills'
+ref = 'v1.2.0'
+path = 'skills'
+commit = '0f3e…'
+digest = 'sha256:…'
+
+[[served]]            # one per skill the skills server serves
+name = 'deploy'
+source = '.ai-rulez/skills/deploy/SKILL.md'
+commit = ''
+digest = 'sha256:a7a18f7b364fef319e5cdab7388daa7d0a63d3e302493d44eca4811c09427304'
+
+[[served]]            # the same skill in another view
+name = 'deploy'
+view = 'role:backend'
+source = '.ai-rulez/skills/deploy/SKILL.md'
+commit = ''
+digest = 'sha256:…'
+```
+
+A served entry is keyed by name and `view`, the way the skills server is started: `role:<name>` for `--role`,
+`profile:<name>`, `targets:<preset>`, `static` for `--include-static`, and `source:<name>` per `--source`, joined by `+`
+(`role:backend+static`). The default view has no `view` key. A plain `lock` pins the default view, every role and every
+view the lock already records; `lock --role`, `--profile`, `--targets`, `--include-static` and `--source` add a view.
+
+The served digest covers the files the server returns, with the generated header lines that change without the skill
+changing left out. Served files are digested at mode `100644`: the executable bit is not served over MCP.
+
+| Command | Effect on served pins |
+| --- | --- |
+| `lock` | a skill the security scan refuses is left unpinned and `lock` exits `3`; `--refuse-findings` writes nothing and exits `2` |
+| `lock --check`, `lock --diff` | a changed served skill is a `served` change, a source whose cached tree no longer matches is a `remote` change; no network |
+| `lock --kind source` / `--kind served` | refreshes one kind |
+| `lock --content-only` | recomputes authored content and the served digests of local skills offline |
+| `mcp --serve-skills` | with a lock, refuses unpinned or changed skills (`AR995`); `--frozen` never uses the network |
+
+## Composing with roles
+
+[Roles](roles.md) are pinned as items (`kind = "role"`), so a new role or a changed `include`/`exclude` list is a lock
+change. A role's rendered outputs are pinned only on request, as one aggregate digest per role:
+
+```toml
+[[output]]
+role = 'backend'
+digest = 'sha256:…'
+```
+
+A role is pinned when it declares `pin = true`, with `lock --roles` (every role) or `lock --role <name>`. Pins from the
+command line carry `requested = true` and stay pinned on a plain `lock`. Removing `pin = true` unpins a role that only
+its own key pinned. A lock with role pins is `version = 2`; an older ai-rulez refuses it rather than misreading it.
+
+- The digest covers the files `generate --role <name>` would write, including the ai-rulez part of
+  `.claude/settings.json`. The role is rendered in memory; nothing is written.
+- `lock --check` compares every pinned role (`output changed  outputs of role backend`), including changes that leave
+  the sources alone, such as a new generator release. `--role <name>` limits the comparison to one role.
+- `lock --diff` adds the per-file digests of a changed role's current rendering (`files` in the JSON).
+- `generate --locked --role <name>` verifies every source and, for a pinned role, its rendered outputs.
+
+`ai-rulez catalog` reports, per item, its digest and whether the sources are in sync with the lock.
+
+## Signing the lock
+
+The lock proves that bytes did not change; a signature says who vouched for them. `ai-rulez sign --lock` and
+`ai-rulez verify --attestation` do this with a `[signing]` policy ([Signing](signing.md)). You can also sign with
+`cosign` directly, as below; `verify --attestation` accepts the bundle it writes.
+
+What is signed is the **lock subject**, a digest over the meaning of the lock rather than its bytes, so line endings and
+key order do not matter, while a hand-edited pin changes the subject:
+
+```text
+lock_subject = SHA256( lp("ai-rulez/lock-subject/v1") || lp(tree) || lp(approvals_digest)
+                       || u64(hash_version) || lp(scope) || u8(outputs_pinned) )
+```
+
+- `tree` is recomputed from the lock entries, never read from the file. `lock --subject` fails (exit `2`) when the
+  stored `tree` disagrees, so a hand-edited lock is never signed.
+- `approvals_digest` is `sha256( lp("ai-rulez/approvals/v1") || records )` over every `[[approval]]` and `[[deny]]`
+  record in lock order, each field length-prefixed (kind, domain, id, digest, reviewer, assurance, `approved_at`,
+  `expires`, `note`, accepted findings, `ref`, `attestation`; then the deny digest and reason). It is the empty string
+  when the lock holds neither. Adding or changing an approval changes the subject, so sign after the last `approve`.
+- `hash_version` is `1`; `scope` is the recorded `[lock] scope` (`all` when none); `outputs_pinned` is `1` or `0`.
+- `lp`, `u64` are defined in [Hashing scheme](#hashing-scheme); `u8` is one byte.
+
+```console
+$ ai-rulez lock --subject
+sha256:99d64ff310d90f8f15b52414748bf8a43f56d3f5abcdbd8750fcd01f459a4464  (lock-subject/v1; tree sha256:4dd87fd5ae23b632928921220800a83b679b58a58cd0e2fa3127cd5196dfcbee, approvals none, hash_version 1, scope all, outputs_pinned true)
+
+$ ai-rulez lock --subject --output lock-subject.json
+sha256:99d64ff310d90f8f15b52414748bf8a43f56d3f5abcdbd8750fcd01f459a4464  (lock-subject/v1; tree sha256:4dd87fd5…, approvals none, hash_version 1, scope all, outputs_pinned true)
+wrote lock-subject.json
+```
+
+The statement (`schema/lock-subject.schema.json`) is deterministic, so the file a verifier recomputes is byte-identical
+to the one that was signed:
+
+```json
+{
+  "schema_version": 1,
+  "type": "ai-rulez/lock-subject/v1",
+  "subject": "sha256:99d64ff310d90f8f15b52414748bf8a43f56d3f5abcdbd8750fcd01f459a4464",
+  "tree": "sha256:4dd87fd5ae23b632928921220800a83b679b58a58cd0e2fa3127cd5196dfcbee",
+  "approvals_digest": "",
+  "hash_version": 1,
+  "scope": "all",
+  "outputs_pinned": true
+}
+```
+
+### Sign in the release workflow
+
+Keyless with cosign from GitHub Actions (the signer is the workflow identity):
+
+```yaml
+permissions: { id-token: write, contents: read }
+steps:
+  - run: ai-rulez lock --check
+  - run: ai-rulez lock --subject --output lock-subject.json
+  - run: cosign sign-blob --yes --bundle .ai-rulez/ai-rulez.lock.sigstore.json lock-subject.json
+```
+
+Commit `.ai-rulez/ai-rulez.lock.sigstore.json` next to the lock. With a key: `cosign sign-blob --key cosign.key
+--bundle ... lock-subject.json`. `ai-rulez sign --lock` writes the same file name (a DSSE attestation instead of a blob
+signature); both verify with `ai-rulez verify --attestation`. Use one kind per release.
+
+### Verify
+
+Recompute the statement from the committed lock and tell cosign who may sign:
+
+```bash
+ai-rulez lock --check                         # the lock still matches the sources
+ai-rulez lock --subject --output lock-subject.json
+cosign verify-blob \
+  --bundle .ai-rulez/ai-rulez.lock.sigstore.json \
+  --certificate-identity "https://github.com/acme/ai-config/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  lock-subject.json
+```
+
+Verification fails when the lock changed after signing, a pin was edited, or the bundle belongs to another
+repository's lock. `lock --check` is still needed: it compares the lock with the sources, while the signature only says
+who vouched for the lock. The plain cosign recipe has no freshness or rollback check; `ai-rulez verify --attestation`
+adds an identity policy, `max_age` and rollback detection on top of the same bundle. Plugin bundles and served skills
+are signed separately ([Bundles, skills and SBOMs](signing.md#bundles-skills-and-sboms)).
 
 ## Hashing scheme
 
-All digests are **SHA-256**, written `sha256:<64 hex digits>`. The scheme is part of the lock format: any change
-to it bumps the lock `version`, and a lock of another version is refused. (The version 1 to 2 step changes only what a
-lock may hold, not the scheme, so `hash_version` below stays 1.)
+Use this section to check a digest with an independent implementation. All digests are SHA-256, written
+`sha256:<64 hex digits>`. The scheme is part of the lock format: a change to it would change the lock `version`.
 
 Notation: `lp(x)` is the 8-byte big-endian length of `x` followed by `x`; `u64(n)` is `n` as 8 bytes big-endian.
 
-**File leaf** (one file of an item):
+**File leaf**, one file of an item:
 
 ```text
 leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
 ```
 
 - `path` is relative to the item, `/`-separated, with no `.`, `..`, empty segment or backslash.
-- `mode` is the string `100755` if the file is executable, else `100644`. Nothing else about the file mode
-  matters. On Linux and macOS the owner execute bit decides (`0o100`), because git records only that bit
-  (`100755` versus `100644`); group and other execute bits are ignored. Windows
-  filesystems have no execute bit, so there the mode is taken from the git index (`git ls-files -s`, the mode git
-  checks out on Unix); if git is not available or the file is not tracked it is `100644`. A checkout whose
-  repository records the executable bit therefore pins the same digest on every operating system. A script that is
-  executable on disk but not recorded as such in git will pin differently on Windows than elsewhere; commit the
-  bit (`git update-index --chmod=+x`). Remote trees are digested the same way (the mode helper is shared).
-- `data` is the **raw bytes on disk**, never the frontmatter-stripped text the loader keeps in memory. For
-  documents and data files (`.md .markdown .mdc .mdx .txt .toml .yaml .yml .json .jsonc`) `CRLF` is converted to
-  `LF` first, so a Windows checkout with `autocrlf` pins the same digest. A lone `CR` is kept. Every other file
-  (images, binaries, extensionless files) and every **script** (`.sh .bash .zsh .py .js .mjs .cjs .ts`) is hashed
-  byte for byte: a `CRLF` in a shell script changes behaviour (`#!/bin/sh\r` fails with "bad interpreter"), so a
-  script whose only change is its line endings pins a different digest. Keep scripts `LF` in git
-  (`.gitattributes`: `*.sh text eol=lf`).
+- `mode` is `100755` when the file is executable, else `100644`. On Linux and macOS the owner execute bit decides; on
+  Windows the mode comes from the git index (`git ls-files -s`), else `100644`. Commit the executable bit
+  (`git update-index --chmod=+x`) so every operating system pins the same digest.
+- `data` is the raw bytes on disk. For documents and data files (`.md .markdown .mdc .mdx .txt .toml .yaml .yml .json
+  .jsonc`) `CRLF` becomes `LF` first, so a checkout with `autocrlf` pins the same digest. Scripts (`.sh .bash .zsh .py
+  .js .mjs .cjs .ts`) and every other file are hashed byte for byte, because `#!/bin/sh\r` fails to run: keep scripts
+  `LF` in git (`*.sh text eol=lf` in `.gitattributes`).
 
-**Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
+**Item tree**, domain-separated per kind (`rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
 `verifier`, `rubric`, `settings`, `output`, `include`, `okf-include`, `installed-skill`, `skill-source`, `served-skill`):
 
 ```text
 digest = SHA256( lp("ai-rulez/<kind>/v1") || u64(n) || leaf_1 || … || leaf_n )
 ```
 
-with the `n` leaves (32 bytes each) sorted by `path`, bytewise. Duplicate paths are an error. A single-file item is
-a tree of one leaf named after the file (`SKILL.md`, `style.md`); a declared item (a hook, a role, a settings
-source) is a leaf holding its compact JSON encoding (struct fields in declaration order, map keys sorted), plus one
-leaf per hook script.
+The `n` leaves (32 bytes each) are sorted by `path`, bytewise; duplicate paths are an error. A single-file item is a
+tree of one leaf named after the file (`SKILL.md`, `style.md`). A declared item (a hook, a role, a settings table) is a
+leaf holding its compact JSON encoding, plus one leaf per hook script.
+
+A remote tree (include, OKF include, installed skill, skill source) is the item tree over its regular files, with `.git`
+and the root `.cache_meta.json` left out. A symlink is the leaf `SHA256(lp("ai-rulez/symlink/v1") || lp(path) ||
+lp(target))` and is never followed; any other non-regular entry is `SHA256(lp("ai-rulez/irregular/v1") || lp(path))`.
 
 **Top-level `tree`**:
 
@@ -510,15 +689,13 @@ leaf per hook script.
 tree = SHA256( lp("ai-rulez/tree/v1") || u64(n) || { lp(kind) || lp(key) || lp(digest) }… )
 ```
 
-over every pin, sorted by `(kind, key)`, where `kind`/`key` are `item/<kind>` with `<domain> NUL <id>`, `output`
-with the path (role pins: kind `output-role`, key the role name), `include`, `installed-skill`, `skill-source` and `served-skill` with the name and `<commit> <digest>`, and `digest` is the
-`sha256:<hex>` text of the pin.
-
-Two items with the same kind, domain and id get a `#2` suffix on the second (in path order), so every key is unique.
+over every pin, sorted by `(kind, key)`: `item/<kind>` with key `<domain> NUL <id>`; `output` with the path (role
+pins: `output-role` with the role name); `include`, `installed-skill`, `skill-source` and `served-skill` with the name
+and `<commit> <digest>`. `digest` is the `sha256:<hex>` text of the pin. `tree` also covers the `source`, `ref`, `path`,
+`tag` and `tag_object` of remote entries and the `view` of served entries. Two items with the same kind, domain and id
+get a `#2` suffix on the second, in path order.
 
 ### Test vectors
-
-These were computed independently (Python's `hashlib`) and are checked by the test suite.
 
 | Input | Digest |
 | --- | --- |
@@ -535,327 +712,26 @@ These were computed independently (Python's `hashlib`) and are checked by the te
 | tree `installed-skill`: `SKILL.md` = `# S\n` | `sha256:018df4aac28d9eca573a05cb491c6704407d9b5de8ca10e0dfe20300928140db` |
 | tree `skill-source`: `SKILL.md` = `# S\n` | `sha256:cf90b42b8c9bbb2e9bc94075e4d8a183117f45b46d0b746b7bc617587f64bc7b` |
 | tree `served-skill`: `SKILL.md` = `# x\n` | `sha256:2225664563ac4bc0affa10d8ca1ea4dcd5ed2a61792b124824005493dffb458c` |
-| directory digest, kind `include`: `rules/a.md` = `# A\n` (`100644`), `hooks/x.sh` = `#!/bin/sh\n` (`100755`) | `sha256:94a2c6de5e10aa7eef64adb55330c4a84c02d49566d56adcedbd7f5db2ddf01c` |
+| directory, kind `include`: `rules/a.md` = `# A\n` (`100644`), `hooks/x.sh` = `#!/bin/sh\n` (`100755`) | `sha256:94a2c6de5e10aa7eef64adb55330c4a84c02d49566d56adcedbd7f5db2ddf01c` |
 | the same directory, kind `okf-include` | `sha256:990b39514f6589c5e61d584b7f59173cb8b1a3bd260ee93af92ebedc819da5e7` |
 | top digest of no entries | `sha256:e8c93a22e1ed47e16dd881a55dc4fbc5ba685af20083b93469265da901784029` |
 
-The remote-source `digest` of an include, OKF include, installed skill or skill source is the directory digest above:
-there is no second algorithm.
+## What the lock does not do
 
-## Signing the lock
+It does not say who published a change, sandbox anything, or tell a malicious edit from a good one. It makes every
+change explicit and reviewable; a human still reviews it. Add [approvals](approvals.md) to record who reviewed,
+[signing](signing.md) to prove who vouched for the lock, and the [security checks](strict-validation.md#security-checks)
+for the content itself.
 
-The lock proves that bytes did not change; it does not say who produced them. To add that, sign the lock and verify
-the signature in CI. `ai-rulez sign --lock` and `ai-rulez verify --attestation` do both with a `[signing]` policy
-(see [Signing](signing.md)). `ai-rulez lock --subject` prints what is signed, so you can also use `cosign` with no
-signing code in ai-rulez; the recipe below stays valid, and `verify --attestation` accepts the bundle it writes.
+## Troubleshooting
 
-What is signed is the **lock subject**, not the bytes of `ai-rulez.lock`. The file is TOML that tools rewrite;
-what matters is its meaning, so the subject is a digest over the recomputed `tree` and the settings the pins were
-written with. Line endings and key order do not matter, and a pin edited by hand changes the subject.
-
-```text
-lock_subject = SHA256( lp("ai-rulez/lock-subject/v1") || lp(tree) || lp(approvals_digest)
-                       || u64(hash_version) || lp(scope) || u8(outputs_pinned) )
-```
-
-- `tree` is recomputed from the lock entries, never read from the file. `lock --subject` fails (exit 2) when the
-  stored `tree` disagrees, so a hand-edited lock is not signed.
-- `approvals_digest` is `sha256( lp("ai-rulez/approvals/v1") || records )` over every `[[approval]]` and `[[deny]]`
-  record in the order the lock writes them, each field length-prefixed (kind, domain, id, digest, reviewer, assurance,
-  `approved_at`, `expires`, `note`, accepted findings, `ref`, `attestation`; then the deny digest and reason). It is
-  the empty string while the lock holds neither, so a lock without approvals has the subject it always had. Approvals
-  stay outside `tree`; inside the subject, adding, editing or removing one changes what a signature covers, so sign
-  (and re-sign) after the last `approve`.
-- `hash_version` is `1`, the lock `version`: the hashing scheme is part of the lock format.
-- `scope` is the recorded `[lock] scope` (`all` when the lock records none); `outputs_pinned` is `1` or `0`.
-- `lp(x)` and `u64(n)` are defined in [Hashing scheme](#hashing-scheme); `u8` is one byte.
-
-```console
-$ ai-rulez lock --subject
-sha256:60e6900f…  (lock-subject/v1; tree sha256:6cd1d810…, approvals none, hash_version 1, scope all, outputs_pinned true)
-
-$ ai-rulez lock --subject --output lock-subject.json
-```
-
-`--output` writes the statement `schema/lock-subject.schema.json` describes. It is deterministic (fixed field
-order, trailing newline), so the file a verifier recomputes is byte-identical to the one that was signed:
-
-```json
-{
-  "schema_version": 1,
-  "type": "ai-rulez/lock-subject/v1",
-  "subject": "sha256:60e6900f7b4f0dfa733cc2ac84f7c8de74f7a2a5724cf0951ce4af4b24e39cb9",
-  "tree": "sha256:6cd1d810fce0e91263b3ebfa3610821a820a07b415a8f2a4b9415de191b6c24e",
-  "approvals_digest": "",
-  "hash_version": 1,
-  "scope": "all",
-  "outputs_pinned": true
-}
-```
-
-### Sign in the release workflow
-
-Keyless, from GitHub Actions (the signer is the workflow identity):
-
-```yaml
-permissions: { id-token: write, contents: read }
-steps:
-  - run: ai-rulez lock --check
-  - run: ai-rulez lock --subject --output lock-subject.json
-  - run: cosign sign-blob --yes --bundle .ai-rulez/ai-rulez.lock.sigstore.json lock-subject.json
-```
-
-Commit `.ai-rulez/ai-rulez.lock.sigstore.json` next to the lock (or publish it with the release). With a key
-instead of an OIDC identity: `cosign sign-blob --key cosign.key --bundle ... lock-subject.json`. The default sidecar
-of `ai-rulez sign --lock` has the same name (a DSSE attestation instead of a blob signature); either kind verifies
-with `ai-rulez verify --attestation`. Do not mix the two in one release.
-
-### Verify
-
-Recompute the statement from the committed lock, then verify the bundle against it. `cosign` must be told who may
-sign; "any valid signature" is not a check:
-
-```bash
-ai-rulez lock --check                         # the lock still matches the sources
-ai-rulez lock --subject --output lock-subject.json
-cosign verify-blob \
-  --bundle .ai-rulez/ai-rulez.lock.sigstore.json \
-  --certificate-identity "https://github.com/example-org/ai-config/.github/workflows/release.yml@refs/heads/main" \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  lock-subject.json
-# with a key: cosign verify-blob --key cosign.pub --bundle ... lock-subject.json
-```
-
-Because the statement is recomputed from the lock in the checkout, verification fails when the lock changed after
-signing, when a pin was edited, or when the bundle belongs to another repository's lock. `lock --check` is still
-needed: it compares the lock with the sources; the signature only says who vouched for the lock.
-
-Limits, stated plainly: a valid signature means "produced by that identity", not "safe". The cosign recipe has no
-freshness or rollback check, so pin the signer and review lock changes. `ai-rulez verify --attestation` adds an identity
-policy, `max_age` and a per-machine rollback check on top of the same bundle (see [Signing](signing.md)). Plugin bundles are signed
-with `sign --bundle` and served skills are gated by a publisher signature (see
-[Signing](signing.md#bundles-skills-and-sboms)); the lock signature covers neither.
-
-## Commands
-
-```bash
-ai-rulez lock                 # pin remotes (network) and content; writes ai-rulez.lock
-ai-rulez lock --content-only  # re-pin authored content and outputs only; offline, remote pins kept
-ai-rulez lock shared          # re-pin one include or skill; content pins are kept as they are
-ai-rulez lock --check         # verify everything, offline; exit 2 on any difference
-ai-rulez lock --outdated      # sources whose version constraint allows a newer tag (network)
-ai-rulez update --dry-run     # what moving the range pins would change
-ai-rulez lock --diff          # show what `ai-rulez lock` would change; exit 0
-ai-rulez lock --diff --format json
-ai-rulez lock --check --format json   # the --diff document on stdout; exit 2 on any difference
-ai-rulez lock --subject               # the digest a signature over the lock commits to; offline, read-only
-ai-rulez generate --locked    # also fail when an authored source differs from the lock
-ai-rulez generate --frozen    # --locked without the network
-```
-
-`lock` writes deterministically: running it twice produces the same bytes. Its output profile is `--profile`, else
-the profile recorded in the lock, else the configured default.
-
-`generate` **never writes the lock**. Accepting a change is always an explicit `ai-rulez lock`.
-
-### `lock --check`
-
-Offline. It compares the remote pins with the local cache (as before), every authored item with its pin, and the
-rendered outputs with the output pins, and exits `2` after naming each difference:
-
-```text
-ai-rulez.lock does not match /work/app/.ai-rulez:
-  source added    rule security (rules/security.md)
-  source changed  skill backend/deploy (domains/backend/skills/deploy)
-  source removed  hook PreToolUse:Bash:0
-  output changed  output .claude/skills/deploy/SKILL.md
-run `ai-rulez lock` to refresh it (after reviewing the change with `ai-rulez lock --diff`)
-```
-
-`source` lines say an authored item changed; `output` lines say what agents see changed. A source change normally
-brings output changes with it, but an output can change alone (a new ai-rulez release, a different include
-revision), and that is worth a look too. Exit codes: `0` in sync, `1` the command could not run, `2` differences,
-and for `lock` itself `3` when the lock was written but served skills were left unpinned because the security scan
-refuses them (`--strict` writes nothing and exits `2` instead). Over several roots (`--recursive`) the most severe code wins:
-`1`, then `2`, then `3`.
-
-With no `ai-rulez.lock` at all, `--check` exits `1` ("no ai-rulez.lock": there is nothing to verify, which is not the same as in sync), and under `[lock] enforce = true` it exits `2` as a drift. Run `ai-rulez lock` first.
-
-A change of the ai-rulez version is a note, not a failure: output digests can differ between releases, and the
-output lines then tell you which.
-
-A lock without content pins (one written by `lock <name>` before any content was pinned) has none to compare, and a
-lock whose pins were stripped looks the same. `--check` therefore fails on it (exit `2`) and asks for `ai-rulez lock`,
-whatever `enforce` says: a check that passes on such a lock would let a downgrade switch the content checks off.
-`generate` keeps using the include and skill pins of such a lock. `generate --locked` on it warns, and fails under `enforce`. A lock with content pins must also carry a `tree` digest.
-A hook `script` (or a frontmatter hook script) outside the project cannot be pinned; it is reported as a `lock` change (not an abort) until it
-moves inside the project.
-
-If remote includes are configured but not in the local cache, outputs cannot be rendered as `generate` would; the
-check then compares sources only and says so in a note, or fails under `enforce = true`. Only a cache miss falls back
-this way: a cached include that violates its pin, or any other load error, is reported as the error it is.
-
-### `lock --diff`
-
-The same comparison, printed for a pull request description or a bot, and always exit code `0`. `--format json`
-prints the document described by
-[`schema/lock-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-diff.schema.json):
-
-```json
-{
-  "schema_version": 1,
-  "in_sync": false,
-  "lock_version": 1,
-  "changes": [
-    { "scope": "source", "change": "changed", "kind": "skill", "id": "deploy", "domain": "backend",
-      "path": "domains/backend/skills/deploy", "old": "sha256:…", "new": "sha256:…", "detail": "version \"1.0.0\" -> \"1.1.0\"" },
-    { "scope": "output", "change": "changed", "path": ".claude/skills/deploy/SKILL.md", "old": "sha256:…", "new": "sha256:…" }
-  ]
-}
-```
-
-`scope` is `source`, `output`, `remote` (a remote pin no longer matches) or `lock` (the lock itself: hand-edited
-pins, or written with different `[lock]` settings).
-
-## Configuration
-
-```toml
-[lock]
-enforce = true           # default whenever ai-rulez.lock exists; false opts out. Strict validation reports drift (and an unreadable lock), AR010 is an error, generate refuses an unlocked remote source, generate --locked requires content pins
-include_outputs = true   # false: pin sources only
-scope = "all"            # "skills": pin only skills, remote includes and installed skills
-min_release_age = "7d"   # default minimum age of a tag for sources with a version constraint
-min_release_age_source = "auto"  # auto | forge | first-seen | commit
-verify_tags = false      # true: generate and lock --check ask the remotes whether a pinned tag moved
-refresh_on_generate = false  # true: generate re-resolves remote sources and rewrites the lock first (like generate --refresh-remote)
-```
-
-`scope = "skills"` is for projects that only care about the skill supply chain; it implies no output pins. The
-lock records the settings it was written with, and `--check` reports a mismatch so a changed `[lock]` table cannot
-silently weaken a check.
-
-With `enforce = true`, and only when a lock exists, `validate` adds:
-
-| Code | Meaning |
-| --- | --- |
-| `AR981` `lock-source-drift` | An authored item was added, removed or changed since the lock was written, the lock has no content pins, or the lock cannot be read or compared (corrupt, another lock `version`, an unpinnable source). Enforcement never skips a check it cannot run. |
-| `AR982` `lock-output-drift` | A generated output differs from its pinned digest. |
-
-Both default to `error`; they can be tuned with `[lint.severity]` like any other code.
-
-## CI usage
-
-Run the lock check next to the drift check:
-
-```yaml
-- run: ai-rulez lock --check          # pins match: sources, outputs, remote cache
-- run: ai-rulez generate --check      # the committed output matches the sources
-- run: ai-rulez generate --locked     # fail if a source changed without a lock update
-```
-
-They answer different questions. `generate --check` asks "was the output regenerated after the sources changed?".
-`lock --check` asks "was the change *approved*?": a source edit, a new skill or a moved include has to come with a
-lock update, which is a separate, small, reviewable diff. On a pull request, `ai-rulez lock --diff` gives a
-summary to paste into the description.
-
-### Scheduled outdated report
-
-A scheduled job tells you when pinned sources fall behind, and gives the `first-seen` record of a
-[minimum release age](#minimum-release-age) its history. It reads tags only and writes nothing:
-
-```yaml
-name: ai-rulez outdated
-on:
-  schedule:
-    - cron: "17 6 * * *"          # daily
-  workflow_dispatch:
-permissions:
-  contents: read
-jobs:
-  outdated:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - run: npm install -g ai-rulez            # or: uvx ai-rulez
-      - name: Report outdated sources
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # release dates; sent only to github.com
-        run: |
-          ai-rulez lock --outdated --format json --fail-on-outdated | tee outdated.json
-      - name: Verify pinned tags did not move
-        run: ai-rulez lock --check --verify-tags
-      - if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: outdated
-          path: outdated.json
-```
-
-`--fail-on-outdated` exits `2` when any source has an allowed update, so the job turns red until someone runs
-`ai-rulez update` and merges the lock; a moved or deleted tag and an unsatisfiable constraint fail it too. To have CI
-run the update and open the pull request itself, use the
-[`Goldziher/ai-rulez/update@v5` sub-action](github-actions.md#scheduled-pin-updates-update). To report
-without failing, drop the flag and read `summary.updatable` and `summary.held_back` from the JSON. To make "outdated"
-a finding instead, turn on `AR734` and let the exit code gate:
-
-```toml
-[lint.severity]
-AR734 = "warning"     # report updatable sources as findings; "error" also fails lock --outdated
-```
-
-A job that updates for you is a separate, reviewed pull request: run `ai-rulez update`, then `ai-rulez generate`
-and `ai-rulez lock`, and open the diff. `update` never runs unattended, and each pin moves only after the scan of the
-new tree.
-
-## Reviewing lock diffs
-
-The lock holds one small block per item, sorted by kind, domain and id, so `git diff ai-rulez.lock` reads like a
-change list:
-
-- a new `[[item]]` block is a new rule, skill, hook or role: open the file at `path`;
-- a changed `digest` with an unchanged `version` on a skill with a `version` is a review smell: the content moved
-  but nobody bumped the version;
-- a changed `owner` line is a change of responsibility;
-- a new `[[item]]` of `kind = "hook"` or a changed hook is code that will run on developers' machines: read the
-  script;
-- an executable skill script that appears or changes is reviewed like any script;
-- `[[output]]` churn with no `[[item]]` change means the rendering changed (a release, an include): check why.
-
-The item digest does not tell you what changed; it tells you *that* it did. Pair it with the normal source diff.
-A reviewer who sees a lock change with no matching source change should ask why.
-
-## Composing with roles
-
-[Roles](roles.md) are pinned as items (`kind = "role"`), so a new role or a changed `include` / `exclude` list is a
-lock change. The lock pins the default rendering (one profile) as one `[[output]]` per file. A role renders a
-different tree, so a role's outputs are pinned only on request, as **one aggregate digest per role**:
-
-```toml
-[[output]]
-role = "backend"
-digest = "sha256:…"
-```
-
-A role is pinned when it declares `pin = true`; `ai-rulez lock --roles` pins every role, and `lock --role <name>`
-pins that role as well. The digest covers the files `generate --role <name>` would write (the same rendering the
-default pins use, plus the ai-rulez-rendered part of `.claude/settings.json`, so `skillOverrides` from
-`skill_mode` count). The role is rendered in memory; nothing is written. A plain `lock` re-pins the roles
-that declare `pin = true` and every role pinned with `--roles` or `--role` (the pin carries `requested = true`), which
-stay pinned. Removing `pin = true` (or setting it to `false`) unpins a role that only its own key pinned: `lock --check`
-reports the pin as `removed` and `lock` drops it. A pin whose role was removed from the configuration is dropped.
-
-- `lock --check` compares every pinned role and reports `output changed  outputs of role backend` (or `added` for a
-  role with `pin = true` that the lock does not pin yet, `removed` for a pin whose role is gone or no longer pinned). It also catches a
-  change that leaves the sources alone, such as a new generator release or a `delivery` entry. `--role <name>`
-  limits the role comparison to one role; naming a role that is not pinned is an error.
-- `lock --diff` adds, for a changed role, the per-file digests of its current rendering (`files` in the JSON), so
-  a reviewer can see which files make up the new digest. The lock itself stores only the aggregate.
-- `generate --locked --role <name>` (and `generate --check --locked --role <name>`) verify every source *and*, when
-  the role is pinned, its rendered outputs. A role without a pin behaves as before.
-- Roles without `pin = true` add nothing to the lock; its format is unchanged for a project that pins none. The
-  aggregate is `lp("ai-rulez/role-output/v1")` over the role's files, and the top-level `tree` covers it under the
-  kind `output-role`. An ai-rulez release that predates role pins reads such an entry as an output without a path.
-
-`generate --locked --role <name>` therefore ties a person's role output to reviewed sources and, for a pinned
-role, to a reviewed rendering. The `catalog` command reports, per item, its digest and whether the sources are in
-sync with the lock.
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `no ai-rulez.lock in …: nothing to check` (exit `1`) | no lock yet | `ai-rulez lock` |
+| `ai-rulez.lock does not exist but [lock] enforce = true` (exit `2`) | `enforce = true` and no lock | `ai-rulez lock` |
+| `unsupported lock version N` | the lock was written by a newer or much older ai-rulez | upgrade ai-rulez, or run `ai-rulez lock` with the version your team uses |
+| `lock --check` reports `output changed` after an upgrade, with no source change | a new ai-rulez renders differently | review the output diff, then `ai-rulez lock` |
+| Digests differ between Windows and Linux | a script is executable on disk but not in git, or a script has CRLF line endings | `git update-index --chmod=+x <file>`; `*.sh text eol=lf` |
+| `lock` exits `3` | a served skill fails the security scan and was left unpinned; the skills server will refuse it | fix the finding the warning names, then `ai-rulez lock` |
+| `generate --locked` fails with `authored content differs from ai-rulez.lock` | a source changed without a lock update | `ai-rulez lock --diff`, review, `ai-rulez lock` |
+| A new range source cannot be locked: every tag held back | `min_release_age` with `auto` and no release history | wait; build first-seen history by running `lock --outdated` regularly on the machine that runs `lock`; or use `min_release_age_source = "commit"` for that source |

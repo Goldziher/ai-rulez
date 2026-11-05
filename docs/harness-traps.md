@@ -1,81 +1,88 @@
 # Harness traps
 
-Some harnesses accept a file that looks valid and then silently ignore it: a rule written to `.cursor/rules/x.md`
-is never read, and a Copilot path file named `go.md` is skipped. Nothing errors, so the author concludes "the model
-ignores my instructions". `ai-rulez validate` reports these as harness trap findings, codes `AR9C1` to
-`AR9CA`.
-
-Each trap carries the harness, the vendor page that says so, a verbatim quote from that page, the date it was
-checked, and a fix. In `--format json` these are the optional fields `harness`, `evidence`, `verified_on` and
-`hint`; the text report prints them under the finding.
+Some harnesses accept a file that looks valid and then silently ignore it: a rule in `.cursor/rules/x.md` is never
+read, and a Copilot instructions file named `go.md` is skipped. Nothing errors, so the instructions just never reach
+the model. `ai-rulez validate` reports these files as harness trap findings, codes `AR9C0` to `AR9CA`.
 
 ```console
 $ ai-rulez validate
+.claude/skills/x/SKILL.md:4: warning AR9C7 claude-frontmatter-key-spelling: Claude Code ignores this skill frontmatter key because it is not spelled exactly as documented ("user_invocable" is not a key; the key is "user-invocable")
+      fix: Skill field names are lowercase words separated by hyphens (disable-model-invocation, user-invocable, allowed-tools), except when_to_use.
+      evidence: https://code.claude.com/docs/en/skills (verified 2026-10-06)
 .cursor/rules/api-guidelines.md:1: warning AR9C1 cursor-rule-extension-ignored: Cursor ignores files in .cursor/rules that are not .mdc (extension ".md")
       fix: Rename it to .mdc and add frontmatter (description, globs, alwaysApply), or move the text to AGENTS.md.
       evidence: https://cursor.com/docs/rules (verified 2026-10-05)
 ```
 
+Each finding names the harness, a fix, and the vendor page that documents the behavior with the date the page was
+checked. In `--format json` these are the fields `harness`, `hint`, `evidence` and `verified_on` (other fields of the
+finding omitted here):
+
+```json
+{
+  "code": "AR9C7",
+  "name": "claude-frontmatter-key-spelling",
+  "severity": "warning",
+  "file": ".claude/skills/x/SKILL.md",
+  "line": 4,
+  "harness": "claude",
+  "evidence": "https://code.claude.com/docs/en/skills",
+  "verified_on": "2026-10-06",
+  "hint": "Skill field names are lowercase words separated by hyphens (disable-model-invocation, user-invocable, allowed-tools), except when_to_use."
+}
+```
+
 ## When a trap runs
 
-- Only for a harness you use: a trap runs when its harness is in `presets`, or when you list it in
-  `[lint.traps] extra_harnesses` (for hand-written files with no preset, such as a team that keeps `.cursor/rules`
-  by hand).
-- Over the files git tracks (or the directory tree outside git) below the lint root, at the root or in a nested
-  package. A file `generate` would write is read from the plan, so a generated file is judged as the harness will see it
-  whether or not `generate` has run; a hand-written file is read from disk.
-  Traps that apply to generated files (`AR9C1`, `AR9C3` to `AR9C9`) also scan the gitignored output directories of
-  their scope (`.claude/skills`, `.claude/agents`, `.kiro/agents`, `.kiro/steering`, `.devin/rules`, ...) at the lint root and keep the files that carry the ai-rulez header (the `AI-RULEZ :: GENERATED FILE` header or the older banner, as the first comment of the file, with a matching `Content-Hash` when one is stored), because
-  Claude Code outputs are gitignored and git does not list them. A gitignored hand-written file is not checked.
-- Severity is `warning` for a hand-written file (it could be a README). A file that carries the ai-rulez banner
-  and is certainly ignored by the harness is an `error`, because it means a preset is broken. An explicit
-  `[lint.severity]` entry always wins.
-- Silence a trap with `ignore = ["AR9C1"]`, `[lint.severity]`, or `ignore_paths`.
+- **Only for a harness you use.** A trap runs when its harness is in `presets`, or listed in
+  `[lint.traps] extra_harnesses` (for files you maintain by hand without the preset, such as a hand-kept
+  `.cursor/rules`).
+- **Over the files `generate` would write and the files on disk.** A file ai-rulez owns is judged by the bytes
+  `generate` would write, whether or not `generate` has run; every other file is read from disk. Hand-written files
+  are the ones git tracks (or the whole tree outside git). Generated files in gitignored output directories
+  (`.claude/skills`, `.claude/agents`, `.kiro/steering`, `.devin/rules`, ...) are checked too, but a gitignored
+  hand-written file is not.
+- **Severity.** `warning` for a hand-written file (it could be a README). A generated file that the harness certainly
+  ignores is an `error`, because it means a preset is broken. A `[lint.severity]` entry always wins.
 
 ```toml
 [lint.traps]
 extra_harnesses = ["cursor", "copilot"]
-max_table_age_days = 90   # AR9C0 when a row's verified_on is older; 0 (default) is off
+max_table_age_days = 90   # AR9C0 when a trap or limit row was verified longer ago; 0 (default) is off
 ```
+
+Silence a trap with `ignore = ["AR9C1"]`, `[lint.severity]` or `ignore_paths`.
 
 ## Size limits and key spelling
 
-`AR9C8` and `AR9C9` use the `size-over` predicate over the generated files on disk: a Claude skill whose `description`
-plus `when_to_use` is over 1,536 characters, the Codex `AGENTS.md` chain from the lint root down (32 KiB, or
-`[codex] project_doc_max_bytes` when set; 0 turns it off), a Devin rule file over 12,000 characters, an Antigravity
-rule file over 24,000 bytes, the root Kilo `REVIEW.md` over 10,000 characters (Kilo reads only the root file). The numbers live once in `internal/harnesslimits/limits.toml`, each with vendor URL, quote
-and `verified_on`; the generator's own soft warnings read the same table. `AR964` checks the sources before generation;
-`AR9C9` checks what was written. Antigravity counts bytes after expanding `@[label](path)` includes, so a file under
-the limit on disk can still be cut.
+`AR9C8` and `AR9C9` check the written files against documented size limits. `AR9C8` covers the Claude Code skill
+listing; `AR9C9` covers the other limits:
 
-`AR9C7` (`key-misspelt`) flags a frontmatter key in `.claude/skills/*/SKILL.md` or `.claude/agents/*.md` that equals a
-documented key ignoring case, hyphens and underscores but is not spelled exactly (`user_invocable`, `max_turns`).
-Claude Code ignores such a key without an error. `settings.json` keys are not checked: the settings page documents no
-silent-ignore behaviour for them.
+| Code | Limit | Harness |
+| ---- | ----- | ------- |
+| `AR9C8` | `description` plus `when_to_use` over 1,536 characters in a skill listing | `claude` |
+| `AR9C9` | The `AGENTS.md` chain from the lint root down over 32 KiB (or `[codex] project_doc_max_bytes`; `0` turns it off) | `codex` |
+| `AR9C9` | A rule file over 12,000 characters | `devin` |
+| `AR9C9` | A rule file over 24,000 bytes, counted after expanding `@[label](path)` includes | `antigravity` |
+| `AR9C9` | The root `REVIEW.md` over 10,000 characters (Kilo reads only the root file) | `kilo` |
+
+[`AR964`](strict-validation.md) checks the sources against documented load limits before generation.
+
+`AR9C7` flags a frontmatter key in `.claude/skills/*/SKILL.md` or `.claude/agents/*.md` that matches a documented key
+when case, hyphens and underscores are ignored, but is not spelled exactly (`user_invocable`, `max_turns`). Claude Code
+ignores such a key without an error.
 
 ## Kiro traps
 
-`AR9C5` (`json-key-required-if`) flags a `.kiro/agents/*.json` custom agent that has no `resources` (or an empty one)
-while `.kiro/steering/*.md` exists in the same package: Kiro does not load steering files into a custom agent unless
-the agent lists them. ai-rulez writes Markdown agents, so this fires on hand-written JSON agents. `AR9C6`
-(`frontmatter-first`) flags a steering file whose `inclusion` frontmatter follows a blank line or other text; Kiro
-documents that it must come first. Neither is marked inert: the vendor page states the rule, not what Kiro does with
-a file that breaks it.
-
-Traps judge the final bytes `generate` would write (including its headers) for files ai-rulez owns, and the files on
-disk for everything else. A file that exists, is not generated and that a run would leave alone keeps its on-disk
-content. The generator implements `lint.PlannedFiles`, which breaks the import cycle between the two packages.
+- `AR9C5` flags a `.kiro/agents/*.json` custom agent with no (or empty) `resources` while `.kiro/steering/*.md`
+  exists in the same package: Kiro loads steering files into a custom agent only when the agent lists them. ai-rulez
+  writes Markdown agents, so this fires on hand-written JSON agents.
+- `AR9C6` flags a steering file whose `inclusion` frontmatter follows a blank line or other text; Kiro requires it to
+  come first.
 
 ## Project traps
 
-A project adds rows of its own in `.ai-rulez/traps/*.toml`, using the layout of the built-in table. Project rows run
-for every project that has them (no preset gate), report `AR9CA`, and may use any predicate of the closed
-vocabulary (`ext-not-in`, `name-suffix-required`, `frontmatter-enum`, `frontmatter-missing-all`, `key-misspelt`,
-`size-over`, `frontmatter-first`, `json-key-required-if`). `source`, `quote` and `verified_on` are optional. A row
-needs `name`, `harness` (a label), `message` and a scope with `dir` or `suffix`; `scope.dir` must stay inside the
-project, use forward slashes (`.` is the project root), and a `suffix` that starts with neither `.` nor `/`
-(`REVIEW.md`) names a whole file name. `ext-not-in` needs `allowed`. `size-over` takes its own `limit` and `measure` (`file-chars`, `file-bytes` or `frontmatter-chars`). An
-invalid row or file (unknown field, unknown kind) is reported as `AR9CA` and skipped. At most 64 files of 256 KiB.
+Add traps of your own in `.ai-rulez/traps/*.toml`. Project traps run whatever the presets and report `AR9CA`:
 
 ```toml
 # .ai-rulez/traps/team.toml
@@ -92,21 +99,28 @@ kind = "frontmatter-missing-all"
 keys = ["title"]
 ```
 
+```text
+docs/a.md:1: warning AR9CA project-trap: docs pages need a title
+      fix: Add title: to the frontmatter.
+```
+
+| Field | Required | Meaning |
+| ----- | -------- | ------- |
+| `name`, `harness`, `message` | yes | Identity, a label for the harness, and the finding text |
+| `hint` | no | The fix shown under the finding |
+| `scope.dir`, `scope.suffix` | one of them | A directory inside the project (forward slashes, `.` for the root), and a suffix; a suffix that starts with neither `.` nor `/` (`REVIEW.md`) names a whole file name |
+| `predicate.kind` | yes | `ext-not-in` (needs `allowed`), `name-suffix-required`, `frontmatter-enum`, `frontmatter-missing-all`, `key-misspelt`, `size-over` (takes `limit` and `measure`: `file-chars`, `file-bytes` or `frontmatter-chars`), `frontmatter-first`, `json-key-required-if` |
+| `source`, `quote`, `verified_on` | no | The evidence shown with the finding |
+
+An invalid file or row (an unknown field or kind) is reported as `AR9CA` and skipped. At most 64 files of 256 KiB each
+are read.
+
 ## Autofix
 
-`ai-rulez validate --fix` applies the safe trap fixes. Today that is `AR9C7` and project `AR9CA` rows of kind `key-misspelt`: it renames a misspelt
-frontmatter key (`user_invocable` to `user-invocable`) in a hand-written skill or agent file, which may live outside
-`.ai-rulez/`, and only while the documented key is absent (a file that has both spellings is reported, not edited). A generated output is never edited (fix its source), and the other traps have no mechanical fix:
-renaming or moving a file, or choosing `resources`, is a decision.
-
-## Keeping the table fresh
-
-`mise run harness:verify` lists every trap and limit row, and the built-in name table of every harness (`internal/harnessnames`, rule AR9U0), with its source URL and `verified_on`, and fails when a row is
-older than `[lint.traps] max_table_age_days` from the repository config (90 when unset; `HARNESS_MAX_AGE_DAYS`
-overrides). It does not use the network. `HARNESS_VERIFY_FETCH=1 mise run harness:verify` also fetches each source and
-fails when a quote, of a trap or of a name table, is no longer on its page. `[lint.traps] max_table_age_days` (AR9C0) also covers the name tables of the harnesses a project writes for.
-
-The name tables are not edited by hand where a harness keeps its built-ins in a public registry. `tools/harness-builtins/generate.py` reads the registry at the tag or commit pinned in `pins.toml` and rewrites the names; `mise run harness:builtins:check` (network) fails when a data file differs from its pinned source or a quote is gone from its page, `mise run harness:builtins:refresh` shows what a newer tag would change, and a weekly workflow opens an issue on drift. A harness with no registry to read is recorded as `extractor = "none"` with the reason. See `tools/harness-builtins/README.md`.
+`ai-rulez validate --fix` renames a misspelt frontmatter key (`AR9C7`, and project traps of kind `key-misspelt`) in
+a hand-written skill or agent file, for example `user_invocable` to `user-invocable`, as long as the documented key is
+not already present. Generated files are never edited: fix their source. The other traps have no mechanical fix,
+because renaming or moving a file, or choosing `resources`, is your decision.
 
 ## The traps
 
@@ -132,20 +146,5 @@ The name tables are not edited by hand where a harness keeps its built-ins in a 
 
 ## Code ranges
 
-`AR9C0` to `AR9CA` belong to harness traps. The review design has its
-own block, `AR9G`. The full allocation table is in [Strict validation](strict-validation.md#code-ranges). Codes are
-stable and never reused once released.
-
-## Not covered yet
-
-Only traps with a verified quote and date ship. Searched on 2026-10-06 and left out:
-
-- Codex skills listing: the docs (learn.chatgpt.com/docs/build-skills) say the list "uses at most 2% of the model's
-  context window, or 8,000 characters when the context window is unknown" and that descriptions are shortened first.
-  The budget depends on the model, so there is no fixed number to check a file against.
-- `settings.json` key spelling: the Claude Code settings page documents no silent-ignore behaviour for unknown keys;
-  the evidence found is GitHub issues, which is not a vendor citation.
-- Project files that need approval or trust (Codex and pi trusted projects, GitLab Duo `--enable-project-hooks`,
-  zcode, Amp and Trae MCP approval): no vendor citation gathered yet.
-
-Each needs a vendor citation before it becomes a rule.
+`AR9C0` to `AR9CA` belong to harness traps; see the allocation table in
+[Strict validation](strict-validation.md#code-ranges). Codes are never reused once released.

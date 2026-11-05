@@ -1,103 +1,152 @@
 # Strict validation
 
-`ai-rulez validate` checks that configuration parses and matches the schema. `ai-rulez validate --strict` goes
-further and checks that the instruction content actually *works*: globs that select nothing, links and
-references that point nowhere, hooks that cannot run. Each problem is a finding with a stable code, a severity
-and a `file:line`.
+`ai-rulez validate` checks that the configuration loads and matches the schema, then lints the content: globs that
+select nothing, links and references that point nowhere, hooks that cannot run, oversized or duplicate items, and
+security problems such as secrets and prompt injection. Each problem is a finding with a stable code, a severity and a
+`file:line`, so you can gate CI on it, baseline it, or accept it with a reason.
 
 <p align="center">
-  <img src="assets/validate.gif" alt="ai-rulez validate --strict flags a defect, --explain describes it, and generate --check fails on drift" width="820" />
+  <img src="assets/validate.gif" alt="ai-rulez validate flags a defect, --explain describes it, and generate --check fails on drift" width="820" />
 </p>
 
-```bash
-ai-rulez validate --strict                       # text report, exit 2 on errors
-ai-rulez validate --strict --format json         # machine-readable
-ai-rulez validate --strict --format sarif --output ai-rulez.sarif   # code scanning upload
-ai-rulez validate --strict --recursive           # every nested root
-ai-rulez validate --strict --fail-on warning     # warnings also fail
+## Example
+
+A rule links to a guide that does not exist, and a skill grants unrestricted `Bash` and names a script it does not
+ship:
+
+```text
+$ ai-rulez validate
+.ai-rulez/rules/api.md:12: error AR201 link-unresolved: link target "../../docs/errors.md" does not exist
+...
+.ai-rulez/skills/deploy/SKILL.md:5: warning AR007 tool-breadth: allowed-tools grants "Bash", which lets the skill run anything; narrow it (for example Bash(git status:*)) or list it in lint.security.allowed_tools
+.ai-rulez/skills/deploy/SKILL.md:10: error AR402 skill-resource-missing: "scripts/deploy.sh" was not found relative to this skill's directory (.ai-rulez/skills/deploy) or relative to the repo root (.)
+
+validation: 2 error(s), 2 warning(s), 0 info across 1 root(s)
+  AR007 tool-breadth                 1
+  AR201 link-unresolved              1
+  AR402 skill-resource-missing       1
+  ...
+risk (advisory, never fails the run): high (score 66/100)
+  high       33  .ai-rulez/rules/api.md
+  high       33  .ai-rulez/skills/deploy/SKILL.md
 ```
 
-Strict mode runs after the normal validation passes, so a config that fails schema or structural validation
-still exits 1 and never reaches the content checks.
+The run exits 2 because of the errors. Ask what a rule means and how to silence it:
+
+```text
+$ ai-rulez validate --explain AR007
+AR007 tool-breadth
+
+Default severity: warning
+Analyzer:         security (scope: item)
+Finds:            allowed-tools grants an unrestricted tool such as Bash(*)
+
+Why it matters
+  An unrestricted allowed-tools entry lets the skill run any command without a prompt, so the blast radius is the whole account.
+
+Bad
+  `allowed-tools: Bash(*)`
+
+Good
+  `allowed-tools: Bash(git status:*), Read`
+
+Suppress
+  - inline: <!-- ai-rulez-lint-ignore: AR007 --> on the line before, or on, the offending line
+  - config.toml: [lint] ignore = ["AR007"]
+  ...
+Docs: https://goldziher.github.io/ai-rulez/strict-validation/#ar007-tool-breadth
+```
+
+Common invocations:
+
+```bash
+ai-rulez validate                                  # schema, then content checks; exit 2 on errors
+ai-rulez validate --strict                         # warnings fail too (--fail-on warning)
+ai-rulez validate --changed=origin/main            # report only what a branch touched
+ai-rulez validate --format sarif --output ai-rulez.sarif   # upload to code scanning
+ai-rulez validate --recursive                      # every nested root of a monorepo
+ai-rulez validate --config-only                    # the configuration file alone, no content checks
+ai-rulez scan                                      # the security checks alone
+```
+
+## What validate checks
+
+1. **The configuration.** The configuration file is checked against the JSON schema (an unknown or misspelled key is
+   an error), then for structure: includes resolve, ids are unique, `[lint]` settings are valid. A failure here exits
+   1 and the content is not linted. `--config-only` stops after this step; it refuses `--strict` and the flags that
+   need the content checks (`--format`, `--fail-on`, `--fix`, `--path`, the baseline flags, ...).
+2. **The content.** Every analyzer runs over the content tree and reports findings (see [Rule index](#rule-index)).
+
+Paths and globs are resolved like this:
+
+- **Tracked files.** Globs, paths and hook files resolve against `git ls-files` plus untracked files that git does not
+  ignore. Outside a git repository the directory is walked.
+- **Repository root.** The git toplevel of the configuration, else the directory that holds it. For a configuration
+  checked out away from its repository (a scratch copy, a CI artifact), pass `--repo-root <dir>` or set
+  `AI_RULEZ_REPO_ROOT`; the root must be inside a git work tree.
+- **Nested roots.** A nested root resolves globs and paths from the repository top or from its own directory,
+  whichever matches, and may name skills, agents, commands and rules of an ancestor root. Without `--recursive`,
+  `validate` checks one root and names the nested roots it skipped.
+- **Only files you own.** Content from builtins and includes resolves names but is not reported on, except by the
+  security checks (see [Imported content](#imported-content)).
+- **Prose, not code.** Fenced code blocks and inline code are ignored for links; backticked tokens are read only as
+  paths or slash commands.
 
 ## Exit codes
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Configuration valid and no finding at or above the fail threshold |
-| 1 | Configuration invalid or could not be loaded (unchanged), or an invalid `[lint]` setting |
-| 2 | Strict findings at or above the threshold (`--fail-on`, else `[lint] fail_on`, else `error`) |
+| 0 | Configuration valid, no finding at or above the fail threshold |
+| 1 | The configuration is invalid or cannot be loaded, a `[lint]` setting is invalid, or the flags conflict |
+| 2 | Findings at or above the threshold |
 
-`--fail-on` accepts `error`, `warning`, `info` or `none` (report, never fail). `--format`, `--output` and `--fail-on`
-require `--strict`. With any structured `--format` (everything but `text`) nothing but the report is written to
-stdout.
-
-## What is checked against what
-
-- **Tracked files.** Globs, paths and hook files are resolved against `git ls-files` (the index), so a file that
-  exists only in your working tree does not satisfy a glob. Outside a git repository the directory is walked
-  instead.
-- **Repository root.** The root defaults to the git toplevel of the configuration, else the directory that holds
-  it. For a configuration checked out away from its repository (a scratch copy, a CI artifact) pass
-  `--repo-root <dir>` or set `AI_RULEZ_REPO_ROOT`: paths, globs (`git ls-files`) and hook files then resolve
-  against that directory instead of reporting paths that exist in the real repository as missing. The root must
-  be inside a git work tree: a directory outside git is refused with an error instead of being walked. `AR402`
-  names both bases it tried: the skill directory and the repo root.
-- **Nested roots.** A root's globs and paths resolve from the repository top or from the root's own directory,
-  whichever matches. A root may name skills, agents, commands and rules defined by an ancestor root or in a
-  hand-authored `.claude/` directory of an ancestor, because assistants load the ancestors' instructions.
-  `--recursive` lints every root and merges the findings.
-- **Only files you own.** Content pulled in from builtins or includes is used to resolve names but is never
-  reported on, except by the security checks when `[lint.security] scan_imports` is set.
-- **Prose, not code.** Fenced code blocks and inline code spans are ignored for links; backticked tokens are only
-  read as paths or slash commands.
+The threshold is `--fail-on` (`error`, `warning`, `info` or `none`; `--strict` is `--fail-on warning`), else the
+threshold of `--lint-profile`, else `[lint] fail_on`, else the threshold of `[lint] profile`, else `error`. `--strict`
+with any other `--fail-on` is an error. With a structured `--format` (anything but `text`), stdout holds only the report.
 
 ## Without a configuration file
 
-`validate`, `scan` and `doctor` work in a repository that has no `.ai-rulez/config.toml` (or `.agents/ai-rulez.toml`):
-nothing needs to be initialized to lint what a project already holds. When no configuration is found in the working
-directory or above, they print `no ai-rulez config found; linting detected files` on stderr and use an implicit
-configuration: no presets, includes, hooks or MCP servers, the default `[lint]` settings, and the git toplevel (else the
-working directory) as the project root.
+`validate`, `scan` and `doctor` also work in a repository with no ai-rulez configuration. They print
+`no ai-rulez config found; linting detected files` on stderr and lint the files found by convention, as hand-written
+sources:
 
-The content set is found by convention, and everything found is treated as hand-written:
+- `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`, at the root and in subdirectories;
+- every `SKILL.md`, with its `references/`, `scripts/` and `assets/`;
+- `.claude/{skills,agents,commands,rules}` at any depth, `.agents/**` and `.cursor/rules`;
+- an `.ai-rulez/` content tree without a `config.toml`;
+- `.claude-plugin/plugin.json` and `marketplace.json`, `hooks/hooks.json`, `.claude/settings.json` hooks and
+  `.mcp.json`.
 
-- `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`, at the root and in subdirectories (context);
-- every `SKILL.md`, wherever it is (a skill, with its `references/`, `scripts/` and `assets/`);
-- `.claude/{skills,agents,commands,rules}` (a nested `.claude` directory is discovered at any depth, so its rules, commands and agents are linted and indexed for `AR301`), `.agents/**` and `.cursor/rules`;
-- an `.ai-rulez/` content tree even without a `config.toml`;
-- `.claude-plugin/plugin.json` and `marketplace.json`, `hooks/hooks.json`, `.claude/settings.json` hooks and `.mcp.json`.
+```text
+$ ai-rulez validate
+no ai-rulez config found; linting detected files
+.claude/skills/release/SKILL.md:8: error AR402 skill-resource-missing: "references/checklist.md" was not found relative to this skill's directory (.claude/skills/release) or relative to the repo root (.)
+AGENTS.md:3: error AR201 link-unresolved: link target "CONTRIBUTING.md" does not exist
 
-A project **with** a configuration lints the same convention files that its configuration does not list, in `validate`
-and `scan` (not in `catalog` or `publish`): a hand-written `.claude/skills/x/SKILL.md` or a nested `CLAUDE.md`. The files
-a `generate` run recorded in its manifest, and files that carry the generated header, are outputs and are left out
-without a notice; `--path` or `--glob` replace this detection, as they do without a configuration.
+validation: 2 error(s), 0 warning(s), 0 info across 1 root(s)
+...
+```
 
-Untracked files that git does not ignore count; a file that carries the ai-rulez generated header (the
-`AI-RULEZ :: GENERATED FILE` line `generate` writes, or the older `Generated by ai-rulez` banner) is an output and is
-left out unless `--outputs` asks for it. The header counts only as the file's own header: the first comment after an
-optional byte order mark and frontmatter (or, for a skill or agent, a `Content-Hash` comment in the frontmatter). A
-marker further down, in prose or a code block, does not make a hand-written file an output, and when the header stores
-a `Content-Hash` the body must still hash to it, so an edited file is linted as a source. The header is text anyone can
-write, so every conventional file left out as generated is named on stderr and in the `notices` of the JSON report
-(`<file>: not linted (generated file: lint it with --outputs)`); read the list when a file you wrote is on it. A custom
-header (`[header]` text, or `hashes = "none"`) is not recognized. With `--path` or `--glob` only the files you name are linted. Exit codes are the
-same as with a configuration. The baseline defaults to a file only when `.ai-rulez/` exists, so pass `--baseline <file>`
-to keep one; `--update-baseline` without a directory or a file is an error. Nothing is ever written, and a home or
-filesystem-root directory outside git is refused instead of walked. `generate`, `clean` and `lock` still need a
-configuration and fail with `run ai-rulez init`, and so does `validate --config-only`, which checks a configuration
-file. `okf validate <dir>` never needed one. `validate --recursive` in a tree that holds no configuration lints that
-implicit root the same way (with `--path` and `--glob` honored) instead of reporting that nothing was found, so
-adding `--recursive` never turns a failing repository into a passing one.
+The implicit configuration has no presets, includes, hooks or MCP servers and the default `[lint]` settings. Nothing
+is written. `--exclude <glob>` leaves files out of the detection, and `--path` or `--glob` replace it with the files
+you name. A baseline is read from `--baseline <file>`, or by default only when an `.ai-rulez/` directory exists. A
+home or filesystem-root directory outside git is refused instead of walked. `generate`, `clean`, `lock` and
+`validate --config-only` still need a configuration. To keep `[lint]` settings without an `.ai-rulez/` folder, see
+[Lint-only configuration](config-without-folder.md#lint-only-configuration).
+
+A project **with** a configuration also lints the convention files its configuration does not cover, such as a
+hand-written `.claude/skills/x/SKILL.md`. A file that carries the ai-rulez generated header, or that a `generate` run
+recorded in its manifest, is an output and is skipped (see [Generated files](#generated-files)); each one skipped is
+named on stderr and in the `notices` of the JSON report. A custom header (`[header]` text, or `hashes = "none"`) is
+not recognized as generated, so such a file is linted as a source.
 
 ## Files outside the content tree
 
-`validate` and `scan` lint the content tree of the configuration. Three inputs add files outside it, for example a
-marketplace, a plugin or a skill kept in a directory of its own:
+To lint a marketplace, a plugin or a skill kept outside the content tree, name it:
 
 ```bash
-ai-rulez validate --strict --path catalog                      # a file or a directory, repeatable
-ai-rulez validate --strict --glob "plugins/**/*.json"           # a glob, repeatable
+ai-rulez validate --path catalog                  # a file or a directory, repeatable
+ai-rulez validate --glob "plugins/**/*.json"      # a glob relative to the project root, repeatable
 ```
 
 ```toml
@@ -105,725 +154,320 @@ ai-rulez validate --strict --glob "plugins/**/*.json"           # a glob, repeat
 paths = ["catalog", "vendor/skills"]   # always linted, relative to the project root
 ```
 
-- **Inside the project root only.** Every path, glob match and `[lint] paths` entry must resolve inside the
-  repository root once symlinks are followed: a path that leaves it is an error, and a file reached through a
-  symlink that points outside is skipped. `--glob` patterns are relative to the root (a pattern without a slash
-  matches at any depth). A glob that matches nothing is reported on stderr. Outside git the project root is the
-  configuration's directory; a `--path` above it widens the root to the nearest directory that holds both, when that
-  directory lies inside the working directory (run from the top of the tree, or pass an absolute path from a
-  directory that contains it). `[lint] paths` and globs do not widen it.
-- **Nothing you name is dropped silently.** A file picked with `--path`, `--glob` or `[lint] paths` that is not
-  linted is named on stderr as `<file>: not linted (<reason>)` and listed once in the `notices` array of the JSON report
-  (`validate --format json`, `scan --format json`; a file that two `--recursive` roots both skipped is reported once). The reasons are: larger than 2 MiB, a binary file, not a regular
-  file, a symlink that resolves outside the project, a generated file (lint it with `--outputs`), or a skill that
-  could not be loaded. Files found below a `--path` directory that are no content are only counted in one summary
-  line. A file named with `--path` that cannot be read, is not a regular file or is over 2 MiB fails the run with
-  exit 1 (it could not be checked, so no verdict is given), as does a path that does not exist or leaves the project;
-  the same file matched by a `--glob` is a notice only, so a broad glob cannot fail on one stray log.
-- **Text of any kind gets the secret scan.** A text file you name with `--path` or `--glob` that is no content kind
-  (`.env`, a YAML or TOML file, `notes.txt`, a JSON file that is not a plugin, marketplace, hook or MCP file) is read
-  as plain text (at most 2 MiB, never through a symlink) and checked for credentials (`AR001`, and your
-  `secret_patterns`); no other rule judges it. Injection phrases, hidden characters, links and the other
-  content rules are not applied to such a file, because it is not a known content kind; only a named markdown file
-  is classified (see below) and gets them. A directory given to `--path` lints only the kinds above, so name
-  `.env`-style files individually or by glob.
-- **One file, one spelling.** On a case-insensitive file system (the default on macOS and Windows) `--path agents.md`
-  is the file `AGENTS.md`: it is classified by the spelling stored on disk and is linted once, however it is named.
-- **Untracked files count.** A directory or glob takes the tracked files and the untracked files that git does not
-  ignore, so `--path .` never lints an ignored `node_modules` or reads `.git`, and an ignored tree does not count
-  against the 20,000-file limit. Outside git the directory is walked and the usual dependency, build, cache and
-  hidden directories below it are skipped (the directory you name is always walked, even `.claude`). An explicit
-  file path is linted even when git ignores it.
-- **Recognized by content, not by location.** A plugin manifest (a `name` and a `version`), a marketplace (a
-  `plugins` list with an `owner` or a `source` per plugin), a hook file (a `hooks` object of matcher groups) and an
-  MCP file (`mcpServers`) are recognized wherever they are, and get the same checks (`AR963`, `AR507`, the `AR6xx`
-  MCP rules) as the ones in `.claude-plugin/`, `hooks/` and `.mcp.json`. Markdown is classified by name and place:
-  `SKILL.md` is a skill, `AGENTS.md` and `CLAUDE.md` are context, files below `agents/`, `commands/`, `rules/` and
-  `checks/` are of that kind, and any other markdown named with `--path` or `--glob` is context. A file that
-  carries the ai-rulez generated header is an output, not a source, and is skipped.
-- **Nothing else changes.** Findings, baselines, `--fix` and the exit codes work as for the content tree; a fix
-  never edits a generated file or a file outside the project root. `--path` and `--glob` need the content checks
-  (not `--config-only`) and cannot be combined with `--update-baseline`: put the paths in `[lint] paths` to
-  baseline them. With `--recursive`, each root lints the matching files below its own directory. A file picked
-  with `--path` or `--glob` that lies outside every root (no root at the repository top covers it) is not dropped:
-  it is linted once at the repository root with the implicit configuration (no root's configuration applies to it),
-  named in the notices as `<file>: outside every --recursive root, linted at the repository root`, and its findings
-  count toward the exit code. This needs a git repository; outside git each root is its own project and a path
-  outside it is an error.
+- Everything must resolve inside the project root. A `--path` that does not exist, leaves the root, or names an
+  unreadable file or one over 2 MiB exits 1. A file matched by a glob that cannot be linted is only a notice.
+- A file that is picked but not linted is named on stderr as `<file>: not linted (<reason>)` and in the `notices` of
+  the JSON report: over 2 MiB, binary, not a regular file, a symlink out of the project, a generated file, or a skill
+  that could not be loaded.
+- Plugin manifests, marketplaces, hook files and MCP files are recognized by content wherever they are. Markdown is
+  classified by name and place (`SKILL.md` is a skill, files below `agents/`, `commands/`, `rules/` and `checks/` are
+  of that kind, other markdown is context).
+- Any other text file you name (`.env`, YAML, TOML) is scanned for secrets (`AR001`) only.
+- Directories and globs take tracked and non-ignored untracked files, so `--path .` never lints an ignored
+  `node_modules`.
+- `--path` and `--glob` cannot be combined with `--update-baseline`; put the paths in `[lint] paths` to baseline them.
+  With `--recursive`, each root lints the matching files below it, and a file outside every root is linted at the
+  repository root.
 
-## Generated files: --outputs
+## Generated files
 
-The content checks judge what you wrote. `--outputs` (or `[lint] lint_outputs = true`) also lints what `generate` writes
-into `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/` and the other harness files, using the bytes a run
-would write now (so it does not matter whether `generate` has run) and, for a file a past run recorded in the generated
-manifest that the plan no longer writes, the file on disk.
+The content checks judge what you wrote. `--outputs` (or `[lint] lint_outputs = true`) also lints what `generate`
+writes into `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/` and the other harness files, using the bytes
+a run would write now:
 
 ```bash
-ai-rulez validate --strict --outputs
+ai-rulez validate --outputs
 ```
 
-- **Which checks.** The security (`AR0xx`), references (`AR2xx`, `AR3xx`) and descriptions (`AR8xx`) analyzers run on
-  the generated markdown; budgets, metadata and the authoring-choice checks do not, since a generated file makes no
-  authoring choice.
-- **Reported once.** A finding on a generated file carries `"source": "output"` in JSON and `properties.source` in
-  SARIF (text marks it `[generated output]`). A generated file that repeats an authored item is not checked again, and
-  a finding on one that an authored file already has (same rule, same message and the same flagged line, as in an `AGENTS.md`
-  that carries the text of every rule) is dropped, so a problem is reported at the authored path and counted once in
-  the risk score and the baseline. The line is compared because a message can mask what it found: a stale generated
-  file that still holds an older, different secret of the same type is kept and reported.
-- **Never fixed.** `--fix` never edits a generated file, and a finding on one carries no fix: fix its source.
-- **Without a configuration.** With no configuration the generated files are the ones that carry the generated header;
-  they are linted as outputs and nothing is generated.
-
-## Findings
-
-| Code | Name | Default | Finds |
-| --- | --- | --- | --- |
-| AR001 | `secret-detected` | error | A credential pattern (AWS access key ids `AKIA`/`ASIA` and AWS secret access keys, which have no prefix and are matched only as a 40-character value assigned to a name containing `aws_secret_access_key` with `=` or `:`, so an arbitrary 40-character string is not reported; GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
-| AR002 | `hidden-characters` | error | Zero-width, bidirectional-control, Unicode tag or other invisible characters (hangul and braille blanks, variation selectors, U+206A to U+206F, line and paragraph separators, the combining grapheme joiner). A joiner between two non-ASCII characters, an emoji presentation selector, and a leading byte order mark are fine |
-| AR003 | `html-comment-instruction` | warning | An HTML comment, invisible when rendered, with instruction-like text (`curl`, `eval`, `run:`, "secretly", injection phrases) |
-| AR004 | `prompt-injection-phrase` | warning | Text that tries to override earlier instructions or hide actions from the user ("ignore previous instructions", "do not tell the user", ...) |
-| AR005 | `risky-shell-exec` | error | `curl ... \| sh` (or an interpreter), `bash <(curl ...)`, `eval` of dynamic text, a base64 payload decoded into a shell. `eval "$(ssh-agent -s)"` and similar environment initializers are exempt. Markdown prose is not flagged only when the command is directly governed by a negation in the same clause ("never run `curl ... | bash`", "do not pipe ... to sh") or followed by a verdict ("... is unsafe"); a run, install, required, first or then in between, or a negation in another clause ("Never skip setup: run ..."), is still reported; fenced code, frontmatter and scripts always are. A prose mention of the bare shorthand `curl | sh` (a downloader with no URL or argument, only flags) names the technique and downloads nothing, so it is not reported; any URL or variable makes it a command again |
-| AR006 | `risky-shell-access` | warning | Reads of `~/.ssh`, `~/.aws`, `.netrc` and other credential locations, writes to `~/`, `/etc`, `/usr`..., `chmod 777` |
-| AR007 | `tool-breadth` | warning | A skill or command `allowed-tools` entry that is unrestricted: `Bash`, `Bash(*)`, `*` (listed exceptions in `allowed_tools` pass) |
-| AR008 | `outbound-host` | warning | A URL whose host is not in `[lint.security] allowed_hosts`; checked only when that list is set (`localhost` and `127.0.0.1` always pass) |
-| AR009 | `encoded-blob` | warning | A base64-like run of 200 or more characters that a reviewer cannot read |
-| AR010 | `unpinned-remote` | warning | A remote include, installed skill or `[[skill_sources]]` entry follows a moving ref and `ai-rulez.lock` does not pin it (a full commit SHA counts as pinned) |
-| AR011 | `external-finding` | warning | A finding from a `[[lint.external]]` scanner (its own severity is kept) |
-| AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
-| AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist. A link in content a `[[scopes]]` entry renders is also resolved from that scope's directory, where the generated file is written |
-| AR202 | `anchor-unresolved` | warning | `file.md#anchor` where the target has no heading producing that anchor |
-| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`, `Procedure/reference: skill X`, `skills/X`, `.claude/skills/X/SKILL.md`). Only a name used as a pointer counts: a backticked term followed by a plural kind noun (`` `disable-model-invocation` skills ``) or preceded by an indefinite article (`` a `both` skill ``) is prose, not a reference, a `` `x` rule `` that follows a possessive or a linter or tool name (``eslint's `camelcase` rule``, ``the eslint `no-console` rule``) names a tool's rule and is prose, `` `x` rule `` is never a reference in a tree that defines no rule (names in `lint.known_names` do not count as rules; list a name there to silence it anywhere), and a `skills/` segment nested in another tree (`` src/mastra/public/skills/shared/… ``, unlike `skills/X` or `.claude/skills/X/SKILL.md`) is not a pointer to a skill of this project. The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
-| AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
-| AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
-| AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `acme/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`). A missing path that git ignores (`.gitignore`, `.git/info/exclude` or the global excludes file) is a local file the text documents and is not reported either (`.claude/settings.local.json`); it is looked up only for a path found missing. Silence the rest with `[lint] allow_paths` (the path may be missing everywhere), `[[lint.ignore_rules]]` (this rule in some files), or `<!-- ai-rulez-lint-ignore: AR401 -->` on the line before or on the line itself |
-| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too. The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
-| AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file (in a skill also `${CLAUDE_SKILL_DIR}/...`, resolved against the skill's own directory), or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
-| AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit (fixable) |
-| AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |
-| AR504 | `hook-source-missing` | error | A `script` of a top-level `[[hooks]]` entry in `config.toml` does not exist |
-| AR505 | `hook-source-not-executable` | error | That `[[hooks]]` script lacks the executable bit |
-| AR506 | `permission-overbroad` | warning | A `[permissions] allow` rule permits every call of a tool (`Bash`, `Bash(*)`, `*`) |
-| AR601 | `mcp-command-not-found` | warning | A stdio `[[mcp_servers]]` `command`, or one of an inline `mcpServers` entry in agent or skill frontmatter, is not on `PATH` (or not an existing relative file) |
-| AR701 | `description-duplicate` | warning | Two skills, agents or commands have identical descriptions |
-| AR702 | `description-near-duplicate` | warning | Descriptions overlap at or above `near_duplicate_threshold` (word-set Jaccard) |
-| AR703 | `duplicate-collapsed` | warning | Two sources define the same rule, context, skill or command name and generation silently keeps one (root over domains over includes over builtins). Message names both paths; allow intentional shadowing with `allow_overrides` |
-| AR730 | `constraint-unsatisfiable` | error | No tag of a source satisfies its `version` constraint, or the source has no semantic version tags (see [Lock file](lockfile.md#version-constraints)) |
-| AR731 | `constraint-invalid` | error | A `version` constraint does not parse, or an include, installed skill or skill source sets both `ref` and `version` |
-| AR732 | `tag-moved` | error | A tag pinned in `ai-rulez.lock` now points to another commit; raised by `lock`, `lock --outdated` and `update`, which never follow it silently |
-| AR733 | `release-held-back` | info | A tag that satisfies a `version` constraint was held back by `min_release_age`; the next older tag, or the pin, is used (see [Lock file](lockfile.md#minimum-release-age)) |
-| AR734 | `source-outdated` | off | A remote source has a newer tag its constraint allows; reported by `lock --outdated` once enabled in `[lint.severity]` |
-| AR735 | `locked-tag-missing` | warning | A tag pinned in `ai-rulez.lock` no longer exists on the remote; the pinned commit is still used |
-| AR740 | `policy-loosened` | error | The repository weakens a key the organization policy only lets it tighten; the policy value is enforced and the attempt reported (always an error, see [Policy](policy.md)) |
-| AR741 | `policy-digest-mismatch` | error | A policy file or URL does not match the digest it is pinned to, or a policy URL has no digest |
-| AR742 | `policy-unavailable` | error | A policy demanded by `--policy` or `AI_RULEZ_POLICY` cannot be read, or its URL cannot be reached and no cached copy younger than `max_stale` exists; ai-rulez fails closed |
-| AR743 | `policy-invalid` | error | A policy file is unusable: not TOML, an unknown key or rule, a bad pattern, or newer than this ai-rulez |
-| AR744 | `policy-required-missing` | error | The repository turns off or ignores a rule code the organization policy requires |
-| AR745 | `source-not-allowed` | error | An include, installed skill or skill source comes from a host the organization policy does not allow or denies |
-| AR746 | `policy-signature-invalid` | error | A policy is unsigned where signatures are required, or its signature does not verify: not a trusted signer, not covering the policy, or older than one already seen (fails closed) |
-| AR747 | `digest-denied` | error | `ai-rulez.lock` pins content whose digest is on the organization policy's `sources.deny_digests` list; a denied include, installed skill or skill source is not loaded (always an error) |
-| AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids: a denied transport, a command outside `mcp.allowed_commands`, or any hook when `hooks.allow` is false; it is not loaded |
-| AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (`0` allows none) |
-| AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version (a range, `latest`, an image tag, a source with no commit pin); reported by `validate --strict` and `sbom --strict-pins` (see [SBOM](sbom.md)) |
-| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognized launcher, no `package`); reported by `validate --strict` and `sbom --strict-pins` |
-| AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no lock, or one that no longer matches the sources; `validate --strict` reports a lock that exists and no longer matches |
-| AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none; `validate --strict` compares a committed `ai-bom.cdx.json` or `sbom.cdx.json` at the project root |
-| AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
-| AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
-| AR803 | `description-style` | off | A skill or agent description does not say when to use it; turned on by `require_use_when = true`. Slash commands are exempt: the user invokes them by name. A trigger is "use ... when/for/before", "when", "whenever", "Load for/before/when ...", "Use this skill any time" or "Use X as ..." |
-| AR804 | `skill-name-invalid` | warning | Skill `name` is not lowercase letters/digits/single hyphens, exceeds 64 characters, or differs from its directory (Agent Skills specification) |
-| AR901 | `size-lines` | warning | Item exceeds its line budget |
-| AR902 | `size-tokens` | warning | Item exceeds its token budget (cl100k_base, an approximation) |
-| AR951 | `metadata-missing` | error | Item lacks a frontmatter key listed in `require_metadata`, or a `[lint.metadata.<key>] required = true` key (no key is required by default). A key inside the Agent Skills `metadata` map counts |
-| AR952 | `metadata-invalid` | error | A `[lint.metadata.<key>]` value is not a date, is not one of the `values` of an enum, or is a date in the future |
-| AR953 | `metadata-stale` | warning | A date older than `max_age_days` |
-| AR954 | `superseded-by-missing` | error | `superseded_by: <name>` names an item that does not exist |
-| AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
-| AR962 | `evals-missing` | off | A skill has no eval cases; turned on by `[lint.evals] require = true` or a `[lint.severity]` entry (see [Evals](evals.md)) |
-| AR996 | `eval-case-invalid` | error | An eval case file (`*.eval.yaml`, `*.eval.yml`, `*.eval.json`) is malformed: unknown field, missing `expect_trigger` or prompt, bad assertion, invalid regex, unsafe path, duplicate id (see [Evals](evals.md#case-format)) |
-| AR997 | `eval-stale` | off | A skill changed after its last recorded passing eval run; turned on by `[lint.evals] require_fresh = "warn"\|"error"` |
-| AR998 | `eval-score-low` | off | A skill's recorded eval pass rate is below `[lint.evals] min_pass_rate`; setting that turns the rule on at error |
-| AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be parsed or has an unsupported `schema_version` |
-| AR9A1 | `activation-low` | off | A skill's recorded activation recall or precision (`eval run --mode activation`) is below `[lint.evals] min_activation_recall` or `min_activation_precision`; setting either turns the rule on at error (see [Evals](evals.md#activation-mode)) |
-| AR9A2 | `skill-confusable` | off | A sibling skill won at least `[lint.evals] confusion_threshold` of this skill's positive activation prompts; setting it turns the rule on at warning |
-| AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
-| AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
-| AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
-| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`) and the skills MCP call forms (`load_skill(x)`, `load_skill(name: "x")`, `get_skill x`, `read_skill_file x`; a single code span `load_skill x` is the recommended fix and is not reported); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
-| AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output, its own skill tree or the shared `.agents/skills` tree it reads (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
-| AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped). Not reported for a harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) |
-| AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
-| AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
-| AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
-| AR989 | `served-file-unscannable` | warning / error | A served skill file (authored skills included) is binary (a NUL byte, invalid UTF-8) or larger than 512 KiB, so the security scan cannot read it. For a remote source (`trust = "error"`) the file is not served; a `SKILL.md` that cannot be scanned is an error and the skill is refused |
-| AR9R0 | `served-skill-bundled-files` | warning | A served skill ships files under `scripts/` or `assets/`, which are not written to the skill tree of a harness that can call MCP (the shared `.agents/skills` tree included); a relative path into them (the form SKILL.md usually uses) resolves to nothing. `references/` are exempt (readable over MCP with `list_skill_resources`/`load_skill`). Set `delivery: both` to keep the files on disk, or fetch them over MCP and write them out yourself (see [Served files](mcp-server.md#served-files-scripts-and-assets) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
-| AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a skill whose `delivery` is `both` and whose frontmatter sets `disable-model-invocation: true` (or `disable_model_invocation`), by a bare name or `Skill(...)`; the Skill tool refuses a DMI skill, so the model then declines the workflow. A file-path pointer is not reported. A `load_skill`/`find_skill` pointer is reported too for the hyphenated key, unless `[mcp] serve_user_invoked_skills = true` (the skills server hides a user-only skill from the model otherwise, but ignores the underscore spelling; see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
-| AR9R2 | `served-dmi-unreachable` | warning | A skill whose `delivery` is `served` sets `disable-model-invocation: true` (the hyphenated key only; Claude Code and the server ignore the underscore spelling): a served skill is never written to disk, so the user has no slash command for it, and the skills server hides it from the model, so nobody can run it. Set `delivery: both`, or `[mcp] serve_user_invoked_skills = true`, or drop the flag. Not reported when `serve_user_invoked_skills` is on |
-| AR971 | `role-reference-unknown` | error | A `[[roles]]` entry lists a domain that does not exist, or an include, exclude or `skill_mode` entry that matches no item (or matches only in a domain the role does not select). See [Roles](roles.md) |
-| AR972 | `role-extends-invalid` | error | A role extends an unknown role, itself, or takes part in a cycle, or extends a role that itself extends another (inheritance is one level deep) |
-| AR973 | `role-unreachable-dependency` | warning | An item a role keeps lists a skill in its `skills:` frontmatter that the role drops, or hides from the model with `skill_mode` `off` or `user-invocable-only` |
-| AR710 | `approval-missing` | error | Content that `[governance] require_approval` selects has no reviewer approval in `ai-rulez.lock` (see [Approvals](approvals.md)) |
-| AR711 | `approval-stale` | error | Content was approved, but its digest changed since: a new version needs a new review |
-| AR712 | `approval-expired` | error | Every approval of the current digest is past its `expires` date |
-| AR713 | `approver-not-authorized` | error | The current digest is approved only by reviewers outside `[governance] approvers` |
-| AR714 | `approval-insufficient` | error | Fewer distinct reviewers approved the current digest than `[governance] min_approvers` asks for |
-| AR715 | `approval-orphan` | warning | An approval names content that no longer exists; `ai-rulez approve --prune` removes it |
-| AR716 | `approval-with-change` | error | An approval was added in the same change as the content it approves (reported only by `--approvals-base` or `approve --verify-base`) |
-| AR717 | `approval-denied` | error | The content's digest is on the `[[deny]]` list in `ai-rulez.lock`: it can be neither approved nor used |
-| AR718 | `approval-unverified` | error | Every approval of the current digest claims an assurance (`signed`, `review-linked`) that could not be verified |
-| AR719 | `approver-unresolved` | error | `[governance] approvers_from` or a team cannot be resolved (no CODEOWNERS file, or a team with no member list), so nobody is authorized by it |
-| AR720 | `signature-missing` | error | `[signing] require` asks for a signed lock and the attestation file is missing (see [Signing](signing.md)) |
-| AR721 | `signature-invalid` | error | The attestation is not a valid Sigstore bundle: bad envelope, signature, certificate chain or log proof |
-| AR722 | `signer-not-trusted` | error | The signer's identity, issuer or key matches no `[[signing.trust]]` entry, or the entry is outside its validity window; also an `identity_regexp` that is not anchored |
-| AR723 | `signature-stale` | error | The signature is older than `[signing] max_age` |
-| AR724 | `attestation-subject-mismatch` | error | The signed lock-subject digest or `hash_version` differs from the lock, or is below `min_hash_version` |
-| AR725 | `trusted-root-unavailable` | error | A certificate-signed attestation needs a trusted root and none is configured or cached |
-| AR726 | `tlog-proof-missing` | error | `[signing] tlog = "required"` and the bundle has no transparency log entry |
-| AR727 | `signature-rollback` | error | The attestation is older than one this machine already verified for the same signer and project |
-| AR728 | `signature-threshold-not-met` | error | Fewer distinct trusted signers signed than `[signing] thresholds` asks for |
-| AR729 | `provenance-invalid` | error | The SLSA provenance of a bundle is missing, is not SLSA provenance v1, or names a builder that `[signing] builders` does not list |
-| AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
-| AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
-| AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
-| AR9L1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
-| AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)) |
-| AR9K1 | `telemetry-repo-key-ignored` | warning | The repository `[telemetry]` sets a key only the user config or `AI_RULEZ_TELEMETRY_*` may set (`allow_network`, `otlp_endpoint`, `headers_env`, ...); it is ignored |
-| AR9C0 | `harness-table-stale` | warning | A trap or harness-limits row whose `verified_on` is older than `[lint.traps] max_table_age_days` (off unless above 0). See [Harness traps](harness-traps.md) |
-| AR9C1 | `cursor-rule-extension-ignored` | warning | A file in `.cursor/rules` that is not `.mdc` (Cursor ignores it; `README.md` and folder-style `RULE.md` are exempt); error when ai-rulez generated it. See [Harness traps](harness-traps.md) |
-| AR9C2 | `cursor-rule-not-applied` | warning | A hand-written `.mdc` rule with no `description`, `globs` or `alwaysApply`, so it applies only when @-mentioned |
-| AR9C3 | `copilot-exclude-agent-invalid` | warning | A `.instructions.md` file whose `excludeAgent` is neither `code-review` nor `cloud-agent` (the older `coding-agent` is still accepted) |
-| AR9C4 | `copilot-instructions-suffix` | warning | A file in `.github/instructions` not named `*.instructions.md` (Copilot skips it); error when ai-rulez generated it |
-| AR9C5 | `kiro-agent-steering-not-loaded` | warning | A `.kiro/agents/*.json` custom agent without `resources` while `.kiro/steering/*.md` exists |
-| AR9C6 | `kiro-steering-frontmatter-not-first` | warning | A `.kiro/steering/*.md` file whose `inclusion` frontmatter follows a blank line or text, so Kiro does not read it |
-| AR9C7 | `claude-frontmatter-key-spelling` | warning | A `.claude/skills/*/SKILL.md` or `.claude/agents/*.md` frontmatter key spelled as a variant of a documented key (`disable_model_invocation`, `max_turns`); Claude Code ignores it silently. Error when ai-rulez generated it |
-| AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
-| AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
-| AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
-| AR9U0 | `harness-builtin-name-collision` | error | A skill, command or agent output has the name or alias of a built-in command, bundled skill or built-in agent of a harness that loads it (every preset that writes the output and every harness that reads the directory it lands in, such as `.agents/skills`). The message names the harness, its version, the evidence page and what the harness does (`user_wins`, `builtin_wins`, `both_listed`). Error only where the table records a quoted outcome and the project writes for the harness (a harness that only reads a shared directory is a warning); a built-in with an undocumented outcome is information, listed once per item. Claude Code commands and bundled skills are AR808. Allow with `[lint.builtin_names] allow` or `allow_overrides` (`name` or `preset:name`) |
-| AR9U1 | `harness-reserved-name` | error | A skill, command or agent output has a name the harness refuses to load (Claude Code `synced`, `anthropic-skills`, `anthropic-skills:*`). Not silenced by `allow` or `allow_overrides`: rename the item |
-| AR9I0 | `accept-unused` | warning | A `[[lint.accept]]` entry accepted no finding: the finding was fixed, the `path` or `match` no longer fits, or the rule is not reported there. Remove the entry (see [Accepting one finding](#accepting-one-finding)) |
-| AR9Q0 | `claude-md-shadows-agents-md` | off | `[lint] agents_md_only = true` asserts AGENTS.md is canonical for Claude Code, but a tracked `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is not the generated `@AGENTS.md` shim and shadows the nearest AGENTS.md. Paths matching `agents_md_only_allow` are exempt, and a `--recursive` run lets each nested root report its own files |
-| AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
-| AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
-| AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`, or its `--version` is outside `version`; it was not run (a notice, not an error; an error when the scanner is `required`, including one that no entry or preset provides) |
-| AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF or adapter output, or exited non-zero with no results; or `isolation = "require"` and the scanner cannot be confined |
-| AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
-| AR9E5 | `scanner-baseline-expired` | warning | An entry of `scanner-baseline.json` is past its `expires` date, so the scanner finding it accepted is reported again |
-| AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped (an error when every result of the run was dropped) |
-| AR9E7 | `scanner-isolation-degraded` | warning | `isolation = "auto"` found no process isolation backend, so staged scanners ran without network or write confinement (once per run) |
-| AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#ai-rulez-convert)) |
-| AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
-| AR9F2 | `convert-dropped` | warning | `convert` found a construct with no ai-rulez equivalent and did not convert it (convert report only) |
-| AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, a hook or allow rule written disabled, a remote source not fetched (convert report only) |
-| AR9F4 | `convert-unsupported` | warning | A source or construct `convert` does not support, such as a `file://` skills-lock source (convert report only) |
-| AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
-| AR9N0 | `publish-preflight-failed` | error | A preflight gate of `ai-rulez publish` failed: `validate --strict`, `lock --check` or `verify --plugin` (publish only, see [Publish](publish.md)) |
-| AR9N1 | `publish-bundle-unsafe` | error | The bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only) |
-| AR9N2 | `publish-secret-found` | error | The secret scan of the bundle found a credential (publish only) |
-| AR9N3 | `publish-source-unreleasable` | error | `[plugin] version` is unset, or the source tree is dirty or has no commit (publish only; `--allow-dirty` waives the tree) |
-| AR9N4 | `publish-target-failed` | error | The upload failed: `gh` is not installed, the release already exists, or `gh` exited non-zero (publish only) |
-| AR9N5 | `publish-verify-mismatch` | error | `publish verify` found a digest, manifest or archive mismatch (publish only) |
-| AR9N6 | `publish-config-invalid` | error | The `[publish]` table, a publish flag or a target option is invalid: unknown emitter, runtime or channel, a bad tag, scope or OCI reference (publish only) |
-| AR9N7 | `publish-unsigned` | error | `require_signature` is set and the bundle is unsigned, or its signature does not verify (publish only) |
-| AR9N8 | `publish-unapproved` | error | `require_approved` is set and content the governance policy selects has no valid approval (publish only) |
-| AR9N9 | `publish-emitter-experimental` | warning | An emitter whose format is not verified against vendor documentation was requested with `--experimental` (publish only) |
-| AR9O0 | `agent-plugins-manifest-invalid` | error | `plugin.json` is missing or fails the Agent Plugins schema, names an unsupported spec version, or has an invalid extension namespace (see [Agent Plugins](agent-plugins.md)) |
-| AR9O1 | `agent-plugins-skill-invalid` | error | A skill of the Agent Plugins package breaks the Agent Skills rules or sits outside `skills/<name>/SKILL.md`, so clients skip it |
-| AR9O2 | `agent-plugins-mcp-invalid` | error | `mcp.json` or one of its servers fails the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it |
-| AR9O3 | `agent-plugins-placeholder-unsupported` | error | An MCP server uses a `${VAR}` placeholder; clients expand only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, in args, env values and cwd |
-| AR9O4 | `agent-plugins-content-dropped` | warning | A field or server the package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server |
-| AR9O5 | `agent-plugins-package-unsafe` | error | A file or link of the Agent Plugins package resolves outside the plugin root or cannot be read |
-| AR9S0 | `ard-manifest-invalid` | error | The `ard.json` manifest fails the vendored ARD entry schema: a required field is missing or has the wrong type (see [Agentic Resource Discovery](ard.md)) |
-| AR9S1 | `ard-identifier-invalid` | error | An ARD identifier breaks the `urn:air` grammar: `[ard] publisher` is not a fully qualified domain name, a namespace or name has an illegal character, or two resources share an identifier |
-| AR9S2 | `ard-entry-invalid` | error | An ARD entry has both or neither of `url` and `data`, or its `url` is not an absolute https URL |
-| AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
-| AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
-| AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, a root `plugin.json` (Codex prefers it as the manifest), and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
-| AR9T1 | `plugin-selector-unmatched` | warning | A `skills`, `commands`, `agents` or `domains` selector of a plugin definition (`[[plugins_authoring]]` or `[[marketplace.plugins]]`) matches nothing, so the plugin bundles less than intended and a plugin left empty is dropped; under `--strict` the warning fails the run (see [Authoring Plugins](plugins.md#several-plugins-from-one-root)) |
-| AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
-| AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
-| AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
-| AR9G3 | `body-inaccurate` | warning | A body cites things that do not exist or contradicts its description (`review`; offline evidence is `AR201`, `AR202`, `AR301`, `AR302`, `AR401`, `AR402`) |
-| AR9G4 | `injection-intent` | warning | Text addresses the agent to hide, override or exfiltrate (`review`; offline evidence is `AR003`, `AR004`, `AR017`, `AR018`, `AR020`) |
-| AR9G5 | `scope-creep` | warning | An item does more than it says or widens its tools (`review`; offline evidence is `AR007`, `AR013`) |
-| AR9G6 | `instruction-conflict` | warning | An item contradicts another item (`review`; needs the judge, no offline evidence) |
-| AR9G7 | `body-structure` | info | A body is bloated or badly structured (`review`; offline evidence is `AR805`, `AR806`, `AR901`, `AR902`) |
-| AR9G8 | `rubric-invalid` | error | A `.ai-rulez/rubrics/<id>/rubric.toml`, golden file or `calibration.json` is malformed (`ai-rulez rubric lint`) |
-| AR9G9 | `judge-calibration-stale` | info | A judged `review` ran on a floating model alias or without a calibration record that matches the rubric, prompt, golden set and model (`review --semantic`; see [Review](review.md#calibration-and-the-gate)) |
-| AR9D0 | `search-config-invalid` | error | The `[search]` table is invalid: an unknown mode, fusion or dtype, an unknown field, an out-of-range number, or an `index_dir` outside the config directory |
-| AR9D1 | `search-index-stale` | warning | A committed search index (an `index_dir` outside `local/`) no longer matches the skills or the embedding model. See [Skill search](search.md) |
-| AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
-| AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
-| AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
-| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --strict --verifiers`; severity is the verifier's own) |
-| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --strict --verifiers`) |
-| AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run`, `test` and `validate --strict --verifiers`) |
-| AR9H4 | `verifier-llm-skipped` | info | An `llm` verifier was not evaluated: LLM use is off, over budget, withheld, unreadable or `--estimate` (`verifiers run` and `validate --strict --verifiers`; shown as skipped, never as a pass) |
-| AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` or `[verifiers_settings] warn_dead`) |
-| AR9H6 | `verifier-no-examples` | warning | A spec verifier has no `[[verifiers.examples]]` (`verifiers run` with `[verifiers_settings] require_examples`) |
-| AR9J1 | `improve-run-stale` | info | A saved `improve` run's original digest no longer matches the skill; `improve apply` refuses (see [Improve](improve.md)) |
-| AR9J2 | `improve-no-holdout` | off | A skill has fewer than three scored held-out eval cases, or none that is negative, so `improve` refuses to run |
-| AR9J3 | `improve-policy-violation` | error | A candidate round broke the diff policy (report only; the round is rejected before any eval spend) |
-| AR9J4 | `improve-sibling-regression` | error | A candidate lowered another skill's trigger recall under the offline ranker (report only; the round is rejected before any held-out spend) |
-| AR9J5 | `improve-underpowered` | info | The held-out gain of a candidate cannot be told from zero: fewer than eight cases, or the bootstrap interval includes zero (report only) |
-| AR9J6 | `improve-repo-optimizer-ignored` | warning | `[improve] optimizer`, `env_pass` or a gate key looser than the defaults in a repository config is not used without `--trust-repo-optimizer` (also emitted by `validate --strict`) |
-| AR9J7 | `improve-isolation-unavailable` | warning | The requested optimizer isolation could not be applied: `require` refuses to run, `auto` runs unconfined |
-| AR9J8 | `improve-pr-refused` | error | `improve pr` refused: unsigned or unaccepted run, a different skill at the base, an existing branch, or unusable git |
-| AR9J9 | `improve-adapter-refused` | error | A bundled adapter (`builtin:review-fix`) could not run: no model, no network opt-in or no declared egress |
-| AR9W0 | `exposure-area-term` | error | A term of an area that is not `shared` appears in text a Claude Code session sees at its start: a root `CLAUDE.md` line, an unconditional root rule, a skill or agent listing line, an MCP server name or an enabled plugin key, outside path literals; an artifact of unknown phase counts as start. The message `<kind> "<name>" at session start names term "<term>" of area "<area>"` is a contract for `[[lint.accept]]` `match`. Only reported with an `[exposure]` area map (see [Area term leakage](exposure.md#area-term-leakage)) |
-| AR9W1 | `exposure-area-term-ambiguous` | warning | A skill or agent listed at session start names no term of any area but some ambiguous words; one finding per word, its area every area that uses it joined by `/` (see [Area term leakage](exposure.md#area-term-leakage)) |
-| AR9W2 | `exposure-area-collision` | off | Two skills or agents listed at session start, of different areas (unclassified counts as one), share listing words with a Jaccard index of at least `[exposure] collision_min_score`; setting it turns the rule on at warning, and a `[lint.severity]` entry turns it on at 0.1. The 20 highest pairs are reported on the description line of the pair's first listing, and the rest in one summary finding on the `collision_min_score` line; `ai-rulez exposure collisions` ranks every pair (see [Session exposure and areas](exposure.md#ai-rulez-exposure-collisions)) |
-| AR9W3 | `exposure-start-budget` | off | The estimated tokens a Claude Code session started at the repository root loads before it touches a file (as `ai-rulez exposure` reports them) exceed `[exposure] start_budget`. Setting `start_budget` turns it on at error (see [Session exposure and areas](exposure.md#start-of-session-budgets)) |
-| AR9W4 | `exposure-gate-unreadable` | warning | A skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names `paths`, `disable-model-invocation` or `user-invocable`, or sets `paths` or `disable-model-invocation` to a value of the wrong type (`paths: 5`, `disable-model-invocation: yes`), so whether it is gated, and when it loads, cannot be known. Needs no `[exposure]` table: reported for the claude preset and for a run without a configuration (see [Session exposure and areas](exposure.md#a-gate-that-cannot-be-read)) |
-| AR9W5 | `exposure-map-invalid` | error | The `[exposure]` table or its area map is invalid: a bad scalar key, a duplicate, reserved or non-kebab area name, a bad path claim, a `skill_areas` value that names no area, an unknown key or unreadable `areas_file`, or both `areas_file` and inline areas. Only reported when the configuration has an `[exposure]` table (see [Session exposure and areas](exposure.md)) |
-| AR9W6 | `exposure-skill-area-unknown` | warning | A `skill_areas` key names no skill of the session inventory (a renamed, moved or deleted skill), on its line in the areas file or the configuration; a skill of a plugin that is not enabled still counts (see [Area term leakage](exposure.md#area-term-leakage)) |
-
-### Generated copies and the duplicate rules
-
-A skill, agent or command file that a plugin bundle of the configuration generates from a definition, or a
-byte-identical copy of one anywhere in the repository (a public export of the bundle's skills), is that definition under
-another path, not a second one: `AR701`, `AR702` and `AR703` do not compare it with the definition. `validate` renders
-the bundles of the configuration's `[plugin]` and of its `[marketplace]` members in memory, the way `verify --plugin`
-does, when it has a duplicate to judge, and a copy counts as the same item only when its bytes equal what the generator
-renders from that definition now; CRLF line endings are read as LF, and nothing else is normalized. A generated header
-or an `.ai-rulez-generated.json` sidecar proves nothing on its own. An edited copy, a copy the definition has moved away
-from since it was generated (run `generate --plugin`), the bundle of a configuration the run does not load (a nested
-plugin that is not a `[marketplace]` member), domain plugins and `[[plugins_authoring]]` bundles are judged as
-definitions of their own. Every other rule, the security rules first, still reads the generated copies.
-
-### Code ranges
-
-Codes are allocated in blocks, one block per feature. This table is the single allocation list: a registered code
-must fall in a block marked *allocated*, blocks never overlap, and a block marked *reserved* or *proposed* holds no
-registered code until its feature ships and the status changes (`TestCodeBlocksAreAllocated` checks the registry,
-and the codes written as literals in other packages, against it). Ranges are inclusive.
-
-| Range | Owner | Status |
-| --- | --- | --- |
-| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR058` used) | allocated |
-| `AR100`-`AR199` | Scope: glob matching (`AR101`) | allocated |
-| `AR200`-`AR299` | Links and imports (`AR201`, `AR202`, `AR210`) | allocated |
-| `AR300`-`AR399` | References and frontmatter (`AR301`-`AR306`) | allocated |
-| `AR400`-`AR499` | Paths, skill resources, commands (`AR401`-`AR403`) | allocated |
-| `AR500`-`AR599` | Hooks and permissions (`AR501`-`AR507`) | allocated |
-| `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
-| `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
-| `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR719` used, see [Approvals](approvals.md)) | allocated |
-| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
-| `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
-| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
-| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom` and `validate --strict`, see [SBOM](sbom.md)) | allocated |
-| `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR808`) | allocated |
-| `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
-| `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
-| `AR960`-`AR969` | Plugins and evals presence (`AR961`-`AR964`) | allocated |
-| `AR970`-`AR979` | Roles (`AR971`-`AR973`) | allocated |
-| `AR980`-`AR988` | Lock drift (`AR981`, `AR982`) | allocated |
-| `AR989`-`AR995` | Served skills and delivery (`AR989`-`AR995`) | allocated |
-| `AR996`-`AR999` | Eval cases and results (`AR996`-`AR998`) | allocated |
-| `AR9A0`-`AR9A9` | Eval results file and activation (`AR9A0`-`AR9A5` used) | allocated |
-| `AR9B0`-`AR9B9` | OKF bundles | allocated |
-| `AR9C0`-`AR9CA` | Harness traps (`AR9C0`-`AR9CA` used; see [Harness traps](harness-traps.md)) | allocated |
-| `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D0`-`AR9D4` used, `AR9D5`-`AR9D9` free) | allocated |
-| `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E7` used) | allocated |
-| `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
-| `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G9` are used by `review` and `rubric lint`) | allocated |
-| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`-`AR9H6` used, never emitted by `validate` unless `--verifiers` is given) | allocated |
-| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J9` used; `validate` emits only `AR9J6`, `improve` the rest) | allocated |
-| `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
-| `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
-| `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
-| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
-| `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
-| `AR9I0`-`AR9I9` | Lint configuration hygiene ([#479](https://github.com/Goldziher/ai-rulez/issues/479); `AR9I0` used, reported by `validate`, see [Accepting one finding](#accepting-one-finding)) | allocated |
-| `AR9Q0`-`AR9Q9` | Harness instruction files ([#318](https://github.com/Goldziher/ai-rulez/issues/318); `AR9Q0` used, reported by `validate --strict` when `[lint] agents_md_only` is set) | allocated |
-| `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`-`AR9R2` used) | allocated |
-| `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
-| `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
-| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
-| `AR9U0`-`AR9U9` | Harness built-in names ([#447](https://github.com/Goldziher/ai-rulez/issues/447); `AR9U0`, `AR9U1` used; reported by `validate --strict`, see [Built-in names of harnesses](#built-in-names-of-harnesses)) | allocated |
-| `AR9V0`-`AR9V9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims; moved from `AR9U` for #447) | reserved |
-| `AR9W0`-`AR9W9` | Session exposure and areas (`AR9W0`-`AR9W6` used; inert without an `[exposure]` table except `AR9W4`, which needs none, see [Session exposure and areas](exposure.md)) | allocated |
-
-Unlisted letters (`AR9X`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
-out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
-a UI for `AR9H`).
-
-Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
-is configured.
-
-`ai-rulez validate --explain AR401` (a code or a name) prints the rule's default severity, why it matters, a bad and
-a good example, the ways to suppress it and a link to its [reference entry](#rule-reference). `--format json` prints
-the same as a record. The explanations live in the rule registry (`internal/lint/ruledocs.go`); a test fails for a
-registered code without one.
+- The security, references and descriptions analyzers run on generated markdown; budgets and metadata do not.
+- A finding on a generated file is marked `[generated output]` in text, `"source": "output"` in JSON and
+  `properties.source` in SARIF. A problem the authored source already has is reported once, at the source.
+- `--fix` never edits a generated file: fix its source and run `generate`.
 
 ## Configuration
 
-Everything is optional. Put it in `config.toml`; a `config.local.*` overlay may
-override individual `[lint]` keys.
+Every key is optional. Put the table in `config.toml`; a `config.local.*` overlay may override individual keys.
+An unknown code, severity, analyzer or content kind is an error (exit 1), never a silently disabled check.
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `fail_on` | string | Lowest failing severity: `error` (default), `warning` or `none` |
+| `profile` | string | `default`, `strict` or `permissive`; see [Profiles](#profiles) |
+| `analyzers` | array | Run only these analyzers; see [Analyzers and scopes](#analyzers-and-scopes) |
+| `ignore` | array | Codes or names dropped everywhere |
+| `ignore_paths` | array | Globs of source files whose findings are dropped |
+| `tracked_only` | boolean | Report no findings in untracked files; see [Untracked files](#untracked-files) |
+| `paths` | array | Extra files and directories to lint; see [Files outside the content tree](#files-outside-the-content-tree) |
+| `lint_outputs` | boolean | Also lint generated files; see [Generated files](#generated-files) |
+| `example_paths` | array | Files whose every line is an [example region](#example-regions) |
+| `allow_paths` | array | Repository paths that may be referenced without existing (`AR401`, `AR402`) |
+| `known_names` | array | Skills, agents, rules and commands provided outside this tree (`AR301`) |
+| `allow_overrides` | array | Intentional shadowing: `name` or `domain/name` (`AR703`), `name` or `preset:name` (`AR808`, `AR9U0`) |
+| `allowed_keys` | array | Extra frontmatter keys (`AR303`) |
+| `skill_roots` | array | Directories `AR808` treats as harness skill roots; see [Skill roots](#skill-roots) |
+| `agents_md_only` | boolean | Report stray `CLAUDE.md` files when `AGENTS.md` is canonical (`AR9Q0`) |
+| `agents_md_only_allow` | array | `CLAUDE.md` locations `AR9Q0` accepts |
+
+Sub-tables:
 
 ```toml
 [lint]
-fail_on = "error"                  # error (default) | warning | none
-analyzers = ["security", "references"]   # run only these analyzers (see Analyzers and scopes); default: all
-ignore = ["AR803"]                 # codes or names dropped everywhere
-ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
-tracked_only = true                # report no findings in untracked files (same as --tracked-only; see Untracked files)
-# ignore_rules (below) drops chosen rules in chosen files; it is an array of tables, see Rule-scoped ignores
-skill_roots = [".claude/skills", "plugins/*/skills"]   # directories AR808 treats as harness skill roots (replaces the defaults)
-example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
-allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
-known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
-allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing: "name" or "domain/name" (AR703), "name" or "preset:name" (AR808, AR9U0)
-allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
-agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
-agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
-paths = ["catalog", "vendor/skills"]   # extra files and directories to lint, relative to the project root
-lint_outputs = true                # also lint the generated files (the same as --outputs)
+fail_on = "error"
+ignore = ["AR803"]
+ignore_paths = ["domains/legacy/**"]
+allow_paths = [".claude/**", "bazel-*/**"]
+known_names = ["superpowers-brainstorm"]
 
-profile = "default"                # default | strict | permissive (see Profiles)
-
-[lint.severity]                    # error | warning | info | off
+[lint.severity]                    # error | warning | info | off, by code or name
 AR401 = "error"
 anchor-unresolved = "off"
 
-[[lint.ignore_rules]]              # one rule family in one part of the tree (see Rule-scoped ignores)
+[[lint.ignore_rules]]              # some rules in some files; see Rule-scoped ignores
 rules = ["AR901", "AR902"]
 paths = ["playground/**"]
-reason = "scratch projects, not shipped"
 
-[[lint.accept]]                    # one finding in one file, with a reason (see Accepting one finding)
+[[lint.accept]]                    # one finding, with a reason; see Accepting one finding
 rule = "AR007"
 path = ".claude/skills/foo/SKILL.md"
-match = "Bash"                     # substring of the message; `line = 12` also works
+match = "Bash"
 reason = "the skill runs git and gh; narrowing would break step 3"
 
-[lint.builtin_names]               # AR9U0, AR9U1: names of harness built-ins (see Built-in names of harnesses)
-enabled = true                     # false turns both off
-allow = ["gemini:help", "usage"]   # intended collisions: "preset:name" or "name" (any harness); never silences AR9U1
-
-[lint.builtin_names.extra]         # built-ins the embedded table cannot know, per preset
-claude = ["acme-deploy"]           # organization commands, MCP prompts, plugin skills, user-level skills
-
-[lint.description]
-min_length = 30
-max_length = 1024
-require_use_when = true            # enables AR803 at warning
-near_duplicate_threshold = 0.9
-
-[lint.ratchet]                     # tolerated findings per rule (see Baseline and tolerated findings)
+[lint.ratchet]                     # tolerated findings per rule; see Baseline and tolerated findings
 AR401 = 12
-link-unresolved = 0
 
-[lint.budgets.skill]               # size budgets per content kind; kinds: rule, context, skill, agent, command
+[lint.budgets.skill]               # size budget per kind: rule, context, skill, agent, command
 max_lines = 400
 max_tokens = 4000                  # 0 keeps the default, a negative value removes the limit
 
-[lint.require_metadata]
-skill = ["owner"]
-rule = ["owner"]
+[lint.description]
+min_length = 20                    # default 20
+max_length = 1024                  # default 1024
+require_use_when = true            # turns on AR803 at warning
+near_duplicate_threshold = 0.85    # AR702, default 0.85
 
-[lint.metadata.last_verified]      # typed metadata, top-level or inside the `metadata` map
+[lint.require_metadata]            # required frontmatter keys per kind (AR951)
+skill = ["owner"]
+
+[lint.metadata.last_verified]      # typed metadata (AR951, AR952, AR953)
 type = "date"                      # string (default) | date | enum
-max_age_days = 90                  # AR953 when older; a bad date is AR952
-required = true                    # AR951 when absent
-kinds = ["skill"]                  # default: every kind
+max_age_days = 90
+required = true
+kinds = ["skill"]
 
 [lint.metadata.tier]
 type = "enum"
 values = ["gold", "silver"]
 
 [lint.security]
-scan_imports = "error"             # unset (default: scan, errors block) | off | warn | error, see below
-allowed_hosts = ["github.com", "*.example.org"]   # enables AR008
+scan_imports = "error"             # unset | off | warn | error; see Imported content
+allowed_hosts = ["github.com", "*.example.org"]   # turns on AR008
 allowed_tools = ["Bash"]           # unrestricted allowed-tools entries that are accepted (AR007)
 injection_phrases = ["as root user"]
-directive_tags = ["assistant"]     # element names AR018 reports next to <system> and <override>
-trusted_orgs = ["acme"]            # owners AR033 accepts "official" for; replaces the built-in list
+directive_tags = ["assistant"]     # AR018 element names besides <system> and <override>
+trusted_orgs = ["acme"]            # owners AR033 accepts "official" for
 secret_patterns = [{ name = "internal token", regex = "corp_[a-z0-9]{10}" }]
 
 [lint.capability]
-max_network_commands = 3           # AR030 network-heavy limit; default 5, 0 allowed
+max_network_commands = 3           # AR030, default 5
 
-[lint.load_budgets]                # AR964 harness limits by id, in the limit's own unit; positive integers
-claude-skill-listing = 1200        # ids: claude-skill-listing, claude-skill-listing-total, codex-agents-chain, codex-skill-listing, windsurf-rule-file, cursor-rule-lines
+[lint.load_budgets]                # AR964 harness limits by id, in the limit's unit
+claude-skill-listing = 1200        # also: claude-skill-listing-total, codex-agents-chain, codex-skill-listing, windsurf-rule-file, cursor-rule-lines
 
-[[lint.external]]                  # run with --external only
-name = "my-scanner"
-command = ["my-scanner", "--sarif"]
-format = "sarif"                   # sarif (default) | json | adapter:snyk-json | adapter:claude-validate-json
-egress = false                     # required for hardening; see External scanners
-timeout = "120s"                   # default 2m, max 15m (or [lint.scanner_policy] max_timeout); bounds each run
-env_pass = []                      # extra environment variable names for an egress = false scanner
-# inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
-# profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
-# version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
-# command = ["python3", "{project}/tools/scan.py", "{stage}"]   # with inputs the cwd is the stage: reach project files through {project}
-# version_command = ["my-scanner", "--version"]   # prints the scanner's version when command[0] is a launcher (python3, node)
-# version_timeout = "30s"          # bounds the version probe (default 10s); a slow probe is reported as timed out (AR9E2)
-# required = true                  # a missing, outdated or failing scanner is an error
-# batch_size = 10                  # hand {skill_dirs} to the scanner at most 10 skills per run, each run with its own timeout
-# parallel = 4                     # run up to 4 batches at once (default 1, at most 16)
-# stage_globs = ["**/*.md"]        # stage only these skill files (relative to the skill directory; SKILL.md always)
-# stage_exclude = ["evals/**"]     # leave these skill files out (wins over stage_globs)
-# fail_on = "error"                # lowest severity of this scanner's findings that fails the run
-# cache_files = ["tools/**/*.py"]  # files the scanner reads; part of the result cache key (a script run through python3, node, sh... is hashed anyway)
-# max_message = 1000               # characters of a finding message kept in text output (default 500)
-# message_properties = ["evidence", "snippet"]   # SARIF result properties appended to the message
+[lint.builtin_names]               # AR9U0, AR9U1; see Built-in names of harnesses
+allow = ["gemini:help", "usage"]
 
-[lint.scanner_policy]
-preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
-required = ["agnix"]               # names whose absence or failure is an error
-fail_on = "warning"                # lowest scanner finding severity that fails the run (scanner findings only)
-baseline = ".ai-rulez/scanner-baseline.json"   # relative to the project root, must stay inside it
-isolation = "auto"                 # auto (default) | none | require, see Isolation
-allow_egress = []                  # set: --allow-egress=<name> also needs the name here; [] forbids every egress scanner
+[lint.builtin_names.extra]
+claude = ["acme-deploy"]
+
+[lint.risk]                        # see Risk score
+error = 30
 
 [lint.traps]
-extra_harnesses = ["cursor"]       # run these harnesses' traps without a preset, see Harness traps
+extra_harnesses = ["cursor"]       # see Harness Traps
 
-[lint.evals]
-require = true                     # enables AR962 at warning
-allow = ["scratch-*"]              # skills exempt from the check
-require_fresh = "warn"             # AR997: warn | error | off (default)
-min_pass_rate = 0.8                # AR998: recorded pass rate floor; also the pass mark of `eval run`
-min_activation_recall = 0.8        # AR9A1: recorded activation recall floor
-min_activation_precision = 0.9     # AR9A1: recorded activation precision floor
-confusion_threshold = 0.25         # AR9A2: share of a skill's prompts a sibling may win
-
-[lint.evals.estimate]              # assumptions of the `eval run` cost estimate; `eval calibrate-estimate` proposes values
-overhead_tokens = 25000
+[lint.evals]                       # see Evals
+require = true                     # turns on AR962 at warning
+min_pass_rate = 0.8                # AR998
 ```
 
-Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,
-command 300 / 3000. The skill figures follow the Agent Skills recommendation (`SKILL.md` under 500 lines and
-5000 tokens). Token counts use the embedded `cl100k_base` tokenizer and are approximate.
+Default size budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,
+command 300 / 3000. Tokens are counted with the `cl100k_base` tokenizer and are approximate. `[[lint.external]]` and
+`[lint.scanner_policy]` are described under [External scanners](#external-scanners), `[lint.traps]` in
+[Harness Traps](harness-traps.md), `[lint.evals]` in [Evals](evals.md).
 
-An unknown code, severity or content kind in `[lint]` is an error (exit 1) rather than a silently disabled check.
+## Suppressing findings
 
-### Suppressing one finding
-
-Add an `ai-rulez-lint-ignore` comment on the line before, or on, the offending line. Without codes it silences
-every finding there:
+| Scope | How |
+| --- | --- |
+| One line | `<!-- ai-rulez-lint-ignore: AR401, AR301 -->` on the line before or on the line; without codes it silences every finding there |
+| One rule everywhere | `[lint] ignore = ["AR401"]`, or `[lint.severity] AR401 = "off"` |
+| Every rule in some files | `[lint] ignore_paths = ["glob"]` |
+| Some rules in some files | [`[[lint.ignore_rules]]`](#rule-scoped-ignores) |
+| One finding, with a reason | [`[[lint.accept]]`](#accepting-one-finding) |
+| Existing findings while you fix them | [A baseline](#baseline-and-tolerated-findings) |
 
 ```markdown
 <!-- ai-rulez-lint-ignore: AR401, AR301 -->
 See `legacy/old-tool/README.md` and the `retired-helper` skill.
 ```
 
-## Automatic fixes
+An organization policy that protects a code refuses `ignore_paths`, `ignore_rules` and `accept` for it and reports
+the attempt as `AR740` (see [Organization policy](policy.md)).
 
-```bash
-ai-rulez validate --strict --fix --dry-run      # show a unified diff, change nothing
-ai-rulez validate --strict --fix                # apply the safe fixes
-ai-rulez validate --strict --fix-unsafe         # also apply fixes that can change meaning
-```
+### Rule-scoped ignores
 
-A finding may carry a mechanical fix. Only deterministic, local corrections exist:
-
-| Rule | Fix | Tier |
-| --- | --- | --- |
-| `AR303` frontmatter-key-unknown | Rename the key to the known key it differs from only by case or separators (`allowed_tools` to `allowed-tools`), unless that key is already set | safe |
-| `AR304` frontmatter-value-invalid, string `"true"`/`"false"` | Write the value as a YAML boolean, without quotes, for the boolean keys of the content kind (`user-invocable`, `disable-model-invocation`, `background`, `omitClaudeMd`, `alwaysApply`; one table, `boolKeys` in `internal/lint/ar_frontmatter.go`) | safe |
-| `AR806` fence-unclosed | Add a closing fence (same character and length as the opening one) after the last line | safe |
-| `AR807` final-newline-missing | Add the final newline | safe |
-| `AR502`, `AR503`, `AR505` not executable | `chmod +x` the hook or script, and stage the bit in the git index (`git update-index --chmod=+x`), because the index mode is what the check reads | safe |
-| `AR9C7` claude-key-spelling, and `AR9CA` project-trap rows of kind `key-misspelt` | Rename the misspelt frontmatter key to the documented spelling (`user_invocable` to `user-invocable`) in a hand-written skill or agent file, which may live outside `.ai-rulez/`; offered only while the documented key is absent, so a key is never written twice | safe |
-| `AR804` skill-name-invalid | Rewrite `name:` to the normalized name (lowercase letters, digits, single hyphens, at most 64 characters) or to the skill's directory name | unsafe: the name is how the skill is invoked and referenced |
-
-Guarantees:
-
-- **Authored sources, plus hand-written harness files for trap fixes.** Text edits apply only to files under the
-  configuration directory, except the harness trap fixes (`AR9C7`, `AR9CA`), which may edit a hand-written harness
-  file elsewhere in the project, never a symlink or a file whose path leaves the project. No fix touches a file recorded as generated in the generate manifest; such a fix is
-  reported as skipped. Fix the source and run `generate`. The summary counts the edits made outside the configuration
-  directory.
-- **Never security findings.** `AR0xx` findings have no automatic fix and would be refused if one existed.
-- **Idempotent and atomic.** An edit records the line it replaces and is skipped (reported) when the file changed
-  since the lint run; files are rewritten atomically with their permissions and line endings (LF or CRLF) kept.
-  Running `--fix` twice changes nothing the second time.
-- **Baselined findings are left alone.** A finding accepted by the baseline is not fixed.
-- **`--dry-run`** prints the unified diff (to stdout with the text format, to stderr with a structured format so
-  stdout stays the report) plus a `chmod` line per mode change, and writes nothing.
-
-After the fixes the run reports what is left, and the exit code reflects that. The summary ends with a reminder to run
-`ai-rulez generate` so the changes reach the generated files.
-
-## Rule-scoped ignores
-
-`ignore` drops a rule everywhere and `ignore_paths` drops every rule in some files. `[[lint.ignore_rules]]` sits in
-between: it drops the listed rules in the listed files and keeps every other finding in them.
+`[[lint.ignore_rules]]` drops the listed rules in the listed files and keeps every other finding in them:
 
 ```toml
 [[lint.ignore_rules]]
-rules = ["AR901", "AR902"]     # codes, names, or a wildcard over codes (AR9*)
-paths = ["playground/**"]      # globs, relative to the repository root or to .ai-rulez/
-reason = "scratch projects"    # optional, for the reader
-
-[[lint.ignore_rules]]
-rules = ["path-missing"]
-paths = ["docs/plugins/**"]    # plugin docs that show `.claude-plugin/plugin.json` as a placeholder
+rules = ["AR901", "AR902"]     # codes, names, or a pattern over codes (AR9*, AR40?)
+paths = ["playground/**"]      # globs relative to the repository root or to .ai-rulez/
+reason = "scratch projects"    # optional
 ```
 
-- The key is `ignore_rules`, not `ignore`, because `[lint] ignore` is already the list of codes dropped everywhere.
-- `rules` takes a code (`AR901`), a name (`claude-md-shadow`) or a pattern with `*`, `?` or `[...]` matched against
-  codes (`AR9*`, `AR40?`). An entry needs at least one rule and one path. An unknown code, a pattern that matches no
-  code, an empty list or a malformed glob is an error when the configuration loads, like the other `[lint]` keys.
-- Paths use the same globs as `ignore_paths` (`**` crosses directories, a directory name covers everything below).
-  They name source files, so a finding reported on a generated file is not covered by the path of its source.
-- An ignored finding is dropped before the baseline and the ratchet see it: it is never written by `--update-baseline`
-  and never counts toward a `[lint.ratchet]` limit. A rule that is ignored for a file and later un-ignored reports
-  its findings as new, unless the baseline already holds them.
-- An organization policy that protects a code (see [Policy](policy.md)) refuses this route like `ignore_paths`, and
-  reports the attempt as `AR740`.
-- `validate --explain <code>` lists this route with the code filled in.
+- An entry needs at least one rule and one path. An unknown code, a pattern that matches no code or a malformed glob
+  is an error when the configuration loads.
+- Paths name source files: a finding on a generated file is not covered by the path of its source.
+- An ignored finding never reaches the baseline or a `[lint.ratchet]` count.
 
-## Accepting one finding
+### Accepting one finding
 
-`[[lint.ignore_rules]]` drops a rule for a whole file and `--baseline` is a generated, fingerprint-keyed JSON file.
-`[[lint.accept]]` sits between them: a hand-written entry, reviewed in a normal pull request, that accepts the
-findings of one rule in one file that a selector names, with a required reason. Every other finding in the file stays
-reported.
+`[[lint.accept]]` accepts the findings of one rule in one file that a selector names, with a required reason. It is
+reviewed in a normal pull request, and every other finding in the file stays reported.
 
 ```toml
 [[lint.accept]]
 rule = "AR007"                                  # one code or name, no wildcards
-path = ".claude/skills/foo/SKILL.md"            # a glob; an exact path is a glob without wildcards
-match = "Bash"                                  # substring of the finding's message
+path = ".claude/skills/foo/SKILL.md"            # a glob, as in ignore_paths
+match = "Bash"                                  # case-sensitive substring of the message
+line = 4                                        # optional; match and/or line is required
 reason = "the skill runs git and gh; narrowing would break step 3"
 ```
 
-- `rule`, `path` and `reason` are required, and so is at least one of `match` and `line`: an entry with neither would
-  accept the whole file, which is what `ignore_rules` is for. A blank `reason`, an unknown or wildcard `rule`, a
-  malformed glob or a line below 1 is an error when the configuration loads.
-- A finding is accepted when its rule is `rule`, its file matches `path`, its message contains `match` (a
-  case-sensitive substring; the finding has no separate matched-text field, and the message names what was found,
-  for example the tool of AR007) and, when `line` is set, it is reported on that line. `match` and `line` must both
-  hold when both are set. Pick a `match` specific enough for the one finding: every finding of the rule in the file
-  that contains it is accepted.
-- `path` uses the same globs and the same base as `ignore_paths` (`**` crosses directories, a path relative to the
-  repository root or to `.ai-rulez/`). It names source files, so a finding reported on a generated file is not
-  covered by the path of its source.
-- An accepted finding stays in the report, marked accepted, with the reason as `accept_reason` in the JSON output. It
-  does not count toward the exit code or a `[lint.ratchet]` limit, like a baseline entry. Unlike `ignore_rules` it is
-  not dropped, so it stays visible to a reviewer. (`--show-suppressed` belongs to the external scanners and does not
-  apply: accepted findings are always shown.) `validate --update-baseline` does not write these findings to the
-  baseline; a finding the baseline itself accepts is unaffected.
-- An entry that accepted nothing is reported as `AR9I0` (`accept-unused`, a warning) on `config.toml`, so a fixed or
-  renamed finding does not leave a stale acceptance behind. It is not reported when this run could not have produced
-  the finding: the rule is off or in `[lint] ignore`, its analyzer was not selected (`--analyzer`), or the run
-  linted only named files (`--path`, `--glob`) and none matches the entry's `path`.
-- An organization policy that protects a code (see [Policy](policy.md)) refuses this route, keeps the finding
-  reported and reports the attempt as `AR740`.
+- A finding is accepted when its rule, file, message (`match`) and, when set, line all fit. Every finding of the rule
+  in the file whose message contains `match` is accepted, so pick a specific one.
+- An accepted finding does not count toward the exit code or a ratchet. The JSON report keeps it with
+  `"accepted": true` and the reason as `accept_reason`; `--update-baseline` does not write it.
+- An entry that accepts nothing is reported as `AR9I0` (`accept-unused`, warning) on `config.toml`, unless the run
+  could not have produced the finding (the rule is off, its analyzer was not selected, or the run linted only named
+  files that do not match).
 
-## Baseline and tolerated findings
+### Baseline and tolerated findings
 
-A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
-records the findings you accept today, so only *new* findings fail the build, and `[lint.ratchet]` caps how many
-findings of one rule are tolerated. (Do not confuse it with `[lint.budgets.<kind>]`, the size budgets of a content kind.)
+A **baseline** records the findings you accept today, so only new findings fail the build. `[lint.ratchet]` caps how
+many findings of one rule are tolerated.
 
 ```bash
-ai-rulez validate --strict --update-baseline --baseline-reason "legacy, tracked in TEAM-123"
+ai-rulez validate --update-baseline --baseline-reason "legacy, tracked in ACME-42"
 git add .ai-rulez/lint-baseline.json
-ai-rulez validate --strict            # exit 2 only for findings not in the baseline
-ai-rulez validate --strict --strict-baseline   # ratchet: stale entries fail too
+ai-rulez validate                     # exit 2 only for findings not in the baseline
+ai-rulez validate --strict-baseline   # stale entries fail too, so the baseline only shrinks
 ```
 
-`.ai-rulez/lint-baseline.json` (next to `config.toml`; `--baseline <file>` names another, which must exist) holds
-one entry per accepted finding:
+```text
+$ ai-rulez validate
+validation: no findings in 1 root(s)
+baseline: 4 finding(s) accepted
+```
+
+`.ai-rulez/lint-baseline.json` (`--baseline <file>` names another, which must exist) holds one entry per finding:
 
 ```json
 {
   "version": 1,
   "entries": [
     {
-      "fingerprint": "ar1:3f2c9a1b7d4e5f60a8b1c2d3",
-      "code": "AR401", "file": ".ai-rulez/rules/legacy.md",
-      "message": "path \"src/old/api.py\" does not exist in the repository",
-      "reason": "module removed in Q3; tracked in TEAM-123",
+      "fingerprint": "ar1:105276fd3c01f14ec2d158da",
+      "code": "AR402",
+      "file": ".ai-rulez/skills/deploy/SKILL.md",
+      "message": "\"scripts/deploy.sh\" was not found relative to this skill's directory (.ai-rulez/skills/deploy) or relative to the repo root (.)",
+      "reason": "legacy, tracked in ACME-42",
       "expires": "2026-12-31"
     }
   ]
 }
 ```
 
-- **Accept keys.** An entry is matched by its `fingerprint` alone (the rule code, repository-relative path and
-  normalized line text, see [Output formats](#output-formats)), never by line number: the finding stays accepted
-  while the file changes around it, and a *different* finding of the same rule on different text is new again. This
-  is the same idea as skillshare's accept keys, kept in a committed file rather than install metadata. `code`,
-  `file` and `message` are there for the reviewer of the baseline diff.
-- **`--update-baseline`** rewrites the file to accept every current finding. Entries that still match keep their
-  `reason` and `expires`; entries that match nothing are dropped. New entries get `--baseline-reason`. Accepting a
-  security finding (`AR0xx`) requires a reason. It exits 0 and cannot be combined with `--strict-baseline`.
-  Findings in untracked files are never written (a teammate's or CI's checkout does not have those files, so the
-  entry would be dead weight): the run says how many it skipped. Outside a repository work tree nothing is skipped.
-- **Only new findings count.** Accepted findings stay visible (`"accepted": true` in JSON, a SARIF `suppression` with
-  the reason, `baselineState` `unchanged` or `new`), but they are left out of the totals and the exit code.
-- **Stale entries.** An entry whose finding is gone is reported (`baseline: N accepted, M stale`). By default that is
-  only information; `--strict-baseline` exits 2 so the baseline can only shrink.
-- **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
-  and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `validate --today` (a hidden flag) or
-  `AI_RULEZ_TODAY` for reproducible runs.
-- **Tolerated findings.** `[lint.ratchet]` maps a code or name to a number: up to that many unaccepted findings of the
-  rule are tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the
-  text report says `ratchet: AR401 has 13 finding(s), over its ratchet of 12`; the JSON key is `ratchet_exceeded`).
-  A rule over its ratchet fails the run (exit 2) whatever its severity. Lower the number over time. Ratchet counts apply
-  per root, after the baseline. `[lint.budget]` and `[lint.ratchet]` are removed spellings of the same table and fail
-  to load with a message naming `[lint.ratchet]`. Putting the size-budget shape in it
-  (`[lint.ratchet.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
+- **Matching.** An entry matches by `fingerprint` (see [Fingerprints](#fingerprints)), never by line number: the
+  finding stays accepted while the file changes around it, and a different finding of the same rule is new.
+- **`--update-baseline`** rewrites the file to accept every current finding, keeps the `reason` and `expires` of
+  entries that still match, drops the rest, and exits 0. A security finding (`AR0xx`) needs a reason. Findings in
+  untracked files are never written. It cannot be combined with `--since`, `--changed`, `--path`, `--glob`,
+  `--analyzer`, `--lint-profile`, `--fix`, `--fix-unsafe` or `--strict-baseline`. It needs a configuration directory
+  or `--baseline <file>`, and with `--baseline <file>` a single root (not a `--recursive` run over several).
+- **Accepted findings** stay visible (`"accepted": true` in JSON, a SARIF `suppression`) but do not count.
+- **Stale entries** (their finding is gone) are reported as information; `--strict-baseline` makes them fail. An entry
+  of an analyzer that did not run is never stale.
+- **`expires`** (`YYYY-MM-DD`, optional): after that day the finding counts as new and the entry is listed as expired.
+  Set `AI_RULEZ_TODAY` to pin the date in tests.
+- **Ratchet.** `[lint.ratchet]` maps a code or name to the number of unaccepted findings tolerated. One more and all
+  of that rule's findings count again (`ratchet: AR401 has 13 finding(s), over its ratchet of 12`, JSON key
+  `ratchet_exceeded`), whatever their severity. It is applied per root, after the baseline. It is a different table
+  from `[lint.budgets.<kind>]`, the size budgets.
+
+## Automatic fixes
+
+```bash
+ai-rulez validate --fix --dry-run      # print a unified diff, change nothing
+ai-rulez validate --fix                # apply the safe fixes
+ai-rulez validate --fix-unsafe         # also apply fixes that can change meaning
+```
+
+| Rule | Fix | Tier |
+| --- | --- | --- |
+| `AR303` frontmatter-key-unknown | Rename a key that differs from a known key only by case or separators (`allowed_tools` to `allowed-tools`) | safe |
+| `AR304` frontmatter-value-invalid | Write a quoted `"true"`/`"false"` of a boolean key as a YAML boolean | safe |
+| `AR806` fence-unclosed | Add the closing fence | safe |
+| `AR807` final-newline-missing | Add the final newline | safe |
+| `AR502`, `AR503`, `AR505` | `chmod +x` the file and stage the bit (`git update-index --chmod=+x`) | safe |
+| `AR9C7`, and `AR9CA` rows of kind `key-misspelt` | Rename a misspelt frontmatter key (`user_invocable` to `user-invocable`) in a hand-written harness file | safe |
+| `AR804` skill-name-invalid | Rewrite `name:` to the normalized name or the directory name | unsafe: the name is how the skill is invoked |
+
+- Fixes edit authored sources under the configuration directory, plus hand-written harness files for the trap fixes.
+  They never edit a generated file or a symlink, and never fix a security finding or a baselined one.
+- An edit is skipped when the file changed since the lint run. Files are rewritten atomically with their permissions
+  and line endings; a second `--fix` changes nothing.
+- The run then reports what is left, and the exit code reflects that. Run `ai-rulez generate` so the fixes reach the
+  generated files.
 
 ## Analyzers and scopes
 
-Every rule belongs to an **analyzer**, a family of related checks, and has a **scope**, the unit one finding is
-about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, command or config entry) or `bundle`
-(a relation between items, or the project as a whole). Both appear as `analyzer` and `scope` on each finding in
-`--format json`, in SARIF result and rule properties (and as a rule tag), and in `--explain`.
+Every rule belongs to an **analyzer** (a family of checks) and has a **scope**: `file` (a line of a file), `item` (one
+rule, skill, agent, command or config entry) or `bundle` (a relation between items, or the project). Both appear on
+each finding in JSON, in SARIF and in `--explain`.
 
 | Analyzer | Rules |
 | --- | --- |
-| `security` | `AR001`-`AR058`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
+| `security` | `AR001`-`AR058`, `AR506`, `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
 | `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR306`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
-| `descriptions` | `AR801`-`AR808` |
+| `descriptions` | `AR801`-`AR808`, `AR9G0`-`AR9G7`, `AR9G9` |
 | `budgets` | `AR901`, `AR902` |
 | `metadata` | `AR951`-`AR954` |
-| `plugin` | `AR961`-`AR964` |
+| `plugin` | `AR961`-`AR964`, `AR9N0`-`AR9N9`, `AR9O0`-`AR9O5`, `AR9S0`-`AR9S4`, `AR9T0`, `AR9T1` |
 | `roles` | `AR971`-`AR973` |
-| `lock` | `AR730`, `AR732`, `AR733`, `AR734`, `AR735`, `AR981`, `AR982`, `AR995` |
+| `lock` | `AR710`-`AR730`, `AR732`-`AR735`, `AR981`, `AR982`, `AR995` |
+| `config` | `AR731`, `AR740`-`AR753`, `AR9G8`, `AR9I0`, `AR9K0`, `AR9L0` |
 | `delivery` | `AR989`-`AR994`, `AR9R0`-`AR9R2` |
-| `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5` |
+| `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5`, `AR9J1`-`AR9J9` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `llmstxt` | `AR9P0`-`AR9P6` |
-| `traps` | `AR9C0`-`AR9CA` |
-| `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0`, `AR9I0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables, unused `[[lint.accept]]` entries) |
-| `exposure` | `AR9W0`, `AR9W1` (area terms at session start), `AR9W2` (listings of different areas that overlap), `AR9W3` (the start-of-session budget), `AR9W4` (a frontmatter gate that cannot be read), `AR9W5` (the `[exposure]` table and its area map), `AR9W6` (`skill_areas` keys that name no skill) |
-| `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
+| `traps` | `AR9C0`-`AR9CA`, `AR9Q0`, `AR9U0`, `AR9U1` |
+| `search` | `AR9D0`-`AR9D4` |
+| `exposure` | `AR9W0`-`AR9W6` |
+| `verifiers` | `AR9H1`-`AR9H6` |
+| `convert` | `AR9F0`-`AR9F5` |
 
-Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
-not, so a new rule cannot silently land in another analyzer. Code ranges and their owners are in
-[Code ranges](#code-ranges).
+`--analyzer security,references` (or `[lint] analyzers`) runs only those analyzers and skips the work of the others.
+The text report says `analyzers run: ...`, and JSON has an `analyzers` array. The exit code reflects the analyzers
+that ran.
 
-`--analyzer security,references` (or repeated) and `[lint] analyzers = ["security", "references"]` run only those
-analyzers. Each check declares the analyzers whose rules it reports, and a check none of them selects is skipped, so
-a security-only job does not count tokens, resolve links or parse frontmatter for metadata checks. The report is the
-full run's report restricted to those analyzers (a test compares the two for every analyzer). The flag replaces the
-config list for that invocation; an unknown name is an error. The text report says `analyzers run: ...` and
-`--format json` has an `analyzers` array.
-
-- Baseline: an entry for an analyzer that did not run is neither stale nor expired, and `--update-baseline` keeps it
-  as it is, so a security-only run cannot erase the accepted findings of the others.
-- Budgets and the exit code reflect the analyzers that ran.
-- `--since` and `--changed` still compute the reference graph, which the `references` checks build, but report
-  none of their findings when `references` is not selected.
-- `scan` is `validate --strict` with the `security` analyzer.
-- `go test ./internal/lint -run '^$' -bench AnalyzerSelection -benchmem` compares the two on 300 skills of 120 lines: a security-only run took 6.6 s against 9.8 s for a full run and allocated 149 MB against 1.4 GB.
-
-## Documenting risky commands: example regions
+## Example regions
 
 Skills that teach shell safety have to show the commands they warn about. An **example region** tells the
-command-shaped rules to look away:
+command-shaped rules (such as `AR005`, `AR006`, `AR008`, `AR021`-`AR025`) to look away:
 
 ````markdown
 ```bash example
@@ -836,671 +480,763 @@ cat ~/.ssh/id_rsa
 ```
 ````
 
-- A fenced block whose info string contains the word `example` (`` ```bash example ``, `` ```sh title="example" ``),
-  or that follows an `<!-- ai-rulez-example -->` comment (blank lines in between are fine), is an example.
-- `[lint] example_paths = ["docs/security-examples/**"]` makes every line of the matching files an example
-  (globs relative to the repository root or to `.ai-rulez/`).
-- Only the rules whose reference entry says so honor regions. Secrets (`AR001`), hidden characters, injection phrases,
-  comment instructions and encoded blobs are never skipped: a real key in an "example" is still a leak.
-- Markers inside imported content (`scan_imports`) are ignored, like `ai-rulez-lint-ignore` there: imported text
-  cannot vouch for itself.
-- For rule authors: `lint.MarkExampleAware("ARnnn")` in an `init` registers a command-shaped rule, and a rule
-  that scans line by line can call `r.inExample(abs, line)` from the runner to skip work early.
+- A fenced block whose info string contains `example`, or that follows an `<!-- ai-rulez-example -->` comment, is an
+  example.
+- `[lint] example_paths = ["docs/security-examples/**"]` makes every line of the matching files an example.
+- Secrets, hidden characters, injection phrases, comment instructions and encoded blobs are never skipped: a real key
+  in an example is still a leak. Each rule's [reference entry](#rule-reference) says whether it honors regions.
+- Markers inside imported content are ignored.
 
 ## Profiles
 
-`[lint] profile` (or `--lint-profile` on the command line) selects a preset of severities and the failure
-threshold. The flag is `--lint-profile`, not `--profile`, because `--profile` selects a *generation* profile on
-`generate`, `tokens` and friends and the two are unrelated.
+`[lint] profile` or `--lint-profile` selects a preset of severities and the fail threshold. (`--profile` on other
+commands selects a generation profile; the two are unrelated.)
 
-| Profile | Deltas against `default` |
+| Profile | Changes against `default` |
 | --- | --- |
-| `default` | None: every rule at its registry severity, `fail_on = error` |
-| `strict` | `fail_on = warning`. Turns on `AR803` and `AR962` (warning). Promotes to error: `AR202` anchor-unresolved, `AR303` frontmatter-key-unknown, `AR401` path-missing, `AR801` description-missing, `AR802` description-length, `AR804` skill-name-invalid, `AR901` size-lines, `AR902` size-tokens |
-| `permissive` | `fail_on = error`. Demotes to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Demotes to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
+| `default` | None: every rule at its default severity, `fail_on = error` |
+| `strict` | `fail_on = warning`. Turns on `AR803` and `AR962` (warning). Raises to error: `AR202`, `AR303`, `AR401`, `AR801`, `AR802`, `AR804`, `AR901`, `AR902` |
+| `permissive` | `fail_on = error`. Lowers to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Lowers to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
 
-Security rules (`AR0xx`) are never changed by a profile, and a profile does not touch `[lint.security]` or
-`[lint.ratchet]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
-`config.local.*` overlay, `config.toml` (`fail_on`, `[lint.severity]`, `profile`), then the preset. The text
-report starts with a `lint profile:` line when a non-default profile is active, and `--format json` carries
-`"profile"`. The preset tables live in `internal/lint/profile.go`.
+A profile never changes the security rules (`AR0xx`), `[lint.security]` or `[lint.ratchet]`. Precedence, highest
+first: the command line, the `config.local.*` overlay, `config.toml`, then the preset. The text report starts with a
+`lint profile:` line when a non-default profile is active.
 
 ## Risk score
 
-Every report carries an advisory risk score per item (a source file) and for the bundle (the root, or the whole run
-across roots). It helps triage; it **never** changes the exit code, which stays a threshold on finding severity
-(`--fail-on`, `fail_on`). The text report shows the bundle line and the five riskiest items, markdown shows the same
-as a table, `--format json` has a `risk` object and SARIF carries it in the run's `properties.risk`.
+Every report carries an advisory risk score per item and for the whole run. It helps triage and never changes the
+exit code.
 
-- **Score.** Each unaccepted finding adds the weight of its severity: error 25, warning 8, info 1. The sum is capped
-  at 100. Findings accepted by a baseline do not count.
-- **Label.** `clean` (no findings), `low` (1-25), `medium` (26-50), `high` (51-75), `critical` (76-100), raised to
-  at least `high` when the worst finding is an error, `medium` for a warning and `low` for an info. One error is
-  therefore never "low", however small the score.
-- **Weights.** `[lint.risk]` sets the points per severity; `0` is allowed, and the severity floor still applies.
+- **Score.** Each unaccepted finding adds the weight of its severity (error 25, warning 8, info 1), capped at 100.
+- **Label.** `clean`, `low` (1-25), `medium` (26-50), `high` (51-75), `critical` (76-100), raised to at least `high`
+  when the worst finding is an error, `medium` for a warning, `low` for an info.
+- **Weights.** `[lint.risk]` sets the points per severity (`error`, `warning`, `info`).
 
-```toml
-[lint.risk]
-error = 30
-warning = 10
-info = 0
-```
+The text report shows the run's score and the five riskiest items; JSON has a `risk` object, SARIF the run property
+`risk`.
 
 ## Changed-only mode
 
 ```bash
-ai-rulez validate --strict --since origin/main    # files changed since a revision
-ai-rulez validate --strict --changed              # a bare --changed is --since HEAD
-ai-rulez validate --strict --changed=origin/main  # --changed=REV is --since REV
+ai-rulez validate --since origin/main      # files changed since a revision
+ai-rulez validate --changed                # uncommitted and untracked changes (--since HEAD)
+ai-rulez validate --changed=origin/main    # the same as --since origin/main
 ```
 
-The whole tree is still indexed and linted, so a link, a skill name or a hook path is resolved against everything
-that exists, not only against the changed files. Only the *report* is narrowed, to findings located in
+The whole tree is still linted, so a link or a skill name resolves against everything. Only the report is narrowed,
+to findings in:
 
-1. files that changed since the revision (committed, staged and unstaged changes, deletions, and untracked files that
-   are not ignored), and
-2. files that refer to a changed file: by a markdown link, a backticked repository path, a skill, agent, rule or
-   command name, a skill's `references/` or `scripts/` path, a frontmatter `skills:` entry or a hook command.
+1. files changed since the revision (committed, staged, unstaged, deleted, and untracked files that are not ignored);
+2. files that refer to a changed file: by a link, a backticked path, a skill, agent, rule or command name, a skill's
+   `references/` or `scripts/` path, a frontmatter `skills:` entry or a hook command.
 
-So editing or deleting `guide.md` also shows the broken link in the rule that points at it. By default the dependency
-is one hop (a file that refers to a dependent is not shown). `--since-depth N` follows N hops and `--since-depth all`
-the whole reverse closure, so a change to a script a skill uses also reaches the agent that lists the skill:
-
-```bash
-ai-rulez validate --strict --since origin/main --since-depth all --since-max-files 200
+```text
+$ ai-rulez validate --changed
+.ai-rulez/context/architecture.md:27: error AR201 link-unresolved: link target "../../docs/runbook.md" does not exist
+...
+changed-only since HEAD (depth 1): 1 changed file(s), 0 file(s) referring to them; 4 finding(s) in other files not shown
+baseline: 4 finding(s) accepted
 ```
 
-The closure is a breadth-first walk over the same reference graph, so a cycle ends when no new file turns up and the
-order is stable. `--since-max-files N` caps the files shown besides the changed ones, nearest first (ties by path);
-the text report says how many were left out. Each finding carries a `hop` in `--format json`: `changed`,
-`dependent` (one hop) or `transitive(n)`, so CI can filter.
-
-The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
-`changed_only` object (`depth`, `-1` for `all`; `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
-`dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
-finding, and a `[lint.ratchet]` count is judged against the full set too; exit status reflects only the findings shown.
-`--update-baseline` cannot be combined with `--since`.
+`--since-depth N` follows N hops of references (default 1), `--since-depth all` the whole chain, and
+`--since-max-files N` caps the files shown besides the changed ones, nearest first. Each finding in JSON carries a
+`hop`: `changed`, `dependent` or `transitive(n)`. The baseline and the ratchet are judged against the full set of
+findings; the exit code reflects only the findings shown.
 
 ### Untracked files
 
-A run lints the files on disk that are not git-ignored, tracked or not, so an untracked build artifact (a
-`__pycache__/*.pyc` left by `python -m py_compile`, reported as AR051) produces findings that a teammate's or CI's
-checkout does not have. `--tracked-only` (or `[lint] tracked_only = true`) reports no findings in files outside the repository index, except
-the files `--changed` or `--since` names, so the result does not depend on what a local run left behind. The files are
-still walked; their findings are dropped after the run. Outside a git work tree there is no index: the option logs a
-warning and every finding is kept. Independently of the option,
-`--update-baseline` skips findings in untracked files and logs how many.
-
-git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
-`GIT_CONFIG_*`, ...) removed from its environment, so the command is safe inside a git hook and never addresses the
-hook's repository instead of the project.
+A run lints files on disk that git does not ignore, tracked or not, so a local build artifact can produce findings
+that CI does not see. `--tracked-only` (or `[lint] tracked_only = true`) reports no findings in files outside the git
+index, except the files `--changed` or `--since` names. Outside a git work tree the option warns and keeps every
+finding.
 
 ## Security checks
 
-`AR001` to `AR011` are deterministic and offline: they read text and report patterns, they never fetch or run
-anything. `ai-rulez scan` runs only this family (same `--format`, `--fail-on`, `--recursive`, exit codes);
-`validate --strict` runs it together with everything else.
+The security rules (`AR001`-`AR058`) are deterministic and offline: they read text and report patterns, and never
+fetch or run anything. They cover rules, context, skills (including the scripts and data files they ship), agents,
+commands, hooks, MCP servers and dependency manifests. `ai-rulez scan` runs only this analyzer, with the same flags,
+formats and exit codes; `validate` runs it with everything else.
 
-They cover `SKILL.md`, rules, context, agents, commands, markdown references and the text files a skill ships
-(scripts, data). Disable a rule everywhere with `ignore`, one file with `ignore_paths`, one line with
-`ai-rulez-lint-ignore`. The patterns are heuristics tuned for precision, and a finding in prose that *documents*
-a risky command needs an inline ignore.
-
-**Imported content.** Content from `includes` and `installed_skills` is scanned by default: `validate --strict`
-reports it, and `generate` scans it *before writing anything* and stops at an error-level finding. With
-`[lint.security] scan_imports = "error"` every finding in imported text counts as an error, `"warn"` only logs, and
-`"off"` opts out of the scan (unset keeps each finding's own severity). The level replaces the severity of findings in
-imported text, and an `ai-rulez-lint-ignore` comment inside imported text is not honored, so an import cannot
-silence the check on its own content. Pair it with `ai-rulez lock` so the scanned bytes are the pinned bytes.
-
-**External scanners.** `[[lint.external]]` plugs in a classifier or a third-party scanner. The command is run from
-the project root with the scanned file paths appended, and prints SARIF 2.1.0 (`runs[].results[]`) or a JSON list
-of `{file, line, severity, rule, message}` to stdout; a non-zero exit is fine when the output parses. Findings are
-merged as `AR011` (with the scanner's severity) into the text and `--format json` reports. Because the command
-comes from the repository, it runs only when you pass `--external`. The command is an argv and never goes through
-a shell.
-
-Every run is bounded: a `timeout` (default 2 minutes, at most 15, applied to each run), a 32 MiB cap on each of
-stdout and stderr, and a kill of the whole process tree at the timeout and again after the command exits. On Linux
-and macOS the tree is the command's session and process group plus every descendant seen while it ran (the process
-table is read at a backing-off interval up to 200 ms), so a helper that calls `setsid()` is killed too. Every child
-also starts with a random per-run token in `AI_RULEZ_RUN_TOKEN` and an extra inherited descriptor (fd 3) on a marker
-pipe, and the kill searches each of your processes started since the command for either one (the environment through
-`KERN_PROCARGS2` on macOS or `/proc/<pid>/environ` on Linux, the descriptors through `proc_pidinfo` or
-`/proc/<pid>/fd`), so a daemon that forks, detaches and loses its parent between two reads is killed as well. macOS
-hides the environment of system and hardened binaries (`/bin/sh`, `perl`), so there the descriptor is what finds them.
-A process that removes both, starting with a fresh environment and the descriptor closed, and detaches between two
-reads can still escape. On Windows the child is placed in a Job
-Object that is terminated the same way; a grandchild spawned in the instant between process start and job
-assignment can escape it. Output
-past the cap is dropped without blocking the scanner: stdout past it is `AR9E3` (never ingested), while stderr
-past it is truncated silently, and stderr is only ever used, cleaned and cut to 500 characters, in the detail of
-an `AR9E3` message. A command that exits 0 while a helper still holds its output pipe open is a success: its output
-is kept and the helper is killed after a 2 second grace. A very long file list is split into several runs so the
-command line stays under the operating system limit (128 KiB of arguments on Unix, 24 KiB on Windows); a failing run
-stops the remaining ones. A scanner that is not installed is a notice (`AR9E2`, warning),
-not a failure; a command found only through a relative `PATH` entry (`.`, `bin`) counts as not installed, because
-its meaning depends on the current directory. One that times out, overflows the cap, or prints unreadable output, a SARIF version other than 2.1.0,
-a run with `executionSuccessful = false`, a tool notification at level `error`, an empty `runs` (SARIF) or an empty list or `null` (JSON) with a non-zero
-exit, is reported as `AR9E3`: it is never ingested in part, and a crashed scanner never looks clean. Results the
-tool marked suppressed are dropped. Messages are cleaned before printing (escape sequences, control,
-bidirectional, zero-width and tag characters removed, one line, secret-shaped text masked, and cut to `max_message`
-characters, 500 by default; see Long messages), and a
-reported path is normalised (`file://`, percent-encoding, Windows separators on Windows only; a backslash is an
-ordinary character on Unix). A SARIF `uriBaseId` is resolved against the base the log declares in
-`originalUriBaseIds` (an undeclared id is resolved against the project root). A path outside the project, a
-`file://` URI naming a host other than `localhost` (a UNC or remote share), or a base that points outside the
-project is attributed to `config.toml` with a note.
-
-### Staged input, severity and baseline
-
-An entry that sets `inputs` runs on a **staged copy** instead of the project. The copy holds exactly the listed kinds
-of content (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `hooks`, `mcp`, `imports`) in a scratch
-directory outside the project: skills with every regular file of their directory (see Staged skill files), files byte for byte as on disk,
-`imports` only when listed. Content keeps its repository path (`.ai-rulez/rules/x.md`, `.ai-rulez/skills/<name>/SKILL.md`
-with its resource files); imported items go under `<config dir>/imports/<kind>/<name>`. `hooks` is written as
-`<config dir>/hooks.json` (the `[[hooks]]` entries as configured) and `mcp` as `<config dir>/mcp-servers.json`, one
-entry per server with `name`, `transport`, `command`, `args`, `url`, `env_names` and `header_names`: environment and
-header **values** are never staged, credential-looking arguments (the value after `--api-key`, `--token=...`, a
-`Bearer ...` string) are replaced by `[REDACTED]`, and a `url` loses its userinfo, query and fragment. Directories are
-mode 0500 and files 0400; no symlink is ever copied. The scanner runs with the stage as its working directory, a
-scrubbed environment (plus `env_pass`), `HOME` and `TMPDIR` set to scratch directories, and no path appended. The
-scratch directory is removed afterwards. Nothing is run when nothing is staged.
-
-#### Staged skill files
-
-A skill's whole directory is staged, not only `scripts/`, `references/` and `assets/`: a file at the skill root
-(`notes.md`, `LICENSE`), in a folder of its own (`rules/`, `templates/`) or in `evals/` reaches the scanner, so a
-payload cannot hide beside `SKILL.md`. The limits are those of an installed skill: git-ignored files and the
-bundle excludes (`.git`, `.venv*`, `venv`, `__pycache__`, `*.pyc`, `node_modules` and the `bundle_exclude` key) stay
-out, symbolic links are never followed, credential-like names (`.env`, `id_rsa*`, `*.pem`, `*.key`,
-`credentials.json`, `*.tfstate` and the like) and files over 8 MiB are skipped, and a skill over 2000 files or
-16 MiB keeps only its canonical directories (a warning names it). `--dry-run` lists exactly these files.
-
-`stage_globs` and `stage_exclude` on a `[[lint.external]]` entry choose among them. Both are globs relative to the
-skill directory (a pattern without a slash matches at any depth, `**` crosses directories); `SKILL.md` is always
-staged. With `stage_globs`, only matching files are staged; `stage_exclude` removes matches and wins. An absolute
-pattern, one with `..` or a malformed one is `AR9E0`.
-
-```toml
-[[lint.external]]
-name = "docs-only"
-command = ["scanner", "{skill_dirs}"]
-inputs = ["skills"]
-egress = false
-stage_globs = ["**/*.md", "scripts/**"]
-stage_exclude = ["evals/**"]
+```bash
+ai-rulez scan
+ai-rulez scan --format sarif --output scan.sarif
 ```
 
-Placeholders in `command` are expanded as arguments, never through a shell: `{stage}` and `{root}` the stage root,
-`{files}` one argument per staged file, `{skill_dirs}` one per staged skill directory (each on its own, not inside a
-longer argument), `{out}` a private file the scanner may write its report to (read instead of stdout), `{tmp}` the
-scratch temp directory, `{project}` the project root. Placeholders need `inputs`; an unknown one is `AR9E0`.
+The patterns are tuned for precision. A finding in prose that documents a risky command needs an
+[example region](#example-regions) or an inline ignore. See the [Security](#security) rows of the rule index.
 
-A scanner with `inputs` runs with the stage as its working directory, so a relative `command[0]`
-(`["tools/scan.sh", "{skill_dirs}"]`) is resolved against the project root, but a relative script argument of an
-interpreter command (`["sh", "tools/scan.sh"]`) is looked up in the stage and fails with exit status 127. Name the
-script through `{project}`: `["sh", "{project}/tools/scan.sh", "{skill_dirs}"]`. `{project}` is only a path; the
-scanner still sees only the staged files unless it reads that path itself, and the cache key hashes the script
-named through it like any other.
+### Imported content
 
-A result is attributed to the project file a staged file came from. A path that is not a staged file (absolute,
-`..`, another project file) is dropped and reported once per scanner as `AR9E6`. A relative path that matches no
-staged file at the root is tried against the skill directories the run was handed (scanners handed `{skill_dirs}`
-print paths relative to them) and must match exactly one. With `batch_size = 1` a run holds one skill, so `SKILL.md`
-and `references/x.md` resolve to that skill; in a batch of several skills, or without `batch_size`, a path that
-names a file in more than one of them is ambiguous and dropped. `AR9E6` is an error when every result of a run was
-dropped, so a scanner whose paths never resolve cannot pass as clean. A severity set for `AR9E6` in `[lint.severity]` (or
-switched off) is kept as set.
+Content from `includes` and `installed_skills` is scanned by default: `validate` reports it, and `generate` scans it
+before writing anything and stops at an error. `[lint.security] scan_imports` sets the severity of every finding in
+imported text: `"error"`, `"warn"` (logged only) or `"off"`; unset keeps each finding's own severity. An inline ignore
+comment inside imported text is not honored, so an import cannot silence the check on itself. Pair it with
+`ai-rulez lock` so the scanned bytes are the pinned bytes.
 
-A result with no `locations` is attributed to the `SKILL.md` of the skill when the run was handed exactly one skill
-(`batch_size = 1`, or a single skill). In any other run it has no file: the finding is reported without a path, its
-message ends in `(no location reported by scanner)`, and a baseline entry records no file and keys on the scanner, the
-rule and the message (or the scanner's own fingerprint). In the JSON report `file` is then `""`, the text format prints `(no file)`, and the GitHub and Markdown formats show `.`.
+## External scanners
 
-Severity is the first of: `severity_map` (rule id or glob to `critical`, `high`, `medium`, `low`, `info`, or
-`error`, `warning`; exact id first, then the longest glob), SARIF `properties.security-severity` of the result or
-its rule (9.0 and up critical, 7.0 high, 4.0 medium, above 0 low), the result `level` (`error` high, `warning`
-medium, `note` low, `none` info), the rule's `defaultConfiguration.level`, else medium. `max_severity` then caps it.
-Critical and high report as error, medium as warning, low and info as info. A rule's `helpUri` (https only) is
-appended to the message as evidence. `--show-suppressed` keeps suppressed results as `info`.
-
-Every scanner finding has a fingerprint (`sc1:...`) that survives line moves and re-formatting: the scanner's own SARIF
-`partialFingerprints` (`primaryLocationLineHash`, else the first key) or `fingerprints` when present, combined with
-the rule and path; otherwise a hash of scanner, rule, repository path, normalized text of the flagged line and an
-occurrence index. Identical (scanner, fingerprint) pairs are reported once.
-
-`.ai-rulez/scanner-baseline.json` accepts findings, in the format of the [lint baseline](#baseline-and-tolerated-findings) with
-each entry also naming its `scanner` and `rule`. `scan --external --write-baseline --reason "..."` records every
-current scanner finding (keeping the entries of scanners that did not run, and dropping every entry that matches
-no current finding, so the file always reflects the run). Accepted findings
-are not reported (their count is logged); editing the flagged line makes the finding new. `--min-severity <level>`
-and repeated `--rule <glob>` narrow what is written (a rule matches the scanner's rule id, `scanner:rule` or the
-`AR` code; `*` is a wildcard); findings left out stay reported and an existing entry for one is kept. The reason of a
-new entry is the longest-matching `--reason-for RULE=text`, else `--reason`; both may use `{rule}`, `{severity}` and
-`{scanner}`. An entry stores only the first line of the message, at most 160 characters, since only the
-fingerprint is matched; a rewrite shortens the messages of older entries too. An entry past its
-`expires` date (the day itself still counts) reports the finding again plus `AR9E5`.
-
-Design decisions: the baseline reuses the lint baseline format (`version`, `entries`) rather than a second schema;
-the stage map is kept in memory, not written into the stage, so the scanner cannot read source paths; staging is
-opt-in per entry through `inputs`, so existing entries are unchanged; `scanners list` never starts a program (the
-command is repository-controlled) and `doctor` starts only scanners you name.
-
-`egress` declares whether content derived from the scanned files can leave the machine (a hosted model, an
-upload, a credential used for a network call):
-
-| `egress` | Environment | Network flags | Runs |
-| --- | --- | --- | --- |
-| unset (legacy) | the full inherited environment | not checked | always; `AR9E1` warns |
-| `false` | scrubbed: `PATH`, `HOME`, `USER`, `TZ`, `LANG`, `LANGUAGE`, every `LC_*` variable, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
-| `true` | scrubbed as above | not checked | only with `--allow-egress=<name>` on the command line (repeatable); otherwise `AR9E4` |
-
-`egress = false` is a declaration with two enforced layers, not a sandbox: the scrubbed environment (proxy and
-credential variables, such as `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_API_KEY`, `*_PAT`, `*_DSN`,
-`*_WEBHOOK_URL`, `COOKIE`, `SESSION`, `DATABASE_URL`, `AWS_*` keys and `HTTPS_PROXY`, are removed and rejected in
-`env_pass`, `AR9E0`; `HOME` is kept, so credentials stored in files below it, such as `~/.aws`, `~/.config` or
-`~/.netrc`, stay reachable by the scanner) and the argv check, which is a heuristic that catches a flag added later, not a scanner that
-ignores its flags. Process isolation (below) adds the third layer for staged scanners. Repository config alone
-cannot enable an egress scanner, so a CI job opts in per invocation. Timeout, caps and the group kill apply to every entry, including legacy ones; the
-environment scrub applies once `egress` is set. The hardened runner is the `internal/runner` package, reused by
-later features that execute commands.
-
-### Policy, presets and profiles
-
-`[lint.scanner_policy]` sets the policy for every scanner at once; all keys are optional.
-
-| Key | Meaning |
-| --- | --- |
-| `preset` | `off` (default), `baseline` or `strict`: the embedded profiles that run with `--external` without a `[[lint.external]]` entry |
-| `required` | Scanner names whose absence, outdated version or failure is an error (`AR9E2` becomes an error; a name no entry or preset provides is reported the same way) |
-| `fail_on` | The lowest severity of a **scanner** finding (`AR011`) that fails the run: `error`, `warning` or `info`. It replaces the run's threshold (`--strict`, `--fail-on`, `[lint] fail_on`) for scanner findings, in both directions; see Failing on scanner findings. The `strict` preset implies `warning` |
-| `max_message` | Characters of a scanner finding message kept in text output (default 500, at most 100000); an entry's own `max_message` wins. The JSON report and SARIF output keep the whole text |
-| `baseline` | The scanner baseline file, relative to the project root; an absolute path or one that leaves the project is `AR9E0`. `--scanner-baseline` wins |
-| `isolation` | `auto` (default), `none` or `require`, see Isolation |
-| `max_timeout` | The longest `timeout` one run of a scanner may be given: a Go duration from `1s` to `6h` (default `15m`). A scanner's `timeout` above it is `AR9E0`. See Batches and timeouts |
-| `allow_egress` | Unset: `--allow-egress=<name>` alone allows an egress scanner. Set (even `[]`): the name must also be listed, so a committed list narrows what a CI flag can enable. Presets never read it |
-
-The profiles live in the binary (`internal/lint/scanners/profiles.toml`), each with `source`, `verified_on` and
-`tested_versions` (empty until a contract test has passed against a real binary). Nothing is downloaded or
-installed; a scanner that is not on `PATH` is an `AR9E2` notice.
-
-| Profile | Egress | Format | Presets | Notes |
-| --- | --- | --- | --- | --- |
-| `agnix` | no | SARIF | baseline, strict | `agnix --format sarif <stage>`; not yet checked against a real binary |
-| `claude-plugin-validate` | no | `adapter:claude-validate-json` | baseline, strict (only with `[plugin]` or `[marketplace]`) | `claude plugin validate --json <stage>`; staged in the plugin layout (`skills/<name>/SKILL.md`, `agents/`, `commands/`); output shape checked against claude 2.1.285 |
-| `cisco-skill-scanner` | no | SARIF | strict | deterministic mode; its LLM, VirusTotal, AI Defense and OSV flags are deny-listed; not yet checked against a real binary |
-| `snyk-agent-scan` | **yes** | `adapter:snyk-json` | none | needs `SNYK_TOKEN` (passed through to it); never part of a preset; the vendor documents receiving skill content, MCP server configuration and tool descriptions, and agent application details |
-
-A preset member is replaced by an entry with the same name or the same `profile`. `[[lint.external]]` with
-`profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
-less egress than the profile: `AR9E0`), severity map, flag deny-list, `batch_size` and `version` range; keys set on
-the entry win. An unknown `profile` fails the configuration load, and the error lists the valid names.
-`ai-rulez scanners list` shows the preset of each scanner.
-
-### Long messages
-
-A scanner finding's message is cut to `max_message` characters (default 500, at most 100000) so a text report stays
-readable. Set it for every scanner in `[lint.scanner_policy]` or for one `[[lint.external]]` entry; the entry wins.
-A cut message ends in `...`, and nothing is lost: the JSON report carries the whole text as `full_message` on the
-finding, and SARIF output as the result property `fullMessage`. With `--debug`, the run logs how many messages of
-each scanner were cut. Fingerprints, the baseline and the result cache do not depend on the limit.
-
-### Evidence in the message
-
-Some scanners keep the matched text out of the SARIF `message` and put it in the result `properties`, so a CI
-annotation shows only a rule title such as `PE3: Credential Access`. `message_properties` on a `[[lint.external]]`
-entry lists the property paths to append, in order:
-
-```toml
-[[lint.external]]
-name = "my-scanner"
-command = ["my-scanner", "--format", "sarif", "{skill_dirs}"]
-format = "sarif"
-inputs = ["skills"]
-message_properties = ["evidence", "snippet"]
-```
-
-The message becomes `PE3: Credential Access [evidence: cat ~/.aws/credentials; snippet: ...]`. A path is dotted
-(`details.match` reads `properties.details.match`); the reserved path `location.snippet` reads the standard
-`locations[0].physicalLocation.region.snippet.text`. Strings, numbers, booleans and arrays of those are used; a
-missing, empty or object-valued property is skipped. Values are sanitized like the message itself (escape and control
-characters removed, whitespace collapsed to single spaces, secret-shaped text masked) and the whole message stays
-within `max_message`, so a long snippet cuts the end. Paths are letters, digits, `_` and `-` joined by dots, at most
-16 per entry (`AR9E0` otherwise).
-A profile or entry with the JSON or adapter formats ignores the key.
-
-```toml
-[lint.scanner_policy]
-max_message = 2000
-
-[[lint.external]]
-name = "verbose-scanner"
-max_message = 200
-```
-
-### Batches and timeouts
-
-`timeout` bounds one run of the scanner (default 2 minutes, at most 15). A scanner that takes minutes per skill
-cannot scan fifty skills in one run, so a command that passes `{skill_dirs}` (and none of `{stage}`, `{root}`,
-`{files}`) can be split:
-
-```toml
-[lint.scanner_policy]
-max_timeout = "1h"        # optional: the longest timeout any run may be given (default 15m, at most 6h)
-
-[[lint.external]]
-name = "deep-scan"
-command = ["deep-scan", "{skill_dirs}"]
-inputs = ["skills"]
-egress = false
-timeout = "20m"           # for each batch
-batch_size = 5            # at most 5 skill directories per run
-parallel = 4              # up to 4 runs at the same time
-```
-
-`batch_size` divides the skills that still need a scan into runs of at most that many directories. Every run gets
-the whole `timeout`, and its skills are cached as soon as it succeeds, so a later run does not repeat a finished
-batch after another one timed out. Without `batch_size` the scanner gets all of them in one run, split anyway when
-the arguments would pass the operating system limit (128 KiB on Unix, 24 KiB on Windows). `parallel` runs up to
-that many batches at once (1 to 16, default 1); each gets its own `{out}` file and temp directory, `HOME` stays
-shared, and results are merged in batch order, so the report does not depend on which batch finished first. A failed
-batch stops the batches that have not started; those that finished keep their results.
-
-A scanner that runs prints `name: N batches to run` on stderr when it starts and, with more than one run,
-`name: batch 4/13` as each run finishes (counted in finish order, so the numbers never repeat with `parallel`). These are
-information lines: `--quiet` drops them and they are never part of the JSON, SARIF or other report on stdout. A run served
-entirely from the cache starts nothing and prints nothing.
-
-The `timeout` of a run stays bounded: the runner never lets one command run longer than 6 hours. Only
-`[lint.scanner_policy] max_timeout` raises the 15 minute default ceiling, so a `timeout` written in an entry (or a
-pull request that edits one) cannot lift its own limit past what the policy allows. `scanners doctor` shows the effective
-timeout.
-
-### Failing on scanner findings
-
-`--strict` is `--fail-on warning`, so a project that wants every content warning to fail the build also fails on
-every scanner warning, and `--strict --fail-on error` is rejected as contradictory. To judge scanner findings by
-their own bar, set `fail_on` in `[lint.scanner_policy]` or on one `[[lint.external]]` entry:
-
-```toml
-[lint.scanner_policy]
-fail_on = "error"        # scanner warnings are reported but do not fail, even under --strict
-
-[[lint.external]]
-name = "cisco"
-fail_on = "warning"      # this scanner's warnings do fail
-```
-
-The threshold of a scanner finding (`AR011`) is the first of: the entry's `fail_on`, `[lint.scanner_policy] fail_on`,
-the `strict` preset's `warning`, then the run's own threshold (`--fail-on`, `--strict`, `[lint] fail_on`, `error`).
-When a scanner threshold applies it replaces the run's: `--strict` with `fail_on = "error"` fails on a scanner
-error and not on a scanner warning, and `--fail-on error` with `fail_on = "warning"` fails on a scanner warning.
-`--fail-on none` still disables every gate. Everything else, including the scanner's own configuration findings
-(`AR9E0` to `AR9E7`), keeps the run's threshold. Findings accepted by the scanner baseline never fail.
-`ai-rulez lock` records `pass` or `fail` per scanner with the same threshold.
-
-### Version pins
-
-`version = ">=1.0.0, <2"` is checked before every run against the first version number in the output of
-`<command[0]> --version`. When `command[0]` is a launcher or interpreter (`python3 scan.py`, `node scan.js`,
-`uvx scanner`), that is the launcher's version, not the scanner's: set `version_command` to the argv that prints
-the scanner's own version (`["python3", "scan.py", "--version"]`). It runs from the project root, through the same
-isolation as the probe, with a 10 second timeout that `version_timeout = "30s"` raises (a slow launcher on a loaded
-machine); it needs `version` (`AR9E0` otherwise). A scanner outside the range, or one whose version output holds no
-version number, is not run (`AR9E2`), and a probe that outlives its timeout is reported as
-`version probe timed out after 10s`, not as empty output.
-`ai-rulez scanners doctor --external` applies the same check and reports `not healthy` for a scanner that
-`validate --external` would refuse to run; without `--external` doctor starts nothing and prints `unverified` for an
-entry that has a `version` range.
-
-### Isolation
-
-A staged scanner (one with `inputs`) runs confined when `isolation` allows it: no network (unless it declares
-`egress = true`) and no writes outside its scratch directory, which holds the stage, `HOME`, `TMPDIR` and the `{out}`
-file. The backends are in `internal/sandbox`: macOS `sandbox-exec` (deprecated by Apple, still present; network and
-filesystem), Linux `bwrap` (network and filesystem) or `unshare --net` (network only). Each installed backend is
-tried once with a trivial command, strongest first, and the first that works is used: in a container that allows
-user namespaces but refuses `bwrap`'s `/proc` mount, `unshare` confines the network. A scanner that is not
-installed is not wrapped. On any other system, or where no installed tool works (user namespaces disabled, already
-inside a sandbox), no backend is available:
-
-| `isolation` | A backend works | No backend |
-| --- | --- | --- |
-| `auto` (default) | confined | runs unconfined; one `AR9E7` warning per run |
-| `require` | confined | the scanner does not run (`AR9E3`) |
-| `none` | runs unconfined, silently | runs unconfined, silently |
-
-The `--version` probe (a `version` range, the version stored with a cached result, `scanners doctor --external`) starts
-the scanner too, so it is confined the same way: with `require` and no backend it is refused (`AR9E3`; `doctor`
-prints "not probed"), and with `auto` and no backend it runs unconfined.
-
-Confinement is best effort, not a security boundary. The macOS profile allows everything except the network, file
-writes outside the scratch directory and the Mach services that start or script applications (LaunchServices and
-Apple Events) or write preferences for it (cfprefsd), so `open -b <bundle id>` and `defaults write` from a scanner
-fail; terminal devices are neither writable nor open to
-ioctls, and every command starts in a new session without a controlling terminal, so a scanner cannot push input into
-the shell that ran ai-rulez (`TIOCSTI`); the rest of the user session stays visible. `bwrap` adds a PID namespace.
-`unshare` confines the network only.
-
-A scanner without `inputs` runs in the project root and cannot be confined: `require` refuses it (`AR9E3`), `auto`
-leaves it as it was. A scanner that writes to a path outside its scratch directory (a cache under the real home, a
-shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR`/`HOME`, or set `isolation = "none"`.
-
-### Result cache and dry runs
-
-The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
-the staged content, the scanner binary (path, size, modification time), the content of the script it runs
-through an interpreter and of the files `cache_files` lists, its command line, its mapping keys
-(`format`, `inputs`, `env_pass`, `severity_map`, `max_severity`, `--show-suppressed`), a hash of each `env_pass`
-value, the isolation mode and backend, and the version of the report-mapping code are unchanged, so an unchanged
-tree costs no scanner run. A result produced under one isolation mode is never served under another, so an unconfined
-result is not reused when `isolation = "require"`. Entries hold normalised findings only, never the raw report, and carry an
-HMAC made with a per-user secret (`~/.config/ai-rulez/scan-cache.key`, mode 0600) like the LLM cache: an edited,
-truncated, planted or symlinked entry is a miss and is removed. A failed run is never cached; an `egress = true`
-scanner never is. The key cannot include the scanner's version (computing it would start the scanner, which `lock`
-must not do), so a launcher scanner (`npx`, `uvx`, `pipx`, `bunx`, `npm`, `pnpm`, `yarn`, `bun`, `uv`), whose tool
-changes without its launcher binary changing, is served from the cache for 24 hours at most. Pin the version in
-the command, or pass `--no-scan-cache`, to control it.
-
-For a scanner that is a script (`command = ["python3", "scan.py", "{stage}"]`), the binary is the interpreter, so
-the key also hashes the script: the first argument that does not start with a dash and names an existing file, when
-`command[0]` is `sh`, `bash`, `zsh`, `dash`, `ksh`, `fish`, `python` (including `python3.12`), `pypy`, `node`, `deno`,
-`bun`, `tsx`, `ruby`, `perl`, `php`, `lua`, `Rscript`, `pwsh`, `uv` or `pipx` (a relative path is read from the
-project root). Editing the script runs the scanner again. A scanner that loads other files (a rules file, a
-configuration, modules next to the script) lists them in `cache_files`, globs relative to the project root (`**`
-crosses directories; an absolute pattern or one with `..` is `AR9E0`; symbolic links are not followed; at most 20000
-files are hashed):
+`[[lint.external]]` runs a third-party scanner and merges its findings as `AR011` with the scanner's own severity.
+Because the command comes from the repository, it runs only with `--external`.
 
 ```toml
 [[lint.external]]
 name = "house-rules"
-command = ["python3", "tools/scan.py", "{stage}"]
-inputs = ["skills"]
-egress = false
-cache_files = ["tools/**/*.py", "tools/rules/*.yaml"]
+command = ["python3", "{project}/tools/scan.py", "{stage}"]
+format = "sarif"                   # sarif (default) | json | adapter:snyk-json | adapter:claude-validate-json
+inputs = ["skills"]                # run on a staged, read-only copy of these kinds
+egress = false                     # declares that no scanned content leaves the machine
+timeout = "120s"
 ```
 
-A scanner whose command passes `{skill_dirs}` and none of `{stage}`, `{root}` and `{files}` judges each skill
-directory on its own, so its result is cached **per skill**: the key is the tree hash of that skill (every staged
-file of its directory), the command line with the directories left out, the scanner's identity and the values above.
-A run hands the scanner only the skills without a cached result, so editing one skill of fifty costs one skill's
-scan; adding a skill scans that skill. Under `--changed` or `--since`, only the skills that hold a changed file are
-handed to the scanner (or read from the cache), and the others are neither run nor reported; the supporting files
-of the other skills are not even listed or read, so the cost of `--changed` follows the size of the change, not of the
-repository. `--no-scan-cache` still
-bypasses the cache, and `--write-baseline` ignores `--changed` so the baseline stays complete. A scanner that
-reports a result naming no file of any skill (or a path outside the stage) cannot have that result replayed from one
-skill's entry, so a run of several skills with such a result is not cached; a run of one skill caches all of it.
-`ai-rulez lock` sums the per-skill entries into one `[[scan]]` record, which exists only when every skill has one.
+```bash
+ai-rulez scan --external                    # run the scanners
+ai-rulez scan --external --dry-run          # show what each scanner would run, start nothing
+ai-rulez scanners list                      # configured scanners, egress and install state
+ai-rulez scanners doctor --external         # probe binaries and versions
+```
 
-`scan --external --dry-run` (also `validate --strict --external --dry-run`) prints, for each scanner that would run,
-its binary, command (stage paths shown as `<stage>` and `<scratch>`), isolation, the names of the environment
-variables it would receive (never values), the staged files and the cache state (`hit`, `miss`, `off`), and starts
-nothing. For a per-skill scanner the cache line counts hits and misses and each skill is listed with its state
-(`hit`, `miss`, `not cached` or `skipped (no changed file)` under `--changed`). It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
-to stderr so stdout stays the report format.
+The scanner prints SARIF 2.1.0 or a JSON list of `{file, line, severity, rule, message}` to stdout; a non-zero exit is
+fine when the output parses. The command is an argv and never goes through a shell.
+
+| Key | Meaning |
+| --- | --- |
+| `name` | Required, unique |
+| `command` | Argv; placeholders below need `inputs` |
+| `format` | `sarif` (default), `json`, `adapter:snyk-json`, `adapter:claude-validate-json` |
+| `inputs` | Kinds to stage: `rules`, `context`, `skills`, `agents`, `commands`, `checks`, `hooks`, `mcp`, `imports` |
+| `profile` | Inherit an embedded profile (see [Policy, presets and profiles](#policy-presets-and-profiles)) |
+| `egress` | `false`: scrubbed environment and network flags refused; `true`: needs `--allow-egress=<name>`; unset: full environment, `AR9E1` |
+| `env_pass` | Extra environment variable names for an `egress = false` scanner (credential-looking names are refused) |
+| `timeout` | Per run; default 2m, at most 15m (or `[lint.scanner_policy] max_timeout`) |
+| `version`, `version_command`, `version_timeout` | A version range checked before each run (`AR9E2` when outside) |
+| `required` | A missing, outdated or failing scanner is an error |
+| `fail_on` | Lowest severity of this scanner's findings that fails the run |
+| `batch_size`, `parallel` | Split `{skill_dirs}` into runs of at most N skills, up to `parallel` (1 to 16) at once |
+| `stage_globs`, `stage_exclude` | Skill files to stage, relative to the skill directory (`SKILL.md` always) |
+| `cache_files` | Files the scanner reads, part of the result cache key |
+| `severity_map`, `max_severity` | Map rule ids or globs to severities; cap them |
+| `max_message`, `message_properties` | Characters kept in text output (default 500); SARIF result properties appended to the message |
+
+Every run is bounded: the timeout, a 32 MiB cap on stdout and stderr, and a kill of the whole process tree. A scanner
+that is not installed is a notice (`AR9E2`). One that times out, overflows the cap or prints output that does not
+parse is `AR9E3` and is never ingested in part, so a crashed scanner never looks clean. A reported path outside the
+project is attributed to `config.toml` with a note.
+
+### Staged input, severity and baseline
+
+With `inputs`, the scanner runs on a **staged copy**: the listed kinds of content in a read-only scratch directory
+outside the project, with their repository paths. A skill is staged with every file of its directory, except
+git-ignored files, bundle excludes, credential-like names (`.env`, `*.pem`, `id_rsa*`, ...) and supporting files
+over 8 MiB; a skill over 2000 files or 16 MiB keeps only its canonical `references/`, `scripts/` and `assets/`
+directories, with a warning. An item file over 4 MiB is staged from its loaded content instead of its bytes on disk.
+MCP servers are staged without environment and header values, with credential-looking arguments redacted. The
+scanner runs in the stage with a scrubbed environment and `HOME` and `TMPDIR` in scratch directories.
+
+| Placeholder | Expands to |
+| --- | --- |
+| `{stage}`, `{root}` | The stage root |
+| `{files}` | One argument per staged file |
+| `{skill_dirs}` | One argument per staged skill directory |
+| `{out}` | A private file the scanner may write its report to (read instead of stdout) |
+| `{tmp}` | The scratch temp directory |
+| `{project}` | The project root (reach your own scripts with `{project}/tools/scan.sh`) |
+
+- **Attribution.** A result is attributed to the project file its staged file came from. A path that is not a staged
+  file is dropped and reported once as `AR9E6`; when every result was dropped, `AR9E6` is an error.
+- **Severity.** The first of: `severity_map` (exact id, then the longest glob), SARIF `security-severity` (9.0
+  critical, 7.0 high, 4.0 medium, above 0 low), the result `level`, the rule's default level, else medium.
+  `max_severity` caps it. Critical and high report as error, medium as warning, low and info as info.
+  `--show-suppressed` keeps results the tool marked suppressed, as info.
+- **Baseline.** `.ai-rulez/scanner-baseline.json` uses the [lint baseline](#baseline-and-tolerated-findings) format,
+  with `scanner` and `rule` on each entry. `scan --external --write-baseline --reason "..."` records every current
+  scanner finding; `--min-severity`, `--rule <glob>` and `--reason-for RULE=text` narrow it. An expired entry reports
+  its finding again plus `AR9E5`.
+
+`egress` declares whether content derived from the scanned files can leave the machine:
+
+| `egress` | Environment | Network flags | Runs |
+| --- | --- | --- | --- |
+| unset | inherited | not checked | always; `AR9E1` warns |
+| `false` | scrubbed to `PATH`, `HOME`, `USER`, `TZ`, locale, temp variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--llm-*`, any `--*url*` or `--*endpoint*` with a non-loopback value, ... are refused (`AR9E4`) | always |
+| `true` | scrubbed as above | not checked | only with `--allow-egress=<name>`; otherwise `AR9E4` |
+
+`egress = false` is a declaration with enforced layers, not a sandbox: `HOME` is kept, so files below it stay
+readable. [Isolation](#isolation) adds confinement for staged scanners. Before an `egress = true` scanner starts,
+ai-rulez warns on stderr what its profile documents the vendor receiving.
+
+### Policy, presets and profiles
+
+`[lint.scanner_policy]` sets the policy for every scanner:
+
+| Key | Meaning |
+| --- | --- |
+| `preset` | `off` (default), `baseline` or `strict`: embedded profiles that run with `--external` without an entry |
+| `required` | Scanner names whose absence, outdated version or failure is an error |
+| `fail_on` | Lowest severity of a scanner finding that fails the run (see below); `strict` implies `warning` |
+| `max_message` | Characters of a scanner message kept in text output (default 500, at most 100000); JSON keeps the full text as `full_message` |
+| `baseline` | Scanner baseline file, relative to the project root; `--scanner-baseline` wins |
+| `isolation` | `auto` (default), `none` or `require`; see [Isolation](#isolation) |
+| `max_timeout` | Longest `timeout` an entry may set, `1s` to `6h` (default `15m`) |
+| `allow_egress` | When set (even `[]`), `--allow-egress=<name>` also needs the name listed here |
+
+| Profile | Egress | Format | Presets | Notes |
+| --- | --- | --- | --- | --- |
+| `agnix` | no | SARIF | baseline, strict | `agnix --format sarif <stage>` |
+| `claude-plugin-validate` | no | `adapter:claude-validate-json` | baseline, strict (with `[plugin]` or `[marketplace]`) | `claude plugin validate --json` on the plugin layout |
+| `cisco-skill-scanner` | no | SARIF | strict | Deterministic mode; its LLM, VirusTotal, AI Defense and OSV flags are refused |
+| `snyk-agent-scan` | **yes** | `adapter:snyk-json` | none | Needs `SNYK_TOKEN`; the vendor receives skill content, MCP configuration and tool descriptions |
+
+The profiles are built in; nothing is downloaded or installed. An entry with `profile = "<name>"` inherits the
+profile's command, format, inputs, egress (it cannot declare less), severity map, flag deny-list, `batch_size` and
+`version`; keys set on the entry win. An entry with the same name or `profile` replaces a preset member.
+
+**Failing on scanner findings.** A scanner finding fails the run at the first threshold set of: the entry's
+`fail_on`, `[lint.scanner_policy] fail_on`, the `strict` preset's `warning`, the run's own. So `--strict` with
+`fail_on = "error"` fails on a scanner error, not a scanner warning; `--fail-on none` still disables every gate.
+
+**Batches.** A command that passes only `{skill_dirs}` can be split with `batch_size`; each batch gets the whole
+`timeout` and is cached when it succeeds.
+
+**Version pins.** `version = ">=1.0.0, <2"` is checked against the first version number of `<command[0]> --version`
+before each run. When `command[0]` is a launcher (`python3`, `node`, `uvx`), set `version_command` to the argv that
+prints the scanner's own version.
+
+### Isolation
+
+A staged scanner runs confined when a backend works: no network (unless `egress = true`) and no writes outside its
+scratch directory. The backends are `sandbox-exec` on macOS, and `bwrap` (network and filesystem) or `unshare --net`
+(network only) on Linux; the strongest one that works is used.
+
+| `isolation` | A backend works | No backend |
+| --- | --- | --- |
+| `auto` (default) | confined | runs unconfined, one `AR9E7` warning per run |
+| `require` | confined | the scanner does not run (`AR9E3`) |
+| `none` | unconfined | unconfined |
+
+A scanner without `inputs` runs in the project root and cannot be confined: `require` refuses it. A scanner that
+writes outside its scratch directory (a cache under the real home, `/tmp`) fails under isolation: point it at
+`TMPDIR` or `HOME`, or set `isolation = "none"`. Confinement is best effort, not a security boundary.
+
+### Result cache and dry runs
+
+The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
+the staged content, the scanner binary, the script it runs through an interpreter, the files in `cache_files`, its
+command line and settings, and the isolation mode are unchanged. Entries are signed with a per-user key, so an edited
+entry is a miss. A failed run and an `egress = true` scanner are never cached. A scanner run through a launcher
+(`npx`, `uvx`, `pipx`, ...) is served from the cache for at most 24 hours. `--no-scan-cache` bypasses the cache.
+
+A scanner that takes `{skill_dirs}` is cached per skill: editing one skill of fifty rescans one skill, and under
+`--changed` only the skills with a changed file are scanned.
+
+`scan --external --dry-run` prints, for each scanner, its binary, command, isolation, the names (never values) of the
+environment variables it would get, the staged files and the cache state, and starts nothing.
 
 ### Adapters
 
-`format = "adapter:<name>"` reads the JSON of a tool that does not print SARIF. An adapter is as strict as the SARIF
-reader: another shape, an empty document after a failing exit, or more than 10,000 results is `AR9E3`.
+`format = "adapter:<name>"` reads the JSON of a tool that does not print SARIF. Another shape, an empty document after
+a failing exit, or more than 10,000 results is `AR9E3`.
 
-- `claude-validate-json`: `claude plugin validate --json`. `errors` are errors, `warnings` warnings, `notes` info; the
-  rule is `<type>:<code or path>`; `success = false` without an error is a failed run. The target must be a directory
-  with `skills/`, `agents/` or `commands/` at its root, which is what the `claude-plugin-validate` profile stages.
-- `snyk-json`: a report of `{"issues": [...]}`, a bare list, or `{"<file>": {"issues": [...]}}`; each issue reads the
-  first set of `id`/`code`/`rule`, `severity`/`level`, `message`/`description`/`title`, `file`/`path`/`filename` and
-  `line`/`start_line`. The shape is a best effort pinned to the profile, not yet checked against a real binary.
-
-### Egress banner
-
-Before an `egress = true` scanner starts (it needs `--allow-egress=<name>`, and `allow_egress` when set), ai-rulez
-logs a warning on stderr that the scan can send data off the machine, naming what its profile documents the vendor
-receiving, or "content derived from the scanned files" for a hand-written entry. The choice is never persisted in a
-committed file.
+- `claude-validate-json`: `claude plugin validate --json`. `errors` are errors, `warnings` warnings, `notes` info.
+- `snyk-json`: `{"issues": [...]}`, a bare list, or issues per file.
 
 ### Lock records
 
 `ai-rulez lock` writes one `[[scan]]` record per staged `egress = false` scanner that has a cached result for the
-current content: `scanner`, `version` (its `--version` line when it ran), `tree` (digest of the staged content),
-`findings`, `max_severity` and `result` (`pass`, or `fail` when a finding reaches `fail_on`, `error` by default;
-counted before the scanner baseline). `lock` starts no program, so run `scan --external` first; a scanner with no
-cached result has no record, and `lock` says so. The records sit outside the tree digest, like approvals.
+current content: `scanner`, `version`, `tree` (digest of the staged content), `findings`, `max_severity` and `result`
+(`pass` or `fail` against the scanner's `fail_on`). `lock` starts no program, so run `scan --external` first.
 
 ## llms.txt checks
 
-A project that turns on the [`llms-txt` preset](llms-txt.md) has the files it writes (`llms.txt`, `llms-full.txt`)
-checked against the [llms.txt format](https://llmstxt.org/) by `validate --strict`. Only the H1 title is mandatory in
-the format, so only structure that breaks it is an error.
+A project that enables the [`llms-txt` preset](llms-txt.md) has `llms.txt` checked against the
+[llms.txt format](https://llmstxt.org/). Only the H1 title is mandatory in the format, so only structure that breaks it
+is an error.
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
-| AR9P0 | `llmstxt-title-missing` | error | The file does not start with an H1 title, or has a second H1 |
-| AR9P1 | `llmstxt-summary-misplaced` | warning | The summary blockquote is empty or does not directly follow the title |
-| AR9P2 | `llmstxt-heading-invalid` | error | A heading other than the H1 title and H2 section names, or an H2 without a name |
-| AR9P3 | `llmstxt-link-entry-invalid` | error | A file-list section holds prose, or a list entry without a `[name](url)` link, or a link target with whitespace |
-| AR9P4 | `llmstxt-optional-misplaced` | warning | The `Optional` section is not the last section |
-| AR9P5 | `llmstxt-section-duplicate-or-empty` | warning | A section has no entries, or repeats an earlier section name |
-| AR9P6 | `llmstxt-link-target-invalid` | warning | A link has an empty target |
+| AR9P0 | `llmstxt-title-missing` | error | An llms.txt file does not start with a single H1 title |
+| AR9P1 | `llmstxt-summary-misplaced` | warning | The llms.txt summary blockquote is empty or does not directly follow the H1 title |
+| AR9P2 | `llmstxt-heading-invalid` | error | An llms.txt file has a heading other than the H1 title and H2 section names, or an H2 without a name |
+| AR9P3 | `llmstxt-link-entry-invalid` | error | An llms.txt file-list section has content that is not a list entry holding a `[name](url)` link |
+| AR9P4 | `llmstxt-optional-misplaced` | warning | The llms.txt Optional section is not the last section |
+| AR9P5 | `llmstxt-section-duplicate-or-empty` | warning | An llms.txt section has no entries, or repeats the name of an earlier section |
+| AR9P6 | `llmstxt-link-target-invalid` | warning | An llms.txt link has an empty target |
 
 ## OKF bundle checks
 
-A project that turns on the [`okf` preset](okf.md) (or sets `[okf] dir`) also has its Open Knowledge Format bundle
-linted by `validate --strict` and `doctor`. The same checks run on any third-party bundle with
-`ai-rulez okf validate <dir>`. Severities below are defaults; the spec says consumers must tolerate most of these
-(broken links, a missing or partial index), so only conformance failures and export drift are errors.
+A project that enables the [`okf` preset](okf.md) (or sets `[okf] dir`), and a configuration directory with a root
+`index.md`, has its Open Knowledge Format bundle linted by `validate` and `doctor`. `ai-rulez okf validate <dir>` runs
+the same checks on any bundle. Consumers must tolerate broken links and partial indexes, so only conformance failures
+and export drift are errors. The `AR9B*` findings sit next to the other analyzers; `--analyzer okf` runs only them.
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
-| AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list; in a migrated configuration directory also an index that lists a title or description its concept no longer has (`ai-rulez generate` refreshes it) |
-| AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2); also an `x-ai-rulez` `kind` that is not `rules`, `context`, `skills`, `agents`, `commands`, `checks` or `skill-resource` (error, the message lists them), and, as a warning, a known `kind` that disagrees with the directory the concept sits in (a configuration directory classifies by directory and ignores the value) |
-| AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
-| AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2`, and info when the root index uses the frontmatter style (the scheme OKF 0.2 does not describe); error from `okf validate` alone when the directory has no root `index.md` naming `okf_version` (it is not a bundle, and `import okf` refuses it too) |
-| AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
-| AR9B5 | `okf-export-drift` | error | The configured bundle differs from what `export okf` would write now (project lint only) |
-| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one); a `log.md` heading that is not an ISO date is a warning |
-| AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
-| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, a markdown file over the size limit that was skipped, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
-| AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead, or a link in a concept points at a file that was not imported (left as written) |
+| AR9B0 | `okf-index-mismatch` | warning | An OKF index.md lists a file that does not exist, omits a concept or subdirectory of its directory, or (in a migrated configuration directory) lists a title or description its concept no longer has |
+| AR9B1 | `okf-type-invalid` | error | An OKF concept has unparseable frontmatter or a missing or empty type, or an x-ai-rulez kind that is unknown (error) or disagrees with its directory (warning) |
+| AR9B2 | `okf-link-broken` | warning | A markdown link in an OKF bundle does not resolve to a file in the bundle |
+| AR9B3 | `okf-version-invalid` | warning | The root okf_version is not MAJOR.MINOR, names a version other than the one ai-rulez implements, or the root index uses the frontmatter style OKF 0.2 does not describe; okf validate also reports an error when there is no root index.md naming okf_version |
+| AR9B4 | `okf-orphan` | info | An OKF concept is reachable from no index entry and no link |
+| AR9B5 | `okf-export-drift` | error | The OKF bundle on disk differs from what export okf would write now |
+| AR9B6 | `okf-reserved-structure` | error | An OKF index.md has frontmatter its style does not allow (frontmatter in a nested one outside the frontmatter style, keys other than okf_version in a body-style root, other than title, version and entries in a frontmatter-style one), or a log.md heading is not an ISO date |
+| AR9B7 | `okf-title-duplicate` | info | Two OKF concepts in one directory share a title |
+| AR9B8 | `okf-path-unsafe` | error | An OKF bundle contains a symlink, a path escaping the bundle, a markdown file over the size limit (skipped), or paths differing only in case |
+| AR9B9 | `okf-lossy-mapping` | info | `import okf` met a concept whose x-ai-rulez data cannot be mapped (it imports by its type) or a link to a file that was not imported (left as written) |
 
-A configuration directory with a root `index.md` (what `ai-rulez init` scaffolds) is a bundle too, and its
-`AR9B*` findings are reported as part of the same run. They sit next to the other analyzers, never instead of
-them: a secret (AR001), a dead link (AR201), a glob that matches nothing (AR101, read from `paths` or from
-`x-ai-rulez.metadata.paths`) or a missing skill resource (AR402) is reported whether or not the tree is OKF.
-`--fail-on`, the baseline, `--recursive` and `--analyzer` apply to them: `--analyzer references` runs only
-the references analyzer, and `--analyzer okf` runs only the OKF pass.
+## Output formats
 
-Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]`). See [OKF](okf.md).
-
-## JSON output
-
-```json
-{
-  "roots": ["."],
-  "findings": [
-    {
-      "code": "AR101", "name": "glob-no-match", "severity": "error",
-      "file": ".ai-rulez/rules/scoped.md", "line": 4,
-      "message": "glob \"nothing/**\" matches no tracked file, so this rule never applies",
-      "root": ".", "fingerprint": "ar1:3f2c9a1b7d4e5f60a8b1c2d3"
-    }
-  ],
-  "summary": { "total": 1, "errors": 1, "warnings": 0, "infos": 0, "by_code": { "AR101": 1 } },
-  "risk": {
-    "bundle": { "score": 25, "label": "high", "findings": 1 },
-    "items": [ { "item": ".ai-rulez/rules/scoped.md", "score": 25, "label": "high", "findings": 1 } ]
-  }
-}
-```
-
-`baseline`, `ratchet_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
-a baseline carries `"accepted": true`, and a finding in a generated file linted with `--outputs` carries
-`"source": "output"` (see [Generated files](#generated-files-outputs)).
-
-`file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
-
-### Output formats
-
-`--format` selects the report shape; `--output <file>` writes it to a file (atomically, parent directories are
-created) instead of stdout. `scan` accepts the same flags. The exit code does not depend on the format.
+`--format` selects the report; `--output <file>` writes it to a file instead of stdout. The exit code does not depend
+on the format.
 
 | Format | Use |
 | --- | --- |
-| `text` (default) | One line per finding plus a per-code tally |
-| `json` | The document above |
-| `sarif` | SARIF 2.1.0 for GitHub code scanning and other SARIF consumers |
-| `github` | GitHub Actions workflow commands (`::error file=,line=,title=::message`), shown as inline annotations |
+| `text` (default) | One line per finding, a per-code tally and the risk summary |
+| `json` | The document below |
+| `sarif` | SARIF 2.1.0 for GitHub code scanning and other consumers |
+| `github` | GitHub Actions workflow commands, shown as annotations on the diff |
 | `junit` | JUnit XML: one `testsuite` per root, one `testcase` per finding |
-| `markdown` | A pull-request comment: a summary line and tables grouped by severity |
+| `markdown` | A pull-request comment: a summary and tables by severity |
 
-**SARIF.** `ruleId` is the `AR` code and `rules[]` carries each rule's name, description, help text (rationale and
-examples, with a Markdown form) and a `helpUri` to the [rule reference](#rule-reference). Levels map `error` to
-`error`, `warning` to `warning` and `info` to `note`. The security family (`AR001`-`AR011`) also sets
-`security-severity` (`8.0` error, `5.0` warning, `2.0` info) so code scanning ranks the alerts. Artifact locations are
-relative to the repository root (`uriBaseId` `%SRCROOT%`). Every result has
-`partialFingerprints["aiRulezFingerprint/v1"]`, so an alert survives edits that only move it (see below).
+```json
+{
+  "schema_version": 1,
+  "roots": ["."],
+  "findings": [
+    {
+      "code": "AR201",
+      "name": "link-unresolved",
+      "severity": "error",
+      "file": ".ai-rulez/context/architecture.md",
+      "line": 27,
+      "message": "link target \"../../docs/runbook.md\" does not exist",
+      "root": ".",
+      "fingerprint": "ar1:c8dc3c3e235cbd267616ab93",
+      "analyzer": "references",
+      "scope": "file",
+      "hop": "changed"
+    }
+  ],
+  "summary": {"total": 1, "errors": 1, "warnings": 0, "infos": 0, "by_code": {"AR201": 1}},
+  "baseline": {"paths": [".ai-rulez/lint-baseline.json"], "accepted": 4},
+  "risk": {"bundle": {"score": 25, "label": "high", "findings": 1}, "items": [...]}
+}
+```
+
+`baseline`, `ratchet_exceeded`, `changed_only` and `notices` appear when they apply. A finding accepted by a baseline
+or `[[lint.accept]]` carries `"accepted": true`; one in a generated file carries `"source": "output"`. Findings are
+sorted by file, line and code.
+
+```text
+$ ai-rulez validate --format github
+::error file=.claude/skills/release/SKILL.md,line=8,title=AR402 skill-resource-missing::"references/checklist.md" was not found relative to this skill's directory (.claude/skills/release) or relative to the repo root (.)
+::error file=AGENTS.md,line=3,title=AR201 link-unresolved::link target "CONTRIBUTING.md" does not exist
+```
+
+- **SARIF.** `ruleId` is the `AR` code; `rules[]` carries each rule's name, description, help and a `helpUri` to the
+  [rule reference](#rule-reference). `error`, `warning` and `info` map to `error`, `warning` and `note`. The security
+  rules also set `security-severity` (8.0, 5.0, 2.0) so code scanning ranks them. Locations are relative to
+  `%SRCROOT%`.
+- **GitHub.** `error`, `warning` and `info` become `::error`, `::warning` and `::notice`; no upload step is needed.
+- **JUnit.** A finding at or above the threshold is a `<failure>`; a lower one is `<skipped>`, visible without failing
+  the job.
 
 ```yaml
 # .github/workflows/ai-rulez.yml
-- run: ai-rulez validate --strict --format sarif --output ai-rulez.sarif
+- run: ai-rulez validate --format sarif --output ai-rulez.sarif
   continue-on-error: true
 - uses: github/codeql-action/upload-sarif@v3
   with: { sarif_file: ai-rulez.sarif }
 ```
 
-**GitHub annotations.** `--format github` needs no upload step: run it in a workflow and findings appear on the
-diff. `error`, `warning` and `info` become `::error`, `::warning` and `::notice`.
+See [GitHub Actions](github-actions.md) for a ready-made workflow.
 
-**JUnit.** A finding at or above the `--fail-on` threshold is a `<failure type="AR401">`; a lower one is `<skipped>`
-with its severity in the message, so it stays visible without failing the job.
+### Fingerprints
 
-**Fingerprints.** Each finding has a `fingerprint` (`ar1:` plus 24 hex digits): a hash of the rule code, the
-repository-relative path and the whitespace-normalized text of the flagged line. It does not include the line
-number, so inserting text above a finding does not change it; editing the flagged line does. Two findings with
-the same code on identical lines of one file are told apart by their order. The `fingerprint` key is new in the
-JSON output; the other keys are unchanged.
+Each finding has a `fingerprint` (`ar1:` plus 24 hex digits): a hash of the rule code, the repository-relative path and
+the whitespace-normalized text of the flagged line. It does not include the line number, so inserting text above a
+finding keeps it; editing the flagged line changes it. SARIF results carry it as
+`partialFingerprints["aiRulezFingerprint/v1"]`, so a code scanning alert survives edits that only move it.
 
-## Relation to other checks
+## Explaining a rule
 
-Strict mode does not repeat what `validate` already enforces (malformed frontmatter, duplicate output ids,
-skill/command namespace collisions, plugin hook `script` existence, unresolved includes). `generate --check` and
-`verify --plugin` cover drift of generated output; strict mode covers the health of the *sources*.
+`ai-rulez validate --explain <code or name>` prints the rule's default severity, analyzer, why it matters, a bad and a
+good example, every way to suppress it and a link to its entry in the [rule reference](#rule-reference).
+`--format json` prints the same as a record. Codes are stable: they are never renumbered or reused, and the code and
+the name are accepted everywhere a rule is configured.
 
 ## Limits
 
-- Name references are matched by pattern, so prose such as ``the skill `argument-hint` `` reports AR301; use
-  `known_names` or an inline ignore for intentional cases.
-- Hook checks read `.claude/settings.json` only. A command that runs a `$CLAUDE_PROJECT_DIR/...` file is resolved
-  (AR501, AR502). In a skill's `hooks` frontmatter, a path behind `${CLAUDE_SKILL_DIR}` (or `$CLAUDE_SKILL_DIR`), the
-  variable Claude Code sets to the skill's directory, is resolved against that directory the same way; agents and
-  commands do not have the variable, so it is not resolved there. The script given to a common interpreter is resolved too (`sh`, `bash`, `zsh`, `dash`, `python`,
-  `python3`, `node`, `ruby`, `perl`, also behind `env` or `VAR=value`): `bash ./x.sh`, `sh x.sh`, `bash -e x.sh` and
-  `/usr/bin/env bash x.sh` report AR501 when the file is missing. The execute bit is not checked for a launched script,
-  and inline code (`bash -c`, `node -e`), absolute paths and paths with any other variable are skipped. A bare relative path
-  without a launcher is resolved only in agent, skill and command frontmatter.
+- Name references are matched by pattern, so prose such as ``the skill `argument-hint` `` reports `AR301`; use
+  `known_names` or an inline ignore.
+- Hook checks read `.claude/settings.json` and the `hooks` frontmatter of agents, skills and commands. A command that
+  runs a `$CLAUDE_PROJECT_DIR/...` file, a `${CLAUDE_SKILL_DIR}/...` file in a skill, or a script given to a common
+  interpreter (`bash x.sh`, `python3 x.py`, also behind `env`) is resolved. Inline code (`bash -c`), absolute paths and
+  paths with other variables are skipped.
 - Anchors use GitHub-style heading slugs.
-- The MCP command check depends on the `PATH` of the machine running the command.
+- The MCP command check (`AR601`) depends on the `PATH` of the machine that runs it.
+- `generate --check` and `verify --plugin` cover drift of generated output; validation covers the health of the
+  sources.
+
+## Rule index
+
+Every rule with its default severity. The [rule reference](#rule-reference) below has the full entry of each, with
+examples. The rules in [Additional rules](#additional-rules-content-config-and-security) are listed there, and the
+llms.txt and OKF rules in their own sections above.
+
+### Security
+
+The deterministic security rules; see [Security checks](#security-checks). `AR9E*` report on the [external
+scanners](#external-scanners).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR001 | `secret-detected` | error | A credential pattern (cloud key, token, private key or a configured pattern) appears in content or a script |
+| AR002 | `hidden-characters` | error | Zero-width, bidirectional-control or Unicode tag characters hide text from a reviewer |
+| AR003 | `html-comment-instruction` | warning | An HTML comment carries imperative or injection-style text the reader will not see |
+| AR004 | `prompt-injection-phrase` | warning | Text tries to override earlier instructions or hide actions from the user |
+| AR005 | `risky-shell-exec` | error | A download piped to a shell, eval of dynamic text, or a decoded payload executed |
+| AR006 | `risky-shell-access` | warning | A command reads a credential location or writes outside the project |
+| AR007 | `tool-breadth` | warning | `allowed-tools` grants an unrestricted tool such as `Bash(*)` |
+| AR008 | `outbound-host` | warning | A URL points to a host outside `lint.security.allowed_hosts` (checked only when the list is set) |
+| AR009 | `encoded-blob` | warning | A long base64-like blob that a reviewer cannot read |
+| AR010 | `unpinned-remote` | warning | A remote include or installed skill follows a moving ref and ai-rulez.lock does not pin it |
+| AR011 | `external-finding` | warning | A finding reported by a scanner configured in `lint.external` |
+| AR506 | `permission-overbroad` | warning | A `[permissions] allow` rule permits every call of a tool |
+| AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid timeout or an env_pass name an `egress = false` scanner must not receive; it is not run |
+| AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not declare egress, so it runs with the full environment |
+| AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary was not found, so it did not run |
+| AR9E3 | `scanner-run-failed` | error | A `[[lint.external]]` scanner timed out, exceeded the output cap, or printed unreadable, unsuccessful or oversized output |
+| AR9E4 | `scanner-egress-blocked` | error | A `[[lint.external]]` scanner was not run: `egress = true` without `--allow-egress`, or a network flag on an `egress = false` scanner |
+| AR9E5 | `scanner-baseline-expired` | warning | An entry of scanner-baseline.json passed its expires date, so the finding it accepted is reported again |
+| AR9E6 | `scanner-out-of-scope-result` | warning | A staged `[[lint.external]]` scanner reported a result for a file that was not staged for it; the result was dropped |
+| AR9E7 | `scanner-isolation-degraded` | warning | `isolation = auto` found no process isolation backend, so staged scanners ran without network or write confinement |
+| AR9K1 | `telemetry-repo-key-ignored` | warning | A repository `[telemetry]` sets a key only user scope may set (allow_network, otlp_endpoint, headers_env, ...); it is ignored |
+| AR9L1 | `llm-untrusted-key` | warning | A repository `[llm]` table sets allow_network, base_url, api_key_env or a price override, which only the user config file and `AI_RULEZ_LLM_*` may set; the value is ignored |
+
+### References and paths
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR101 | `glob-no-match` | error | A paths/globs pattern matches no tracked file |
+| AR201 | `link-unresolved` | error | A relative markdown link does not resolve to a file |
+| AR202 | `anchor-unresolved` | warning | A markdown link anchor matches no heading in the target |
+| AR301 | `reference-unknown` | error | A skill, agent, rule or command referenced by name does not exist |
+| AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
+| AR303 | `frontmatter-key-unknown` | warning | A frontmatter key is not a known Agent Skills, Claude Code or ai-rulez key (a typo is silently ignored by the tools) |
+| AR401 | `path-missing` | warning | A backticked repo path does not exist |
+| AR402 | `skill-resource-missing` | error | A skill references a references/, scripts/ or assets/ file it does not ship |
+
+### Hooks and MCP servers
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR501 | `hook-missing` | error | A hook command points at a repo file that does not exist |
+| AR502 | `hook-not-executable` | error | A hook command runs a repo file that lacks the executable bit |
+| AR503 | `script-not-executable` | warning | A skill script with a shebang lacks the executable bit |
+| AR504 | `hook-source-missing` | error | A `[[hooks]]` script in config.toml does not exist |
+| AR505 | `hook-source-not-executable` | error | A `[[hooks]]` script in config.toml lacks the executable bit |
+| AR601 | `mcp-command-not-found` | warning | A stdio MCP server command is not on PATH |
+
+### Duplicates, descriptions and size
+
+Size budgets are set per content kind in `[lint.budgets.<kind>]`; see [Configuration](#configuration). A file that a
+plugin bundle of the configuration generates from a definition, or a byte-identical copy of it, is that definition under
+another path: the duplicate rules do not compare it with the definition. An edited or outdated copy counts as a
+definition of its own (run `generate --plugin`).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR701 | `description-duplicate` | warning | Two skills, agents or commands share an identical description |
+| AR702 | `description-near-duplicate` | warning | Two descriptions are near-identical, so the model cannot tell them apart |
+| AR703 | `duplicate-collapsed` | warning | Two sources define the same name and one was silently dropped (allow intentional shadowing with `lint.allow_overrides`) |
+| AR801 | `description-missing` | warning | A skill, agent or command has no description |
+| AR802 | `description-length` | warning | A description is shorter or longer than the configured bounds |
+| AR803 | `description-style` | off | A skill or agent description does not say when to use it (enabled by `lint.description.require_use_when`; commands are exempt, the user invokes them by name) |
+| AR804 | `skill-name-invalid` | warning | A skill name is not lowercase-hyphen, exceeds 64 characters, or differs from its directory |
+| AR901 | `size-lines` | warning | An item exceeds its line budget |
+| AR902 | `size-tokens` | warning | An item exceeds its token budget |
+
+### Metadata
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR951 | `metadata-missing` | error | An item lacks a frontmatter key required by `lint.require_metadata` or a required `lint.metadata` rule |
+| AR952 | `metadata-invalid` | error | A frontmatter value is not the type or enum value its `lint.metadata` rule demands |
+| AR953 | `metadata-stale` | warning | A dated frontmatter value is older than its `lint.metadata` max_age_days |
+| AR954 | `superseded-by-missing` | error | A deprecated item names a superseded_by replacement that does not exist |
+
+### Plugins and roles
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since HEAD but its version did not, so installs keep the cached copy |
+| AR962 | `evals-missing` | off | A skill has no eval cases (enabled by `lint.evals.require` or `lint.severity`; exempt skills go in `lint.evals.allow`) |
+| AR971 | `role-reference-unknown` | error | A role names a domain, skill, rule, agent or command that does not exist (or exists only in a domain the role does not select) |
+| AR972 | `role-extends-invalid` | error | A role extends an unknown role, takes part in an extends cycle, or extends a role that itself extends another (one level only) |
+| AR973 | `role-unreachable-dependency` | warning | A kept item lists a skill in its skills: frontmatter that the role drops or hides from the model |
+| AR9T0 | `root-component-shipped` | warning | A single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/, a Codex plugin.json) to every user; set `[plugin]` content_root or move the plugin into a monorepo member |
+| AR9T1 | `plugin-selector-unmatched` | warning | A skills, commands, agents or domains selector of a plugin definition matches nothing, so the plugin bundles less than intended (a plugin that ends up empty is dropped) |
+
+### Approvals and signing
+
+See [Approvals](approvals.md) and [Signing](signing.md).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR710 | `approval-missing` | error | Content that `[governance]` require_approval selects has no reviewer approval in ai-rulez.lock |
+| AR711 | `approval-stale` | error | Content was approved, but its digest changed since: the approval no longer applies |
+| AR712 | `approval-expired` | error | Every approval of the current digest is past its expiry date |
+| AR713 | `approver-not-authorized` | error | The current digest is approved only by reviewers outside `[governance]` approvers |
+| AR714 | `approval-insufficient` | error | Fewer distinct reviewers approved the current digest than `[governance]` min_approvers asks for |
+| AR715 | `approval-orphan` | warning | An approval in ai-rulez.lock names content that no longer exists; remove it with `ai-rulez approve --prune` |
+| AR716 | `approval-with-change` | error | An approval was added in the same change as the content it approves (found only with `--approvals-base` or `approve --verify-base`) |
+| AR717 | `approval-denied` | error | Content's digest is on the deny list in ai-rulez.lock: it can be neither approved nor used |
+| AR718 | `approval-unverified` | error | Every approval of the current digest claims an assurance (signed, review-linked) that could not be verified |
+| AR719 | `approver-unresolved` | error | `[governance]` approvers_from or a team cannot be resolved (no CODEOWNERS file, or a team with no member list), so nobody is authorized by it |
+| AR720 | `signature-missing` | error | `[signing]` require asks for a signed lock and no attestation file exists |
+| AR721 | `signature-invalid` | error | The lock attestation is not a valid Sigstore bundle: bad envelope, signature, certificate chain or log proof |
+| AR722 | `signer-not-trusted` | error | The lock was signed by an identity, issuer or key that no `[[signing.trust]]` entry accepts, or an identity_regexp is not anchored |
+| AR723 | `signature-stale` | error | The lock signature is older than `[signing]` max_age |
+| AR724 | `attestation-subject-mismatch` | error | The signed digest or hash_version differs from the lock: the lock changed after it was signed |
+| AR725 | `trusted-root-unavailable` | error | A certificate-signed attestation needs a Sigstore trusted root and none is configured or cached |
+| AR726 | `tlog-proof-missing` | error | `[signing]` tlog requires a transparency log entry and the bundle has none |
+| AR727 | `signature-rollback` | error | The lock attestation is older than one this machine already verified for the same signer and project |
+| AR728 | `signature-threshold-not-met` | error | Fewer distinct trusted signers signed than `[signing]` thresholds asks for |
+| AR729 | `provenance-invalid` | error | The SLSA provenance of a bundle is missing, malformed or names a builder that `[signing]` builders does not list |
+
+### Versions and the lock
+
+See [Lock file](lockfile.md).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR730 | `constraint-unsatisfiable` | error | No tag of the source satisfies its version constraint (or the source has no semantic version tags) |
+| AR731 | `constraint-invalid` | error | A version constraint does not parse, or an include, installed skill or skill source sets both ref and version |
+| AR732 | `tag-moved` | error | A tag pinned in ai-rulez.lock now points to another commit; it is never followed silently |
+| AR733 | `release-held-back` | info | A tag that satisfies a version constraint was held back by min_release_age; the next older tag (or the pin) is used |
+| AR734 | `source-outdated` | off | A remote source has a newer tag its version constraint allows; reported by `lock --outdated` once enabled in `[lint.severity]` |
+| AR735 | `locked-tag-missing` | warning | A tag pinned in ai-rulez.lock no longer exists on the remote; the pinned commit is still used |
+| AR981 | `lock-source-drift` | error | An authored item differs from the content pinned in ai-rulez.lock (raised only when a lock exists and `[lock]` enforce = true) |
+| AR982 | `lock-output-drift` | error | A generated output differs from the digest pinned in ai-rulez.lock (raised only when a lock exists and `[lock]` enforce = true) |
+
+### Organization policy and SBOM
+
+See [Organization policy](policy.md) and [SBOM](sbom.md).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR740 | `policy-loosened` | error | The repository configuration weakens a key the organization policy only lets it tighten; the policy value is enforced and the attempt reported (always an error) |
+| AR741 | `policy-digest-mismatch` | error | A policy file or URL does not match the digest it is pinned to, or a policy URL has no digest (a URL policy is never loaded unpinned) |
+| AR742 | `policy-unavailable` | error | A policy that was demanded by `--policy` or `AI_RULEZ_POLICY` cannot be read, or its URL cannot be reached and no cached copy younger than max_stale exists; ai-rulez fails closed instead of running without it |
+| AR743 | `policy-invalid` | error | A policy file is unusable: not TOML, an unknown key, a bad pattern, or newer than this ai-rulez |
+| AR744 | `policy-required-missing` | error | The repository turns off or ignores a rule code the organization policy requires |
+| AR745 | `source-not-allowed` | error | An include, installed skill or skill source comes from a host the organization policy does not allow, or one it denies |
+| AR746 | `policy-signature-invalid` | error | A policy is unsigned where signatures are required, or its signature does not verify: not a trusted signer, not covering the policy, or older than one already seen (fails closed) |
+| AR747 | `digest-denied` | error | `ai-rulez.lock` pins content whose digest is on the organization policy's sources.deny_digests list; a denied include, installed skill or skill source is not loaded (always an error) |
+| AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids (a denied transport, a command outside mcp.allowed_commands, or hooks when hooks.allow is false); it is not loaded |
+| AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (0 allows none); always an error |
+| AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version: a range, a tag such as latest, or no commit pin |
+| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM: its command is not a recognized launcher and no package is declared |
+| AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no ai-rulez.lock, or one that no longer matches the sources, so the SBOM would not describe what the lock pins |
+| AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or no committed SBOM |
+
+### Served skills and delivery
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR989 | `served-file-unscannable` | warning / error | A skill file the server would serve is binary or larger than 512 KiB, so the security scan cannot read it; reported for authored skills too. The server does not serve such a file from a remote source (trust=error) and refuses a skill whose SKILL.md is one |
+| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent or command names a skill whose delivery is served, which is not in the harness's skill tree; a served skill naming a sibling served skill is fine |
+| AR991 | `delivery-stub-missing` | error | Skills are served but a harness that can call MCP has no dynamic-skills stub telling the agent to call find_skill |
+| AR992 | `delivery-static-fallback` | warning | A harness without MCP support keeps served skills as static files (nothing is dropped) |
+| AR993 | `served-no-server` | warning | Skills are served but no MCP server runs `ai-rulez mcp --serve-skills`; the generated self entry runs it when mcp.self_server is on |
+| AR994 | `delivery-invalid` | error | A skill's delivery frontmatter is not static, served or both |
+| AR995 | `served-lock-mismatch` | error | `[lock]` enforce is on and a served skill is not pinned in ai-rulez.lock with its current digest |
+| AR9R0 | `served-skill-bundled-files` | warning | A served skill ships scripts/ or assets/ that are not written to disk, so a relative path into them does not resolve; set delivery: both to keep them |
+| AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a delivery: both skill whose frontmatter sets disable-model-invocation: true, by a bare name or Skill(...); the Skill tool refuses it and the model then declines the workflow |
+| AR9R2 | `served-dmi-unreachable` | warning | A delivery: served skill sets disable-model-invocation: true, so nobody can run it: it is not written to disk (no slash command) and the skills server hides it from the model; set delivery: both, or `[mcp]` serve_user_invoked_skills = true |
+
+### Evals and improve
+
+See [Evals](evals.md) and [Improve](improve.md). Only `AR9J6` is reported by `validate`; `improve` reports the other
+`AR9J*` codes.
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR996 | `eval-case-invalid` | error | An eval case file (`*.eval.yaml`, `*.eval.yml`, `*.eval.json`) is malformed: unknown field, missing expect_trigger or prompt, bad assertion, unsafe path |
+| AR997 | `eval-stale` | off | A skill changed after its last recorded passing eval run (enabled by `lint.evals.require_fresh`) |
+| AR998 | `eval-score-low` | off | A skill's recorded eval pass rate is below `lint.evals.min_pass_rate` (enabled by setting it) |
+| AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be read or has an unsupported schema_version |
+| AR9A1 | `activation-low` | off | A skill's recorded activation recall or precision is below `lint.evals.min_activation_recall` or min_activation_precision (enabled by setting either) |
+| AR9A2 | `skill-confusable` | off | A sibling skill won at least `lint.evals.confusion_threshold` of this skill's positive activation prompts (enabled by setting it) |
+| AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy: it expects a trigger although the frontmatter stops the model from invoking the skill, or expects none for a skill only ever started explicitly (disable-model-invocation: true or allow_implicit_invocation: false) |
+| AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill (off by default; enable it in `[lint.severity]`) |
+| AR9A5 | `eval-import-unmapped` | info | Fields of an imported eval scenario that have no counterpart in the case format (reported by `ai-rulez eval import`, never by `validate`) |
+| AR9J1 | `improve-run-stale` | info | A saved improve run's original digest no longer matches the skill (improve apply only) |
+| AR9J2 | `improve-no-holdout` | off | A skill has fewer held-out eval cases than improve needs (improve only) |
+| AR9J3 | `improve-policy-violation` | error | A candidate round broke the diff policy (improve report only) |
+| AR9J4 | `improve-sibling-regression` | error | A candidate lowered another skill's trigger recall (improve report only) |
+| AR9J5 | `improve-underpowered` | info | The held-out gain of a candidate cannot be told from zero (improve report only) |
+| AR9J6 | `improve-repo-optimizer-ignored` | warning | An `[improve]` optimizer, env_pass or looser-than-default gate key of the repository config is not used without `--trust-repo-optimizer` |
+| AR9J7 | `improve-isolation-unavailable` | warning | The requested optimizer isolation could not be applied (improve only) |
+| AR9J8 | `improve-pr-refused` | error | `improve pr` refused to open a pull request (improve only) |
+| AR9J9 | `improve-adapter-refused` | error | A bundled optimizer adapter could not run (improve only) |
+
+### Harness traps and built-in names
+
+See [Harness Traps](harness-traps.md) and [Built-in names of harnesses](#built-in-names-of-harnesses).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9C0 | `harness-table-stale` | warning | A row of the harness trap or limits table was last verified more than `[lint.traps]` max_table_age_days ago (off unless the setting is above 0) |
+| AR9C1 | `cursor-rule-extension-ignored` | warning | A file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in `lint.traps.extra_harnesses`) |
+| AR9C2 | `cursor-rule-not-applied` | warning | A hand-written .mdc rule has no description, globs or alwaysApply, so it applies only when @-mentioned |
+| AR9C3 | `copilot-exclude-agent-invalid` | warning | A Copilot instructions file sets excludeAgent to something other than code-review or cloud-agent |
+| AR9C4 | `copilot-instructions-suffix` | warning | A file in .github/instructions does not end in .instructions.md, so Copilot skips it (error when ai-rulez generated it) |
+| AR9C5 | `kiro-agent-steering-not-loaded` | warning | A Kiro custom agent file has no resources while .kiro/steering holds steering files, so the agent never loads them |
+| AR9C6 | `kiro-steering-frontmatter-not-first` | warning | A Kiro steering file has its inclusion frontmatter after a blank line or other text, so Kiro does not read it |
+| AR9C7 | `claude-frontmatter-key-spelling` | warning | A Claude Code skill or subagent file spells a frontmatter key in a variant (underscore for hyphen, wrong case) that Claude Code silently ignores |
+| AR9C8 | `claude-listing-truncated` | warning | A generated Claude Code skill has description plus when_to_use past the skill listing cap, so the rest is cut off |
+| AR9C9 | `harness-limit-exceeded` | warning | A generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files, Kilo REVIEW.md), so the rest is not loaded |
+| AR9CA | `project-trap` | warning | A trap row of the project (.ai-rulez/traps/*.toml) matched a file, or a row is invalid |
+| AR9Q0 | `claude-md-shadows-agents-md` | off | AGENTS.md is canonical for Claude Code, but a tracked CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md is not the generated shim and shadows the nearest AGENTS.md |
+| AR9U0 | `harness-builtin-name-collision` | error | A skill, command or agent is named like a built-in command, bundled skill or built-in agent of a harness that loads it (allow an intended collision with `lint.builtin_names.allow`; an outcome the harness does not document is only informational) |
+| AR9U1 | `harness-reserved-name` | error | A skill, command or agent is named like a name the harness refuses to load; `lint.builtin_names.allow` does not apply |
+
+### Configuration tables
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9I0 | `accept-unused` | warning | A `[[lint.accept]]` entry accepted no finding: the finding was fixed, the path or match no longer fits, or the rule is not reported there; remove the entry |
+| AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` setting is invalid: bad enum or range, unsupported protocol, non-https endpoint, or a literal credential in headers_env |
+| AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit |
+| AR9D0 | `search-config-invalid` | error | The `[search]` table is invalid: an unknown mode, fusion or dtype, an unknown field, an out-of-range number or an index_dir that leaves the config directory |
+| AR9D1 | `search-index-stale` | warning | A committed skill search index no longer matches the skills or the embedding model: a changed description, an added or removed skill, another model or text template |
+| AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used: not valid JSON, unknown key, unsupported schema version or an invalid case (search `--eval` only) |
+| AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret; it ranks lexically only (search index only) |
+| AR9D4 | `search-eval-regression` | error | A skill search metric is below its minimum, or more cases regressed against the baseline than allowed (search `--eval` only) |
+| AR9G8 | `rubric-invalid` | error | A rubric (`.ai-rulez/rubrics/<id>/rubric.toml`) or one of its golden or calibration files is malformed |
+
+### Session exposure
+
+See [Session exposure and areas](exposure.md).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9W0 | `exposure-area-term` | error | A term of an area that is not shared appears in text a Claude Code session sees at its start (a root CLAUDE.md, an unconditional root rule, a skill or agent listing line, an MCP server name, an enabled plugin name), outside path literals |
+| AR9W1 | `exposure-area-term-ambiguous` | warning | A skill or agent listed at session start names no term of any area but some ambiguous words, so the area it belongs to cannot be told |
+| AR9W2 | `exposure-area-collision` | off | Two skills or agents listed at session start, of different areas, overlap in the words of their listings at or over `[exposure]` collision_min_score (setting it turns the rule on at warning); the 20 highest pairs are reported, the rest in one summary finding |
+| AR9W3 | `exposure-start-budget` | off | The estimated tokens a Claude Code session loads at start exceed `[exposure]` start_budget (setting it turns the rule on at error) |
+| AR9W4 | `exposure-gate-unreadable` | warning | A skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names paths, disable-model-invocation or user-invocable, or sets paths or disable-model-invocation to a value of the wrong type, so whether it is gated, and when it loads, cannot be known |
+| AR9W5 | `exposure-map-invalid` | error | The `[exposure]` table or its area map is invalid: a bad scalar key, a duplicate, malformed or reserved area name, a bad path claim, a skill_areas value naming no area, an unknown key, an unreadable areas_file, or both areas_file and inline areas |
+| AR9W6 | `exposure-skill-area-unknown` | warning | A skill_areas key of the area map names no skill of the session inventory |
+
+### Verifiers
+
+Reported by `verifiers run` and by `validate --verifiers`; see [Verifiers](verifiers.md).
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --verifiers`) |
+| AR9H2 | `verifier-invalid` | error | A verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --verifiers`) |
+| AR9H3 | `verifier-command-failed-to-run` | error | A command predicate was refused (no `--allow-exec`, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --verifiers`) |
+| AR9H4 | `verifier-llm-skipped` | info | An llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld or unreadable, or `--estimate` was given; never counted as a pass (reported by `verifiers run` and `validate --verifiers`) |
+| AR9H5 | `verifier-dead-scope` | warning | A verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --verifiers`, with `--strict-applicability`) |
+| AR9H6 | `verifier-no-examples` | warning | A verifier has no self-test examples (reported by `verifiers run` and `validate --verifiers`, with `[verifiers_settings]` require_examples) |
+
+### Reported by other commands
+
+`convert` (`AR9F*`), `publish` (`AR9N*`) and `review` (`AR9G*`) report these codes in their own output; `validate` never
+does. `AR9O*` and `AR9S*` are also reported by `validate` for an [Agent Plugins](agent-plugins.md) package or an
+[ARD](ard.md) manifest.
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9F0 | `convert-input-invalid` | error | An input file of `convert` cannot be parsed at all (reported by convert, never by validate) |
+| AR9F1 | `convert-approximated` | warning | A construct was converted with a different meaning or without part of its fields (convert report only) |
+| AR9F2 | `convert-dropped` | warning | A construct has no equivalent and was not converted (convert report only) |
+| AR9F3 | `convert-needs-action` | warning | A construct needs a manual step after conversion, for example a literal secret replaced by ${VAR} (convert report only) |
+| AR9F4 | `convert-unsupported` | warning | A source or construct convert does not support (convert report only) |
+| AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
+| AR9N0 | `publish-preflight-failed` | error | A preflight gate of `publish` failed: strict validation, the lock check or plugin verification (reported by publish, never by validate) |
+| AR9N1 | `publish-bundle-unsafe` | error | The bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only) |
+| AR9N2 | `publish-secret-found` | error | The secret scan of the bundle found a credential (publish only) |
+| AR9N3 | `publish-source-unreleasable` | error | The plugin has no version, or the source tree is dirty or has no commit (publish only) |
+| AR9N4 | `publish-target-failed` | error | The upload step failed: gh is missing, the release exists or gh exited non-zero (publish only) |
+| AR9N5 | `publish-verify-mismatch` | error | `publish verify` found a digest, manifest or archive mismatch in a dist directory (publish only) |
+| AR9N6 | `publish-config-invalid` | error | The `[publish]` table, a publish flag or a target option is invalid: unknown emitter, runtime or channel, a bad tag, scope or OCI reference (publish only) |
+| AR9N7 | `publish-unsigned` | error | `require_signature` is set and the bundle is unsigned, or its signature does not verify (publish only) |
+| AR9N8 | `publish-unapproved` | error | `require_approved` is set and content the governance policy selects has no valid approval (publish only) |
+| AR9N9 | `publish-emitter-experimental` | warning | An emitter whose format is not verified against vendor documentation was requested with `--experimental` (publish only) |
+| AR9G0 | `review-run-note` | info | A review note: an item withheld from a judge, excluded or skipped (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G2 | `trigger-overlap` | warning | A description is likely to be confused with a sibling (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G3 | `body-inaccurate` | warning | A body contradicts its description or cites things that do not exist (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G4 | `injection-intent` | warning | Text addresses the agent to hide, override or exfiltrate (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G5 | `scope-creep` | warning | An item does more than it says or widens its tools (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G6 | `instruction-conflict` | warning | An item contradicts another item (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G7 | `body-structure` | info | A body is bloated or badly structured (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9G9 | `judge-calibration-stale` | info | A judged review ran on a model alias, or without a calibration record that matches the rubric, prompt, golden set and model (advisory: reported by `ai-rulez review`, never by `validate`) |
+| AR9O0 | `agent-plugins-manifest-invalid` | error | `plugin.json` is missing or does not match the Agent Plugins schema, names an unsupported spec version, or carries an invalid extension namespace |
+| AR9O1 | `agent-plugins-skill-invalid` | error | A skill of the Agent Plugins package breaks the Agent Skills rules (name, description, frontmatter) or sits outside skills/<name>/SKILL.md, so clients skip it |
+| AR9O2 | `agent-plugins-mcp-invalid` | error | `mcp.json` or one of its servers does not match the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it |
+| AR9O3 | `agent-plugins-placeholder-unsupported` | error | An MCP server uses a ${VAR} placeholder; Agent Plugins clients expand only ${PLUGIN_ROOT} and ${PLUGIN_DATA}, in args, env values and cwd |
+| AR9O4 | `agent-plugins-content-dropped` | warning | A field or server the Agent Plugins package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server |
+| AR9O5 | `agent-plugins-package-unsafe` | error | A file or link of the Agent Plugins package resolves outside the plugin root or cannot be read |
+| AR9S0 | `ard-manifest-invalid` | error | The ard.json manifest fails the vendored ARD entry schema (a required field is missing or has the wrong type) |
+| AR9S1 | `ard-identifier-invalid` | error | An ARD identifier breaks the urn:air grammar: `[ard]` publisher is not a fully qualified domain name, a namespace or name has an illegal character, or two resources share an identifier |
+| AR9S2 | `ard-entry-invalid` | error | An ARD entry has both or neither of url and data, or its url is not an absolute https URL |
+| AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no representativeQueries or fewer than 2 or more than 5; registries build their search index from them |
+| AR9S4 | `ard-not-declared` | error | The ard emitter is requested but the configuration has no `[ard]` table with publisher and namespace |
+
+### Code ranges
+
+Codes are allocated in blocks, one block per feature. A registered code falls in a block marked *allocated*; blocks
+never overlap, and a *reserved* block holds no code. Ranges are inclusive. Unlisted letters (`AR9X`-`AR9Z`) are free.
+
+| Range | Owner | Status |
+| --- | --- | --- |
+| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain | allocated |
+| `AR100`-`AR199` | Scope: glob matching | allocated |
+| `AR200`-`AR299` | Links and imports | allocated |
+| `AR300`-`AR399` | References and frontmatter | allocated |
+| `AR400`-`AR499` | Paths, skill resources, commands | allocated |
+| `AR500`-`AR599` | Hooks and permissions | allocated |
+| `AR600`-`AR699` | MCP servers | allocated |
+| `AR700`-`AR709` | Duplicate descriptions | allocated |
+| `AR710`-`AR719` | Approvals ([Approvals](approvals.md)) | allocated |
+| `AR720`-`AR729` | Signing ([Signing](signing.md)) | allocated |
+| `AR730`-`AR739` | Version constraints and tags | allocated |
+| `AR740`-`AR749` | Organization policy ([Organization policy](policy.md)) | allocated |
+| `AR750`-`AR759` | SBOM ([SBOM](sbom.md)) | allocated |
+| `AR800`-`AR899` | Descriptions, names and markdown shape | allocated |
+| `AR900`-`AR949` | Size budgets | allocated |
+| `AR950`-`AR959` | Metadata | allocated |
+| `AR960`-`AR969` | Plugins, evals presence and harness load budgets | allocated |
+| `AR970`-`AR979` | Roles | allocated |
+| `AR980`-`AR988` | Lock drift | allocated |
+| `AR989`-`AR995` | Served skills and delivery | allocated |
+| `AR996`-`AR999` | Eval cases and results | allocated |
+| `AR9A0`-`AR9A9` | Eval results file and activation | allocated |
+| `AR9B0`-`AR9B9` | OKF bundles | allocated |
+| `AR9C0`-`AR9CA` | Harness traps ([Harness Traps](harness-traps.md)) | allocated |
+| `AR9D0`-`AR9D9` | Skill search ([Skill search](search.md)) | allocated |
+| `AR9E0`-`AR9E9` | External scanners | allocated |
+| `AR9F0`-`AR9F9` | `convert` report | allocated |
+| `AR9G0`-`AR9G9` | Model-judged review ([Review](review.md)) | allocated |
+| `AR9H0`-`AR9H9` | Verifiers ([Verifiers](verifiers.md)) | allocated |
+| `AR9I0`-`AR9I9` | Lint configuration hygiene | allocated |
+| `AR9J0`-`AR9J9` | Improve ([Improve](improve.md)) | allocated |
+| `AR9K0`-`AR9K9` | Telemetry | allocated |
+| `AR9L0`-`AR9L9` | LLM access | allocated |
+| `AR9M0`-`AR9M9` | Catalog | reserved |
+| `AR9N0`-`AR9N9` | Publish ([Publish](publish.md)) | allocated |
+| `AR9O0`-`AR9O9` | Agent Plugins packages ([Agent Plugins](agent-plugins.md)) | allocated |
+| `AR9P0`-`AR9P9` | llms.txt files | allocated |
+| `AR9Q0`-`AR9Q9` | Harness instruction files | allocated |
+| `AR9R0`-`AR9R9` | Served-skill on-disk traps | allocated |
+| `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([ARD](ard.md)) | allocated |
+| `AR9T0`-`AR9T9` | Plugin bundle root components ([Authoring plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
+| `AR9U0`-`AR9U9` | Harness built-in names ([Built-in names of harnesses](#built-in-names-of-harnesses)) | allocated |
+| `AR9V0`-`AR9V9` | UI | reserved |
+| `AR9W0`-`AR9W9` | Session exposure and areas ([Session exposure and areas](exposure.md)) | allocated |
 
 ## Additional rules (content, config and security)
 
@@ -1576,37 +1312,47 @@ does not override it; a rule that reports mild and serious cases at different le
 
 ### Built-in names of harnesses
 
-A harness has built-in commands, bundled skills and agents, and a user item of the same name is treated differently:
-it replaces the built-in (Claude Code, OpenCode, Qwen Code, Kilo), the built-in stays and the user item is renamed or
-unreachable (Gemini CLI, Cline, Goose, Augment), or both are listed (Codex). `internal/harnessnames/data/<preset>.toml`
-holds one table per preset: the names and aliases, the page each group was taken from, and, where the harness documents
-the outcome, a verbatim quote (`go test ./internal/harnessnames` checks the structure; `tools/harness-builtins` regenerates the names from each harness's registry at a pinned tag and `mise run harness:builtins:check` verifies every quote against its page; a recorded outcome without a verbatim quote is set to `unknown`). AR9U0 compares every skill, command and agent output with the names of each harness that loads it: the
-presets that write it and every harness that reads the directory it lands in, whether or not its preset is enabled
-(`.agents/skills` is read by Amp, Codex, Cursor, Gemini CLI, Goose and others). Names are compared as the harness
-derives them: trimmed, NFKC-normalized and case-folded; the directory or file name and the `name:` frontmatter are both
-checked. Plugin-only content is exempt: a harness invokes it under a prefix.
+A harness has built-in commands, bundled skills and agents. A skill, command or agent of the same name either replaces
+the built-in (Claude Code, OpenCode, Qwen Code, Kilo), is renamed or unreachable (Gemini CLI, Cline, Goose, Augment),
+or is listed next to it (Codex). `AR9U0` compares every generated skill, command and agent with the built-in names of
+each harness that loads it: the presets that write it and every harness that reads the directory it lands in, such as
+`.agents/skills`. Names are compared trimmed, Unicode-normalized and case-folded; both the file or directory name and
+the `name:` frontmatter are checked. Plugin-only content is exempt, because a harness invokes it under a prefix.
 
-The severity follows the evidence: an `error` only for a preset the project writes for whose table is set to `error` (Claude Code, Codex,
-Gemini CLI, OpenCode, Cline, Qwen Code, Goose, Kilo, Zoo Code) and whose group has a quoted outcome; a `warning` for a
-harness that only reads a shared directory such as `.agents/skills`, for an outcome without a quote, for `both_listed`, and for names you declare; information, once per item, for a documented
-built-in whose collision outcome the vendor does not state. A table can be incomplete (`completeness` is `partial` or
-`docs-only` for most harnesses): a name that is missing from it is not reported. Acknowledge an intended collision with
-`[lint.builtin_names] allow` (or `allow_overrides`), declare names the table cannot know with
-`[lint.builtin_names.extra]`, or add a table `.ai-rulez/harness-names/<preset>.toml` in the layout of the embedded files
-(`schema = 1`, `preset`, `[[group]]` with `kind`, `names`, `user_collision`; a source is optional, findings are
-warnings unless the file sets `severity = "error"`). AR9U1 names the values a harness never loads; nothing silences it
-but the global `[lint] ignore`.
+| Severity | When |
+| --- | --- |
+| error | A preset the project writes for, when the harness's table is marked `error` and quotes the documented outcome |
+| warning | A harness that only reads a shared directory, an outcome without a documented source, a name listed next to the built-in, or a name you declared |
+| info | A documented built-in whose collision outcome the vendor does not state (once per item) |
+
+The tables of built-in names may be incomplete; a name missing from them is not reported. To adjust:
+
+- `[lint.builtin_names] allow = ["gemini:help", "usage"]` (or `[lint] allow_overrides`) accepts an intended collision.
+- `[lint.builtin_names.extra]` declares names the tables cannot know, per preset (organization commands, MCP prompts,
+  user-level skills).
+- `.ai-rulez/harness-names/<preset>.toml` adds a table in the layout of the built-in ones (`schema = 1`, `preset`,
+  `[[group]]` with `kind`, `names` and `user_collision`); its findings are warnings unless it sets
+  `severity = "error"`.
+- `[lint.builtin_names] enabled = false` turns both rules off.
+
+`AR9U1` reports a name the harness refuses to load; only `[lint] ignore` silences it.
 
 ### Skill roots
 
-AR808 compares a skill name with the built-ins of a harness, which only matters where the harness reads the skill. A `SKILL.md` or command that `validate` finds by convention (or that `--path` and `--glob` name) is checked only inside a root of the preset's harness:
+`AR808` compares a skill name with the built-ins of a harness, which matters only where the harness reads the skill. A
+hand-written `SKILL.md` or command found by convention (or named with `--path` and `--glob`) is checked only inside a
+skill root of the preset's harness. Content under `.ai-rulez/` is always checked, because `generate` writes it into
+those roots. For Claude Code the roots are:
 
-- Claude Code: `.claude/skills` and `.claude/commands` at any depth (`x/.claude/skills`), a plugin's `skills/` directory next to its `.claude-plugin/plugin.json`, and the directory of a local `[[skill_sources]]` entry.
-- Content authored under `.ai-rulez/` is always checked, because `generate` writes it into those roots.
+- `.claude/skills` and `.claude/commands` at any depth;
+- a plugin's `skills/` directory next to its `.claude-plugin/plugin.json`;
+- the directory of a local `[[skill_sources]]` entry.
 
-A `SKILL.md` anywhere else, such as an application's own `src/public/skills/`, is still linted for format (descriptions, links, security) but cannot shadow a built-in. `[lint] skill_roots = [globs]` replaces the harness roots: each glob is relative to the project root and matches the directory that holds the skill directories (`x/**/skills`, `plugins/*/skills`), so list `.claude/skills` as well to keep it. To leave files out altogether use `validate --exclude <glob>` (works without a configuration and takes the files found by convention, `--path` and `--glob` out of the run) or `[lint] ignore_paths` (drops the findings of matching source files). `.ai-rulezignore` is not read.
-
-The roots live in the preset table (`internal/lint/ar_reserved_names.go`). The per-harness name tables planned in [#447](https://github.com/Goldziher/ai-rulez/issues/447) extend that table, so each harness gets its own list of reserved names and roots, and `skill_roots` applies to every preset in the table.
+A `SKILL.md` anywhere else, such as an application's own `src/public/skills/`, is still linted for format, links and
+security, but cannot shadow a built-in. `[lint] skill_roots = ["plugins/*/skills"]` replaces the roots: each glob is
+relative to the project root and matches the directory that holds the skill directories, so list `.claude/skills` too
+to keep it. To leave files out altogether, use `validate --exclude <glob>` or `[lint] ignore_paths`;
+`.ai-rulezignore` is not read.
 
 <!-- lint-rules-notes:begin -->
 ### Changes to existing rules
@@ -1646,9 +1392,8 @@ scanners such as Microsoft Defender report a binary or a checkout that holds the
 
 ## Rule reference
 
-`ai-rulez validate --explain AR001` prints the same information in the terminal. This section is generated from
-the rule registry (`UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc`); the headings are the anchors
-that SARIF `helpUri` values and `--explain` link to.
+The entry of every rule: default severity, analyzer and scope, why it matters, and a bad and a good example.
+`ai-rulez validate --explain <code>` prints the same in the terminal, and SARIF `helpUri` values link here.
 
 <!-- rules:begin (generated: UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc) -->
 

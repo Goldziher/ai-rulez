@@ -1,91 +1,147 @@
 # SBOM
 
-`ai-rulez sbom` prints a bill of materials of the project's AI configuration as
-[CycloneDX](https://cyclonedx.org/) 1.6 or [SPDX](https://spdx.dev/) 2.3 JSON. Instructions an agent follows are a
-supply chain; the SBOM lists it in the formats security tooling already ingests.
+`ai-rulez sbom` writes a bill of materials of your AI configuration as [CycloneDX](https://cyclonedx.org/) 1.6 or
+[SPDX](https://spdx.dev/) 2.3 JSON: every rule, skill, hook and agent, every remote source and MCP server, with digests,
+pins and approval status. Use it to feed the instructions your assistants follow into the security tooling you already
+run.
+
+## Example
 
 ```bash
-ai-rulez sbom > ai-bom.cdx.json                              # CycloneDX 1.6
-ai-rulez sbom --type spdx-json -o ai-bom.spdx.json         # SPDX 2.3
-ai-rulez sbom --files skills --role backend --require-lock   # a role's slice, files hashed, lock must match
-ai-rulez sbom -o ai-bom.cdx.json --check                     # CI: fail when the committed SBOM is stale
+ai-rulez sbom -o ai-bom.cdx.json                 # CycloneDX 1.6
+ai-rulez sbom --type spdx-json -o ai-bom.spdx.json
+ai-rulez sbom -o ai-bom.cdx.json --check         # CI: fail when the committed SBOM is stale
 ```
 
-| Flag | Meaning |
-| --- | --- |
-| `--type cyclonedx\|spdx-json` | Document type (default `cyclonedx`; `spdx` is accepted for `spdx-json`) |
-| `--format text\|json` | Report format of a run with no document to print (a failed gate, `--check`, or a write with `-o`); `json` prints `schema/sbom-report.schema.json`. The document itself is JSON either way |
-| `-o`, `--output file` | Write the document to a file instead of stdout |
-| `--files none\|skills\|all` | List the files of items with their plain SHA-256 (default `none`) |
-| `--profile name`, `--role name` | Describe one profile's or role's slice |
-| `--include-outputs` | List the generated files with their output digest |
-| `--no-approvals`, `--redact-reviewers` | Leave approval status out, or replace reviewer identities with a salted hash |
-| `--verify` | Verify the lock attestation and record the result |
-| `--require-lock` | Exit 2 (`AR752`) unless `ai-rulez.lock` matches the sources |
-| `--strict-pins` | Exit 2 (`AR750`, `AR751`) when an MCP package or remote source is not pinned or has no package URL |
-| `--check` | With `-o`: exit 2 (`AR753`) when the committed SBOM differs from a fresh one |
-| `--timestamp [RFC3339\|now]` | Record a time; `SOURCE_DATE_EPOCH` is honoured when the flag is absent |
-| `--online` | Contact remote includes and skill sources (`git ls-remote`) |
-| `-n`, `--config-dir name` | Configuration directory name |
+An excerpt of the CycloneDX document for a project with a skill, a hook and an MCP server:
+
+```json
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:d5158f98-fd54-50e7-9a88-28d84eceef9e",
+  "version": 1,
+  "metadata": {
+    "tools": { "components": [{ "type": "application", "name": "ai-rulez", "version": "5.10.0" }] },
+    "component": {
+      "type": "application",
+      "bom-ref": "ai-rulez:project",
+      "name": "acme",
+      "properties": [
+        { "name": "ai-rulez:lock", "value": "present" },
+        { "name": "ai-rulez:lock-in-sync", "value": "true" },
+        { "name": "ai-rulez:tree", "value": "sha256:4dd87fd5ae23b632928921220800a83b679b58a58cd0e2fa3127cd5196dfcbee" }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:skill::deploy",
+      "group": "skill",
+      "name": "deploy",
+      "version": "1.2.0",
+      "description": "Deploy the service",
+      "properties": [
+        { "name": "ai-rulez:approval", "value": "stale" },
+        { "name": "ai-rulez:digest", "value": "sha256:70094bee730997ae05d11499b29571a05dde6cb5f17a4af98ed29465ba50d855" },
+        { "name": "ai-rulez:kind", "value": "skill" },
+        { "name": "ai-rulez:owner", "value": "platform" },
+        { "name": "ai-rulez:path", "value": "skills/deploy" }
+      ],
+      "components": [
+        {
+          "type": "file",
+          "bom-ref": "ai-rulez:item:skill::deploy:file:skills/deploy/scripts/run.sh",
+          "name": "skills/deploy/scripts/run.sh",
+          "properties": [
+            { "name": "ai-rulez:executes", "value": "true" },
+            { "name": "ai-rulez:kind", "value": "file" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "ai-rulez:mcp:fs",
+      "name": "fs",
+      "purl": "pkg:npm/%40modelcontextprotocol/server-filesystem",
+      "properties": [
+        { "name": "ai-rulez:enabled", "value": "true" },
+        { "name": "ai-rulez:kind", "value": "mcp-server" },
+        { "name": "ai-rulez:mcp-command", "value": "npx" },
+        { "name": "ai-rulez:pinned", "value": "false" },
+        { "name": "ai-rulez:purl-source", "value": "heuristic" }
+      ]
+    }
+  ],
+  ...
+}
+```
+
+`sbom` renders nothing and writes nothing but `--output`. It does not use the network by default: remote sources are
+read from `ai-rulez.lock` and the local cache (run `ai-rulez lock` or `generate` once to fill it). The machine-local
+overlay is never included, so the document is the same on every checkout.
+
+## Options
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--type cyclonedx\|spdx-json` | `cyclonedx` | Document type; `spdx` is accepted for `spdx-json` |
+| `-o`, `--output <file>` | stdout | Write the document to a file |
+| `--files none\|skills\|all` | `none` | List the files of skills, or of every item, with their plain SHA-256 |
+| `--profile <name>`, `--role <name>` | all content | Describe one profile's or role's slice ([Scoping](#scoping)); they combine |
+| `--include-outputs` | off | List the generated files with their output digest |
+| `--no-approvals` | off | Leave approval status out |
+| `--redact-reviewers` | off | Replace reviewer identities with a salted hash |
+| `--verify` | off | Verify the lock attestation and record the result |
+| `--require-lock` | off | Exit `2` (`AR752`) unless `ai-rulez.lock` matches the sources |
+| `--strict-pins` | off | Exit `2` (`AR750`, `AR751`) when an MCP package or remote source is not pinned or has no package URL |
+| `--check` | off | With `-o`: exit `2` (`AR753`) when the committed file differs from a fresh document |
+| `--timestamp <RFC3339\|now>` | none | Record a time; `SOURCE_DATE_EPOCH` is used when the flag is absent |
+| `--online` | off | Contact remote includes and skill sources (`git ls-remote`), only needed to resolve a moving ref |
+| `--format text\|json` | `text` | Report format of a run that prints no document (`--check`, `-o`, a failed gate); `json` follows `schema/sbom-report.schema.json` |
 
 Exit codes: `0` ok, `1` could not run, `2` a gate (`--require-lock`, `--strict-pins`, `--check`) failed. When a gate
 fails nothing is written.
-
-Nothing is rendered and nothing is written except `--output`. `sbom` **does not use the network by default**: remote
-includes and skill sources are read from `ai-rulez.lock` and the local cache (run `ai-rulez generate` or
-`ai-rulez lock` once to fill it), and one that is neither pinned nor cached is warned about and listed without
-content. `--online` lets it contact the remotes the way `generate` does, which is only needed to resolve a moving ref.
-The machine-local overlay (`config.local.*`, `local/`) is never included, so the document is the same on every
-checkout.
 
 ## What it lists
 
 | CycloneDX | SPDX 2.3 | Content |
 | --- | --- | --- |
-| `components[]`, type `data` | `packages[]`, related to the project by `CONTAINS` | Every rule, context file, skill, agent, command, check, hook and role (and the permission and managed-settings pins), with `ai-rulez:kind`, `ai-rulez:domain`, `ai-rulez:path`, `ai-rulez:digest`; `version` and `ai-rulez:owner` from the item's frontmatter; `description` and `licenses` from the frontmatter |
-| nested `components[]`, type `file` | `files[]`, related to their package by `CONTAINS` | The files of an item (`--files`), and always the scripts of a skill |
-| `components[]`, type `data` | `packages[]`, related by `DEPENDS_ON` | Each remote include, installed skill and `[[skill_sources]]` entry: `purl`, `vcs` reference (SPDX `downloadLocation` `git+https://host/path@commit`), `ai-rulez:ref`, and the commit and digest pinned in `ai-rulez.lock` |
-| `components[]`, type `application` | `packages[]`, related by `DEPENDS_ON` | Each local MCP server (command based): name, command executable, enabled, profiles, env key names, and a `purl` |
-| `services[]` | `packages[]`, related by `DEPENDS_ON` | Each remote MCP server (`url`): endpoint reduced to scheme and host, `authenticated` when headers are set. SPDX 2.3 has no service type: the package says "remote service" in its comment |
-| `components[]`, type `file` | `packages[]` | Generated outputs (`--include-outputs`) with `ai-rulez:output-digest` |
-| `metadata.component` | the root package `SPDXRef-Config`, described by the document | The project, with `ai-rulez:tree`, `ai-rulez:lock` (`present`/`absent`), `ai-rulez:lock-in-sync`, and the slice (`ai-rulez:profile`, `ai-rulez:role`, `ai-rulez:files`, `ai-rulez:lock-scope` when the lock pins only skills) |
-| `dependencies[]` | `relationships[]` | The project depends on every component and service; a role depends on the items it keeps; a skill or agent depends on the skills its `skills:` frontmatter names |
+| `components[]`, type `data` | `packages[]`, `CONTAINS` | Every rule, context file, skill, agent, command, check, hook and role, and the permissions and managed-settings pins: `ai-rulez:kind`, `ai-rulez:domain`, `ai-rulez:path`, `ai-rulez:digest`, and `version`, `ai-rulez:owner`, `description` and `licenses` from frontmatter |
+| nested `components[]`, type `file` | `files[]`, `CONTAINS` | The files of an item with `--files`; always the scripts of a skill |
+| `components[]`, type `data` | `packages[]`, `DEPENDS_ON` | Each remote include, installed skill and skill source: `purl`, VCS reference, `ai-rulez:ref`, and the commit and digest pinned in the lock |
+| `components[]`, type `application` | `packages[]`, `DEPENDS_ON` | Each command-based MCP server: name, command, enabled, profiles, env key names, `purl` |
+| `services[]` | `packages[]`, `DEPENDS_ON` | Each remote MCP server: endpoint reduced to scheme and host, `authenticated` when headers are set |
+| `components[]`, type `file` | `packages[]` | Generated outputs with `--include-outputs`, with `ai-rulez:output-digest` |
+| `metadata.component` | root package `SPDXRef-Config` | The project: `ai-rulez:tree`, `ai-rulez:lock` (`present`/`absent`), `ai-rulez:lock-in-sync`, and the slice (`ai-rulez:profile`, `ai-rulez:role`, `ai-rulez:files`) |
+| `dependencies[]` | `relationships[]` | The project depends on every component and service; a role on the items it keeps; a skill or agent on the skills its `skills:` frontmatter names |
 
-Items come from the same digests as [`ai-rulez.lock`](lockfile.md), computed from the sources (CRLF normalised), so the
-SBOM digest of an item equals the lock's digest of it. `ai-rulez:lock-in-sync` is `false` when the lock no longer
-matches the sources.
-
-SPDX has no property bag, so every `ai-rulez:` property of a package is written to its `comment`, one `name=value` per
-line. SPDX identifiers are the component reference with the characters SPDX does not allow replaced and a hash of the
-original appended, so two references never share one.
+The item digests are the [lock's digests](lockfile.md#hashing-scheme), so the SBOM digest of an item equals the lock's.
+SPDX has no property bag, so `ai-rulez:` properties go to each package's `comment`, one `name=value` per line.
 
 ### Files and hashes
 
-With `--files skills` the files of every skill are listed, with `--files all` those of every item (rules, context,
-agents, commands, checks, skills). Each file has its **plain SHA-256** of the bytes on disk (CycloneDX `hashes`; SPDX
-`checksums` with SHA-1 as well, because SPDX 2.3 requires one on every file, and a package verification code). Plain
-hashes follow the checkout's line endings: they differ between an LF and a CRLF checkout, while the tree digests in
-`ai-rulez:digest` do not. Without `--files` the scripts of a skill (files under `scripts/` or with an executable bit) are
-still listed, marked `ai-rulez:executes = true` and without a hash, so a reviewer sees the code that runs on a
-developer's machine and the default document stays byte-identical across line endings.
+With `--files skills` the files of every skill are listed, with `--files all` those of every item. Each file has the
+plain SHA-256 of its bytes on disk (CycloneDX `hashes`; SPDX `checksums`, with the SHA-1 SPDX 2.3 requires). Plain
+hashes follow the checkout's line endings, while `ai-rulez:digest` does not. Without `--files`, a skill's scripts
+(under `scripts/` or executable) are still listed, marked `ai-rulez:executes = true` and without a hash, so a reviewer
+sees the code that runs on a developer's machine.
 
 ### Licenses
 
-The `license` of a skill's frontmatter becomes the component's license. An SPDX id is `license.id`, an SPDX expression
-of ids (`MIT OR Apache-2.0`, `GPL-2.0-only WITH Classpath-exception-2.0`) is `expression`, and anything else is
-`license.name`. SPDX gets the id or expression as `licenseDeclared`, or a `LicenseRef-` (with the declared string in
-`hasExtractedLicensingInfos`) for free text; `licenseConcluded` is always `NOASSERTION`. A license is never guessed.
-Text from frontmatter (`description`, `license`) has control, format and bidirectional characters removed and is capped
-at 1 KiB, so it cannot smuggle hidden content to the tool that reads the SBOM.
+The `license` in a skill's frontmatter becomes the component's license: an SPDX id is `license.id`, an SPDX expression
+(`MIT OR Apache-2.0`) is `expression`, anything else is `license.name` (SPDX: a `LicenseRef-`). A license is never
+guessed; `licenseConcluded` is always `NOASSERTION`. Frontmatter text has control and bidirectional characters removed
+and is capped at 1 KiB.
 
-### Package URLs
+### Package URLs and pinning
 
-Remote sources: `pkg:github/<owner>/<repo>@<commit or ref>#<path>` (also `gitlab`, `bitbucket`); any other host is
-`pkg:generic/<name>@<version>?vcs_url=git+https://host/path`. A local path or `file://` source gets no purl and no
-location (`ai-rulez:source-location` is `local`). The in-repository `path` of a source is emitted as `ai-rulez:path`
-unless it is absolute or contains `..`, in which case it is left out.
+Remote sources get `pkg:github/<owner>/<repo>@<commit or ref>#<path>` (also `gitlab`, `bitbucket`), or
+`pkg:generic/<name>@<version>?vcs_url=git+https://host/path` for other hosts. A local source gets no purl.
 
-An MCP server declares its package with the optional `package` key (a purl, never written to any harness file):
+An MCP server can declare its package with the optional `package` key (a purl; never written to any harness file):
 
 ```toml
 [[mcp_servers]]
@@ -94,148 +150,129 @@ command = "/usr/local/bin/fs-server"
 package = "pkg:npm/%40modelcontextprotocol/server-filesystem@1.2.3"
 ```
 
-A declared package is used as it is (`ai-rulez:purl-source = declared`). Without one the package is guessed from the
-launcher and marked `ai-rulez:purl-source = heuristic`:
+A declared package is used as written (`ai-rulez:purl-source = declared`). Otherwise the package is derived from the
+launcher (`ai-rulez:purl-source = heuristic`):
 
 | Command | Purl |
 | --- | --- |
 | `npx`, `bunx`, `pnpm dlx`, `yarn dlx` | `pkg:npm/%40scope/name@version` |
-| `uvx`, `pipx run`, `uv tool run` | `pkg:pypi/name@version` (`==` or `@` pins, `--from`) |
+| `uvx`, `pipx run`, `uv tool run` | `pkg:pypi/name@version` (from `==` or `@` pins, and `--from`) |
 | `docker run`, `podman run` | `pkg:oci/name@sha256:...?repository_url=...&tag=...` |
 | `go run module@version` | `pkg:golang/module@version` |
 
-Anything else (a binary path, a local script, a package URL or tarball) gets no purl. Arguments are only read to find
-the package and are never emitted. A declared `package` that is not a package URL, or that carries credentials in a
-qualifier, is ignored (and reported as `AR751`).
+Anything else (a binary path, a local script) gets no purl. Arguments are read only to find the package and are never
+emitted.
 
-### Pinning
+A component is **pinned** (`ai-rulez:pinned = true`) when it names one release: an exact version, an image digest, or a
+git source with a commit. An unpinned package has no version in its purl, so a scanner does not match the wrong
+release; `ai-rulez:requested-version` keeps what was asked for. `--strict-pins` turns these into failures:
 
-A component is **pinned** when it names one release: an exact version (`1.2.3`, `==0.4.0`, `v1.2.3`), an image digest, a
-declared purl with an exact version, or a git source with a commit (from the lock, or a commit SHA as `ref`).
-`ai-rulez:pinned` says `true` or `false`. An unpinned package has **no version in its purl** (a scanner would match
-`latest` or a range against the wrong release) and `ai-rulez:requested-version` keeps what was asked for. `--strict-pins`
-fails on:
+```console
+$ ai-rulez sbom --strict-pins
+AR750 sbom-component-unpinned: mcp-server fs: the package has no version; pin it (for example name@1.2.3)
+```
 
-- `AR750` an MCP package or git source that is not pinned (a range, `latest`, a bare major, an image tag, an include on
-  a branch with no lock);
-- `AR751` an MCP server with no package URL at all.
-
-Both are `info` findings: they are listed only with `--strict-pins`, which turns them into exit 2.
+- `AR750`: an MCP package or git source that is not pinned (a range, `latest`, a branch with no lock);
+- `AR751`: an MCP server with no package URL, or a declared `package` that is not a valid purl.
 
 ## Scoping
 
-`--profile` keeps the root content and the domains the profile names (a composed value works), and drops MCP servers
-and installed skills scoped to other profiles. `--role` keeps the items the role selects, the context files, the role
-itself and the non-selectable items (hooks, settings); remote sources and MCP servers are listed in full because roles
-select content, not servers. The slice is stated on the project component, and a scoped document has its own serial
-number. An unknown profile or role is an error. `--profile` and `--role` can be combined.
-
-`--require-lock` makes the SBOM a statement about the pinned content: it fails with `AR752` when there is no lock, or the
-lock no longer matches the sources.
+`--profile` keeps the root content and the domains the profile names, and drops MCP servers and installed skills
+scoped to other profiles. `--role` keeps the items the role selects, the context files, the role itself, hooks and
+settings; remote sources and MCP servers stay, because roles select content, not servers. The slice is recorded on the
+project component, and a scoped document has its own serial number. An unknown profile or role is an error.
 
 ## Approvals and signature
 
-With `[governance]` configured, or approval records in the lock, every pinned item and source gets its approval status
-from the same evaluation as [`ai-rulez approve`](approvals.md): `ai-rulez:approval` is `approved`, `not-required`,
-`missing`, `stale`, `expired`, `unauthorized` or `insufficient`; `ai-rulez:approvers` lists the reviewers of the current
-digest, `ai-rulez:approval-assurance` is the weakest assurance among the counted approvals (`asserted`, `review-linked` or `signed`) and `ai-rulez:approval-expires` the earliest expiry. Expiry is judged
-by the wall clock, except under `--check`, which judges it at the time the committed document records (so an approval
-that expires later does not make an unchanged SBOM drift; `approve --list` and `validate` report the expiry). SPDX also gets one `REVIEW` annotation per approving record (with its assurance), dated with the record's `approved_at`.
-Approvals are claims recorded in the lock, not proof of review.
+With `[governance]` configured or approval records in the lock, every item and source gets its status from the same
+evaluation as [`ai-rulez approve`](approvals.md):
 
-Reviewer identities are personal data. `--redact-reviewers` replaces each with `reviewer-` and eight hex digits of a
-SHA-256 over the lock tree and the normalised identity (stable within one lock, not comparable across projects). The salt is public, so an identity that can be guessed (an
-email, a login) can be confirmed against the token: set `AI_RULEZ_SBOM_REDACT_KEY` to key the hash (HMAC-SHA-256, still
-stable for one key) or use `--no-approvals` for a public document;
-`--no-approvals` leaves approvals out altogether.
+| Property | Value |
+| --- | --- |
+| `ai-rulez:approval` | `approved`, `not-required`, `missing`, `stale`, `expired`, `unauthorized` or `insufficient` |
+| `ai-rulez:approvers` | the reviewers of the current digest |
+| `ai-rulez:approval-assurance` | the weakest assurance among the counted approvals |
+| `ai-rulez:approval-expires` | the earliest expiry |
 
-`--verify` verifies the lock attestation offline against `[signing]` trust, the way `ai-rulez verify --attestation`
-does, without touching the rollback state, and records `ai-rulez:signature` (`verified`, `absent` or `invalid`, with
-`ai-rulez:signature-code`) and, when verified, `ai-rulez:signer`, `ai-rulez:signer-issuer` and `ai-rulez:signed-at` on
-the project component (an SPDX `OTHER` annotation on the root package). It exits 1 when no trusted signer is configured or
-the lock pins nothing, because the check could not run.
+SPDX also gets one `REVIEW` annotation per approving record, dated with its `approved_at`. Approvals are claims recorded
+in the lock, not proof of review.
+
+Reviewer identities are personal data. `--redact-reviewers` replaces each with `reviewer-` and eight hex digits
+(`reviewer-b70c2f8e`), stable within one lock. The default salt is public, so a guessable identity can be confirmed
+against it: set `AI_RULEZ_SBOM_REDACT_KEY` to key the hash, or use `--no-approvals` for a public document.
+
+`--verify` checks the lock attestation offline against `[signing]` trust, as
+[`verify --attestation`](signing.md#verify) does, and records `ai-rulez:signature` (`verified`, `absent` or `invalid`,
+with `ai-rulez:signature-code`) and, when verified, `ai-rulez:signer`, `ai-rulez:signer-issuer` and `ai-rulez:signed-at`
+on the project component. It exits `1` when no trusted signer is configured.
 
 ## Checking a committed SBOM
 
-`sbom -o file --check` generates the document in memory and compares it with `file`, which it never rewrites. It exits 0
-when they agree, and 2 (`AR753`) when they differ or the file is missing, naming what was added, removed or changed:
+`sbom -o <file> --check` builds the document in memory and compares it with the file, which it never rewrites:
 
-```text
-AR753 sbom-drift: sbom.cdx.json: differs from the SBOM generated now; regenerate it with `ai-rulez sbom -o sbom.cdx.json`
-  components: added ai-rulez:item:rule::r2
-  components: changed ai-rulez:item:rule::r1
+```console
+$ ai-rulez sbom -o ai-bom.cdx.json --check
+AR753 sbom-drift: ai-bom.cdx.json: differs from the SBOM generated now; regenerate it with `ai-rulez sbom -o ai-bom.cdx.json`
+  components: added ai-rulez:item:rule::review
+  dependencies: changed ai-rulez:project
+  serialNumber changed: "urn:uuid:fa3d4992-3838-52e2-b892-7b169dc26cca" -> "urn:uuid:55518116-92c2-540b-8cc6-43bc7fee1505"
+  ...
 ```
 
-The ai-rulez version recorded in the document (`metadata.tools`, SPDX `creationInfo.creators`) is ignored, so upgrading
-the tool does not fail the check on its own. A `--timestamp` that moves (`now`) always differs: do not use one with
-`--check`, or pin it with `SOURCE_DATE_EPOCH`.
+It exits `0` when they agree and `2` when they differ or the file is missing. The recorded ai-rulez version is ignored,
+so upgrading does not fail the check by itself. Do not combine `--timestamp now` with `--check`; pin the time with
+`SOURCE_DATE_EPOCH` instead. Approval expiry under `--check` is judged at the time the document records, so an approval
+that expires later does not make an unchanged SBOM drift.
 
 ## In `validate`
 
-`validate` builds the SBOM in memory (nothing is written, no network) and reports the same findings under the
-`config` analyzer, against `config.toml`:
+`validate` builds the SBOM in memory and reports, under the `config` analyzer:
 
-- `AR750` and `AR751` (`info`) for MCP packages and remote sources that cannot be given an exact version or a package
-  URL, as `--strict-pins` does (an unpinned `npx` package is also `AR012`; the two say it from the lint and the SBOM
-  side);
-- `AR752` (`error`) when `ai-rulez.lock` exists and no longer matches the sources. A project without a lock is not a
-  finding here: `--require-lock` is the opt-in for that. The lock drift codes (`AR98x`) name what changed;
-- `AR753` (`error`) when a committed CycloneDX SBOM at the project root (`ai-bom.cdx.json` or `sbom.cdx.json`) differs
-  from a fresh one. The document says how it was made (`ai-rulez:files`, `profile`, `role`, the listed outputs, its
-  timestamp), so no flags are needed; whether `--no-approvals` was used is not recorded, so the document is current when
-  either reading matches. A file another tool made, an SPDX file, a document with hashed reviewers (`--redact-reviewers`)
-  or a recorded attestation check (`--verify`) is skipped: use `sbom --check` for those, which takes the flags itself.
+| Code | Severity | When |
+| --- | --- | --- |
+| `AR750`, `AR751` | `info` | MCP packages and remote sources without an exact version or package URL |
+| `AR752` | `error` | `ai-rulez.lock` exists and no longer matches the sources (a project without a lock is not a finding) |
+| `AR753` | `error` | a committed CycloneDX SBOM at the project root (`ai-bom.cdx.json` or `sbom.cdx.json`) differs from a fresh one |
+
+For `AR753`, the document records how it was made (`--files`, profile, role, outputs, timestamp), so no flags are
+needed. SPDX files, files another tool made, and documents made with `--redact-reviewers` or `--verify` are skipped:
+check those with `sbom --check` and the same flags.
 
 ## Signing the SBOM
 
-An SBOM proves nothing about who made it. Sign it with `ai-rulez sign --sbom sbom.cdx.json --key cosign.key` (see
-[Signing](signing.md)), which attests the document's SHA-256 (the file's bytes, whatever the format) with a key or a
-keyless identity and writes `sbom.cdx.json.sigstore.json` next to it. Check it with
-`ai-rulez verify --sbom sbom.cdx.json` against `[[signing.trust]]` entries with `subject = "sbom"`. `sbom` itself writes
-no signature, and a later `sbom -o` that changes the file makes the old attestation fail (`AR724`).
+An SBOM proves nothing about who made it. Sign it and verify it with a trust entry for the `sbom` subject:
+
+```console
+$ ai-rulez sign --sbom ai-bom.cdx.json --key release.key
+INFO  Signed sbom path=ai-bom.cdx.json signer=key sha256:c49716c6… subject=sha256:757766f3… bundle=ai-bom.cdx.json.sigstore.json
+$ ai-rulez verify --sbom ai-bom.cdx.json --public-key release.pub
+OK  sbom  signer=sha256:c49716c6aeb4b89ba6176d8b7e7951b9a8801e92498d9104b4e4c58f8d8e0ac9
+    issuer=none (key)  logged=no  age=0s
+    no transparency log or timestamp: the signing time is the signer's own claim (weak freshness)
+    digest=sha256:757766f3c240073573d92a87b6698aad8f2349bc7352932ff83a4301a60ce80f
+```
+
+The signature covers the file's bytes. Regenerating the file with different content makes the old attestation fail
+(`AR724`). In a project, trust signers with `[[signing.trust]]` entries with `subject = "sbom"` ([Signing](signing.md)).
 
 ## Determinism
 
-No `timestamp` unless `--timestamp` or `SOURCE_DATE_EPOCH` is given. SPDX requires `creationInfo.created`, so it carries
-the fixed placeholder `1970-01-01T00:00:00Z` (with a comment saying so) by default. Components, services, properties,
-files, relationships and dependencies are sorted; the same project yields the same bytes on every run, operating
-system and line ending (see Files and hashes for the one exception, plain file hashes). The CycloneDX `serialNumber` and
-the SPDX `documentNamespace` are a UUIDv5 over the lock tree (the `tree` of `ai-rulez.lock` when it pins content,
-otherwise the tree computed from the sources and the remote pins), the list of component references and the slice
-options, so they change when the content, an MCP server, a source or the slice changes, and not otherwise.
-`metadata.tools` records the ai-rulez version, so the bytes also change when you upgrade.
+The same project yields the same bytes on every run, operating system and line ending (except plain file hashes):
+
+- no timestamp unless `--timestamp` or `SOURCE_DATE_EPOCH` is given; SPDX `creationInfo.created` is the placeholder
+  `1970-01-01T00:00:00Z`, with a comment saying so;
+- components, properties, files, relationships and dependencies are sorted;
+- the CycloneDX `serialNumber` and the SPDX `documentNamespace` are derived from the lock tree, the component list and
+  the slice, so they change when the content, an MCP server, a source or the slice changes;
+- `metadata.tools` records the ai-rulez version, so the bytes change when you upgrade.
 
 ## No secrets
 
-- Environment and header **values** of MCP servers are never read into the document; only the key names are listed
-  (`ai-rulez:env-keys`, `ai-rulez:header-keys`).
-- URLs lose userinfo, query and fragment (`https://u:p@host/mcp?key=x` becomes `https://host/mcp`). A URL that is a
-  `${VAR}` placeholder is omitted. A secret inside the URL path cannot be told from the path and is kept: do not put
-  one there.
-- The digest of the generated MCP settings is left out, because it covers env and header values.
-- ai-rulez digests are `sha256` tree digests of ai-rulez's own scheme, not file hashes, so they appear only in
-  `ai-rulez:`-namespaced properties and never in CycloneDX `hashes` or SPDX `checksums`.
+- MCP server env and header **values** are never read; only key names are listed (`ai-rulez:env-keys`,
+  `ai-rulez:header-keys`).
+- URLs lose userinfo, query and fragment (`https://u:p@host/mcp?key=x` becomes `https://host/mcp`); a `${VAR}` URL is
+  omitted. A secret in a URL path cannot be told apart from the path: do not put one there.
+- The `mcp-servers` settings digest is left out, because it covers env and header values.
+- ai-rulez tree digests appear only in `ai-rulez:` properties, never in CycloneDX `hashes` or SPDX `checksums`.
 
-## Validating
-
-Both outputs validate against the upstream JSON schemas: CycloneDX `bom-1.6.schema.json` and SPDX 2.3.1
-`spdx-schema.json`. The repository's tests do this against copies vendored under `internal/sbom/testdata`, whose
-digests are pinned in a test, so updating one is a reviewed change. Any CycloneDX or SPDX tool accepts the files.
-
-## Design decisions
-
-- **Formats**: CycloneDX 1.6 and SPDX 2.3 JSON. SPDX 3 and newer CycloneDX minors are not offered; `--spec-version` does
-  not exist yet.
-- **One build, two renderings**: the SPDX document is derived from the same model as the CycloneDX one, so the two
-  always agree.
-- **Item component type**: `data`. Rules, skills and the like are content, not software.
-- **Serial number**: derived, not random, so a diff of two SBOMs of an unchanged project is empty. The component
-  references are mixed in because MCP servers are not pinned by the lock.
-- **SPDX `created`**: a fixed placeholder, not the clock, so the output stays reproducible. Pass `--timestamp` for a
-  real time.
-- **MCP purls**: a declared `package` is authoritative; a guess identifies what the launcher would download, not what
-  is installed, and is marked as heuristic.
-- **Settings pins**: the `mcp-servers` settings pin is omitted (secrets), every other settings pin is listed.
-- **Findings** (`AR750`-`AR753`) are reported by `sbom` and by `validate`; see
-  [In `validate`](#in-validate).
-- **Not offered**: `--include-builtins`, `--redact-hosts`, `--spec-version`, a `[sbom]` config table and `sbom --sign`.
+Both outputs validate against the upstream CycloneDX 1.6 and SPDX 2.3 JSON schemas.

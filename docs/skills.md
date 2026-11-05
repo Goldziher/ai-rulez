@@ -1,118 +1,242 @@
-# Skill Frontmatter
+# Skill frontmatter
 
-A skill is `.ai-rulez/skills/<id>/SKILL.md`: YAML frontmatter followed by the instructions. `generate` carries the
-frontmatter into each preset's skill directory **with its original types**. A nested `metadata:` map stays a map,
-`disable-model-invocation: true` stays a boolean, and `last_verified: 2026-10-01` stays a date.
+A skill is a directory `.ai-rulez/skills/<id>/` (or `.ai-rulez/domains/<domain>/skills/<id>/`) with a `SKILL.md`:
+YAML frontmatter followed by the instructions, plus optional `references/`, `scripts/` and `assets/` folders.
+`generate` copies each skill into the skill folder of every enabled tool and carries the frontmatter over with its
+original YAML types: a nested `metadata` map stays a map, `disable-model-invocation: true` stays a boolean.
 
-```yaml
----
-name: release-notes
-description: Use when writing release notes for a tag.
-license: MIT
-compatibility: Needs git and gh
-allowed-tools: Bash(git:*) Read
-disable-model-invocation: true
-paths:
-  - "CHANGELOG.md"
-metadata:
-  owner: team-a
-  reviewed: { by: alice, date: 2026-10-01 }
-  tags: [docs, release]
----
+## Example
+
+```text
+.ai-rulez/skills/changelog-draft/
+├── SKILL.md
+└── scripts/
+    └── changes.sh
 ```
 
-The parsed YAML of `license`, `compatibility`, `allowed-tools`, `metadata`, `disable-model-invocation` and any other
-key is equal in source and output. Collections are written in block style, aliases are resolved, comments are dropped,
-and keys are sorted, so output is deterministic.
+```markdown
+<!-- .ai-rulez/skills/changelog-draft/SKILL.md -->
+---
+type: Playbook
+title: Changelog Draft
+description: Use when writing release notes for a tag.
+x-ai-rulez:
+  kind: skill
+  id: changelog-draft
+  metadata:
+    name: changelog-draft
+    license: MIT
+    allowed-tools: Bash(git:*) Read
+    disable-model-invocation: true
+    argument-hint: "<tag>"
+    paths:
+      - CHANGELOG.md
+    metadata:
+      owner: docs-team
+      tags: [docs, release]
+---
+
+# Changelog draft
+
+1. Run `scripts/changes.sh <tag>` to list the merged pull requests.
+2. Group them under Features, Fixes and Chores.
+```
+
+`ai-rulez add skill <name>` creates the directory with a `SKILL.md` (and its `index.md` listing); add `scripts/`,
+`references/` or `assets/` yourself. As for [rules](rules.md#rule-files), `type`, `title` and `description` are the
+OKF keys of the file and the ai-rulez keys go under `x-ai-rulez.metadata`; they also work at the top level. `type` is
+required: a hand-written `SKILL.md` without it is an `AR9B1` error, and a hand-made skill directory is reported as
+unlisted (`AR9B0`) until `ai-rulez generate` refreshes the `index.md` listings.
+
+```toml
+# .ai-rulez/config.toml
+presets = ["claude", "cursor", "codex"]
+```
+
+`ai-rulez generate` writes `.claude/skills/changelog-draft/` for Claude Code and one shared
+`.agents/skills/changelog-draft/` that Cursor and Codex both read. Each gets `SKILL.md` and `scripts/changes.sh`
+(executable bit kept). Claude Code receives every key:
+
+```markdown
+<!-- .claude/skills/changelog-draft/SKILL.md -->
+---
+allowed-tools: Bash(git:*) Read
+argument-hint: <tag>
+description: Use when writing release notes for a tag.
+disable-model-invocation: true
+license: MIT
+metadata:
+    owner: docs-team
+    tags:
+        - docs
+        - release
+name: changelog-draft
+paths:
+    - CHANGELOG.md
+# Content-Hash: blake3:9aae4dd1...
+---
+
+# Changelog draft
+
+1. Run `scripts/changes.sh <tag>` to list the merged pull requests.
+2. Group them under Features, Fixes and Chores.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### Scripts
+
+- `scripts/changes.sh`
+```
+
+The shared tree gets the portable keys only, so `argument-hint` is left out:
+
+```markdown
+<!-- .agents/skills/changelog-draft/SKILL.md -->
+---
+name: changelog-draft
+description: "Use when writing release notes for a tag."
+allowed-tools: Bash(git:*) Read
+disable-model-invocation: true
+license: MIT
+metadata:
+  owner: docs-team
+  tags:
+    - docs
+    - release
+paths:
+  - CHANGELOG.md
+# Content-Hash: blake3:9aae4dd1...
+---
+...
+```
+
+## Frontmatter keys
+
+| Key                        | Type    | Meaning                                                                                       |
+| -------------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `name`                     | string  | The skill name. Defaults to the directory name.                                               |
+| `description`              | string  | What the skill does and when to use it. Tools list it to decide when to load the skill.       |
+| `license`                  | string  | [Agent Skills](https://agentskills.io/specification) field.                                   |
+| `compatibility`            | string  | Agent Skills field: environment requirements (`Needs git and gh`).                            |
+| `metadata`                 | map     | Agent Skills field: free-form keys. The spec expects string values; nested values are passed through as written. |
+| `allowed-tools`            | string  | Agent Skills field: space-separated tools the skill may use.                                  |
+| `paths` (or `globs`)       | list    | Load the skill only when matching files are in play; see [Path-gated skills](#path-gated-skills). |
+| `disable-model-invocation` | boolean | `true`: only the user can invoke the skill; see [Invocation keys](#invocation-keys).          |
+| `user-invocable`           | boolean | `false`: hide the skill from the `/` menu.                                                    |
+| `delivery`                 | string  | `static`, `served` or `both`; see [Dynamic loading](#dynamic-loading-delivery). Never written to output. |
+| `priority`, `targets`      |         | As for [rules](rules.md#frontmatter): ordering and the outputs the skill is written to.       |
+| any other key              |         | Passed through to Claude Code (`model`, `context`, `hooks`, `argument-hint`, ...).            |
+
+Output frontmatter is deterministic: collections are written in block style, aliases are resolved and comments are
+dropped. In `.claude/skills/` all keys are sorted; in the other skill trees `name` and `description` come first and
+the rest are sorted.
 
 ## What each preset writes
 
-| Key                                                      | Claude Code (`.claude/skills`)        | Cursor (`.agents/skills`) | Every other preset's skill tree                 |
-| -------------------------------------------------------- | ------------------------------------- | ------------------------- | ----------------------------------------------- |
-| `name`, `description`                                    | yes                                   | yes                       | yes                                             |
-| `delivery` (an ai-rulez key, see below)                  | no: removed before writing            | no                        | no                                              |
-| `license`, `compatibility`, `metadata`, `allowed-tools`  | yes                                   | yes                       | yes (the Agent Skills specification fields)     |
-| `paths` (or `globs`)                                     | yes, gates the skill to matching files | yes                      | no: no other tool documents a skill `paths` key |
-| `disable-model-invocation`                               | yes                                   | yes                       | Codex: `agents/openai.yaml`, see below          |
-| `user-invocable`                                         | yes                                   | no                        | no                                              |
-| any other key (`model`, `context`, `hooks`, `argument-hint`, ...) | yes                          | no                        | no                                              |
+| Key                                                     | Claude Code (`.claude/skills/`) | Every other skill tree (`.agents/skills/`, `.github/skills/`, ...) |
+| ------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------ |
+| `name`, `description`                                   | yes                             | yes                                                                |
+| `license`, `compatibility`, `metadata`, `allowed-tools` | yes                             | yes                                                                |
+| `paths`                                                 | yes                             | yes (read by Cursor; ignored by tools without a skill path gate)   |
+| `disable-model-invocation`, `user-invocable`            | yes                             | yes                                                                |
+| `delivery`                                              | no                              | no                                                                 |
+| any other key                                           | yes                             | no                                                                 |
 
-"Every other preset" means Codex, Copilot, OpenCode, Gemini, Devin, Cline, Antigravity, Xum, Baz and the shared
-`.agents/skills` tree of `agents_md`. Keys a tool does not document are not written to its tree: some consumers reject
-unknown keys (Claude.ai uploads and the Skills API accept only `name`, `description`, `license`, `compatibility`,
-`metadata` and `allowed-tools`). Claude Code receives every key, like the `generate --plugin` bundle, which copies
-`SKILL.md` verbatim.
-
-Vendor facts behind the table (verified 2026-10-04): Claude Code documents `paths`, `disable-model-invocation`,
-`user-invocable`, `allowed-tools`, `license`, `compatibility` (up to 500 characters) and `metadata` as skill frontmatter
-and ignores unknown fields; the [Agent Skills specification](https://agentskills.io/specification) defines `name`
-(64 characters), `description` (1024 characters), `license`, `compatibility`, `metadata` (string keys and values) and
-`allowed-tools` (space-separated string); Cursor documents `paths` (with `globs` as a legacy fallback),
-`disable-model-invocation` and `metadata`.
+Other tools get only the keys above because some consumers reject unknown keys (Claude.ai uploads and the Skills API
+accept only the Agent Skills fields). The [`generate --plugin`](plugins.md) bundle copies `SKILL.md` as written.
 
 ## Invocation keys
 
-`user-invocable` and `disable-model-invocation` are decided by the author. ai-rulez never overwrites a value you set;
-`yes`, `no`, `on`, `off`, `1` and `0` are accepted and written as a boolean.
+`user-invocable` and `disable-model-invocation` are yours: ai-rulez never overwrites a value you set. Use a YAML
+boolean; another value (`"no"`, `"off"`) is reported as `AR304`.
 
-- **Default**: a skill is user-invocable (Claude Code's default), so the key is not written and the skill appears in
-  the `/` menu.
-- **Hide all skills from the menu**: `[claude.skills] hide_from_menu = true` writes `user-invocable: false` on skills that
-  do not set the key. A skill with its own `user-invocable: true` stays visible.
-- **Commands** are rendered as skills and keep `user-invocable: true` unless the command sets the key.
-- `argument-hint` is passed through on skills again (it is a documented skill field and skills are user-invocable).
-  The warning that called it inert was removed.
-- **Codex** has no `SKILL.md` key for this. `disable-model-invocation: true` writes
-  `.agents/skills/<id>/agents/openai.yaml` with `policy: { allow_implicit_invocation: false }`, so Codex runs the skill
-  only when it is named with `$skill`.
+- By default a skill is user-invocable, the key is not written, and the skill appears in the `/` menu.
+- `[claude.skills] hide_from_menu = true` writes `user-invocable: false` into every Claude Code skill that does not
+  set the key. A skill with its own `user-invocable: true` stays visible.
+- Commands rendered as skills keep `user-invocable: true` unless the command sets the key.
+- Codex has no `SKILL.md` key for this. When the `codex` preset writes its own skill tree (`agents_md = false`),
+  `disable-model-invocation: true` adds `agents/openai.yaml` with `policy: { allow_implicit_invocation: false }`, so
+  Codex runs the skill only when you name it with `$changelog-draft`.
+
+```toml
+[claude.skills]
+hide_from_menu = true
+```
 
 ## Path-gated skills
 
-`paths` (or `globs`) on a skill makes Claude Code and Cursor load it only when matching files are in play. Patterns use
-the same syntax as rule `paths`. The other tools ignore the key.
+`paths` (or `globs`) makes Claude Code and Cursor load a skill only when files matching the globs are in play. The
+syntax is the same as for rule [`paths`](rules.md#frontmatter). Tools without a skill path gate ignore the key and
+list the skill as usual.
 
 ## Hooks that run bundled scripts
 
-A skill's `hooks` frontmatter runs commands while the skill is active. Claude Code sets `${CLAUDE_SKILL_DIR}` (also
-`$CLAUDE_SKILL_DIR`) to the skill's own directory, so `command: "${CLAUDE_SKILL_DIR}/scripts/check.sh"` reaches a
-script bundled with the skill whatever the working directory is. `validate --strict` resolves the path against the
-skill's directory: a missing file is `AR501`, and a script run directly (not through `bash` or another launcher)
-without the executable bit is `AR502`. The variable is a skill's own; it is not resolved in agent or command hooks.
+A skill's `hooks` key (Claude Code) runs commands while the skill is active. Claude Code sets `${CLAUDE_SKILL_DIR}` to
+the skill's own directory, so a hook can reach a bundled script from any working directory:
+
+```yaml
+hooks:
+  PostToolUse:
+    - matcher: Edit
+      hooks:
+        - type: command
+          command: "${CLAUDE_SKILL_DIR}/scripts/check.sh"
+```
+
+`validate` resolves the path against the skill directory: a missing file is `AR501`, and a script run
+directly (not through `bash` or another interpreter) without the executable bit is `AR502`. The variable is defined
+only for skills, not for agent or command hooks.
 
 ## Dynamic loading (`delivery`)
 
-`delivery` decides how a skill reaches the agent: `static` (default) writes it into every harness skill tree, `served`
-leaves it out of the trees and serves it over MCP on demand, and `both` does both. It is an ai-rulez key: it is removed
-from the generated frontmatter and never carried into a skill tree.
+`delivery` decides how a skill reaches the agent:
+
+| Value              | Effect                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| `static` (default) | written into every tool's skill folder                                                     |
+| `served`           | left out of the skill folders and served on demand by `ai-rulez mcp --serve-skills`        |
+| `both`             | written to the folders and served                                                          |
 
 ```yaml
----
-name: db-migrations
-description: Plan and run database schema changes safely. Use when changing a table.
+# .ai-rulez/skills/db-migrations/SKILL.md, under x-ai-rulez.metadata
 delivery: served
 triggers: [schema change, alembic migration, add a column]
----
 ```
 
-The skill's own `delivery` wins. A role's `delivery`, `[domains.<name>] delivery` and `[skills] delivery` set the
-default otherwise, so a project can serve a whole domain or every skill and mark the few core skills `static`. A
-harness that cannot call MCP tools keeps served skills as static files (warning `AR992`), and served skills need an
-`[[mcp_servers]]` entry running `ai-rulez mcp --serve-skills` (warning `AR993`). See
-[Dynamic skill loading](mcp-server.md#dynamic-skill-loading).
+When any skill is served, each tool's skill folder gets a `dynamic-skills` skill that tells the agent to call
+`find_skill` and `load_skill`, and the default `ai-rulez` MCP server entry starts with `--serve-skills`.
 
-A `served` skill is delivered over MCP, so none of its files are written to the skill tree of a harness that can call MCP tools, including the shared `.agents/skills` tree: a skill whose
-SKILL.md runs a bundled `scripts/` or `assets/` file by relative path cannot run it (`AR9R0` warns). Use
-`delivery: both` for a skill that ships such files, so the files stay on disk while other harnesses or roles still
-find the skill by search. A client that must keep the skill served can still fetch the files: `list_skill_resources`
-reports each file's `mode`, `executable` and an `interpreter` hint, and `read_skill_file` returns binary files as
-base64 and large files in chunks; see
-[Served files](mcp-server.md#served-files-scripts-and-assets) for the recipe that writes them out. And do not combine `both` with `disable-model-invocation: true` and point at the skill by
-name: the Skill tool refuses a disable-model-invocation skill, so the model declines the workflow (`AR9R1` warns);
-point at the file path instead (a `load_skill` call works only with `[mcp] serve_user_invoked_skills = true`). A
-`served` skill with `disable-model-invocation: true` is written nowhere and hidden from the model, so nobody can
-run it (`AR9R2` warns).
+The default comes from, in order: the skill's own `delivery`, the [role's](roles.md#delivery) `delivery`,
+`[domains.<name>] delivery`, `[skills] delivery`, then `static`. A project can serve a whole domain, or every skill,
+and mark a few core skills `static`:
+
+```toml
+[skills]
+delivery = "served"
+```
+
+Warnings to know:
+
+| Code    | When                                                                                                         |
+| ------- | ------------------------------------------------------------------------------------------------------------ |
+| `AR992` | A served skill targets a tool that cannot call MCP tools; it is written there as a static file.             |
+| `AR993` | Skills are served but no MCP server entry runs `ai-rulez mcp --serve-skills`.                               |
+| `AR9R0` | A `served` skill runs a bundled `scripts/` or `assets/` file by relative path. Nothing is on disk to run; use `delivery: both`. |
+| `AR9R1` | Always-loaded content points at a `both` skill with `disable-model-invocation: true` by name; the model's Skill tool refuses it. Point at the file path instead. |
+| `AR9R2` | A `served` skill sets `disable-model-invocation: true`: it is written nowhere and hidden from the model, so nobody can run it. |
+
+An MCP client that must keep a skill served can still fetch its files with `list_skill_resources` and
+`read_skill_file`; see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading).
 
 ## Size limits
 
 `generate` and `tokens` warn when a root instruction file exceeds a limit the tool documents. See
 [Rules: size limits](rules.md#size-limits).
+
+## See also
+
+- [Installed skills](installed-skills.md): skills fetched from other repositories.
+- [AGENTS.md and .agents/skills](agents-md.md): the shared skill tree.

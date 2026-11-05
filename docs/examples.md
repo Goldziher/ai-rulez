@@ -1,402 +1,291 @@
-# Configuration Examples
+# Examples
 
-ai-rulez uses a file-based directory structure (`.ai-rulez/`) with TOML configuration. These examples show how to organize your configuration across multiple markdown files and a `config.toml` file.
+Complete configurations for common setups. Each example shows the files you write in `.ai-rulez/`, the command you
+run and what it generates.
 
----
+Start every example from a project created with `ai-rulez init` (see the [Quick start](quick-start.md)). `init` makes
+`.ai-rulez/` an [OKF](okf.md) bundle with `index.md` listings; a tree you build by hand without them is the deprecated
+pre-OKF layout and logs a deprecation notice. In an OKF tree, content files use OKF frontmatter: a `type` (`Decision`
+for rules, `Concept` for context, `Playbook` for skills), an optional `title`, and ai-rulez settings under
+`x-ai-rulez.metadata`. `ai-rulez add` writes this frontmatter for you; `ai-rulez generate` keeps the `index.md`
+listings up to date.
 
-## 1. Minimal Configuration (Single Team)
+## Rules scoped to part of the repository
 
-The simplest setup for a single team with basic rules.
+A web project where TypeScript rules should load only when the assistant works on TypeScript files.
 
-**`.ai-rulez/config.toml`:**
+`.ai-rulez/config.toml`:
 
 ```toml
 version = "5.0"
-name = "My Project"
+name = "web"
+presets = ["cursor", "copilot", "codex"]
 
-presets = ["claude", "cursor"]
-gitignore = true
+[rules]
+scoped_fallback = "skill"
 ```
 
-**`.ai-rulez/rules/code-quality.md`:**
+`.ai-rulez/rules/typescript.md`:
 
 ```markdown
 ---
-priority: high
+type: Decision
+title: TypeScript
+x-ai-rulez:
+  kind: rule
+  id: typescript
+  metadata:
+    priority: high
+    paths: ["src/**/*.ts", "src/**/*.tsx"]
 ---
 
-# Code Quality
+# TypeScript
 
-- Use meaningful variable names
-- Comment complex logic
-- All tests must pass before merge
+- Enable `strict` in `tsconfig.json`.
+- Prefer `unknown` over `any`.
 ```
-
-**`.ai-rulez/context/architecture.md`:**
-
-```markdown
-# Architecture
-
-This is a monolithic application with:
-
-- PostgreSQL database
-- REST API backend
-- React frontend
-```
-
-### Generated Output
 
 ```bash
 ai-rulez generate
-# Creates:
-# - CLAUDE.md (context and agent roster)
-# - .claude/rules/code-quality.md (the rule, under the default split mode)
-# - .cursor/rules/ (one .mdc file per rule and context item)
 ```
 
+Each tool with a rules folder gets the rule there, in its own scoping syntax. Codex has no rules folder, so
+`scoped_fallback = "skill"` serves the rule as a skill that applies to the same paths:
+
+```text
+.cursor/rules/typescript.mdc                      # globs: src/**/*.ts,src/**/*.tsx
+.github/instructions/typescript.instructions.md   # applyTo: src/**/*.ts,src/**/*.tsx
+.agents/skills/rule-typescript/SKILL.md           # paths: [src/**/*.ts, src/**/*.tsx]
+```
+
+The rule is not in `AGENTS.md`, so it costs nothing while the assistant works on other files. Without
+`scoped_fallback = "skill"`, `generate` inlines scoped rules into `AGENTS.md` for tools without a rules folder and
+warns that the tools with one then load them in every session; see
+[Glob-scoped rules and AGENTS.md](rules.md#glob-scoped-rules-and-agentsmd).
+
+## A skill with a script
+
+Skills are loaded on demand: the assistant sees the `description` and reads the body only when the task matches.
+Files next to `SKILL.md` (`scripts/`, `references/`, `assets/`) are copied with it.
+
+```text
+.ai-rulez/skills/release/
+├── SKILL.md
+└── scripts/
+    └── check.sh
+```
+
+`.ai-rulez/skills/release/SKILL.md`:
+
+```markdown
+---
+type: Playbook
+title: Release
+description: Cut a release of the web app. Use when asked to tag, version or publish a release.
+x-ai-rulez:
+  kind: skill
+  id: release
 ---
 
-## 2. Multi-Team Configuration with Domains
+# Release
 
-For projects with multiple teams, use domains to organize team-specific content.
+1. Run `scripts/check.sh` and stop if it fails.
+2. Bump the version in `package.json`.
+3. Tag the commit `vX.Y.Z` and push the tag.
+```
 
-**`.ai-rulez/config.toml`:**
+With the presets of the previous example, `ai-rulez generate` writes the skill, script included, to the shared skill
+folder:
+
+```text
+.agents/skills/release/SKILL.md
+.agents/skills/release/scripts/check.sh
+```
+
+Tools with their own skill folder get a copy there too, for example `.claude/skills/release/` for `claude`.
+
+See [Skill frontmatter](skills.md) for `allowed-tools`, served skills and other keys.
+
+## One instruction file per tool, and an MCP server
+
+By default all tools share one `AGENTS.md`. With `agents_md = false`, each tool gets its own root file. This example
+also limits one rule to a single tool and adds an MCP server for every tool.
+
+`.ai-rulez/config.toml`:
 
 ```toml
 version = "5.0"
-name = "Platform"
+name = "billing"
+agents_md = false
+presets = ["claude", "gemini", "copilot"]
 
-presets = ["claude", "cursor", "gemini"]
-default = "full"
-gitignore = true
-
-[profiles]
-full = ["backend", "frontend", "qa"]
-backend = ["backend", "qa"]
-frontend = ["frontend", "qa"]
-qa = ["qa"]
+[[mcp_servers]]
+name = "postgres"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-postgres@0.6.2", "${DATABASE_URL}"]
 ```
 
-**`.ai-rulez/rules/security.md`:**
+`.ai-rulez/rules/money.md`:
 
 ```markdown
 ---
-priority: critical
+type: Decision
+title: Money
+x-ai-rulez:
+  kind: rule
+  id: money
+  metadata:
+    priority: critical
 ---
 
-# Security
+# Money
 
-- All secrets must use environment variables
-- Validate all user input
-- Use HTTPS for all external API calls
+- Store amounts as integer minor units, never floats.
 ```
 
-**`.ai-rulez/domains/backend/rules/database.md`:**
+`.ai-rulez/rules/claude-subagents.md`, written only for Claude Code:
 
 ```markdown
 ---
-priority: critical
+type: Decision
+title: Subagents
+x-ai-rulez:
+  kind: rule
+  id: claude-subagents
+  metadata:
+    targets: ["claude"]
 ---
 
-# Database Standards
+# Subagents
 
-- Use prepared statements to prevent SQL injection
-- Always add database migrations
-- Index foreign keys for performance
+- Run database migrations in a subagent, never in the main session.
 ```
-
-**`.ai-rulez/domains/frontend/rules/components.md`:**
-
-```markdown
----
-priority: high
----
-
-# Component Guidelines
-
-- One component per file
-- Use TypeScript for type safety
-- Write unit tests for all components
-```
-
-### Generated Output
 
 ```bash
-# Generate for backend team
-ai-rulez generate --profile backend
-# Includes: root rules + backend-specific rules
-
-# Generate for frontend team
-ai-rulez generate --profile frontend
-# Includes: root rules + frontend-specific rules
-
-# Generate for QA
-ai-rulez generate --profile qa
-# Includes: root rules + QA-specific rules
+ai-rulez generate
 ```
 
----
-
-## 3. Using Skills for Specialized Roles
-
-Create AI skill definitions for specialized tasks.
-
-**`.ai-rulez/skills/code-reviewer/SKILL.md`:**
-
-```markdown
----
-priority: high
-description: "Code reviewer for quality assurance"
----
-
-# Code Reviewer
-
-You are an expert code reviewer with deep knowledge of:
-
-- Code quality and maintainability
-- Testing best practices
-- Performance optimization
-
-## Your Responsibilities
-
-1. Review pull requests for correctness
-2. Suggest improvements and refactoring
-3. Verify test coverage
+```text
+CLAUDE.md
+.claude/rules/money.md
+.claude/rules/claude-subagents.md
+GEMINI.md
+.gemini/settings.json                       # postgres and ai-rulez MCP servers
+.github/copilot-instructions.md
+.github/instructions/money.instructions.md
+.mcp.json                                   # postgres and ai-rulez MCP servers
+.vscode/mcp.json
 ```
 
-**`.ai-rulez/skills/architecture-expert/SKILL.md`:**
+`${DATABASE_URL}` is written as a reference, never as the resolved value, in tools that support environment
+references. `generate` also adds the ai-rulez MCP server itself; set `[mcp] self_server = false` to leave it out. See
+[Configuration](configuration.md) for MCP server keys and [Rules](rules.md#targets) for `targets`.
 
-```markdown
----
-priority: high
-description: "System architecture specialist"
----
+## Teams with domains and profiles
 
-# Architecture Expert
+A platform repository where the backend and frontend teams each have their own rules. Root content applies to
+everyone; a profile selects which domains are added.
 
-You are a system architect specializing in:
-
-- Microservices design
-- Scalability patterns
-- System reliability
-
-## Your Responsibilities
-
-1. Review architectural decisions
-2. Suggest performance improvements
-3. Identify technical debt
+```text
+.ai-rulez/
+├── config.toml
+├── rules/security.md
+└── domains/
+    ├── backend/rules/database.md
+    └── frontend/rules/components.md
 ```
 
-### Usage in Generated Files
-
-Each skill is written as its own file, for example `.claude/skills/code-reviewer/SKILL.md` and
-`.claude/skills/architecture-expert/SKILL.md`. The assistant reads the skill's `description` and loads
-the body when the task matches; nothing is added to `CLAUDE.md` for it.
-
----
-
-## 4. Complex Project with Multiple Presets
-
-For projects that need different output formats for different tools.
-
-**`.ai-rulez/config.toml`:**
-
-```toml
-version = "5.0"
-name = "ML Research Platform"
-description = "Machine learning platform with team separation"
-
-presets = [
-  "claude",
-  "cursor",
-  "gemini",
-  "devin",
-  { name = "internal-guide", type = "markdown", path = "docs/AI_DEVELOPMENT_GUIDE.md" },
-]
-default = "full"
-gitignore = true
-
-[profiles]
-full = ["research", "infrastructure"]
-research = ["research"]
-infrastructure = ["infrastructure"]
-```
-
-**`.ai-rulez/domains/research/rules/ml-standards.md`:**
-
-```markdown
----
-priority: critical
-targets: ["CLAUDE.md", "GEMINI.md"]
----
-
-# ML Development Standards
-
-- Use type hints for all functions
-- Document mathematical assumptions
-- Include reproducibility seeds
-```
-
-**`.ai-rulez/domains/infrastructure/rules/deployment.md`:**
-
-```markdown
----
-priority: high
-targets: ["CLAUDE.md", ".cursor/rules/"]
----
-
-# Deployment Standards
-
-- All changes require review
-- Run tests before deployment
-- Keep infrastructure as code
-```
-
----
-
-## 5. Project with Frontmatter and Custom Fields
-
-Markdown files can include YAML frontmatter with custom fields.
-
-**`.ai-rulez/rules/testing.md`:**
-
-```markdown
----
-priority: critical
-author: qa-team
-tags: [testing, quality, ci-cd]
-review_date: 2025-01-15
-targets:
-  - "CLAUDE.md"
-  - ".cursor/rules/"
----
-
-# Testing Standards
-
-## Unit Tests
-
-All code changes must include corresponding unit tests.
-
-- Aim for 80%+ code coverage
-- Use table-driven tests for Go
-- Test both happy path and error cases
-
-## Integration Tests
-
-Test service interactions:
-
-- Database operations
-- API endpoints
-- External service calls
-```
-
----
-
-## 6. Monorepo with Shared Rules
-
-For larger projects, reuse configurations across subdirectories.
-
-**`/.ai-rulez/config.toml`** (Root config):
-
-```toml
-version = "5.0"
-name = "Platform"
-
-presets = ["claude", "cursor"]
-default = "full"
-
-[profiles]
-full = ["shared"]
-```
-
-**`/backend/.ai-rulez/config.toml`** (Backend-specific):
-
-```toml
-version = "5.0"
-name = "Backend Service"
-
-presets = ["claude", "cursor"]
-default = "backend"
-
-[profiles]
-backend = ["api", "database"]
-```
-
-**`/backend/.ai-rulez/domains/api/rules/endpoints.md`:**
-
-```markdown
----
-priority: high
----
-
-# API Endpoint Guidelines
-
-- Use consistent path structure
-- Version APIs from the start
-- Return consistent error responses
-```
-
-### Generation
+Create the domains and their rules with the CLI:
 
 ```bash
-# From root, processes all .ai-rulez/ directories recursively
+ai-rulez domain add backend
+ai-rulez domain add frontend
+ai-rulez add rule security --priority critical --content '# Security
+
+- Validate all user input.'
+ai-rulez add rule database --domain backend --priority critical --content '# Database
+
+- Use prepared statements.'
+ai-rulez add rule components --domain frontend --content '# Components
+
+- One component per file.'
+```
+
+Then define the profiles in `.ai-rulez/config.toml`:
+
+```toml
+version = "5.0"
+name = "platform"
+presets = ["claude", "cursor", "codex"]
+default = "full"
+
+[profiles]
+full = ["backend", "frontend"]
+backend = ["backend"]
+frontend = ["frontend"]
+```
+
+```bash
+ai-rulez generate                     # default profile "full": security, database, components
+ai-rulez generate --profile backend   # security, database
+ai-rulez generate --profile frontend  # security, components
+```
+
+Set `default` when you define `[profiles]`. Without it, a run without `--profile` includes no domain content and
+`generate` warns. See [Domains & profiles](domains.md) and, for per-person filtering, [Roles](roles.md).
+
+## Shared rules from another repository
+
+Keep organization-wide rules in one repository and include them everywhere. A version constraint picks the newest
+matching tag.
+
+```toml
+version = "5.0"
+name = "web"
+presets = ["cursor", "codex"]
+
+[[includes]]
+name = "org-standards"
+source = "https://github.com/acme/ai-standards.git"
+version = "^1.2"
+include = ["rules", "skills"]
+merge_strategy = "local-override"
+```
+
+`include` limits what is taken from the source; `merge_strategy = "local-override"` (the default) lets a local item
+with the same name win. Pin what was resolved in `.ai-rulez/ai-rulez.lock` and commit it with the configuration:
+
+```bash
+ai-rulez generate
+ai-rulez lock
+git add .ai-rulez
+```
+
+`ai-rulez lock --outdated` reports newer matching tags and `ai-rulez update` moves the pin. See [Includes](includes.md)
+and [Lock file](lockfile.md).
+
+## Monorepo with nested projects
+
+Each service keeps its own `.ai-rulez/` next to its code, and the repository root has one for shared conventions.
+
+```text
+acme/
+├── .ai-rulez/
+│   ├── config.toml
+│   └── rules/commits.md
+└── services/
+    └── api/
+        └── .ai-rulez/
+            ├── config.toml
+            └── rules/endpoints.md
+```
+
+```bash
 ai-rulez generate --recursive
+ai-rulez validate --recursive
 ```
 
----
-
-## 7. Environment-Specific Profiles
-
-Use profiles for different deployment environments.
-
-**`.ai-rulez/config.toml`:**
-
-```toml
-version = "5.0"
-name = "Web Application"
-
-presets = ["claude"]
-
-[profiles]
-development = ["dev-guidelines"]
-staging = ["staging-checks", "security-checks"]
-production = ["production-critical", "security-hardened", "compliance"]
-```
-
-**`.ai-rulez/domains/dev-guidelines/rules/debugging.md`:**
-
-```markdown
----
-priority: medium
----
-
-# Development Guidelines
-
-- Enable verbose logging in dev
-- Use debug endpoints for testing
-- Performance is less critical than clarity
-```
-
-**`.ai-rulez/domains/production-critical/rules/reliability.md`:**
-
-```markdown
----
-priority: critical
----
-
-# Production Standards
-
-- All deployments require approval
-- Monitor error rates in production
-- Implement circuit breakers for external services
-```
-
-### Usage
-
-```bash
-# Generate for development
-ai-rulez generate --profile development
-
-# Generate for production
-ai-rulez generate --profile production
-```
+Each root generates its own files (`AGENTS.md`, `CLAUDE.md`, ...) in its own directory. Tools that read nested
+instruction files load the service's file in addition to the root's when they work in `services/api/`. A local
+include in a nested project must stay inside that project's directory; share content across services with a git
+include or the repository-root configuration. See [Monorepo](monorepo.md).
