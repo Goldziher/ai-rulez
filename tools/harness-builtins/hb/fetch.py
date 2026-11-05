@@ -21,6 +21,7 @@ TIMEOUT = 60
 ATTEMPTS = 4
 BACKOFF = 5.0
 TRANSIENT = {429, 500, 502, 503, 504}
+CURL_HTTP_STATUS = re.compile(r"returned error: (\d{3})")
 
 
 class FetchError(Exception):
@@ -79,8 +80,10 @@ def _curl(url: str, cause: Exception) -> str:
         )
     except (OSError, subprocess.CalledProcessError) as e:
         detail = e.stderr.decode("utf-8", "replace").strip() if isinstance(e, subprocess.CalledProcessError) else str(e)
-        # a failed fetch here is a timeout, a rate limit or a server error far more often than a 404
-        raise FetchError(f"{url}: {detail or cause} (rate limited? set GITHUB_TOKEN)", transient=True) from e
+        # curl -f names the HTTP status; anything else (timeout, DNS, TLS) is worth retrying
+        status = CURL_HTTP_STATUS.search(detail)
+        transient = int(status.group(1)) in TRANSIENT if status else True
+        raise FetchError(f"{url}: {detail or cause} (rate limited? set GITHUB_TOKEN)", transient=transient) from e
     return out.stdout.decode("utf-8", "replace")
 
 

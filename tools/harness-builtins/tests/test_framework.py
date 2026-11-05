@@ -1,5 +1,6 @@
 import copy
 import io
+import subprocess
 import tempfile
 import tomllib
 import unittest
@@ -172,6 +173,25 @@ class FetchTest(unittest.TestCase):
             with self.assertRaises(fetch.FetchError):
                 fetch.http_get("https://example.com/x")
         self.assertEqual(once.call_count, fetch.ATTEMPTS)
+
+    def test_curl_reports_an_http_client_error_as_permanent_and_429_or_5xx_as_transient(self) -> None:
+        # Arrange
+        def failing(stderr: str) -> subprocess.CalledProcessError:
+            return subprocess.CalledProcessError(22, ["curl"], stderr=stderr.encode())
+
+        cases = [
+            ("curl: (22) The requested URL returned error: 404", False),
+            ("curl: (22) The requested URL returned error: 429", True),
+            ("curl: (22) The requested URL returned error: 503", True),
+            ("curl: (28) Connection timed out after 60001 milliseconds", True),
+        ]
+        for stderr, transient in cases:
+            # Act
+            with mock.patch.object(fetch.subprocess, "run", side_effect=failing(stderr)):
+                with self.assertRaises(fetch.FetchError) as caught:
+                    fetch._curl("https://example.com/x", TimeoutError())
+            # Assert
+            self.assertEqual(caught.exception.transient, transient, stderr)
 
     def test_only_plain_https_urls(self):
         for url in ("http://example.com/x", "file:///etc/passwd", "https://user:pw@example.com/x"):
