@@ -7,8 +7,8 @@ part. An **area map** in the `[exposure]` table names the parts of the repositor
 claims and the words that identify it. ai-rulez then shows what a session loads at its start, which area every
 artifact belongs to, and where an area's words leak into the shared start-of-session text.
 
-Currently supports Claude Code only (`harness = "claude"`): the commands read the native Claude Code files
-(`CLAUDE.md`, `.claude/`, `.mcp.json`, enabled plugins), whichever presets generated them.
+The commands read the native Claude Code files (`CLAUDE.md`, `.claude/`, `.mcp.json`, enabled plugins), whichever
+presets generated them; with `harness = "codex"`, the Codex ones (see [The codex harness](#the-codex-harness)).
 
 ## Example
 
@@ -289,8 +289,8 @@ Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, se
 
 - **`AGENTS.md`** (kind `agents_md`). Codex starts at the project root and walks down to the working directory, includes
   at most one file per directory, and checks `AGENTS.override.md` before `AGENTS.md`; an `AGENTS.md` beside an override
-  is left out. Only listed (non-ignored) files are seen, so an override that `.gitignore` or `[discovery]` hides does not
-  shadow its `AGENTS.md`. The root file is in context at start, one in a subdirectory waits (phase `on_demand`). The
+  is left out. The root `AGENTS.md` and `AGENTS.override.md` are read even when gitignored; in a subdirectory, an
+  override that `.gitignore` or `[discovery]` hides is not seen and does not shadow its `AGENTS.md`. The root file is in context at start, one in a subdirectory waits (phase `on_demand`). The
   32 KiB cap (`project_doc_max_bytes`) is applied per file, not to the combined chain: a file past it counts only those
   bytes and is marked `truncated`, while Codex counts the chain's combined size. Sources: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
 - **Skills** from `.agents/skills/<name>/SKILL.md` (kind `skill`), the repository location the skills page names. The

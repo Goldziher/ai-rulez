@@ -86,7 +86,8 @@ none, enabled (the ones the root .claude/settings*.json enable; the default unle
 says otherwise) or all.
 
 Exit codes: 0 the report was printed, 1 the command could not run (bad flags, an invalid
-configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget; exposure leakage exits 2 on a
+configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget
+(codex_start_budget under --harness codex); exposure leakage exits 2 on a
 violation or a stale acceptance.`,
 		Example: `  ai-rulez exposure
   ai-rulez exposure --plugins all --context-window 1000000 --format json
