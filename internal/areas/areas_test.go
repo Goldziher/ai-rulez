@@ -570,3 +570,77 @@ func TestInvalidAcceptancesAreRejected(t *testing.T) {
 		})
 	}
 }
+
+func TestExcludedCompoundsNeedNameBoundaries(t *testing.T) {
+	m, problems := New([]config.ExposureArea{{Name: "xberg", Terms: []string{"xberg"}, Exclude: []string{"xberg-io", "xberg-io-labs"}}}, nil)
+	require.Empty(t, problems)
+	tests := []struct {
+		name, text string
+		leaks      bool
+	}{
+		{"the compound", "the xberg-io org", false},
+		{"the longer compound", "the xberg-io-labs org", false},
+		{"both compounds", "xberg-io-labs and xberg-io", false},
+		{"a longer name that starts with it", "the xberg-iox org", true},
+		{"a longer name that ends with it", "the a-xberg-io org", true},
+		{"a prefixed name", "the my-xberg-io org", true},
+		{"a suffixed name", "the xberg-io-tools org", true},
+		{"glued letters before", "the myxberg-io org", false},
+		{"the compound and a leaked longer name", "xberg-io and xberg-iox", true},
+		{"the compound at the ends of the text", "xberg-io", false},
+		{"punctuation is a boundary", "(xberg-io), xberg-io.", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.leaks, len(m.Find(tt.text)) > 0)
+		})
+	}
+}
+
+func TestExcludeEqualToATermIsRejected(t *testing.T) {
+	tests := []struct {
+		name string
+		def  config.ExposureArea
+	}{
+		{"a term", config.ExposureArea{Name: "a", Terms: []string{"foo"}, Exclude: []string{"FOO"}}},
+		{"an ambiguous word", config.ExposureArea{Name: "a", Terms: []string{"bar"}, Ambiguous: []string{"foo"}, Exclude: []string{"foo"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, problems := New([]config.ExposureArea{tt.def}, nil)
+			assert.Nil(t, m)
+			require.Len(t, problems, 1)
+			assert.Contains(t, problems[0].Message, "would disable it")
+		})
+	}
+}
+
+func TestAcceptPathsFollowTheLintAcceptGlobs(t *testing.T) {
+	tests := []struct {
+		pattern, file string
+		want          bool
+	}{
+		{"**/AGENTS.md", "AGENTS.md", true},
+		{"**/AGENTS.md", "a/b/AGENTS.md", true},
+		{"AGENTS.md", "AGENTS.md", true},
+		{"AGENTS.md", "sub/AGENTS.md", true},
+		{"docs/**/a.md", "docs/a.md", true},
+		{"docs/**/a.md", "docs/x/y/a.md", true},
+		{"docs/**/a.md", "other/a.md", false},
+		{"docs/*.md", "docs/a.md", true},
+		{"docs/*.md", "docs/x/a.md", false},
+		{"docs/**", "docs/x/y.md", true},
+		{"docs", "docs/x/y.md", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern+" vs "+tt.file, func(t *testing.T) {
+			body := "[[area]]\nname = \"a\"\nterms = [\"x\"]\n\n[[accept]]\nterm = \"x\"\npath = \"" + tt.pattern + "\"\nreason = \"r\"\n"
+			m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", body))
+			require.Empty(t, problems)
+
+			_, ok := m.Accepting("a", "x", tt.file)
+
+			assert.Equal(t, tt.want, ok)
+		})
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
@@ -152,12 +153,12 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	}
 	start := inv.Start()
 	out := lint.ExposureLeakage{Checked: len(start), AreasFile: file}
-	leaks, stale := exposure.CheckLeaks(start, m)
+	leaks, stale := exposure.CheckLeaksFrom(start, m, s.rootBelowBase())
 	for i := range leaks {
 		l := &leaks[i]
 		out.Leaks = append(out.Leaks, lint.ExposureLeak{
 			Ambiguous: l.Severity == exposure.LeakWarning, Area: l.Area, Term: l.Term, Kind: string(l.Kind), Name: l.Name,
-			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(), AcceptReason: l.Reason,
+			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(), AcceptReason: l.Reason, ImportedBy: l.ImportedBy,
 		})
 	}
 	if s.judgesAcceptances() {
@@ -179,6 +180,24 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 		out.UnknownSkills = append(out.UnknownSkills, lint.ExposureSkillArea{Skill: key, Area: skillAreas[key]})
 	}
 	return out, true
+}
+
+// rootBelowBase is the inventory's directory relative to the project root, slash separated: "" for the root
+// itself or a directory outside it, whose paths no acceptance can name.
+func (s exposureLintSource) rootBelowBase() string {
+	root, err := s.inventoryRoot()
+	if err != nil {
+		return ""
+	}
+	base, err := s.base()
+	if err != nil {
+		return ""
+	}
+	rel := rootRelative(base, root)
+	if filepath.IsAbs(filepath.FromSlash(rel)) || rel == "." || strings.HasPrefix(rel, "../") {
+		return ""
+	}
+	return rel
 }
 
 // judgesAcceptances reports whether the inventory covers the project root. The paths of the acceptances of an

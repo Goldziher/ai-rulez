@@ -69,8 +69,10 @@ type AreaInfo struct {
 	Paths       []string `json:"paths"`
 	Terms       []string `json:"terms"`
 	Ambiguous   []string `json:"ambiguous"`
-	Shared      bool     `json:"shared"`
-	Declare     string   `json:"declare"`
+	// Exclude are the compound names holding a term that do not name the area; omitted when there are none.
+	Exclude []string `json:"exclude,omitempty"`
+	Shared  bool     `json:"shared"`
+	Declare string   `json:"declare"`
 }
 
 // ClassifiedArtifact identifies an artifact and gives its area. AreaScope is
@@ -109,10 +111,14 @@ func NewAreasReport(inv *Inventory, m *areas.Map, areasFile string) *AreasReport
 	all := m.Areas()
 	for i := range all {
 		a := &all[i]
-		rep.Areas = append(rep.Areas, AreaInfo{
+		info := AreaInfo{
 			Name: a.Name, Description: a.Description, Owner: a.Owner, Paths: nonNil(a.Paths), Terms: nonNil(a.Terms),
 			Ambiguous: nonNil(a.Ambiguous), Shared: a.Shared, Declare: a.Declare,
-		})
+		}
+		if len(a.Exclude) > 0 {
+			info.Exclude = a.Exclude
+		}
+		rep.Areas = append(rep.Areas, info)
 		rep.Counts[a.Name] = 0
 	}
 	for k, v := range m.SkillAreas() {

@@ -11,13 +11,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - An `[exposure]` area gains `exclude`, compound names that contain one of its terms without naming the area (an
   org `xberg-io` against the term `xberg`). An areas file gains `[[accept]]` tables (`term`, `path`, `reason`,
   optional `area`) that record known occurrences at session start; an entry that accepts nothing is reported as
-  `AR9I0` and fails `exposure leakage`. (#537)
+  `AR9I0` and fails `exposure leakage`. An area's `exclude` also applies to classification, and `exposure areas`
+  prints it. (#537)
 
 ### Fixed
 
 - `exposure leakage` and `AR9W0` scan the text of files a `CLAUDE.md` or rule imports with `@path`, as the start
   budget already counts it, and report a leak against the imported file and its line. A `CLAUDE.md` of
-  `@AGENTS.md` is no longer exempt from the leakage checks. (#536)
+  `@AGENTS.md` is no longer exempt from the leakage checks. An import that is not read (over the read limit, an
+  absolute, home or outside-the-root path) is listed as unchecked. (#536)
 
 ### Changed
 

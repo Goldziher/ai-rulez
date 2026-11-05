@@ -2,6 +2,7 @@ package exposure
 
 import (
 	"fmt"
+	"path"
 	"slices"
 	"strings"
 	"unicode"
@@ -49,6 +50,9 @@ type Leak struct {
 	Excerpt string `json:"excerpt"`
 	// Reason is the reason of the acceptance of an accepted leak.
 	Reason string `json:"reason"`
+	// ImportedBy is the path of the start-of-session artifact that imports Path with `@path`, for a leak in an
+	// imported file; empty otherwise.
+	ImportedBy string `json:"imported_by,omitempty"`
 }
 
 // Message is the finding message of the leak. It is a public contract: a
@@ -86,13 +90,32 @@ type Unchecked struct {
 	Reason string `json:"reason"`
 }
 
-// UncheckedArtifacts lists the artifacts of start that were kept unread, in order.
+// UncheckedArtifacts lists, in order, the artifacts of start that were kept unread and the files they import
+// that were not read: an import over the read limit, or one the inventory does not follow (an absolute or
+// home path, one outside the root, an unreadable target). An imported file is listed under the importing
+// artifact's kind and name, with its path as written for the latter.
 func UncheckedArtifacts(start []Artifact) []Unchecked {
 	var out []Unchecked
+	seen := map[Unchecked]bool{}
+	add := func(u Unchecked) {
+		if !seen[u] {
+			seen[u] = true
+			out = append(out, u)
+		}
+	}
 	for i := range start {
 		a := &start[i]
 		if reason := a.UnreadReason(); reason != "" {
-			out = append(out, Unchecked{Path: a.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: reason})
+			add(Unchecked{Path: a.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: reason})
+			continue
+		}
+		for _, im := range a.Imports {
+			if im.Text == "" && im.TextBytes > 0 {
+				add(Unchecked{Path: im.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: "imported by " + a.Path + ": the file is over the read limit"})
+			}
+		}
+		for _, p := range a.ImportProblems {
+			add(Unchecked{Path: p.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: "imported by " + a.Path + ": " + p.Reason})
 		}
 	}
 	return out
@@ -136,6 +159,13 @@ func Leaks(start []Artifact, m *areas.Map) []Leak {
 // session loads, on the lines of the imported file and reported against its path, once per file; a file that is
 // itself a start-of-session artifact is scanned as that artifact.
 func CheckLeaks(start []Artifact, m *areas.Map) (leaks []Leak, stale []areas.Accept) {
+	return CheckLeaksFrom(start, m, "")
+}
+
+// CheckLeaksFrom is CheckLeaks for an inventory of the directory rel (slash separated, "" for the project root)
+// below the project root: the leak paths are relative to that directory, while the acceptances of the area map
+// are relative to the project root, so they are matched against the path under rel.
+func CheckLeaksFrom(start []Artifact, m *areas.Map, rel string) (leaks []Leak, stale []areas.Accept) {
 	if m == nil {
 		return nil, nil
 	}
@@ -152,13 +182,17 @@ func CheckLeaks(start []Artifact, m *areas.Map) (leaks []Leak, stale []areas.Acc
 				continue
 			}
 			scanned[im.Path] = true
-			leaks = append(leaks, importViolations(a, &im, m)...)
+			found := importViolations(a, &im, m)
+			for j := range found {
+				found[j].ImportedBy = a.Path
+			}
+			leaks = append(leaks, found...)
 		}
 		leaks = append(leaks, warnings(a, m)...)
 	}
 	used := map[int]bool{}
 	for i := range leaks {
-		if acc, ok := m.Accepting(leaks[i].Area, leaks[i].Term, leaks[i].Path); ok {
+		if acc, ok := m.Accepting(leaks[i].Area, leaks[i].Term, path.Join(rel, leaks[i].Path)); ok {
 			leaks[i].Reason = acc.Reason
 			used[acc.Index] = true
 		}

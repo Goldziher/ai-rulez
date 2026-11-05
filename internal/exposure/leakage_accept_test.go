@@ -69,3 +69,38 @@ func TestLeaks_ExcludedCompoundIsNotALeak(t *testing.T) {
 	assert.Empty(t, Leaks(inv.Start(), m))
 	assert.Len(t, Leaks([]Artifact{startArtifact(KindClaudeMD, "CLAUDE.md", "xberg-io and xberg")}, m), 1)
 }
+
+func TestCheckLeaksFrom_AcceptancesAreMatchedBelowTheProjectRoot(t *testing.T) {
+	// Arrange: the inventory is of services/billing, so its CLAUDE.md is services/billing/CLAUDE.md of the project.
+	m, problems := areas.LoadFile(writeAreas(t, `
+[[area]]
+name = "search"
+terms = ["ranker"]
+
+[[accept]]
+term = "ranker"
+path = "services/billing/CLAUDE.md"
+reason = "billing talks about it"
+`))
+	require.Empty(t, problems)
+	start := []Artifact{startArtifact(KindClaudeMD, "CLAUDE.md", "the ranker")}
+
+	// Act
+	atRoot, staleAtRoot := CheckLeaksFrom(start, m, "")
+	below, staleBelow := CheckLeaksFrom(start, m, "services/billing")
+
+	// Assert
+	require.Len(t, atRoot, 1)
+	assert.Empty(t, atRoot[0].Reason)
+	assert.Len(t, staleAtRoot, 1)
+	require.Len(t, below, 1)
+	assert.Equal(t, "billing talks about it", below[0].Reason)
+	assert.Empty(t, staleBelow)
+}
+
+func writeAreas(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "areas.toml")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+	return path
+}

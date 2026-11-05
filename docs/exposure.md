@@ -104,19 +104,22 @@ A key the file does not define is an error, not ignored, so a misspelled key is 
   decide an area on their own. A word that is both a term and ambiguous in one area is a term.
 - **`exclude`** are compound names that contain a term and do not name the area: with `terms = ["xberg"]`,
   `exclude = ["xberg-io"]` keeps the org name `xberg-io` from counting while a bare `xberg` still does. An occurrence
-  of an excluded name is ignored, case-insensitively, for that area only, in classification and in leakage. Each
-  entry must contain a term or ambiguous word of the area, or the map is invalid. Available inline and in the file.
+  of an excluded name is ignored, case-insensitively, for that area only, in classification and in leakage, when the
+  characters around it are not part of a longer name (`xberg-iox`, `my-xberg-io` and `xberg-io-tools` still count).
+  Each entry must be longer than, and contain, a term or ambiguous word of the area, or the map is invalid; one equal
+  to a term would disable the area. `exposure areas` prints it as `exclude`. Available inline and in the file.
 - **`shared`** marks repository-wide tooling (a build system, CI): its terms still classify artifacts, but naming
   them at session start is not leakage.
 - **`owner`** and **`description`** are reported as they are.
 
 An areas file may also hold `[[accept]]` tables, each recording one known occurrence of an area word at session
-start: `term` (the word, case-insensitive), `path` (the file the leak is reported in: an exact path, a glob such as
-`docs/*.md`, or `dir/**` for everything below), `reason` (required, not blank) and optionally `area` (only the words
+start: `term` (the word, case-insensitive), `path` (the file the leak is reported in, relative to the project root: a path or glob read as the
+path of a `[[lint.accept]]` entry is, so `**` crosses directories, a pattern without a slash matches at any depth and a
+directory covers everything below it), `reason` (required, not blank) and optionally `area` (only the words
 of that area). A leak an entry covers is not a violation: `exposure leakage` lists it as `accepted` with the reason,
 and `validate` reports the finding as accepted. An entry that covers no leak is stale: it is reported as `AR9I0` on its
 line in the areas file and fails `exposure leakage`, like a stale `[[lint.accept]]`. An inventory below the project
-root (`exposure leakage --root`) does not judge them. Acceptances are not part of the inline form; use
+root (`exposure leakage --root`) matches the entries against the project-relative path but does not judge them stale. Acceptances are not part of the inline form; use
 `[[lint.accept]]` there.
 
 ## Matching terms
@@ -383,8 +386,10 @@ accepts it. With `--root DIR` the session is the one started in `DIR`: its `CLAU
 the project's (an entry's `path` is relative to the project root, as in `validate`). An entry whose `path` matches
 no file under `DIR` is not judged, so it is not reported as stale.
 
-A start-of-session artifact whose file was not read (over the 1 MiB read limit, or a symlink to outside the root)
-loads in every session, but no leak in it can be found. It is listed under `unchecked` with the reason, and as an
+A start-of-session artifact whose file was not read (over the 1 MiB read limit, or a symlink to outside the root),
+or a file such an artifact imports with `@path` that was not read (over the limit, or an absolute, `~` or
+outside-the-root path), loads in every session, but no leak in it can be found. It is listed under `unchecked` with
+the reason (for an import, under the importing artifact's kind and name), and as an
 `unchecked:` line of the text output; it is not a finding and does not change the exit code. Read it, or bring it
 under the limit, to have it checked.
 

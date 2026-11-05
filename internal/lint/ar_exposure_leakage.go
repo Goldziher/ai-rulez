@@ -69,6 +69,9 @@ type ExposureLeak struct {
 	Message   string
 	// AcceptReason is the reason of the [[accept]] entry of the areas file that covers the leak, "" for none.
 	AcceptReason string
+	// ImportedBy is the path (relative to Root) of the artifact that imports Path, "" for a leak in the
+	// artifact's own text.
+	ImportedBy string
 }
 
 // ExposureSkillArea is a skill_areas entry.
@@ -146,7 +149,7 @@ func registerArExposureLeakage(s *ruleSet) {
 	for _, code := range []string{CodeExposureAreaTerm, CodeExposureAreaAmbiguous, CodeExposureSkillUnknown} {
 		SetAnalyzer(code, AnalyzerExposure, ScopeBundle)
 	}
-	s.addRunCheck(checkExposureLeakage, AnalyzerExposure)
+	s.addRunCheck(checkExposureLeakage, AnalyzerExposure, AnalyzerConfig)
 }
 
 // checkExposureLeakage reports the area words of the start-of-session text (AR9W0, AR9W1) and the skill_areas
@@ -174,7 +177,11 @@ func checkExposureLeakage(r *runner) {
 		if len(r.findings) == before {
 			continue
 		}
-		r.exposureDeps(before, abs, nil)
+		var via []string
+		if l.ImportedBy != "" {
+			via = append(via, filepath.Join(root, filepath.FromSlash(l.ImportedBy)))
+		}
+		r.exposureDeps(before, abs, via)
 		if l.AcceptReason != "" && !r.refuseSuppression(code, routeAreasAccept) {
 			m := r.findings[before].meta()
 			m.Accepted, m.AcceptedByConfig, m.AcceptReason = true, true, l.AcceptReason

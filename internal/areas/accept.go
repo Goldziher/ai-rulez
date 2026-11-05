@@ -2,9 +2,10 @@ package areas
 
 import (
 	"fmt"
-	"path"
 	"slices"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/pathglob"
 )
 
 // Accept is a recorded acceptance of a known occurrence of an area word at session start: the word, the file it
@@ -15,11 +16,13 @@ type Accept struct {
 	Term string
 	// Area optionally limits the acceptance to the words of one area.
 	Area string
-	// Path is a repository-relative path or glob (path.Match; a trailing "/**" covers everything below).
+	// Path is a repository-relative path or glob, read as the path of a [[lint.accept]] entry is: "**" crosses
+	// directories, a pattern with no slash matches at any depth, and a directory covers everything below it.
 	Path   string
 	Reason string
 	Index  int
 	Line   int
+	glob   pathglob.Matcher
 }
 
 // Accepts returns the recorded acceptances in file order.
@@ -27,7 +30,11 @@ func (m *Map) Accepts() []Accept {
 	if m == nil {
 		return nil
 	}
-	return slices.Clone(m.accepts)
+	out := slices.Clone(m.accepts)
+	for i := range out {
+		out[i].glob = pathglob.Matcher{}
+	}
+	return out
 }
 
 // Accepting returns the first acceptance of the word term in the file filePath. area is the area of the
@@ -39,23 +46,11 @@ func (m *Map) Accepting(area, term, filePath string) (Accept, bool) {
 	}
 	term = pyStrLower(strings.TrimFunc(term, pyIsSpace))
 	for _, a := range m.accepts {
-		if a.Term == term && (a.Area == "" || slices.Contains(strings.Split(area, "/"), a.Area)) && pathAccepted(a.Path, filePath) {
+		if a.Term == term && (a.Area == "" || slices.Contains(strings.Split(area, "/"), a.Area)) && a.glob.Match(filePath) {
 			return a, true
 		}
 	}
 	return Accept{}, false
-}
-
-// pathAccepted reports whether pattern covers file: equal, a path.Match glob, or a prefix pattern "dir/**".
-func pathAccepted(pattern, file string) bool {
-	if pattern == file {
-		return true
-	}
-	if dir, ok := strings.CutSuffix(pattern, "/**"); ok {
-		return strings.HasPrefix(file, dir+"/")
-	}
-	ok, err := path.Match(pattern, file)
-	return err == nil && ok
 }
 
 // normalizeAccepts validates the acceptances and lowercases their words; known are the area names.
@@ -81,9 +76,11 @@ func normalizeAccepts(accepts []Accept, known map[string]bool) ([]Accept, []Prob
 		case strings.HasPrefix(a.Path, "/") || strings.Contains(a.Path, `\`) || strings.HasPrefix(a.Path, "../"):
 			add("path", "accept %d: path %q must be a repository-relative, forward-slash path", i+1, a.Path)
 		default:
-			if _, err := path.Match(a.Path, ""); err != nil {
+			g, ok := pathglob.New(a.Path)
+			if !ok || pathglob.Malformed(a.Path) {
 				add("path", "accept %d: path glob %q is malformed", i+1, a.Path)
 			}
+			a.glob = g
 		}
 		if a.Area != "" && !known[a.Area] {
 			add("area", "accept %d: area %q names no area", i+1, a.Area)

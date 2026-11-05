@@ -132,22 +132,34 @@ func (m *matcher) withoutExcluded(text string, matches []TermMatch) []TermMatch 
 	return out
 }
 
-// blankCompounds replaces every case-insensitive occurrence of a compound with spaces.
+// blankCompounds replaces every case-insensitive occurrence of a compound with spaces, longest compound first,
+// where the characters around it do not continue a name (a letter, digit, hyphen or underscore): "xberg-iox"
+// and "my-xberg-io" are other names than "xberg-io".
 func blankCompounds(text string, compounds [][]rune) string {
+	sorted := slices.Clone(compounds)
+	slices.SortStableFunc(sorted, func(a, b []rune) int { return len(b) - len(a) })
 	runes := []rune(text)
 	for i := 0; i < len(runes); i++ {
-		for _, c := range compounds {
-			if i+len(c) <= len(runes) && matchesFold(c, runes[i:i+len(c)]) {
-				for k := range c {
-					runes[i+k] = ' '
-				}
-				i += len(c) - 1
-				break
+		if i > 0 && joinsName(runes[i-1]) {
+			continue
+		}
+		for _, c := range sorted {
+			end := i + len(c)
+			if end > len(runes) || !matchesFold(c, runes[i:end]) || (end < len(runes) && joinsName(runes[end])) {
+				continue
 			}
+			for k := range c {
+				runes[i+k] = ' '
+			}
+			i = end - 1
+			break
 		}
 	}
 	return string(runes)
 }
+
+// joinsName reports whether r continues a hyphenated or snake-case name.
+func joinsName(r rune) bool { return pyIsAlnumFold(r) || r == '-' || r == '_' }
 
 // StripPathLiterals blanks out repository path literals (a path claim's first segment followed by "/"):
 // naming a location is not naming an area.

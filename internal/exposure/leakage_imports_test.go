@@ -2,10 +2,13 @@ package exposure
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/repoindex"
 )
 
 func TestLeaks_ImportedTextIsScanned(t *testing.T) {
@@ -89,4 +92,57 @@ func TestImportTextIsNotSerialized(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "secret body")
+}
+
+func TestUncheckedArtifacts_UnreadImportsAreListed(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  Unchecked
+	}{
+		{
+			name:  "an import over the read limit",
+			files: map[string]string{"CLAUDE.md": "@big.md\n", "big.md": strings.Repeat("x", repoindex.MaxFileBytes+1)},
+			want:  Unchecked{Path: "big.md", Kind: KindClaudeMD, Name: "CLAUDE.md", Reason: "imported by CLAUDE.md: the file is over the read limit"},
+		},
+		{
+			name:  "an import that leaves the root",
+			files: map[string]string{"CLAUDE.md": "@../x.md\n"},
+			want:  Unchecked{Path: "../x.md", Kind: KindClaudeMD, Name: "CLAUDE.md", Reason: "imported by CLAUDE.md: the path resolves outside the repository root"},
+		},
+		{
+			name:  "a home import",
+			files: map[string]string{"CLAUDE.md": "@~/x.md\n"},
+			want:  Unchecked{Path: "~/x.md", Kind: KindClaudeMD, Name: "CLAUDE.md", Reason: "imported by CLAUDE.md: an absolute or home path is not modeled"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			start := build(t, writeRepo(t, tt.files)).Start()
+
+			// Act
+			got := UncheckedArtifacts(start)
+
+			// Assert
+			assert.Equal(t, []Unchecked{tt.want}, got)
+		})
+	}
+}
+
+func TestUncheckedArtifacts_ReadImportsAreNotListed(t *testing.T) {
+	start := build(t, writeRepo(t, map[string]string{"CLAUDE.md": "@AGENTS.md\n@missing.md\n", "AGENTS.md": "text\n"})).Start()
+
+	assert.Empty(t, UncheckedArtifacts(start))
+}
+
+func TestLeaks_ImportedByNamesTheImporter(t *testing.T) {
+	root := writeRepo(t, map[string]string{"CLAUDE.md": "@AGENTS.md\nthe ranker\n", "AGENTS.md": "the ranker\n"})
+
+	leaks := Leaks(build(t, root).Start(), leakMap(t))
+
+	require.Len(t, leaks, 2)
+	assert.Empty(t, leaks[0].ImportedBy)
+	assert.Equal(t, "AGENTS.md", leaks[1].Path)
+	assert.Equal(t, "CLAUDE.md", leaks[1].ImportedBy)
 }
