@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
@@ -105,22 +106,22 @@ func (r *runner) exposureDeps(before int, from string, paths []string) {
 	}
 }
 
-// exposureStartBudgetSeverity turns AR9W3 on at error when [exposure]
-// start_budget is set.
+// exposureStartBudgetSeverity turns AR9W3 on at error when the start budget of
+// the [exposure] harness is set: start_budget, or codex_start_budget for codex.
 func (r *runner) exposureStartBudgetSeverity() {
-	if r.cfg != nil && r.cfg.Exposure != nil && r.cfg.Exposure.StartBudget > 0 {
+	if r.cfg != nil && r.cfg.Exposure != nil && r.cfg.Exposure.EffectiveStartBudget(r.cfg.Exposure.EffectiveHarness()) > 0 {
 		r.sev[CodeExposureStartBudget] = SeverityError
 	}
 }
 
 func registerArExposure(s *ruleSet) {
 	s.addRules(
-		RuleInfo{CodeExposureStartBudget, "exposure-start-budget", SeverityOff, "the estimated tokens a Claude Code session loads at start exceed [exposure] start_budget (setting it turns the rule on at error)"},
+		RuleInfo{CodeExposureStartBudget, "exposure-start-budget", SeverityOff, "the estimated tokens a session of the [exposure] harness (claude by default) loads at start exceed its budget, [exposure] start_budget or, for the codex harness, codex_start_budget (setting it turns the rule on at error)"},
 		RuleInfo{CodeExposureMapInvalid, "exposure-map-invalid", SeverityError, "the [exposure] table or its area map is invalid: a bad scalar key, a duplicate, malformed or reserved area name, a bad path claim, a skill_areas value naming no area, an unknown key, an unreadable areas_file, or both areas_file and inline areas"},
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeExposureStartBudget: {
-			Why:  "Everything a session loads before it touches a file (the root CLAUDE.md, unconditional rules, the skill and agent listings, MCP server names) is paid for by every session, whatever it works on. A budget turns growth of that surface into a decision instead of drift. The estimate is the one `ai-rulez exposure` reports.",
+			Why:  "Everything a session loads before it touches a file (the root CLAUDE.md, unconditional rules, the skill and agent listings, MCP server names) is paid for by every session, whatever it works on. A budget turns growth of that surface into a decision instead of drift. The estimate and the harness are the ones `ai-rulez exposure` reports.",
 			Bad:  "`[exposure] start_budget = 4000` while the root CLAUDE.md and the skill listing add up to about 5200 estimated tokens",
 			Good: "Move area-specific guidance into a subdirectory CLAUDE.md or a `paths:`-gated rule, so it loads on demand, or raise start_budget on purpose",
 		},
@@ -142,28 +143,36 @@ func registerArExposure(s *ruleSet) {
 // keeps it when the change that pushes the session past the budget is in one
 // of them.
 func checkExposureStartBudget(r *runner) {
-	if r.cfg == nil || r.cfg.Exposure == nil || r.cfg.Exposure.StartBudget <= 0 || r.sev[CodeExposureStartBudget] == SeverityOff {
+	if r.cfg == nil || r.cfg.Exposure == nil || r.sev[CodeExposureStartBudget] == SeverityOff {
 		return
+	}
+	harness := r.cfg.Exposure.EffectiveHarness()
+	budget := r.cfg.Exposure.EffectiveStartBudget(harness)
+	if budget <= 0 {
+		return
+	}
+	key, session, label := "start_budget", "a session", "the start budget"
+	if harness == config.ExposureHarnessCodex {
+		key, session, label = "codex_start_budget", "a codex session", "the codex start budget"
 	}
 	start := r.exposureStart()
 	if start == nil {
 		return
 	}
-	budget := r.cfg.Exposure.StartBudget
 	if start.StartTokens <= budget && len(start.UnmodeledImports) == 0 {
 		return
 	}
-	path, line := r.exposureLine("start_budget")
+	path, line := r.exposureLine(key)
 	before := len(r.findings)
 	switch {
 	case start.StartTokens > budget:
 		r.add(CodeExposureStartBudget, path, line,
-			"a session started at the repository root loads about %d estimated tokens (%d artifacts), %d past the [exposure] start_budget of %d; run `ai-rulez exposure` for the heaviest artifacts",
-			start.StartTokens, start.StartArtifacts, start.StartTokens-budget, budget)
+			"%s started at the repository root loads about %d estimated tokens (%d artifacts), %d past the [exposure] %s of %d; run `ai-rulez exposure` for the heaviest artifacts",
+			session, start.StartTokens, start.StartArtifacts, start.StartTokens-budget, key, budget)
 	default:
 		r.add(CodeExposureStartBudget, path, line,
-			"the start budget of %d cannot be verified: %s; run `ai-rulez exposure` for the unmodeled import",
-			budget, strings.Join(start.UnmodeledImports, "; "))
+			"%s of %d cannot be verified: %s; run `ai-rulez exposure` for the unmodeled import",
+			label, budget, strings.Join(start.UnmodeledImports, "; "))
 	}
 	r.exposureDeps(before, path, start.StartPaths)
 }

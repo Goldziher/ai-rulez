@@ -2881,7 +2881,7 @@ Describes the areas of a repository (the directories each one claims, its owner 
 session exposure checks. The map is inline or in `areas_file`, not both; `validate` reports a map it cannot use as
 `AR9W5`, area terms in the text a session sees at its start as `AR9W0` and `AR9W1` (accepted with `[[lint.accept]]`),
 and `skill_areas` keys that name no skill as `AR9W6`; `collision_min_score` turns on `AR9W2` for start-listed skills
-and agents of different areas whose listings overlap (the 20 highest pairs, then one finding for the rest). `start_budget` caps the estimated tokens a session loads at
+and agents of different areas whose listings overlap (the 20 highest pairs, then one finding for the rest). `start_budget` (`codex_start_budget` for `harness = "codex"`) caps the estimated tokens a session loads at
 start (`AR9W3`), and `context_window` sizes the skill listing budget `AR964` checks. Without the table nothing
 changes. See
 [Session exposure and areas](exposure.md).
@@ -14188,7 +14188,7 @@ ai-rulez validate --strict --outputs
 | AR9W0 | `exposure-area-term` | error | A term of an area that is not `shared` appears in text a Claude Code session sees at its start: a root `CLAUDE.md` line, an unconditional root rule, a skill or agent listing line, an MCP server name or an enabled plugin key, outside path literals; an artifact of unknown phase counts as start. The message `<kind> "<name>" at session start names term "<term>" of area "<area>"` is a contract for `[[lint.accept]]` `match`. Only reported with an `[exposure]` area map (see [Area term leakage](exposure.md#area-term-leakage)) |
 | AR9W1 | `exposure-area-term-ambiguous` | warning | A skill or agent listed at session start names no term of any area but some ambiguous words; one finding per word, its area every area that uses it joined by `/` (see [Area term leakage](exposure.md#area-term-leakage)) |
 | AR9W2 | `exposure-area-collision` | off | Two skills or agents listed at session start, of different areas (unclassified counts as one), share listing words with a Jaccard index of at least `[exposure] collision_min_score`; setting it turns the rule on at warning, and a `[lint.severity]` entry turns it on at 0.1. The 20 highest pairs are reported on the description line of the pair's first listing, and the rest in one summary finding on the `collision_min_score` line; `ai-rulez exposure collisions` ranks every pair (see [Session exposure and areas](exposure.md#ai-rulez-exposure-collisions)) |
-| AR9W3 | `exposure-start-budget` | off | The estimated tokens a Claude Code session started at the repository root loads before it touches a file (as `ai-rulez exposure` reports them) exceed `[exposure] start_budget`. Setting `start_budget` turns it on at error (see [Session exposure and areas](exposure.md#start-of-session-budgets)) |
+| AR9W3 | `exposure-start-budget` | off | The estimated tokens a session of the `[exposure] harness` (Claude Code by default) started at the repository root loads before it touches a file (as `ai-rulez exposure` reports them) exceed that harness's budget, `[exposure] start_budget` or, for `harness = "codex"`, `codex_start_budget`. Setting the budget turns it on at error (see [Session exposure and areas](exposure.md#start-of-session-budgets)) |
 | AR9W4 | `exposure-gate-unreadable` | warning | A skill, command or rule Claude Code loads has frontmatter that does not parse (AR306) while it names `paths`, `disable-model-invocation` or `user-invocable`, or sets `paths` or `disable-model-invocation` to a value of the wrong type (`paths: 5`, `disable-model-invocation: yes`), so whether it is gated, and when it loads, cannot be known. Needs no `[exposure]` table: reported for the claude preset and for a run without a configuration (see [Session exposure and areas](exposure.md#a-gate-that-cannot-be-read)) |
 | AR9W5 | `exposure-map-invalid` | error | The `[exposure]` table or its area map is invalid: a bad scalar key, a duplicate, reserved or non-kebab area name, a bad path claim, a `skill_areas` value that names no area, an unknown key or unreadable `areas_file`, or both `areas_file` and inline areas. Only reported when the configuration has an `[exposure]` table (see [Session exposure and areas](exposure.md)) |
 | AR9W6 | `exposure-skill-area-unknown` | warning | A `skill_areas` key names no skill of the session inventory (a renamed, moved or deleted skill), on its line in the areas file or the configuration; a skill of a plugin that is not enabled still counts (see [Area term leakage](exposure.md#area-term-leakage)) |
@@ -18186,11 +18186,11 @@ two skills or agents listed at session start, of different areas, overlap in the
 
 ##### AR9W3 exposure-start-budget
 
-the estimated tokens a Claude Code session loads at start exceed [exposure] start_budget (setting it turns the rule on at error)
+the estimated tokens a session of the [exposure] harness (claude by default) loads at start exceed its budget, [exposure] start_budget or, for the codex harness, codex_start_budget (setting it turns the rule on at error)
 
 - Default severity: `off`
 - Analyzer: `exposure` (scope `bundle`)
-- Why: Everything a session loads before it touches a file (the root CLAUDE.md, unconditional rules, the skill and agent listings, MCP server names) is paid for by every session, whatever it works on. A budget turns growth of that surface into a decision instead of drift. The estimate is the one `ai-rulez exposure` reports.
+- Why: Everything a session loads before it touches a file (the root CLAUDE.md, unconditional rules, the skill and agent listings, MCP server names) is paid for by every session, whatever it works on. A budget turns growth of that surface into a decision instead of drift. The estimate and the harness are the ones `ai-rulez exposure` reports.
 - Bad: `[exposure] start_budget = 4000` while the root CLAUDE.md and the skill listing add up to about 5200 estimated tokens
 - Good: Move area-specific guidance into a subdirectory CLAUDE.md or a `paths:`-gated rule, so it loads on demand, or raise start_budget on purpose
 
@@ -18699,8 +18699,9 @@ Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, se
 Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, user-level (`~/.codex`,
 `~/.agents/skills`) and admin (`/etc/codex`) files, the skill policy in `agents/openai.yaml`, and `.codex/skills`
 (the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
-`AR9W3` and the other `validate` rules, and the `inventory`, `areas`, `leakage` and `collisions` subcommands, still read
-the Claude Code inventory: only the start-of-session report honors the harness.
+`AR9W3` follows the harness (see [Start-of-session budgets](#start-of-session-budgets)); the other `validate` rules and
+the `inventory`, `areas`, `leakage` and `collisions` subcommands still read the Claude Code inventory. Codex has no
+marketplace plugins, so `--plugins enabled` or `all` under the codex harness is an error; `--plugins none` is accepted.
 
 #### MCP tool schemas
 
@@ -18716,19 +18717,23 @@ mcp tool schemas (estimated): 2 servers x 400 = 800 tokens, included in the star
 The JSON carries it as `mcp_schemas` (`servers`, `tokens_per_server`, `tokens`) and as an `mcp_schemas` entry of
 `start_tokens_by_kind` (also in the text breakdown), so the breakdown still sums to `start_tokens`. It is off by
 default (0), and then no number changes and both are absent. An explicit `--mcp-server-tokens 0` turns a configured
-estimate off for one run. `AR9W3` counts the same estimate, so `validate` and `exposure` agree on the Claude budget. There is no built-in estimate: measure a server's tool list once and set
-the number.
+estimate off for one run. `AR9W3` counts the same estimate, so `validate` and `exposure` agree on the budget. The
+estimate is also in `tokens_by_phase` for `start`, so that figure equals `start_tokens`. There is no built-in
+estimate: measure a server's tool list once and set the number.
 
 #### Start-of-session budgets
 
 Two checks of `validate` read the start-of-session report, both only with an `[exposure]` table, both computed as
 `ai-rulez exposure` computes them with `[exposure] plugins` and `context_window`:
 
-- **`AR9W3 exposure-start-budget`** reports Claude Code start tokens over `[exposure] start_budget`. It is off while
-  `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same
-  case, so either can gate CI; `exposure --harness codex` exits `2` over `codex_start_budget` the same way, and `AR9W3` does not read it. A start-of-session `@path` import that cannot be modelled (an absolute or `~` path, a
-  path that leaves the root, or an unreadable target) also fails the budget closed: the budget cannot be verified, and
-  both report it rather than staying green.
+- **`AR9W3 exposure-start-budget`** reports start tokens over the budget of the `[exposure] harness`: `start_budget`
+  for Claude Code (the default), `codex_start_budget` for `harness = "codex"`. The inventory is the one that harness
+  loads, and the finding names the harness and the key. It is off while that budget is 0 (the default); setting it
+  turns the rule on at error, so under codex a `start_budget` alone leaves it off. `ai-rulez exposure` exits `2` in
+  the same case (`exposure --harness codex` against `codex_start_budget`), so either can gate CI; `validate` takes the
+  harness from `[exposure] harness` only, not from a flag. A start-of-session `@path` import that cannot be modelled
+  (an absolute or `~` path, a path that leaves the root, or an unreadable target) also fails the budget closed: the
+  budget cannot be verified, and both report it rather than staying green.
 - **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
   reports a start-of-session skill listing over Claude Code's listing budget, with the claude preset configured.
   `[lint.load_budgets] claude-skill-listing-total = N` replaces the computed budget with a fixed one.

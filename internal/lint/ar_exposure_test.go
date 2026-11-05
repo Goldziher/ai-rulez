@@ -389,3 +389,37 @@ func TestExposureStartUnderChanged(t *testing.T) {
 		})
 	}
 }
+
+func TestExposureStartBudget_FollowsTheHarness(t *testing.T) {
+	start := &ExposureStart{ContextWindow: 200000, StartArtifacts: 4, StartTokens: 150, ListingBudgetChars: 8000}
+	tests := []struct {
+		name   string
+		table  string
+		want   int
+		inText []string
+	}{
+		{
+			name: "codex over codex_start_budget", table: "[exposure]\nharness = \"codex\"\ncodex_start_budget = 100\n", want: 1,
+			inText: []string{"a codex session", "50 past the [exposure] codex_start_budget of 100"},
+		},
+		{name: "codex ignores an exceeded claude start_budget", table: "[exposure]\nharness = \"codex\"\nstart_budget = 10\ncodex_start_budget = 200\n", want: 0},
+		{name: "codex without codex_start_budget is off", table: "[exposure]\nharness = \"codex\"\nstart_budget = 10\n", want: 0},
+		{name: "claude ignores codex_start_budget", table: "[exposure]\ncodex_start_budget = 10\n", want: 0},
+		{
+			name: "claude names its key", table: "[exposure]\nstart_budget = 100\ncodex_start_budget = 10\n", want: 1,
+			inText: []string{"50 past the [exposure] start_budget of 100"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs, _ := lintExposure(t, baseConfig, tt.table, start)
+
+			require.Equal(t, tt.want, countCode(fs, CodeExposureStartBudget), dump(fs))
+			for _, f := range findingsWith(fs, CodeExposureStartBudget, "") {
+				for _, w := range tt.inText {
+					assert.Contains(t, f.Message, w)
+				}
+			}
+		})
+	}
+}

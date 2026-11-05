@@ -45,3 +45,14 @@ func TestNewReport_McpSchemasAreInTheByKindBreakdown(t *testing.T) {
 	off := NewReport(mcpInventory(), ReportOptions{ContextWindow: 200000})
 	assert.NotContains(t, off.StartTokensByKind, KindMCPSchemas)
 }
+
+func TestNewReport_McpSchemasAreInTheStartPhaseTokens(t *testing.T) {
+	rep := NewReport(mcpInventory(), ReportOptions{ContextWindow: 200000, McpServerTokens: 300})
+
+	assert.Equal(t, 702, rep.StartTokens)
+	assert.Equal(t, rep.StartTokens, rep.TokensByPhase[PhaseStart])
+	assert.Equal(t, 1, rep.TokensByPhase[PhaseOnDemand])
+
+	off := NewReport(mcpInventory(), ReportOptions{ContextWindow: 200000})
+	assert.Equal(t, off.StartTokens, off.TokensByPhase[PhaseStart])
+}

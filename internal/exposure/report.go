@@ -97,7 +97,7 @@ type Report struct {
 	// path that leaves the root, or an unreadable target). With a start budget
 	// set, any entry fails the budget closed even when StartTokens fits.
 	StartImportsUnmodeled []UnmodeledImport `json:"start_imports_unmodeled"`
-	// TokensByPhase sums the tokens of the phases that have artifacts.
+	// TokensByPhase sums the tokens of the phases that have artifacts; the start phase includes the MCP schema estimate, so it equals StartTokens.
 	TokensByPhase     map[Phase]int `json:"tokens_by_phase"`
 	StartTokensByKind map[Kind]int  `json:"start_tokens_by_kind"`
 	// CountsByPhaseAndKind always holds start, on_demand and manual, and
@@ -175,6 +175,7 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 		rep.McpSchemas = &McpSchemas{Servers: mcpServers, TokensPerServer: opts.McpServerTokens, Tokens: mcpServers * opts.McpServerTokens}
 		rep.StartTokens += rep.McpSchemas.Tokens
 		rep.StartTokensByKind[KindMCPSchemas] = rep.McpSchemas.Tokens
+		rep.TokensByPhase[PhaseStart] += rep.McpSchemas.Tokens
 	}
 	rep.Listing.OverBudgetChars = max(0, rep.Listing.Chars-rep.Listing.BudgetChars)
 	return rep
