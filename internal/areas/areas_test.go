@@ -555,6 +555,8 @@ func TestInvalidAcceptancesAreRejected(t *testing.T) {
 		{"no term", "path = \"a.md\"\nreason = \"r\"\n", "term is empty"},
 		{"no path", "term = \"x\"\nreason = \"r\"\n", "path is empty"},
 		{"outside the root", "term = \"x\"\npath = \"../a.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"dot-dot after a leading slash", "term = \"x\"\npath = \"/../a.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"dot-dot inside the path", "term = \"x\"\npath = \"a/../b.md\"\nreason = \"r\"\n", "repository-relative"},
 		{"malformed glob", "term = \"x\"\npath = \"[a.md\"\nreason = \"r\"\n", "malformed"},
 		{"unknown area", "term = \"x\"\narea = \"nope\"\npath = \"a.md\"\nreason = \"r\"\n", `names no area`},
 		{"unknown key", "term = \"x\"\npath = \"a.md\"\nreason = \"r\"\nwhy = \"r\"\n", `unknown key "accept.why"`},

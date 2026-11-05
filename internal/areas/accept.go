@@ -73,7 +73,7 @@ func normalizeAccepts(accepts []Accept, known map[string]bool) ([]Accept, []Prob
 		switch {
 		case strings.TrimSpace(a.Path) == "":
 			add("path", "accept %d: path is empty; name the file the acceptance covers", i+1)
-		case strings.HasPrefix(strings.TrimPrefix(strings.TrimSpace(a.Path), "./"), "../"):
+		case hasDotDotSegment(a.Path):
 			add("path", "accept %d: path %q must be repository-relative; it leaves the root", i+1, a.Path)
 		default:
 			g, ok := pathglob.New(a.Path)
@@ -88,6 +88,17 @@ func normalizeAccepts(accepts []Accept, known map[string]bool) ([]Accept, []Prob
 		out = append(out, a)
 	}
 	return out, problems
+}
+
+// hasDotDotSegment reports whether a path names a ".." segment, which either leaves the root or never matches
+// a leak path, which is always clean and repository-relative.
+func hasDotDotSegment(p string) bool {
+	for seg := range strings.SplitSeq(strings.TrimSpace(p), "/") {
+		if seg == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 // acceptLine is the 1-based line of the n-th [[accept]] table's header in the lines of an areas file, or of the
