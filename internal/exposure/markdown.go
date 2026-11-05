@@ -140,6 +140,12 @@ type header struct {
 
 // markdownArtifact builds a CLAUDE.md, rule, skill or agent from its text.
 func markdownArtifact(kind Kind, source Source, file, scope, fallback, text string) Artifact {
+	return markdownArtifactCapped(kind, source, file, scope, fallback, text, listingCap())
+}
+
+// markdownArtifactCapped is markdownArtifact with the per-skill description cap
+// in characters; a cap of 0 or less keeps the whole description.
+func markdownArtifactCapped(kind Kind, source Source, file, scope, fallback, text string, descCap int) Artifact {
 	block := frontmatter.SplitString(text)
 	h, err := decodeHeader(block)
 	a := Artifact{Kind: kind, Source: source, Path: file, Scope: scope, Paths: h.paths, Frontmatter: &FrontmatterStatus{OK: err == nil}}
@@ -154,8 +160,8 @@ func markdownArtifact(kind Kind, source Source, file, scope, fallback, text stri
 	switch kind {
 	case KindSkill, KindAgent:
 		desc := listingDescription(h)
-		if kind == KindSkill {
-			desc, a.Truncated = capRunes(desc, listingCap())
+		if kind == KindSkill && descCap > 0 {
+			desc, a.Truncated = capRunes(desc, descCap)
 		}
 		a.ListingText = a.Name + listingSep + desc
 		a.Text = a.ListingText

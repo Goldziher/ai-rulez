@@ -780,6 +780,11 @@
           "minLength": 1,
           "type": "string"
         },
+        "codex_start_budget": {
+          "description": "start_budget for the codex harness (exposure --harness codex); 0 (default) turns the check off.",
+          "minimum": 0,
+          "type": "integer"
+        },
         "collision_min_score": {
           "description": "Word overlap at which two start-listed skills or agents of different areas collide; 0 (default) turns the check off.",
           "maximum": 1,
@@ -792,8 +797,8 @@
           "type": "integer"
         },
         "harness": {
-          "description": "Harness whose load model applies (default claude, the only one).",
-          "enum": ["claude"],
+          "description": "Harness whose load model applies (default claude).",
+          "enum": ["claude", "codex"],
           "type": "string"
         },
         "plugins": {

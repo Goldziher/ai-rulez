@@ -2892,6 +2892,7 @@ areas_file = "tools/context/areas.toml"   # [[area]] tables and [skill_areas], r
 collision_min_score = 0.2                 # AR9W2 at warning; 0 (default) is off
 context_window = 200000                   # tokens; the skill listing budget is 1% of it at 4 characters per token
 start_budget = 6000                       # AR9W3 above 6000 estimated start tokens; 0 (default) is off
+codex_start_budget = 6500                 # the same for `exposure --harness codex`; 0 (default) is off
 ```
 
 ##### `header`
@@ -18256,11 +18257,12 @@ rule on this page has any effect except `AR9W4`, which needs none; the commands 
 
 ```toml
 [exposure]
-harness = "claude"                 # only "claude"
+harness = "claude"                 # claude (default) or codex: the load model `exposure` applies
 context_window = 200000            # tokens (default 200000)
 plugins = "enabled"                # none | enabled (default) | all: plugin skills counted at start
 areas_file = "tools/context/areas.toml"   # optional: the map in its own file
 start_budget = 0                   # most estimated start tokens; 0 (default) is off
+codex_start_budget = 0             # the same for --harness codex; 0 (default) is off
 collision_min_score = 0            # AR9W2 word overlap between areas; 0 (default) is off
 
 [[exposure.areas]]
@@ -18280,6 +18282,8 @@ deploy-staging = "platform"
 Every key is optional. `plugins`, `context_window` and `start_budget` are read by `ai-rulez exposure` and by
 `validate` (see [Start-of-session budgets](#start-of-session-budgets)); `collision_min_score` turns on `AR9W2` and is
 the default `--min-score` of `exposure collisions`; `plugins` is also the default `--plugins` of the subcommands.
+`codex_start_budget` is `start_budget` for the codex harness, so one repository can gate both (`start_budget = 5350`,
+`codex_start_budget = 5800`).
 `declare` is read by context evals, which arrive in a later release, and is validated now so a table written today
 keeps working.
 
@@ -18394,7 +18398,7 @@ cannot be found names `[exposure]`), `2` (`exposure` only) the start tokens exce
 | `--areas FILE` | all | Area map file to use instead of the `[exposure]` table |
 | `--root DIR` | all | Directory to inspect, as a session started there sees it; default the project root, else the working directory |
 | `--context-window N` | `exposure` | Model context window in tokens, for the skill listing budget; default `[exposure] context_window`, else 200000 |
-| `--harness claude` | `exposure` | Harness whose load model applies; only `claude` |
+| `--harness claude\|codex` | `exposure` | Harness whose load model applies; default `[exposure] harness`, else `claude`. `codex` budgets against `[exposure] codex_start_budget` |
 | `--with-text` | `inventory` | Include each artifact's text in the JSON (`--format json` only; with text output it is an error) |
 | `--min-score N` | `collisions` | Lowest score reported, 0 to 1; default `[exposure] collision_min_score` when set, else 0.1 |
 | `--limit N` | `collisions` | Pairs printed, highest score first (default 20); 0 prints every pair |
@@ -18669,14 +18673,39 @@ as the string `"yes"`: `validate` reports the value as `AR304` (not a boolean) a
 inventory` gives a root skill the phase `unknown` with the frontmatter error `"disable-model-invocation" is not a
 boolean`. Write `true` and `false`, which every reader agrees on.
 
+#### The codex harness
+
+`ai-rulez exposure --harness codex` (or `[exposure] harness = "codex"`) applies Codex's load model instead of Claude
+Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, settings, `@path` import, plugin or
+`.mcp.json`. What it reads, for a session started at the repository root:
+
+- **`AGENTS.md`** (kind `agents_md`). Codex starts at the project root and walks down to the working directory, includes
+  at most one file per directory, and checks `AGENTS.override.md` before `AGENTS.md`; an `AGENTS.md` beside an override
+  is left out. The root file is in context at start, one in a subdirectory waits (phase `on_demand`). The combined size
+  is capped at 32 KiB (`project_doc_max_bytes`), so a root file past it counts only those bytes and is marked
+  `truncated`. Sources: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+- **Skills** from `.agents/skills/<name>/SKILL.md` (kind `skill`), the repository location the skills page names. The
+  start list holds each skill's name, description and file path (the path is part of the counted listing line); no
+  `paths:` or `disable-model-invocation` gate applies and the description is not cut at Claude's 1536-character cap.
+  The listing budget is 2% of the context window, at 4 characters per token (the conversion is an assumption, as for
+  Claude). Sources: [Skills](https://learn.chatgpt.com/docs/build-skills).
+- **MCP servers** from the `[mcp_servers.<name>]` tables of `.codex/config.toml`, except a server with
+  `enabled = false`. Source: [MCP](https://learn.chatgpt.com/docs/extend/mcp).
+
+Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, user-level (`~/.codex`,
+`~/.agents/skills`) and admin (`/etc/codex`) files, the skill policy in `agents/openai.yaml`, and `.codex/skills`
+(the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
+`AR9W3` and the other `validate` rules, and the `leakage` and `collisions` subcommands, still read the Claude Code
+inventory.
+
 #### Start-of-session budgets
 
 Two checks of `validate` read the start-of-session report, both only with an `[exposure]` table, both computed as
 `ai-rulez exposure` computes them with `[exposure] plugins` and `context_window`:
 
-- **`AR9W3 exposure-start-budget`** reports start tokens over `[exposure] start_budget`. It is off while
+- **`AR9W3 exposure-start-budget`** reports Claude Code start tokens over `[exposure] start_budget`. It is off while
   `start_budget` is 0 (the default); setting it turns the rule on at error. `ai-rulez exposure` exits `2` in the same
-  case, so either can gate CI. A start-of-session `@path` import that cannot be modelled (an absolute or `~` path, a
+  case, so either can gate CI; `exposure --harness codex` exits `2` over `codex_start_budget` the same way, and `AR9W3` does not read it. A start-of-session `@path` import that cannot be modelled (an absolute or `~` path, a
   path that leaves the root, or an unreadable target) also fails the budget closed: the budget cannot be verified, and
   both report it rather than staying green.
 - **`AR964 load-budget-exceeded`**, row `claude-skill-listing-total` (warning past the budget, info from 90% of it),
@@ -33221,7 +33250,7 @@ ai-rulez exposure leakage --format json
 | `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
 | `--context-window` | int | `0` | Model context window in tokens, for the skill listing budget (default: [exposure] context_window, else 200000) |
 | `--format` | string | `text` | Output format: text, json |
-| `--harness` | string | `claude` | Harness whose load model applies; only claude |
+| `--harness` | string |  | Harness whose load model applies: claude or codex (default: [exposure] harness, else claude) |
 | `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
 | `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
 

@@ -1,6 +1,10 @@
 package exposure
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
+)
 
 // SchemaReport is the schema_version of a Report, whose JSON is described by
 // schema/exposure-report.v1.schema.json.
@@ -17,6 +21,16 @@ const (
 // with a contextWindow-token window: 8000 at 200000.
 func ListingBudgetChars(contextWindow int) int {
 	return contextWindow * ListingCharsPerToken * ListingBudgetPercent / 100
+}
+
+// ListingBudgetCharsFor is the character budget of the skill listing of a
+// harness: Claude Code's 1% of the window, Codex's 2% (harnesslimits
+// codex.skill_listing_percent), both at 4 characters per token.
+func ListingBudgetCharsFor(harness string, contextWindow int) int {
+	if harness == HarnessCodex {
+		return contextWindow * ListingCharsPerToken * harnesslimits.MustValue("codex.skill_listing_percent") / 100
+	}
+	return ListingBudgetChars(contextWindow)
 }
 
 // ListingBudget is the skill listing of a session against Claude Code's budget.
@@ -106,7 +120,7 @@ func NewReport(inv *Inventory, opts ReportOptions) *Report {
 		Root:                  inv.Root,
 		Plugins:               inv.Plugins,
 		StartBudget:           opts.StartBudget,
-		Listing:               ListingBudget{ContextWindow: opts.ContextWindow, BudgetChars: ListingBudgetChars(opts.ContextWindow)},
+		Listing:               ListingBudget{ContextWindow: opts.ContextWindow, BudgetChars: ListingBudgetCharsFor(inv.Harness, opts.ContextWindow)},
 		TokensByPhase:         map[Phase]int{},
 		StartTokensByKind:     map[Kind]int{},
 		CountsByPhaseAndKind:  map[Phase]map[Kind]int{PhaseStart: {}, PhaseOnDemand: {}, PhaseManual: {}},

@@ -19,7 +19,7 @@ type Limit struct {
 	ID           string `toml:"id"`
 	Harness      string `toml:"harness"`
 	Subject      string `toml:"subject"`
-	Unit         string `toml:"unit"`     // chars or bytes
+	Unit         string `toml:"unit"`     // chars, bytes or percent (of the context window)
 	Value        int    `toml:"value"`    // the documented limit
 	Behavior     string `toml:"behavior"` // truncated | dropped | ignored | error
 	Source       string `toml:"source"`
