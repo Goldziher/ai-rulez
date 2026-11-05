@@ -59,6 +59,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -88,8 +89,14 @@ func EstimateTokens(n int) int {
 	return (n*10 + 38) / 39
 }
 
-// HarnessClaude is the only harness the load model describes.
-const HarnessClaude = "claude"
+// The harnesses the load model describes.
+const (
+	HarnessClaude = "claude"
+	HarnessCodex  = "codex"
+)
+
+// Harnesses lists the harnesses of the load model.
+func Harnesses() []string { return []string{HarnessClaude, HarnessCodex} }
 
 // RootScope is the scope of the repository root, as in internal/repoindex.
 const RootScope = repoindex.RootScope
@@ -100,6 +107,7 @@ type Kind string
 // The artifact kinds.
 const (
 	KindClaudeMD  Kind = "claude_md"
+	KindAgentsMD  Kind = "agents_md"
 	KindRule      Kind = "rule"
 	KindSkill     Kind = "skill"
 	KindAgent     Kind = "agent"
@@ -281,6 +289,8 @@ type Options struct {
 	// Files, when set, is the file listing (slash separated, relative to Root)
 	// instead of repoindex.ListFiles.
 	Files []string
+	// Harness is the harness whose load model applies; empty is HarnessClaude.
+	Harness string
 	// Plugins selects the marketplace plugins whose skills are listed; empty is
 	// PluginsEnabled.
 	Plugins PluginMode
@@ -304,29 +314,29 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "build the exposure inventory: resolve the repository root")
 	}
-	mode := opts.Plugins
-	if mode == "" {
-		mode = PluginsEnabled
+	harness, mode, err := harnessAndMode(opts)
+	if err != nil {
+		return nil, err
 	}
-	if !mode.Valid() {
-		return nil, oops.Errorf("build the exposure inventory: unknown plugin mode %q (use none, enabled or all)", mode)
-	}
+	codex := harness == HarnessCodex
 	files, capped := opts.Files, false
 	if files == nil {
 		files, capped = repoindex.ListFilesCapped(ctx, root)
-		files = withNativeArtifacts(root, files)
+		if codex {
+			files = withCodexArtifacts(root, files)
+		} else {
+			files = withNativeArtifacts(root, files)
+		}
 	}
-	files = withRootSettings(root, files)
-	b := &builder{root: root, absRoot: filepath.ToSlash(root), realRoot: realPath(root), files: files}
+	if !codex {
+		files = withRootSettings(root, files)
+	}
+	b := &builder{root: root, absRoot: filepath.ToSlash(root), realRoot: realPath(root), files: files, harness: harness}
 	if capped {
 		b.problems = append(b.problems, Problem{Path: ".", Error: fmt.Sprintf("the file walk stopped after %d files; artifacts past them are not counted", len(files))})
 	}
-	b.readSettings()
-	for _, file := range walkOrder(files) {
-		b.collect(file)
-	}
+	catalog := b.collectAll(codex)
 	repo := b.applySettings()
-	catalog := b.catalog()
 	plugins := b.pluginSkills(catalog.selected(mode, opts.Requested))
 	all := make([]Artifact, 0, len(repo)+len(plugins))
 	all = append(append(all, repo...), plugins...)
@@ -335,10 +345,13 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 	}
 	for i := range all {
 		b.resolveImports(&all[i])
+		if codex {
+			capCodexInstructions(&all[i])
+		}
 	}
 	return &Inventory{
 		SchemaVersion: SchemaInventory,
-		Harness:       HarnessClaude,
+		Harness:       harness,
 		Root:          b.absRoot,
 		Settings:      b.rootSettings.summary(),
 		Plugins:       catalog.summary(mode, opts.Requested),
@@ -346,6 +359,29 @@ func Build(ctx context.Context, opts Options) (*Inventory, error) {
 		Problems:      append([]Problem{}, b.problems...),
 		areaPrefix:    areaPrefix(opts.AreaBase, root),
 	}, nil
+}
+
+// harnessAndMode resolves the harness and the plugin mode of the options; the
+// marketplace is Claude Code's, so Codex lists none.
+func harnessAndMode(opts Options) (string, PluginMode, error) {
+	harness := opts.Harness
+	if harness == "" {
+		harness = HarnessClaude
+	}
+	if !slices.Contains(Harnesses(), harness) {
+		return "", "", oops.Errorf("build the exposure inventory: unknown harness %q (use claude or codex)", harness)
+	}
+	mode := opts.Plugins
+	if harness == HarnessCodex {
+		mode = PluginsNone
+	}
+	if mode == "" {
+		mode = PluginsEnabled
+	}
+	if !mode.Valid() {
+		return "", "", oops.Errorf("build the exposure inventory: unknown plugin mode %q (use none, enabled or all)", mode)
+	}
+	return harness, mode, nil
 }
 
 // areaPrefix is the path of root below base, slash separated; "" when base is
@@ -419,6 +455,8 @@ func (inv *Inventory) WithoutText() *Inventory {
 // builder holds the state of one Build.
 type builder struct {
 	root, absRoot string
+	harness       string
+	fileSet       map[string]bool
 	// realRoot is the root with its symlinks resolved, which a symlinked file's
 	// target must lie below.
 	realRoot string
@@ -652,4 +690,26 @@ func walkLess(a, b string) bool {
 		return as[i] < bs[i]
 	}
 	return len(as) < len(bs)
+}
+
+// collectAll reads the settings and every listed file under the harness's load
+// model, and returns the plugin marketplace (empty for Codex).
+func (b *builder) collectAll(codex bool) catalog {
+	if codex {
+		b.settings = map[string]*settingsFile{}
+		b.rootSettings = mergedSettings{overrides: map[string]string{}, enabled: map[string]bool{}}
+	} else {
+		b.readSettings()
+	}
+	for _, file := range walkOrder(b.files) {
+		if codex {
+			b.collectCodex(file)
+		} else {
+			b.collect(file)
+		}
+	}
+	if codex {
+		return catalog{enabled: map[string]bool{}}
+	}
+	return b.catalog()
 }

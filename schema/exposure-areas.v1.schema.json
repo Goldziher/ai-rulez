@@ -62,7 +62,7 @@
         ],
         "additionalProperties": false,
         "properties": {
-          "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
+          "kind": { "enum": ["claude_md", "agents_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
           "source": { "enum": ["file", "command", "plugin"] },
           "name": { "type": "string" },
           "qualified_name": { "type": "string" },

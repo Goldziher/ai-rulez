@@ -8,7 +8,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": 1 },
-    "harness": { "const": "claude" },
+    "harness": { "enum": ["claude", "codex"] },
     "root": { "type": "string", "description": "The absolute repository root, slash separated." },
     "settings": {
       "type": "object",
@@ -83,7 +83,7 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
+        "kind": { "enum": ["claude_md", "agents_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
         "source": { "enum": ["file", "command", "plugin"] },
         "name": { "type": "string" },
         "qualified_name": { "type": "string", "description": "plugin:skill for a plugin skill, the name otherwise." },

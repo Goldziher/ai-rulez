@@ -8,6 +8,7 @@ func TestTableLoadsAndKnownRowsHaveTheirValues(t *testing.T) {
 		"claude.skill_listing_chars":       1536,
 		"claude.skill_listing_total_chars": 8000,
 		"codex.agents_md_chain_bytes":      32768,
+		"codex.skill_listing_percent":      2,
 		"devin.rule_file_chars":            12000,
 		"antigravity.rule_file_bytes":      24000,
 	}

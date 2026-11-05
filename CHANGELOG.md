@@ -6,6 +6,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`exposure` supports the Codex harness.** `ai-rulez exposure --harness codex` (or `[exposure] harness = "codex"`)
+  models Codex's start context instead of Claude Code's: the root `AGENTS.md` or `AGENTS.override.md` (one file per
+  directory, override first, capped at the 32 KiB `project_doc_max_bytes`), the `.agents/skills` listing with each
+  skill's path against Codex's 2% listing budget, and the MCP servers of `.codex/config.toml`. Claude-specific
+  artifacts do not count. The budget is its own key, `[exposure] codex_start_budget`, so one repository can gate both
+  harnesses ([#538](https://github.com/Goldziher/ai-rulez/issues/538)).
+
 ### Changed
 
 - Python 3.11 is now the minimum supported version; Python 3.10 reached end of life.
