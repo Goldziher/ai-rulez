@@ -18300,6 +18300,16 @@ paths = ["infra", "tools"]
 shared = true
 terms = ["terraform"]
 
+[[area]]
+name = "xberg"
+terms = ["xberg"]
+exclude = ["xberg-io"]             # the org name contains the term and does not name the area
+
+[[accept]]                         # a known, accepted occurrence at session start (areas file only)
+term = "xberg"
+path = "docs/overview.md"          # a path, a glob, or "dir/**"
+reason = "the overview names the product"
+
 [skill_areas]
 deploy-staging = "platform"
 ```
@@ -18320,9 +18330,22 @@ A key the file does not define is an error, not ignored, so a misspelled key is 
   of several areas.
 - **`ambiguous`** are words the area uses in its own sense that other areas also use (`account`, `query`). They never
   decide an area on their own. A word that is both a term and ambiguous in one area is a term.
+- **`exclude`** are compound names that contain a term and do not name the area: with `terms = ["xberg"]`,
+  `exclude = ["xberg-io"]` keeps the org name `xberg-io` from counting while a bare `xberg` still does. An occurrence
+  of an excluded name is ignored, case-insensitively, for that area only, in classification and in leakage. Each
+  entry must contain a term or ambiguous word of the area, or the map is invalid. Available inline and in the file.
 - **`shared`** marks repository-wide tooling (a build system, CI): its terms still classify artifacts, but naming
   them at session start is not leakage.
 - **`owner`** and **`description`** are reported as they are.
+
+An areas file may also hold `[[accept]]` tables, each recording one known occurrence of an area word at session
+start: `term` (the word, case-insensitive), `path` (the file the leak is reported in: an exact path, a glob such as
+`docs/*.md`, or `dir/**` for everything below), `reason` (required, not blank) and optionally `area` (only the words
+of that area). A leak an entry covers is not a violation: `exposure leakage` lists it as `accepted` with the reason,
+and `validate` reports the finding as accepted. An entry that covers no leak is stale: it is reported as `AR9I0` on its
+line in the areas file and fails `exposure leakage`, like a stale `[[lint.accept]]`. An inventory below the project
+root (`exposure leakage --root`) does not judge them. Acceptances are not part of the inline form; use
+`[[lint.accept]]` there.
 
 #### Matching terms
 

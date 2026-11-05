@@ -4228,6 +4228,11 @@
           "items": { "type": "string" },
           "description": "Words the area uses in its own sense that other areas use too; a word in terms wins."
         },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Compound names that contain a term and do not name the area (an org xberg-io against the term xberg); an occurrence is ignored, case-insensitively. Each must contain a term or ambiguous word of the area."
+        },
         "shared": {
           "type": "boolean",
           "description": "Repository-wide tooling: the terms classify artifacts but never count as leakage (default false)."

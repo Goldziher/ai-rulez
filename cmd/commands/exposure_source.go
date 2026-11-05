@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/exposure"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
@@ -151,13 +152,18 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	}
 	start := inv.Start()
 	out := lint.ExposureLeakage{Checked: len(start), AreasFile: file}
-	leaks := exposure.Leaks(start, m)
+	leaks, stale := exposure.CheckLeaks(start, m)
 	for i := range leaks {
 		l := &leaks[i]
 		out.Leaks = append(out.Leaks, lint.ExposureLeak{
 			Ambiguous: l.Severity == exposure.LeakWarning, Area: l.Area, Term: l.Term, Kind: string(l.Kind), Name: l.Name,
-			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(),
+			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(), AcceptReason: l.Reason,
 		})
+	}
+	if s.judgesAcceptances() {
+		for _, a := range stale {
+			out.StaleAccepts = append(out.StaleAccepts, lint.ExposureStaleAccept{Index: a.Index, Term: a.Term, Path: a.Path, Line: a.Line})
+		}
 	}
 	for _, u := range exposure.UncheckedArtifacts(start) {
 		out.Unchecked = append(out.Unchecked, lint.ExposureUnchecked{Path: u.Path, Kind: string(u.Kind), Name: u.Name, Reason: u.Reason})
@@ -173,6 +179,18 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 		out.UnknownSkills = append(out.UnknownSkills, lint.ExposureSkillArea{Skill: key, Area: skillAreas[key]})
 	}
 	return out, true
+}
+
+// judgesAcceptances reports whether the inventory covers the project root. The paths of the acceptances of an
+// areas file are relative to it, so one that accepts nothing in an inventory of a subdirectory (--root) says
+// nothing.
+func (s exposureLintSource) judgesAcceptances() bool {
+	root, err := s.inventoryRoot()
+	if err != nil {
+		return false
+	}
+	base, err := s.base()
+	return err == nil && gitutil.Resolve(root) == gitutil.Resolve(base)
 }
 
 // Inputs implements lint.ExposureSource: the absolute paths of the files besides the artifacts that decide

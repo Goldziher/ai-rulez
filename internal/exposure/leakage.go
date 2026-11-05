@@ -125,30 +125,50 @@ func StartInputs() []string {
 //
 // A nil map finds nothing.
 func Leaks(start []Artifact, m *areas.Map) []Leak {
+	leaks, _ := CheckLeaks(start, m)
+	return leaks
+}
+
+// CheckLeaks is Leaks with the recorded acceptances of the area map applied: a leak an [[accept]] entry covers
+// stays in the result with the entry's reason in Reason. stale are the entries that accepted nothing.
+//
+// The text of each file a start-of-session CLAUDE.md or rule imports with `@path` is scanned as the text the
+// session loads, on the lines of the imported file and reported against its path, once per file; a file that is
+// itself a start-of-session artifact is scanned as that artifact.
+func CheckLeaks(start []Artifact, m *areas.Map) (leaks []Leak, stale []areas.Accept) {
 	if m == nil {
-		return nil
+		return nil, nil
 	}
 	artifacts := map[string]bool{}
 	for i := range start {
 		artifacts[start[i].Path] = true
 	}
 	scanned := map[string]bool{}
-	var out []Leak
 	for i := range start {
 		a := &start[i]
-		out = append(out, violations(a, m)...)
-		// The text of a file a CLAUDE.md or rule imports loads with it: scanned on its own lines and
-		// reported against its path, once per file; an imported start artifact is scanned as itself.
+		leaks = append(leaks, violations(a, m)...)
 		for _, im := range a.Imports {
 			if im.Text == "" || artifacts[im.Path] || scanned[im.Path] {
 				continue
 			}
 			scanned[im.Path] = true
-			out = append(out, importViolations(a, &im, m)...)
+			leaks = append(leaks, importViolations(a, &im, m)...)
 		}
-		out = append(out, warnings(a, m)...)
+		leaks = append(leaks, warnings(a, m)...)
 	}
-	return out
+	used := map[int]bool{}
+	for i := range leaks {
+		if acc, ok := m.Accepting(leaks[i].Area, leaks[i].Term, leaks[i].Path); ok {
+			leaks[i].Reason = acc.Reason
+			used[acc.Index] = true
+		}
+	}
+	for _, acc := range m.Accepts() {
+		if !used[acc.Index] {
+			stale = append(stale, acc)
+		}
+	}
+	return leaks, stale
 }
 
 func violations(a *Artifact, m *areas.Map) []Leak {

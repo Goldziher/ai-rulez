@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- An `[exposure]` area gains `exclude`, compound names that contain one of its terms without naming the area (an
+  org `xberg-io` against the term `xberg`). An areas file gains `[[accept]]` tables (`term`, `path`, `reason`,
+  optional `area`) that record known occurrences at session start; an entry that accepts nothing is reported as
+  `AR9I0` and fails `exposure leakage`. (#537)
+
 ### Fixed
 
 - `exposure leakage` and `AR9W0` scan the text of files a `CLAUDE.md` or rule imports with `@path`, as the start

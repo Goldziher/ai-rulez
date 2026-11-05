@@ -450,3 +450,123 @@ func TestSkillLine(t *testing.T) {
 		})
 	}
 }
+
+func TestExcludedCompoundsDoNotMatchTheirTerm(t *testing.T) {
+	// Arrange: `xberg` names an area, but the org name `xberg-io` contains it.
+	m, problems := New([]config.ExposureArea{
+		{Name: "xberg", Terms: []string{"xberg"}, Exclude: []string{"XBerg-IO"}},
+		{Name: "other", Terms: []string{"xberg-io"}},
+	}, nil)
+	require.Empty(t, problems)
+
+	tests := []struct {
+		name, text string
+		want       []string
+	}{
+		{"the compound alone", "see github.com/xberg-io/repo", []string{"other/xberg-io"}},
+		{"the compound in other case", "the Xberg-IO org", []string{"other/xberg-io"}},
+		{"the compound and the bare term", "xberg-io hosts xberg", []string{"xberg/xberg", "other/xberg-io"}},
+		{"the bare term", "run xberg now", []string{"xberg/xberg"}},
+		{"no match at all", "nothing here", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			for _, f := range m.Find(tt.text) {
+				got = append(got, f.Area+"/"+f.Term)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+	area, ok := m.Area("xberg")
+	require.True(t, ok)
+	assert.Equal(t, []string{"xberg-io"}, area.Exclude)
+}
+
+func TestExcludeThatNamesNoTermIsRejected(t *testing.T) {
+	m, problems := New([]config.ExposureArea{{Name: "a", Terms: []string{"foo"}, Exclude: []string{"bar-io"}}}, nil)
+	assert.Nil(t, m)
+	require.Len(t, problems, 1)
+	assert.Contains(t, problems[0].Message, `exclude "bar-io" contains none of the terms or ambiguous words`)
+}
+
+const acceptFile = `
+[[area]]
+name = "xberg"
+terms = ["xberg"]
+
+[[accept]]
+term = "XBerg"
+path = "docs/*.md"
+reason = "the product name in docs"
+
+[[accept]]
+term = "xberg"
+area = "xberg"
+path = "CLAUDE.md"
+reason = "root note"
+`
+
+func TestLoadFileReadsAcceptances(t *testing.T) {
+	path := writeFile(t, t.TempDir(), "areas.toml", acceptFile)
+
+	m, problems := LoadFile(path)
+
+	require.Empty(t, problems)
+	got := m.Accepts()
+	require.Len(t, got, 2)
+	assert.Equal(t, Accept{Term: "xberg", Path: "docs/*.md", Reason: "the product name in docs", Index: 0, Line: 6}, got[0])
+	assert.Equal(t, 11, got[1].Line)
+	assert.Equal(t, 1, got[1].Index)
+}
+
+func TestAcceptingMatchesTermAreaAndPath(t *testing.T) {
+	m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", acceptFile))
+	require.Empty(t, problems)
+
+	tests := []struct {
+		name, area, term, path string
+		want                   int
+	}{
+		{"glob path, term case-insensitive", "xberg", "XBERG", "docs/a.md", 0},
+		{"exact path with area", "xberg", "xberg", "CLAUDE.md", 1},
+		{"another path", "xberg", "xberg", "README.md", -1},
+		{"another term", "xberg", "other", "CLAUDE.md", -1},
+		{"another area", "billing", "xberg", "CLAUDE.md", -1},
+		{"a joined warning area names it", "billing/xberg", "xberg", "CLAUDE.md", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, ok := m.Accepting(tt.area, tt.term, tt.path)
+			assert.Equal(t, tt.want >= 0, ok)
+			if ok {
+				assert.Equal(t, tt.want, a.Index)
+			}
+		})
+	}
+}
+
+func TestInvalidAcceptancesAreRejected(t *testing.T) {
+	tests := []struct {
+		name, entry, want string
+	}{
+		{"no reason", "term = \"x\"\npath = \"a.md\"\n", "reason is required"},
+		{"blank reason", "term = \"x\"\npath = \"a.md\"\nreason = \"  \"\n", "reason is required"},
+		{"no term", "path = \"a.md\"\nreason = \"r\"\n", "term is empty"},
+		{"no path", "term = \"x\"\nreason = \"r\"\n", "path is empty"},
+		{"absolute path", "term = \"x\"\npath = \"/a.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"malformed glob", "term = \"x\"\npath = \"[a.md\"\nreason = \"r\"\n", "malformed"},
+		{"unknown area", "term = \"x\"\narea = \"nope\"\npath = \"a.md\"\nreason = \"r\"\n", `names no area`},
+		{"unknown key", "term = \"x\"\npath = \"a.md\"\nreason = \"r\"\nwhy = \"r\"\n", `unknown key "accept.why"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := "[[area]]\nname = \"a\"\nterms = [\"x\"]\n\n\n[[accept]]\n" + tt.entry
+			m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", body))
+			assert.Nil(t, m)
+			require.NotEmpty(t, problems)
+			assert.Contains(t, problems[0].Message, tt.want)
+			assert.Positive(t, problems[0].Line)
+		})
+	}
+}
