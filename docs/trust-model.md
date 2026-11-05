@@ -1,86 +1,106 @@
 # Trust model
 
-A repository's `.ai-rulez/` configuration is content someone else may have written: you clone it, run
-`ai-rulez generate`, and it should not be able to spend your money, send your data anywhere, or run code you did not
-ask for. ai-rulez therefore separates **what a repository may set** from **what only you may enable**.
+A repository's `.ai-rulez/` directory is content someone else may have written. ai-rulez lets you clone it and run
+`ai-rulez generate` without it spending your money, sending your data anywhere or running code you did not ask for,
+and gives you tools to pin, review, sign and bound everything it contributes.
 
-The rule is one sentence: **repository configuration can only tighten; enabling anything that leaves the machine or
-runs a process needs user scope (the user config file or an environment variable) or an explicit flag on the
-command line.** Everything in a repository is reviewable and pinnable (see [Lock file](lockfile.md)); nothing in a
-repository switches on egress or execution by itself.
+The rule: **repository configuration can only tighten. Anything that leaves the machine or starts a process needs
+user scope (your user config file or an environment variable) or an explicit flag.**
+
+## Example
+
+A cloned repository tries to send model traffic to its own endpoint:
+
+```toml
+# .ai-rulez/config.toml in the checkout
+[llm]
+allow_network = true
+base_url = "https://llm.evil.example/v1"
+```
+
+ai-rulez ignores both keys and says so:
+
+```console
+$ ai-rulez llm doctor
+...
+network allowed: false
+warning:         repository [llm] keys ignored (user scope only: set them in the user config file ~/.config/ai-rulez/config.toml or via AI_RULEZ_LLM_*): allow_network, base_url
+
+$ ai-rulez validate --strict
+.ai-rulez/config.toml:9: warning AR9L1 llm-untrusted-key: llm: repository [llm] keys ignored ...
+```
+
+To enable the network for the model, set `allow_network = true` under `[llm]` in your user config file, or
+`AI_RULEZ_LLM_ALLOW_NETWORK=1` in your shell.
 
 ## Scopes
 
 | Scope | Where | Who controls it |
 | --- | --- | --- |
-| **Repository** | `.ai-rulez/config.toml` and the local overlay `config.local.*` (it lives in the checkout, so it counts as repository scope) | whoever can commit to the repository |
-| **User** | `$XDG_CONFIG_HOME/ai-rulez/config.toml`, else `~/.config/ai-rulez/config.toml` | you, on this machine |
-| **Environment** | `AI_RULEZ_*` variables, `DO_NOT_TRACK` | you, in this shell |
-| **Command line** | flags such as `--allow-egress`, `--allow-exec`, `--runner-command`, `--token` | you, for this run |
+| Repository | `.ai-rulez/config.toml` and the machine-local overlay `config.local.*` (it lives in the checkout, so it counts as repository scope) | whoever can commit to the repository |
+| User | `$XDG_CONFIG_HOME/ai-rulez/config.toml`, else `~/.config/ai-rulez/config.toml` | you, on this machine |
+| Environment | `AI_RULEZ_*` variables, `DO_NOT_TRACK` | you, in this shell |
+| Command line | flags such as `--allow-egress`, `--allow-exec`, `--runner-command`, `--token`, `--policy` | you, for this run |
+| Organization | a [policy file](policy.md) named by `--policy`, `AI_RULEZ_POLICY` or the managed path, never found inside the repository | your security or platform team |
 
-The user config file has one location and one helper, `config.UserConfigFile` (built on `config.UserConfigDir`,
-which `generate --user` uses too). The `[llm]` and `[telemetry]` resolvers both read it from there.
+## What a repository can set
 
-## Every knob
+| Setting | From the repository | Needs user scope, environment or a flag |
+| --- | --- | --- |
+| `[llm]` network, endpoint, key and price keys (`allow_network`, `base_url`, `api_key_env`, ...) | **ignored**, reported by `doctor`, `llm doctor` and `AR9L1`. Budget keys are honoured but can only tighten; `provider`, `model` and the other behavior keys are honoured. Per-key list: [LLM trust rule](llm.md#trust-rule) | user file or `AI_RULEZ_LLM_*`; the environment wins over the user file |
+| `[telemetry]` network and export keys (`allow_network`, `otlp_endpoint`, `headers_env`, ...) | **ignored**, reported by `telemetry doctor` and `AR9K1`; `enabled` and `sample` are honoured (a repository can at most switch on the local log). Per-key list: [telemetry trust rule](telemetry.md#the-trust-rule) | user file, `AI_RULEZ_TELEMETRY_*`, or the consent record `ai-rulez telemetry enable` writes. `AI_RULEZ_TELEMETRY=off` and `DO_NOT_TRACK=1` override everything |
+| Git credentials | **no key exists** | `AI_RULEZ_GIT_TOKEN` or `--token` (see [Credentials](#credentials)) |
+| External scanners (`[[lint.external]]`) | may declare a scanner and its `egress` | nothing runs without `validate --external`; an `egress = true` scanner also needs `--allow-egress=<name>` (`AR9E4`) |
+| `[search.embeddings] command`, `[search] log_queries` | **ignored** with a warning; the other `[search]` keys only change ranking and are honoured | user file; `--allow-exec` honours a repository `command` for one run; the MCP server never honours it. See [Skill search](search.md#data-egress) |
+| Verifiers (`[[verifiers]]`) | content predicates run; `command` and `llm` predicates may be declared | `verifiers run --allow-exec` (or `AI_RULEZ_VERIFIERS_ALLOW_EXEC=1`) runs commands; `--allow-llm` plus user-scope `[llm] allow_network` calls a model. A verifier from an include runs only when `[verifiers_settings] trust_exec_from` names it and the lock pins it. `generate`, `validate`, hooks and the MCP server never do either |
+| Evals | cases are repository files | `--runner-command` picks the command; `--allow-exec` lets `command_exit` assertions run |
+| `[[hooks]]` | written into the harness settings files by `generate`; pinned by the [lock](lockfile.md) and scanned | review the pull request; `generate` lists new or changed commands and asks you to review them (silence with `--yes` or `AI_RULEZ_ACK_COMMANDS=1`); `generate --user` installs hooks from your user config |
+| `[[mcp_servers]]` | written into the harness MCP files by `generate`; pinned as `settings:mcp-servers` and listed in the same command acknowledgment | review the pull request; an organization policy bounds them with `mcp.allowed_commands` and `mcp.deny_transports` |
+| Remote sources (`[[includes]]`, `[[installed_skills]]`, `[[skill_sources]]`) | may name a source over https, ssh or a local path (`http://` is rejected) | a content change is caught by the lock digest, and imported content is security-scanned before it is written |
+| `[lock]`, `[governance]`, `[signing]` | honoured, and editable by any pull request | an [organization policy](policy.md) sets a floor the repository cannot lower. `verify --public-key` and `--identity`/`--issuer` only add signers; restricting who may sign takes a policy `[[signing.trust]]` list or `allow_repo_identities = false` |
+| Organization policy | **never read** from the repository | `--policy`, `AI_RULEZ_POLICY`, or `/etc/ai-rulez/policy.toml` (and the macOS and Windows equivalents) |
 
-| Knob | Repository config | User config / environment | Command line | Precedence (highest first) |
-| --- | --- | --- | --- | --- |
-| `[llm] allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `doctor` and `AR9L1` | honoured (`AI_RULEZ_LLM_*` too) | - | environment, user file, repository (ignored), defaults |
-| `[llm] max_cost_usd`, `max_tokens`, `max_calls` | honoured, can only tighten (the lower non-zero value wins) | honoured | - | the lower of repository and user; the environment overrides both |
-| `[llm] provider`, `model`, `cache`, `timeout_seconds`, `max_retries` | honoured; a repository `provider`, a `provider/` prefix in `model` or `embedding_model`, or a per-request model (verifier `llm.model`, `[search.embeddings] model`) that names another provider cannot receive a user-scope API key (refused) | honoured | - | environment, user file, repository, defaults |
-| `[telemetry] allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and `AR9K0` | honoured (`AI_RULEZ_TELEMETRY_*` too) | - | kill switches (`AI_RULEZ_TELEMETRY=off`, `DO_NOT_TRACK=1`), environment, user file, repository (ignored), defaults |
-| Telemetry consent record (`telemetry enable`, user config dir, mode 0600) | **never read as consent from the repository**: the record lives outside the project and a repository config cannot create or edit it | grants `allow_network` while it still matches the effective endpoint, protocol and exported field set; supplies the endpoint, protocol and the `include_paths`/`include_session` gates the user left unset | `telemetry enable` writes it, `telemetry disable` removes it | an environment `AI_RULEZ_TELEMETRY_ALLOW_NETWORK=0` refuses over the record, and an environment or user-file setting of `include_paths`/`include_session` is never overridden by it (an opt-out makes the record stale); kill switches and an organization policy win over it |
-| `[telemetry] enabled`, `sample` | honoured (a repository can at most switch on the local log) | honoured | - | as above |
-| Git credentials for private includes, installed skills and skill sources | **no key exists**: a repository cannot name a token or a credential variable | `AI_RULEZ_GIT_TOKEN` | `--token` | flag, environment |
-| Scanner commands and egress (`[[lint.external]]`, `egress`, `env_pass`) | may **declare** a scanner and its `egress` (declaring `egress = false` scrubs the environment; a network flag on such a scanner is refused) | - | `validate --external` runs scanners; `--allow-egress=<name>` lets an `egress = true` scanner run | the command line decides; without `--external` nothing runs, without `--allow-egress` an egress scanner is blocked (`AR9E4`). The `--version` probe (the `version` range, the cached version, `scanners doctor`) is a run of the scanner and is confined like one: `isolation = "require"` with no working backend refuses it |
-| Skill search (`[search]`, `[search.embeddings]`) | `mode`, `fields`, `fusion`, `index_dir` (must stay inside the config directory) and the rest are honoured: they only change ranking, and a hybrid search still needs the user-scope `[llm] allow_network`. `[search.embeddings] command` runs a program, so it is **ignored** with a warning; `log_queries` records what users ask, so it is **ignored** with a warning | `[search]` keys honoured; `[search.embeddings] command` honoured; `log_queries` honoured; `AI_RULEZ_SEARCH_MODE`; `AI_RULEZ_SEARCH_LOG_QUERIES` | `--mode`; `--allow-exec` honours a repository `command` for that run | environment and flags, user file, repository; the MCP server never honours a repository `command`. See [Skill search](search.md#data-egress) |
-| Verifiers (`[[verifiers]]`, `.ai-rulez/verifiers/`) | declares predicates. Content predicates are read-only; a `command` predicate and an `llm` predicate may be **declared** but nothing runs or is sent without the flags on the right. Changed file names are passed to a command with `./` before a leading `-`, so a file name cannot become an option | - | `verifiers run` and `verifiers test` run `command` predicates only with `--allow-exec` (or `AI_RULEZ_VERIFIERS_ALLOW_EXEC=1`); `llm` predicates only with `--allow-llm` plus the user-scope `[llm] allow_network`; an included verifier needs `[verifiers_settings] trust_exec_from` and a lock pin | the command line decides; `generate`, `validate`, hooks and the MCP `run_verifiers` tool never run a command or call a model (a refused `command` is `AR9H3`, an `llm` verifier is skipped, `AR9H4`); `verifiers suggest --write` creates a new file and refuses a symlinked `verifiers/` directory |
-| Eval execution (`command` runner, `command_exit` assertions) | cases are files in the repository, but they only run when asked | - | `--runner-command` picks the shell command; `--allow-exec` lets `command_exit` assertions execute | the command line; without `--allow-exec` a `command_exit` assertion is not run |
-| Hooks installation (`[[hooks]]`, `telemetry hook`) | `[[hooks]]` are repository content that `generate` writes into the harness settings files (committed, reviewed, pinned by `ai-rulez.lock`, scanned by the security rules); a hook that leaves the project cannot be pinned and fails `lock --check` | `generate --user` installs user-level hooks from the user config | `telemetry hook` only prints; nothing is installed until you merge it or add it to `[[hooks]]` | review in the pull request; the lock detects a changed script |
-| Remote sources (`[[includes]]`, `[[installed_skills]]`, `[[skill_sources]]`) | may name a source; `http://` is rejected (https, ssh and local paths only) | - | - | a remote content change is caught by the lock digest; imported content is security-scanned before `generate` writes it |
-| `[lock] enforce` | the repository's own policy; defaults to on whenever `ai-rulez.lock` exists | - | `generate --locked` / `--frozen` require the lock whatever this says | flag, then `[lock] enforce` |
-| `[lint.security] scan_imports` | honoured; on by default; `off` opts out for that repository | - | - | the repository's setting, never weaker than the organization policy |
-| Signing (`[signing]`, `[[signing.trust]]`, `sign`, `verify --attestation`) | names who may sign the lock, bundles, skills and SBOMs (`identity`, `issuer`, `key_file`, `subject`, `source`), `require`, `thresholds`, `builders`, `max_age`, `tlog`, `trusted_root`: **honoured, and attacker-controlled by a pull request**, so a repository can self-attest; `verify --attestation` warns when the signers come from the repository alone. A machine-local overlay cannot add a signer | the rollback state (`$XDG_STATE_HOME/ai-rulez/signing-state.json`) and its HMAC secret live in user scope, outside the checkout | `--public-key`, `--identity` with `--issuer` and `--trusted-root` add signers and a root from outside the repository; `--no-state` skips the rollback state | the repository's table plus the flags (flags only add); enforce the table from outside with an [organization policy](policy.md) or CI configuration. See [Signing](signing.md) |
-| Organization policy (`--policy`, `AI_RULEZ_POLICY`, managed path) | **not read**: a policy is never discovered inside the repository, so a pull request cannot delete it | the policy file (`AI_RULEZ_POLICY`, or the managed path `/etc/ai-rulez/policy.toml` and its macOS and Windows equivalents) | `--policy <file>` | the folded policy bounds the repository: allowlists intersect, denylists union, severities and switches only tighten; a loosening attempt is clamped and reported as `AR740`-`AR745` (see [Organization policy](policy.md)) |
+A repository therefore cannot turn on network access for the model or telemetry, give itself credentials, or make a
+scanner, verifier or eval run a program.
 
-Two things are deliberately not knobs: a repository cannot turn on network access for the model, and it cannot give
-itself credentials. A hostile checkout can therefore not spend your API budget, exfiltrate a prompt to its own
-endpoint, or make a scanner or an eval run a program.
+## Credentials
 
-## Git credentials
+- **Git token** (`AI_RULEZ_GIT_TOKEN` or `--token`) for private includes and installed skills. It is sent only to
+  `github.com`, or to the comma-separated hosts in `AI_RULEZ_GIT_TOKEN_HOSTS` (environment only; replaces the
+  default). It travels as a per-command `Authorization` header, so it is not in the URL, the process arguments or the
+  cached clone's `.git/config`. A source on another https host gets no token and a warning; `http://`, `git://`, ssh
+  and file sources never get it. Skill sources run git with no credential helper and no prompt: use public
+  repositories or an SSH agent.
+- **GitHub API token** (`GITHUB_TOKEN`, `GH_TOKEN` or `gh auth token`) for release dates, review-linked approvals and `--resolve-teams`.
+  It is a separate grant, sent only to `github.com` or the hosts in `AI_RULEZ_FORGE_HOSTS`. See
+  [Forge client](forge.md).
 
-A token (`AI_RULEZ_GIT_TOKEN` or `--token`) is sent only to hosts you allowlist, never to a host a repository
-names on its own: it goes to `github.com` by default, or to the comma-separated hosts in `AI_RULEZ_GIT_TOKEN_HOSTS`
-(environment only, which replaces the default). It travels as a per-command `Authorization` header scoped to
-that host, so it is in neither the URL, the process arguments, nor the cached clone's `.git/config`. A repository
-that names another HTTPS host gets no token and a warning. The GitHub API token (`GITHUB_TOKEN`, `GH_TOKEN`, `gh auth token`) used
-for release dates and approvals is a separate grant: it goes only to `github.com` or the hosts in `AI_RULEZ_FORGE_HOSTS`. Plain `http://`, `git://`, ssh and file sources never
-receive it. Use a token with the least scope that can read what you include. Skill sources run git with no credential helper and
-no prompt, so they fetch public repositories or use an SSH agent.
+Use tokens with the least scope that can read what you include.
 
-## What the checks cover
+## Supply-chain controls
 
-The trust rule governs what ai-rulez itself reads and what it generates. The repository-declared environment check (a
-hook or MCP server `env` that sets `AI_RULEZ_TELEMETRY_*` or `AI_RULEZ_LLM_*` to redirect export or model traffic) covers
-only the configs ai-rulez generates. A hand-written `.claude/settings.json`, `.mcp.json` or any other harness file in
-the repository is outside its control: review those files like code, and set `AI_RULEZ_TELEMETRY=off` or
-`DO_NOT_TRACK=1` when you open a checkout you do not trust.
+The trust rule keeps a checkout from acting on its own. The governance features make every change to what your
+assistants are told explicit, reviewable and attributable:
 
-The same limit applies to the response cache and the sink command: the `[llm]` cache lives under your user cache
-directory and is authenticated with a per-user secret, and `telemetry record --sink-command` always runs with a 3 second
-timeout and an output cap, but a sink command is code you chose to run.
+| Question | Control | Page |
+| --- | --- | --- |
+| Did anything change since it was reviewed? | `ai-rulez.lock` pins every remote source, authored item and generated output by digest; `lock --check` and `generate --locked` fail on drift | [Lock file](lockfile.md) |
+| Who reviewed this content? | `ai-rulez approve` records a reviewer against a digest; `[governance]` makes content unusable until approved | [Approvals](approvals.md) |
+| Who vouches for the lock? | `ai-rulez sign` writes a Sigstore bundle; `verify --attestation` checks it offline against named signers | [Signing](signing.md) |
+| What may a repository never loosen? | an organization policy outside the repository clamps `[lock]`, `[governance]`, `[signing]`, sources, lint severities and more | [Organization policy](policy.md) |
+| What is the configuration made of? | `ai-rulez sbom` writes CycloneDX or SPDX for security tooling | [SBOM](sbom.md) |
+| How does ai-rulez talk to GitHub? | read-only, allowlisted hosts, token from the environment only | [Forge client](forge.md) |
 
-## What `doctor` and the strict rules tell you
+Each layer is an assertion of a different strength. A digest proves bytes did not change; an approval is a recorded
+claim that someone looked; a signature proves which identity produced the lock; a policy holds only if it is set from
+outside the repository. None of them judges whether content is safe: pair them with the
+[security checks](strict-validation.md#security-checks) and human review.
 
-- `ai-rulez doctor` and `llm doctor` list repository `[llm]` keys that were ignored and where the user file was read.
-- `telemetry doctor` lists ignored `[telemetry]` keys and every validation problem.
-- `AR9L1` and `AR9K0` report the same under `validate`.
+## Limits
 
-## Checklist for a new privileged setting
-
-If you add a setting that reaches the network, spends money or starts a process:
-
-1. Read it only from the user config file (`config.UserConfigFile`), the environment or a flag.
-2. If the repository may also set it, let it only lower a limit, never raise one.
-3. Report a repository value that was ignored by name.
-4. Add a row to the table above.
+- The checks cover the configuration ai-rulez reads and the files it generates. A hand-written `.claude/settings.json`,
+  `.mcp.json`, `.cursor/mcp.json` or other harness file committed to the repository is outside its control: review
+  those like code, and set `AI_RULEZ_TELEMETRY=off` or `DO_NOT_TRACK=1` when you open a checkout you do not trust.
+- A `telemetry record --sink-command` is code you chose to run; it runs with a 3 second timeout and an output cap.
+- `[lock]`, `[governance]` and `[signing]` in the repository are changed by the same pull request they gate. Protect
+  them with branch protection and code owners, or enforce them with an [organization policy](policy.md).

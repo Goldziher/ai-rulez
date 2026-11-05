@@ -1,48 +1,47 @@
 # Review
 
-`ai-rulez review` scores skills, agents and commands against a rubric you own. Without flags it is **offline**: the
-score comes from the lint findings each rubric dimension names, no model is called, and nothing leaves the machine.
-With `--semantic` it adds an **LLM judge** for what lint cannot see: a vague or overlapping trigger, a body that
-contradicts its description, injection intent, scope creep. The judge is advisory, cached, bounded by spend caps, and
-may gate a build only after `review calibrate` measured it against a labeled golden set. `review fix` proposes a
-patch for its findings and never writes without `--apply`. Design: [#220](https://github.com/Goldziher/ai-rulez/issues/220),
-follow-up [#269](https://github.com/Goldziher/ai-rulez/issues/269).
+`ai-rulez review` scores your skills, agents and commands against a rubric: is the trigger concrete, does the
+description overlap a sibling, does the body match what it promises. Without flags it is offline: each rubric
+dimension is scored from the lint findings that bear on it, and nothing leaves the machine. `--semantic` adds a model
+judge for what lint cannot see; the judge is advisory, cached and capped, and it can fail a build only after
+`review calibrate` has measured it against human labels. `review fix` proposes a verified patch for its findings.
 
-- [Quick start](#quick-start)
-- [How the offline score is built](#how-the-offline-score-is-built)
-- [Pre-filters](#pre-filters)
-- [Estimate and the egress manifest](#estimate-and-the-egress-manifest)
-- [The judge: `--semantic`](#the-judge-semantic)
-- [Calibration and the gate](#calibration-and-the-gate)
-- [Drift and model comparison](#drift-and-model-comparison)
-- [`review fix`](#review-fix)
-- [Selecting items](#selecting-items)
-- [Baselines](#baselines)
-- [Rubrics](#rubrics)
-- [Configuration](#configuration)
-- [Output and exit codes](#output-and-exit-codes)
-- [Design decisions](#design-decisions)
+Review scores the quality of authored items dimension by dimension. To audit all agent configuration for security,
+governance and quality problems with quoted evidence, use [Judge](judge.md). Model access is configured on
+[LLM access](llm.md).
 
-## Quick start
+## Example
 
 ```console
-ai-rulez review                          # offline score of every skill, agent and command
-ai-rulez review skill:deploy             # one item: an id, a name or a path
-ai-rulez review --estimate               # egress manifest and cost range of a judged run; sends nothing
-ai-rulez review --semantic               # add the judge (needs [llm] allow_network = true in user scope)
-ai-rulez review --semantic --content full --k 3 --max-cost 0.25
-ai-rulez review calibrate --golden tests/review/golden/skill-quality
-ai-rulez review --semantic --gate        # exit 2 on a stable fail of a calibrated dimension
-ai-rulez review fix skill:deploy --model gemini-2.5-flash   # print a patch; --apply writes it
-ai-rulez review explain AR9G2            # what a code means, plus the rubric's definitions
-ai-rulez rubric lint                     # check .ai-rulez/rubrics/*
+$ ai-rulez review
+rubric skill-quality@2 (builtin:skill-quality, sha256:537e621b)  offline: lint evidence only, no model call
+rule:atomic-commits          rule     skipped: rubric skill-quality does not apply to rule items
+skill:deploy-staging         skill    score 100/100
+skill:release-notes          skill    score 100/100
+3 items: 2 scored, 0 withheld, 0 excluded, 1 skipped; mean score 100
 ```
 
+Before adding the judge, see what a judged run would send and cost. `--estimate` sends nothing:
+
+```console
+$ ai-rulez review --estimate --model gemini-2.5-flash-lite
+...
+egress manifest (estimate; nothing is sent by --estimate)
+  model gemini-2.5-flash-lite  host (provider default)  network allowed: false  content: descriptions
+  skill:deploy-staging         2 call(s)   2829 bytes  sha256 adb401f984a3
+  skill:release-notes          2 call(s)   2800 bytes  sha256 ac147370b05a
+  2 items, 4-12 calls, ~3038-9114 input tokens, up to 18000 output tokens
+  cost $0.0009 to $0.0081 (cap $0.5, 300 calls)
+```
+
+With `[llm] allow_network = true` in your user config, a judged run looks like this:
+
 ```text
-rubric skill-quality@2 (builtin:skill-quality, sha256:15e8abaa)  model gemini/gemini-2.5-flash-lite (resolved gemini/gemini-2.5-flash-lite)  votes<=3  content full  advisory
-skill:deploy                 skill    score 100/100  semantic 45/100
+$ ai-rulez review --semantic --content full
+rubric skill-quality@2 (builtin:skill-quality, sha256:537e621b)  model gemini/gemini-2.5-flash-lite (resolved gemini/gemini-2.5-flash-lite)  votes<=3  content full  advisory
+skill:deploy-staging         skill    score 100/100  semantic 45/100
   AR9G1  trigger-quality      fail - The description does not name a concrete trigger or when not to use the skill.  [judge, agree 2/2]
-  AR9G2  overlap              fail "Update docs when CLI behavior changes." - overlaps docs-and-site.  [judge, unstable agree 2/3]
+  AR9G2  overlap              fail "Write the release notes for the rollout." - overlaps release-notes.  [judge, unstable agree 2/3]
 skill:leak                   skill    withheld: AR001 secret-detected: never sent to a judge
 3 items: 2 scored, 1 withheld, 0 excluded, 0 skipped; mean score 100; mean semantic score 45 over 2 judged
 2 items judged, 0 answers cached; calls 9, tokens 11204, cost $0.0113 (cap $0.5)
@@ -50,11 +49,22 @@ calibration: missing
   no calibration record: run `ai-rulez review calibrate`
 ```
 
-## How the offline score is built
+Other commands:
 
-Each rubric dimension lists `twins`: the lint rules that already say something about it (for example
-`trigger-quality` has `AR801`-`AR803`). For every item the dimension gets a verdict from the findings on that item
-(and, for a skill or command, on its resource files):
+```bash
+ai-rulez review skill:deploy-staging             # one item: an id, a name or a path
+ai-rulez review calibrate --golden tests/review/golden/skill-quality
+ai-rulez review --semantic --gate                # exit 2 on a stable fail of a calibrated dimension
+ai-rulez review fix skill:deploy-staging --model gemini-2.5-flash   # print a patch; --apply writes it
+ai-rulez review explain AR9G2                    # what a code means, with the rubric's definitions
+ai-rulez rubric lint                             # check .ai-rulez/rubrics/*
+```
+
+## The offline score
+
+Each rubric dimension lists `twins`: the lint rules that already say something about it (`trigger-quality` has
+`AR801`-`AR803`). The dimension's verdict comes from the twin findings on the item and, for a skill or command, on its
+resource files:
 
 | Twin finding | Verdict | Value |
 | --- | --- | --- |
@@ -62,156 +72,124 @@ Each rubric dimension lists `twins`: the lint rules that already say something a
 | a warning | `warn` | 0.5 |
 | an error | `fail` | 0 |
 
-`score = round(100 * sum(weight_i * value_i) / sum(weight_i))` over the dimensions that were scored. A dimension
-with no twin (the built-in `instruction-conflict`) is listed as `not-scored` and left out of both sums. The weights
-and the formula are printed in `--format json` under `rubric`.
+`score = round(100 * sum(weight_i * value_i) / sum(weight_i))` over the scored dimensions. A dimension with no twin
+(the built-in `instruction-conflict`) is `not-scored` and left out. `pass` means no lint rule fired, not that a person
+would call the description good: read the offline score as a floor.
 
-Read the offline score as a floor from deterministic checks, not as a judgement: `pass` means no lint rule fired, not
-that a person would call the description good. A finding of a dimension below `pass` is reported with the dimension's
-code (`AR9G1`-`AR9G7`, see [Rule codes](#rule-codes)), at the dimension's severity ceiling (`warning` or `info`, never
-`error`). Every finding is advisory and carries a fingerprint that survives line moves.
+A dimension below `pass` is reported with its code (`AR9G1`-`AR9G7`, see [Rule codes](#rule-codes)) at the dimension's
+severity ceiling (`warning` or `info`, never `error`). Every finding is advisory and carries a fingerprint that
+survives line moves.
 
-## Pre-filters
+The built-in rubric `builtin:skill-quality` (`ai-rulez rubric show`):
 
-Run before anything is planned or sent, and they decide what is ever eligible to leave the machine:
+| Dimension | Code | Weight | Group | Body needed | Twins |
+| --- | --- | --- | --- | --- | --- |
+| `trigger-quality` | `AR9G1` | 0.30 | intrinsic | no | `AR801`, `AR802`, `AR803` |
+| `overlap` | `AR9G2` | 0.25 | contextual | no | `AR701`, `AR702` |
+| `body-accuracy` | `AR9G3` | 0.15 | intrinsic | yes | `AR201`, `AR202`, `AR301`, `AR302`, `AR401`, `AR402` |
+| `injection-intent` | `AR9G4` | 0.10 | intrinsic | yes | `AR003`, `AR004`, `AR017`, `AR018`, `AR020` |
+| `scope-creep` | `AR9G5` | 0.10 | intrinsic | yes | `AR007`, `AR013` |
+| `instruction-conflict` | `AR9G6` | 0.05 | contextual | yes | none |
+| `body-structure` | `AR9G7` | 0.05 | intrinsic | yes | `AR805`, `AR806`, `AR901`, `AR902` |
 
-- An item with a secret or hidden-character finding (`AR001`, `AR002`) on its file or its skill resources is
-  **withheld**: no score, no manifest entry, an `AR9G0` note. The decision does not rest on the lint findings alone:
-  review scans the item's own text for a credential or a hidden character directly, so `[lint] ignore`,
-  `[lint.severity]`, `ignore_paths` and an inline `ai-rulez-lint-ignore` cannot make an item eligible to leave the
-  machine. With `[review] on_secret = "redact"` an item whose **own text** holds a credential is sent with every
-  credential replaced by `[REDACTED:AR001]` and marked `redacted`; it is still withheld when the masked text still
-  looks like it holds one, when the credential is in a resource file, or when it has a hidden character (never
-  redacted).
-- A twin **error** pre-empts the dimension: the judge is not asked, and the dimension keeps the lint verdict.
-- `[review] exclude` globs (matched against the name, the id and the path) exclude an item.
-- Content from includes, installed skills, skill sources and builtins is skipped unless `--include-imports`. It is
-  never read when skipped.
-- An item the rubric does not apply to (`applies_to`) or that cannot be read is skipped with the reason.
+It applies to skills, agents and commands.
 
-Nothing is dropped silently: withheld, excluded and skipped items are listed with their reason.
+## What is never sent
+
+These filters run before anything is planned, and decide what may ever leave the machine:
+
+- An item with a credential or hidden character (`AR001`, `AR002`) in its file or its skill resources is **withheld**:
+  no score, no manifest entry, an `AR9G0` note. Review scans the text itself, so lint ignores and severity overrides
+  cannot make such an item eligible. With `[review] on_secret = "redact"`, an item whose own text holds a credential
+  is sent with it replaced by `[REDACTED:AR001]`; it is still withheld when the masked text still looks like a
+  credential, when the credential is in a resource file, or when it has a hidden character.
+- A twin **error** pre-empts its dimension: the judge is not asked, and the lint verdict stands.
+- `[review] exclude` globs (matched against name, id and path) exclude an item.
+- Content from includes, installed skills, skill sources and builtins is skipped unless `--include-imports`.
+- An item the rubric does not apply to, or that cannot be read, is skipped with the reason.
+
+Withheld, excluded and skipped items are always listed with their reason.
 
 ## Estimate and the egress manifest
 
-`--estimate` prints a manifest of what a judged run **would** send and sends nothing (`"sent": false`). It works
-offline and is the recommended first step.
+`--estimate` prints what a judged run would send and sends nothing. It works offline and is the recommended first
+step.
 
-```text
-egress manifest (estimate; nothing is sent by --estimate)
-  model claude-haiku-4-5  host gateway.internal  network allowed: false  content: descriptions
-  skill:deploy                 2 call(s)   2735 bytes  sha256 dd57c18f4bb0
-  withheld (never sent): skill:leak
-  2 items, 4-12 calls, ~2167-6501 input tokens, up to 8400 output tokens
-  cost $0.0102 to $0.0485 (cap $0.50, 300 calls)
-```
-
-- **What**: per item, the planned calls (an `intrinsic` call with the item, a `contextual` call with the item's
-  description and up to `max_siblings` sibling descriptions), their bytes, and the SHA-256 of the data block. Never
-  the content. `--content descriptions` (default) sends the name, description and frontmatter keys; `--content full`
-  adds the frontmatter and the body, head and tail truncated at the rubric's `max_item_tokens`.
-- **Where**: the host of the resolved `[llm]` base URL (`(provider default)` when unset) and whether
-  `allow_network` is on. `[llm]` follows the [trust rule](llm.md#trust-rule): a repository `base_url` is ignored and
-  reported as ignored.
-- **How much**: tokens are estimated at one per three bytes (conservative); cost uses the model's price from the
-  built-in price table or `[llm] price_input_per_mtok`/`price_output_per_mtok`. The lower bound is one vote per call
-  and a 400-token answer; the upper bound is `votes.max` votes per call at `max_output_tokens`.
-- **Caps**: `--max-cost` / `--max-calls`, else `[review] max_cost_usd` / `max_calls`, else 0.50 USD and 300 calls
-  (`--max-cost 0` means unlimited). The estimate is **refused** (exit 1, listed under `refused`) when even the lower
-  bound exceeds a cap, or when the model has no price and a cost cap is set. An organization policy that forbids
-  model calls refuses the estimate too.
-- `--show-prompt` prints the exact planned messages. The nonce of the data fence is shown as
-  `<nonce:000000000000000000000000>` so the plan and its hash are reproducible; a real run derives a 96-bit one.
+- **What**: per item, the planned calls (an `intrinsic` call with the item, a `contextual` call with its description
+  and up to `max_siblings` sibling descriptions), their size, and the SHA-256 of the data. Never the content.
+- **Where**: the host of the resolved `[llm] base_url` (`(provider default)` when unset) and whether `allow_network`
+  is on. A repository `base_url` is ignored, by the [trust rule](llm.md#trust-rule).
+- **How much**: tokens at one per three bytes; the low bound is one vote per call and a 400-token answer, the high
+  bound `votes.max` votes at `max_output_tokens`. Prices come from the built-in table or `[llm]
+  price_input_per_mtok`/`price_output_per_mtok`.
+- **Caps**: `--max-cost`/`--max-calls`, else `[review] max_cost_usd`/`max_calls`, else 0.50 USD and 300 calls
+  (`--max-cost 0` is unlimited). A run is refused (exit 1) when even the low bound exceeds a cap, or when the model has
+  no price and a cost cap is set.
+- `--show-prompt` prints the exact planned messages.
 
 ## The judge: `--semantic`
 
-```console
+```text
 ai-rulez review --semantic [--content descriptions|full] [--k N] [--model M | --models A,B]
                            [--max-cost USD] [--max-calls N] [--no-cache] [--cache-dir DIR]
                            [--gate [--gate-level info|warning|error]] [--baseline F] [--write-baseline F]
 ```
 
-Both opt-ins must hold: `--semantic` on the command line and `[llm] allow_network = true` in **user scope** (the user
-config file or `AI_RULEZ_LLM_ALLOW_NETWORK`; a repository config cannot switch the network on, see the
-[trust rule](llm.md#trust-rule)). A model must be configured (`[llm] model` or `--model`). Nothing is sent before
-every check passed, including the estimate against the spend caps.
+Two opt-ins are required: `--semantic`, and `[llm] allow_network = true` in user scope (the user config file or
+`AI_RULEZ_LLM_ALLOW_NETWORK`; see the [trust rule](llm.md#trust-rule)). A model must be set (`[llm] model` or
+`--model`). Nothing is sent until every check, including the caps, has passed.
 
-**What the judge is asked.** At most two calls per item: an `intrinsic` call (the item alone) and a `contextual`
-call (the item's description plus up to `max_siblings` sibling descriptions, chosen by the same word-set similarity
-as `AR702`). The messages are a fixed system prompt (the rubric's `system.md`, else the built-in one) and one user
-message holding the rubric's dimension definitions and the item inside a fence whose delimiter carries a nonce:
+**Content.** `--content descriptions` (default) sends the name, description and frontmatter keys. Dimensions that need
+the body (`body-accuracy`, `injection-intent`, `scope-creep`, `instruction-conflict`, `body-structure`) are then
+`skipped` ("needs --content full"), not guessed, so a default run judges `trigger-quality` and `overlap`.
+`--content full` adds the frontmatter and body, truncated head and tail at the rubric's `max_item_tokens`. A truncated
+item's verdicts are capped at `info`, and `--gate` refuses to run on it.
 
-```text
-<<<DATA-7f3a91c2e0b14d65a8c3f9d1 item=skill:deploy>>>
-name: deploy
-description: Helps with deployments
-...
-<<<END-DATA-7f3a91c2e0b14d65a8c3f9d1>>>
-```
+**Prompt.** The item is sent inside a fence whose delimiter carries a nonce derived from the request, so the item's
+author cannot close it. The model is told the fenced text is data, and that text addressed to the reviewer is itself a
+finding. No tools are exposed. The reply must match a JSON schema exactly; an invalid reply is retried once, then the
+dimension is `error`, never `pass`.
 
-The nonce is derived from the request, so the author of the item cannot predict or close it and the response cache
-stays effective. The model is told the fenced text is data, never instructions, and that text addressed to the
-reviewer is itself a finding. No tools or function calling are exposed to it. The reply is requested as JSON through a
-schema (no `additionalProperties`: Gemini rejects it) and decoded **strictly**: an unknown field, data after the
-object, a missing or repeated dimension, or a verdict other than `pass`, `warn` or `fail` makes the reply invalid. An
-invalid reply is retried once; then the dimension is `error`, never `pass`.
+**Evidence.** Every quote a verdict cites must appear verbatim (whitespace-normalized) in what was sent, and be 8
+characters to 20 words long. A quote that does not is dropped and counted (`hallucinated_evidence`); a `warn` or
+`fail` left with no valid quote is reported as `pass`, unless the dimension sets `allow_absence` (the problem is that
+something is missing).
 
-**Content modes.** `descriptions` (default) sends the name, description and frontmatter keys. A dimension that can
-only be answered from the body (`needs_body = true`: `body-accuracy`, `injection-intent`, `scope-creep`,
-`instruction-conflict`, `body-structure` in the built-in rubric) is then **not judged** and is reported `skipped`
-("needs --content full") instead of being guessed from a description. `full` adds the frontmatter and the body (and a
-1.5 KB excerpt of each sibling body for the contextual call). A truncated body caps that item's verdicts at `info` and **refuses `--gate`** (exit 1): the middle of a long body is
-never seen, so the run cannot vouch for the item.
+**Votes.** The first vote runs at `first_temperature`. A pass is accepted, except for `injection-intent`, which is
+always voted on again. A flagged dimension gets up to `--k` votes (default the rubric's `votes.max`, 3) with the
+dimensions and siblings reshuffled, stopping once two votes agree. The verdict is the median (`pass < warn < fail`);
+`agreement` is the share of votes equal to it. Below `instability_threshold` (0.67) the dimension is `unstable`: it is
+reported at `info`, counts as a pass and never gates.
 
-**Evidence.** Every `quote` a verdict cites must appear verbatim (whitespace-normalised) in what was sent. A quote
-that does not is dropped and counted (`hallucinated_evidence` in the report); a `warn` or `fail` left with no valid
-quote is dropped and reported as a `pass`, unless the dimension has `allow_absence` (the problem is that something is
-missing). A quote must be at least 8 characters and at most 20 words (a one-character quote is found in any text).
-Model-reported confidence is not requested: it is poorly calibrated. Confidence is the vote agreement.
+**Semantic score.** The same formula over the dimensions the judge answered.
 
-**Votes.** The first vote runs at `first_temperature`. If it passes a dimension, that is accepted (precision over
-recall), except `injection-intent`: a single pass is the verdict an injected text asks for, so that dimension is always
-voted on again (one extra call per judged item). A flagged dimension gets up to `--k` votes (default the rubric's `votes.max`, 3) at `extra_temperature`, each
-with the dimensions reshuffled and the siblings reversed (vote 2) or shuffled (later votes) from a seed derived from
-the item, so a re-run reproduces every vote and each vote is cached on its own. Voting stops early once two votes agree
-on every flagged dimension. The verdict is the **median** (`pass < warn < fail`, a tie goes to the lower level);
-`agreement` is the share of votes equal to it. Below `instability_threshold` (0.67, so `2/3` is below it) the dimension
-is `unstable`: it is reported at `info`, counts as a pass in the score and never gates.
+**Cache and caps.** Answers are cached by the [model layer](llm.md), keyed by the request and a prompt version that
+includes a digest of the rubric and its `system.md`, so editing the rubric invalidates them. A cache hit costs nothing,
+so an unchanged project costs nothing to re-run. When `--max-cost` or `--max-calls` is reached the run stops: the
+report is `incomplete`, lists the items it did not judge, and exits 0 (1 with `--gate`). A repository `[review]` cap
+can only lower the default; the user config, environment and flags can set any value.
 
-**Score.** `semantic_score` uses the same formula over the dimensions the judge answered. Pre-empted, skipped and
-errored dimensions are left out of both sums.
+**Hosts.** A user-scope `[review] allowed_hosts` (or `AI_RULEZ_REVIEW_ALLOWED_HOSTS`, comma-separated) restricts where
+a judged run may send; `provider-default` names the provider's own endpoint. A run to another host is refused before
+anything is sent. Without a list, review warns and accepts any host. See
+[Data egress](llm.md#data-egress-and-residency).
 
-**Cache and caps.** Answers are cached by the model layer ([LLM access](llm.md)): endpoint identity, model, the whole
-request and `PromptVersion` (`review/<rubric id>@<version>+<8 hex of the prompt digest>`), so an edit to the rubric,
-`system.md` or the template invalidates it even without a version bump. A cache hit costs no budget and no network, so
-an unchanged project costs nothing on re-run. `--max-cost` and `--max-calls` are enforced by the budget before every
-call (worst case reserved) and the run **stops** when one is reached: the report is `incomplete`, lists the items it
-did not judge, and exits 0 (1 with `--gate`, because it cannot vouch). A repository `[review]` cap can only **lower**
-the default (a hostile repository must not raise what a run may spend); the user config file, the environment and the
-flags can set any value.
-
-**Where it goes.** The only egress is the model layer. A user-scope `[review] allowed_hosts` (or
-`AI_RULEZ_REVIEW_ALLOWED_HOSTS`) restricts the hosts a judged run may send to (`provider-default` names the provider's
-own endpoint); a run to another host is refused before anything is sent. With no allow-list the judge accepts any `base_url` host and
-says so in a warning. A repository `allowed_hosts` is ignored and
-reported. See [Data egress](llm.md#data-egress-and-residency).
-
-**Findings.** One AR code per dimension (`AR9G1`-`AR9G7`), at the dimension's severity ceiling, `advisory: true`,
-`origin: "llm-judge"`, with the first quote, the rationale, the suggestion, the vote agreement and a fingerprint of
-`code | item | dimension | normalised first quote`. SARIF results carry the same.
+**Findings.** One code per dimension (`AR9G1`-`AR9G7`), at the dimension's severity ceiling, marked `advisory: true`
+and `origin: "llm-judge"`, with the first quote, rationale, suggestion, vote agreement and a fingerprint of
+`code | item | dimension | normalized first quote`.
 
 ## Calibration and the gate
 
-The judge may fail a build only after it was **measured**. `review calibrate` judges every case of a golden set the
-way `--semantic` does (all `k` votes are asked, so consistency can be measured) and compares the verdicts with the
-adjudicated human labels.
+The judge may fail a build only after it was measured. `review calibrate` judges every case of a golden set the way
+`--semantic` does (all `k` votes) and compares the verdicts with adjudicated human labels.
 
-```console
+```bash
 ai-rulez review calibrate --golden tests/review/golden/skill-quality --model gemini-2.5-flash-lite
-ai-rulez review calibrate --models gemini-2.5-flash-lite,gemini-2.5-flash   # compare, writes nothing
+ai-rulez review calibrate --models gemini-2.5-flash-lite,gemini-2.5-flash   # compare models; writes nothing
 ai-rulez review calibrate --compare .ai-rulez/calibration/skill-quality.builtin.json   # drift check
 ```
 
-A golden case (`golden/*.golden.yaml`, paths relative to the golden directory) is labeled by at least two labelers and
+A golden case (`golden/*.golden.yaml`, paths relative to the golden directory) is labeled by at least two people and
 adjudicated:
 
 ```yaml
@@ -227,128 +205,117 @@ adjudicated: { trigger-quality: fail, overlap: pass }
 probes: [pad, reorder, rename, canary]
 ```
 
-Per dimension the record holds: quadratic-weighted **kappa** against the adjudicated labels; **precision**, **recall**
-and F1 of "flagged" (not `pass`) with Wilson 95% intervals; the labelers' own **kappa** (below
-`min_human_kappa` the dimension is `ill-defined`: fix the rubric, not the model); the judge's **consistency** across the
-`k` votes (share of cases with identical votes, and Fleiss' kappa); the **metamorphic probes**: `pad` (neutral filler
-appended; the verdict must not improve: verbosity bias), `reorder` (siblings reversed; the verdict must not change:
-position bias), `rename` (the item renamed; the verdict must not change: name priors) and `canary` (text addressed to
-the reviewer; `injection-intent` must flag it and no verdict may improve); and the **calibration curve** (vote
-agreement against measured precision). A dimension with fewer than 6 labeled cases is `uncalibrated`.
-A case the judge could not answer for a dimension counts as a wrong answer (and in `errors`); a probe it could not
-answer fails; a probe a case declares that was never measured misses `min_probe`; and with `--k 1` consistency is not
-measured, so a positive `min_consistency` is a miss.
-The record `status` is `pass` only when no calibrated dimension is `fail` or `ill-defined`, at least one passes, and the
-set has `golden_min_items` cases. The thresholds are the rubric's `[calibration]` table
-(`min_weighted_kappa`, `min_consistency`, `min_human_kappa`, `min_recall.<dimension>`, `min_precision`, `min_probe`,
-`max_age_days`).
+Per dimension the calibration measures:
+
+| Measure | Meaning | Threshold (`[calibration]`) |
+| --- | --- | --- |
+| weighted kappa | agreement with the adjudicated labels | `min_weighted_kappa` |
+| precision, recall | of "flagged" (not `pass`), with Wilson 95% intervals | `min_precision`, `min_recall.<dimension>` |
+| human kappa | agreement between the labelers; below it the dimension is `ill-defined` (fix the rubric, not the model) | `min_human_kappa` |
+| consistency | share of cases with identical votes across `k` | `min_consistency` |
+| probes | `pad` (filler must not improve a verdict), `reorder` (sibling order must not change it), `rename` (the name must not change it), `canary` (text addressed to the reviewer must be flagged by `injection-intent`) | `min_probe` |
+
+A dimension with fewer than 6 labeled cases is `uncalibrated`. The record passes when no calibrated dimension is `fail`
+or `ill-defined`, at least one passes, and the set has `golden_min_items` cases.
 
 The record is `calibration.json` in the rubric directory, or `.ai-rulez/calibration/<id>.builtin.json` for a built-in
-rubric. It binds the result to: the **rubric digest** (rubric.toml and system.md, not the record itself), the **prompt
-digest** (template, system prompt, reply schema, rubric file), the **golden digest** (cases and fixtures), the
-**resolved model id** (what the provider answered with, not the alias asked for) and the content mode and `k`.
+rubric. It binds the result to the rubric digest, the prompt digest, the golden-set digest, the resolved model id (what
+the provider answered with, not the alias), the content mode and `k`.
 
-`review --semantic --gate` is **refused** (exit 1, nothing spent) unless a record matches all of those, passed, and is
+`review --semantic --gate` is refused (exit 1, nothing spent) unless a record matches all of those, passed, and is
 younger than `max_age_days` (`[review.gate] calibration_max_age_days` overrides it). It is also refused for a floating
-alias (`...-latest`) and when the model that answers is not the one the record names. It then exits 2 when a **stable**
-`fail` verdict exists on a dimension whose calibration passed, at or above `--gate-level` (the lowest severity ceiling
-that gates: `warning` by default; a judge never reports above `warning`, so `error` gates no judged verdict). Unstable,
-pre-empted, errored, truncated and baselined verdicts never gate (and an errored dimension or a truncated item refuses the
-run: it is incomplete); a calibration record dated in the future is stale; dimensions the record did not calibrate never gate.
-`[review.gate] require_calibration = false` lets `--gate` run without a record (every dimension counts and `AR9G9`
-still says so).
+alias (`...-latest`) and when the answering model differs from the record's. It then exits 2 on a **stable** `fail`
+of a dimension whose calibration passed, at or above `--gate-level` (default `warning`). Unstable, pre-empted,
+errored, truncated and baselined verdicts never gate, and an errored or truncated item makes the gated run refuse as
+incomplete. `[review.gate] require_calibration = false` lets `--gate` run without a record.
 
-**`AR9G9 judge-calibration-stale`** (info) is reported by every judged run whose model is a floating alias or answered
-under another id, or that has no matching record (missing, stale with the reasons, or failed).
+`AR9G9 judge-calibration-stale` (info) is reported by every judged run on a floating alias, under another model id, or
+without a matching record.
 
-`calibrate` needs the same opt-in as `--semantic` and is bounded by `--max-cost` (default 2.00 USD) and `--max-calls`
-(default 1000); a calibration cut short writes nothing. Exit 0 when the judge passes, 2 when it does not or drifted.
+`calibrate` needs the same opt-in as `--semantic` and is capped by `--max-cost` (default 2.00 USD) and `--max-calls`
+(default 1000); a run cut short writes nothing. It exits 0 when the judge passes and 2 when it does not or drifted.
+`--content` defaults to `full` for `calibrate` (the record binds the content mode, so calibrate with the mode you gate
+with). `--no-probes` skips the probes, `--no-write` and `-o FILE` control where the record goes.
 
 ## Drift and model comparison
 
 `review calibrate --compare calibration.json` is the scheduled drift job: it calibrates again, compares with the
-committed record, prints every golden verdict that changed, and exits 2 when a dimension's kappa fell by more than 0.05,
-a dimension stopped passing, the resolved model changed, or the judge no longer meets its thresholds. Replay tests need
-no network: the review package's own tests serve recorded replies through the `Fake` backend.
+committed record, prints every golden verdict that changed, and exits 2 when a dimension's kappa fell by more than
+0.05, a dimension stopped passing, the resolved model changed, or the judge no longer meets its thresholds.
 
-`--models A,B` (on `review --semantic` and on `calibrate`) judges with each model and reports pairwise agreement and
-kappa per dimension, and the items the models judge differently, as "review first". The first model is the primary one
-(its findings are the report's); the spend caps are split between the models. On `calibrate` it measures each model
-against the labels and writes no record.
+`--models A,B` (on `review --semantic` and `calibrate`) judges with each model and reports pairwise agreement and kappa
+per dimension, and lists the items the models disagree on as "review first". The first model is the primary one; the
+caps are split between the models. On `calibrate` it writes no record.
 
 ## `review fix`
 
-```console
+```text
 ai-rulez review fix [id|name|path...] [--finding FINGERPRINT] [--model FIXER] [--judge-model JUDGE]
                     [--output fix.patch] [--apply] [--allow-same-model] [--patch fix.patch]
 ```
 
-For each authored item with a stable judged finding, the fixer proposes **exact-text edits** (`old` must occur once in
-the file; the unified diff is built from them, not asked of the model). A proposal is kept only when all of this holds,
-with up to two attempts (the second sees why the first was rejected), else the item reports "no safe fix". A caller
-that has learned something about earlier attempts at the file, as the [`builtin:review-fix`](improve.md#bundled-adapters)
-adapter does from the previous round of an `improve` run, passes it as `FixInput.Feedback`: the fixer sees it from the
-first attempt, as untrusted data in a fence of its own, without control characters and capped at 1500 characters:
+For each authored item with a stable judged finding, the fixer model proposes exact-text edits (each `old` text must
+occur once in the file); ai-rulez builds the unified diff from them. A proposal is kept only when all of this holds,
+with up to two attempts (the second sees why the first failed), else the item reports "no safe fix":
 
-1. the edits apply exactly and change the file;
-2. the frontmatter still parses and **only `description` changed** in it: the `name` and the tool list are untouched, and
-   a file without frontmatter gets none;
-3. the item grew by at most `[review.fix] max_growth_percent` (default 25%, never less than 200 bytes);
-4. the security scan finds nothing new, no credential or hidden character was added, no link was added, and no executable line (shebang, shell prompt, command substitution, shell fence) was added;
-5. a judge, **a different model from the fixer** unless `--allow-same-model` (self-preference), rates every targeted
-   dimension better and no other dimension worse.
+1. The edits apply exactly and change the file.
+2. In the frontmatter, only `description` changed: `name` and the tool list are untouched.
+3. The item grew by at most `[review.fix] max_growth_percent` (default 25%, at least 200 bytes allowed).
+4. The security scan finds nothing new, and no credential, hidden character, link or executable line was added.
+5. A judge that is a **different model from the fixer** (unless `--allow-same-model`) rates every targeted dimension
+   better and no other worse.
 
-Only authored content inside the configuration directory is touched: items from includes, installed skills, builtins,
-the machine-local overlay and generated outputs are reported as not fixable. The patch (to `--output` or standard output)
-has a header with the item digest, the finding, the models and the rubric version, then a unified diff:
+Only authored content in the configuration directory is touched; items from includes, installed skills, builtins, the
+local overlay and generated outputs are reported as not fixable. The patch goes to `--output` or standard output, with
+a header naming the item digest, finding, models and rubric version:
 
 ```text
 # ai-rulez review fix
-# item: skill:deploy
-# path: .ai-rulez/skills/deploy/SKILL.md
+# item: skill:deploy-staging
+# path: .ai-rulez/skills/deploy-staging/SKILL.md
 # digest: sha256:2da78adb...
 # finding: 51c0e2... AR9G1 trigger-quality
---- a/.ai-rulez/skills/deploy/SKILL.md
-+++ b/.ai-rulez/skills/deploy/SKILL.md
+--- a/.ai-rulez/skills/deploy-staging/SKILL.md
++++ b/.ai-rulez/skills/deploy-staging/SKILL.md
 @@ -1,5 +1,5 @@
+...
 ```
 
-`--apply` writes the verified edits to the item files. It refuses a file whose digest differs from the patch header
-(**stale patch**), a file with uncommitted changes in git or outside a git repository, and never touches more than the
-item files; every file is checked before the first is written, so a refused file leaves all of them unchanged; it keeps the file mode and replaces the file atomically, then tells you to run `ai-rulez lock` (the lock
-pins the changed item; with `[governance]` approvals the change needs a new approval). A second run proposes nothing
-(empty patch, exit 0): the fix was rated better and that answer is cached. `--patch FILE` takes a patch written
-earlier instead of asking a model: it verifies the digest, the hunks, the checks and the security scan, and `--apply`
-writes it. A patch is a file anyone can hand over, so it may name only an item a fix run could have edited (never
-`config.toml`, the lock, a script or a calibration record). The same pipeline backs
-[`improve --with builtin:review-fix`](improve.md#bundled-adapters), where the held-out eval gate, not the judge, decides
-whether the fix is kept. Exit 2 when a finding had no safe fix. The fix settings are `[review.fix]`; the judge model is `--judge-model`,
-else `[llm] model`; the fixer is `--model`, else `[review.fix] model`.
+`--apply` writes the verified edits. It refuses a file whose digest differs from the patch header (stale patch), and a
+file with uncommitted changes or outside a git repository; every file is checked before the first is written. Run
+`ai-rulez lock` afterwards (with [approvals](approvals.md), the change needs a new approval). `--patch FILE` verifies
+and applies a patch from an earlier run without calling a model; it may only name items a fix run could edit.
+
+The fixer is `--model`, else `[review.fix] model`; the judge is `--judge-model`, else `[llm] model`. `review fix`
+defaults to `--content full`. It exits 2 when a finding had no safe fix. The same pipeline backs
+[`improve --with builtin:review-fix`](improve.md#bundled-adapters), where a held-out eval gate decides whether the fix
+is kept.
 
 ## Selecting items
 
-- `[id|name|path...]`: an id such as `skill:deploy` or `skill:backend/deploy`, a name, or a path; a selector that matches
-  nothing is an error.
-- `--since REV`: only items whose file (or, for a skill or command directory, any file below it) changed since the git
-  revision (committed, staged, unstaged and untracked). Siblings are still drawn from every item.
-- `--role NAME` / `--profile NAME`: only the content slice `generate --role` or `--profile` renders (`--profile a,b`
-  composes). The two are exclusive. A role cannot change the rubric.
+- `[id|name|path...]`: an id such as `skill:deploy-staging` or `skill:ops/deploy-staging`, a name, or a path. A selector that
+  matches nothing is an error.
+- `--since REV`: only items whose files changed since the revision (committed, staged, unstaged, untracked). Siblings
+  are still drawn from every item.
+- `--role NAME` / `--profile NAME`: only the content slice `generate --role` or `--profile` renders. The two are
+  exclusive.
+- `--no-local`: ignore the machine-local overlay and `local/` content.
+
+`--concurrency N` (default 4, at most 16) sets how many items `review`, `review fix` and `review calibrate` judge at
+once.
 
 ## Baselines
 
-`--write-baseline FILE` writes the fingerprints of this run's findings; `--baseline FILE` hides them in a later run
-(they are listed in `--format json` as `baselined`, left out of the text and SARIF output, and never gate), so a team
-adopts the review without fixing everything first. `--baseline` also accepts an earlier `--format json` report. A
-finding whose quote changed has another fingerprint and is new. Drift of the judge itself is
-[`calibrate --compare`](#drift-and-model-comparison).
+`--write-baseline FILE` writes the fingerprints of this run's findings; `--baseline FILE` hides them in a later run, so
+a team can adopt review without fixing everything first. Baselined findings are listed as `baselined` in JSON, left
+out of text and SARIF, and never gate. An earlier `--format json` report also works as a baseline. A finding whose
+quote changed has a new fingerprint.
 
 ## Rubrics
 
-A rubric is a user-owned, versioned directory, never written into any per-tool output tree (no context cost). It is
-pinned in `ai-rulez.lock` as kind `rubric` (id = the directory name; the digest covers **every file** under the
-directory: rubric.toml, system.md, the golden cases and fixtures, calibration.json), so a silent edit of a rubric, its
-prompt or its labels, and a re-calibration, show in review as lock drift (`AR981`) until `ai-rulez lock` runs. A rubric
-directory with a symlink is a lock problem, not a skipped file. See [Lockfile](lockfile.md).
+A rubric is a versioned directory you own. It is never written into a harness's output tree, and
+[`ai-rulez lock`](lockfile.md) pins it as kind `rubric` over every file in the directory, so an edit to a rubric, its
+prompt, its labels or its calibration shows as lock drift (`AR981`) until you lock again.
 
 ```text
 .ai-rulez/rubrics/<id>/
@@ -359,8 +326,8 @@ directory with a symlink is a lock problem, not a skipped file. See [Lockfile](l
   calibration.json            # written by `review calibrate`
 ```
 
-`builtin:skill-quality` is embedded in the binary. Use `--rubric <id>` or `[review] rubric`. A rubric that fails
-`rubric lint` is refused, so a review never scores against something other than what the file says.
+`builtin:skill-quality` is embedded in the binary. Select a rubric with `--rubric <id>` or `[review] rubric`. A rubric
+that fails `rubric lint` is refused.
 
 ```toml
 schema_version = 1
@@ -371,7 +338,7 @@ applies_to = ["skill", "agent", "command"]   # also: rule
 [limits]
 max_item_tokens = 6000           # longer bodies are head+tail truncated; verdicts are capped at info
 max_siblings = 5
-max_output_tokens = 700          # the judge's completion cap; unset means 1500 (thinking models spend part of it)
+max_output_tokens = 700          # the judge's completion cap; unset means 1500
 
 [votes]
 first_temperature = 0.0
@@ -392,7 +359,7 @@ injection-intent = 0.90
 
 [[dimension]]
 id = "trigger-quality"
-code = "AR9G1"                   # AR9G1-AR9G7: the finding code of this dimension
+code = "AR9G1"                   # AR9G1-AR9G7
 group = "intrinsic"              # intrinsic: the item alone; contextual: needs siblings
 weight = 0.6                     # weights must sum to 1
 severity = "warning"             # ceiling: warning or info, never error
@@ -405,26 +372,32 @@ warn = "Names the task but the trigger is generic."
 fail = "Could apply to almost any request."
 ```
 
+A custom rubric can reorder, reweight or retarget dimensions, but uses only the codes `AR9G1`-`AR9G7`.
+
 ### `ai-rulez rubric`
 
 | Command | Purpose |
 | --- | --- |
-| `rubric list` | The built-in and project rubrics with version and digest |
-| `rubric show [id]` | Dimensions, weights, twins and the formula |
-| `rubric lint [id...]` | Check rubrics (default: every project rubric; `builtin:<id>` is accepted). `--format text\|json\|sarif`. Exit 2 with findings, 1 when unreadable |
+| `rubric list` | The built-in and project rubrics with version and digest. |
+| `rubric show [id]` | Dimensions, weights, twins and the formula. |
+| `rubric lint [id...]` | Check rubrics (default: every project rubric; `builtin:<id>` is accepted). `--format text\|json\|sarif`. Exit 2 with findings, 1 when unreadable. |
 
-`rubric lint` reports `AR9G8` for: a wrong `schema_version`, an `id` that is not the directory name, weights that do
-not sum to 1, duplicate dimension ids or codes, a code outside `AR9G1`-`AR9G7`, a twin that is not a registered lint
-rule, a `severity` of `error`, thresholds out of range, an unknown key, a golden case with fewer than two labelers,
-an unknown dimension or verdict, a path with `..`, an unknown probe, a calibration record for another rubric, and
-any symlinked rubric directory or file.
+`rubric lint` reports `AR9G8` for: a wrong `schema_version`, an `id` other than the directory name, weights that do not
+sum to 1, duplicate dimension ids or codes, a code outside `AR9G1`-`AR9G7`, a twin that is not a lint rule, a
+`severity` of `error`, thresholds out of range, an unknown key, a golden case with fewer than two labelers, an unknown
+dimension, verdict or probe, a path with `..`, a calibration record for another rubric, and any symlink.
 
 ### Rule codes
 
-`AR9G0`-`AR9G9` are allocated ([code ranges](strict-validation.md#code-ranges)). `AR9G1`-`AR9G7` are the built-in
-dimensions, `AR9G0` is the run note (an item withheld, excluded, skipped, or not judged because the run stopped),
-`AR9G8` is `rubric-invalid`, `AR9G9` is `judge-calibration-stale`. `validate` does not emit them; `review` and
-`rubric lint` do. `review explain AR9G2` prints the explanation and the rubric's definitions.
+| Code | Meaning |
+| --- | --- |
+| `AR9G0` | Run note: an item was withheld, excluded, skipped, or not judged because the run stopped. |
+| `AR9G1`-`AR9G7` | The rubric's dimensions (built-in: see the table under [The offline score](#the-offline-score)). |
+| `AR9G8` | `rubric-invalid`. |
+| `AR9G9` | `judge-calibration-stale`. |
+
+`review` and `rubric lint` emit them; `validate` does not. `review explain AR9G2` prints the explanation and the
+rubric's definitions. See [code ranges](strict-validation.md#code-ranges).
 
 ## Configuration
 
@@ -436,7 +409,7 @@ exclude = ["internal-*"]           # name globs
 max_cost_usd = 0.50                # a repository value can only lower the default
 max_calls = 300
 on_secret = "withhold"             # withhold | redact
-allowed_hosts = []                 # honoured only from the user config file
+allowed_hosts = []                 # honored only from the user config file
 
 [review.gate]
 level = "warning"                  # info | warning | error
@@ -448,49 +421,33 @@ model = ""                         # must differ from the judge unless --allow-s
 max_growth_percent = 25
 ```
 
-The user config file (`$XDG_CONFIG_HOME/ai-rulez/config.toml`) may also carry `[review]` with `allowed_hosts`,
-`max_cost_usd` and `max_calls`; `AI_RULEZ_REVIEW_ALLOWED_HOSTS` (comma-separated) overrides the list. An invalid
-`[review]` table is an error. For a judged run to price a model that is not in the built-in table with a cost cap set,
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `rubric` | `builtin:skill-quality` | Rubric to score against. |
+| `content` | `descriptions` | What a judge receives. |
+| `exclude` | `[]` | Items never reviewed (globs on name, id and path). |
+| `max_cost_usd`, `max_calls` | `0.50`, `300` | Caps of a judged run. A repository value can only lower them. |
+| `on_secret` | `withhold` | `withhold` or `redact` an item whose own text holds a credential. |
+| `allowed_hosts` | `[]` (any, with a warning) | Hosts a judged run may send to. User config only; `AI_RULEZ_REVIEW_ALLOWED_HOSTS` overrides. |
+| `gate.level` | `warning` | Lowest severity ceiling that gates. |
+| `gate.require_calibration` | `true` | Refuse `--gate` without a matching calibration record. |
+| `gate.calibration_max_age_days` | the rubric's `max_age_days` | Maximum age of the record. |
+| `fix.model` | none | Fixer model. |
+| `fix.max_growth_percent` | `25` | Most an item may grow in a fix. |
+
+An invalid `[review]` table is an error. To price a model the built-in table does not know while a cost cap is set,
 set `[llm] price_input_per_mtok` and `price_output_per_mtok` in user scope.
 
 ## Output and exit codes
 
-`--format text` (default), `json` (schema [review-report.schema.json](schema.md), `review-report/1`) or `sarif`.
-SARIF results use the dimension codes as rule ids, mark `advisory: true` and `origin: "lint-twin"` or `"llm-judge"`,
-and carry `aiRulezReviewFingerprint/v1`. `--output FILE` writes the report to a file. The JSON report adds, for a judged
-run: `run` (calls, cached answers, tokens, cost, the cap, `incomplete` and the unjudged items, the requested and
-resolved models, `hallucinated_evidence`), `items[].semantic`, `findings[]`, `egress`, `calibration`, `gate`, `models`
-and `baseline`.
+`--format text` (default), `json` ([`review-report.schema.json`](schema.md), `review-report/1`) or `sarif`.
+`-o FILE` writes the report to a file. SARIF results use the dimension codes as rule ids, carry `advisory: true`,
+`origin: "lint-twin"` or `"llm-judge"`, and the `aiRulezReviewFingerprint/v1` fingerprint. A judged run's JSON adds
+`run` (calls, cache hits, tokens, cost, caps, `incomplete`, requested and resolved models, `hallucinated_evidence`),
+`items[].semantic`, `findings`, `egress`, `calibration`, `gate`, `models` and `baseline`.
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Reviewed. Advisory findings never change it |
-| 1 | Could not run or was refused: bad flag or config, invalid rubric, no network opt-in or model, a host outside `allowed_hosts`, an estimate over a cap, `--gate` without a matching calibration, an incomplete run with `--gate` |
-| 2 | `--gate` failed; `calibrate` did not pass or drifted; `review fix` had a finding with no safe fix; `rubric lint` found problems |
-
-## Design decisions
-
-- **`review` exists offline.** The deterministic score is useful alone, so it ships; the judge is opt-in on top.
-- **Double opt-in and fail closed.** `--semantic` and `allow_network` in user scope; the cost caps are checked against
-  the estimate before the first call and enforced per call.
-- **Withhold by default, never send a hidden character.** `on_secret = "redact"` is an explicit choice and re-scans the
-  masked text.
-- **Descriptions are the default content, and body-only dimensions are skipped, not guessed.** A judge that is shown a
-  description and asked whether the body is accurate answers `pass` with nothing to cite; reporting that as a result is
-  worse than reporting nothing. The cost is that the default run judges two dimensions; `--content full` judges all.
-- **Evidence or nothing.** A verdict the item cannot back is dropped and counted, not reported.
-- **Gating is earned per rubric and model.** A record binds the result to the exact rubric, prompt, golden set, model id
-  and content mode; anything else is stale. `require_calibration = false` is the explicit opt-out.
-- **Dimensions are gated individually.** A dimension that did not pass calibration, or that nobody labeled, is advisory
-  even when others gate.
-- **Repository config cannot raise spend or widen hosts.** Caps can only be lowered by a repository; `allowed_hosts`
-  is user scope only.
-- **The fixer proposes edits, not a diff.** Exact-text edits are verifiable and a diff is generated from them; models
-  write unreliable hunks.
-- **The fixer and the judge differ.** A model verifying its own edit is biased toward it; `--allow-same-model` is the
-  explicit override.
-- **Rubrics from the repository are data.** Never executed; symlinks are refused rather than followed.
-- **Lint twins are a code list, not a mapping language.** The rule's own severity decides the verdict.
-- **Dimension codes are `AR9G1`-`AR9G7` only.** A custom rubric can reorder, reweight or retarget dimensions but not
-  add an eighth code.
-- **Price table.** Prices come from the model layer (`internal/llm`); `review` keeps no second copy.
+| 0 | Reviewed. Advisory findings never change it. |
+| 1 | Could not run or was refused: a bad flag or config, an invalid rubric, no network opt-in or model, a host outside `allowed_hosts`, an estimate over a cap, `--gate` without a matching calibration, an incomplete run with `--gate`. |
+| 2 | `--gate` failed; `calibrate` did not pass or drifted; `review fix` found no safe fix; `rubric lint` found problems. |

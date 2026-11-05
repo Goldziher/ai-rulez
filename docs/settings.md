@@ -1,16 +1,69 @@
-# Hooks, permissions and settings keys
+# Hooks and settings
 
-`ai-rulez generate` can write the lifecycle hooks, permission rules and a few other settings keys of a
-project into each harness's native settings file, without shipping a plugin. The keys are declared once
-in `config.toml` and merged into the files through the same owned-key machinery as MCP servers (see
-[Settings document merge behavior](configuration.md#settings-document-merge-behavior)): ai-rulez owns
-the entries it writes, and every other key, hook group and rule in those files survives `generate` and
-`clean`.
+`ai-rulez generate` writes lifecycle hooks, the generated-file guard and a few other settings keys into each
+harness's native settings file, from one declaration in `config.toml`. ai-rulez owns only the entries it writes:
+every other key, hook group and rule in those files survives `generate` and `clean`. Permission rules have a page of
+their own: [Permissions](permissions.md).
 
-Everything on this page is opt-in except `[session_start]`. A config without `[[hooks]]`, `[guard]`,
-`[permissions]` or `[claude.settings.managed]` renders exactly what it did before; a project that generates for
-Claude Code also gets the `SessionStart` hook of [`[session_start]`](session-start.md) unless it sets
-`generate = false`.
+```toml
+# .ai-rulez/config.toml
+presets = ["claude", "cursor", "gemini", "copilot"]
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+script = "scripts/guard.sh"
+timeout = 10
+
+[session_start]
+generate = false   # leave out the default SessionStart hook of Claude Code
+```
+
+`generate` translates the event, the matcher, the script path and the timeout for each harness:
+
+```json
+// .claude/settings.json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/'scripts/guard.sh'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```json
+// .cursor/hooks.json
+{
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "'./scripts/guard.sh'",
+        "timeout": 10,
+        "matcher": "^Shell$"
+      }
+    ]
+  },
+  "version": 1
+}
+```
+
+Gemini CLI gets a `BeforeTool` group with the matcher `^run_shell_command$`, the command
+`"$GEMINI_PROJECT_DIR"/'scripts/guard.sh'` and `"timeout": 10000` (milliseconds); Copilot gets a `preToolUse` entry in
+`.github/hooks/ai-rulez.json` with `"matcher": "bash"` and `"timeoutSec": 10`.
+
+All of this is opt-in except [`[session_start]`](session-start.md), which adds a `SessionStart` hook for
+Claude Code unless you set `generate = false`.
 
 ## `[[hooks]]`
 
@@ -22,30 +75,41 @@ matchers = { gemini = "run_shell_command", cursor = "Shell" }   # per-harness ov
 [[hooks.hooks]]
 script = "scripts/guard.sh"          # or: command = "..."
 timeout = 10                         # seconds
-if = "Bash(git push *)"              # claude only
+if = "Bash(git push *)"              # claude and qoder only
 
 [[hooks]]
 event = "SessionStart"
 targets = ["claude", "codex"]        # optional: restrict to some harnesses
 [[hooks.hooks]]
-command = "ai-rulez verify"
+command = "ai-rulez generate --check"
 status_message = "Checking generated files"
 ```
 
-A group has the same fields as a [`[[plugin.hooks]]`](plugins.md) group (`event`, `matcher`, and `hooks`
-with `command` or `script`, `args`, `timeout`, `async`, `if`, `status_message`) plus two that only exist
-here, because the same declaration is rendered for several harnesses. Only `type = "command"` handlers exist here (omit `type`); `validate` and `generate` both reject other types:
+| Key | Type | Default | Meaning |
+| --- | ---- | ------- | ------- |
+| `event` | string | required | The event, by its Claude Code name; translated per harness (tables below) |
+| `matcher` | string | none | Tool matcher in Claude Code's vocabulary (`Bash`, `Edit\|Write`, `mcp__github__.*`) |
+| `matchers` | table | none | A matcher per harness; `matchers.<harness>` always wins over the translated `matcher` |
+| `targets` | list | every harness | The harnesses the group is rendered for |
+| `hooks` | list | required | Handlers, run in order |
+| `hooks.command` | string | | A shell command, copied verbatim |
+| `hooks.script` | string | | A committed script, relative to the project root |
+| `hooks.args` | list | | Exec-form arguments (shell-quoted into the command where the harness has no exec form) |
+| `hooks.timeout` | integer | harness default | Seconds; converted where the harness counts milliseconds |
+| `hooks.async` | boolean | `false` | Run without waiting |
+| `hooks.if` | string | | A Claude Code permission-rule condition |
+| `hooks.status_message` | string | | Text shown while the hook runs, where the harness has one |
 
-- `targets`: the harnesses the group is rendered for. Empty means every harness the group can be
-  expressed for. One of the harnesses named in the tables below.
-- `matchers`: a matcher per harness, overriding `matcher`. Tool names differ between harnesses (Claude
-  Code `Bash`, Gemini CLI `run_shell_command`), so a Claude matcher is copied to the harnesses that use the
-  same vocabulary (the list under the event tables) and rewritten token by token for the harnesses whose vendor
-  documents its tool names (see [Tool names in matchers](#tool-names-in-matchers)). Where a token has no
-  documented name, the group is skipped with a warning rather than guessed. `matchers.<harness>` always wins.
+The fields are those of a [`[[plugin.hooks]]`](plugins.md) group, plus `targets` and `matchers`. Only command
+handlers exist (omit `type`); `validate` and `generate` reject other types.
 
-Events are written with Claude Code's names. Each harness has its own names and handler fields; the
-renderer translates them and refuses to approximate:
+A matcher is copied to the harnesses that use Claude Code's tool names and rewritten token by token for the
+harnesses whose vendor documents its own (see [Tool names in matchers](#tool-names-in-matchers)). A token with no
+documented equivalent skips the group with a warning instead of guessing.
+
+### Events
+
+Events use Claude Code's names. The five harnesses with a dedicated renderer:
 
 | Harness | File | Shape | Timeout |
 | ------- | ---- | ----- | ------- |
@@ -55,8 +119,7 @@ renderer translates them and refuses to approximate:
 | `cursor` | `.cursor/hooks.json` (`version` and `hooks`) | event, flat handler entries, camelCase events | seconds |
 | `copilot` | `.github/hooks/ai-rulez.json` | event, flat handler entries, `bash`, `timeoutSec` | seconds |
 
-Supported events per harness (the Claude Code name on the left; `-` means the harness has no equivalent
-and the group is skipped with a warning):
+Supported events (`-` means the harness has no equivalent, and the group is skipped for it with a warning):
 
 | Claude Code event | claude | codex | gemini | cursor | copilot |
 | ----------------- | ------ | ----- | ------ | ------ | ------- |
@@ -74,32 +137,31 @@ and the group is skipped with a warning):
 | `Stop` | yes | yes | `AfterAgent` | `stop` | `agentStop` |
 | every other Claude Code event | yes | - | - | - | - |
 
-`UserPromptSubmit` and `Stop` map to Gemini's `BeforeAgent` and `AfterAgent`, the nearest events (Gemini
-documents them as firing after a prompt is submitted and once per turn after the final response); they
-are not identical, so review them when you target Gemini. A test compares this table with the renderer's
-event tables.
+Gemini's `BeforeAgent` and `AfterAgent` are the nearest events to `UserPromptSubmit` and `Stop`, not exact
+equivalents: `BeforeAgent` fires after a prompt is submitted and `AfterAgent` once per turn after the final response.
+Review such hooks when you target Gemini.
 
-Handler fields a harness lacks are never dropped silently when dropping would change behaviour:
+### Handler fields
 
-- `if` exists in Claude Code and Qoder. A handler with `if` is skipped for every other harness, because
-  running it unconditionally would widen it.
-- `async` exists in Claude Code, Codex, Qwen, Qoder, Junie and ZCode. A handler with `async = true` is skipped
-  elsewhere.
-- `args` (exec form) exists in Claude Code, Qoder and Deep Agents. For the others the arguments are
-  shell-quoted into the command.
-- `status_message` is cosmetic and is omitted where the harness has no equivalent.
-- Copilot and Copilot CLI honour an optional `matcher` (a regex tested against `toolName`) on `preToolUse` and
-  `postToolUse` only; on any other event a group that sets one is skipped.
+A handler field the harness lacks is never dropped when dropping it would change what the hook does:
 
-Every skipped group is reported once per run as a warning: `[[hooks]] not generated for <harness>: ...`.
-A preset without hook support gets one warning naming those presets; ai-rulez emits no hook it could not read
-from the vendor's documentation. The harnesses that do have hook support are listed in the tables below
-(settings files and plugin modules).
+| Field | Harnesses that have it | Elsewhere |
+| ----- | ---------------------- | --------- |
+| `if` | `claude`, `qoder` | the handler is skipped (running it unconditionally would widen it) |
+| `async` | `claude`, `codex`, `qwen`, `qoder`, `junie`, `zcode`, the [plugin-based harnesses](#plugin-based-harnesses) | the handler is skipped |
+| `args` | `claude`, `qoder`, `deepagents` | the arguments are shell-quoted into the command |
+| `status_message` | where the harness has one | omitted |
+
+A `matcher` on an event where the harness ignores matchers skips the group: Copilot and Copilot CLI honour one on
+`preToolUse` and `postToolUse` only, and Cline has none.
+
+Each skipped group or handler is reported once per run: `[[hooks]] not generated for <harness>: ...`. Presets that
+have no hooks at all are named in one warning.
 
 ### Scripts
 
-`script` is a path relative to the project root. The command written to the settings file addresses it
-through the variable the harness documents for its project root:
+`script` is a path relative to the project root. The script is not copied: commit it, so the hook works in a fresh
+clone. The generated command addresses it through the variable the harness documents for its project root:
 
 | Harness | Command for `script = "scripts/guard.sh"` |
 | ------- | ----------------------------------------- |
@@ -107,25 +169,17 @@ through the variable the harness documents for its project root:
 | `gemini` | `"$GEMINI_PROJECT_DIR"/'scripts/guard.sh'` |
 | `codex`, `copilot` | `"$(git rev-parse --show-toplevel)"/'scripts/guard.sh'` |
 | `cursor` | `'./scripts/guard.sh'` (Cursor runs project hooks from the project root) |
-| every harness of the next section | see the script table there |
+| the harnesses of the next section | see the script table there |
 
-A script path may only contain letters, digits, `.`, `_`, `-` and `/`; `validate` rejects anything else (a
-space, quote, `$`, backtick, `;`, `&`, `|`, newline or backslash would otherwise be spliced into a shell
-command line). Every generated line also single-quotes the path, and a user-scope config directory is
-single-quoted with embedded quotes escaped, so neither can inject a command. A `command` is yours and is
-copied verbatim.
-
-Unlike `[[plugin.hooks]]`, the script is not copied anywhere: it is part of the repository and must be
-committed, which is what makes the hook work in a fresh clone. `validate` rejects a script path that
-leaves the project; `validate` reports a script that does not exist (`AR504`) or lacks the
-executable bit (`AR505`), and the generated `.claude/settings.json` is covered by `AR501`/`AR502`.
+A script path may contain only letters, digits, `.`, `_`, `-` and `/`, and must stay inside the project; `validate`
+rejects anything else. The generated path is single-quoted, so it cannot inject a command. `validate` reports a
+script that does not exist (`AR504`) or is not executable (`AR505`), and a hook in the generated
+`.claude/settings.json` that points at a missing or non-executable file (`AR501`, `AR502`).
 
 ### More settings-file harnesses
 
-The harnesses below share one renderer driven by a table of vendor facts: the events a vendor documents, the
-handler field names, the timeout unit, whether a matcher is honoured and on which events. The output is a
-hook group merged into the file like the five above (hand-written hooks stay, `clean` takes back only what was
-written), and `generate --user` writes the user-level file. `Layout` says how the document is built.
+These harnesses share one renderer. The hook group is merged into the file like the five above, and
+`generate --user` writes the user-level file.
 
 | Harness | Project file | User file (`--user`) | Layout | Timeout |
 | ------- | ------------ | -------------------- | ------ | ------- |
@@ -156,9 +210,8 @@ written), and `generate --user` writes the user-level file. `Layout` says how th
 | `kimi` | none: no project hooks documented | `~/.kimi-code/config.toml` (`[[hooks]]`, `KIMI_CODE_HOME`) | TOML, one flat `[[hooks]]` list, the event in `event` | seconds |
 | `cline` | `.clinerules/hooks/<Event>` | `~/Documents/Cline/Hooks/<Event>` | one executable script per event | n/a |
 
-Supported events per harness, by Claude Code name; a native name in parentheses is shown where it differs.
-An event not listed is skipped for that harness with a warning, and so is a matcher on an event the vendor
-says ignores one:
+Supported events per harness, by Claude Code name, with the native name in parentheses where it differs. An event
+not listed is skipped with a warning, and so is a matcher on an event the vendor says ignores one:
 
 | Harness | Events |
 | ------- | ------ |
@@ -189,37 +242,32 @@ says ignores one:
 | `kimi` | `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PostToolUseFailure`, `Notification`, `SubagentStart`, `SubagentStop`, `Stop`, `StopFailure`, `PreCompact`, `PostCompact`, `SessionEnd` |
 | `cline` | `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `SessionStart` (`TaskStart`), `Stop` (`TaskComplete`) |
 
-A test compares this table with the renderer's event tables. Mappings that are an inference, not something the
-vendor documents: `Stop` to Vibe's `post_agent`, to Cline's `TaskComplete` and to Copilot CLI's `agentStop`;
-`SessionStart` to Cline's `TaskStart`. Review them when you target those harnesses.
+Four mappings are the nearest event rather than one the vendor documents as equivalent: `Stop` to Vibe's
+`post_agent`, Cline's `TaskComplete` and Copilot CLI's `agentStop`, and `SessionStart` to Cline's `TaskStart`.
 
-Matchers follow what each vendor documents. Claude Code names (`Bash`, `Edit|Write`) are copied to the
-harnesses that accept them: `claude`, `codex`, `qwen`, `codebuddy`, `qoder`, `letta`, `grok`, `deepagents`,
-`junie`, `zcode`. For the harnesses in the next section the matcher is rewritten; for every other one
-(`commandcode`, `bob`, `reasonix`, `hermes`, `kimi`, ...) a group with a `matcher` needs `matchers.<harness>`.
-Two matchers are not tool names at all: Duo CLI's matches the session source (`startup` or `resume`) and Vibe's
-`match` is a glob (or a regex behind `re:`). Where a vendor requires a matcher field Poolside and Vibe get `*`
-when the group sets none.
+Matchers in Claude Code names (`Bash`, `Edit|Write`) are copied as written to `claude`, `codex`, `qwen`, `codebuddy`,
+`qoder`, `letta`, `grok`, `deepagents`, `junie` and `zcode`, and rewritten for the harnesses in the next section. Every
+other harness (`commandcode`, `bob`, `reasonix`, `hermes`, `kimi`, ...) needs `matchers.<harness>` for a group with a
+`matcher`. Two matchers are not tool names: Duo CLI's matches the session source (`startup` or `resume`), and Vibe's
+`match` is a glob (or a regular expression after `re:`). Poolside and Vibe require a matcher and get `*` when the group
+sets none.
 
 ### Tool names in matchers
 
-A matcher is rewritten token by token over its top-level alternation (`Edit|Write`, `^Bash$`,
-`mcp__github__.*`) through the vocabulary in `internal/toolnames`, the one table that hook matchers, the
-plugin runtimes (`opencode`, `kilo`, `pi`, `amp`) and this page share. A Claude name outside the harness's
-vocabulary, a regular expression more complex than a name, or an alternation in a harness whose matcher is a
-glob or an exact name skips the whole group with a warning naming the token; a translation is never partial.
-Harnesses that test the matcher as an unanchored regular expression get each name anchored (`^Execute$`), since a
-Claude matcher is a whole-name match. Names below were read from the cited pages on 2026-10-05; a tool a vendor
-does not document is left out.
+A matcher is rewritten token by token over its top-level alternation (`Edit|Write`, `^Bash$`, `mcp__github__.*`). A
+Claude Code name outside the harness's documented vocabulary, a regular expression more complex than a name, or an
+alternation where the harness matches a glob or an exact name skips the whole group with a warning that names the
+token; a translation is never partial. Where the harness tests the matcher as an unanchored regular expression, each
+name is anchored (`^Execute$`), because a Claude Code matcher matches the whole name.
 
-| Harness | Claude tool to native name | MCP tools | Source |
+| Harness | Claude Code tool to native name | MCP tools | Vendor page |
 | --- | --- | --- | --- |
 | `cursor` | Bash `Shell`; Read `Read`; Edit, MultiEdit, Write `Write` (Cursor files edits under Write); Grep `Grep`; Task, Agent `Task` | not rewritten (`MCP:<tool>` carries no server) | cursor.com/docs/hooks |
 | `gemini` | Bash `run_shell_command`; Read `read_file`, `read_many_files`; Edit, MultiEdit `replace`; Write `write_file`; Grep `grep_search`; Glob `glob`; LS `list_directory`; WebFetch `web_fetch`; WebSearch `google_web_search`; TodoWrite `write_todos` | `mcp_<server>_<tool>` | geminicli.com/docs/reference/tools/ |
 | `copilot`, `copilot-cli` | Bash `bash`; Read `view`; Edit, MultiEdit `edit`; Write `create`; Grep `grep`; Glob `glob`; WebFetch `web_fetch`; Task, Agent `task` | not documented | docs.github.com/en/copilot/reference/hooks-configuration |
 | `factory` | Bash `Execute`; Read `Read`; Edit `Edit`; Write `Create`; Grep `Grep`; Glob `Glob`; LS `LS`; WebFetch `FetchUrl`; WebSearch `WebSearch`; Task, Agent `Task` | `mcp__<server>__<tool>` | docs.factory.com/reference/hooks-reference |
 | `devin` | Bash `exec`; Read `read`; Edit `edit`; Write `write`; Grep `grep`; Glob `glob`; WebFetch `webfetch` | `mcp__<server>__<tool>` | docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks |
-| `kiro` | Bash `shell` (one tool, no alternation; Kiro's other categories span several Claude tools) | not rewritten | kiro.dev/docs/hooks/types/ |
+| `kiro` | Bash `shell` (one tool, no alternation; Kiro's other categories span several Claude Code tools) | not rewritten | kiro.dev/docs/hooks/types/ |
 | `goose` | Bash `shell`; Write `write`; Edit, MultiEdit `edit` | `<server>__<tool>` | goose-docs.ai/docs/guides/context-engineering/hooks/ |
 | `crush` | Bash `bash`; Read `view`; Edit `edit`; Write `write`; MultiEdit `multiedit`; Grep `grep`; Glob `glob`; LS `ls`; Task, Agent `agent` | `mcp_<server>_<tool>` | github.com/charmbracelet/crush docs/hooks/README.md |
 | `cortex` | Bash `bash`; Read `read`; Edit `edit`; Write `write`; Grep `grep`; Glob `glob`; NotebookEdit `notebook_edit_cell` | `mcp__<server>__<tool>` | docs.snowflake.com/en/user-guide/cortex-code/extensibility |
@@ -228,76 +276,61 @@ does not document is left out.
 | `augment` | Bash `launch-process`; Read `view`; Edit, MultiEdit `str-replace-editor`; Write `save-file`; WebFetch `web-fetch`; WebSearch `web-search` | not rewritten (`mcp:` prefix, `<tool>_<server>`) | docs.augmentcode.com/cli/hooks |
 | `antigravity` | Bash `run_command`; Read `view_file`; Edit `replace_file_content`; MultiEdit `multi_replace_file_content`; Write `write_to_file`; Grep `grep_search`; Glob `find_by_name`; LS `list_dir`; WebFetch `read_url_content`; WebSearch `search_web`; Task, Agent `invoke_subagent` | not documented | antigravity.google/docs/hooks |
 
-Left unmapped on purpose: Command Code (the page names the tools in two cases, `SHELL` and `shell`), Bob (only
-`write_file` is documented) and Reasonix (no `match` documentation could be read). Cursor's `beforeShellExecution`
-is not used for `PreToolUse` with `Bash`: its matcher is tested against the command text, not the tool, so it
-is not equivalent; the `preToolUse` matcher `Shell` is. Copilot hooks carry the tool name on stdin as well, but
-no sh filter is generated: the documented `matcher` makes one unnecessary.
+Command Code, Bob and Reasonix document too few tool names to map, so set `matchers.<harness>` for them. For the
+plugin-based `amp`, only `Bash`, `Read`, `Grep` and `Task` map to documented Amp names; the others (`edit_file`,
+`create_file`, `glob`, ...) are not on Amp's documentation pages, so check them with `amp tools list` and set
+`matchers.amp` if one differs. Cursor's
+`beforeShellExecution` is not used for `PreToolUse` with `Bash`: its matcher is tested against the command text, not
+the tool name.
 
-Handlers are `command` handlers everywhere; a handler of another `type`, and a handler field the harness lacks
-(`if`, `async`), is skipped with a warning like for the harnesses above. `script` is addressed through the
-variable the vendor documents:
+The script variable for these harnesses:
 
 | Harness | Command for `script = "scripts/guard.sh"` |
 | ------- | ----------------------------------------- |
-| `qwen` | `"$QWEN_PROJECT_DIR"/scripts/guard.sh` |
-| `codebuddy` | `"$CODEBUDDY_PROJECT_DIR"/scripts/guard.sh` |
-| `qoder` | `"$QODER_PROJECT_DIR"/scripts/guard.sh` |
-| `commandcode` | `"$COMMANDCODE_PROJECT_DIR"/scripts/guard.sh` |
-| `factory` | `"$FACTORY_PROJECT_DIR"/scripts/guard.sh` |
-| `devin` | `"$DEVIN_PROJECT_DIR"/scripts/guard.sh` |
-| `cortex` | `"$CORTEX_PROJECT_DIR"/scripts/guard.sh` |
-| `gitlab-duo` | `"$DUO_PROJECT_DIR"/scripts/guard.sh` |
-| `grok` | `"$GROK_WORKSPACE_ROOT"/scripts/guard.sh` |
-| `deepagents` | `"${CLAUDE_PROJECT_DIR}"/scripts/guard.sh` |
-| `letta`, `antigravity`, `bob`, `kiro`, `vibe` | `./scripts/guard.sh` (the vendor's examples run project scripts relative to the project) |
+| `qwen` | `"$QWEN_PROJECT_DIR"/'scripts/guard.sh'` |
+| `codebuddy` | `"$CODEBUDDY_PROJECT_DIR"/'scripts/guard.sh'` |
+| `qoder` | `"$QODER_PROJECT_DIR"/'scripts/guard.sh'` |
+| `commandcode` | `"$COMMANDCODE_PROJECT_DIR"/'scripts/guard.sh'` |
+| `factory` | `"$FACTORY_PROJECT_DIR"/'scripts/guard.sh'` |
+| `devin` | `"$DEVIN_PROJECT_DIR"/'scripts/guard.sh'` |
+| `cortex` | `"$CORTEX_PROJECT_DIR"/'scripts/guard.sh'` |
+| `gitlab-duo` | `"$DUO_PROJECT_DIR"/'scripts/guard.sh'` |
+| `grok` | `"$GROK_WORKSPACE_ROOT"/'scripts/guard.sh'` |
+| `deepagents` | `"${CLAUDE_PROJECT_DIR}"/'scripts/guard.sh'` |
+| `crush` | `"$CRUSH_PROJECT_DIR"/'scripts/guard.sh'` |
+| `letta`, `antigravity`, `bob`, `kiro`, `vibe` | `'./scripts/guard.sh'` (the harness runs project hooks from the project directory) |
 | `cline` | `"$root"/scripts/guard.sh`, where the wrapper computes `$root` from its own location |
-| `crush` | `"$CRUSH_PROJECT_DIR"/scripts/guard.sh` |
-| `augment`, `goose`, `poolside`, `reasonix` | skipped with a warning in project scope (no documented way to address the project); use `command` |
+| `augment`, `goose`, `poolside`, `reasonix` | not generated: the harness documents no way to address a project file, so use `command` |
 
-In user scope every `script` is the absolute path in the user config directory.
+With `generate --user`, every `script` becomes its absolute path in the user config directory.
 
-Not generated, and why:
+Some harnesses need a step from you before a generated project hook runs: Duo CLI needs `--enable-project-hooks` (or
+`GITLAB_ENABLE_PROJECT_HOOKS=true`), Grok needs `/hooks-trust`, and Deep Agents asks you to trust the file. Devin also
+loads the hooks of `.claude/settings.json`, so a hook generated for both `claude` and `devin` runs twice. `generate`
+prints each of these once per run.
 
-- `junie`, `zcode`, `hermes` and `kimi` have no project-level hooks (Junie and ZCode ignore them explicitly), so a
-  project `generate` skips them with a warning and `generate --user` writes them.
-- `codewhale`: its project hooks file loads only after the user approves a digest of its exact bytes, and
-  its events do not map to Claude Code's without guessing.
-- `continue-dev`: the preset no longer exists, and its hook format is documented only in source code.
-- Copilot CLI's `preMcpToolCall` and Augment's `PromptSubmit` appear in third-party mappings but in no vendor
-  documentation, so they are not emitted.
-
-Some harnesses need a step from you before a generated project hook runs, which generation cannot do: Duo CLI
-needs `--enable-project-hooks` (or `GITLAB_ENABLE_PROJECT_HOOKS=true`), Grok needs `/hooks-trust`, Deep Agents
-asks to trust the file. Devin also loads the hooks of `.claude/settings.json`, so a
-hook generated for both `claude` and `devin` runs twice. Each of these is printed once per run.
+`codewhale` gets no hooks: its project hooks load only after you approve a digest of the file's exact bytes, and its
+events do not map to Claude Code's.
 
 #### Cline
 
-Cline has no hooks document: it runs the executable named after an event from `.clinerules/hooks/` (and from
-`~/Documents/Cline/Hooks/`). `generate` writes one executable POSIX shell script per event
-(`PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `PreCompact`, `TaskStart`, `TaskComplete`). Each runs the
-configured commands in order with the hook input on stdin (read up to 16 MiB); each command runs inside a
-`{ ...; }` group, so `cd dir && ./check` or a trailing `# comment` behave as written and its exit status is
-the group's. The last command's output is the hook's output and the first failing command stops the rest. Cline has no matcher, timeout or `async`, so a group or handler that
-sets one is skipped with a warning. The scripts are owned whole, gitignored when `gitignore = true`, and removed by `clean`; a script
-is treated as generated only when its second line (after the shebang) starts with `# Generated by ai-rulez`,
-so a script you wrote under the same name, even one that mentions the marker in a comment, is never
-overwritten (a warning says so). Cline on Windows expects `.ps1` files,
-which are not generated. The vendor's current documentation describes only SDK plugins; the file contract was
-read from Cline's source (see Vendor sources).
+Cline runs the executable named after an event from `.clinerules/hooks/` (and `~/Documents/Cline/Hooks/`), so
+`generate` writes one POSIX shell script per event (`PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `PreCompact`,
+`TaskStart`, `TaskComplete`). The script runs the configured commands in order with the hook input on stdin; the first
+failing command stops the rest, and the last command's output is the hook's output. Cline has no matcher, timeout or
+`async`, so a group or handler that sets one is skipped with a warning. Windows `.ps1` hooks are not generated.
+
+A script is treated as generated only when its second line starts with `# Generated by ai-rulez`; a script of yours
+with the same name is never overwritten.
 
 ### Plugin-based harnesses
 
-OpenCode, Kilo, MiMo Code, Pi and Amp have no hooks file: their hooks are code, loaded from a plugin or
-extension directory. `[[hooks]]` render for them (`targets` and `matchers` accept `opencode`, `kilo`,
-`mimocode`, `pi` and `amp`) into one JavaScript or TypeScript module that ai-rulez owns whole. With `gitignore = true` it is
-gitignored (the module only, never its directory, which also holds hand-written plugins), removed by
-`clean` and by dropping the last hook, and written to the user-level directory by `generate --user`.
+OpenCode, Kilo, MiMo Code, Pi and Amp load hooks as code from a plugin or extension directory. For them `[[hooks]]`
+render into one JavaScript or TypeScript module that ai-rulez owns whole:
 
 | Harness | Project file | User file (`--user`) | Plugin API |
 | ------- | ------------ | -------------------- | ---------- |
-| `opencode` | `.opencode/plugins/ai-rulez-hooks.js` | `~/.config/opencode/plugins/ai-rulez-hooks.js` | default export with the v2 `setup(ctx)` and the v1 `server(ctx)`, so it loads on either generation |
+| `opencode` | `.opencode/plugins/ai-rulez-hooks.js` | `~/.config/opencode/plugins/ai-rulez-hooks.js` | default export with the v2 `setup(ctx)` and the v1 `server(ctx)`, so it loads on either |
 | `kilo` | `.kilo/plugins/ai-rulez-hooks.js` | `~/.config/kilo/plugins/ai-rulez-hooks.js` | default export `{ id, server }` |
 | `mimocode` | `.mimocode/plugins/ai-rulez-hooks.js` | `~/.config/mimocode/plugins/ai-rulez-hooks.js` | default export `{ id, server }` |
 | `pi` | `.pi/extensions/ai-rulez-hooks.ts` | `~/.pi/agent/extensions/ai-rulez-hooks.ts` | default-exported factory, `pi.on(event, handler)` |
@@ -316,89 +349,73 @@ Events (Claude Code name, then the native event):
 | `PreCompact` / `PostCompact` | - / `session.compacted` | `session_before_compact` / `session_compact` | - |
 | `Stop` | `session.idle` | `agent_settled` | `agent.end` |
 
-An event outside the column is skipped with a warning. OpenCode reports `session.created` and
-`session.idle` for subagent sessions too, so those hooks run for them as well; Pi's `agent_settled`
-fires once when a run is final.
+An event outside the column is skipped with a warning. OpenCode also reports `session.created` and `session.idle` for
+subagent sessions, so those hooks run for subagents too.
 
-What the generated module does for every command:
+How the module runs a command:
 
-- The command runs in a shell from the project directory with a Claude Code style JSON document on stdin:
-  `session_id`, `cwd`, `hook_event_name` and the fields of the event (`tool_name`, `tool_input`,
-  `tool_response`, `prompt`, `source`, `trigger`, `reason`). The harness defines no hook payload of its
-  own. `tool_name` is the Claude Code name where one is mapped (`bash` becomes `Bash`, `edit_file`
-  becomes `Edit`) and `harness_tool_name` is the harness's own name; `tool_input` also carries `command`
-  and `file_path` as Claude Code names them. `CLAUDE_PROJECT_DIR` and `AI_RULEZ_PROJECT_DIR` hold the
-  project directory.
-- A `matcher` is a regular expression that must match a whole tool name, and it is tested against the
-  harness's name and the Claude Code names mapped to it, so `Edit|Write` selects OpenCode's `edit`,
-  `write` and `apply_patch` and Pi's `edit` and `write`. A name outside the table (an MCP tool) matches only
-  by its own name, so write it in `matchers.<harness>`. On `SessionStart` the matcher is tested against the
-  source (`startup`, and for Pi `resume` and `clear`), on `PreCompact` and `PostCompact` against `manual`
-  or `auto` (Pi). On any other event without a subject a matcher skips the group with a warning.
-- Exit code 2 from a `PreToolUse` hook blocks the call and its stderr becomes the reason (Pi also blocks a
-  prompt on `UserPromptSubmit`); so does a JSON decision of `block` or `deny` on stdout. Any other non-zero
-  exit, a timeout (`timeout`, default 600 seconds) or a spawn failure is logged to stderr and never blocks.
-  Hooks of other events cannot block. `async = true` runs the command without waiting for it.
-- A handler with `if` or a non-command `type` is skipped with a warning, as for the other harnesses.
-- A `script` runs as `./<script>` from the project directory (an absolute path in the user config
-  directory for `--user`); `args` are shell-quoted into the command.
+- **Input.** The command runs in a shell from the project directory, with a Claude Code style JSON document on
+  stdin: `session_id`, `cwd`, `hook_event_name` and the event's fields (`tool_name`, `tool_input`, `tool_response`,
+  `prompt`, `source`, `trigger`, `reason`). `tool_name` is the Claude Code name where one is mapped (`bash` becomes
+  `Bash`) and `harness_tool_name` the harness's own. `CLAUDE_PROJECT_DIR`, `AI_RULEZ_PROJECT_DIR` and
+  `AI_RULEZ_HOOK_EVENT` are set.
+- **Matcher.** A regular expression that must match a whole tool name, tested against the harness's name and the
+  Claude Code names mapped to it, so `Edit|Write` selects OpenCode's `edit`, `write` and `apply_patch`. An unmapped
+  name (an MCP tool) matches only by its own name; write it in `matchers.<harness>`. On `SessionStart` the matcher is
+  tested against the source, on Pi's compaction events against `manual` or `auto`. A matcher that Go and JavaScript
+  would read differently (inline flags, lookarounds, backreferences, unbalanced groups) skips the group with a
+  warning.
+- **Blocking.** Exit code 2 from a `PreToolUse` hook blocks the call and its stderr becomes the reason, as does a JSON
+  decision of `block` or `deny` on stdout (Pi also blocks a prompt on `UserPromptSubmit`). Any other non-zero exit, a
+  timeout (`timeout`, default 600 seconds) or a spawn failure is logged and never blocks.
+- **Scripts.** A `script` runs as `./<script>` from the project directory; `args` are shell-quoted into the command.
 
-The hook commands are embedded as one JSON literal produced by the Go encoder, never spliced into code,
-so quotes, newlines, backticks and `${}` in a command reach the shell as written.
+Amp requires a `tool.call` handler to return a result; a non-blocking hook returns `{ action: "allow" }`, the only
+result that neither rejects nor rewrites the call.
 
-A module is owned only while its first line is the `// Generated by ai-rulez` banner. A hand-written plugin
-with the same file name is never overwritten: it is left alone and a warning says so.
+The module is owned only while its first line is the `// Generated by ai-rulez` banner; a plugin of yours with the same
+file name is left alone with a warning. With `gitignore = true` the module is gitignored; `clean`, or dropping the last
+hook, removes it.
 
-A `matcher` is checked when the module is generated. It must be a regular expression that Go and
-JavaScript read alike: unbalanced groups (`a)|(b`, which would escape the `^(?:...)$` anchoring), inline
-flags, named groups, lookarounds, backreferences, POSIX classes, `\p{..}` and `\z` are rejected, and the
-group is skipped with a warning instead of generating a matcher that fails to compile and matches nothing
-(which would silently disable a blocking hook).
+### Failure and environment
 
-Amp requires a `tool.call` handler to return a result, and `{ action: "allow" }` is the only one that
-neither rejects nor rewrites the call; Amp documents no way to return "no opinion", so a non-blocking hook
-returns it. Whether Amp's own permission rules still apply after `allow` is not documented.
-
-### Environment and failure semantics
-
-- A hook command inherits the full environment of the harness process, secrets included (tokens, cloud
-  credentials), and runs with your privileges. ai-rulez does not filter it: a `command` or `script` in
-  `[[hooks]]` has the same access as you do, so review them like code. The plugin modules add
-  `CLAUDE_PROJECT_DIR`, `AI_RULEZ_PROJECT_DIR` and `AI_RULEZ_HOOK_EVENT`.
-- Hooks fail open. As in Claude Code, only a deliberate block (exit code 2, or a JSON `block`/`deny`
-  decision) stops an event; any other non-zero exit, a timeout, a missing script or a spawn failure is
-  logged and the event proceeds. A guard that must not be bypassed has to exit 2 itself on every error
-  path (`set -e` is not enough, it exits 1), and a deny that matters belongs in `[permissions]` or a sandbox
-  as well. There is no `fail_closed` option: Claude Code has no such model, and emulating it per harness
-  would change what a hook error means from harness to harness.
-- Harnesses that merge several hook sources run them all, so a hook generated for two overlapping
-  harnesses (Devin and Claude, for example) can run twice.
+- **Hooks fail open.** Only a deliberate block (exit code 2, or a JSON `block`/`deny` decision) stops an event. Any
+  other non-zero exit, a timeout, a missing script or a spawn failure is logged and the event proceeds. A guard that
+  must not be bypassed has to exit 2 on every error path (`set -e` exits 1). A deny that matters also belongs in
+  [`[permissions]`](permissions.md) or a sandbox.
+- **Full environment.** A hook command inherits the harness's environment, credentials included, and runs with your
+  privileges. Review `[[hooks]]` like code.
+- **Duplicates.** A harness that merges several hook sources runs them all, so a hook generated for two overlapping
+  harnesses (Devin and Claude Code) can run twice.
 
 ### Trust and review
 
-Harnesses do not run project hooks blindly. Codex requires non-managed hooks to be reviewed and trusted
-(`/hooks`) before they run and loads project hooks only for a trusted `.codex/` layer, and Claude Code
-asks you to trust the folder before project `allow` rules and most `env` values apply. Generating a hook
-does not bypass any of that.
+Harnesses do not run project hooks blindly. Codex requires non-managed hooks to be reviewed and trusted (`/hooks`)
+and loads project hooks only for a trusted `.codex/` layer; Claude Code asks you to trust the folder before project
+`allow` rules and most `env` values apply. Generating a hook does not bypass any of that. `generate` prints new or
+changed hook commands the first time it writes them; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences the notice.
 
 ## `[guard]`
 
 ```toml
 [guard]
 generated = true
-# version = "5.0.0"          # npx version to run; default is the generating binary's version
+# version = "5.10.0"         # npx version to run; default is the generating binary's version
 # command = ["ai-rulez"]     # replaces `npx -y ai-rulez@<version>`; excludes version
 ```
 
-Agents ignore the "do not edit" banner of a generated file often enough that the edit is lost on the next
-`generate`. With `generated = true`, `generate` adds a `PreToolUse` hook that runs `ai-rulez guard` before
-every file-editing tool call and blocks the ones that target a generated file. The agent is told to edit the
-source under `.ai-rulez/` (named from the file's `Generated by ai-rulez from <source>` banner when it has
-one) and to read the ai-rulez skill.
+With `generated = true`, `generate` adds a `PreToolUse` hook that runs `ai-rulez guard` before every file-editing tool
+call and blocks the calls that target a generated file. The agent is told to edit the source under `.ai-rulez/`
+instead. An agent that ignores the "do not edit" banner otherwise loses its edit on the next `generate`.
 
-It is a table of its own because `[hooks]` cannot coexist with the `[[hooks]]` array of tables in TOML. The
-hook is synthesized at generation time and written like any other `[[hooks]]` group; it is never saved back to
-`config.toml`.
+| Key | Type | Default | Meaning |
+| --- | ---- | ------- | ------- |
+| `generated` | boolean | `false` | Add the guard hook |
+| `version` | string | the generating binary's version | The version `npx -y ai-rulez@<version> guard` runs |
+| `command` | list | `["npx", "-y", "ai-rulez@<version>"]` | The launcher, without the trailing `guard`; excludes `version` |
+
+Only harnesses whose documented `PreToolUse` hook blocks a call on exit code 2 get the guard; `generate` logs which
+others were skipped:
 
 | Harness | Event | Matcher it renders |
 | ------- | ----- | ------------------ |
@@ -410,55 +427,23 @@ hook is synthesized at generation time and written like any other `[[hooks]]` gr
 | `copilot` | `preToolUse` | `edit\|create` |
 | `copilot-cli` | `preToolUse` | `edit\|create` |
 
-Only harnesses whose documented `PreToolUse` hook blocks a call on exit code 2 get it; the others are skipped
-and `generate` logs which at info level. The exit-2 contract of each, as documented (read 2026-10-06):
-
-- Claude Code ([hooks](https://code.claude.com/docs/en/hooks)): "Exit 2 means a blocking error"; `PreToolUse`
-  "blocks the tool call" and stderr is the message.
-- Codex ([hooks](https://learn.chatgpt.com/docs/hooks)): "You can also use exit code `2` and write the blocking
-  reason to `stderr`"; file edits arrive as `apply_patch`, selectable with `apply_patch`, `Edit` or `Write`.
-- Gemini CLI ([hooks](https://geminicli.com/docs/hooks/)): exit 2 is a "Critical Block. The target action (tool,
-  turn, or stop) is aborted"; stderr is the rejection reason.
-- Cursor ([hooks](https://cursor.com/docs/hooks)): "Exit code `2` - Block the action (equivalent to returning
-  `permission: "deny"`)".
-- Factory ([hooks guide](https://docs.factory.com/cli/configuration/hooks-guide)): "Exit code 2: Blocking or
-  corrective feedback. PreToolUse blocks the tool call"; the editing tools are `Create`, `Edit` and `ApplyPatch`.
-- GitHub Copilot ([hooks configuration](https://docs.github.com/en/copilot/reference/hooks-configuration)):
-  `preToolUse` denies on exit code 2 (any other non-zero exit also denies; timeouts fail open). The same page
-  documents a JSON `permissionDecision: "deny"` on stdout, which the guard does not need. The `copilot` and
-  `copilot-cli` presets share `.github/hooks/ai-rulez.json`, so enabling both writes the one file once.
-
-The hook command resolves the executable the way [`[mcp] self_server`](configuration.md) does, so it works
-through `npx` without a global install. The first `npx` run downloads the package and can exceed the 10 second
-hook timeout; the hook then fails open and the edit goes through. Set `[guard] command = ["ai-rulez"]` with a
-local install to avoid that.
-
-`generate --user` never adds the guard: it protects a project's generated files, not the home directory.
+The first `npx` run downloads the package and can exceed the 10-second hook timeout; the hook then fails open and the
+edit goes through. With a local install, set `command = ["ai-rulez"]`. `generate --user` never adds the guard.
 
 How `ai-rulez guard` decides:
 
-- It reads the hook JSON on stdin (`tool_name`, `tool_input.file_path`, `path`, `target_file`, or the
-  `*** Update File:` lines of a Codex `apply_patch`, including `command` arrays and indented markers) and
-  resolves the path against the payload's `cwd`. It locates the project from that `cwd` and from the target
-  file's own directory.
-  `..` segments and symlinks are resolved first, so neither reaches a generated file by another name.
-- A path is blocked only when it is a wholly owned output listed in `.ai-rulez/.generated-manifest.json` or
-  `.generated-manifest.local.json`. Documents ai-rulez only merges keys into (`.claude/settings.json`,
-  `.vscode/settings.json`, `.mcp.json`, ...) are never blocked. Read-only tools are never blocked.
-- The machine-local manifest is believed only when git does not track it, the current user owns it and nobody
-  else can write to it; otherwise `generate`, `clean` and the guard ignore it and `generate` warns (run
-  `git rm --cached .ai-rulez/.generated-manifest.local.json`). A tracked local manifest is never written to.
-- It reads the two manifests and nothing else: no config load, no network, a few milliseconds.
-- It fails open on its own errors: a payload that does not parse, a project without a manifest and a path
-  outside the project all exit 0. A blocked call exits 2 with the reason on stderr. A guard that errors must
-  not wedge the agent, and [`ai-rulez verify`](cli.md#verify-command) still catches a hand edit afterwards.
-- It does not fail open on input it will not analyse: a payload over 8 MiB for an edit tool, or a call naming
-  more than 1000 distinct files, exits 2 with a message asking for smaller edits; an oversized read is allowed. Padding a patch is not a bypass. Repeated
-  paths are collapsed, and the project and manifests are looked up once per call, so a large patch stays well
-  inside a hook timeout.
+- It reads the hook JSON on stdin (`tool_input.file_path`, `path`, `target_file`, or the `*** Update File:` lines of a
+  Codex `apply_patch`), resolves `..` and symlinks, and locates the project from the payload's `cwd`.
+- It blocks a path only when it is a wholly generated output listed in `.ai-rulez/.generated-manifest.json` or the
+  machine-local `.generated-manifest.local.json`. Documents ai-rulez only merges keys into (`.claude/settings.json`,
+  `.vscode/settings.json`, `.mcp.json`, ...) and read-only tools are never blocked.
+- It reads the two manifests and nothing else: no config load, no network.
+- It fails open on its own errors (a payload that does not parse, no manifest, a path outside the project). A blocked
+  call exits 2 with the reason on stderr. An edit payload over 8 MiB, or one naming more than 1,000 files, is blocked
+  with a request for smaller edits.
 
-The guard stops an agent's file-editing tools. Shell-based writes (`sed -i`, `tee`, a `>` redirect or a script
-run through a Bash tool) are not blocked; a deny that must hold belongs in `[permissions]` or a sandbox as well.
+The guard stops file-editing tools only. A write through a shell (`sed -i`, `tee`, a `>` redirect) is not blocked;
+[`ai-rulez generate --check`](cli.md#detecting-drift) still catches the hand edit afterwards.
 
 ## `[permissions]`
 
@@ -469,23 +454,12 @@ ask   = ["Bash(git push *)"]
 deny  = ["Read(./.env)", "Bash(rm -rf *)"]
 ```
 
-Rules use Claude Code's permission-rule syntax and are written to `permissions.allow`, `permissions.ask`
-and `permissions.deny` of `.claude/settings.json`. Each rule is owned individually: rules you wrote in
-the same arrays stay, a rule removed from `config.toml` is removed from the file, and a rule you wrote
-that is identical to a configured one stays yours on `clean`.
-
-Besides Claude Code, `[permissions]` is translated into the native permission format of every harness that
-has one (Codex rules, OpenCode `permission`, Cursor `cli.json`, VS Code `chat.tools.*` and others). See
-[Permissions](permissions.md) for the per-harness table, what is lossy and the sources. A config with
-`[permissions]` and a preset that has no documented permission file prints one warning naming the
-presets that get nothing, and says that their deny rules are not enforced.
-
-`validate` warns about an allow rule that permits every call of a tool (`Bash`, `Bash(*)`, `*`,
-`WebFetch`), and `validate` reports the same as `AR506 permission-overbroad`. Deny and ask
-lists are not checked. ai-rulez does not evaluate rules; Claude Code applies them (deny over ask over
-allow).
+Rules in Claude Code syntax, translated into the native permission file of every harness that has one. The rule
+syntax, the per-harness files and what each translation can express are in [Permissions](permissions.md).
 
 ## `[claude.settings.managed]`
+
+Currently supports Claude Code only.
 
 ```toml
 [claude.settings.managed]
@@ -493,137 +467,128 @@ env = { EXAMPLE_FLAG = "1" }
 skill_overrides = { init = "off", legacy-deploy = "name-only" }
 ```
 
-Keys of `.claude/settings.json` owned entry by entry: `env.<NAME>` and `skillOverrides.<skill>`.
-`skill_overrides` values are `on`, `name-only`, `user-invocable-only` or `off`. Unlike the plugin keys of
-`[claude.settings]`, no `manage = true` is needed: declaring an entry is the opt-in. Other entries of the
-same objects survive. An entry the file already holds with the configured value is yours and stays on
-`clean`; one with a different value is replaced by the configured value on `generate` (the configuration
-wins, as for MCP servers) and removed on `clean`, and an entry you edit after generation stays yours.
+| Key | Writes | Values |
+| --- | ------ | ------ |
+| `env` | `env.<NAME>` of `.claude/settings.json` | strings |
+| `skill_overrides` | `skillOverrides.<skill>` | `on`, `name-only`, `user-invocable-only`, `off` |
 
-A [role](roles.md)'s `skill_mode` is rendered through the same ownership: `generate --role <name>` owns
-`skillOverrides.<skill>` for the skills the role sets, the role's value wins over the same skill in
-`skill_overrides`, and switching roles removes the previous role's entries.
+Each entry is owned on its own; other entries of the same objects survive. Declaring an entry is the opt-in. An
+entry the file already holds with the configured value stays yours on `clean`; one with a different value is replaced
+on `generate` and removed on `clean`.
+
+A [role](roles.md)'s `skill_mode` is written through the same keys: `generate --role <name>` owns
+`skillOverrides.<skill>` for the skills the role sets, the role's value wins over `skill_overrides`, and switching
+roles removes the previous role's entries.
 
 ## Files and ownership
 
 | File | Written when | On `clean` |
 | ---- | ------------ | ---------- |
-| `.claude/settings.json` | plugin keys, `[[hooks]]`, `[permissions]` or managed keys are declared (MCP servers are not: Claude Code reads them from `.mcp.json`) | only the entries ai-rulez wrote are removed; the file is deleted only if nothing else is left |
-| `.claude/settings.json`, `.codex/config.toml`, `opencode.json` | `[[enabled_plugins]]` are declared: `enabledPlugins` and `extraKnownMarketplaces`, `[plugins."<id>"]` tables, and the `plugin` array (see [Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace)) | same; only the entries ai-rulez wrote are removed |
+| `.claude/settings.json` | the project generates for `claude` (the default [`[session_start]`](session-start.md) hook), or `[[hooks]]`, `[permissions]`, managed keys or plugin keys are declared | the entries ai-rulez wrote are removed; the file goes when nothing else is left |
+| `.claude/settings.json`, `.codex/config.toml`, `opencode.json` | `[[enabled_plugins]]` are declared (see [Enable a plugin from another marketplace](plugins.md#enable-a-plugin-from-another-marketplace)) | same |
 | `.codex/hooks.json`, `.cursor/hooks.json`, `.gemini/settings.json` | `[[hooks]]` apply to the harness | same |
-| `.opencode/plugins/ai-rulez-hooks.js`, `.kilo/plugins/ai-rulez-hooks.js`, `.mimocode/plugins/ai-rulez-hooks.js`, `.pi/extensions/ai-rulez-hooks.ts`, `.amp/plugins/ai-rulez-hooks.ts` | `[[hooks]]` apply to the harness | deleted (ai-rulez owns the whole module; the directory also holds hand-written plugins, which are left alone) |
-| `.factory/hooks.json`, `.agents/hooks.json`, `.devin/hooks.v1.json`, `.gitlab/duo/hooks.json`, `.grok/hooks/ai-rulez.json`, `.kiro/hooks/ai-rulez.json`, `.deepagents/hooks.json`, `.agents/plugins/ai-rulez/hooks/hooks.json`, `.vibe/hooks.toml` | `[[hooks]]` apply to the harness | only the hooks ai-rulez wrote are removed; the file goes when nothing else is in it |
-| `.qwen/settings.json`, `.augment/settings.json`, `.codebuddy/settings.json`, `.qoder/settings.json`, `.commandcode/settings.json`, `.letta/settings.json`, `.bob/settings.json`, `.cortex/settings.json`, `.reasonix/settings.json`, `crush.json`, `.poolside/settings.yaml` | MCP servers or `[[hooks]]` apply to the harness | same; MCP servers and hooks of one file are merged together |
-| user-level `~/.junie/config.json`, `~/.zcode/cli/config.json` (`hooks.events`, `hooks.enabled`), `~/.hermes/config.yaml`, `~/.kimi-code/config.toml` | `generate --user` with `[[hooks]]` | same; ZCode's `hooks.enabled` is added only when absent and kept on `clean` while the file holds other settings |
-| `.clinerules/hooks/<Event>` | `[[hooks]]` apply to `cline` | deleted (ai-rulez owns the script; one without its `Generated by ai-rulez` line is yours and is never overwritten) |
-| `.github/hooks/ai-rulez.json` | `[[hooks]]` apply to `copilot` or `copilot-cli` | deleted (ai-rulez owns the whole file; Copilot loads every `*.json` in that directory, so hand-written hook files go beside it) |
+| `.factory/hooks.json`, `.agents/hooks.json`, `.devin/hooks.v1.json`, `.gitlab/duo/hooks.json`, `.grok/hooks/ai-rulez.json`, `.kiro/hooks/ai-rulez.json`, `.deepagents/hooks.json`, `.agents/plugins/ai-rulez/hooks/hooks.json`, `.vibe/hooks.toml` | `[[hooks]]` apply to the harness | same |
+| `.qwen/settings.json`, `.augment/settings.json`, `.codebuddy/settings.json`, `.qoder/settings.json`, `.commandcode/settings.json`, `.letta/settings.json`, `.bob/settings.json`, `.cortex/settings.json`, `.reasonix/settings.json`, `crush.json`, `.poolside/settings.yaml` | `[[hooks]]` or `[permissions]` apply to the harness, or MCP servers for `qwen`, `augment`, `crush` and `poolside` | same; MCP servers, hooks and permissions of one file are merged together |
+| `~/.junie/config.json`, `~/.zcode/cli/config.json`, `~/.hermes/config.yaml`, `~/.kimi-code/config.toml` | `generate --user` with `[[hooks]]` | same; ZCode's `hooks.enabled` is added only when absent |
+| `.opencode/plugins/ai-rulez-hooks.js`, `.kilo/plugins/ai-rulez-hooks.js`, `.mimocode/plugins/ai-rulez-hooks.js`, `.pi/extensions/ai-rulez-hooks.ts`, `.amp/plugins/ai-rulez-hooks.ts` | `[[hooks]]` apply to the harness | deleted; hand-written plugins in the directory stay |
+| `.clinerules/hooks/<Event>` | `[[hooks]]` apply to `cline` | deleted |
+| `.github/hooks/ai-rulez.json` | `[[hooks]]` apply to `copilot` or `copilot-cli` | deleted; Copilot loads every `*.json` in the directory, so put your own hook files beside it |
 
-Claims are recorded in the machine-local manifest, so `generate` also removes an entry you deleted from
-`config.toml`. A document that uses comments or trailing commas (JSONC) is edited in place and keeps its
-comments; only a document that does not parse fails, with a hint naming the path.
+The files that hold only permission rules (`.codex/rules/ai-rulez.rules`, `.cursor/cli.json`, `.vscode/settings.json`,
+...) are listed in [Permissions](permissions.md#harnesses).
+
+A document with comments or trailing commas (JSONC) is edited in place and keeps its comments; a document that does not
+parse fails with a hint naming the path. Project-wide settings are not written for `[[scopes]]` subdirectories.
+
+A settings document that ai-rulez creates is gitignored with the other generated files when `gitignore = true`, so
+its hooks reach teammates only when the file was already tracked, or with `gitignore = false`. Hook commands are quoted
+for POSIX shells; the Copilot `powershell` field is not written.
+
+### Shared settings documents
+
+`.mcp.json`, `.claude/settings.json`, `.gemini/settings.json`, `.amp/settings.json`, `.agents/mcp_config.json`,
+`.pi/mcp.json`, `opencode.json` and similar files are shared documents: ai-rulez owns specific entries and you own the
+rest. `generate` replaces only its entries and keeps every other member byte for byte, including indentation and, in
+JSONC, TOML and YAML files, comments.
+
+- **MCP servers are owned one by one.** A server you added under a name that is not in your configuration survives
+  `generate` and `clean`. A server removed from the configuration is removed on the next `generate`, as long as it
+  still holds the value ai-rulez wrote; an entry you edited is yours and stays, with a warning. A hand-written server
+  with the name of a configured one is replaced by the configured value.
+- **Hooks, permissions and managed keys** are owned element by element: hand-written groups, rules and entries in the
+  same arrays survive.
+- **Plugin keys.** With `[claude.settings] manage = true`, ai-rulez owns `extraKnownMarketplaces.<marketplace>` and the
+  listed `enabledPlugins` entries, each on its own.
+- **Written only when needed.** A settings document is written only when ai-rulez has something to put in it (MCP
+  servers, a resolved Amp effort, managed keys, hooks). `.gemini/settings.json` (`context.fileName`) and
+  `opencode.json` (`instructions`) also carry the entry that loads machine-local content.
+- **Removal.** `clean`, and `generate` after a preset or server is removed, take back the entries ai-rulez merged in
+  while they hold the value it wrote, and keep the rest of the document. A key or object left empty is dropped, and
+  a document left with nothing is deleted. The record of what was merged is kept as
+  digests, never values; see [Settings documents shared with you](local-overrides.md#settings-documents-shared-with-you).
+- **Git ignore.** A document that still holds keys you own is your file: it is not added to the managed `.gitignore`
+  block and never deleted as stale. A document holding only ai-rulez's keys is a generated file and is ignored with
+  `gitignore = true`.
 
 ### What ai-rulez may change
 
-The shared manifest (`.ai-rulez/.generated-manifest.json`; committed when `gitignore` is off, gitignored
-otherwise) is a file anyone who can commit, or who can write to a clone, can edit, so it proves nothing. ai-rulez takes something back or deletes it only on proof of authorship:
+ai-rulez takes an entry back, or deletes a file, only on proof that it wrote it:
 
-1. an in-file `Content-Hash` that matches the body of the file, or
-2. a claim or digest in the gitignored machine-local manifest (`.ai-rulez/.generated-manifest.local.json`),
-   written by this machine, or
-3. the current config rendering the same value.
+1. an in-file `Content-Hash` that matches the file's body, or
+2. a claim or digest in the machine-local manifest (`.ai-rulez/.generated-manifest.local.json`, gitignored), or
+3. the current configuration rendering the same value.
 
-Consequences:
+The shared manifest (`.ai-rulez/.generated-manifest.json`) lists generated paths for teammates and the guard, but
+anyone with push access can edit it, so it is never accepted as proof. What follows from that:
 
-- The shared manifest lists generated paths for teammates and the guard. It never supplies a claim, a
-  digest or a licence to remove a `permissions` deny or ask rule.
-- A claim removes a value only while it still equals the digest recorded when ai-rulez wrote it; an edited
-  value is yours and stays.
-- A merged document that existed before ai-rulez first wrote to it (no local record, not listed as generated)
-  is yours: `clean` never deletes it, even when its content equals what ai-rulez renders, and a value or array
-  element you already had is not claimed. A document ai-rulez created is deleted by `clean` only while it
-  still has the bytes this machine recorded.
-- The original layout is restored: `generate` run any number of times followed by `clean` gives back the
-  original bytes (one-line JSON, a missing final newline, an empty `[mcp_servers]` table, `mcp_servers: {}`).
-- On a fresh clone there is no local manifest. `generate` renders the same outputs, and a stale generated file
-  is removed only on its `Content-Hash`; a stale file with no header is reported and left.
-- A hook dropped from the configuration is taken out of `.claude/settings.json` (and the other merged settings
-  documents) only on a machine whose local manifest recorded writing it. A fresh clone has no such record, so a
-  hook group the config no longer renders stays in the committed file, and `generate --check` reports no drift
-  for it: the check compares what `generate` would write, and `generate` never takes back an entry it cannot prove
-  it wrote. The committed manifest is editable by anyone with push access, so it is not accepted as that proof for
-  hooks (a forged entry could strip a hook you wrote yourself). Remove the stale group by hand.
-- `generate` and `clean` never remove a file whose parent directory resolves, through a symlink, outside the
-  project.
-- A settings document ai-rulez creates is gitignored with the other generated files (`gitignore = true`), so hooks
-  and permissions it writes reach teammates only when the file already existed and is tracked, or when
-  `gitignore = false`; each teammate otherwise runs `generate`. Hook script commands are quoted for POSIX
-  shells only; on Windows the Copilot `powershell` field is not written.
-- `generate` rewrites a generated file whose body no longer matches its `Content-Hash`, so a hand edit is lost
-  and `generate --check` stops reporting it. `clean` keeps such a file and warns; `--force` removes it.
+- An entry you edited after `generate` wrote it is yours and stays.
+- A settings document that existed before ai-rulez first wrote to it is yours: `clean` never deletes it, and values
+  you already had are not claimed.
+- `generate` followed by `clean` restores the original bytes of a merged document.
+- A fresh clone has no machine-local manifest. A hook you drop from the configuration stays in a committed
+  `.claude/settings.json` (and the other merged documents) on such a clone, and `generate --check` reports no drift
+  for it. Remove the stale group by hand.
+- `generate` rewrites a generated file whose body no longer matches its `Content-Hash`, so a hand edit is lost. `clean`
+  keeps such a file and warns; `clean --include-edited` removes it.
+- The machine-local manifest is believed only when git does not track it and only you can write to it; otherwise
+  `generate` warns (run `git rm --cached .ai-rulez/.generated-manifest.local.json`).
+- `generate` and `clean` never remove a file whose directory resolves, through a symlink, outside the project.
 
-Project-wide settings are not written for `[[scopes]]` subdirectories.
+## Vendor documentation
 
-## Vendor sources
+The hook formats follow each vendor's documentation:
 
-Formats were read from the vendors' documentation on 2026-10-04:
-
-- Claude Code: `code.claude.com/docs/en/hooks`, `/settings`, `/permissions`, `/skills` (skillOverrides).
-- Codex: `learn.chatgpt.com/docs/hooks` (`developers.openai.com/codex/hooks` redirects there).
-- Cursor: `cursor.com/docs/hooks`.
-- Gemini CLI: `geminicli.com/docs/hooks/` and `/docs/hooks/reference/`.
-- GitHub Copilot: `docs.github.com/en/copilot/reference/hooks-configuration`.
-
-- OpenCode: `opencode.ai/docs/plugins/` and, for the v2 plugin API, `opencode.ai/v2/docs/build/plugins` (the
-  v1 `server()` plus v2 `setup()` default export is documented under "Support V1"); plugin directories from
-  `packages/opencode/src/config/plugin.ts` (`{plugin,plugins}/*.{ts,js}`).
-- Kilo: `kilo.ai/docs/automate/extending/plugins` and `Kilo-Org/kilocode` (`packages/opencode/src/config/plugin.ts`).
-- MiMo Code: `XiaomiMiMo/MiMo-Code` (`packages/cli/src/config/plugin.ts`, `packages/cli/src/plugin/index.ts`).
-- Pi: `earendil-works/pi`, `packages/coding-agent/docs/extensions.md` and
-  `src/core/extensions/types.ts` (event payloads, `ToolCallEventResult`).
-- Amp: `ampcode.com/docs/plugin-api`, `ampcode.com/docs/customize/plugins` and the `@ampcode/plugin` typings.
-  Amp's tool names beyond `Bash`, `Read`, `Grep` and `Task` (`edit_file`, `create_file`, `glob`, `web_search`,
-  `read_web_page`, `todo_write`) are not listed on any documentation page; they are from the tool names
-  Amp uses elsewhere, so check them with `amp tools list` and use `matchers.amp` if one differs.
-
-Settings-file harnesses of "More settings-file harnesses", read 2026-10-05 (the vendor's page, and for Cline
-and Continue its source, where no page describes the file format):
-
-- Copilot CLI: `docs.github.com/en/copilot/reference/hooks-configuration`.
-- Factory Droid: `docs.factory.com/reference/hooks-reference` and `/cli/configuration/hooks-guide`.
-- Antigravity: `antigravity.google/docs/hooks`.
-- Qwen Code: `qwenlm.github.io/qwen-code-docs/en/users/features/hooks/`. The user-level path is not stated
-  there; `~/.qwen/settings.json` is the location Qwen Code's other user settings use.
-- Auggie (Augment): `docs.augmentcode.com/cli/hooks`.
-- CodeBuddy Code: `codebuddy.ai/docs/cli/hooks`.
-- Qoder CLI: `docs.qoder.com/cli/hooks`.
-- Command Code: `commandcode.ai/docs/hooks`.
-- Letta Code: `docs.letta.com/letta-code/hooks`.
-- GitLab Duo CLI: `docs.gitlab.com/user/gitlab_duo_cli/customize/` (hooks are an experiment).
-- Devin CLI: `docs.devin.ai/cli/extensibility/hooks/overview`.
-- Grok Build CLI: `docs.x.ai/build/features/hooks`.
-- IBM Bob: `bob.ibm.com/docs/ide/configuration/lifecycle-hooks`.
-- Snowflake Cortex Code: `docs.snowflake.com/en/user-guide/cortex-code/extensibility`. A second page names
-  `.snowflake/cortex/settings.json` as the project file; `.cortex/settings.json` is the one the CLI page and the
-  preset use.
-- Block goose: `goose-docs.ai/docs/guides/context-engineering/hooks/`.
-- Deep Agents Code: `docs.langchain.com/oss/deepagents/code/hooks`.
-- Junie CLI: `junie.jetbrains.com/docs/junie-cli-hooks.html`.
-- ZCode: `zcode.z.ai/en/docs/hooks`.
-- Crush: `github.com/charmbracelet/crush`, `docs/hooks/README.md`. Crush prefers a `crushrc` script but still
-  reads the `hooks` of `crush.json`.
-- Poolside Pool: `docs.poolside.ai/hooks`.
-- Reasonix: `DeepSeek-Reasonix`, `docs/DESKTOP_HOOKS.zh-CN.md` and `internal/hook/hook.go` (the project's
-  documentation is a desktop guide).
-- Hermes Agent: `hermes-agent.nousresearch.com/docs/user-guide/features/hooks`.
-- Kiro: `kiro.dev/docs/hooks/` (the standalone `.kiro/hooks/*.json` format of the IDE 1.0 and CLI 3.0); the
-  user-level `~/.kiro/hooks/` directory is from the vendor's changelog, and the file name `ai-rulez.json`
-  there is ours.
-- Mistral Vibe: `docs.mistral.ai/vibe/code/cli/hooks`.
-- Kimi Code: `moonshotai.github.io/kimi-code/en/customization/hooks.html` (the older kimi-cli documents
-  `~/.kimi/config.toml`).
-- Cline: the extension and SDK sources `apps/vscode/src/core/hooks/utils.ts` and
-  `sdk/packages/core/src/hooks/hook-file-config.ts` of `github.com/cline/cline`; docs.cline.bot only describes
-  SDK plugins now.
-
-The event mapping for Gemini's `BeforeAgent`/`AfterAgent` is an inference from the event descriptions;
-no vendor page maps Claude Code events to Gemini's.
+| Harness | Page |
+| ------- | ---- |
+| `claude` | `code.claude.com/docs/en/hooks`, `/settings`, `/skills` (`skillOverrides`) |
+| `codex` | `learn.chatgpt.com/docs/hooks` |
+| `cursor` | `cursor.com/docs/hooks` |
+| `gemini` | `geminicli.com/docs/hooks/` |
+| `copilot`, `copilot-cli` | `docs.github.com/en/copilot/reference/hooks-configuration` |
+| `opencode` | `opencode.ai/docs/plugins/` |
+| `kilo` | `kilo.ai/docs/automate/extending/plugins` |
+| `pi` | `packages/coding-agent/docs/extensions.md` in `earendil-works/pi` |
+| `amp` | `ampcode.com/docs/plugin-api` |
+| `factory` | `docs.factory.com/reference/hooks-reference` |
+| `antigravity` | `antigravity.google/docs/hooks` |
+| `qwen` | `qwenlm.github.io/qwen-code-docs/en/users/features/hooks/` |
+| `augment` | `docs.augmentcode.com/cli/hooks` |
+| `codebuddy` | `codebuddy.ai/docs/cli/hooks` |
+| `qoder` | `docs.qoder.com/cli/hooks` |
+| `commandcode` | `commandcode.ai/docs/hooks` |
+| `letta` | `docs.letta.com/letta-code/hooks` |
+| `gitlab-duo` | `docs.gitlab.com/user/gitlab_duo_cli/customize/` (hooks are an experiment) |
+| `devin` | `docs.devin.ai/cli/extensibility/hooks/overview` |
+| `grok` | `docs.x.ai/build/features/hooks` |
+| `bob` | `bob.ibm.com/docs/ide/configuration/lifecycle-hooks` |
+| `cortex` | `docs.snowflake.com/en/user-guide/cortex-code/extensibility` |
+| `goose` | `goose-docs.ai/docs/guides/context-engineering/hooks/` |
+| `deepagents` | `docs.langchain.com/oss/deepagents/code/hooks` |
+| `junie` | `junie.jetbrains.com/docs/junie-cli-hooks.html` |
+| `zcode` | `zcode.z.ai/en/docs/hooks` |
+| `crush` | `docs/hooks/README.md` in `github.com/charmbracelet/crush` |
+| `poolside` | `docs.poolside.ai/hooks` |
+| `hermes` | `hermes-agent.nousresearch.com/docs/user-guide/features/hooks` |
+| `kiro` | `kiro.dev/docs/hooks/` |
+| `vibe` | `docs.mistral.ai/vibe/code/cli/hooks` |
+| `kimi` | `moonshotai.github.io/kimi-code/en/customization/hooks.html` |
