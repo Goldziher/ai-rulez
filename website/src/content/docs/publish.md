@@ -278,7 +278,7 @@ ai-rulez publish --to github-release --sign-keyless --execute --yes          # F
 
 | Flag | Meaning |
 | --- | --- |
-| `--sign-key FILE` | sign with a PEM private key; use ECDSA P-256 (cosign keys work). The password comes from `AI_RULEZ_SIGNING_KEY_PASSWORD`, `COSIGN_PASSWORD`, or the variable named by `--sign-key-password-env` |
+| `--sign-key FILE` | sign with an ECDSA or ed25519 PEM private key (cosign keys work). The password comes from `AI_RULEZ_SIGNING_KEY_PASSWORD`, `COSIGN_PASSWORD`, or the variable named by `--sign-key-password-env` |
 | `--sign-tlog` | with `--sign-key`: also record the signature in the Rekor log |
 | `--sign-keyless` | sign with a short-lived Fulcio certificate and record it in Rekor. The certificate names your identity in a public log, so use a key for a private repository |
 | `--sign-token-env`, `--sign-interactive`, `--fulcio-url`, `--rekor-url` | keyless options |
