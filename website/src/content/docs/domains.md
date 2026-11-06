@@ -118,7 +118,8 @@ A domain folder has the same layout as the root of `.ai-rulez/`:
 └── checks/
 ```
 
-Any subset of these folders makes a domain. Domain names are folder names; use names that say who owns the content
+Any subset of these folders makes a domain. `ai-rulez init --domains a,b` creates them; `add ... --domain <name>` fails
+until the domain folder exists. Domain names are folder names; use names that say who owns the content
 (`backend`, `payments`, `mobile`), not `misc` or `shared`. Content everybody needs belongs at the root.
 
 ## What a profile selects

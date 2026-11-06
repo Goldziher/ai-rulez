@@ -22,19 +22,20 @@ ref = "v1.2.0"
 include = ["rules", "skills"]
 ```
 
-The repository holds plain content folders, no configuration needed:
+The repository holds the content in a `.ai-rulez/` folder, no configuration needed:
 
 ```text
 ai-standards/
-├── rules/
-│   └── security.md
-└── skills/
-    └── security-review/
-        └── SKILL.md
+└── .ai-rulez/
+    ├── rules/
+    │   └── security.md
+    └── skills/
+        └── security-review/
+            └── SKILL.md
 ```
 
 ```markdown
-<!-- ai-standards/rules/security.md -->
+<!-- ai-standards/.ai-rulez/rules/security.md -->
 ---
 priority: critical
 ---
@@ -91,7 +92,9 @@ Codex). If you add your own `.ai-rulez/rules/security.md`, it replaces the inclu
   honored only from `config.local.toml` or when no lock is enforced: `generate --locked`, `--frozen` and an enforced
   lock fail on a `local_override` in the committed config.
 
-`ai-rulez include add|list|remove` edits the list:
+`ai-rulez include add|list|remove` edits the list. `add` takes `--ref`, `--path`, `--include`, `--install-to` and
+`--merge-strategy`; its `--include` defaults to `rules,context,skills`, so pass the kinds you want (the config key
+defaults to every kind).
 
 ```bash
 ai-rulez include add standards https://github.com/acme/ai-standards --ref v1.2.0 --include rules,skills
@@ -128,8 +131,9 @@ in `config.local.toml` (`include add --local`) or in your user config (`generate
 
 An include source can be laid out two ways, and ai-rulez detects which:
 
-1. **Bare**: the directory has `rules/`, `context/`, `skills/`, `agents/`, `commands/` or `checks/` directly, at the
-   root or under `path`. This is the simplest layout for a shared module.
+1. **Bare**: the directory has `rules/`, `context/`, `skills/` or `agents/` directly, under `path`. This is the
+   simplest layout for a shared module. A git source needs `path` for it, because without one only `.ai-rulez/` is
+   fetched; a local directory may be bare at its root.
 
    ```text
    shared-modules/

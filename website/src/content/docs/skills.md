@@ -225,11 +225,13 @@ Warnings to know:
 
 | Code    | When                                                                                                         |
 | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `AR990` | Always-loaded content (a rule, context, agent or command) names a `served` skill, which is not in the tool's skill folder. A served skill naming another served skill is fine. |
+| `AR994` | A skill's `delivery` is not `static`, `served` or `both` (error). |
 | `AR992` | A served skill targets a tool that cannot call MCP tools; it is written there as a static file.             |
 | `AR993` | Skills are served but no MCP server entry runs `ai-rulez mcp --serve-skills`.                               |
 | `AR9R0` | A `served` skill runs a bundled `scripts/` or `assets/` file by relative path. Nothing is on disk to run; use `delivery: both`. |
 | `AR9R1` | Always-loaded content points at a `both` skill with `disable-model-invocation: true` by name; the model's Skill tool refuses it. Point at the file path instead. |
-| `AR9R2` | A `served` skill sets `disable-model-invocation: true`: it is written nowhere and hidden from the model, so nobody can run it. |
+| `AR9R2` | A `served` skill sets `disable-model-invocation: true`: it is written nowhere and hidden from the model, so nobody can run it. Use `delivery: both`, or set `[mcp] serve_user_invoked_skills = true`. |
 
 An MCP client that must keep a skill served can still fetch its files with `list_skill_resources` and
 `read_skill_file`; see [Dynamic skill loading](/ai-rulez/mcp-server/#dynamic-skill-loading).
