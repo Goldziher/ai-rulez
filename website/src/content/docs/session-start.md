@@ -1,6 +1,6 @@
 ---
 title: "Run generate in remote sessions"
-description: "A remote (cloud) agent session starts from a fresh clone of the repository."
+description: "Run ai-rulez generate when a remote or cloud agent session starts from a fresh clone, so gitignored outputs exist."
 ---
 
 A remote (cloud) agent session starts from a fresh clone of the repository. Generated files are there only when they

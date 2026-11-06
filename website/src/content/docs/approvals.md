@@ -1,6 +1,6 @@
 ---
 title: "Approvals"
-description: "A scan says content looks clean; an approval records that a named person read it and accepted it."
+description: "Record that a named person reviewed a piece of content and accepted its digest, and require approvals in CI."
 ---
 
 A scan says content looks clean; an approval records that a named person read it and accepted it. `ai-rulez approve`

@@ -1,6 +1,6 @@
 ---
 title: "Custom presets"
-description: "presets in .ai-rulez/config.toml lists the tools ai-rulez generates for."
+description: "Define your own preset for a tool ai-rulez does not support, or override where a built-in preset writes its files."
 ---
 
 `presets` in `.ai-rulez/config.toml` lists the tools ai-rulez generates for. Most projects use only built-in presets

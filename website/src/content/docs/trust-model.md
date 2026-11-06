@@ -1,6 +1,6 @@
 ---
 title: "Trust model"
-description: "A repository's .ai-rulez/ directory is content someone else may have written."
+description: "What ai-rulez treats as untrusted in a repository's .ai-rulez/ content, and how scanning, approvals, the lock file and signing contain it."
 ---
 
 A repository's `.ai-rulez/` directory is content someone else may have written. ai-rulez lets you clone it and run

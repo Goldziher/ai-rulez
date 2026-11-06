@@ -1,6 +1,6 @@
 ---
 title: "llms.txt"
-description: "llms.txt is a Markdown index at the root of a site or repository that tells language models what is there and where to read it."
+description: "Generate llms.txt, an index that tells language models what your repository contains and where to read it."
 ---
 
 [llms.txt](https://llmstxt.org/) is a Markdown index at the root of a site or repository that tells language models

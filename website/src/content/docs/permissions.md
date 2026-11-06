@@ -1,6 +1,6 @@
 ---
 title: "Permissions"
-description: "[permissions] is one allow / ask / deny list for every harness that has a native permission file."
+description: "[permissions] is one allow / ask / deny list that ai-rulez renders into each harness's native permission file."
 ---
 
 `[permissions]` is one allow / ask / deny list for every harness that has a native permission file. You write Claude

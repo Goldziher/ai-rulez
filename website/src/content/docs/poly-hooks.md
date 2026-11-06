@@ -1,6 +1,6 @@
 ---
 title: "Poly hooks"
-description: "ai-rulez publishes a hook catalog for Poly, poly-hooks.toml at the root of its repository."
+description: "Run ai-rulez generate --check and validate on commit with Poly, using the hook catalog in poly-hooks.toml."
 ---
 
 ai-rulez publishes a hook catalog for [Poly](https://github.com/Goldziher/poly), `poly-hooks.toml` at the root of
