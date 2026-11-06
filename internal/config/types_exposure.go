@@ -68,6 +68,9 @@ type ExposureArea struct {
 	Terms []string `yaml:"terms,omitempty" json:"terms,omitempty" toml:"terms,omitempty"`
 	// Ambiguous are words the area uses in its own sense that other areas use too; a term wins over them.
 	Ambiguous []string `yaml:"ambiguous,omitempty" json:"ambiguous,omitempty" toml:"ambiguous,omitempty"`
+	// Exclude are compound names that contain a term and do not name the area (an org `xberg-io` against the
+	// term `xberg`): an occurrence of one is blanked, case-insensitively, before the area's words are matched.
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
 	// Shared marks repository-wide tooling: its terms classify artifacts but never count as leakage.
 	Shared bool `yaml:"shared,omitempty" json:"shared,omitempty" toml:"shared,omitempty"`
 	// Declare is the repository path a session of this area declares it works on (context evals).
