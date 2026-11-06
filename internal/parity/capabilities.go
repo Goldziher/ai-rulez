@@ -429,7 +429,7 @@ func cliOnlyCapabilities() []Capability {
 		return Capability{ID: id, Kind: CLIOnly, CLI: cli, Reason: reason}
 	}
 	return []Capability{
-		only("exposure", "offline report of what a Claude Code session loads at its start and on demand, run by a maintainer; no tool exposes it", "exposure"),
+		only("exposure", "offline report of what a Claude Code or Codex session loads at its start and on demand; no tool exposes it", "exposure"),
 		only("exposure-areas", "offline view of the area map of the [exposure] settings; no tool exposes it", "exposure areas"),
 		only("exposure-collisions", "offline report of skill and agent listings that collide; no tool exposes it", "exposure collisions"),
 		only("exposure-inventory", "offline listing of the session inventory; no tool exposes it", "exposure inventory"),
@@ -450,7 +450,7 @@ func cliOnlyCapabilities() []Capability {
 		only("okf-export-import", "write a whole bundle or import a foreign one into the tree", "export okf", "import okf"),
 		only("publish", "builds and signs distribution artifacts and may push them", "publish *"),
 		only("eval-improve", "run models and harness subprocesses and spend money", "eval *", "improve *"),
-		only("review", "spends model tokens in its default mode; the offline heuristics are not exposed yet", "review *", "rubric *"),
+		only("review", "spends model tokens in its default mode; no tool exposes its offline heuristics", "review *", "rubric *"),
 		only("telemetry", "consent and network egress of usage data", "telemetry *"),
 		only("llm", "model credentials and cost estimates for network calls", "llm *"),
 		only("scanners", "run external scanner programs, possibly with egress", "scanners *"),
