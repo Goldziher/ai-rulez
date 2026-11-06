@@ -324,7 +324,7 @@ code. The tables below are generated from the source.
 | `edit context` | partial field edits and stdin input; update_context is the whole-item replacement for a tool client |
 | `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
-| `exposure` | offline report of what a Claude Code session loads at its start and on demand, run by a maintainer; no tool exposes it |
+| `exposure` | offline report of what a Claude Code or Codex session loads at its start and on demand; no tool exposes it |
 | `exposure areas` | offline view of the area map of the [exposure] settings; no tool exposes it |
 | `exposure collisions` | offline report of skill and agent listings that collide; no tool exposes it |
 | `exposure inventory` | offline listing of the session inventory; no tool exposes it |
@@ -340,7 +340,7 @@ code. The tables below are generated from the source.
 | `export okf`, `import okf` | write a whole bundle or import a foreign one into the tree |
 | `plugin *` | installs, removes and updates plugins imported from marketplaces: network fetches, hook and MCP imports that run code |
 | `publish *` | builds and signs distribution artifacts and may push them |
-| `review *`, `rubric *` | spends model tokens in its default mode; the offline heuristics are not exposed yet |
+| `review *`, `rubric *` | spends model tokens in its default mode; no tool exposes its offline heuristics |
 | `roles show` | a presentation of one role; resolve_role returns what the role keeps |
 | `edit rule` | partial field edits and stdin input; update_rule is the whole-item replacement for a tool client |
 | `scanners *` | run external scanner programs, possibly with egress |
