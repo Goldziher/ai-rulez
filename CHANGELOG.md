@@ -8,6 +8,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- `validate` no longer reports `AR303` for the agent frontmatter keys `extends` and `<preset>_model` (`claude_model`,
+  `codex_model`, ...), which generation reads; a misspelled preset prefix and the same keys on other kinds are still
+  reported.
 - `exposure leakage` and `AR9W0`, `AR9W1` and `AR9W6` check the Codex inventory (the root `AGENTS.md` and its imports,
   `.agents/skills`, the MCP servers of `.codex/config.toml`) under `[exposure] harness = "codex"` or the new
   `exposure leakage --harness codex`, instead of always reading `CLAUDE.md` and `.claude/`. `--plugins` other than

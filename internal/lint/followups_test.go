@@ -94,6 +94,10 @@ func TestUnknownFrontmatterKey(t *testing.T) {
 		{name: "summary on a skill is flagged", front: "summary: One line.\n", kind: "skill", want: true, line: 4},
 		{name: "okf reserved keys pass", front: "type: Playbook\ntitle: S\nx-ai-rulez:\n  kind: skill\n  id: s\n  metadata:\n    priority: high\n", kind: "skill"},
 		{name: "okf metadata is checked like top-level keys", front: "type: Playbook\nx-ai-rulez:\n  kind: skill\n  metadata:\n    team: core\n", kind: "skill", want: true, line: 8},
+		{name: "agent extends and preset model keys pass", front: "extends: base\nclaude_model: sonnet\ncodex_model: gpt-5\n", kind: "agent"},
+		{name: "unknown preset model key on an agent is flagged", front: "nonexistentpreset_model: x\n", kind: "agent", want: true, line: 4},
+		{name: "extends on a skill is flagged", front: "extends: base\n", kind: "skill", want: true, line: 4},
+		{name: "preset model key on a skill is flagged", front: "claude_model: sonnet\n", kind: "skill", want: true, line: 4},
 		{name: "skill key on a subagent is flagged", front: "user-invocable: false\n", kind: "agent", want: true, line: 4},
 	}
 	for _, tt := range tests {

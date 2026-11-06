@@ -75,7 +75,12 @@ func (r *runner) knownKeys(kind string) map[string]bool {
 	case kindSkill, kindCommand:
 		add(claudeSkillKeys)
 	case kindAgent:
-		add(claudeAgentKeys)
+		// extends and <preset>_model are read from agent frontmatter by generation
+		// (presets.resolveAgentExtends, presets.ResolveAgentModel).
+		add(claudeAgentKeys, []string{"extends"})
+		for _, name := range config.IndividualPresetNames() {
+			known[name+"_model"] = true
+		}
 	case kindCheck:
 		add(checkKeys)
 	case kindContext:
