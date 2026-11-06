@@ -99,7 +99,7 @@ Review the diff for injection, leaked secrets and unsafe deserialization.
 | `extends` | Append this agent to a lower-precedence agent of that name; see [Extending agents](#extending-agents). |
 | `priority`, `targets` | Ordering and output selection, as for rules ([Targets](/ai-rulez/rules/#targets)). |
 
-The `claude` preset also passes Claude Code's subagent keys through with their YAML types: `disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`; other presets ignore them. For OpenCode, `hidden` is written as a boolean and `temperature` and `top_p` as numbers. `validate` reports a key no tool reads as `AR303`; it currently also reports `extends` and the `<preset>_model` keys, which do work: list them in [`[lint] allowed_keys`](/ai-rulez/strict-validation/) to silence it.
+The `claude` preset also passes Claude Code's subagent keys through with their YAML types: `disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`; other presets ignore them. For OpenCode, `hidden` is written as a boolean and `temperature` and `top_p` as numbers. `validate` reports a key no tool reads as `AR303`, and also reports `extends` and the `<preset>_model` keys even though they work: list them in [`[lint] allowed_keys`](/ai-rulez/strict-validation/) to silence it.
 
 ### Commands
 
@@ -314,7 +314,7 @@ path = ".my-tool/mcp.json"
 emit_when = "has_mcp_servers"
 ```
 
-`emit_when` takes `always`, `has_mcp_servers`, `has_plugins`, `has_resolved_effort`, `has_mcp_json_entries`, `has_mcp_servers_or_plugin_settings`, `has_resolved_effort_or_mcp_servers` or `has_hooks`. A provider without a `split` rules output (below) inlines every rule into its root file, and custom providers get no [machine-local](/ai-rulez/local-overrides/) output.
+`emit_when` takes `always`, `has_mcp_servers`, `has_plugins`, `has_resolved_effort`, `has_mcp_json_entries`, `has_mcp_servers_or_plugin_settings`, `has_resolved_effort_or_mcp_servers`, `has_claude_settings`, `has_permissions` or `has_hooks`; it defaults to `has_mcp_servers` for an `mcp` sidecar, `has_hooks` for `hooks`, `has_permissions` for `permissions` and `always` otherwise. A provider without a `split` rules output (below) inlines every rule into its root file, and custom providers get no [machine-local](/ai-rulez/local-overrides/) output.
 
 #### Output path rules
 
@@ -447,7 +447,7 @@ exclude = ["deploy-*"]
 migrate = "name-only"
 ```
 
-`[[roles]]` keys: `name`, `description`, `extends`, `domains`, `skills`, `rules`, `agents`, `commands`, `checks`, `pin`, `skill_mode`, `delivery`, `match`. `[role_manifest]` keys: `enabled`, `skill_mode_fallback` (`drop` or `serve`).
+`[[roles]]` keys: `name`, `description`, `extends`, `domains`, `skills`, `rules`, `agents`, `commands`, `checks`, `pin`, `skill_mode`, `delivery`, `match`. `[role_manifest]` keys: `enabled`, `skill_mode_fallback` (`drop` (default) or `serve`), which says what `generate --role` does with a skill whose `skill_mode` is `off` on a harness with no per-skill setting.
 
 ## Output files
 
@@ -719,10 +719,11 @@ Effort resolves per preset and agent: the agent's `effort` frontmatter (for pres
 | `xum` | `.xum/agents/<id>.md` | `ai.thinkingLevel` | `high` | `high` |
 | `factory` | `.factory/droids/<id>.md` | `reasoningEffort` | `high` | `high` |
 | `amp` | `.amp/settings.json` (global only) | `amp.anthropic.effort` | `high` | `max` |
+| `reasonix` | `.reasonix/skills/<id>/SKILL.md` | `effort` | `high` | `max` |
 
 `cursor`, `copilot`, `gemini`, `junie`, `antigravity` and `cline` take effort from their own settings; ai-rulez writes none.
 
-The model resolves as: the agent's `<preset>_model` frontmatter (`claude_model`, `copilot_model`, ...), then `model_by_preset.<preset>`, then the agent's `model`; otherwise nothing is written. Presets that write a model:
+The model resolves as: the agent's `<preset>_model` frontmatter (`claude_model`, `copilot_model`, ...), then `model_by_preset.<preset>`, then the agent's `model`; otherwise nothing is written. Most presets that write agent files write a model. Where it lands for the main ones:
 
 | Preset | Agent file | Field |
 | --- | --- | --- |
@@ -774,16 +775,16 @@ Universal packs:
 | --- | --- | --- |
 | `ai-governance` | yes | Rules: read before write, minimal changes, verification before completion, systematic debugging, agent workflow, generated files, communication style, no AI signatures, explain reasoning. Agents: `code-reviewer`, `docs-writer`. Skills: `config-placement`, `skill-authoring`. |
 | `agent-delegation` | yes | The `## Agents` roster in root instruction files. |
-| `security` | yes | Rules: input validation, secrets handling, least privilege, customer data boundary. Skills: `owasp-quick-reference`, `dependency-awareness`. |
+| `security` | yes | Rules: input validation, secrets handling, least privilege, customer data boundary. Skills: `owasp-quick-reference`, `dependency-awareness`. Agent: `security-auditor`. |
 | `git-workflow` | yes | Rules: conventional commits, atomic commits, branch hygiene, safe operations. |
 | `code-quality` | yes | Skills: `code-quality-standards`, `error-handling`. |
-| `testing` | yes | Rule: tests ship with the change. Skills: `tdd-workflow`, `testing-conventions`. |
+| `testing` | yes | Rule: tests ship with the change. Skills: `tdd-workflow`, `testing-conventions`. Agent: `test-writer`. |
 | `token-efficiency` | yes | Rules: context preservation, output awareness. Skills: `task-runner`, `incremental-approach`. |
-| `cicd` | no | Rules: pipeline standards, GitHub workflow conventions. |
+| `cicd` | no | Rules: pipeline standards, GitHub workflow conventions. Agents: `devops-engineer`, `release-engineer`. |
 | `docker` | no | Skill: `container-standards`. |
 | `observability` | no | Skill: `observability-standards`. |
 | `documentation` | no | Rules: inline docs, README standards, docs with code, ADR immutability. Skill: `adr-workflow`. |
-| `polyglot-bindings` | no | Skills: native ABI boundaries, FFI ownership, error conversion, binding parity. |
+| `polyglot-bindings` | no | Skills: `bindings`, `ffi-and-language-interop`, `rust-polyglot-conventions`. Agents: `ffi-engineer`, `polyglot-architect`. |
 | `default-commands` | no | Commands: `/iterate`, `/parallelize`. |
 
 Language packs (`rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`, `r`) and binding packs (`pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`) are skills: toolchain, linting, type checking, security scanning, testing and anti-patterns for that language or binding. Skills load on demand, so they cost nothing in the always-loaded files; only behavioral rules are written inline.
@@ -819,7 +820,7 @@ discover_skills = "repo"
 exclude = ["third_party/**"]
 ```
 
-By default `generate` adds this entry to `.mcp.json` and to the project MCP file of the configured presets that have one: `.cursor/mcp.json`, `.vscode/mcp.json` (`copilot`), `.codex/config.toml`, `opencode.json`, `.devin/mcp_config.json`, `.agents/mcp_config.json` (`antigravity`) and `.xum/mcp.jsonc`. `.gemini/settings.json` gets MCP servers only when `[[mcp_servers]]` declares some:
+By default `generate` adds this entry to `.mcp.json` and to the project MCP file of the configured presets that have one, such as `.cursor/mcp.json`, `.vscode/mcp.json` (`copilot`), `.codex/config.toml`, `opencode.json`, `.devin/mcp_config.json`, `.agents/mcp_config.json` (`antigravity`) and `.xum/mcp.jsonc`. Presets whose MCP file is written only for declared servers (`gemini`, `qwen`, `zed`, `vibe`, ...) get the entry only when `[[mcp_servers]]` declares some:
 
 ```json
 {
@@ -844,7 +845,7 @@ Generation keys:
 
 The other `[mcp]` keys are defaults of `ai-rulez mcp`, read when the server starts, with the matching flag winning: `serve_skills`, `discover_skills`, `exclude`, `index_cache`, `read_only`, `tools`, `authoring`, `allow`, `deny`, `serve_user_invoked_skills`, `daemon`, `daemon_idle_timeout`, `no_watch`. They are documented in [Settings in the configuration](/ai-rulez/mcp-server/#settings-in-the-configuration).
 
-The self entry is merged into existing files: other servers and keys survive, and a server you declare named `ai-rulez` wins. Each root decides on its own, also under `generate --recursive`. MCP output is project-only; the user scope never carries the entry. Turning `self_server` off removes the entry on the next `generate` (and `.mcp.json` with it, when nothing else is left). On a clone whose local manifest never recorded the entry, it can survive; remove it by hand.
+`self_server_version`, `self_server_launcher` and `self_server_command` need `self_server = true`. The self entry is merged into existing files: other servers and keys survive, and a server you declare named `ai-rulez` wins. Each root decides on its own, also under `generate --recursive`. MCP output is project-only; the user scope never carries the entry. Turning `self_server` off removes the entry on the next `generate` (and `.mcp.json` with it, when nothing else is left). On a clone whose local manifest never recorded the entry, it can survive; remove it by hand.
 
 ### `[[mcp_servers]]`
 
@@ -922,7 +923,7 @@ Where a tool expands environment references itself, a value that came from a `${
 
 - `${VAR}`, `${env:VAR}` and `{env:VAR}` can sit inside a longer value (`Bearer ${TOKEN}`); `$VAR` is used only for a whole value.
 - The root `.mcp.json` uses `${VAR}` only for upper-case names.
-- Tools that document no expansion (`qoder`, `junie`, `antigravity`, `zed`, `trae`, `cline`, `xum`, `kiro` without its opt-in) get the resolved value, written owner-only.
+- Tools that document no expansion (`copilot` in `.vscode/mcp.json`, `qoder`, `junie`, `antigravity`, `zed`, `trae`, `cline`, `xum`, `kiro` without its opt-in) get the resolved value, written owner-only.
 - When a preset that needs the resolved value and one that reads references share `.mcp.json`, `generate` fails naming both; pass the secret with `--env` or `.env` to use both.
 
 ### Settings document merge behavior
@@ -935,7 +936,7 @@ These keys write lifecycle hooks and permission rules into each harness's native
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `[[hooks]]` | array of tables | Lifecycle hooks with Claude Code event names, translated per harness. Keys: `event`, `matcher`, `matchers` (per harness), `targets`, `hooks` (handlers with `type` (only `command`), `command` or `script`, `args`, `timeout`, `async`, `if`, `status_message`). |
+| `[[hooks]]` | array of tables | Lifecycle hooks with Claude Code event names, translated per harness. Keys: `event`, `matcher`, `matchers` (per harness), `targets`, `hooks` (handlers with `type` (only `command`), exactly one of `command` or `script`, `args`, `timeout`, `async`, `if`, `status_message`). |
 | `[permissions]` | table | `allow`, `ask` and `deny` rules in Claude Code permission-rule syntax, translated for every harness with a permission file. |
 | `[guard]` | table | `generated = true` adds a `PreToolUse` hook that blocks an agent's edit to a generated file. Keys: `generated` (default `false`), `version`, `command`. |
 | `[session_start]` | table | A `SessionStart` hook for Claude Code that regenerates outputs in a remote session. On by default. Keys: `generate` (default `true`), `when` (`remote` or `always`), `mode` (`auto`, `locked`, `frozen`, `plain`), `timeout` (default 120 s), `version`, `command`, `prompt`, `prompt_text`. See [Run generate in remote sessions](/ai-rulez/session-start/). |
@@ -995,7 +996,7 @@ include = ["xberg*"]
 | --- | --- | --- | --- |
 | `name` | string | required | Unique entry name. |
 | `source` | string | required | Git URL, `owner/repo`, `github:owner/repo`, `file://` URL or a directory inside the project (`~/path` only from `config.local.toml` or the user config). |
-| `path` | string | `skills/<name>` | Skill directory, or a directory of skill directories, inside the source. |
+| `path` | string | `skills/<name>`, or `skills` with `include`/`exclude` | Skill directory, or a directory of skill directories, inside the source. |
 | `ref`, `version`, `tag_prefix`, `include_prerelease`, `min_release_age` | | | Version selection, as above. |
 | `local_override` | string | none | Local path used instead of `source` when present. |
 | `include`, `exclude` | array | none | Globs on skill directory names; `exclude` wins. |
@@ -1083,7 +1084,7 @@ verify_tags = true
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `enforce` | boolean | `true` when `ai-rulez.lock` exists | `validate` reports content drift (`AR981`, `AR982`), `generate` refuses a remote source the lock does not pin, and `lock --check` and `generate --locked` require content pins. |
+| `enforce` | boolean | `true` when `ai-rulez.lock` exists | `validate` reports content drift (`AR981`, `AR982`), `generate` refuses a remote source the lock does not pin, and `lock --check` and `generate --locked` require content pins; the skills server refuses a served skill whose digest the lock does not record. |
 | `include_outputs` | boolean | `true` | Also pin digests of generated files. |
 | `scope` | `all`, `skills` | `all` | Pin every authored item, or only skills and remote sources. |
 | `min_release_age` | string | none | Default minimum age (`7d`, `12h`, `2w`) of a tag picked by a `version` constraint (`AR733`). |
@@ -1143,10 +1144,10 @@ The producer side: packaging metadata for a distributable plugin bundle, built b
 name = "acme-tools"
 version = "1.2.0"
 description = "Acme review tooling."
-runtimes = ["claude", "agent-plugins"]   # the codex runtime also needs [plugin.author] name and [plugin.interface]
+runtimes = ["claude", "agent-plugins"]
 ```
 
-`name`, `version` and `description` are required. Other keys: `display_name`, `version_from`, `author` (`name`, `email`, `url`), `homepage`, `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`, `tags`, `runtimes` (default all: `claude`, `cursor`, `codex`, `gemini`, `kimi`, `opencode`, `factory`, `hermes`, `agent-plugins`, `copilot`), `spec` (Agent Plugins `1.0.0` (default) or `1.1.0`), `content_root`, `include_domains`, `include`, `include_evals`, `skills_dir_owned`, `provenance_headers`, `shared_resources`, `package_manager`, `opencode_dependency`, `opencode_dependency_enabled`, and the sub-tables `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`, `[plugin.interface]`, `[plugin.codex]`, `[plugin.cursor]`, `[plugin.gemini]`, `[plugin.kimi]`, `[plugin.hermes]`, `[plugin.pi]`.
+`name` and `description` are required, and so is exactly one of `version` and `version_from`. Other keys: `display_name`, `version_from`, `author` (`name`, `email`, `url`), `homepage`, `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`, `tags`, `runtimes` (default: `claude`, `cursor`, `codex`, `gemini`, `kimi`, `opencode`, `factory` and `hermes`; `agent-plugins`, `copilot` and `pi` are written only when named, and the `codex` runtime also needs `[plugin.author]` `name` and `[plugin.interface]`), `spec` (Agent Plugins `1.0.0` (default) or `1.1.0`), `content_root`, `include_domains`, `include`, `include_evals`, `skills_dir_owned`, `provenance_headers`, `shared_resources`, `package_manager`, `opencode_dependency`, `opencode_dependency_enabled`, and the sub-tables `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`, `[plugin.interface]`, `[plugin.codex]`, `[plugin.cursor]`, `[plugin.gemini]`, `[plugin.kimi]`, `[plugin.hermes]`, `[plugin.pi]`.
 
 To publish several plugins from one root, use `[[plugins_authoring]]` instead of `[plugin]`, and `[[marketplaces_authoring]]` for several marketplace indexes; `.ai-rulez/plugins/<name>.toml` and `.ai-rulez/marketplaces/<name>.toml` hold one entry each. `[marketplace]` describes the marketplace index written for the plugins (`name`, `description`, `owner`, `members`, `output_dir`, `from_domains`, `plugins`, `cursor_index`, `catalog_skill`). See [Several plugins from one root](/ai-rulez/plugins/#several-plugins-from-one-root).
 
@@ -1185,9 +1186,9 @@ key = "engines.node"
 equals = ">=20"
 ```
 
-Keys: `name` and `type` (required), `description`, `severity` (`error` (default), `warning`, `info`), `path`, `glob`, `exclude`, `pattern`, `min`, `max`, `key`, `equals`, `profile`, `rule`, `skill`, `agent`, `command`, `anchor`, `message`, `fix`, `when_changed`, `require`, `examples`. A key that does not apply to the `type` is a configuration error. `config.local.toml` may add verifiers; entries merge by `name`.
+Keys: `name` and `type` (required; one of `file_exists`, `file_absent`, `glob_count`, `regex`, `forbid`, `key_equals`, `generated_in_sync`), `description`, `severity` (`error` (default), `warning`, `info`), `path`, `glob`, `exclude`, `pattern`, `min`, `max`, `key`, `equals`, `profile`, `rule`, `skill`, `agent`, `command`, `anchor`, `message`, `fix`, `when_changed`, `require`, `examples`. A key that does not apply to the `type` is a configuration error. `config.local.toml` may add verifiers; entries merge by `name`.
 
-`[verifiers_settings]` holds the limits of a run: `max_timeout_s`, `max_file_bytes` (default 5 MiB), `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`. It is a separate table because TOML cannot use `verifiers` as both an array and a table.
+`[verifiers_settings]` holds the limits of a run: `max_timeout_s` (default 300), `max_file_bytes` (default 5 MiB), `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`. It is a separate table because TOML cannot use `verifiers` as both an array and a table.
 
 ### `[exposure]`
 
@@ -1272,7 +1273,7 @@ Both are shared policy: a layer or `config.local.toml` cannot change them.
 
 ## Model features
 
-Features that call a language model. Nothing calls out unless `[llm] allow_network` is true, and the network, endpoint and credential keys (`allow_network`, `base_url`, `api_key_env`, price overrides) are honored only from the user configuration (`~/.config/ai-rulez/config.toml`) or `AI_RULEZ_LLM_*` variables, never from `config.toml`.
+Features that call a language model. Nothing calls out unless `[llm] allow_network` is true, and the network, endpoint and credential keys (`allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, price overrides) are honored only from the user configuration (`~/.config/ai-rulez/config.toml`) or `AI_RULEZ_LLM_*` variables, never from `config.toml`.
 
 | Table | Purpose | Page |
 | --- | --- | --- |
@@ -1313,7 +1314,7 @@ ai-rulez config layers                        # list the layers and which are ac
 
 Layers become active in this order, each merged over the one before:
 
-1. `default_layers` in `config.toml`: committed and always active. A listed layer without its file is an error. The key is ignored, with a warning, inside a layer or the local overlay.
+1. `default_layers` in `config.toml`: committed and always active. A listed layer without its file is an error; `default` is not a layer name and is skipped. The key is ignored, with a warning, inside a layer or the local overlay.
 2. `AI_RULEZ_LAYERS` (comma-separated), or `AI_RULEZ_PROFILE` when it is not set, so one value can select a profile and the layer named like it. A name without a file is skipped. The `--profile` flag does not select layers.
 3. `config.local.toml`, always last. `local` is a reserved layer name.
 
@@ -1330,7 +1331,7 @@ Layers merge like the local overlay ([merge rules](/ai-rulez/local-overrides/#me
 presets = ["codex"]
 ```
 
-Use the overlay to add: dropping a shared preset currently removes that preset's committed outputs; see the [warning](/ai-rulez/local-overrides/#config-overlay).
+Use the overlay to add: dropping a shared preset removes that preset's committed outputs; see the [warning](/ai-rulez/local-overrides/#config-overlay).
 
 Merge rules, the `ai-rulez local` commands, the `.ai-rulez/local/` content tree and the drift guard are in [Local configuration](/ai-rulez/local-overrides/).
 
