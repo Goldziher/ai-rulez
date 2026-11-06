@@ -27,6 +27,12 @@ RULES = (
     ("website/src/content/docs/installation.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
     ("website/src/content/docs/installation.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
     ("website/src/content/docs/installation.md", rf"(rev: v){PINNED_RELEASE}()", "semver", False),
+    # The `version:` input of the GitHub Action examples.
+    ("README.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/installation.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/github-actions.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/approvals.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/lockfile.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
 )
 
 
