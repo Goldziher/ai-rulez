@@ -10,6 +10,7 @@ import os
 import re
 import ssl
 import subprocess
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -17,10 +18,16 @@ import urllib.request
 USER_AGENT = "ai-rulez-harness-builtins"
 GITHUB_HOSTS = {"raw.githubusercontent.com", "api.github.com"}
 TIMEOUT = 60
+ATTEMPTS = 4
+BACKOFF = 5.0
+TRANSIENT = {429, 500, 502, 503, 504}
+CURL_HTTP_STATUS = re.compile(r"returned error: (\d{3})")
 
 
 class FetchError(Exception):
-    pass
+    def __init__(self, message: str, transient: bool = False):
+        super().__init__(message)
+        self.transient = transient
 
 
 def _request(url: str) -> urllib.request.Request:
@@ -35,12 +42,24 @@ def _request(url: str) -> urllib.request.Request:
 
 
 def http_get(url: str) -> str:
+    """A page, retried with a growing pause when the host rate-limits, fails or times out."""
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            return _get_once(url)
+        except FetchError as e:
+            if not e.transient or attempt == ATTEMPTS:
+                raise
+            time.sleep(BACKOFF * attempt)
+    raise AssertionError("unreachable")
+
+
+def _get_once(url: str) -> str:
     req = _request(url)
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             return resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
-        raise FetchError(f"{url}: HTTP {e.code}") from e
+        raise FetchError(f"{url}: HTTP {e.code}", transient=e.code in TRANSIENT) from e
     except (urllib.error.URLError, ssl.SSLError, TimeoutError) as e:
         return _curl(url, e)
 
@@ -61,7 +80,10 @@ def _curl(url: str, cause: Exception) -> str:
         )
     except (OSError, subprocess.CalledProcessError) as e:
         detail = e.stderr.decode("utf-8", "replace").strip() if isinstance(e, subprocess.CalledProcessError) else str(e)
-        raise FetchError(f"{url}: {detail or cause} (rate limited? set GITHUB_TOKEN)") from e
+        # curl -f names the HTTP status; anything else (timeout, DNS, TLS) is worth retrying
+        status = CURL_HTTP_STATUS.search(detail)
+        transient = int(status.group(1)) in TRANSIENT if status else True
+        raise FetchError(f"{url}: {detail or cause} (rate limited? set GITHUB_TOKEN)", transient=transient) from e
     return out.stdout.decode("utf-8", "replace")
 
 

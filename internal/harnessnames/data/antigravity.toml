@@ -1,7 +1,7 @@
 schema = 1
 preset = "antigravity"
 harness_version = "docs-only; CLI v1.4.0, App v2.24.0 per https://antigravity.google/docs/changelog (2026-10-15)"
-verified_on = "2026-10-27"
+verified_on = "2026-11-05"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://antigravity.google/docs/cli/reference"
-verified_on = "2026-10-27"
+verified_on = "2026-11-05"
 
 [[source]]
 id = "s4"
@@ -72,7 +72,7 @@ names = [
   "skills",
   "statusline",
   "tasks",
-  "teamwork-preview",
+  "teamwork",
   "title",
   "usage",
   "voice",
@@ -95,12 +95,8 @@ aliases = { "clear" = [
   "switch",
 ], "rewind" = [
   "undo",
-], "teamwork-preview" = [
-  "teamwork",
 ], "usage" = [
   "quota",
-], "voice" = [
-  "record",
 ] }
 
 [[group]]

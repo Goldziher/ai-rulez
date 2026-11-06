@@ -77,7 +77,7 @@ def parse_commands(text: str) -> dict:
 
 
 def parse_subagents(text: str) -> dict:
-    """The built-in subagents: one per tab (or bold heading line) of the section, plus the rows of the Other table.
+    """The built-in subagents: one per tab (`<Tab title>`, a `> [tab] Title` blockquote, or a bold heading line) of the section, plus the rows of the Other table.
 
     "agent_override" holds those the page says a user or project subagent of the same name
     overrides ("named `X` overrides the built-in"); "agent" holds the rest. A tab title or
@@ -87,11 +87,19 @@ def parse_subagents(text: str) -> dict:
     if not m:
         raise ValueError("section 'Built-in subagents' not found")
     section = m.group(1)
-    titles = re.findall(r'<Tab title="([^"]+)">', section) or re.findall(r"(?m)^\*\*([^*\n]+)\*\*[ \t]*$", section)
+    titles = (
+        re.findall(r'<Tab title="([^"]+)">', section)
+        or re.findall(r"(?m)^> \[tab\] (\S[^\n]*?)[ \t]*$", section)
+        or re.findall(r"(?m)^\*\*([^*\n]+)\*\*[ \t]*$", section)
+    )
     names = [t for t in titles if t != "Other"]
-    table = re.search(r"(?m)^[ \t]*\| Agent \|.*\n[ \t]*\|[ :|-]+\n((?:[ \t]*\|.*\n?)+)", section)
+    # a table inside a tab is a blockquote ("> | Agent | ...")
+    table = re.search(r"(?m)^[ \t>]*\| Agent \|.*\n[ \t>]*\|[ :|-]+\n((?:[ \t>]*\|.*\n?)+)", section)
     if table:
-        names += [_cells(line.strip())[0] for line in table.group(1).splitlines() if line.strip().startswith("|")]
+        for line in table.group(1).splitlines():
+            line = line.strip().lstrip(">").strip()
+            if line.startswith("|"):
+                names.append(_cells(line)[0])
     if not names:
         raise ValueError("no built-in subagents found")
     override = re.findall(r"named `([^`]+)` overrides the built-in", section)

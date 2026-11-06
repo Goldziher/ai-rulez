@@ -91,6 +91,21 @@ class ClaudeTest(unittest.TestCase):
         self.assertEqual(got["agent_override"], ["Explore"])
         self.assertEqual(got["agent"], ["Plan", "statusline-setup"])
 
+    def test_parse_subagents_reads_the_blockquote_tab_layout(self):
+        # Arrange
+        text = (
+            "## Built-in subagents\n\n> [tab] Explore\n>\n"
+            "> A [project subagent](#x) named `Explore` overrides the built-in.\n\n"
+            "> [tab] Plan\n>\n> Research.\n\n> [tab] Other\n>\n"
+            "> | Agent | Model | When Claude uses it |\n> | :- | :- | :- |\n"
+            "> | statusline-setup | Sonnet | When you run `/statusline` |\n\n## Next\n"
+        )
+        # Act
+        got = self.ex.parse_subagents(text)
+        # Assert
+        self.assertEqual(got["agent_override"], ["Explore"])
+        self.assertEqual(got["agent"], ["Plan", "statusline-setup"])
+
     def test_extract_fetches_the_two_pages(self):
         # Arrange
         ctx = helpers.context(

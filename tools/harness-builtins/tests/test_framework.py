@@ -1,5 +1,6 @@
 import copy
 import io
+import subprocess
 import tempfile
 import tomllib
 import unittest
@@ -145,6 +146,53 @@ class RustEnumTest(unittest.TestCase):
 
 
 class FetchTest(unittest.TestCase):
+    def test_a_transient_failure_is_retried_and_a_permanent_one_is_not(self):
+        # Arrange
+        calls = []
+
+        def flaky(url):
+            calls.append(url)
+            if len(calls) < 3:
+                raise fetch.FetchError("HTTP 429", transient=True)
+            return "page"
+
+        # Act
+        with mock.patch.object(fetch, "_get_once", side_effect=flaky), mock.patch.object(fetch.time, "sleep"):
+            got = fetch.http_get("https://example.com/x")
+        # Assert
+        self.assertEqual((got, len(calls)), ("page", 3))
+        with mock.patch.object(fetch, "_get_once", side_effect=fetch.FetchError("HTTP 404")) as once:
+            with self.assertRaises(fetch.FetchError):
+                fetch.http_get("https://example.com/x")
+        self.assertEqual(once.call_count, 1)
+
+    def test_a_failure_that_never_clears_is_raised_after_the_attempts(self):
+        # Arrange / Act / Assert
+        err = fetch.FetchError("HTTP 503", transient=True)
+        with mock.patch.object(fetch, "_get_once", side_effect=err) as once, mock.patch.object(fetch.time, "sleep"):
+            with self.assertRaises(fetch.FetchError):
+                fetch.http_get("https://example.com/x")
+        self.assertEqual(once.call_count, fetch.ATTEMPTS)
+
+    def test_curl_reports_an_http_client_error_as_permanent_and_429_or_5xx_as_transient(self) -> None:
+        # Arrange
+        def failing(stderr: str) -> subprocess.CalledProcessError:
+            return subprocess.CalledProcessError(22, ["curl"], stderr=stderr.encode())
+
+        cases = [
+            ("curl: (22) The requested URL returned error: 404", False),
+            ("curl: (22) The requested URL returned error: 429", True),
+            ("curl: (22) The requested URL returned error: 503", True),
+            ("curl: (28) Connection timed out after 60001 milliseconds", True),
+        ]
+        for stderr, transient in cases:
+            # Act
+            with mock.patch.object(fetch.subprocess, "run", side_effect=failing(stderr)):
+                with self.assertRaises(fetch.FetchError) as caught:
+                    fetch._curl("https://example.com/x", TimeoutError())
+            # Assert
+            self.assertEqual(caught.exception.transient, transient, stderr)
+
     def test_only_plain_https_urls(self):
         for url in ("http://example.com/x", "file:///etc/passwd", "https://user:pw@example.com/x"):
             with self.subTest(url), self.assertRaises(fetch.FetchError):
