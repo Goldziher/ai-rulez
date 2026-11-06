@@ -12,7 +12,7 @@ ai-rulez version
 ```
 
 ```text
-ai-rulez version 5.10.0
+ai-rulez version 5.11.0
 ```
 
 ## Package managers
@@ -61,7 +61,7 @@ pnpm dlx ai-rulez@latest generate
 uvx ai-rulez generate
 ```
 
-Pin a version (`npx ai-rulez@5.10.0`, `uvx --from ai-rulez==5.10.0 ai-rulez`) when a script or hook must not change
+Pin a version (`npx ai-rulez@5.11.0`, `uvx --from ai-rulez==5.11.0 ai-rulez`) when a script or hook must not change
 behavior between releases.
 
 ## Go
@@ -134,7 +134,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v5.10.0
+    rev: v5.11.0
     hooks:
       - id: ai-rulez-recursive
       - id: ai-rulez-validate
