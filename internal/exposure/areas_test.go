@@ -1,7 +1,9 @@
 package exposure
 
 import (
+	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -214,4 +216,20 @@ func TestNewAreasReport_CountsEveryAreaAndKeepsTheProblems(t *testing.T) {
 	assert.Equal(t, map[string]int{"billing": 0, "search": 0, "tooling": 0, areas.Unclassified: 0}, rep.Counts)
 	assert.Equal(t, []Problem{{Path: "big.md", Error: "over the read limit"}}, rep.Problems)
 	assert.NotNil(t, NewAreasReport(&Inventory{}, classifiedMap(t), "").Problems, "no problems is an empty list")
+}
+
+func TestNewAreasReport_ExcludeIsListedOnlyWhenSet(t *testing.T) {
+	m, problems := areas.New([]config.ExposureArea{
+		{Name: "xberg", Terms: []string{"xberg"}, Exclude: []string{"xberg-io"}},
+		{Name: "plain", Terms: []string{"plain"}},
+	}, nil)
+	require.Empty(t, problems)
+
+	rep := NewAreasReport(&Inventory{}, m, "")
+	data, err := json.Marshal(rep.Areas)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"xberg-io"}, rep.Areas[0].Exclude)
+	assert.Contains(t, string(data), `"exclude":["xberg-io"]`)
+	assert.Equal(t, 1, strings.Count(string(data), `"exclude"`))
 }

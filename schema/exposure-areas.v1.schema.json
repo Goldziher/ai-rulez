@@ -38,6 +38,11 @@
           "paths": { "type": "array", "items": { "type": "string" } },
           "terms": { "type": "array", "items": { "type": "string" } },
           "ambiguous": { "type": "array", "items": { "type": "string" } },
+          "exclude": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Compound names that contain a term of the area without naming it; absent when the area has none."
+          },
           "shared": { "type": "boolean" },
           "declare": { "type": "string" }
         }

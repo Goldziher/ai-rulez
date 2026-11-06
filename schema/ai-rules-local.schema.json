@@ -38,6 +38,13 @@
           "description": "Finishes the sentence \"I work on ...\" for the area.",
           "type": "string"
         },
+        "exclude": {
+          "description": "Compound names that contain a term and do not name the area (an org xberg-io against the term xberg); an occurrence is ignored, case-insensitively. Each must contain a term or ambiguous word of the area.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "name": {
           "description": "Unique lower-kebab area name; unclassified is reserved.",
           "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",

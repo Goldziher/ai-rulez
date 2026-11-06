@@ -46,7 +46,7 @@ reason = "completeness is none: baz is a closed-source code review product with 
 
 [bob]
 extractor = "none"
-reason = "bob.ibm.com/docs/ide/features/slash-commands is a client-rendered HTML page with no markdown rendition (the .md URL is a 404); the built-in commands are headings, the mode commands (/code, /ask) are named only in prose, and the built-in skills and subagents appear in prose or in an untitled HTML table."
+reason = "bob.ibm.com/docs/ide/features/slash-commands is a client-rendered HTML page with no markdown rendition (the .md URL is a 404); the built-in commands are headings, and the built-in skills and subagents appear in prose or in an untitled HTML table."
 
 [claude]
 extractor = "claude"

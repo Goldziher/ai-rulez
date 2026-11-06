@@ -44,6 +44,8 @@ type Import struct {
 	Path      string `json:"path"`
 	TextBytes int    `json:"text_bytes"`
 	Tokens    int    `json:"tokens"`
+	// Text is the file's text, for the leakage check; "" for a file over the read limit. It is never printed.
+	Text string `json:"-"`
 }
 
 // ImportProblem is an import of a start-of-session instruction file that the
@@ -148,7 +150,7 @@ func (b *builder) readImport(rel string) (im Import, problem string, ok bool, te
 		// artifact is.
 		bytes = r.oversized
 	}
-	return Import{Path: rel, TextBytes: bytes, Tokens: EstimateTokens(bytes)}, "", true, r.text
+	return Import{Path: rel, TextBytes: bytes, Tokens: EstimateTokens(bytes), Text: r.text}, "", true, r.text
 }
 
 // importRefs lists the `@path` directives of a markdown text. Directives inside

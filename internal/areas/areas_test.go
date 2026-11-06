@@ -450,3 +450,246 @@ func TestSkillLine(t *testing.T) {
 		})
 	}
 }
+
+func TestExcludedCompoundsDoNotMatchTheirTerm(t *testing.T) {
+	// Arrange: `xberg` names an area, but the org name `xberg-io` contains it.
+	m, problems := New([]config.ExposureArea{
+		{Name: "xberg", Terms: []string{"xberg"}, Exclude: []string{"XBerg-IO"}},
+		{Name: "other", Terms: []string{"xberg-io"}},
+	}, nil)
+	require.Empty(t, problems)
+
+	tests := []struct {
+		name, text string
+		want       []string
+	}{
+		{"the compound alone", "see github.com/xberg-io/repo", []string{"other/xberg-io"}},
+		{"the compound in other case", "the Xberg-IO org", []string{"other/xberg-io"}},
+		{"the compound and the bare term", "xberg-io hosts xberg", []string{"xberg/xberg", "other/xberg-io"}},
+		{"the bare term", "run xberg now", []string{"xberg/xberg"}},
+		{"no match at all", "nothing here", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []string
+			for _, f := range m.Find(tt.text) {
+				got = append(got, f.Area+"/"+f.Term)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+	area, ok := m.Area("xberg")
+	require.True(t, ok)
+	assert.Equal(t, []string{"xberg-io"}, area.Exclude)
+}
+
+func TestExcludeThatNamesNoTermIsRejected(t *testing.T) {
+	m, problems := New([]config.ExposureArea{{Name: "a", Terms: []string{"foo"}, Exclude: []string{"bar-io"}}}, nil)
+	assert.Nil(t, m)
+	require.Len(t, problems, 1)
+	assert.Contains(t, problems[0].Message, `exclude "bar-io" contains none of the terms or ambiguous words`)
+}
+
+const acceptFile = `
+[[area]]
+name = "xberg"
+terms = ["xberg"]
+
+[[accept]]
+term = "XBerg"
+path = "docs/*.md"
+reason = "the product name in docs"
+
+[[accept]]
+term = "xberg"
+area = "xberg"
+path = "CLAUDE.md"
+reason = "root note"
+`
+
+func TestLoadFileReadsAcceptances(t *testing.T) {
+	path := writeFile(t, t.TempDir(), "areas.toml", acceptFile)
+
+	m, problems := LoadFile(path)
+
+	require.Empty(t, problems)
+	got := m.Accepts()
+	require.Len(t, got, 2)
+	assert.Equal(t, Accept{Term: "xberg", Path: "docs/*.md", Reason: "the product name in docs", Index: 0, Line: 6}, got[0])
+	assert.Equal(t, 11, got[1].Line)
+	assert.Equal(t, 1, got[1].Index)
+}
+
+func TestAcceptingMatchesTermAreaAndPath(t *testing.T) {
+	m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", acceptFile))
+	require.Empty(t, problems)
+
+	tests := []struct {
+		name, area, term, path string
+		want                   int
+	}{
+		{"glob path, term case-insensitive", "xberg", "XBERG", "docs/a.md", 0},
+		{"exact path with area", "xberg", "xberg", "CLAUDE.md", 1},
+		{"another path", "xberg", "xberg", "README.md", -1},
+		{"another term", "xberg", "other", "CLAUDE.md", -1},
+		{"another area", "billing", "xberg", "CLAUDE.md", -1},
+		{"a joined warning area names it", "billing/xberg", "xberg", "CLAUDE.md", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, ok := m.Accepting(tt.area, tt.term, tt.path)
+			assert.Equal(t, tt.want >= 0, ok)
+			if ok {
+				assert.Equal(t, tt.want, a.Index)
+			}
+		})
+	}
+}
+
+func TestInvalidAcceptancesAreRejected(t *testing.T) {
+	tests := []struct {
+		name, entry, want string
+	}{
+		{"no reason", "term = \"x\"\npath = \"a.md\"\n", "reason is required"},
+		{"blank reason", "term = \"x\"\npath = \"a.md\"\nreason = \"  \"\n", "reason is required"},
+		{"no term", "path = \"a.md\"\nreason = \"r\"\n", "term is empty"},
+		{"no path", "term = \"x\"\nreason = \"r\"\n", "path is empty"},
+		{"outside the root", "term = \"x\"\npath = \"../a.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"dot-dot after a leading slash", "term = \"x\"\npath = \"/../a.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"dot-dot inside the path", "term = \"x\"\npath = \"a/../b.md\"\nreason = \"r\"\n", "repository-relative"},
+		{"malformed glob", "term = \"x\"\npath = \"[a.md\"\nreason = \"r\"\n", "malformed"},
+		{"unknown area", "term = \"x\"\narea = \"nope\"\npath = \"a.md\"\nreason = \"r\"\n", `names no area`},
+		{"unknown key", "term = \"x\"\npath = \"a.md\"\nreason = \"r\"\nwhy = \"r\"\n", `unknown key "accept.why"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := "[[area]]\nname = \"a\"\nterms = [\"x\"]\n\n\n[[accept]]\n" + tt.entry
+			m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", body))
+			assert.Nil(t, m)
+			require.NotEmpty(t, problems)
+			assert.Contains(t, problems[0].Message, tt.want)
+			assert.Positive(t, problems[0].Line)
+		})
+	}
+}
+
+func TestExcludedCompoundsNeedNameBoundaries(t *testing.T) {
+	m, problems := New([]config.ExposureArea{{Name: "xberg", Terms: []string{"xberg"}, Exclude: []string{"xberg-io", "xberg-io-labs"}}}, nil)
+	require.Empty(t, problems)
+	tests := []struct {
+		name, text string
+		leaks      bool
+	}{
+		{"the compound", "the xberg-io org", false},
+		{"the longer compound", "the xberg-io-labs org", false},
+		{"both compounds", "xberg-io-labs and xberg-io", false},
+		{"a longer name that starts with it", "the xberg-iox org", true},
+		{"a longer name that ends with it", "the a-xberg-io org", true},
+		{"a prefixed name", "the my-xberg-io org", true},
+		{"a suffixed name", "the xberg-io-tools org", true},
+		{"glued letters before", "the myxberg-io org", false},
+		{"the compound and a leaked longer name", "xberg-io and xberg-iox", true},
+		{"the compound at the ends of the text", "xberg-io", false},
+		{"punctuation is a boundary", "(xberg-io), xberg-io.", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.leaks, len(m.Find(tt.text)) > 0)
+		})
+	}
+}
+
+func TestExcludeEqualToATermIsRejected(t *testing.T) {
+	tests := []struct {
+		name string
+		def  config.ExposureArea
+	}{
+		{"a term", config.ExposureArea{Name: "a", Terms: []string{"foo"}, Exclude: []string{"FOO"}}},
+		{"an ambiguous word", config.ExposureArea{Name: "a", Terms: []string{"bar"}, Ambiguous: []string{"foo"}, Exclude: []string{"foo"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, problems := New([]config.ExposureArea{tt.def}, nil)
+			assert.Nil(t, m)
+			require.Len(t, problems, 1)
+			assert.Contains(t, problems[0].Message, "would disable it")
+		})
+	}
+}
+
+func TestAcceptPathsFollowTheLintAcceptGlobs(t *testing.T) {
+	tests := []struct {
+		pattern, file string
+		want          bool
+	}{
+		{"**/AGENTS.md", "AGENTS.md", true},
+		{"**/AGENTS.md", "a/b/AGENTS.md", true},
+		{"AGENTS.md", "AGENTS.md", true},
+		{"AGENTS.md", "sub/AGENTS.md", true},
+		{"docs/**/a.md", "docs/a.md", true},
+		{"docs/**/a.md", "docs/x/y/a.md", true},
+		{"docs/**/a.md", "other/a.md", false},
+		{"docs/*.md", "docs/a.md", true},
+		{"docs/*.md", "docs/x/a.md", false},
+		{"docs/**", "docs/x/y.md", true},
+		{"docs", "docs/x/y.md", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern+" vs "+tt.file, func(t *testing.T) {
+			body := "[[area]]\nname = \"a\"\nterms = [\"x\"]\n\n[[accept]]\nterm = \"x\"\npath = \"" + tt.pattern + "\"\nreason = \"r\"\n"
+			m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", body))
+			require.Empty(t, problems)
+
+			_, ok := m.Accepting("a", "x", tt.file)
+
+			assert.Equal(t, tt.want, ok)
+		})
+	}
+}
+
+func TestAcceptPathsNormalizeLikeLintAccept(t *testing.T) {
+	tests := []struct {
+		pattern, file string
+		want          bool
+	}{
+		{"/CLAUDE.md", "CLAUDE.md", true},
+		{"./docs/a.md", "docs/a.md", true},
+		{"./docs/", "docs/x/a.md", true},
+		{`docs/\*.md`, "docs/a.md", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern+" vs "+tt.file, func(t *testing.T) {
+			body := "[[area]]\nname = \"a\"\nterms = [\"x\"]\n\n[[accept]]\nterm = \"x\"\npath = '" + tt.pattern + "'\nreason = \"r\"\n"
+			m, problems := LoadFile(writeFile(t, t.TempDir(), "areas.toml", body))
+			require.Empty(t, problems)
+			_, ok := m.Accepting("a", "x", tt.file)
+			assert.Equal(t, tt.want, ok)
+		})
+	}
+}
+
+func TestExcludeWithTheTermOnlyInsideAWordIsRejected(t *testing.T) {
+	tests := []struct {
+		name    string
+		exclude string
+		ok      bool
+	}{
+		{"inside a longer word", "researchers", false},
+		{"glued letters", "mysearch", false},
+		{"as a whole word of a compound", "search-engine", true},
+		{"after punctuation", "web.search", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, problems := New([]config.ExposureArea{{Name: "a", Terms: []string{"search"}, Exclude: []string{tt.exclude}}}, nil)
+			if tt.ok {
+				require.Empty(t, problems)
+				assert.NotNil(t, m)
+				return
+			}
+			assert.Nil(t, m)
+			require.Len(t, problems, 1)
+			assert.Contains(t, problems[0].Message, "as a whole word")
+		})
+	}
+}

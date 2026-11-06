@@ -271,3 +271,40 @@ func TestLeakageTreeRoot(t *testing.T) {
 	assert.Equal(t, base, leakageTreeRoot(base, filepath.Join(base, "services", "billing")))
 	assert.Equal(t, other, leakageTreeRoot(base, other))
 }
+
+// leakageRepo writes the files into a fresh root and the areas file beside it, and returns the flags that
+// run `exposure leakage` on them.
+func leakageRepo(t *testing.T, areasBody string, files map[string]string) exposureFlags {
+	t.Helper()
+	root := t.TempDir()
+	for name, body := range files {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o750))
+		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
+	}
+	areasFile := filepath.Join(t.TempDir(), "areas.toml")
+	require.NoError(t, os.WriteFile(areasFile, []byte(areasBody), 0o600))
+	return exposureFlags{root: root, areasFile: areasFile}
+}
+
+// A CLAUDE.md that is only `@AGENTS.md` loads AGENTS.md at session start, so a term in it is a leak (AR9W0)
+// reported against AGENTS.md and its line (#536).
+func TestRunExposureLeakageScansImportedText(t *testing.T) {
+	areasBody := "[[area]]\nname = \"billing\"\nterms = [\"invoice\"]\n"
+	leaked := leakageRepo(t, areasBody, map[string]string{"CLAUDE.md": "@AGENTS.md\n", "AGENTS.md": "# Guide\n\nSend the invoice.\n"})
+	clean := leakageRepo(t, areasBody, map[string]string{"CLAUDE.md": "@AGENTS.md\n", "AGENTS.md": "# Guide\n\nSend the mail.\n"})
+
+	got, err := runExposureLeakage(t.Context(), &leaked)
+	require.NoError(t, err)
+	control, err := runExposureLeakage(t.Context(), &clean)
+	require.NoError(t, err)
+
+	require.Len(t, got.Findings, 1)
+	assert.Equal(t, exposure.LeakViolation, got.Findings[0].Severity)
+	assert.Equal(t, "AR9W0", got.Findings[0].Code)
+	assert.Equal(t, "AGENTS.md", got.Findings[0].Path)
+	assert.Equal(t, 3, got.Findings[0].Line)
+	assert.False(t, got.OK())
+	assert.Empty(t, control.Findings)
+	assert.True(t, control.OK())
+}

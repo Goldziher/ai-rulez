@@ -1,7 +1,9 @@
 package lint
 
 import (
+	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
@@ -15,6 +17,9 @@ const (
 	CodeExposureAreaAmbiguous = "AR9W1"
 	CodeExposureSkillUnknown  = "AR9W6"
 )
+
+// routeAreasAccept names the [[accept]] tables of an areas file in the AR740 finding of a refused attempt.
+const routeAreasAccept = "[[accept]] of the areas file"
 
 // ExposureLeakage is the leakage of the start-of-session text of a project, as the session exposure finds it.
 type ExposureLeakage struct {
@@ -31,6 +36,15 @@ type ExposureLeakage struct {
 	// Unchecked are the start-of-session artifacts whose text could not be read (over the read limit, a
 	// symlink to outside the root), so no leak in them can be found. They are reported, not findings.
 	Unchecked []ExposureUnchecked
+	// StaleAccepts are the [[accept]] entries of the areas file that accepted no leak.
+	StaleAccepts []ExposureStaleAccept
+}
+
+// ExposureStaleAccept is an [[accept]] entry of the areas file (at AreasFile, on Line) that accepted nothing.
+type ExposureStaleAccept struct {
+	Index      int
+	Term, Path string
+	Line       int
 }
 
 // ExposureUnchecked is a start-of-session artifact whose text was not read. Path is relative to the source's
@@ -54,6 +68,14 @@ type ExposureLeak struct {
 	Line      int
 	Excerpt   string
 	Message   string
+	// AcceptReason is the reason of the [[accept]] entry of the areas file that covers the leak, "" for none.
+	AcceptReason string
+	// ImportedBy are the paths (relative to Root) of the artifacts that import Path, none for a leak in the
+	// artifact's own text.
+	ImportedBy []string
+	// ImportChain are the paths (relative to Root) of every file the finding depends on besides Path: the
+	// importing artifacts and the files they import.
+	ImportChain []string
 }
 
 // ExposureSkillArea is a skill_areas entry.
@@ -131,7 +153,7 @@ func registerArExposureLeakage(s *ruleSet) {
 	for _, code := range []string{CodeExposureAreaTerm, CodeExposureAreaAmbiguous, CodeExposureSkillUnknown} {
 		SetAnalyzer(code, AnalyzerExposure, ScopeBundle)
 	}
-	s.addRunCheck(checkExposureLeakage, AnalyzerExposure)
+	s.addRunCheck(checkExposureLeakage, AnalyzerExposure, AnalyzerConfig)
 }
 
 // checkExposureLeakage reports the area words of the start-of-session text (AR9W0, AR9W1) and the skill_areas
@@ -159,7 +181,15 @@ func checkExposureLeakage(r *runner) {
 		if len(r.findings) == before {
 			continue
 		}
-		r.exposureDeps(before, abs, nil)
+		var via []string
+		for _, p := range append(slices.Clone(l.ImportedBy), l.ImportChain...) {
+			via = append(via, filepath.Join(root, filepath.FromSlash(p)))
+		}
+		r.exposureDeps(before, abs, via)
+		if l.AcceptReason != "" && !r.refuseSuppression(code, routeAreasAccept) {
+			m := r.findings[before].meta()
+			m.Accepted, m.AcceptedByConfig, m.AcceptReason = true, true, l.AcceptReason
+		}
 		r.leakage.leaks = append(r.leakage.leaks, leakRecord{leak: *l, code: code, file: r.findings[before].File})
 	}
 	for _, s := range lk.UnknownSkills {
@@ -167,6 +197,14 @@ func checkExposureLeakage(r *runner) {
 		before := len(r.findings)
 		r.add(CodeExposureSkillUnknown, path, line, "skill_areas assigns %q to %q, but no skill of the session inventory is named %q; rename or remove the entry", s.Skill, s.Area, s.Skill)
 		r.exposureDeps(before, path, nil)
+	}
+	for _, a := range lk.StaleAccepts {
+		msg := fmt.Sprintf("accept[%d] (%q in %s) of the areas file accepted no leak; remove it or fix its term or path", a.Index, a.Term, a.Path)
+		before := len(r.findings)
+		r.add(CodeAcceptUnused, lk.AreasFile, a.Line, "%s", msg)
+		r.exposureDeps(before, lk.AreasFile, nil)
+		// Recorded whether or not AR9I0 is reported, so `exposure leakage` fails on it with AR9I0 off.
+		r.staleAccepts = append(r.staleAccepts, staleAccept{code: CodeExposureAreaTerm, message: msg})
 	}
 }
 
