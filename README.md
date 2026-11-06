@@ -222,7 +222,7 @@ pre-commit or prek:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v5.10.0
+    rev: v5.11.0
     hooks:
       - id: ai-rulez-recursive
       - id: ai-rulez-validate
