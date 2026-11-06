@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.11.1] - 2026-11-06
+
 ### Fixed
 
 - `validate` no longer reports `AR303` for the agent frontmatter keys `extends` and `<preset>_model` (`claude_model`,
@@ -16,6 +18,20 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   `exposure leakage --harness codex`, instead of always reading `CLAUDE.md` and `.claude/`. `--plugins` other than
   `none` is an error under codex, and the leakage schema accepts the `agents_md` kind
   ([#545](https://github.com/Goldziher/ai-rulez/issues/545)).
+- The npm and PyPI packages ship their own README instead of a copy of the repository README, whose relative links
+  were broken on the registry pages.
+- `ai-rulez init --minimal` and the bundled `ai-rulez` skill link to the documentation site; their links to
+  `docs/*.md` on GitHub returned 404 after the site moved.
+- `ai-rulez local --help` names `config.local.toml`, the only overlay file read.
+- The documentation's GitHub Action examples pin the current release, and `set-version` keeps them in step.
+
+### Changed
+
+- Documentation: corrected the configuration reference (plugin runtimes default, effort and MCP self-entry presets,
+  builtin agents, provider-spec `emit_when`), the includes, roles, skills, checks, domains, monorepo, custom preset and
+  publish pages; removed maintainer and implementation detail from the architecture, performance, migration and
+  validation pages; fixed the pink tint of the light-theme cards and the home page title.
+- The npm and PyPI package descriptions, keywords and classifiers are shorter and match the project description.
 
 ## [5.11.0] - 2026-11-06
 
