@@ -15,6 +15,6 @@ x-ai-rulez:
 
 ## Documentation and Samples
 
-- Mirror new capability guides in `docs/` and rebuild the zensical site (`zensical.toml`) when behavior changes.
+- Mirror new capability guides in `website/src/content/docs/` and add new pages to the sidebar in `website/astro.config.mjs` when behavior changes.
 - Keep configuration examples aligned with the JSON schema defaults and CLI output.
 - Highlight agent and MCP integrations that improve onboarding.

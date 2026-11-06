@@ -11,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 )
 
-// PredicateApproval is the predicate type of a signed approval (docs/approvals.md).
+// PredicateApproval is the predicate type of a signed approval (https://goldziher.github.io/ai-rulez/approvals/).
 const PredicateApproval = "https://github.com/Goldziher/ai-rulez/attestations/approval/v1"
 
 // SubjectApproval is the trust subject of a signed approval: a

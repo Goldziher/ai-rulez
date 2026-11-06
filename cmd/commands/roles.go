@@ -134,7 +134,7 @@ func printModeOutcomes(w reportWriter, outcomes []roles.SkillOutcome) {
 			continue
 		}
 		if !header {
-			w.printf("\nskill_mode not honored on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):\n")
+			w.printf("\nskill_mode not honored on every configured harness (see https://goldziher.github.io/ai-rulez/roles/#skill_mode-on-other-harnesses):\n")
 			header = true
 		}
 		w.printf("  %s = %s: not applied on %s; %s\n", o.Key(), o.Mode, strings.Join(o.Degraded, ", "), modeFallbackText(*o))

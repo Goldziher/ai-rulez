@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verifiers-spec.schema.json",
   "title": "ai-rulez verifier declaration file",
-  "description": "A file under .ai-rulez/verifiers/*.toml: [[verifiers]] tables that attach a predicate to the rule, skill, agent or command it enforces. See docs/verifiers.md.",
+  "description": "A file under .ai-rulez/verifiers/*.toml: [[verifiers]] tables that attach a predicate to the rule, skill, agent or command it enforces. See https://goldziher.github.io/ai-rulez/verifiers/.",
   "type": "object",
   "additionalProperties": false,
   "properties": {

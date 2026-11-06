@@ -13,7 +13,7 @@ import (
 	"github.com/samber/oops"
 )
 
-// The okf importer is `convert --from okf`: an OKF bundle (docs/okf.md) becomes
+// The okf importer is `convert --from okf`: an OKF bundle (https://goldziher.github.io/ai-rulez/okf/) becomes
 // an .ai-rulez/ tree through the same mapping as `ai-rulez import okf`, but its
 // result goes through convert's plan, report, scan and write, so there is one
 // report format and one set of safety checks.

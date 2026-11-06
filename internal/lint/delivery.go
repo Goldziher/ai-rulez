@@ -17,7 +17,7 @@ import (
 
 // Dynamic skill loading rules. AR990 to AR995 are the first delivery block; the
 // roles work uses AR971 to AR973 and AR981 to AR982. AR9R0 to AR9R2 are the
-// on-disk and invocation traps that serving a skill introduces (docs/strict-validation.md).
+// on-disk and invocation traps that serving a skill introduces (https://goldziher.github.io/ai-rulez/strict-validation/).
 const (
 	CodeServedReferencedStatically = "AR990"
 	CodeDeliveryStubMissing        = "AR991"

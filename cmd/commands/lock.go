@@ -43,7 +43,7 @@ var LockCmd = &cobra.Command{
 points to and a digest of the imported files in .ai-rulez/ai-rulez.lock. The
 lock also pins the authored content: a sha256 digest of every rule, skill (with
 its resources), agent, command, context file, hook and role, and of the
-generated outputs, plus one digest over the whole set. See docs/lockfile.md.
+generated outputs, plus one digest over the whole set. See https://goldziher.github.io/ai-rulez/lockfile/.
 
 Once the lock is committed, "generate" fetches exactly the pinned commits and
 fails if the fetched files do not match the recorded digest, so output no longer

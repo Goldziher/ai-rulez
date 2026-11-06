@@ -22,7 +22,7 @@ func writeTreeFile(t *testing.T, dir, rel, body string, mode os.FileMode) {
 }
 
 // The expected digests come from the independent Python implementation in
-// docs/lockfile.md.
+// website/src/content/docs/lockfile.md.
 func TestDigestDir_Vectors(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("the execute bit comes from the git index on Windows")
@@ -100,7 +100,7 @@ func TestDigestDir_SymlinkLeafVectors(t *testing.T) {
 		t.Skip("symlinks need privileges on Windows")
 	}
 	// The expected digests come from an independent Python implementation of the
-	// scheme in docs/lockfile.md.
+	// scheme in website/src/content/docs/lockfile.md.
 	dir := t.TempDir()
 	writeTreeFile(t, dir, "rules/a.md", "# A\n", 0o644)
 	testutil.SymlinkOrSkip(t, "rules/a.md", filepath.Join(dir, "README.md"))

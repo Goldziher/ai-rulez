@@ -17,7 +17,7 @@ import (
 // Hook event names handled by HandleHook. Claude Code's are verified against the
 // hook input schemas in Claude Code 2.1.289; Codex uses the same SubagentStart and
 // SubagentStop names and Cursor the camelCase forms (matched case-insensitively),
-// both per their documentation (see docs/telemetry.md).
+// both per their documentation (see https://goldziher.github.io/ai-rulez/telemetry/).
 const (
 	HookInstructionsLoaded = "InstructionsLoaded"
 	HookSubagentStart      = "SubagentStart"

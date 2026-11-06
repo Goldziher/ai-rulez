@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-// Rule code of a tag held back by min_release_age (docs/strict-validation.md).
+// Rule code of a tag held back by min_release_age (https://goldziher.github.io/ai-rulez/strict-validation/).
 const (
 	CodeHeldBack   = "AR733"
 	CodeOutdated   = "AR734"
 	maxGateLookups = 50
 )
 
-// Sources of a tag's release time, in order of trust (docs/lockfile.md).
+// Sources of a tag's release time, in order of trust (https://goldziher.github.io/ai-rulez/lockfile/).
 const (
 	SourceForge     = "forge"
 	SourceFirstSeen = "first-seen"

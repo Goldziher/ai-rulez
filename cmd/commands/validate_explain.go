@@ -17,7 +17,7 @@ var validateExplain string
 func runExplain(w io.Writer, key, format string) error {
 	e, ok := lint.Explain(key)
 	if !ok {
-		return oops.Hint("Run `ai-rulez validate --explain AR001`; codes are listed in docs/strict-validation.md").
+		return oops.Hint("Run `ai-rulez validate --explain AR001`; codes are listed in https://goldziher.github.io/ai-rulez/strict-validation/").
 			Errorf("unknown rule %q", key)
 	}
 	if format == formatJSON {

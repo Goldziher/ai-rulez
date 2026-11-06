@@ -387,10 +387,10 @@ func TestClineHookScripts(t *testing.T) {
 	assert.Contains(t, joined, "the event FileChanged has no equivalent")
 }
 
-// TestDocsDialectEventTable pins the "Harness | Events" table of docs/settings.md
+// TestDocsDialectEventTable pins the "Harness | Events" table of website/src/content/docs/settings.md
 // to the renderer's event tables.
 func TestDocsDialectEventTable(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "settings.md"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "website", "src", "content", "docs", "settings.md"))
 	require.NoError(t, err)
 	cell := regexp.MustCompile("`([A-Za-z]+)`(?: \\(`([A-Za-z_]+)`\\))?")
 
@@ -429,7 +429,7 @@ func TestDocsDialectEventTable(t *testing.T) {
 	}
 	for _, c := range dialectCases {
 		harness := strings.TrimSuffix(c.harness, "/user")
-		assert.True(t, rows[harness], "docs/settings.md lists the events of %s", harness)
+		assert.True(t, rows[harness], "website/src/content/docs/settings.md lists the events of %s", harness)
 	}
 	assert.True(t, rows[config.HarnessCopilotCLI])
 	assert.True(t, rows[config.HarnessCline])

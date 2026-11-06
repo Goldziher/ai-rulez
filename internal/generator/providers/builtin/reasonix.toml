@@ -83,7 +83,7 @@ emit_when = "has_mcp_json_entries"
 
 # User-scope layout: everything lives under ~/.reasonix.
 # Hooks: top-level [[hooks]] rendered in reasonix's native format, read from the
-# vendor documentation (see docs/settings.md). Reasonix reads `hooks` from settings.json (flat entries, milliseconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Reasonix reads `hooks` from settings.json (flat entries, milliseconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "reasonix"

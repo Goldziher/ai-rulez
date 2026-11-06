@@ -1,4 +1,4 @@
-// Package policy implements the tighten-only organization policy (docs/policy.md):
+// Package policy implements the tighten-only organization policy (https://goldziher.github.io/ai-rulez/policy/):
 // discovery from anchors outside the repository, a per-key merge algebra that
 // can only restrict, and the application of the result to a loaded
 // configuration, which clamps what runs and reports every loosening attempt.
@@ -75,7 +75,7 @@ type Policy struct {
 	statedLoose []string
 }
 
-// Governance governs [governance] (docs/approvals.md): the approval floor the
+// Governance governs [governance] (https://goldziher.github.io/ai-rulez/approvals/): the approval floor the
 // repository can raise but not lower.
 type Governance struct {
 	// Enforce makes missing approvals fail lock --check, generate --locked and the skills server.

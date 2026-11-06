@@ -133,7 +133,7 @@ func TestTrapDocsAreGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile("../../docs/harness-traps.md")
+	data, err := os.ReadFile("../../website/src/content/docs/harness-traps.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,17 +141,17 @@ func TestTrapDocsAreGenerated(t *testing.T) {
 	text := string(data)
 	i, j := strings.Index(text, begin), strings.Index(text, end)
 	if i < 0 || j < i {
-		t.Fatalf("docs/harness-traps.md lacks the %q ... %q markers", begin, end)
+		t.Fatalf("website/src/content/docs/harness-traps.md lacks the %q ... %q markers", begin, end)
 	}
 	if os.Getenv("UPDATE_DOCS") != "" {
 		text = text[:i+len(begin)] + want + text[j:]
-		if err := os.WriteFile("../../docs/harness-traps.md", []byte(text), 0o644); err != nil { //nolint:gosec // docs file
+		if err := os.WriteFile("../../website/src/content/docs/harness-traps.md", []byte(text), 0o644); err != nil { //nolint:gosec // docs file
 			t.Fatal(err)
 		}
 		return
 	}
 	if got := text[i+len(begin) : j]; got != want {
-		t.Errorf("docs/harness-traps.md is out of date with traps.toml; regenerate it with UPDATE_DOCS=1 go test ./internal/lint -run TestTrapDocsAreGenerated; want:\n%s", want)
+		t.Errorf("website/src/content/docs/harness-traps.md is out of date with traps.toml; regenerate it with UPDATE_DOCS=1 go test ./internal/lint -run TestTrapDocsAreGenerated; want:\n%s", want)
 	}
 }
 

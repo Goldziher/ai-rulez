@@ -18,7 +18,7 @@ import (
 	"github.com/samber/oops"
 )
 
-// Rule codes of the verifier family (docs/verifiers.md, docs/strict-validation.md).
+// Rule codes of the verifier family (https://goldziher.github.io/ai-rulez/verifiers/, https://goldziher.github.io/ai-rulez/strict-validation/).
 const (
 	CodeVerifierFailed    = "AR9H1"
 	CodeVerifierInvalid   = "AR9H2"

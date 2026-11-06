@@ -31,7 +31,7 @@ var HookHarnesses = withPluginHarnesses(slices.Concat([]string{HarnessClaude, Ha
 // Claude Code permission-rule syntax ("Bash(git *)", "Read(./.env)"). It is
 // rendered into .claude/settings.json verbatim and translated into the native
 // permission format of the other harnesses that have one (see
-// docs/permissions.md). Each listed rule is owned element by element, so rules
+// https://goldziher.github.io/ai-rulez/permissions/). Each listed rule is owned element by element, so rules
 // the consumer wrote in the same arrays survive.
 type Permissions struct {
 	Allow []string `yaml:"allow,omitempty" json:"allow,omitempty" toml:"allow,omitempty"`

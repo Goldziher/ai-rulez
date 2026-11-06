@@ -33,7 +33,7 @@ const HookBuiltinGuard = "guard"
 // call when the hook exits with code 2 and writes the reason to stderr. A harness
 // outside this list is skipped, never approximated.
 //
-// Evidence, read 2026-10-06 (docs/settings.md [guard] lists the URLs): Claude Code,
+// Evidence, read 2026-10-06 (https://goldziher.github.io/ai-rulez/settings/ [guard] lists the URLs): Claude Code,
 // Codex, Gemini CLI, Cursor, Factory, Copilot and Copilot CLI each document exit
 // code 2 as a block of the pre-tool call.
 var GuardHarnesses = []string{

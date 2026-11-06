@@ -89,7 +89,7 @@ with the credential masked. Content from includes and installed skills is skippe
 --include-imports. Rubrics live in .ai-rulez/rubrics/<id>/ (see "ai-rulez rubric --help").
 
 Exit status: 0 on success; 1 when the review could not run or was refused; 2 when --gate fails.
-See docs/review.md.`,
+See https://goldziher.github.io/ai-rulez/review/.`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		code, err := runReview(cmd, args, cmd.OutOrStdout())

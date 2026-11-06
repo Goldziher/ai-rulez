@@ -6,8 +6,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
-// Codes of the model-judged review feature (docs/review.md). AR9G is the review
-// block of the allocation table in docs/strict-validation.md. Phase 0 (no model
+// Codes of the model-judged review feature (https://goldziher.github.io/ai-rulez/review/). AR9G is the review
+// block of the allocation table in https://goldziher.github.io/ai-rulez/strict-validation/. Phase 0 (no model
 // call) emits AR9G8 from `rubric lint`, AR9G0 as a run note and AR9G1-AR9G7 from
 // the deterministic lint evidence behind each rubric dimension. With --semantic the
 // same codes carry the judge's verdicts, and AR9G9 (judge-calibration-stale) reports a

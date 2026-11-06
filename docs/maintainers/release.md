@@ -13,16 +13,14 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
    ```bash
    mise run set-version -- 5.4.0
    scripts/release-bump.sh check 5.4.0
-   uv lock
    ```
 
-   The task updates both Go version defaults, the npm wrapper, both Python `__init__.py` files, the docs
-   `pyproject.toml`, pre-commit defaults and the README and Poly hook version examples. `uv lock` synchronizes
-   the docs project's version in its lockfile. The publish workflow's `release-bump.sh check` verifies the
+   The task updates both Go version defaults, the npm wrapper, both Python `__init__.py` files, pre-commit
+   defaults and the README, installation and Poly hook version examples. The publish workflow's `release-bump.sh check` verifies the
    distribution versions and the liter-llm pin. Prerelease versions such as `5.4.0-rc.1` are converted to PEP 440 (`5.4.0rc1`) for Python metadata by the same task.
 
    Date the release's changelog section, review the release notes, update any remaining version examples, and
-   regenerate the CLI and LLM documentation with `mise run docs:cli` and `mise run docs:llms`.
+   regenerate the CLI reference with `mise run docs:cli`. The site build writes `llms.txt` and `llms-full.txt`.
 
    Then regenerate the goldens: the generated manifest records the tool version, so every golden that lists
    `.ai-rulez/.generated-manifest.local.json` changes.
@@ -55,7 +53,7 @@ The root `action.yml` is published as `uses: Goldziher/ai-rulez@v5`, and the `ch
 and `update/action.yml` sub-actions as `Goldziher/ai-rulez/check@v5` and
 `Goldziher/ai-rulez/update@v5` from the same tag. The `v5` tag selects the action
 implementation; its `version` input independently selects the CLI binary (default `latest`).
-See the [action guide](../github-actions.md) for input and environment examples.
+See the [action guide](https://goldziher.github.io/ai-rulez/github-actions/) for input and environment examples.
 
 Only stable `vX.Y.Z` releases move a floating tag, and the tag is the release's major: `v5.8.0`
 moves `v5`, a future `v6.0.0` would create `v6`. The final `update_action_tag` job has
@@ -200,7 +198,7 @@ To rebuild a release from scratch, delete its assets (or the draft) and rerun.
 The `provenance` job uses `actions/attest-build-provenance` over each binary and archive, signed with this workflow's
 identity (`.github/workflows/publish.yaml@refs/tags/v...`, which must stay a top-level workflow of this repository).
 Each archive gets `<archive-name>.sigstore.json`. `ai-rulez verify --self` checks the running binary's sha256 against
-the bundle next to it or `--attestation-file`; see [Signing](../signing.md#verifying-ai-rulez-itself). The binary is
+the bundle next to it or `--attestation-file`; see [Signing](https://goldziher.github.io/ai-rulez/signing/#verifying-ai-rulez-itself). The binary is
 attested after it is unpacked from the published archive, so the attested bytes are the shipped bytes. A Windows DLL
 shipped by the fallback path is covered by the archive digest but is not itself a subject.
 

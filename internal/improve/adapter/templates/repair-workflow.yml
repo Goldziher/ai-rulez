@@ -1,5 +1,5 @@
 # Scheduled "model upgrade repair" for skills: a GitHub Actions template for `ai-rulez improve`
-# (print it with `ai-rulez improve adapters repair-workflow`, docs/improve.md).
+# (print it with `ai-rulez improve adapters repair-workflow`, https://goldziher.github.io/ai-rulez/improve/).
 #
 # A model upgrade can make a skill that passed its evals start failing. Each week this job re-runs the eval
 # suites against the model you name, asks the optimizer to repair every skill that now fails, and opens a DRAFT

@@ -12,14 +12,14 @@ import (
 )
 
 // Every AI_RULEZ_* name the code reads is in the Environment Variables section of
-// docs/cli.md. Names that end in an underscore are prefixes of a family listed
+// website/src/content/docs/cli.md. Names that end in an underscore are prefixes of a family listed
 // there by its members.
 func TestEveryEnvironmentVariableIsDocumented(t *testing.T) {
-	docs, err := os.ReadFile(filepath.Join("..", "..", "docs", "cli.md"))
+	docs, err := os.ReadFile(filepath.Join("..", "..", "website", "src", "content", "docs", "cli.md"))
 	require.NoError(t, err)
 	section := string(docs)
 	_, section, ok := strings.Cut(section, "## Environment Variables")
-	require.True(t, ok, "docs/cli.md has no Environment Variables section")
+	require.True(t, ok, "website/src/content/docs/cli.md has no Environment Variables section")
 	section, _, _ = strings.Cut(section, "\n## ")
 
 	name := regexp.MustCompile(`AI_RULEZ_[A-Z0-9]+(?:_[A-Z0-9]+)*`)
@@ -45,7 +45,7 @@ func TestEveryEnvironmentVariableIsDocumented(t *testing.T) {
 
 	for env, path := range used {
 		if !strings.Contains(section, env) {
-			t.Errorf("%s (read in %s) is not documented in the Environment Variables section of docs/cli.md", env, path)
+			t.Errorf("%s (read in %s) is not documented in the Environment Variables section of website/src/content/docs/cli.md", env, path)
 		}
 	}
 }

@@ -27,7 +27,7 @@ AI-Rulez ships through multiple channels:
 
 Versioning and metadata:
 
-- Keep versions aligned in `cmd/commands/root.go`, `package.json`, and `pyproject.toml`.
-- `mise run set-version -- X.Y.Z` bumps every manifest; `mise run docs:llms` regenerates `docs/llms.txt` and `docs/llms-full.txt`.
+- Keep versions aligned in `cmd/commands/root.go`, `package.json`, and the PyPI wrapper in `release/pypi/`.
+- `mise run set-version -- X.Y.Z` bumps every manifest; `mise run docs:cli` regenerates the CLI reference page.
 - Update release notes and docs when CLI surface changes.
 - Regenerate outputs after changing `.ai-rulez/` content.

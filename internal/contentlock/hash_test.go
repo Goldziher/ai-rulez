@@ -10,7 +10,7 @@ import (
 )
 
 // The vectors below were computed with an independent Python implementation of
-// the scheme in docs/lockfile.md. If one changes, lockfile.Version must change.
+// the scheme in website/src/content/docs/lockfile.md. If one changes, lockfile.Version must change.
 func TestVectors(t *testing.T) {
 	skill := []Leaf{
 		{Path: "SKILL.md", Mode: ModeRegular, Data: []byte("---\nname: deploy\n---\nDeploy.\n")},

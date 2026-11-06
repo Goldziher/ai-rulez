@@ -33,7 +33,7 @@ func checkRoleModes(_ context.Context, s *state) []Finding {
 				Check: CheckRoleModes, Severity: SeverityInfo,
 				Message: "role " + name + ": skill_mode " + o.Mode + " of " + o.Key() + " is not honored on " +
 					strings.Join(o.Degraded, ", ") + "; " + degradedEffect(*o),
-				Hint: "see docs/roles.md#skill_mode-on-other-harnesses; [role_manifest] skill_mode_fallback picks drop or serve for off",
+				Hint: "see https://goldziher.github.io/ai-rulez/roles/#skill_mode-on-other-harnesses; [role_manifest] skill_mode_fallback picks drop or serve for off",
 			})
 		}
 	}

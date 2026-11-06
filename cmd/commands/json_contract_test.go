@@ -23,11 +23,11 @@ var reportCommands = []string{
 // noContractYet are report commands whose JSON has no schema of its own; each
 // names the reason.
 var noContractYet = map[string]string{
-	"verifiers calibrate":     "the calibration record is documented in docs/verifiers.md; its schema is the record file's",
-	"verifiers suggest":       "the proposals follow the llm response; documented in docs/verifiers.md",
-	"eval calibrate-estimate": "documented in docs/evals.md",
+	"verifiers calibrate":     "the calibration record is documented in website/src/content/docs/verifiers.md; its schema is the record file's",
+	"verifiers suggest":       "the proposals follow the llm response; documented in website/src/content/docs/verifiers.md",
+	"eval calibrate-estimate": "documented in website/src/content/docs/evals.md",
 	"eval import":             "the import report shares the convert report schema (schema/convert-report.schema.json)",
-	"okf import":              "the import report is documented in docs/okf.md",
+	"okf import":              "the import report is documented in website/src/content/docs/okf.md",
 }
 
 // jsonCommandPaths collects the runnable commands that accept --format json,

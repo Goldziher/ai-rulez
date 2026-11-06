@@ -4,7 +4,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/agentplugins"
 )
 
-// Codes of the Agent Plugins package check (docs/agent-plugins.md). They are
+// Codes of the Agent Plugins package check (https://goldziher.github.io/ai-rulez/agent-plugins/). They are
 // reported by `validate --strict` and `publish` for a project that builds an
 // Agent Plugins package (the agent-plugins runtime, or copilot and the codex
 // root layout, which share it).

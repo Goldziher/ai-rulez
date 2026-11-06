@@ -10,7 +10,7 @@ import (
 	"github.com/samber/oops"
 )
 
-// Publish emitter names of [[publish.emitters]] and npm access values (docs/publish.md).
+// Publish emitter names of [[publish.emitters]] and npm access values (https://goldziher.github.io/ai-rulez/publish/).
 const (
 	PublishEmitterTemplate     = "template"
 	PublishEmitterCursor       = "cursor-team-marketplace"
@@ -36,7 +36,7 @@ var (
 // publishOptionMax bounds an emitter option value.
 const publishOptionMax = 256
 
-// PublishConfig is the [publish] table (docs/publish.md). It holds no
+// PublishConfig is the [publish] table (https://goldziher.github.io/ai-rulez/publish/). It holds no
 // credential: registries and forges authenticate through their own CLIs and
 // environment, never through the repository.
 type PublishConfig struct {

@@ -57,7 +57,7 @@ and accepted it. The record is bound to the digest, so it stops applying the
 moment the content changes (a CRLF-only edit does not change the digest; a
 flipped executable bit does). [governance] require_approval chooses what needs
 one; validate, lock --check, generate --locked and the skills server
-enforce it. See docs/approvals.md.
+enforce it. See https://goldziher.github.io/ai-rulez/approvals/.
 
 An item is named kind:id or kind:domain/id (skill:backend/deploy, hook:PreToolUse:*:0,
 include:shared, installed-skill:name, source:name, served:name, settings:mcp-servers);
@@ -86,7 +86,7 @@ An approval in the committed lock is an assertion, not authentication: anyone wh
 can edit the lock can add one. --verify-base <rev> is the CI control for that: it
 compares the lock with the one at the merge base of <rev> and HEAD and reports
 (AR716) every approval added since for content that was added or changed in the
-same range. See docs/approvals.md.
+same range. See https://goldziher.github.io/ai-rulez/approvals/.
 
 --from-github-review <pr> records one review-linked approval per approving review
 of the pull request (reviewer github:<login>, ref the review URL), after checking

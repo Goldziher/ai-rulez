@@ -34,7 +34,7 @@ func AssuranceRank(level string) int {
 }
 
 // Approval records that a reviewer read the content whose digest is Digest and
-// accepted it (docs/approvals.md). Approvals sit outside the tree digest: adding
+// accepted it (https://goldziher.github.io/ai-rulez/approvals/). Approvals sit outside the tree digest: adding
 // one changes no pin. They are bound to the digest, so a changed digest leaves the
 // record in place but no longer applies to the content.
 type Approval struct {
@@ -68,7 +68,7 @@ type Approval struct {
 // configuration directory.
 const AttestationDir = "attestations"
 
-// Deny records a digest that must never be approved or used (docs/approvals.md):
+// Deny records a digest that must never be approved or used (https://goldziher.github.io/ai-rulez/approvals/):
 // content known to be malicious, say. A deny entry outlives the content: it
 // names the digest, not an item.
 type Deny struct {
@@ -113,7 +113,7 @@ func sortedDeny(in []Deny) []Deny {
 const ApprovalsLabel = "ai-rulez/approvals/v1"
 
 // ApprovalsDigest is the digest of the approval set the lock subject commits to
-// (docs/lockfile.md): every [[approval]] and [[deny]] record in the order Save
+// (https://goldziher.github.io/ai-rulez/lockfile/): every [[approval]] and [[deny]] record in the order Save
 // writes them, each field length-prefixed. It is "" when the lock holds neither,
 // so a lock without approvals keeps the subject it always had.
 func (f *File) ApprovalsDigest() string {

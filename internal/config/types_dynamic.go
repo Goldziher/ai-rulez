@@ -2,7 +2,7 @@ package config
 
 // Dynamic skill loading: how each skill reaches the agent (static files, served
 // over MCP on demand, or both), where remote skill sources come from, and whether
-// the lock is enforced at serve time. See docs/mcp-server.md, "Dynamic skill
+// the lock is enforced at serve time. See https://goldziher.github.io/ai-rulez/mcp-server/, "Dynamic skill
 // loading". Everything here is optional; without it generation is unchanged.
 
 // Delivery says how a skill reaches the agent.

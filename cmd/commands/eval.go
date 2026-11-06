@@ -80,7 +80,7 @@ var evalRunCmd = &cobra.Command{
 each skill: pass rate, trigger precision and recall, the delta against a run without the
 skill (--ablation), and token cost.
 
-Cases are files named *.eval.yaml, *.eval.yml or *.eval.json; see docs/evals.md and
+Cases are files named *.eval.yaml, *.eval.yml or *.eval.json; see https://goldziher.github.io/ai-rulez/evals/ and
 schema/eval-case.schema.json. A runner executes them:
 
   claude-plugin-eval   translate the cases for "claude plugin eval" and run it (harness claude)

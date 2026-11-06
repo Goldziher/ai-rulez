@@ -61,6 +61,6 @@ func checkAgentPlugins(files []File) error {
 	if len(msgs) == 0 {
 		return nil
 	}
-	return newError(code, ExitGate, "fix the package (see docs/agent-plugins.md), or drop agent-plugins from the plugin runtimes",
+	return newError(code, ExitGate, "fix the package (see https://goldziher.github.io/ai-rulez/agent-plugins/), or drop agent-plugins from the plugin runtimes",
 		"the Agent Plugins package breaks the specification: %s", strings.Join(msgs, "; "))
 }

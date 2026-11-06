@@ -56,8 +56,8 @@ run = "govulncheck ./..."
 
 [tasks."update"]
 shell = "bash -euo pipefail -c"
-description = "Update Go modules and the docs lockfile"
-run = ["go get -u all", "go mod tidy", "uv lock --upgrade"]
+description = "Update Go modules and the docs site dependencies"
+run = ["go get -u all", "go mod tidy", "pnpm --dir website update"]
 
 [tasks."upgrade"]
 shell = "bash -euo pipefail -c"
@@ -258,23 +258,25 @@ run = "go run ./cmd/ai-rulez validate"
 
 [tasks."docs:cli"]
 shell = "bash -euo pipefail -c"
-description = "Regenerate docs/cli-reference.md and the command index of docs/cli.md from the Cobra command tree"
+description = "Regenerate website/src/content/docs/cli-reference.md and the command index of website/src/content/docs/cli.md from the Cobra command tree"
 run = "go run ./scripts/clidocs"
 
 [tasks."docs:cli:check"]
 shell = "bash -euo pipefail -c"
-description = "Fail when docs/cli-reference.md or the command index of docs/cli.md differ from the command tree"
+description = "Fail when website/src/content/docs/cli-reference.md or the command index of website/src/content/docs/cli.md differ from the command tree"
 run = "go run ./scripts/clidocs --check"
 
-[tasks."docs:llms"]
+[tasks."docs:dev"]
 shell = "bash -euo pipefail -c"
-description = "Regenerate docs/llms.txt and docs/llms-full.txt from zensical.toml and docs/"
-run = "go run ./scripts/docsllms"
+description = "Serve the documentation site (website/) with live reload at http://localhost:4321/ai-rulez/"
+dir = "website"
+run = ["pnpm install --frozen-lockfile", "pnpm run dev"]
 
-[tasks."docs:llms:check"]
+[tasks."docs:build"]
 shell = "bash -euo pipefail -c"
-description = "Fail when docs/llms.txt or docs/llms-full.txt differ from the docs sources"
-run = "go run ./scripts/docsllms --check"
+description = "Build the documentation site into website/dist, including llms.txt and llms-full.txt"
+dir = "website"
+run = ["pnpm install --frozen-lockfile", "pnpm run build"]
 
 [tasks."harness:verify"]
 shell = "bash -euo pipefail -c"

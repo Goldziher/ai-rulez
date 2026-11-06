@@ -12,7 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
-// Trust tiers of text that reaches a reviewer (docs/judge.md).
+// Trust tiers of text that reaches a reviewer (https://goldziher.github.io/ai-rulez/judge/).
 const (
 	// TierConfigured (T1) is rubric text the owner of the run configured: a skill named by path on
 	// the command line, a pinned skill, a prompt extension file.

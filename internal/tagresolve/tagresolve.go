@@ -15,7 +15,7 @@ import (
 	"github.com/samber/oops"
 )
 
-// Rule codes of the semver family (docs/strict-validation.md, block AR730-AR739).
+// Rule codes of the semver family (https://goldziher.github.io/ai-rulez/strict-validation/, block AR730-AR739).
 const (
 	CodeUnsatisfiable   = "AR730"
 	CodeConstraintBad   = "AR731"

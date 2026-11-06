@@ -1,5 +1,5 @@
 // Package releasetime finds when a git tag was released, for the minimum
-// release age gate (`min_release_age`, docs/lockfile.md). Three sources, in order
+// release age gate (`min_release_age`, https://goldziher.github.io/ai-rulez/lockfile/). Three sources, in order
 // of trust: the forge's publish time (internal/forge), the time this machine
 // first saw the tag (a local file), and the date in the git data. It implements
 // tagresolve.ReleaseTimer.

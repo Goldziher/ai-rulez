@@ -7,7 +7,7 @@ import "github.com/samber/oops"
 const DefaultCatalogPageSize = 200
 
 // CatalogConfig is the [catalog] table: defaults for `ai-rulez catalog` (see
-// docs/catalog.md). Every key is optional; a command-line flag overrides it.
+// https://goldziher.github.io/ai-rulez/catalog/). Every key is optional; a command-line flag overrides it.
 type CatalogConfig struct {
 	// Title is the title of the static site.
 	Title string `yaml:"title,omitempty" json:"title,omitempty" toml:"title,omitempty"`

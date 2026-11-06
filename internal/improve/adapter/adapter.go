@@ -1,5 +1,5 @@
 // Package adapter holds the optimizers bundled with `ai-rulez improve`: small programs that speak
-// optimizer protocol v1 (docs/improve.md) so the protocol has living examples. They run as a
+// optimizer protocol v1 (https://goldziher.github.io/ai-rulez/improve/) so the protocol has living examples. They run as a
 // child process of improve like any other optimizer, inside the same sandbox, environment
 // scrub, diff policy and held-out gate; nothing here is trusted by the gate.
 package adapter

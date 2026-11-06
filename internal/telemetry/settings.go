@@ -559,7 +559,7 @@ func loadTable(paths []string) (*config.TelemetryConfig, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&cfg); err != nil {
-		return nil, oops.Hint("Check the [telemetry] keys against docs/telemetry.md").Wrapf(err, "invalid [telemetry] table")
+		return nil, oops.Hint("Check the [telemetry] keys against https://goldziher.github.io/ai-rulez/telemetry/").Wrapf(err, "invalid [telemetry] table")
 	}
 	return &cfg, nil
 }

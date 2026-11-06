@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Codes of signing findings (docs/strict-validation.md, AR720 to AR729). The
+// Codes of signing findings (https://goldziher.github.io/ai-rulez/strict-validation/, AR720 to AR729). The
 // same codes are registered in internal/lint; a test keeps the two equal.
 const (
 	CodeMissing          = "AR720"

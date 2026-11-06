@@ -69,7 +69,7 @@ skill name, a timestamp, a salted hash of the session id, the content hash, the 
 outcome; never prompts, arguments or file contents. Set [usage] skills_index = true so generate
 writes .ai-rulez/skills-index.json, which gives every logged skill its content hash.
 
-Everything is off by default. See docs/telemetry.md for what is collected, what never
+Everything is off by default. See https://goldziher.github.io/ai-rulez/telemetry/ for what is collected, what never
 is, and the rule that a repository cannot enable network export.`,
 }
 

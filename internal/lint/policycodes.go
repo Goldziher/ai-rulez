@@ -8,8 +8,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// Codes of the organization policy (internal/policy, docs/policy.md). AR74x is
-// the policy block of the allocation table in docs/strict-validation.md.
+// Codes of the organization policy (internal/policy, https://goldziher.github.io/ai-rulez/policy/). AR74x is
+// the policy block of the allocation table in https://goldziher.github.io/ai-rulez/strict-validation/.
 const (
 	CodePolicyLoosened        = "AR740"
 	CodePolicyDigestMismatch  = "AR741"

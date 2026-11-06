@@ -1,7 +1,7 @@
 # Benchmark gate
 
 This page is for maintainers. It is not in the site navigation. How the gate measures is in
-[Performance](../performance.md#regression-tracking).
+[Performance](https://goldziher.github.io/ai-rulez/performance/#regression-tracking).
 
 ## What the job does
 

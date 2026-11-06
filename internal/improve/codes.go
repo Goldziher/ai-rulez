@@ -6,7 +6,7 @@
 // experimental.
 package improve
 
-// Report codes of `ai-rulez improve` (docs/improve.md). They are registered in
+// Report codes of `ai-rulez improve` (https://goldziher.github.io/ai-rulez/improve/). They are registered in
 // internal/lint (improvecodes.go) so `validate --explain AR9J1` works and the
 // allocation of the AR9 blocks is checked in one place; `validate` never emits
 // them.

@@ -1,6 +1,6 @@
 package lint
 
-// Codes of the `ai-rulez publish` report (internal/publish, docs/publish.md).
+// Codes of the `ai-rulez publish` report (internal/publish, https://goldziher.github.io/ai-rulez/publish/).
 // They are registered here so `validate --explain AR9N0` works and the AR9
 // block allocation is checked in one place; `validate` never emits them.
 // TestAllocatedBlocksCoverLiteralsInOtherPackages keeps them equal to the

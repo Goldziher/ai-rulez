@@ -72,18 +72,18 @@ func TestRegistry_EveryCodeConstantIsRegisteredOnce(t *testing.T) {
 }
 
 func TestRegistry_EveryCodeIsDocumented(t *testing.T) {
-	doc, err := os.ReadFile(filepath.Join("..", "..", "docs", "strict-validation.md"))
+	doc, err := os.ReadFile(filepath.Join("..", "..", "website", "src", "content", "docs", "strict-validation.md"))
 	require.NoError(t, err)
 	row := regexp.MustCompile("(?m)^\\| (AR[0-9A-Z]+) \\| `([a-z0-9-]+)` \\|")
 	documented := map[string]string{}
 	for _, m := range row.FindAllStringSubmatch(string(doc), -1) {
 		_, dup := documented[m[1]]
-		assert.False(t, dup, "%s is documented twice in docs/strict-validation.md", m[1])
+		assert.False(t, dup, "%s is documented twice in website/src/content/docs/strict-validation.md", m[1])
 		documented[m[1]] = m[2]
 	}
 	for _, r := range Rules() {
 		name, ok := documented[r.Code]
-		if assert.True(t, ok, "%s (%s) is not in the docs/strict-validation.md table", r.Code, r.Name) {
+		if assert.True(t, ok, "%s (%s) is not in the website/src/content/docs/strict-validation.md table", r.Code, r.Name) {
 			assert.Equal(t, r.Name, name, "docs name for %s", r.Code)
 		}
 	}
@@ -93,17 +93,17 @@ func TestRegistry_EveryCodeIsDocumented(t *testing.T) {
 	}
 }
 
-// codeBlock is one row of the "Code ranges" table in docs/strict-validation.md.
+// codeBlock is one row of the "Code ranges" table in website/src/content/docs/strict-validation.md.
 type codeBlock struct {
 	from, to, owner, status string
 }
 
 func parseCodeBlocks(t *testing.T) []codeBlock {
 	t.Helper()
-	doc, err := os.ReadFile(filepath.Join("..", "..", "docs", "strict-validation.md"))
+	doc, err := os.ReadFile(filepath.Join("..", "..", "website", "src", "content", "docs", "strict-validation.md"))
 	require.NoError(t, err)
 	_, section, found := strings.Cut(string(doc), "### Code ranges")
-	require.True(t, found, "docs/strict-validation.md has no Code ranges section")
+	require.True(t, found, "website/src/content/docs/strict-validation.md has no Code ranges section")
 	section, _, _ = strings.Cut(section, "\n## ")
 	row := regexp.MustCompile("(?m)^\\| `(AR[0-9A-Z]{3})`-`(AR[0-9A-Z]{3})` \\| ([^|]+) \\| (\\w+) \\|$")
 	var blocks []codeBlock

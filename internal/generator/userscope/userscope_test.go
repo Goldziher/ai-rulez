@@ -227,16 +227,16 @@ func userScopeTable(t *testing.T) string {
 	return b.String()
 }
 
-// TestDocsTable pins the "where things go" table of docs/user-scope.md to the
+// TestDocsTable pins the "where things go" table of website/src/content/docs/user-scope.md to the
 // layouts the presets declare. Run with UPDATE_DOCS=1 to rewrite the table.
 func TestDocsTable(t *testing.T) {
-	path := filepath.Join("..", "..", "..", "docs", "user-scope.md")
+	path := filepath.Join("..", "..", "..", "website", "src", "content", "docs", "user-scope.md")
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	doc := string(data)
 	start := strings.Index(doc, tableStart)
 	end := strings.Index(doc, tableEnd)
-	require.True(t, start >= 0 && end > start, "docs/user-scope.md needs the %s markers", tableStart)
+	require.True(t, start >= 0 && end > start, "website/src/content/docs/user-scope.md needs the %s markers", tableStart)
 
 	want := userScopeTable(t)
 	got := strings.TrimPrefix(doc[start+len(tableStart):end], "\n")
@@ -245,7 +245,7 @@ func TestDocsTable(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, []byte(updated), 0o644))
 		return
 	}
-	assert.Equal(t, want, got, "docs/user-scope.md is out of date; run UPDATE_DOCS=1 go test ./internal/generator/userscope")
+	assert.Equal(t, want, got, "website/src/content/docs/user-scope.md is out of date; run UPDATE_DOCS=1 go test ./internal/generator/userscope")
 }
 
 func TestResolve_RefusesDangerousHomeOverrides(t *testing.T) {

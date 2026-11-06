@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/policy.schema.json",
   "title": "ai-rulez organization policy",
-  "description": "An organization policy file (--policy, AI_RULEZ_POLICY, or the managed path). A repository can only add restrictions to it. See docs/policy.md.",
+  "description": "An organization policy file (--policy, AI_RULEZ_POLICY, or the managed path). A repository can only add restrictions to it. See https://goldziher.github.io/ai-rulez/policy/.",
   "type": "object",
   "required": ["policy_version"],
   "additionalProperties": false,
@@ -238,7 +238,7 @@
     },
     "signing": {
       "type": "object",
-      "description": "Floor under the repository's [signing] table (docs/signing.md). The repository may raise it, never lower it.",
+      "description": "Floor under the repository's [signing] table (https://goldziher.github.io/ai-rulez/signing/). The repository may raise it, never lower it.",
       "additionalProperties": false,
       "properties": {
         "require_verified": {

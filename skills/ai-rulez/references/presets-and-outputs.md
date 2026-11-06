@@ -38,7 +38,7 @@ presets = [
 These are 15 of the 52 built-in presets. The others: `aiassistant`, `augment`, `bob`, `codebuddy`, `codebuff`,
 `codewhale`, `commandcode`, `copilot-cli`, `cortex`, `crush`, `deepagents`, `dsh`, `factory`, `gitlab-duo`, `goose`,
 `grok`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `poolside`, `qoder`, `qwen`,
-`reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `zcode`, `zed`, `zoocode`. `docs/harnesses.md` is the
+`reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `zcode`, `zed`, `zoocode`. `https://goldziher.github.io/ai-rulez/harnesses/` is the
 matrix of what each writes (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
 
 Removed and renamed: `windsurf` is `devin` (`.windsurf/` is `.devin/`, `windsurf_model` is `devin_model`);

@@ -43,7 +43,7 @@ global_path = ".config/crush/crush.json"
 
 # User-scope layout: Crush keeps its memory, skills and config under ~/.config/crush.
 # Hooks: top-level [[hooks]] rendered in crush's native format, read from the
-# vendor documentation (see docs/settings.md). Crush reads `hooks.PreToolUse` from crush.json (flat entries, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Crush reads `hooks.PreToolUse` from crush.json (flat entries, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "crush"

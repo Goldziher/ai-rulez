@@ -77,7 +77,7 @@ func runTelemetryEnable(out io.Writer) error {
 	endpoint = config.NormalizeTelemetryEndpoint(endpoint, protocol)
 	candidate := config.TelemetryConfig{OTLPEndpoint: endpoint, OTLPProtocol: protocol}
 	if problems := candidate.Validate(); len(problems) > 0 {
-		return oops.Hint("See docs/telemetry.md for the accepted endpoint and protocol forms.").Errorf("%s", strings.Join(problems, "; "))
+		return oops.Hint("See https://goldziher.github.io/ai-rulez/telemetry/ for the accepted endpoint and protocol forms.").Errorf("%s", strings.Join(problems, "; "))
 	}
 
 	record := telemetry.NewConsent(endpoint, protocol, includePaths, includeSession, telemetry.SystemClock(), Version)

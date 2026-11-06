@@ -11,7 +11,7 @@ import (
 )
 
 // buildGuardBound is the time a cold Build of the 5000-file, 100-scope
-// monorepo may take. A build measures 70-250 ms here (docs/performance.md); the
+// monorepo may take. A build measures 70-250 ms here (website/src/content/docs/performance.md); the
 // bound is several times that and never under two seconds, so only a change
 // that makes the build scale badly, not a slow machine, trips it.
 const buildGuardBound = 2 * time.Second

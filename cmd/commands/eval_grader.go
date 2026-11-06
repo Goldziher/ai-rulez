@@ -50,10 +50,10 @@ func buildGrader(cmd *cobra.Command, cfg *config.Config) (evals.RubricGrader, fu
 	lc := resolved.Config
 	switch {
 	case !lc.AllowNetwork:
-		return nil, noop, oops.Hint("Set allow_network = true in the user config ($XDG_CONFIG_HOME/ai-rulez/config.toml) or AI_RULEZ_LLM_ALLOW_NETWORK=1; a repository config cannot enable it, see docs/llm.md").
+		return nil, noop, oops.Hint("Set allow_network = true in the user config ($XDG_CONFIG_HOME/ai-rulez/config.toml) or AI_RULEZ_LLM_ALLOW_NETWORK=1; a repository config cannot enable it, see https://goldziher.github.io/ai-rulez/llm/").
 			Errorf("--grader builtin: [llm] allow_network is not enabled")
 	case lc.FullModel() == "":
-		return nil, noop, oops.Hint("Set [llm] model (and provider) in the user config, see docs/llm.md").Errorf("--grader builtin: no [llm] model is configured")
+		return nil, noop, oops.Hint("Set [llm] model (and provider) in the user config, see https://goldziher.github.io/ai-rulez/llm/").Errorf("--grader builtin: no [llm] model is configured")
 	}
 	if maxCost := evalFlags.graderMaxCost; maxCost > 0 && (lc.MaxCostUSD == 0 || maxCost < lc.MaxCostUSD) {
 		lc.MaxCostUSD = maxCost // the budget guard enforces it, failing closed

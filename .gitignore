@@ -186,3 +186,7 @@ poly.local.toml
 
 # The judge benchmark corpus is made of the files ai-rulez reads; track them all.
 !/bench/judge/corpus/**
+
+# --- Docs site --- #
+/website/dist/
+/website/.astro/

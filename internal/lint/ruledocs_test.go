@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const strictDoc = "../../docs/strict-validation.md"
+const strictDoc = "../../website/src/content/docs/strict-validation.md"
 
 func TestEveryRuleHasDocs(t *testing.T) {
 	for _, r := range Rules() {
@@ -45,7 +45,7 @@ func TestEveryRuleAnchorIsAHeadingInTheDocs(t *testing.T) {
 	slugs := headingSlugs(string(raw))
 	for _, r := range Rules() {
 		_, ok := slugs[anchorFor(r)]
-		assert.True(t, ok, "docs/strict-validation.md has no heading for %s (run UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc)", r.Code)
+		assert.True(t, ok, "website/src/content/docs/strict-validation.md has no heading for %s (run UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc)", r.Code)
 	}
 }
 
@@ -56,7 +56,7 @@ func TestRuleReferenceDoc(t *testing.T) {
 	doc := string(raw)
 	begin := strings.Index(doc, "<!-- rules:begin")
 	end := strings.Index(doc, ruleRefEnd)
-	require.True(t, begin >= 0 && end > begin, "docs/strict-validation.md lacks the rules:begin/rules:end markers")
+	require.True(t, begin >= 0 && end > begin, "website/src/content/docs/strict-validation.md lacks the rules:begin/rules:end markers")
 	want := doc[:begin] + RuleReferenceMarkdown() + strings.TrimPrefix(doc[end+len(ruleRefEnd):], "\n")
 	if os.Getenv("UPDATE_DOCS") != "" {
 		require.NoError(t, os.WriteFile(path, []byte(want), 0o644)) //nolint:gosec // docs file

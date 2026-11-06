@@ -120,7 +120,7 @@ func approvalGate(ctx context.Context, cfg *config.Config, require bool) (*publi
 	if !policy.Active() {
 		if require {
 			return nil, publish.Errorf(publish.CodeUnapproved, publish.ExitGate,
-				"select content in [governance] (see docs/approvals.md) or drop require_approved",
+				"select content in [governance] (see https://goldziher.github.io/ai-rulez/approvals/) or drop require_approved",
 				"require_approved is set but the [governance] policy selects nothing to approve")
 		}
 		return nil, nil //nolint:nilnil // no policy, nothing to record

@@ -32,7 +32,7 @@ const ExitBlock = 2
 const (
 	configDirName = ".ai-rulez"
 	// agentsStateDir is where a project configured in .agents/ai-rulez.toml keeps
-	// its manifests: the "agents" source (see docs/agents-source.md).
+	// its manifests: the "agents" source (see https://goldziher.github.io/ai-rulez/agents-source/).
 	agentsStateDir    = ".agents/.ai-rulez"
 	manifestName      = ".generated-manifest.json"
 	localManifestName = ".generated-manifest.local.json"

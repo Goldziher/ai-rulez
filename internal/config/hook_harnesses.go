@@ -2,7 +2,7 @@ package config
 
 // Harness names accepted in HookGroup.Targets and HookGroup.Matchers beyond the
 // five of settings_authoring.go. Each is the name of the preset (or provider
-// spec) that renders the harness's native hooks file; see docs/settings.md for
+// spec) that renders the harness's native hooks file; see https://goldziher.github.io/ai-rulez/settings/ for
 // the vendor documentation each format was read from.
 const (
 	HarnessCopilotCLI  = "copilot-cli"

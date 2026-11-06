@@ -92,7 +92,7 @@ global_path = ".junie/mcp/mcp.json"
 
 # User-scope layout: Junie merges ~/.junie/AGENTS.md with the project guidelines.
 # Hooks: top-level [[hooks]] rendered in junie's native format, read from the
-# vendor documentation (see docs/settings.md). Junie ignores project-level hooks; they are written to ~/.junie/config.json with --user.
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Junie ignores project-level hooks; they are written to ~/.junie/config.json with --user.
 [[sidecars]]
 kind = "hooks"
 dialect = "junie"

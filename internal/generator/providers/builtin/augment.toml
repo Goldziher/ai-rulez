@@ -106,7 +106,7 @@ path = ".augment/code_review_guidelines.yaml"
 dialect = "augment"
 
 # Hooks: top-level [[hooks]] rendered in augment's native format, read from the
-# vendor documentation (see docs/settings.md). Auggie CLI reads `hooks` from settings.json (five events, milliseconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Auggie CLI reads `hooks` from settings.json (five events, milliseconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "augment"

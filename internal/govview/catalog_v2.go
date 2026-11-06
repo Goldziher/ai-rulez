@@ -80,7 +80,7 @@ type Excerpt struct {
 	Truncated bool   `json:"truncated"`
 }
 
-// ItemApproval is the reviewer-approval state of one item (docs/approvals.md).
+// ItemApproval is the reviewer-approval state of one item (https://goldziher.github.io/ai-rulez/approvals/).
 type ItemApproval struct {
 	// Required says [governance] require_approval selects the item.
 	Required bool `json:"required"`

@@ -65,7 +65,7 @@ type ARDInput struct {
 // proposal) for the skills, MCP servers and plugins of a release. With a
 // base_url it also writes the skill files the manifest points at, so hosting is
 // a copy of the output directory. The manifest is served from
-// https://<publisher>/.well-known/ard.json; see docs/ard.md.
+// https://<publisher>/.well-known/ard.json; see https://goldziher.github.io/ai-rulez/ard/.
 type ardEmitter struct{}
 
 // init registers the ARD emitter and the MCP server card emitter that shares its builders.

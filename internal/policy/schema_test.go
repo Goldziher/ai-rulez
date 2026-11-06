@@ -31,18 +31,18 @@ func tomlToJSON(t *testing.T, body string) []byte {
 	return out
 }
 
-// The policy documented in docs/policy.md is the one the parser and the schema accept.
+// The policy documented in website/src/content/docs/policy.md is the one the parser and the schema accept.
 func TestDocumentedPolicyMatchesParserAndSchema(t *testing.T) {
 	// Arrange
-	doc, err := os.ReadFile(filepath.Join("..", "..", "docs", "policy.md"))
+	doc, err := os.ReadFile(filepath.Join("..", "..", "website", "src", "content", "docs", "policy.md"))
 	require.NoError(t, err)
 	fence := regexp.MustCompile("(?s)```toml\n(# ai-rulez-policy\\.toml.*?)```")
 	blocks := fence.FindAllStringSubmatch(string(doc), -1)
-	require.NotEmpty(t, blocks, "docs/policy.md must show a policy file")
+	require.NotEmpty(t, blocks, "website/src/content/docs/policy.md must show a policy file")
 	schema := compileSchema(t, "policy.schema.json")
 	for _, b := range blocks {
 		// Act
-		_, _, perr := Parse("docs/policy.md", []byte(b[1]))
+		_, _, perr := Parse("website/src/content/docs/policy.md", []byte(b[1]))
 		result := schema.Validate(tomlToJSON(t, b[1]))
 		// Assert
 		require.NoError(t, perr)

@@ -1,5 +1,5 @@
 // Package okfbridge maps ai-rulez content to and from OKF bundles
-// (internal/okf). See docs/okf.md for the mapping table.
+// (internal/okf). See https://goldziher.github.io/ai-rulez/okf/ for the mapping table.
 package okfbridge
 
 import (
@@ -99,7 +99,7 @@ func kindFromName(name string) (Kind, bool) {
 	return "", false
 }
 
-// defaultType is the OKF type written for a kind (docs/okf.md, Mapping).
+// defaultType is the OKF type written for a kind (https://goldziher.github.io/ai-rulez/okf/, Mapping).
 func defaultType(k Kind) string {
 	switch k {
 	case KindRule:

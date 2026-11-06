@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-// Markers delimit the generated block of docs/mcp-server.md.
+// Markers delimit the generated block of https://goldziher.github.io/ai-rulez/mcp-server/.
 const (
 	DocsBegin = "<!-- parity:begin -->"
 	DocsEnd   = "<!-- parity:end -->"
 )
 
-// Markdown renders the table as the three tables of docs/mcp-server.md: the
+// Markdown renders the table as the three tables of https://goldziher.github.io/ai-rulez/mcp-server/: the
 // capabilities both sides have, those only the command line has, and those only
 // MCP has. The output is deterministic.
 func Markdown(caps []Capability) string {

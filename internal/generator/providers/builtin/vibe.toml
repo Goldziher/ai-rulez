@@ -37,7 +37,7 @@ global_path = ".vibe/config.toml"
 emit_when = "has_mcp_servers"
 
 # Hooks: top-level [[hooks]] rendered in vibe's native format, read from the
-# vendor documentation (see docs/settings.md). Vibe reads a flat [[hooks]] list from hooks.toml (seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Vibe reads a flat [[hooks]] list from hooks.toml (seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "vibe"

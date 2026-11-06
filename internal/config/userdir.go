@@ -9,7 +9,7 @@ import (
 )
 
 // UserConfigFileName is the user config file inside UserConfigDir: the one file
-// that may set the user-scope-only keys of [llm] and [telemetry] (docs/trust-model.md).
+// that may set the user-scope-only keys of [llm] and [telemetry] (https://goldziher.github.io/ai-rulez/trust-model/).
 const UserConfigFileName = "config.toml"
 
 // UserConfigFile is the path of the user config file, "" when no home directory

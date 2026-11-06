@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.10.0'
 scope = 'all'
-tree = 'sha256:7f79e439b4ba5f87f5e82c01b02cddf664ec47fb2767bafe5f7a4f30744561dd'
+tree = 'sha256:4c0c8f337bd077b0b5e9fe940522f567c31896026c0bd3367c94bf3d72921dcd'
 
 [[served]]
 name = 'build'
@@ -52,7 +52,7 @@ digest = 'sha256:8f41215233c26441abed2b18f35575ce6b5614f91d9bef4885d550322542d4a
 name = 'docs-and-site'
 source = '.ai-rulez/skills/docs-and-site/SKILL.md'
 commit = ''
-digest = 'sha256:b950231d0e629601ecd1b7ccd9f787508570ff88ab355396ad4cb4295c5c3356'
+digest = 'sha256:4a77128204cb19bde93571990eb17a3807741ca2fd57288fef7153b8f0ba9d62'
 
 [[served]]
 name = 'error-handling'
@@ -112,13 +112,13 @@ digest = 'sha256:2700d984ba10baa2e16ed19b48cc8fd5f7351776f2ce03f6712394d3912f91c
 name = 'release-and-distribution'
 source = '.ai-rulez/skills/release-and-distribution/SKILL.md'
 commit = ''
-digest = 'sha256:1d794508c342f8db68a2b9c404bacb675958fc5d4d2f717e04af586e056741c9'
+digest = 'sha256:e51ae7bbb28a8037a3bf1ecc79acd1a2e819803000b8ff68c25b403db0a63c22'
 
 [[served]]
 name = 'repository-layout'
 source = '.ai-rulez/skills/repository-layout/SKILL.md'
 commit = ''
-digest = 'sha256:62d141b267c507d6a26a42addde26ccc14b28466de9930ec73ed28ca2fe38b55'
+digest = 'sha256:ae3e51dea3a3495f61e443a047e92ae6dd39a819cebd7c0ecf55b736acae1570'
 
 [[served]]
 name = 'review'
@@ -226,7 +226,7 @@ digest = 'sha256:bd8e2a3b428a8cb07155892e56d4a2deef6c2ef59633e394d9fbf40eae78e60
 kind = 'context'
 id = 'generation-pipeline'
 path = 'context/generation-pipeline.md'
-digest = 'sha256:52e9f3fa818e6d2dd52d692e26a60cb99c8310ef6a59af9e36e99ac059c8609f'
+digest = 'sha256:d13adf798cac8fcad479b43754d4f67526b405efe2792e045e0f62928876e06e'
 
 [[item]]
 kind = 'context'
@@ -238,7 +238,7 @@ digest = 'sha256:1093dd57cdf711746da2b611cc0253e618937663ef23515a46b2eb5963760b4
 kind = 'context'
 id = 'mcp-integrations'
 path = 'context/mcp-integrations.md'
-digest = 'sha256:8ccdce472f5d645c8d8e8a9dd5b3cfbc39ff43814dfbf368ca599fee77f18084'
+digest = 'sha256:47b03b68ccc6457142c1074eccd87a27fa78af7a3cbb423594cd202e788d1aa6'
 
 [[item]]
 kind = 'context'
@@ -256,43 +256,43 @@ digest = 'sha256:e713dc88203189aa6a45a35ca561abcd51e94a5edddf20aaf2feff81beabea5
 kind = 'context'
 id = 'release-and-distribution'
 path = 'context/release-and-distribution.md'
-digest = 'sha256:4797d068f5f852405a4aab052d99b394c250c3f1409b4518491affcdc931147d'
+digest = 'sha256:5370a8f308ef918a788248f470f6e60e5d0eeaa4e502a5aa8c072e11bede7acc'
 
 [[item]]
 kind = 'context'
 id = 'skills-and-agents'
 path = 'context/skills-and-agents.md'
-digest = 'sha256:3b4bf64a720cde6cc071a82dff4d56fadae0f2c8201d909140440e1f3fe27a5b'
+digest = 'sha256:c80fea29ea9372a0f853b6baafc4ef6e15444d693e3a2e09a1ed8c5bd2508f7c'
 
 [[item]]
 kind = 'context'
 id = 'testing-and-quality'
 path = 'context/testing-and-quality.md'
-digest = 'sha256:a16fe999be34b31769fa233a28df54c6c7fa0ff81debb846fb541a0e4e297963'
+digest = 'sha256:c2b596e2dc61fe6f3b3678102e4fb4a358dd9c790cfb0d861d290d04c23071ef'
 
 [[item]]
 kind = 'context'
 id = 'tool-overview'
 path = 'context/tool-overview.md'
-digest = 'sha256:8e3a7bbde2c8d94c3d729638763c9aeccdf761fcc56f8d7c94ad2048f39321ba'
+digest = 'sha256:789f065124c9cfae627ac1136cb9b0347f7355817bc4c859c459f40752837fc0'
 
 [[item]]
 kind = 'context'
 id = 'workspace-layout'
 path = 'context/workspace-layout.md'
-digest = 'sha256:c92a50d6d50b6a6b141a571caa39a0e5f8514d221181d04a72fc949b8f833a73'
+digest = 'sha256:b0732725aeab5c59ccfb94af9ef4c77a843eaa04f620babf33ace7b56e07e117'
 
 [[item]]
 kind = 'rule'
 id = 'cross-runtime-distribution'
 path = 'rules/cross-runtime-distribution.md'
-digest = 'sha256:fb84dc5e345895531a172ac9e3bf1fe68db3f8f6839b55ebdd9121041d1981bf'
+digest = 'sha256:9584f758d3231965c1ebb43f5a0f0a9b73b1f1598a9efeaf1fafa2279e4f116f'
 
 [[item]]
 kind = 'rule'
 id = 'documentation-and-samples'
 path = 'rules/documentation-and-samples.md'
-digest = 'sha256:134012c61ad2578e848c47dfd35772668a0d0d5d09b9eccf4acb3d01a0ffca08'
+digest = 'sha256:b0732290421e037489dcc3eb7b9853733ec86bf6c8f1d5ea04b914ad57ca2d77'
 
 [[item]]
 kind = 'rule'
@@ -334,7 +334,7 @@ digest = 'sha256:d0030e80c8e2bef47b9b327dba587eeb66366c35994d7dfd9a3561f15c9387f
 kind = 'skill'
 id = 'docs-and-site'
 path = 'skills/docs-and-site'
-digest = 'sha256:e4a99522b967f1673a839f30d4f6cdfa168bebc9fbd48e868b7d1494d661f75e'
+digest = 'sha256:ee2e5c5d9dab0ffdb68a0e9466e83d54c9812e331cfdc456574dfc6455581dda'
 
 [[item]]
 kind = 'skill'
@@ -346,13 +346,13 @@ digest = 'sha256:982c138e8cd494b216507644c9d77c01d72a59fa0a712e1fa63c50e4ebbe930
 kind = 'skill'
 id = 'release-and-distribution'
 path = 'skills/release-and-distribution'
-digest = 'sha256:43b86ff29fcb3b9704a2a54edc89d0f0b389d3424b6b1da2ca8c8719244b5f18'
+digest = 'sha256:50d6c810b5caf2d351df7295161cf452d04f35432bd24a9ab19c2d59cc8ff540'
 
 [[item]]
 kind = 'skill'
 id = 'repository-layout'
 path = 'skills/repository-layout'
-digest = 'sha256:7d6b6ca9958c165c0593248ca449b07814e8a45140e5c123d4294750996e1278'
+digest = 'sha256:be2710351636a51dbb23e2b7d35c019e4df0c233fb8e9b21a433093232023383'
 
 [[item]]
 kind = 'skill'

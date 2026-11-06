@@ -542,7 +542,7 @@ func validateTraps(tr *config.LintTraps) []string {
 	return problems
 }
 
-// TrapsMarkdown renders the trap table as the Markdown table docs/harness-traps.md embeds.
+// TrapsMarkdown renders the trap table as the Markdown table https://goldziher.github.io/ai-rulez/harness-traps/ embeds.
 func TrapsMarkdown() (string, error) {
 	traps, err := Traps()
 	if err != nil {

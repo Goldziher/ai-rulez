@@ -57,7 +57,7 @@ the CI source pin identifies the reviewed implementation used for plugin validat
 - **`internal/config`** defines configuration types, loads TOML configuration and reads the content tree. YAML remains in Markdown frontmatter, eval cases and legacy migration inputs.
 - **`internal/project`** assembles project loading, includes and installed skills.
 - **`internal/crud`** shares content and configuration mutations between the CLI and MCP server. Its `Operator` interface is in `internal/crud/crud.go`; content operations and file handling live in `content.go`, `files.go` and related files.
-- Domain packages own the other behavior: generation in `internal/generator`, validation in `internal/lint`, model review in `internal/judge`, and locking in `internal/lockfile` and `internal/lockrun`. See [Architecture](docs/architecture.md) for the full package map.
+- Domain packages own the other behavior: generation in `internal/generator`, validation in `internal/lint`, model review in `internal/judge`, and locking in `internal/lockfile` and `internal/lockrun`. See [Architecture](website/src/content/docs/architecture.md) for the full package map.
 - **`pkg/airulez`** exposes the public Go API over explicit workspaces. Preserve its documented API and isolation guarantees when changing shared internals.
 
 ### CLI and MCP adapters
@@ -114,9 +114,23 @@ Most packages read `UPDATE_GOLDEN=1`; the task sets it and reruns those packages
 | --- | --- | --- |
 | `UPDATE_GOLDEN=1` | golden files of the packages above | `UPDATE_GOLDEN=1 go test ./path/to/pkg` |
 | `-update-tokens-golden` | the tokens report golden | `go test ./internal/generator -run Golden_TokenReportJSON -update-tokens-golden` |
-| `UPDATE_DOCS=1` | generated tables in `docs/` | `UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc` |
+| `UPDATE_DOCS=1` | generated tables in `website/src/content/docs/` | `UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc` |
 | `UPDATE_SCHEMA=1`, `UPDATE_LOCAL_SCHEMA=1` | preset enums and the local schema in `schema/` | `UPDATE_SCHEMA=1 go test ./schema -run TestPresetEnums` |
 | `UPDATE_ALLOWLIST=1` | the architecture-lint allowlist | `UPDATE_ALLOWLIST=1 go test ./tests/archlint` |
+
+### Documentation
+
+The documentation site lives in `website/` and is built with [Astro Starlight](https://starlight.astro.build). Pages are
+Markdown files in `website/src/content/docs/`; the sidebar is in `website/astro.config.mjs`.
+
+```bash
+mise run docs:dev     # live preview at http://localhost:4321/ai-rulez/
+mise run docs:build   # build into website/dist, including llms.txt and llms-full.txt
+mise run docs:cli     # regenerate the CLI reference after a command or flag change
+```
+
+Every page needs `title` front matter. Link between pages with site paths, for example
+`[Rules](/ai-rulez/rules/#targets)`. A new page must also be added to the sidebar.
 
 ### Commit Messages
 

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verify-approvals.schema.json",
   "title": "ai-rulez verify --approvals",
-  "description": "Output of `ai-rulez verify --approvals --format json`: the re-check of the signed and review-linked approvals that apply to the current content (docs/approvals.md).",
+  "description": "Output of `ai-rulez verify --approvals --format json`: the re-check of the signed and review-linked approvals that apply to the current content (https://goldziher.github.io/ai-rulez/approvals/).",
   "type": "object",
   "required": ["schema_version", "online", "results"],
   "additionalProperties": false,

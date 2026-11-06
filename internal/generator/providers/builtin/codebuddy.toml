@@ -77,7 +77,7 @@ emit_when = "has_mcp_json_entries"
 
 # User-scope layout: everything lives under ~/.codebuddy.
 # Hooks: top-level [[hooks]] rendered in codebuddy's native format, read from the
-# vendor documentation (see docs/settings.md). CodeBuddy Code reads `hooks` from settings.json (Claude-style groups, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). CodeBuddy Code reads `hooks` from settings.json (Claude-style groups, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "codebuddy"

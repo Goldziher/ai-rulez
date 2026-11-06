@@ -1,6 +1,6 @@
 package lint
 
-// Codes of version-constraint resolution (internal/tagresolve, docs/lockfile.md
+// Codes of version-constraint resolution (internal/tagresolve, https://goldziher.github.io/ai-rulez/lockfile/
 // "Version constraints"). `lock`, `lock --outdated` and `update` raise them, and
 // a config that sets both `ref` and `version` fails validation with AR731; they
 // are registered here so `validate --explain AR730` works and the AR73x block is

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-collisions.v1.schema.json",
   "title": "ai-rulez exposure collisions",
-  "description": "Output of `ai-rulez exposure collisions --format json`: pairs of skills and agents listed at session start, of different areas, ranked by the Jaccard index of the words of their listings. See docs/exposure.md.",
+  "description": "Output of `ai-rulez exposure collisions --format json`: pairs of skills and agents listed at session start, of different areas, ranked by the Jaccard index of the words of their listings. See https://goldziher.github.io/ai-rulez/exposure/.",
   "type": "object",
   "required": ["schema_version", "root", "plugins", "min_score", "artifacts_compared", "total", "collisions"],
   "additionalProperties": false,

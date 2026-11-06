@@ -1,6 +1,6 @@
 // Package approval decides whether pinned content has the reviewer approvals the
 // [governance] table asks for. An approval is a record in ai-rulez.lock bound to
-// one content digest (docs/approvals.md): when the digest changes the record stops
+// one content digest (https://goldziher.github.io/ai-rulez/approvals/): when the digest changes the record stops
 // applying, so a new version of an approved item needs a new review.
 package approval
 

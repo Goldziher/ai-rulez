@@ -28,7 +28,6 @@ exclude = [
 
   # Docs site self-references and base path links (resolve correctly when deployed)
   "goldziher\\.github\\.io/ai-rulez",
-  "file:///.*site/ai-rulez",
 
   # PyPI project pages (rate-limited)
   "pypi\\.org/project/",
@@ -43,7 +42,7 @@ exclude = [
   "^https://www\\.codebuddy\\.ai/docs/cli",
 
   # The rule text "[name](url)" in strict-validation renders as a relative link.
-  "^file:///.*/site/url$",
+  "^file:///.*/_site/.*/url$",
 
   # 404 until the conformance suite lands on main.
   "^https://github\\.com/Goldziher/ai-rulez/tree/main/tests/conformance$",
@@ -55,10 +54,10 @@ exclude = [
   "^https://fulcio\\.sigstore\\.dev/?$",
 ]
 
-# llms-full.txt concatenates every docs page as plain text, so its placeholder
-# URLs (org/repo, host, example-org, ...) are examples, not links; the rendered
-# HTML pages are still checked.
-exclude_path = ["site/llms-full.txt"]
+# llms-full.txt and llms-small.txt concatenate every docs page as plain text, so
+# their placeholder URLs (org/repo, host, example-org, ...) are examples, not
+# links; the rendered HTML pages are still checked.
+exclude_path = ["_site/ai-rulez/llms-full.txt", "_site/ai-rulez/llms-small.txt"]
 
 # Accept these HTTP status codes as valid. 429 and 503 are throttling responses
 # (github.com serves blob pages to the checker with intermittent 503s), not dead links.

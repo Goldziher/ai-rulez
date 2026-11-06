@@ -66,7 +66,7 @@ func newExposureCmd() *cobra.Command {
 		Long: `Inspect the context a Claude Code session started at the repository root sees: the CLAUDE.md
 files, rules, skills, agents, MCP servers and plugins, when each one loads (at session start, on demand,
 only when the user runs it), and which area of the [exposure] area map it belongs to. The commands are
-offline, free and deterministic; see docs/exposure.md.
+offline, free and deterministic; see https://goldziher.github.io/ai-rulez/exposure/.
 
 --harness codex applies Codex's load model (AGENTS.md, .agents/skills, .codex/config.toml MCP servers) and checks
 [exposure] codex_start_budget. --mcp-server-tokens (or [exposure] mcp_server_tokens) adds an estimated tool schema

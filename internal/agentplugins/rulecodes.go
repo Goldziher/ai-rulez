@@ -2,7 +2,7 @@ package agentplugins
 
 // Rule codes under which ai-rulez reports findings (validate --strict, publish).
 // They are registered, with explanations, in internal/lint and documented in
-// docs/strict-validation.md; the block is AR9O.
+// https://goldziher.github.io/ai-rulez/strict-validation/; the block is AR9O.
 const (
 	RuleManifest    = "AR9O0"
 	RuleSkill       = "AR9O1"

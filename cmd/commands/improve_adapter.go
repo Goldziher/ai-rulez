@@ -191,7 +191,7 @@ func resolveOptimizer(cmd *cobra.Command, cfg *config.Config, value string) (*op
 // not (AR9J9). The child receives resolved settings, never a key: its API key variable is forwarded by name.
 func reviewFixAdapterArgs(cmd *cobra.Command, cfg *config.Config) (args, envPass, egress []string, err error) {
 	refuse := func(format string, a ...any) error {
-		return oops.Code(improve.CodeAdapterRefused).Hint("docs/improve.md, \"builtin:review-fix\"").Errorf(improve.CodeAdapterRefused+": "+format, a...)
+		return oops.Code(improve.CodeAdapterRefused).Hint("https://goldziher.github.io/ai-rulez/improve/, \"builtin:review-fix\"").Errorf(improve.CodeAdapterRefused+": "+format, a...)
 	}
 	js, jerr := resolveJudge(cmd, cfg, improveFlags.adapterJudgeModel, rv.DefaultMaxCostUSD, rv.DefaultMaxCalls)
 	if jerr != nil {

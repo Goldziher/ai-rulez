@@ -40,7 +40,7 @@ who signed (identity and issuer, or key), the log proof, freshness and rollback.
 --bundle <dir>, --skill <dir> and --sbom <file> verify the attestation of a plugin
 bundle, a published skill or an SBOM file the same way (they imply --attestation;
 --public-key or --identity with --issuer can stand in for a project's [signing]
-table). See docs/signing.md.
+table). See https://goldziher.github.io/ai-rulez/signing/.
 
 With --self, verify the running ai-rulez binary against the Sigstore bundle its release
 published (an SLSA provenance statement naming the binary's sha256, signed by the
@@ -48,12 +48,12 @@ release workflow; default next to the binary as <binary>.sigstore.json, else
 --attestation-file). It needs the cached trusted root ('ai-rulez trust update'),
 changes nothing and is independent of any project. --public-key or --identity with
 --issuer replace the pinned release identity, to verify a fork's build. See
-docs/signing.md.
+https://goldziher.github.io/ai-rulez/signing/.
 
 With --approvals, verify instead re-checks the signed approvals recorded in the lock
 against their attestations and the [[signing.trust]] entries for approvals, offline;
 --online also asks the forge whether each review-linked approval still holds. See
-docs/approvals.md.
+https://goldziher.github.io/ai-rulez/approvals/.
 
 Exit codes: 0 verified, 1 the check could not run (also a bare "verify" with no
 mode), 2 verification failed (--plugin: the bundle differs from its provenance;

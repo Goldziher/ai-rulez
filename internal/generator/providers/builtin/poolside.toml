@@ -39,7 +39,7 @@ global_path = ".config/poolside/settings.yaml"
 
 # User-scope layout: Pool keeps its personal files under ~/.config/poolside.
 # Hooks: top-level [[hooks]] rendered in poolside's native format, read from the
-# vendor documentation (see docs/settings.md). Pool reads `hooks.<Event>` from settings.yaml (flat entries, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Pool reads `hooks.<Event>` from settings.yaml (flat entries, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "poolside"

@@ -1,6 +1,6 @@
 package lint
 
-// Codes of the `ai-rulez convert` report (internal/importer, docs/cli.md). They
+// Codes of the `ai-rulez convert` report (internal/importer, https://goldziher.github.io/ai-rulez/cli/). They
 // are registered here so `validate --explain AR9F1` works and the allocation of
 // the AR9 blocks is checked in one place; `validate` never emits them.
 // TestAllocatedBlocksCoverLiteralsInOtherPackages keeps them equal to the

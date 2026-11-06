@@ -103,7 +103,7 @@ global_path = ".factory/mcp.json"
 
 # User-scope layout: everything lives under ~/.factory.
 # Hooks: top-level [[hooks]] rendered in factory's native format, read from the
-# vendor documentation (see docs/settings.md). Droid reads hooks.json, keyed by event at the document root (seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Droid reads hooks.json, keyed by event at the document root (seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "factory"

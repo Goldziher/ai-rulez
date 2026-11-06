@@ -11,9 +11,9 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 )
 
-// The exit-code contract of v5, documented in docs/cli.md: 0 ok, 1 the command
+// The exit-code contract of v5, documented in website/src/content/docs/cli.md: 0 ok, 1 the command
 // could not run or the configuration is invalid, 2 findings or drift. `lock` is
-// the one documented exception family (see docs/lockfile.md).
+// the one documented exception family (see website/src/content/docs/lockfile.md).
 const (
 	exitOK       = 0
 	exitCannot   = 1

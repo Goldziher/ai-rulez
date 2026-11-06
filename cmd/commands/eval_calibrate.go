@@ -26,7 +26,7 @@ reported and the ones the estimate expected, per agent run, and the output assum
 different harnesses and models, and case runs and activation runs, are never mixed. It prints the
 proposal and the median token error before and after; it changes nothing, reads only records signed with
 your key, and sends nothing anywhere. Put the printed [lint.evals.estimate] table in your configuration to
-apply it. See docs/evals.md.`,
+apply it. See https://goldziher.github.io/ai-rulez/evals/.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error { return runEvalCalibrate(cmd) },
 }

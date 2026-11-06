@@ -49,7 +49,7 @@ emit_when = "has_mcp_servers"
 
 # KIMI_CODE_HOME replaces ~/.kimi-code as the data root.
 # Hooks: top-level [[hooks]] rendered in kimi's native format, read from the
-# vendor documentation (see docs/settings.md). Kimi Code documents hooks in the user config.toml only, so they are written with --user.
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Kimi Code documents hooks in the user config.toml only, so they are written with --user.
 [[sidecars]]
 kind = "hooks"
 dialect = "kimi"

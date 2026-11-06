@@ -19,7 +19,7 @@ import (
 // skills, context, hooks), apm_modules/ holds the installed dependencies and
 // apm.lock.yaml pins them. The formats are read from the public documentation and
 // from rulesync's APM-compatible reader (src/lib/apm); the layout of .apm/ is not
-// verified against a release of apm itself (see docs/cli.md).
+// verified against a release of apm itself (see https://goldziher.github.io/ai-rulez/cli/).
 
 const (
 	apmName     = "apm"

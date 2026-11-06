@@ -45,7 +45,7 @@ func UnsupportedDiagnostics(cfg *config.Config) []string { //nolint:gocyclo // a
 		sort.Strings(noPermissions)
 		out = append(out, "[permissions] are not generated for "+strings.Join(noPermissions, ", ")+
 			": ai-rulez translates them for "+strings.Join(PermissionHarnesses(), ", ")+
-			" only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced")
+			" only; the others have no documented permission file (see https://goldziher.github.io/ai-rulez/permissions/), so their deny rules are NOT enforced")
 	}
 	if !cfg.Permissions.IsEmpty() && len(userOnly) > 0 {
 		sort.Strings(userOnly)

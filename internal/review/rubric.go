@@ -3,7 +3,7 @@
 // Phase 0 (this package today) is offline: the score is built from the lint
 // findings each rubric dimension names as its "twins", and no model is ever
 // called. It also plans what a later judge would send, so `review --estimate`
-// can print the egress manifest and a cost range first (docs/review.md).
+// can print the egress manifest and a cost range first (https://goldziher.github.io/ai-rulez/review/).
 package review
 
 import (

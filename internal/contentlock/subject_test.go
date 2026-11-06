@@ -8,7 +8,7 @@ import (
 )
 
 // The vectors were computed with an independent Python implementation of the
-// formula in docs/lockfile.md ("Signing the lock").
+// formula in website/src/content/docs/lockfile.md ("Signing the lock").
 func TestSubjectDigestVectors(t *testing.T) {
 	const (
 		emptyTree = "sha256:e8c93a22e1ed47e16dd881a55dc4fbc5ba685af20083b93469265da901784029"

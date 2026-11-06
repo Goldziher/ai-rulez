@@ -10,7 +10,7 @@ import (
 )
 
 // lockSubjectAt prints or writes the lock-subject statement of the lock at path
-// (see docs/lockfile.md, "Signing the lock"). It reads the lock only: no
+// (see https://goldziher.github.io/ai-rulez/lockfile/, "Signing the lock"). It reads the lock only: no
 // network, no sources. The tree is recomputed from the entries and must match
 // the stored one, so a hand-edited lock is refused instead of signed.
 func lockSubjectAt(path string) error {

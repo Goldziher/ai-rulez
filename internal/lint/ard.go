@@ -5,7 +5,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// Codes of the Agentic Resource Discovery manifest check (docs/ard.md). They are
+// Codes of the Agentic Resource Discovery manifest check (https://goldziher.github.io/ai-rulez/ard/). They are
 // reported by `validate --strict` for a project with an [ard] table, and by
 // `publish` when the ard emitter runs. The block is AR9S; the literals repeat
 // internal/ard so the registry test can see them, and TestARDCodesMatchPackage

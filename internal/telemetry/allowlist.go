@@ -47,7 +47,7 @@ const (
 	GateSession = "include_session"
 )
 
-// Allowlist is the closed set of exported event fields. docs/telemetry.md mirrors
+// Allowlist is the closed set of exported event fields. https://goldziher.github.io/ai-rulez/telemetry/ mirrors
 // it and a test fails if either drifts.
 var Allowlist = []Attr{
 	{Name: "ai_rulez.item.kind", Field: fieldKind, Metric: fieldKind},

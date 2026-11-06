@@ -12,7 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// goldenSkillDigest is the vector of docs/lockfile.md for the fixture skill below.
+// goldenSkillDigest is the vector of website/src/content/docs/lockfile.md for the fixture skill below.
 const goldenSkillDigest = "sha256:262d721306783b4c3b554a1345253c266f6f991733dad6a347e1b55d5e57ac05"
 
 func writeGoldenSkill(t *testing.T, dir string) {

@@ -1,5 +1,5 @@
 // Package signing signs and verifies ai-rulez attestations with Sigstore
-// (docs/signing.md). An attestation is a Sigstore bundle holding a DSSE envelope
+// (https://goldziher.github.io/ai-rulez/signing/). An attestation is a Sigstore bundle holding a DSSE envelope
 // over an in-toto statement; the first user is `ai-rulez sign --lock`, which
 // signs the lock subject printed by `lock --subject`; `sign --bundle`, `--skill`
 // and `--sbom` sign the other subjects.

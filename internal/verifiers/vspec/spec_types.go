@@ -48,7 +48,7 @@ type GlobCountPred struct {
 
 // CommandPred holds when a program exits with the expected status. It runs
 // only with --allow-exec, without a shell, in the project root, with a scrubbed
-// environment (see docs/verifiers.md).
+// environment (see https://goldziher.github.io/ai-rulez/verifiers/).
 type CommandPred struct {
 	// Argv is the program and its arguments; there is no shell.
 	Argv []string `toml:"argv" json:"argv"`

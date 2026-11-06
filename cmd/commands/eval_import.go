@@ -44,7 +44,7 @@ the task beside it as <id>.task.md. Nothing is written unless every scenario map
 is not overwritten without --force. --lift-assertions also turns criteria in a fixed phrasing ("The file
 "x" exists", "The output contains "y"") into deterministic assertions, never dropping the criterion from
 the rubric; every lift is listed for review. Text with hidden characters or credentials is refused;
-instruction-override phrases are flagged. See docs/evals.md.`,
+instruction-override phrases are flagged. See https://goldziher.github.io/ai-rulez/evals/.`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runEvalImport,
 }

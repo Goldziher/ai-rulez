@@ -39,7 +39,7 @@ func TestIndexListsEveryVisibleCommandAndEscapesPipes(t *testing.T) {
 func TestReferenceShowsUsageAliasesExamplesAndFlags(t *testing.T) {
 	got := Reference(fixture())
 
-	assert.True(t, strings.HasPrefix(got, "# CLI Command Reference"))
+	assert.True(t, strings.HasPrefix(got, "---\ntitle: \"CLI command reference\""))
 	assert.Contains(t, got, "## `tool group leaf`")
 	assert.Contains(t, got, "tool group leaf <name> [flags]")
 	assert.Contains(t, got, "Aliases: `l`")

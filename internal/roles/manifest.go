@@ -58,7 +58,7 @@ type Totals struct {
 	Tokens int            `json:"tokens"`
 	ByKind map[string]int `json:"by_kind"`
 	// Served counts the skills the role receives through the skills server only:
-	// they are not listed in the agent's context (see docs/mcp-server.md).
+	// they are not listed in the agent's context (see https://goldziher.github.io/ai-rulez/mcp-server/).
 	Served int `json:"served_skills"`
 	// ServedTokens is the share of Tokens held by those skills; they cost nothing
 	// until the agent calls load_skill.

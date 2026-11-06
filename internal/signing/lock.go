@@ -27,7 +27,7 @@ type LockItem struct {
 }
 
 // LockPredicate is the predicate of a lock attestation: the fields the
-// lock-subject digest commits to (docs/lockfile.md), plus provenance claims.
+// lock-subject digest commits to (https://goldziher.github.io/ai-rulez/lockfile/), plus provenance claims.
 // Everything except the committed fields is informational.
 type LockPredicate struct {
 	HashVersion     int        `json:"hash_version"`
@@ -218,7 +218,7 @@ func VerifyLock(data []byte, lock *lockfile.File, p LockPolicy) (*LockReport, er
 
 // verifyLockBundle verifies a DSSE bundle (`ai-rulez sign --lock`) or a
 // message-signature bundle over the lock-subject statement (`cosign sign-blob`,
-// docs/lockfile.md) and checks it covers this lock.
+// https://goldziher.github.io/ai-rulez/lockfile/) and checks it covers this lock.
 func verifyLockBundle(data []byte, lock *lockfile.File, p LockPolicy) (*Result, LockPredicate, error) {
 	if !IsBlobBundle(data) {
 		res, err := p.Verifier.Verify(data)

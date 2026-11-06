@@ -123,7 +123,7 @@ func TestLiveKMSRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	fp, err := Fingerprint(signer.Key.GetPublicKey())
 	require.NoError(t, err)
-	// The transcript recorded in docs/signing.md: the key URI, the fingerprint the
+	// The transcript recorded in website/src/content/docs/signing.md: the key URI, the fingerprint the
 	// bundle names, and that the detached signature covers the tree statement.
 	t.Logf("live KMS round trip: ref=%s key=%s bundle-names=%s bytes=%d", ref, fp, rep.Result.Signer.KeyID, len(data))
 	assert.Equal(t, fp, rep.Result.Signer.KeyID, "the bundle names the KMS key by fingerprint")

@@ -58,7 +58,7 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 	}
 	if !slices.Contains(VerifierTypes, v.Type) {
 		if v.Type == ItemKindCommand {
-			return oops.Hint("The command predicate is spec-form only: declare [verifiers.require.command] under a rule-linked verifier (see docs/verifiers.md).").
+			return oops.Hint("The command predicate is spec-form only: declare [verifiers.require.command] under a rule-linked verifier (see https://goldziher.github.io/ai-rulez/verifiers/).").
 				Errorf("unknown verifier type %q at %s.type", v.Type, field)
 		}
 		return oops.Hint("Use one of: "+strings.Join(VerifierTypes, ", ")).

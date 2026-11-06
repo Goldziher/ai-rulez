@@ -1,6 +1,6 @@
 package lint
 
-// Codes of attestations (docs/signing.md). The commands verify the
+// Codes of attestations (https://goldziher.github.io/ai-rulez/signing/). The commands verify the
 // attestation (internal/signing) and pass the failures in with WithSigning,
 // because this package must not import the signing machinery. The same codes are
 // declared in internal/signing; a test keeps the two equal.
@@ -76,7 +76,7 @@ func registerSigning(s *ruleSet) {
 		CodeSignatureRollback: {
 			Why:  "This machine has already verified a newer attestation for the repository. Accepting an older one would roll the lock back to a state that was valid once.",
 			Bad:  "Presenting last quarter's signed lock after this quarter's was verified",
-			Good: "Use the current attestation; the per-user high-water mark lives in the state directory (docs/signing.md)",
+			Good: "Use the current attestation; the high-water mark lives in the per-user state directory",
 		},
 		CodeSignatureThreshold: {
 			Why:  "[signing] thresholds = { lock = 2 } asks for two distinct trusted signers. One signature, or two bundles by the same signer, do not meet it.",

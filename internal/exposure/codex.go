@@ -13,7 +13,7 @@ import (
 )
 
 // The Codex load model, from the vendor pages cited in internal/harnesslimits
-// and docs/exposure.md: AGENTS.md read from the repository root down (one file
+// and https://goldziher.github.io/ai-rulez/exposure/: AGENTS.md read from the repository root down (one file
 // per directory, AGENTS.override.md first, 32 KiB combined), the skills of
 // every .agents/skills directory from the working directory up to the root,
 // and the [mcp_servers.*] tables of .codex/config.toml. Not modeled:

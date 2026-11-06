@@ -4,7 +4,7 @@ package schema
 // that describes it. Command is the cobra path of the command followed by the
 // flag that selects the document when one command prints several ("lock
 // --check"). The tests run every contract and validate the output; the table in
-// docs/cli.md ("JSON contracts") lists the same pairs.
+// https://goldziher.github.io/ai-rulez/cli/ ("JSON contracts") lists the same pairs.
 type JSONContract struct {
 	Command string
 	Schema  string

@@ -12,12 +12,12 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/parity"
 )
 
-var updateDocs = flag.Bool("update-docs", false, "rewrite the parity table in docs/mcp-server.md from internal/parity")
+var updateDocs = flag.Bool("update-docs", false, "rewrite the parity table in website/src/content/docs/mcp-server.md from internal/parity")
 
-// docsPath is docs/mcp-server.md, found from this test file's directory.
+// docsPath is website/src/content/docs/mcp-server.md, found from this test file's directory.
 func docsPath(t *testing.T) string {
 	t.Helper()
-	dir, err := filepath.Abs(filepath.Join("..", "..", "docs", "mcp-server.md"))
+	dir, err := filepath.Abs(filepath.Join("..", "..", "website", "src", "content", "docs", "mcp-server.md"))
 	require.NoError(t, err)
 	return dir
 }
@@ -33,15 +33,15 @@ func TestDocsMatchTheTable(t *testing.T) {
 	generated := parity.DocsBegin + "\n\n" + parity.Markdown(parity.Capabilities()) + "\n" + parity.DocsEnd
 
 	if *updateDocs {
-		require.GreaterOrEqual(t, begin, 0, "docs/mcp-server.md needs the %s marker", parity.DocsBegin)
+		require.GreaterOrEqual(t, begin, 0, "website/src/content/docs/mcp-server.md needs the %s marker", parity.DocsBegin)
 		require.Greater(t, end, begin)
 		updated := doc[:begin] + generated + doc[end+len(parity.DocsEnd):]
 		require.NoError(t, os.WriteFile(path, []byte(updated), 0o600))
 		return
 	}
 
-	require.GreaterOrEqual(t, begin, 0, "docs/mcp-server.md has no parity block")
+	require.GreaterOrEqual(t, begin, 0, "website/src/content/docs/mcp-server.md has no parity block")
 	require.Greater(t, end, begin)
 	require.Equal(t, generated, doc[begin:end+len(parity.DocsEnd)],
-		"the parity table in docs/mcp-server.md is stale: go test ./tests/parity -run TestDocsMatchTheTable -update-docs")
+		"the parity table in website/src/content/docs/mcp-server.md is stale: go test ./tests/parity -run TestDocsMatchTheTable -update-docs")
 }

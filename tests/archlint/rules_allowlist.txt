@@ -308,7 +308,6 @@ global internal/lint/traps_plan.go 2
 global internal/lint/units.go 1
 global internal/llm/bedrock.go 1
 global internal/llm/judge.go 1
-global internal/llmstxt/docsite.go 2
 global internal/llmstxt/render.go 2
 global internal/lockfile/lockfile.go 1
 global internal/lockfile/source.go 1

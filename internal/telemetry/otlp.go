@@ -13,7 +13,7 @@ import (
 
 // This file is a small OTLP/HTTP JSON encoder (lowerCamelCase keys, 64-bit
 // integers as decimal strings, enums as integers), written by hand instead of
-// pulling in the OpenTelemetry SDK: see docs/telemetry.md for the dependency
+// pulling in the OpenTelemetry SDK: see https://goldziher.github.io/ai-rulez/telemetry/ for the dependency
 // decision.
 
 // Metric names.

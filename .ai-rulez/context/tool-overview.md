@@ -24,14 +24,14 @@ agents, commands, hooks, permissions and MCP servers in one source of truth, `.a
 author -> generate -> bundle -> lint/validate -> govern -> publish. The source can also be the open standards themselves:
 `source = "agents"` reads the root `AGENTS.md` (and nested ones) and `.agents/`.
 
-- Author: `.ai-rulez/` markdown and `config.toml` (an OKF bundle), or `AGENTS.md` plus `.agents/` with the configuration in `.agents/ai-rulez.toml` (`docs/agents-source.md`); `agents_md_split = true` reads `AGENTS.md` as one item per `##` heading.
+- Author: `.ai-rulez/` markdown and `config.toml` (an OKF bundle), or `AGENTS.md` plus `.agents/` with the configuration in `.agents/ai-rulez.toml` (`website/src/content/docs/agents-source.md`); `agents_md_split = true` reads `AGENTS.md` as one item per `##` heading.
 - Generate: native files for 52 built-in harness presets, including Claude Code, Cursor, Codex, Copilot, Gemini CLI,
-  OpenCode, Devin, and Kilo (`docs/harnesses.md` has the per-preset feature matrix). With the agents source, `AGENTS.md` and `.agents/` are read and never written.
+  OpenCode, Devin, and Kilo (`website/src/content/docs/harnesses.md` has the per-preset feature matrix). With the agents source, `AGENTS.md` and `.agents/` are read and never written.
 - Bundle and publish: plugin bundles and marketplace indexes (`generate --plugin`, from `[plugin]` or several `[[plugins_authoring]]` / `[[marketplaces_authoring]]` definitions), Agent Plugins, ARD manifests, MCP Server Cards and OKF bundles (`export okf`, `publish --emit`).
-- Validate: `validate`, `scan` and `okf validate` with stable `AR` codes and each standard's own schema or rules. `validate` needs no config: without one it lints the files that follow a convention, and `--path`, `--glob` and `--outputs` widen what it checks. `judge` reviews agent configuration with models (verified quotes, an adjudicator, repo-aware governance), also without config. `exposure` checks what a Claude Code session loads at start (`docs/exposure.md`).
+- Validate: `validate`, `scan` and `okf validate` with stable `AR` codes and each standard's own schema or rules. `validate` needs no config: without one it lints the files that follow a convention, and `--path`, `--glob` and `--outputs` widen what it checks. `judge` reviews agent configuration with models (verified quotes, an adjudicator, repo-aware governance), also without config. `exposure` checks what a Claude Code session loads at start (`website/src/content/docs/exposure.md`).
 - Govern: `ai-rulez.lock`, approvals, Sigstore signing, organization policy and SBOM.
 - CI: the root `action.yml` is a composite GitHub Action that installs a sha256-verified binary (`uses: Goldziher/ai-rulez@<ref>`).
-- Standards named as supported must be generated, validated and conformance-tested; `docs/standards.md` carries the
+- Standards named as supported must be generated, validated and conformance-tested; `website/src/content/docs/standards.md` carries the
   pinned spec versions and test status, and the README marks unimplemented ones "planned". Do not claim conformance
   ahead of the matching implementation and test.
 

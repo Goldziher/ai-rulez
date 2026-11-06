@@ -31,7 +31,7 @@ const ExposureDefaultCollisionMinScore = 0.1
 const ExposureDefaultCollisionLimit = 20
 
 // ExposureConfig is the [exposure] table: what a session sees at start and the area map that names which part
-// of the repository an artifact belongs to (docs/exposure.md). The map is either inline ([[exposure.areas]] and
+// of the repository an artifact belongs to (https://goldziher.github.io/ai-rulez/exposure/). The map is either inline ([[exposure.areas]] and
 // [exposure.skill_areas]) or in areas_file, never both. Every key is optional; the rules that read the table are
 // inert without it.
 //

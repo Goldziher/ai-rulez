@@ -54,7 +54,7 @@ dialect = "bob"
 global_path = ".bob/settings/mcp.json"
 
 # Hooks: top-level [[hooks]] rendered in bob's native format, read from the
-# vendor documentation (see docs/settings.md). Bob reads `hooks` from settings.json (five events, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Bob reads `hooks` from settings.json (five events, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "bob"

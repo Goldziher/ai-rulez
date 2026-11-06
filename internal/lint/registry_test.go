@@ -13,7 +13,7 @@ var codeFormatRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustComp
 
 func TestRegisteredCodesAreUniqueAndDocumented(t *testing.T) {
 	docs := ""
-	entries, err := filepath.Glob(filepath.Join("..", "..", "docs", "*.md"))
+	entries, err := filepath.Glob(filepath.Join("..", "..", "website", "src", "content", "docs", "*.md"))
 	if err != nil || len(entries) == 0 {
 		t.Fatalf("cannot read docs: %v", err)
 	}

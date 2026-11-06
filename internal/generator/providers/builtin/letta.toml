@@ -62,7 +62,7 @@ field = "model"
 
 # User-scope layout: agents and skills live under ~/.letta.
 # Hooks: top-level [[hooks]] rendered in letta's native format, read from the
-# vendor documentation (see docs/settings.md). Letta Code reads `hooks` from settings.json (milliseconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Letta Code reads `hooks` from settings.json (milliseconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "letta"
