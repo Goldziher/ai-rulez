@@ -190,7 +190,7 @@ Other rules:
 | `local path` | Print the overlay path |
 
 ```bash
-ai-rulez local set default dev
+ai-rulez local set default dev          # `dev` must be a profile in config.toml or the overlay
 ai-rulez local set presets '["codex", "!cursor"]'
 ai-rulez local set mcp_servers.github.command npx
 printf %s "$TOKEN" | ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN --stdin
