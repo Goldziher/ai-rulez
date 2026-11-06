@@ -582,9 +582,9 @@ jobs:
         with:
           registry-url: "https://registry.npmjs.org"
 
-      - name: Copy README
+      - name: Copy license files
         run: |
-          cp README.md LICENSE THIRD_PARTY_NOTICES.md release/npm/
+          cp LICENSE THIRD_PARTY_NOTICES.md release/npm/
           cp -R LICENSES release/npm/LICENSES
 
       - name: Publish to npm
@@ -642,7 +642,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.meta.outputs.python_version }}
         run: |
-          cp README.md LICENSE THIRD_PARTY_NOTICES.md release/pypi/
+          cp LICENSE THIRD_PARTY_NOTICES.md release/pypi/
           cp -R LICENSES release/pypi/LICENSES
           cd release/pypi
           pyproject-build
