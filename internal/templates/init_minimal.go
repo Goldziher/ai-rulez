@@ -27,7 +27,7 @@ func InitMinimalConfigTOML(projectName string, presets []string) string {
 # CLAUDE.md, AGENTS.md and the other instruction files stay yours: with this file
 # alone ai-rulez never writes or deletes them. It installs skills, wires MCP
 # servers, writes hooks and permissions, lints, and pins everything in ai-rulez.lock.
-# Documentation: https://github.com/Goldziher/ai-rulez/blob/main/docs/config-without-folder.md
+# Documentation: https://goldziher.github.io/ai-rulez/config-without-folder/
 
 version = "5.0"
 name = `)
