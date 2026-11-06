@@ -153,11 +153,11 @@ type noExposure struct{}
 
 func (noExposure) Root() string                                { return "" }
 func (noExposure) Inputs() []string                            { return nil }
-func (noExposure) StartExposure() *ExposureStart               { return nil }
+func (noExposure) StartExposure(string) *ExposureStart         { return nil }
 func (noExposure) Collisions(float64) []ExposureCollision      { return nil }
 func (noExposure) Leakage() (leakage ExposureLeakage, ok bool) { return ExposureLeakage{}, false }
 
-func (f fakeExposure) StartExposure() *ExposureStart {
+func (f fakeExposure) StartExposure(string) *ExposureStart {
 	*f.calls++
 	return f.start
 }
@@ -336,8 +336,8 @@ type fakeStart struct {
 	inputs []string
 }
 
-func (f fakeStart) StartExposure() *ExposureStart { return f.start }
-func (f fakeStart) Inputs() []string              { return f.inputs }
+func (f fakeStart) StartExposure(string) *ExposureStart { return f.start }
+func (f fakeStart) Inputs() []string                    { return f.inputs }
 
 // Under --changed, AR9W3 and the AR964 listing total sit on the config, but the change that moves them is in a
 // start-of-session artifact or an input, so they depend on those.
@@ -386,6 +386,40 @@ func TestExposureStartUnderChanged(t *testing.T) {
 			}
 			assert.Equal(t, want, countCode(rep.Findings, CodeExposureStartBudget), "AR9W3\n%s", dump(rep.Findings))
 			assert.Len(t, findingsWith(rep.Findings, CodeLoadBudget, "skills a session lists at start"), want, "AR964 listing total\n%s", dump(rep.Findings))
+		})
+	}
+}
+
+func TestExposureStartBudget_FollowsTheHarness(t *testing.T) {
+	start := &ExposureStart{ContextWindow: 200000, StartArtifacts: 4, StartTokens: 150, ListingBudgetChars: 8000}
+	tests := []struct {
+		name   string
+		table  string
+		want   int
+		inText []string
+	}{
+		{
+			name: "codex over codex_start_budget", table: "[exposure]\nharness = \"codex\"\ncodex_start_budget = 100\n", want: 1,
+			inText: []string{"a codex session", "50 past the [exposure] codex_start_budget of 100"},
+		},
+		{name: "codex ignores an exceeded claude start_budget", table: "[exposure]\nharness = \"codex\"\nstart_budget = 10\ncodex_start_budget = 200\n", want: 0},
+		{name: "codex without codex_start_budget is off", table: "[exposure]\nharness = \"codex\"\nstart_budget = 10\n", want: 0},
+		{name: "claude ignores codex_start_budget", table: "[exposure]\ncodex_start_budget = 10\n", want: 0},
+		{
+			name: "claude names its key", table: "[exposure]\nstart_budget = 100\ncodex_start_budget = 10\n", want: 1,
+			inText: []string{"50 past the [exposure] start_budget of 100"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs, _ := lintExposure(t, baseConfig, tt.table, start)
+
+			require.Equal(t, tt.want, countCode(fs, CodeExposureStartBudget), dump(fs))
+			for _, f := range findingsWith(fs, CodeExposureStartBudget, "") {
+				for _, w := range tt.inText {
+					assert.Contains(t, f.Message, w)
+				}
+			}
 		})
 	}
 }

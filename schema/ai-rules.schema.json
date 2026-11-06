@@ -2424,8 +2424,8 @@
       "properties": {
         "harness": {
           "type": "string",
-          "enum": ["claude"],
-          "description": "Harness whose load model applies (default claude, the only one)."
+          "enum": ["claude", "codex"],
+          "description": "Harness whose load model applies (default claude)."
         },
         "context_window": {
           "type": "integer",
@@ -2446,6 +2446,16 @@
           "type": "integer",
           "minimum": 0,
           "description": "Most estimated start-of-session tokens allowed; 0 (default) turns the check off."
+        },
+        "codex_start_budget": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "start_budget for the codex harness (exposure --harness codex); 0 (default) turns the check off."
+        },
+        "mcp_server_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated tool schema tokens of one configured MCP server at session start, added to the start count; 0 (default) leaves MCP schemas out."
         },
         "collision_min_score": {
           "type": "number",

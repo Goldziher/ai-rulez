@@ -100,7 +100,7 @@ func TestEveryLimitRowIsWellFormed(t *testing.T) {
 			t.Errorf("duplicate limit %s", l.ID)
 		}
 		ids[l.ID] = true
-		if l.Value <= 0 || l.Source == "" || l.Quote == "" || l.VerifiedOn == "" || l.Harness == "" || (l.Unit != "chars" && l.Unit != "bytes") {
+		if l.Value <= 0 || l.Source == "" || l.Quote == "" || l.VerifiedOn == "" || l.Harness == "" || (l.Unit != "chars" && l.Unit != "bytes" && l.Unit != "percent") {
 			t.Errorf("%s lacks provenance or a value: %+v", l.ID, l)
 		}
 		if _, ok := rowAgeDays(l.VerifiedOn, time.Now()); !ok {

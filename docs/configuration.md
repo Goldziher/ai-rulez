@@ -1188,7 +1188,7 @@ Keys: `name` and `type` (required), `description`, `severity` (`error` (default)
 
 ### `[exposure]`
 
-The repository's areas (the directories each one claims, its owner and the terms that name it) and the session exposure checks built on them. Currently supports Claude Code only (`harness = "claude"`). Without the table nothing changes. See [Session Exposure and Areas](exposure.md).
+The repository's areas (the directories each one claims, its owner and the terms that name it) and the session exposure checks built on them. `harness` picks the load model: `"claude"` (default) or `"codex"`. Without the table nothing changes. See [Session Exposure and Areas](exposure.md).
 
 ```toml
 [exposure]
@@ -1196,7 +1196,7 @@ areas_file = "tools/context/areas.toml"
 start_budget = 6000
 ```
 
-Keys: `harness`, `context_window`, `plugins`, `areas_file`, `areas`, `skill_areas`, `start_budget`, `collision_min_score`.
+Keys: `harness`, `context_window`, `plugins`, `areas_file`, `areas`, `skill_areas`, `start_budget`, `codex_start_budget`, `mcp_server_tokens`, `collision_min_score`.
 
 ## Exports and publishing
 

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-report.v1.schema.json",
   "title": "ai-rulez exposure report",
-  "description": "Output of `ai-rulez exposure --format json`: what a Claude Code session started at the repository root loads before it touches a file, the skill listing against Claude Code's listing budget, and what waits on demand or for the user. An artifact of phase unknown counts as start in start_tokens, start_tokens_by_kind and listing. See docs/exposure.md.",
+  "description": "Output of `ai-rulez exposure --format json`: what a Claude Code or Codex session started at the repository root loads before it touches a file, the skill listing against Claude Code's listing budget, and what waits on demand or for the user. An artifact of phase unknown counts as start in start_tokens, start_tokens_by_kind and listing. See docs/exposure.md.",
   "type": "object",
   "required": [
     "schema_version",
@@ -20,8 +20,12 @@
   ],
   "additionalProperties": false,
   "definitions": {
-    "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
+    "kind": { "enum": ["claude_md", "agents_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings"] },
     "phase": { "enum": ["start", "on_demand", "manual", "unknown"] },
+    "startKind": {
+      "description": "A kind, or mcp_schemas: the estimated MCP tool schema tokens, present only with a per-server estimate.",
+      "enum": ["claude_md", "agents_md", "rule", "skill", "agent", "mcp_server", "plugin", "settings", "mcp_schemas"]
+    },
     "count": { "type": "integer", "minimum": 0 },
     "kindCounts": {
       "type": "object",
@@ -31,7 +35,7 @@
   },
   "properties": {
     "schema_version": { "const": 1 },
-    "harness": { "const": "claude" },
+    "harness": { "enum": ["claude", "codex"] },
     "root": { "type": "string", "description": "The absolute repository root, slash separated." },
     "plugins": {
       "type": "object",
@@ -82,6 +86,17 @@
       }
     },
     "start_tokens": { "$ref": "#/definitions/count", "description": "Estimated tokens in context at session start." },
+    "mcp_schemas": {
+      "type": "object",
+      "description": "The estimated tool schema tokens of the MCP servers configured at start, already included in start_tokens. Present only when a per-server estimate is configured (--mcp-server-tokens or [exposure] mcp_server_tokens).",
+      "required": ["servers", "tokens_per_server", "tokens"],
+      "additionalProperties": false,
+      "properties": {
+        "servers": { "$ref": "#/definitions/count", "description": "MCP servers configured at start." },
+        "tokens_per_server": { "$ref": "#/definitions/count" },
+        "tokens": { "$ref": "#/definitions/count", "description": "servers times tokens_per_server." }
+      }
+    },
     "start_imports_unmodeled": {
       "type": "array",
       "description": "Start-of-session `@path` imports the inventory could not follow. With a non-zero start_budget any entry fails the budget closed.",
@@ -105,7 +120,12 @@
       "propertyNames": { "$ref": "#/definitions/phase" },
       "additionalProperties": { "$ref": "#/definitions/count" }
     },
-    "start_tokens_by_kind": { "$ref": "#/definitions/kindCounts" },
+    "start_tokens_by_kind": {
+      "type": "object",
+      "description": "Start tokens per kind; with an MCP per-server estimate it includes an mcp_schemas entry, so the values sum to start_tokens.",
+      "propertyNames": { "$ref": "#/definitions/startKind" },
+      "additionalProperties": { "$ref": "#/definitions/count" }
+    },
     "counts_by_phase_and_kind": {
       "type": "object",
       "description": "Artifacts per phase and kind; start, on_demand and manual are always present, unknown when an artifact has it.",

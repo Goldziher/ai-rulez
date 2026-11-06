@@ -44,6 +44,22 @@ quote = "stops adding files once the combined size reaches the limit defined by 
 verified_on = "2026-10-06"
 configurable = "[codex] project_doc_max_bytes"
 
+# The page states the budget as a share of the context window, and 8,000
+# characters when the window is unknown (the figure of AR964's codex-skill-listing
+# row); the exposure report converts the share to characters at 4 per token, as
+# it does for Claude (the conversion is not stated on the page).
+# skills.max_context_tokens, which raises the budget, is not modeled.
+[[limit]]
+id = "codex.skill_listing_percent"
+harness = "codex"
+subject = "the initial skill list (every listed skill's name, description and path), as a percentage of the context window"
+unit = "percent"
+value = 2
+behavior = "truncated"
+source = "https://learn.chatgpt.com/docs/build-skills"
+quote = "By default, this list uses at most 2% of the model’s context window, or 8,000 characters when the context window is unknown."
+verified_on = "2026-11-05"
+
 [[limit]]
 id = "devin.rule_file_chars"
 harness = "devin"

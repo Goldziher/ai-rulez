@@ -16,7 +16,7 @@ func TestExposureConfigValidate(t *testing.T) {
 		{"nil", nil, nil},
 		{"empty", &ExposureConfig{}, nil},
 		{"valid", &ExposureConfig{Harness: "claude", Plugins: "all", ContextWindow: 1000, StartBudget: 10, CollisionMinScore: 0.5}, nil},
-		{"harness", &ExposureConfig{Harness: "codex"}, []string{`exposure.harness "codex" must be "claude"`}},
+		{"harness", &ExposureConfig{Harness: "gemini"}, []string{`exposure.harness "gemini" must be "claude" or "codex"`}},
 		{"plugins", &ExposureConfig{Plugins: "some"}, []string{`exposure.plugins "some" must be "none", "enabled" or "all"`}},
 		{"negative numbers", &ExposureConfig{ContextWindow: -1, StartBudget: -1}, []string{"exposure.context_window must not be negative", "exposure.start_budget must not be negative"}},
 		{"score", &ExposureConfig{CollisionMinScore: 1.5}, []string{"exposure.collision_min_score must be between 0 and 1, got 1.5"}},
@@ -45,4 +45,17 @@ func TestExposureTableLoads(t *testing.T) {
 		assert.Equal(t, []ExposureArea{{Name: "billing", Paths: []string{"services/billing"}, Shared: true}}, cfg.Exposure.Areas)
 		assert.Equal(t, map[string]string{"deploy": "billing"}, cfg.Exposure.SkillAreas)
 	}
+}
+
+func TestExposureConfig_CodexAndMcpKeys(t *testing.T) {
+	assert.Empty(t, (&ExposureConfig{Harness: "codex", CodexStartBudget: 5800, McpServerTokens: 400}).Validate())
+	assert.Equal(t,
+		[]string{"exposure.codex_start_budget must not be negative", "exposure.mcp_server_tokens must not be negative"},
+		(&ExposureConfig{CodexStartBudget: -1, McpServerTokens: -1}).Validate())
+	assert.Contains(t, (&ExposureConfig{Harness: "gemini"}).Validate()[0], "must be")
+
+	c := &ExposureConfig{StartBudget: 5350, CodexStartBudget: 5800}
+	assert.Equal(t, 5350, c.EffectiveStartBudget(ExposureHarnessClaude))
+	assert.Equal(t, 5800, c.EffectiveStartBudget(ExposureHarnessCodex))
+	assert.Equal(t, 0, (*ExposureConfig)(nil).EffectiveStartBudget(ExposureHarnessCodex))
 }

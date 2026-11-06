@@ -193,7 +193,8 @@ func TestRunExposureReportRejectsBadFlags(t *testing.T) {
 		flags exposureFlags
 		want  string
 	}{
-		{"unknown harness", exposureFlags{harness: "codex", root: t.TempDir()}, `unknown --harness "codex" (only claude)`},
+		{"unknown harness", exposureFlags{harness: "gemini", root: t.TempDir()}, `unknown --harness "gemini" (claude or codex)`},
+		{"negative mcp tokens", exposureFlags{harness: "claude", mcpServerTokens: -1, root: t.TempDir()}, "--mcp-server-tokens must not be negative"},
 		{"negative window", exposureFlags{harness: "claude", contextWindow: -1, root: t.TempDir()}, "--context-window must not be negative"},
 		{"unknown plugin mode", exposureFlags{harness: "claude", plugins: "some", root: t.TempDir()}, `unknown --plugins "some"`},
 	}

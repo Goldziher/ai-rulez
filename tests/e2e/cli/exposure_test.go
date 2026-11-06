@@ -224,7 +224,7 @@ func TestExposureFailures(t *testing.T) {
 		{"an invalid -C with --root", []string{"-C", "badcfg/config.toml", "exposure", "inventory", "--root", "empty"}, "AR9W5"},
 		{"a missing -C with --root", []string{"-C", "nope.toml", "exposure", "inventory", "--root", "empty"}, "does not exist"},
 		{"--with-text without json", []string{"exposure", "inventory", "--with-text"}, "--with-text applies to --format json"},
-		{"an unknown harness", []string{"exposure", "--harness", "codex"}, `unknown --harness "codex"`},
+		{"an unknown harness", []string{"exposure", "--harness", "gemini"}, `unknown --harness "gemini"`},
 		{"a negative context window", []string{"exposure", "--context-window", "-5"}, "--context-window must not be negative"},
 		{"an unknown subcommand", []string{"exposure", "inventroy"}, `unknown command "inventroy"`},
 	}

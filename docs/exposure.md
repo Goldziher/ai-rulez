@@ -7,8 +7,8 @@ part. An **area map** in the `[exposure]` table names the parts of the repositor
 claims and the words that identify it. ai-rulez then shows what a session loads at its start, which area every
 artifact belongs to, and where an area's words leak into the shared start-of-session text.
 
-Currently supports Claude Code only (`harness = "claude"`): the commands read the native Claude Code files
-(`CLAUDE.md`, `.claude/`, `.mcp.json`, enabled plugins), whichever presets generated them.
+The commands read the native Claude Code files (`CLAUDE.md`, `.claude/`, `.mcp.json`, enabled plugins), whichever
+presets generated them; with `harness = "codex"`, the Codex ones (see [The codex harness](#the-codex-harness)).
 
 ## Example
 
@@ -170,10 +170,12 @@ validation rules runs.
 
 | Key | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `harness` | string | `"claude"` | Harness whose load model applies; only `"claude"` |
+| `harness` | string | `"claude"` | Harness whose load model applies: `"claude"` or `"codex"` (see [The codex harness](#the-codex-harness)) |
 | `context_window` | integer | `200000` | Model context window in tokens, for the skill listing budget |
 | `plugins` | string | `"enabled"` | Repository-marketplace plugins whose skills are listed at start: `none`, `enabled` (those `.claude/settings*.json` enable) or `all` |
 | `start_budget` | integer | `0` (off) | Most estimated start-of-session tokens; turns on `AR9W3` |
+| `codex_start_budget` | integer | `0` (off) | `start_budget` for `harness = "codex"`, so one repository can gate both |
+| `mcp_server_tokens` | integer | `0` (off) | Estimated tool schema tokens per MCP server, added to the start count (see [MCP tool schemas](#mcp-tool-schemas)) |
 | `collision_min_score` | number | `0` (off) | Lowest overlap score between listings of different areas; turns on `AR9W2` and is the default `--min-score` of `exposure collisions` |
 | `areas_file` | string | | Area map in its own file, relative to the project root |
 | `[[exposure.areas]]` | array of tables | | The areas (inline form) |
@@ -295,6 +297,51 @@ The inventory follows Claude Code's load model for a session started at the insp
 - Not modeled: `CLAUDE.local.md`, user and managed settings, symlinked directories, and the agents, commands and MCP
   servers of plugins.
 
+## The codex harness
+
+`ai-rulez exposure --harness codex` (or `[exposure] harness = "codex"`) applies Codex's load model instead of Claude
+Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, settings, `@path` import, plugin or
+`.mcp.json`. What it reads, for a session started at the repository root:
+
+- **`AGENTS.md`** (kind `agents_md`). Codex starts at the project root and walks down to the working directory, includes
+  at most one file per directory, and checks `AGENTS.override.md` before `AGENTS.md`; an `AGENTS.md` beside an override
+  is left out. The root `AGENTS.md` and `AGENTS.override.md` are read even when gitignored; in a subdirectory, an
+  override that `.gitignore` or `[discovery]` hides is not seen and does not shadow its `AGENTS.md`. The root file is in context at start, one in a subdirectory waits (phase `on_demand`). The
+  32 KiB cap (`project_doc_max_bytes`) is applied per file, not to the combined chain: a file past it counts only those
+  bytes and is marked `truncated`, while Codex counts the chain's combined size. Sources: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+- **Skills** from `.agents/skills/<name>/SKILL.md` (kind `skill`), the repository location the skills page names. The
+  start list holds each skill's name, description and file path (the path is part of the counted listing line); no
+  `paths:` or `disable-model-invocation` gate applies and the description is not cut at Claude's 1536-character cap.
+  The listing budget is 2% of the context window, at 4 characters per token (the conversion is an assumption, as for
+  Claude). Sources: [Skills](https://learn.chatgpt.com/docs/build-skills).
+- **MCP servers** from the `[mcp_servers.<name>]` tables of `.codex/config.toml`, except a server with
+  `enabled = false`. Source: [MCP](https://learn.chatgpt.com/docs/extend/mcp).
+
+Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, user-level (`~/.codex`,
+`~/.agents/skills`) and admin (`/etc/codex`) files, the skill policy in `agents/openai.yaml`, and `.codex/skills`
+(the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
+`AR9W3` follows the harness (see [Start-of-session budgets](#start-of-session-budgets)); the other `validate` rules and
+the `inventory`, `areas`, `leakage` and `collisions` subcommands still read the Claude Code inventory. Codex has no
+marketplace plugins, so `--plugins enabled` or `all` under the codex harness is an error; `--plugins none` is accepted.
+
+## MCP tool schemas
+
+The start count omits the tool schemas a harness loads from its MCP servers, which need running servers to know. To
+count them anyway, give a per-server estimate: `--mcp-server-tokens N` or `[exposure] mcp_server_tokens = N`. The report
+multiplies it by the MCP servers configured at start (Claude: `.mcp.json`; Codex: `.codex/config.toml`), adds the
+product to `start_tokens` and the budget check, and prints its own line:
+
+```text
+mcp tool schemas (estimated): 2 servers x 400 = 800 tokens, included in the start tokens
+```
+
+The JSON carries it as `mcp_schemas` (`servers`, `tokens_per_server`, `tokens`) and as an `mcp_schemas` entry of
+`start_tokens_by_kind` (also in the text breakdown), so the breakdown still sums to `start_tokens`. It is off by
+default (0), and then no number changes and both are absent. An explicit `--mcp-server-tokens 0` turns a configured
+estimate off for one run. `AR9W3` counts the same estimate, so `validate` and `exposure` agree on the budget. The
+estimate is also in `tokens_by_phase` for `start`, so that figure equals `start_tokens`. There is no built-in
+estimate: measure a server's tool list once and set the number.
+
 ## Commands
 
 All commands are offline and deterministic. They inspect the project root, or `--root DIR` to see what a session
@@ -310,7 +357,8 @@ a map before you configure it.
 | `--areas FILE` | all | Area map file to use instead of the `[exposure]` table |
 | `--root DIR` | all | Directory to inspect; default the project root |
 | `--context-window N` | `exposure` | Context window for the listing budget; default `[exposure] context_window`, else 200000 |
-| `--harness claude` | `exposure` | Harness whose load model applies; only `claude` |
+| `--harness claude\|codex` | `exposure` | Harness whose load model applies; default `[exposure] harness`, else `claude` (see [The codex harness](#the-codex-harness)) |
+| `--mcp-server-tokens N` | `exposure` | Estimated tool schema tokens per MCP server, added to the start count; default `[exposure] mcp_server_tokens`, else 0 (see [MCP tool schemas](#mcp-tool-schemas)) |
 | `--with-text` | `inventory` | Include each artifact's text (with `--format json` only) |
 | `--min-score N` | `collisions` | Lowest score reported, 0 to 1; default `[exposure] collision_min_score`, else 0.1 |
 | `--limit N` | `collisions` | Pairs printed, highest score first (default 20; 0 prints all) |
@@ -319,7 +367,7 @@ a map before you configure it.
 | --- | --- |
 | 0 | The report was printed |
 | 1 | The command could not run: a bad flag, an invalid configuration or area map, or no area map for `areas`, `collisions` and `leakage` |
-| 2 | `exposure`: start tokens exceed `start_budget`. `exposure leakage`: a violation or a stale acceptance |
+| 2 | `exposure`: start tokens exceed the harness's budget (`start_budget`, or `codex_start_budget` under codex). `exposure leakage`: a violation or a stale acceptance |
 
 ### `ai-rulez exposure`
 
@@ -433,8 +481,10 @@ reason = "server names stay in the root .mcp.json; their tools are deferred"
 
 Two checks read the start-of-session report, computed with `[exposure] plugins` and `context_window`:
 
-- **`AR9W3` `exposure-start-budget`** reports start tokens over `[exposure] start_budget`. Setting the budget turns
-  the rule on at error, and `ai-rulez exposure` exits 2 in the same case. A start-of-session `@path` import that cannot
+- **`AR9W3` `exposure-start-budget`** reports start tokens over the budget of `[exposure] harness`: `start_budget` for
+  Claude Code, `codex_start_budget` for codex (so under codex a `start_budget` alone leaves it off). Setting the budget
+  turns the rule on at error, and `ai-rulez exposure` exits 2 in the same case; `validate` takes the harness from the
+  configuration only. A start-of-session `@path` import that cannot
   be followed also fails the budget, because the total cannot be known.
 - **`AR964` `load-budget-exceeded`**, row `claude-skill-listing-total`, warns when the start-of-session skill listing
   is past Claude Code's listing budget (info from 90% of it), with the `claude` preset configured.
@@ -510,7 +560,7 @@ files that shape the session changed: the areas file, the configuration, `.claud
 | `AR9W0` | `exposure-area-term` | error | A term of a non-shared area in start-of-session text |
 | `AR9W1` | `exposure-area-term-ambiguous` | warning | A start-of-session listing that names only ambiguous words |
 | `AR9W2` | `exposure-area-collision` | off | Overlapping listings of different areas; on with `collision_min_score` |
-| `AR9W3` | `exposure-start-budget` | off | Start tokens over `start_budget`; on (error) with `start_budget` |
+| `AR9W3` | `exposure-start-budget` | off | Start tokens over the harness's budget; on (error) with `start_budget` or, under codex, `codex_start_budget` |
 | `AR9W4` | `exposure-gate-unreadable` | warning | A gate whose frontmatter does not parse or whose value has the wrong type |
 | `AR9W5` | `exposure-map-invalid` | error | An unusable `[exposure]` table or area map; while it stands, no rule that reads the map runs |
 | `AR9W6` | `exposure-skill-area-unknown` | warning | A `skill_areas` key that names no skill |
