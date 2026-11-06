@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.11.0] - 2026-11-06
+
 ### Added
 
 - **`exposure` supports the Codex harness.** `ai-rulez exposure --harness codex` (or `[exposure] harness = "codex"`)
@@ -35,10 +37,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   budget already counts it, and report a leak against the imported file and its line. A `CLAUDE.md` of
   `@AGENTS.md` is no longer exempt from the leakage checks. An import that is not read (over the read limit, an
   absolute, home or outside-the-root path) is listed as unchecked. (#536)
+- The harness built-in name tables follow their sources again: the augment and claude extractors handle the
+  changed docs layout, Bob's modes (not slash commands) are dropped, and augment's list gains 18 names and loses 27,
+  so `AR808` and related rules report differently for augment configurations. The fetcher retries 429, 5xx and
+  timeouts. (#535)
 
 ### Changed
 
 - Python 3.11 is now the minimum supported version; Python 3.10 reached end of life.
+- Rewrite the user documentation.
+- Follow the xberg-io/toolchains v1.15.0 baseline (poly 0.32.5, uv 0.13.7) and upgrade Go dependencies, including
+  Liter 2.6.0, and the documentation lockfile, including zensical 0.1.0.
 
 ## [5.10.0] - 2026-11-01
 
