@@ -323,9 +323,11 @@ Code's. Nothing Claude-specific counts: no `CLAUDE.md`, `.claude/` directory, se
 Not modelled: `project_doc_fallback_filenames`, `skills.max_context_tokens`, user-level (`~/.codex`,
 `~/.agents/skills`) and admin (`/etc/codex`) files, the skill policy in `agents/openai.yaml`, and `.codex/skills`
 (the skills page does not name it, so it is not read). Whether Codex skips an empty `AGENTS.override.md` is unverified.
-`AR9W3` follows the harness (see [Start-of-session budgets](#start-of-session-budgets)); the other `validate` rules and
-the `inventory`, `areas`, `leakage` and `collisions` subcommands still read the Claude Code inventory. Codex has no
-marketplace plugins, so `--plugins enabled` or `all` under the codex harness is an error; `--plugins none` is accepted.
+`AR9W3` follows the harness (see [Start-of-session budgets](#start-of-session-budgets)), and so do `AR9W0`, `AR9W1` and
+`AR9W6` (see [Area term leakage](#area-term-leakage)) and `ai-rulez exposure leakage`, which also takes `--harness`; the
+other `validate` rules and the `inventory`, `areas` and `collisions` subcommands still read the Claude Code inventory.
+Codex has no marketplace plugins, so `--plugins enabled` or `all` under the codex harness is an error; `--plugins none`
+is accepted.
 
 ## MCP tool schemas
 
@@ -360,7 +362,7 @@ a map before you configure it.
 | `--areas FILE` | all | Area map file to use instead of the `[exposure]` table |
 | `--root DIR` | all | Directory to inspect; default the project root |
 | `--context-window N` | `exposure` | Context window for the listing budget; default `[exposure] context_window`, else 200000 |
-| `--harness claude\|codex` | `exposure` | Harness whose load model applies; default `[exposure] harness`, else `claude` (see [The codex harness](#the-codex-harness)) |
+| `--harness claude\|codex` | `exposure`, `leakage` | Harness whose load model applies; default `[exposure] harness`, else `claude` (see [The codex harness](#the-codex-harness)) |
 | `--mcp-server-tokens N` | `exposure` | Estimated tool schema tokens per MCP server, added to the start count; default `[exposure] mcp_server_tokens`, else 0 (see [MCP tool schemas](#mcp-tool-schemas)) |
 | `--with-text` | `inventory` | Include each artifact's text (with `--format json` only) |
 | `--min-score N` | `collisions` | Lowest score reported, 0 to 1; default `[exposure] collision_min_score`, else 0.1 |
@@ -451,6 +453,11 @@ start-of-session artifacts that import it; its `kind` and `name` are those of th
 The leakage rules read the text a session sees at its start: the root `CLAUDE.md` and `.claude/CLAUDE.md`,
 unconditional root rules, the listing line of each root skill and agent, the server names of the root `.mcp.json`,
 the enabled plugin names and, with `plugins = "enabled"` or `"all"`, the listings of the plugin skills that load.
+
+Under `[exposure] harness = "codex"` (or `ai-rulez exposure leakage --harness codex`, which wins over the table) they
+read Codex's start-of-session text instead: the root `AGENTS.md` or `AGENTS.override.md`, the listing line of each
+`.agents/skills` skill, and the server names of `.codex/config.toml`. A leak is reported with kind `agents_md` for the
+instruction file. There are no plugins to list.
 
 | Code | Default | Reports |
 | --- | --- | --- |

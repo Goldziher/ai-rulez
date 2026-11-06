@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/areas"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
@@ -89,4 +90,37 @@ func TestExposureLintSourceStartExposure_BuildsTheConfiguredHarnessInventory(t *
 	inv, err := codex.inventoryFor(codex.mode(), config.ExposureHarnessCodex)
 	require.NoError(t, err)
 	assert.Equal(t, config.ExposureHarnessCodex, inv.Harness)
+}
+
+func TestExposureLintSourceLeakage_FollowsTheHarness(t *testing.T) {
+	root := codexRepo(t, "harness = \"codex\"\n")
+	for rel, body := range map[string]string{
+		"AGENTS.md":                      "# Repo\n\nEvery invoice goes through the ledger.\n",
+		".agents/skills/ledger/SKILL.md": "---\nname: ledger\ndescription: Reconciles each invoice.\n---\nbody\n",
+	} {
+		path := filepath.Join(root, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o750))
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+	}
+	m, problems := areas.Load(&config.ExposureConfig{Areas: []config.ExposureArea{{Name: "billing", Paths: []string{"services/billing"}, Terms: []string{"invoice"}}}}, root)
+	require.Empty(t, problems)
+	build := func(exp *config.ExposureConfig, harness string) exposureLintSource {
+		return exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: exp}, areas: m, harness: harness, cache: &exposureCache{}}
+	}
+	paths := func(src exposureLintSource) []string {
+		out, ok := src.Leakage()
+		require.True(t, ok)
+		var got []string
+		for _, l := range out.Leaks {
+			got = append(got, l.Path)
+		}
+		return got
+	}
+
+	assert.ElementsMatch(t, []string{"AGENTS.md", ".agents/skills/ledger/SKILL.md"},
+		paths(build(&config.ExposureConfig{Harness: config.ExposureHarnessCodex}, "")), "[exposure] harness = codex")
+	assert.ElementsMatch(t, []string{"AGENTS.md", ".agents/skills/ledger/SKILL.md"},
+		paths(build(&config.ExposureConfig{}, config.ExposureHarnessCodex)), "--harness codex")
+	assert.Empty(t, paths(build(&config.ExposureConfig{Harness: config.ExposureHarnessCodex}, config.ExposureHarnessClaude)), "--harness claude wins over the table")
+	assert.Empty(t, paths(build(&config.ExposureConfig{}, "")), "the claude inventory has the short CLAUDE.md only")
 }

@@ -177,3 +177,81 @@ func TestExposureLeakageWithoutAMap(t *testing.T) {
 	require.Equal(t, 1, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
 	assert.Contains(t, res.Stderr, "no area map")
 }
+
+// codexLeakageProject names the billing area only in Codex-rendered start-of-session artifacts: the root
+// AGENTS.md, a .agents/skills listing and a .codex/config.toml MCP server. No CLAUDE.md or .claude/ file exists.
+func codexLeakageProject(t *testing.T, extraConfig string) string {
+	t.Helper()
+	root := minimalProject(t, "\n[exposure]\n"+extraConfig+`
+[[exposure.areas]]
+name = "billing"
+paths = ["services/billing"]
+terms = ["invoice"]
+`)
+	writeTree(t, root, map[string]string{
+		"AGENTS.md":                      "# Repo\n\nEvery invoice goes through the ledger.\n",
+		".agents/skills/ledger/SKILL.md": "---\nname: ledger\ndescription: Reconciles each invoice.\n---\nbody\n",
+		".codex/config.toml":             "[mcp_servers.invoice-db]\ncommand = \"db\"\n",
+	})
+	return root
+}
+
+func TestExposureLeakageCodexHarness(t *testing.T) {
+	env := newIsoEnv(t)
+	agents := leakageFinding{Severity: "violation", Code: "AR9W0", Area: "billing", Term: "invoice", Kind: "agents_md", Name: "AGENTS.md", Path: "AGENTS.md", Line: 3}
+	skill := leakageFinding{Severity: "violation", Code: "AR9W0", Area: "billing", Term: "invoice", Kind: "skill", Name: "ledger", Path: ".agents/skills/ledger/SKILL.md", Line: 1}
+	server := leakageFinding{Severity: "violation", Code: "AR9W0", Area: "billing", Term: "invoice", Kind: "mcp_server", Name: "invoice-db", Path: ".codex/config.toml", Line: 1}
+
+	t.Run("--harness codex checks the Codex inventory", func(t *testing.T) {
+		root := codexLeakageProject(t, "")
+
+		res := env.run(root, "exposure", "leakage", "--harness", "codex", "--format", "json")
+
+		require.Equal(t, 2, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
+		assert.ElementsMatch(t, []leakageFinding{agents, skill, server}, leakage(t, res.Stdout).Findings)
+	})
+
+	t.Run("[exposure] harness = codex is the default", func(t *testing.T) {
+		root := codexLeakageProject(t, "harness = \"codex\"\n")
+
+		res := env.run(root, "exposure", "leakage", "--format", "json")
+
+		require.Equal(t, 2, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
+		assert.ElementsMatch(t, []leakageFinding{agents, skill, server}, leakage(t, res.Stdout).Findings)
+
+		claude := env.run(root, "exposure", "leakage", "--harness", "claude", "--format", "json")
+		require.Equal(t, 0, claude.ExitCode, "--harness overrides the table\nstdout: %s\nstderr: %s", claude.Stdout, claude.Stderr)
+		assert.Empty(t, leakage(t, claude.Stdout).Findings)
+	})
+
+	t.Run("the claude harness does not see Codex-only artifacts", func(t *testing.T) {
+		root := codexLeakageProject(t, "")
+
+		res := env.run(root, "exposure", "leakage", "--format", "json")
+
+		require.Equal(t, 0, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
+		assert.Empty(t, leakage(t, res.Stdout).Findings)
+	})
+
+	t.Run("validate AR9W0 follows [exposure] harness", func(t *testing.T) {
+		root := codexLeakageProject(t, "harness = \"codex\"\n")
+
+		res := env.run(root, "validate", "--analyzer", "exposure", "--format", "json")
+
+		require.Equal(t, 2, res.ExitCode, "stdout: %s\nstderr: %s", res.Stdout, res.Stderr)
+		assert.Contains(t, res.Stdout, `skill \"ledger\" at session start names term \"invoice\" of area \"billing\"`)
+		assert.Contains(t, res.Stdout, `agents_md \"AGENTS.md\" at session start names term \"invoice\"`)
+	})
+
+	t.Run("--plugins other than none and an unknown --harness are errors", func(t *testing.T) {
+		root := codexLeakageProject(t, "")
+
+		plugins := env.run(root, "exposure", "leakage", "--harness", "codex", "--plugins", "all")
+		assert.Equal(t, 1, plugins.ExitCode, plugins.Stderr)
+		assert.Contains(t, plugins.Stderr, "no marketplace plugins")
+
+		bad := env.run(root, "exposure", "leakage", "--harness", "gemini")
+		assert.Equal(t, 1, bad.ExitCode, bad.Stderr)
+		assert.Contains(t, bad.Stderr, "unknown --harness")
+	})
+}

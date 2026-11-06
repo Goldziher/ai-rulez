@@ -49,7 +49,7 @@
             "type": "string",
             "description": "The term or ambiguous word, lowercase as the area map holds it."
           },
-          "kind": { "enum": ["claude_md", "rule", "skill", "agent", "mcp_server", "plugin"] },
+          "kind": { "enum": ["claude_md", "agents_md", "rule", "skill", "agent", "mcp_server", "plugin"] },
           "name": {
             "type": "string",
             "description": "The qualified name of the artifact (plugin:skill for a plugin skill)."
@@ -87,7 +87,7 @@
         "additionalProperties": false,
         "properties": {
           "path": { "type": "string", "description": "The file, relative to the root and slash separated." },
-          "kind": { "enum": ["claude_md", "rule", "skill", "agent"] },
+          "kind": { "enum": ["claude_md", "agents_md", "rule", "skill", "agent"] },
           "name": { "type": "string", "description": "The qualified name of the artifact." },
           "reason": { "type": "string", "description": "Why the file was not read." }
         }

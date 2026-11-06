@@ -6,6 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Fixed
+
+- `exposure leakage` and `AR9W0`, `AR9W1` and `AR9W6` check the Codex inventory (the root `AGENTS.md` and its imports,
+  `.agents/skills`, the MCP servers of `.codex/config.toml`) under `[exposure] harness = "codex"` or the new
+  `exposure leakage --harness codex`, instead of always reading `CLAUDE.md` and `.claude/`. `--plugins` other than
+  `none` is an error under codex, and the leakage schema accepts the `agents_md` kind
+  ([#545](https://github.com/Goldziher/ai-rulez/issues/545)).
+
 ## [5.11.0] - 2026-11-06
 
 ### Added
