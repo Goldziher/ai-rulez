@@ -180,4 +180,4 @@ configured; you do not need to list it.
 | `function "..." not defined`              | The template uses a function that is not a Go built-in. Rewrite it with `range`/`if`. |
 | `has an unsafe 'path'`                    | `path` leaves the project or points into a control directory; see [Output paths](#output-paths). |
 | The output is missing a rule              | The rule's domain is not in the active profile, or the template filters it out.     |
-| A warning that hooks are not generated    | Custom presets have no hook support; hooks are written for built-in presets only.    |
+| A warning that hooks or permissions are not generated | Custom presets have no hook or permission support; both are written for built-in presets only. |
