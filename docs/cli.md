@@ -671,7 +671,7 @@ codes appear in the convert report only, never in `validate`.
 - **Secrets**: a literal credential in an MCP server's `env`, `headers`, arguments or URL is replaced by a `${VAR}`
   reference (`needs-action`); the value is never printed or written. Set the variable before you run `generate`.
 - **Hooks and `allow` rules** are written as a commented block at the end of `config.toml` until you pass
-  `--enable-hooks` or `--enable-permissions`, or remove the `# ` yourself. `ask` and `deny` rules are always live.
+  `--enable-hooks` or `--enable-permissions`, or uncomment the lines yourself. `ask` and `deny` rules are always live.
   Each hook keeps the tool it came from in `targets`. See [Hook translation](#hook-translation).
 - **Presets** are inferred from files only one tool owns (`.cursor/rules` implies `cursor`); `AGENTS.md` alone
   implies none, and `claude` is used and reported.
