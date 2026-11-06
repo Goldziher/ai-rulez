@@ -375,24 +375,15 @@ After the conversion:
 
 ## Go API
 
-Packages under `internal/` are not a public API. Code that embeds ai-rulez should use
-`github.com/Goldziher/ai-rulez/v5/pkg/airulez` (experimental; see [Embedding](/ai-rulez/embedding/)). The module path is
+Code that embeds ai-rulez should use `github.com/Goldziher/ai-rulez/v5/pkg/airulez` (experimental; see
+[Embedding](/ai-rulez/embedding/)). The module path is
 `github.com/Goldziher/ai-rulez/v5` and the binary is `cmd/ai-rulez`:
 
 ```bash
 go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
 ```
 
-Changes for code that used `internal/config` directly:
-
-- The process-wide preset registry is gone (`config.GetPresetGenerator`, `config.PresetRegistry`,
-  `config.RegisterPreset`, `config.RegisterRulesDir`); each generation carries its own registry.
-- `config.LoadConfig` fails on a configuration with includes or installed skills unless it is given
-  `config.WithResolvers` (or `config.WithoutRemote`).
-- `config.SetPolicyEnforcer` is replaced by the load option `config.WithPolicy`.
-- The V2/V3 helpers (`config.DetectConfigVersion`, `config.VersionDir`, `config.ConfigVersionV3`, `Config.IsV3`,
-  `config.DecodeLegacyMCPFile`, `config.MigrateLocalOverlayToTOML`, `LocalOverlay.Format`) are removed.
-- In `pkg/airulez`, the machine-local overlay is read only with `Options.WithLocal`; `Options.WithoutLocal` is removed.
+In `pkg/airulez`, the machine-local overlay is read only with `Options.WithLocal`; `Options.WithoutLocal` is removed.
 
 ## See also
 
