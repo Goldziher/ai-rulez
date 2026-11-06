@@ -7,6 +7,10 @@ import sys
 from pathlib import Path
 
 PINNED_RELEASE = r"[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*"
+# The version input of a Goldziher/ai-rulez Action step, after any other inputs of its with: block.
+ACTION_PIN = (
+    rf"(Goldziher/ai-rulez(?:/[a-z]+)?@v[0-9]+\s*\n\s+with:\n(?:[ \t]+[\w-]+: .*\n)*?[ \t]+version: ){PINNED_RELEASE}()"
+)
 
 RULES = (
     ("cmd/commands/root.go", r'(?m)^(\s*Version\s*=\s*")[^"]+(")', "semver", True),
@@ -28,11 +32,11 @@ RULES = (
     ("website/src/content/docs/installation.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
     ("website/src/content/docs/installation.md", rf"(rev: v){PINNED_RELEASE}()", "semver", False),
     # The `version:` input of the GitHub Action examples.
-    ("README.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
-    ("website/src/content/docs/installation.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
-    ("website/src/content/docs/github-actions.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
-    ("website/src/content/docs/approvals.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
-    ("website/src/content/docs/lockfile.md", rf"(?m)(^\s+version: ){PINNED_RELEASE}()", "semver", False),
+    ("README.md", ACTION_PIN, "semver", False),
+    ("website/src/content/docs/installation.md", ACTION_PIN, "semver", False),
+    ("website/src/content/docs/github-actions.md", ACTION_PIN, "semver", False),
+    ("website/src/content/docs/approvals.md", ACTION_PIN, "semver", False),
+    ("website/src/content/docs/lockfile.md", ACTION_PIN, "semver", False),
 )
 
 

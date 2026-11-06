@@ -102,6 +102,16 @@ class VersionFixtures(unittest.TestCase):
             self.assertIn("ai-rulez@latest", text)
             self.assertIn("ai-rulez==latest", text)
 
+    def test_action_pin_rule_ignores_other_version_keys(self) -> None:
+        path = self.root / "website/src/content/docs/github-actions.md"
+        other = "plugin:\n  version: 1.2.3\n- uses: Goldziher/ai-rulez/check@v5\n  with:\n    profile: ci\n    version: 1.2.3\n"
+        path.write_text(path.read_text() + other)
+        set_version.synchronize(self.root, "9.8.7")
+        text = path.read_text()
+        self.assertIn("plugin:\n  version: 1.2.3\n", text)
+        self.assertIn("    profile: ci\n    version: 9.8.7\n", text)
+        self.assertEqual(text.count("version: 9.8.7"), 2)
+
     def test_invalid_version_refuses_without_writes(self) -> None:
         before = self.snapshot()
         with self.assertRaisesRegex(ValueError, "version must be"):
@@ -124,7 +134,7 @@ class VersionFixtures(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(VersionFixtures)
-    assert suite.countTestCases() == 7
+    assert suite.countTestCases() == 8
     result = unittest.TextTestRunner(verbosity=2).run(suite)
-    assert result.testsRun == 7 and not result.skipped
+    assert result.testsRun == 8 and not result.skipped
     raise SystemExit(0 if result.wasSuccessful() else 1)
