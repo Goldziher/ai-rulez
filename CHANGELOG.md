@@ -41,13 +41,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   changed docs layout, Bob's modes (not slash commands) are dropped, and augment's list gains 18 names and loses 27,
   so `AR808` and related rules report differently for augment configurations. The fetcher retries 429, 5xx and
   timeouts. (#535)
+- `exposure` counts the MCP servers of a root `.mcp.json` that Git ignores, as Claude Code loads it either way; a
+  generated, ignored `.mcp.json` used to report no servers and no MCP start tokens. (#546)
 
 ### Changed
 
 - Python 3.11 is now the minimum supported version; Python 3.10 reached end of life.
-- Rewrite the user documentation.
+- The documentation site moved from zensical to Astro Starlight in `website/`, at the same URLs, and its pages were
+  rewritten. CLI help, hints and schemas link to the site instead of `docs/<page>.md`, and the site build writes
+  `llms.txt`, `llms-small.txt` and `llms-full.txt`.
 - Follow the xberg-io/toolchains v1.15.0 baseline (poly 0.32.5, uv 0.13.7) and upgrade Go dependencies, including
-  Liter 2.6.0, and the documentation lockfile, including zensical 0.1.0.
+  Liter 2.6.0, and the documentation site's, including Starlight 0.42.9.
 
 ## [5.10.0] - 2026-11-01
 
