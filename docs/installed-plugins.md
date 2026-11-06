@@ -165,8 +165,8 @@ later one is skipped with a warning. Set `name_prefix` to keep both.
     "command": "./vendor/acme-market/plugins/formatter/fmt.sh"
     ```
 
-    For a fetched plugin there is no such directory, so the hook or server is not imported (run with `--debug` to see
-    each skipped component). `${CLAUDE_PLUGIN_DATA}` is never supported.
+  For a fetched plugin there is no such directory, so the hook or server is not imported (run with `--debug` to see
+  each skipped component). `${CLAUDE_PLUGIN_DATA}` is never supported.
 - **Permissions** are never imported: a plugin cannot add an allow rule.
 
 ## Security

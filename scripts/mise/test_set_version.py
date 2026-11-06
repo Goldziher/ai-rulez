@@ -23,7 +23,7 @@ FIXTURES = {
     "README.md": 'rev: v1.2.3\nrevision = "v1.2.3"\n',
     "poly-hooks.toml": 'command = "npx ai-rulez@latest && uvx ai-rulez==latest"\n',
     "docs/poly-hooks.md": 'revision = "v1.2.3"\nnpx ai-rulez@latest\nuvx ai-rulez==latest\n',
-    "docs/installation.md": 'ai-rulez version 1.2.3\nrev: v1.2.3\nnpx ai-rulez@latest\nuvx --from ai-rulez==latest ai-rulez\n',
+    "docs/installation.md": "ai-rulez version 1.2.3\nrev: v1.2.3\nnpx ai-rulez@latest\nuvx --from ai-rulez==latest ai-rulez\n",
 }
 PYTHON_METADATA = {"pyproject.toml", "release/pypi/__init__.py", "release/pypi/ai_rulez/__init__.py"}
 

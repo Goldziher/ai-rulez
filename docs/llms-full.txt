@@ -5343,8 +5343,8 @@ later one is skipped with a warning. Set `name_prefix` to keep both.
     "command": "./vendor/acme-market/plugins/formatter/fmt.sh"
     ```
 
-    For a fetched plugin there is no such directory, so the hook or server is not imported (run with `--debug` to see
-    each skipped component). `${CLAUDE_PLUGIN_DATA}` is never supported.
+  For a fetched plugin there is no such directory, so the hook or server is not imported (run with `--debug` to see
+  each skipped component). `${CLAUDE_PLUGIN_DATA}` is never supported.
 - **Permissions** are never imported: a plugin cannot add an allow rule.
 
 #### Security
@@ -10740,9 +10740,9 @@ verified acme-tools 1.2.0: 4 files match SHA256SUMS, the manifest and the archiv
     - `verify --plugin`;
     - a secret scan of every bundle file, using the security scan's patterns.
 
-    A symlink in the bundle is an error, and the machine-local overlay is never loaded. When the bundle holds an
-    [Agent Plugins](agent-plugins.md) package, it is checked against the specification (`AR9O0`-`AR9O5`), in
-    `--dry-run` as well.
+   A symlink in the bundle is an error, and the machine-local overlay is never loaded. When the bundle holds an
+   [Agent Plugins](agent-plugins.md) package, it is checked against the specification (`AR9O0`-`AR9O5`), in
+   `--dry-run` as well.
 3. **Policy gates** from [`[publish]`](#configuration): `require_signature` (`AR9N7`) and `require_approved`
    (`AR9N8`).
 4. **Build** the dist directory, signing the archive when asked.
@@ -25030,7 +25030,7 @@ codes appear in the convert report only, never in `validate`.
 - **Secrets**: a literal credential in an MCP server's `env`, `headers`, arguments or URL is replaced by a `${VAR}`
   reference (`needs-action`); the value is never printed or written. Set the variable before you run `generate`.
 - **Hooks and `allow` rules** are written as a commented block at the end of `config.toml` until you pass
-  `--enable-hooks` or `--enable-permissions`, or remove the `# ` yourself. `ask` and `deny` rules are always live.
+  `--enable-hooks` or `--enable-permissions`, or uncomment the lines yourself. `ask` and `deny` rules are always live.
   Each hook keeps the tool it came from in `targets`. See [Hook translation](#hook-translation).
 - **Presets** are inferred from files only one tool owns (`.cursor/rules` implies `cursor`); `AGENTS.md` alone
   implies none, and `claude` is used and reported.
