@@ -3,7 +3,7 @@ title: "Quick start"
 description: "Set up ai-rulez in a repository, add a rule, and generate the files for five assistants."
 ---
 
-Set up ai-rulez in a repository, add a rule, and generate the files for five assistants. It takes about five minutes.
+Set up ai-rulez in a repository, add a rule, and generate the files for five assistants.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/quickstart.gif" alt="ai-rulez init and generate: one .ai-rulez source becomes the native files of several AI tools" width="820" />
