@@ -3,8 +3,9 @@ title: "Architecture decision records"
 description: "Repository decisions use MADR in adrs/. Accepted records are immutable under adrlint.lock."
 ---
 
-Repository decisions use MADR in `adrs/`. Accepted records are immutable under `adrlint.lock`. Run
-`mise run adr:check` before committing a change to this log. ADR Markdown is formatted by adrlint.
+Design decisions are recorded as MADR files in
+[`adrs/`](https://github.com/Goldziher/ai-rulez/tree/main/adrs). Accepted records are immutable; a changed decision is a
+new record that supersedes the old one.
 
 | ID | Decision | Status | Date |
 | --- | --- | --- | --- |

@@ -1,12 +1,11 @@
 ---
 title: "Performance"
-description: "What the common ai-rulez operations cost on a typical project, which settings change that, and how a slowdown in ai-rulez itself is caught before release."
+description: "What the common ai-rulez operations cost on a typical project, and which settings change that."
 ---
 
-What the common ai-rulez operations cost on a typical project, which settings change that, and how a slowdown in
-ai-rulez itself is caught before release.
+What the common ai-rulez operations cost on a typical project, and which settings change that.
 
-The numbers below come from the benchmarks in the repository on synthetic projects, measured on a 4-vCPU Intel Xeon
+The numbers below come from benchmarks on synthetic projects, measured on a 4-vCPU Intel Xeon
 2.1 GHz virtual machine with a slow file system, so rows dominated by file writes (such as `generate`) are
 likely faster on a local SSD. Compare rows with each other; your machine will differ in absolute terms.
 
@@ -112,17 +111,3 @@ duration are dominated by the number of model calls:
 - Use `--changed` (`judge`), `--since` (`review`) or `--changed-only` (`eval run`) to limit the run to what changed.
 - Responses are cached per user ([LLM access](/ai-rulez/llm/)); an unchanged project costs nothing on a re-run.
 - `judge --concurrency` (default 4) and `--rpm` trade speed against provider rate limits.
-
-## Running the benchmarks
-
-```bash
-mise run test:benchmark          # every benchmark, small and medium synthetic projects
-mise run test:benchmark:large    # adds the 2,000-file project and 20,000-file monorepos
-go test ./internal/lint -run '^$' -bench RunFull -benchmem
-```
-
-Benchmarks build synthetic projects in a temporary directory and make no network calls.
-
-## Regression tracking
-
-CI compares benchmarks against each change's base revision; see the [maintainer notes](https://github.com/Goldziher/ai-rulez/blob/main/docs/maintainers/benchmarks.md).
