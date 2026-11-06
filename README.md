@@ -11,6 +11,7 @@
   <a href="https://pypi.org/project/ai-rulez/"><img src="https://img.shields.io/pypi/v/ai-rulez?color=blue" alt="PyPI version"></a>
   <a href="https://github.com/Goldziher/homebrew-tap"><img src="https://img.shields.io/github/v/release/Goldziher/ai-rulez?label=homebrew&color=blue" alt="Homebrew version"></a>
   <a href="https://pkg.go.dev/github.com/Goldziher/ai-rulez/v5"><img src="https://img.shields.io/github/v/release/Goldziher/ai-rulez?label=go&color=blue" alt="Go version"></a>
+  <a href="https://github.com/Goldziher/ai-rulez/actions/workflows/ci.yaml"><img src="https://img.shields.io/github/actions/workflow/status/Goldziher/ai-rulez/ci.yaml?branch=main&label=CI" alt="CI"></a>
   <a href="https://github.com/Goldziher/ai-rulez/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Goldziher/ai-rulez?color=blue" alt="License"></a>
   <a href="https://goldziher.github.io/ai-rulez/"><img src="https://img.shields.io/badge/docs-ai--rulez-blue" alt="Documentation"></a>
 </p>
@@ -228,8 +229,8 @@ repos:
       - id: ai-rulez-validate
 ```
 
-See [GitHub Actions](https://goldziher.github.io/ai-rulez/github-actions/) for the governance gate and scheduled pin updates, and
-[Installation](https://goldziher.github.io/ai-rulez/installation/#git-hooks) for Lefthook, Poly and `init --setup-hooks`.
+See [GitHub Actions](https://goldziher.github.io/ai-rulez/github-actions/) for the governance gate and scheduled pin
+updates, and [Installation](https://goldziher.github.io/ai-rulez/installation/#git-hooks) for Lefthook, Poly and `init --setup-hooks`.
 
 ## Upgrading from 4.x
 

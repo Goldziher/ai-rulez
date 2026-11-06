@@ -4,83 +4,53 @@
 
 # ai-rulez
 
-The standards-compliant lifecycle tool for agent knowledge and capabilities.
+[![PyPI version](https://img.shields.io/pypi/v/ai-rulez?color=blue)](https://pypi.org/project/ai-rulez/)
+[![License](https://img.shields.io/github/license/Goldziher/ai-rulez?color=blue)](https://github.com/Goldziher/ai-rulez/blob/main/LICENSE)
 
-[![PyPI Version](https://img.shields.io/pypi/v/ai-rulez)](https://pypi.org/project/ai-rulez/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/ai-rulez)](https://pypi.org/project/ai-rulez/)
+One source for the rules, skills and settings of every AI coding assistant. ai-rulez keeps them in a single `.ai-rulez/` directory and generates the native files of 52 tools (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, skills, MCP and settings files), then validates, locks, signs and publishes them.
 
-**Documentation:** [goldziher.github.io/ai-rulez](https://goldziher.github.io/ai-rulez/)
+Documentation: [goldziher.github.io/ai-rulez](https://goldziher.github.io/ai-rulez/)
 
----
+## Install
 
-## What is ai-rulez?
-
-ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-rulez/` source of truth and takes them through the lifecycle: author, generate native configs for 52 harnesses, bundle (OKF, Agent Plugins, ARD), lint and validate against each standard, govern (lock, approvals, Sigstore signing, policy, SBOM) and publish. Standards and their status: [docs/standards](https://goldziher.github.io/ai-rulez/standards/).
-
-**Key features:**
-
-- **Directory-based** – One `.ai-rulez/` directory for all your AI tooling
-- **Standards as the source** – Or keep `AGENTS.md` and `.agents/` as the source (`source = "agents"`); ai-rulez translates them to every other tool and never writes into them
-- **Multi-tool generation** – Generate configs for all major AI assistants from one source
-- **Plugin publishing** – `generate --plugin` packages the same source into distributable plugin bundles and runtime-specific marketplace indexes (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, Hermes; opt-in Pi, Copilot, and Agent Plugins)
-- **Pi packages** – Opt in with `[plugin] runtimes = ["pi"]` to bundle skills and prompt templates for Git or npm installation; npm publishing preserves runtime metadata and uses `<configured-scope>/<plugin-name>`
-- **Domain separation** – Organize rules by backend, frontend, QA, or any domain
-- **Profiles** – Define profiles for different teams or use cases
-- **Includes** – Compose from local packages or Git repositories
-- **CRUD operations** – Manage configuration programmatically via CLI or MCP
-- **Lint without a config** – `ai-rulez validate --strict` checks `AGENTS.md`, `SKILL.md`, `.claude/`, `.agents/`, plugin manifests, hooks and MCP files in any repository; `--path`, `--glob` and `--outputs` widen the scope
-- **Judge** – `ai-rulez judge` reviews agent configuration for security, quality and governance with verified evidence and optional rubric skills; no project config is required. `--estimate` sends nothing; a real run needs `--allow-llm` or standing consent in your user config.
-- **GitHub Action** – `uses: Goldziher/ai-rulez@v5` installs a sha256-verified binary in CI and accepts optional LLM configuration inputs. The floating `v5` action ref advances after stable v5 publication; set `version` separately to pin the CLI. `Goldziher/ai-rulez/check@v5` runs the full governance gate (validate, lock, generated-output drift, clean checkout); `Goldziher/ai-rulez/update@v5` opens a scheduled pin-update pull request. [Action guide](https://goldziher.github.io/ai-rulez/github-actions/).
-
----
-
-## Installation
-
-**uv:**
+Requires Python 3.11 or newer.
 
 ```bash
-uv tool install ai-rulez
+pipx install ai-rulez     # or: uv tool install ai-rulez, pip install ai-rulez
 ```
 
-**pip:**
+Or run it without installing:
 
 ```bash
-pip install ai-rulez
+uvx ai-rulez init acme
 ```
 
-**Or use without installation:**
+The package is a thin launcher for the `ai-rulez` Go binary and installs the `ai-rulez` command. On the first run it
+downloads the binary for your platform (Linux and macOS on amd64 and arm64, Windows on amd64) from the GitHub release
+that matches the package version, verifies its SHA-256 checksum and caches it in `~/.cache/ai-rulez`. It is
+re-downloaded when the package version changes.
+
+## Quickstart
 
 ```bash
-uvx ai-rulez init "My Project"
+ai-rulez init acme
+ai-rulez add rule testing --content '# Testing
+
+- Every bug fix ships with a regression test.'
+ai-rulez generate
 ```
 
----
+Set the tools you use in `.ai-rulez/config.toml` with `presets = ["claude", "cursor", "codex"]`. Run
+`ai-rulez generate --check` in CI to catch drift. The
+[Quick start](https://goldziher.github.io/ai-rulez/quick-start/) covers the rest.
 
-## Quick Example
+## Other channels
 
-```bash
-# Initialize a new project
-uvx ai-rulez init "My Project"
+Homebrew (`brew install goldziher/tap/ai-rulez`), npm (`npm install -g ai-rulez`) and Go
+(`go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`). See
+[Installation](https://goldziher.github.io/ai-rulez/installation/).
 
-# Add a rule
-uvx ai-rulez add rule coding-standards --priority high
+## Links
 
-# Generate configs for the selected tools
-uvx ai-rulez generate
-```
-
-This generates native configuration for the presets selected during `init`. Shared instructions use `AGENTS.md`; tool-specific content uses paths such as `.cursor/rules/`.
-
----
-
-## Learn More
-
-**[Full Documentation →](https://goldziher.github.io/ai-rulez/)** · [Complete feature table](https://github.com/Goldziher/ai-rulez#features)
-
----
-
-## Other Platforms
-
-- **Homebrew** (macOS/Linux) – `brew install goldziher/tap/ai-rulez`
-- **Go** – clone the repository and run `mise run build` for a statically linked executable; see [source installation](https://goldziher.github.io/ai-rulez/installation/).
-- **npm** (Node.js) – `pnpm add -g ai-rulez`
+[Documentation](https://goldziher.github.io/ai-rulez/) · [Source](https://github.com/Goldziher/ai-rulez) ·
+[Issues](https://github.com/Goldziher/ai-rulez/issues) · [MIT license](https://github.com/Goldziher/ai-rulez/blob/main/LICENSE)

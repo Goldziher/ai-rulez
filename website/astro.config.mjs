@@ -139,11 +139,15 @@ async function pageDescription(slug) {
   return "";
 }
 
+// Maintainer-facing pages stay on the site but out of the llms.txt index.
+const INDEX_SKIP = new Set(["architecture", "adr-index"]);
+
 async function sidebarSections() {
   const out = [];
   for (const group of sidebar) {
     const lines = [];
     for (const item of group.items) {
+      if (INDEX_SKIP.has(item.slug)) continue;
       const url = item.slug !== undefined ? `${SITE}${item.slug}/` : item.link;
       const desc = item.slug !== undefined ? await pageDescription(item.slug) : "";
       lines.push(`- [${item.label}](${url})${desc ? `: ${desc}` : ""}`);
