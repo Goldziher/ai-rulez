@@ -664,15 +664,15 @@ func TestInventory_EmptyArtifactsAreAnEmptyList(t *testing.T) {
 	assert.Contains(t, string(data), `"artifacts":[]`)
 }
 
-// TestWithNativeArtifacts_AddsGitignoredContext is the #522 regression: the git
-// listing leaves out a generated CLAUDE.md, AGENTS.md and .claude/, but a session
-// loads them, so exposure has to count them.
+// A session loads generated context files even when Git ignores them (#522, #546).
 func TestWithNativeArtifacts_AddsGitignoredContext(t *testing.T) {
 	// Arrange
 	root := writeRepo(t, map[string]string{
 		"CLAUDE.md":             "Read the instructions in this repository.\n",
 		"AGENTS.md":             "Always follow the conventions.\n",
 		".claude/rules/rule.md": "Always follow the repository conventions.\n",
+		".mcp.json":             `{"mcpServers":{"root-tools":{}}}`,
+		"nested/.mcp.json":      `{"mcpServers":{"nested-tools":{}}}`,
 		"README.md":             "readme\n",
 	})
 
@@ -680,16 +680,16 @@ func TestWithNativeArtifacts_AddsGitignoredContext(t *testing.T) {
 	got := withNativeArtifacts(root, []string{"README.md"})
 
 	// Assert
-	assert.ElementsMatch(t, []string{"README.md", "CLAUDE.md", "AGENTS.md", ".claude/rules/rule.md"}, got)
+	assert.ElementsMatch(t, []string{"README.md", "CLAUDE.md", "AGENTS.md", ".claude/rules/rule.md", ".mcp.json"}, got)
 }
 
 func TestWithNativeArtifacts_KeepsOneEntryPerFile(t *testing.T) {
 	// Arrange
-	root := writeRepo(t, map[string]string{"CLAUDE.md": "x\n"})
+	root := writeRepo(t, map[string]string{"CLAUDE.md": "x\n", ".mcp.json": `{"mcpServers":{}}`})
 
 	// Act
-	got := withNativeArtifacts(root, []string{"CLAUDE.md"})
+	got := withNativeArtifacts(root, []string{"CLAUDE.md", ".mcp.json"})
 
 	// Assert
-	assert.Equal(t, []string{"CLAUDE.md"}, got)
+	assert.Equal(t, []string{"CLAUDE.md", ".mcp.json"}, got)
 }

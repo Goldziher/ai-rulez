@@ -328,6 +328,38 @@ func TestExposureReport(t *testing.T) {
 	})
 }
 
+func TestExposureCountsRootMCPConfigRegardlessOfGitIgnore(t *testing.T) {
+	env := newIsoEnv(t)
+	tests := []struct {
+		name   string
+		ignore string
+	}{
+		{name: "ignored", ignore: "/.mcp.json\n"},
+		{name: "listed"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := minimalProject(t, "")
+			writeTree(t, root, map[string]string{
+				".gitignore": tt.ignore,
+				".mcp.json":  `{"mcpServers":{"local-tools":{"command":"unused-test-command"}}}`,
+			})
+			env.git(root, "init", "--quiet")
+
+			// Act
+			res := env.run(root, "exposure", "--harness", "claude", "--format", "json", "--mcp-server-tokens", "250")
+
+			// Assert
+			require.Equal(t, 0, res.ExitCode, res.Stderr)
+			doc := exposureReport(t, res.Stdout)
+			assert.Equal(t, 1, doc.CountsByPhaseAndKind["start"]["mcp_server"])
+			assert.Positive(t, doc.StartTokensByKind["mcp_server"])
+			assert.Equal(t, 250, doc.StartTokensByKind["mcp_schemas"])
+		})
+	}
+}
+
 func TestExposureStartBudget(t *testing.T) {
 	env := newIsoEnv(t)
 	root := exposureProject(t, env, "\n[exposure]\nstart_budget = 1\n")
