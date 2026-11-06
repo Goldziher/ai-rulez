@@ -7,16 +7,25 @@ class AugmentTest(unittest.TestCase):
     def setUp(self):
         self.ex = helpers.load_extractor("augment")
 
-    def test_parse_commands_reads_both_tables_and_ignores_the_shortcuts_table(self):
+    def test_parse_commands_reads_the_table_and_ignores_the_shortcuts_table(self):
         # Arrange
         text = helpers.read("augment", "interactive.md")
         # Act
         got = self.ex.parse_commands(text)
         # Assert
-        self.assertIn("about", got["names"])  # common table
-        self.assertIn("restart-mcp", got["names"])  # additional table
+        self.assertIn("about", got["names"])
+        self.assertIn("restart-mcp", got["names"])
         self.assertNotIn("Ctrl + P", got["names"])
-        self.assertEqual(len(got["names"]), 44)
+        self.assertEqual(len(got["names"]), 35)
+
+    def test_parse_commands_takes_every_command_of_a_row(self):
+        # Arrange
+        text = helpers.read("augment", "interactive.md")
+        # Act
+        got = self.ex.parse_commands(text)
+        # Assert
+        for name in ("exit", "quit", "login", "logout"):
+            self.assertIn(name, got["names"])
 
     def test_parse_commands_strips_arguments(self):
         # Arrange
@@ -24,9 +33,9 @@ class AugmentTest(unittest.TestCase):
         # Act
         got = self.ex.parse_commands(text)
         # Assert
-        self.assertIn("btw", got["names"])
-        self.assertIn("image", got["names"])
-        self.assertNotIn("btw <question>", got["names"])
+        self.assertIn("name", got["names"])
+        self.assertIn("import", got["names"])
+        self.assertNotIn("name <name>", got["names"])
 
     def test_parse_commands_rejects_a_changed_layout(self):
         # Arrange

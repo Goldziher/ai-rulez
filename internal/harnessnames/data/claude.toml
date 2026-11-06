@@ -1,7 +1,7 @@
 schema = 1
 preset = "claude"
 harness_version = "2.1.302 (local binary); docs fetched 2026-10-18"
-verified_on = "2026-10-18"
+verified_on = "2026-11-05"
 completeness = "partial"
 severity = "error"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = true
 [[source]]
 id = "s1"
 url = "https://code.claude.com/docs/en/commands.md"
-verified_on = "2026-10-18"
+verified_on = "2026-11-05"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,7 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://code.claude.com/docs/en/sub-agents.md"
-verified_on = "2026-10-18"
+verified_on = "2026-11-05"
 
 [[source]]
 id = "s4"
@@ -118,6 +118,7 @@ names = [
   "remote-control",
   "remote-env",
   "rename",
+  "restart",
   "resume",
   "rewind",
   "sandbox",
@@ -169,6 +170,8 @@ aliases = { "background" = [
   "allowed-tools",
 ], "remote-control" = [
   "rc",
+], "restart" = [
+  "update",
 ], "resume" = [
   "continue",
 ], "rewind" = [

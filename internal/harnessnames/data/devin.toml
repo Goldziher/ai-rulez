@@ -1,7 +1,7 @@
 schema = 1
 preset = "devin"
 harness_version = "Devin CLI stable v3000.11.92 (changelog dated 2026-10-14)"
-verified_on = "2026-10-27"
+verified_on = "2026-11-05"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://docs.devin.ai/cli/reference/commands.md#slash-commands"
-verified_on = "2026-10-27"
+verified_on = "2026-11-05"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,7 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://docs.devin.ai/cli/subagents.md"
-verified_on = "2026-10-27"
+verified_on = "2026-11-05"
 
 [[source]]
 id = "s4"
@@ -44,7 +44,9 @@ names = [
   "bypass",
   "clear",
   "cloud",
+  "code",
   "compact",
+  "confetti",
   "config",
   "context",
   "continue",
@@ -54,6 +56,7 @@ names = [
   "fast",
   "feedback",
   "fork",
+  "fusion",
   "handoff",
   "help",
   "hooks",
@@ -71,6 +74,7 @@ names = [
   "pickup",
   "plan",
   "platform",
+  "recap",
   "remove-dir",
   "rename",
   "repo",
@@ -115,7 +119,7 @@ kind = "command"
 source = "s2"
 user_collision = "unknown"
 match = "exact"
-names = ["goal", "recap", "cloud-attach", "cloud-sessions"]
+names = ["goal", "cloud-attach", "cloud-sessions"]
 
 [[group]]
 kind = "agent"
