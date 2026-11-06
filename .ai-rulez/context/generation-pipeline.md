@@ -17,7 +17,7 @@ x-ai-rulez:
 
 ## Generation Pipeline
 
-Pipeline: load -> merge -> validate -> render -> write. The full description is in `website/src/content/docs/architecture.md`.
+Pipeline: load -> merge -> validate -> render -> write. The full description is in `architecture.md`.
 
 - Load: `internal/project` wires the resolvers into `internal/config`, which reads `.ai-rulez/config.toml` (or `.agents/ai-rulez.toml`), the `default_layers` / `AI_RULEZ_LAYERS` `config.<name>.toml` layers, the machine-local overlay and the plugin and marketplace definition files, then scans the content tree and resolves includes, installed skills and builtin packs. All reads go through a `workspace` view.
 - Source layouts: `.ai-rulez/` (an OKF bundle), `.agents/` plus `AGENTS.md` (`source = "agents"`, or implied by `.agents/ai-rulez.toml`), and an OKF bundle. With the agents source `internal/agentssource` adds the root `AGENTS.md` (one item, or one per `##` heading with `agents_md_split = true`) and every nested `AGENTS.md` (context scoped to its directory), and drops generated files found under `.agents`. `generate` never writes `AGENTS.md` or anything under `.agents` for this source.
