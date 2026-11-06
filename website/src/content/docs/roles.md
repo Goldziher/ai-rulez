@@ -60,7 +60,7 @@ rule   backend  database         -                    -         156    43
 skill  backend  review-pr        name-only            static    289    78
 skill  release  deploy           user-invocable-only  static    297    74
 
-skill_mode not honored on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):
+skill_mode not honored on every configured harness (see https://goldziher.github.io/ai-rulez/roles/#skill_mode-on-other-harnesses):
   backend/review-pr = name-only: not applied on copilot, cursor; the skill stays listed there
 ```
 
@@ -113,7 +113,7 @@ TOML cannot use `roles` as both an array and a table.
 
 | Key                                               | Type   | Meaning                                                                                                   |
 | ------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
-| `name`                                            | string | Lowercase letters, digits, `-` and `_`; unique. What `--role` takes.                                     |
+| `name`                                            | string | Lowercase letters, digits, `-` and `_`, starting with a letter or digit; unique. What `--role` takes.   |
 | `description`                                     | string | Shown by `roles list`.                                                                                    |
 | `domains`                                         | list   | Domains the role selects, as in a profile (`builtin:<name>` works too). Root content, globally enabled builtins and include-sourced domains are always kept. |
 | `skills`, `rules`, `agents`, `commands`, `checks` | table  | `include` and `exclude` lists of item ids or [`path.Match`](https://pkg.go.dev/path#Match) globs. An entry with `/` matches `domain/id`. An empty `include` keeps everything the domains provide; `exclude` always wins. Context has no selector: context files always stay. |

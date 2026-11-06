@@ -112,6 +112,7 @@ Root checks are always included; domain checks are included when the domain is i
 ```bash
 ai-rulez add check security --description "Security issues" --severity high
 ai-rulez add check sql-injection --domain backend --targets "src/**/*.go"
+ai-rulez add check perf --tools Read,Grep --severity medium
 ai-rulez list checks [--domain backend] [--format json]
 ai-rulez remove check security [--domain backend] [--yes]
 ```
