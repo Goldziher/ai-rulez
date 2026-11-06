@@ -1,2 +1,2 @@
-baseline = "v1.13.0"
+baseline = "v1.15.0"
 task_sets = ["governance", "governance-check"]
