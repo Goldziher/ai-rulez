@@ -31,7 +31,7 @@ const localFlagUsage = "Write to the machine-local config.local.* overlay instea
 var LocalCmd = &cobra.Command{
 	Use:   flagLocal,
 	Short: "Manage the machine-local config overlay",
-	Long: `Manage config.local.{toml,yaml,json}, the machine-local overlay merged onto the
+	Long: `Manage config.local.toml, the machine-local overlay merged onto the
 shared config at load time. It is gitignored and never written into the shared
 config; use it for personal presets, profiles, MCP servers and secrets.`,
 }
