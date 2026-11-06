@@ -348,7 +348,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14301 4af47863753cc32f1ac995b1b86dd35e199c598483f4c7e7f12c02b4acb61a42
+.ai-rulez/.generated-manifest.local.json file 0644 14301 6e4ec79357cab636191acf39cea9b7189822b570c40f9c700b72de6d2afd47aa
 >>>>
 {
   "version": "1",
@@ -469,7 +469,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "ca65b1627fc95e8311bf0a0d5b8503d004bbebd9063eb89743740ca707c83869"
+          "fbb2dc2399f83218cb1316aa406361f2279a48e735e946d2a25cb332382258d2"
         ]
       },
       {
@@ -511,8 +511,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b",
-          "ce9f7a54c3e2906764270de5fd08077d4dfea4089a2aad4a4d7fc0e632f44af7"
+          "0b020da222c4a1df304ee235b7d7c827995d5c455a09726cdfa9387041ac5db1",
+          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
         ]
       },
       {
@@ -798,9 +798,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "f6af6abd17e4fb47e6948eacde223be271ce5cce7894b58cd6da3084365c3f82",
+    ".cursor/hooks.json": "a17c895e67e76878a7e2fa4a85f88ec3c463f780314ccfa893325a9e83d9f6f1",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".factory/hooks.json": "8bf51ac49a73591a7031928b7fec94336b323c0eac8e682ae212b47c39c8d412",
+    ".factory/hooks.json": "50e85a4b6064a49b8a265d792cbc8c80deedb173c5c43ec5593e41f48a5ea430",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
