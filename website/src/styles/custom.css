@@ -36,15 +36,15 @@
 
 [data-has-hero] .page {
   background:
-    radial-gradient(60ch 40ch at 15% -10%, color-mix(in oklch, var(--ar-magenta) 12%, transparent), transparent 70%),
-    radial-gradient(50ch 32ch at 88% -6%, color-mix(in oklch, var(--ar-blue) 16%, transparent), transparent 70%);
+    radial-gradient(60ch 40ch at 15% -10%, color-mix(in srgb, var(--ar-magenta) 12%, transparent), transparent 70%),
+    radial-gradient(50ch 32ch at 88% -6%, color-mix(in srgb, var(--ar-blue) 16%, transparent), transparent 70%);
 }
 
 .hero .stack a[data-variant="primary"] {
   background: linear-gradient(120deg, var(--ar-magenta), var(--ar-blue) 60%, var(--ar-cyan));
   border: none;
   color: #fff;
-  box-shadow: 0 8px 30px -12px color-mix(in oklch, var(--ar-blue) 80%, transparent);
+  box-shadow: 0 8px 30px -12px color-mix(in srgb, var(--ar-blue) 80%, transparent);
 }
 
 .hero .stack a[data-variant="primary"]:hover {
@@ -52,19 +52,19 @@
 }
 
 .card {
-  background: color-mix(in oklch, var(--sl-color-gray-6) 60%, transparent);
+  background: color-mix(in srgb, var(--sl-color-gray-6) 60%, transparent);
   border: 1px solid var(--sl-color-gray-5);
   transition:
     border-color 0.2s ease,
     transform 0.2s ease;
 }
 .card:hover {
-  border-color: color-mix(in oklch, var(--ar-blue) 60%, var(--sl-color-gray-5));
+  border-color: color-mix(in srgb, var(--ar-blue) 60%, var(--sl-color-gray-5));
   transform: translateY(-2px);
 }
 .card .icon {
   color: var(--ar-blue);
-  background: color-mix(in oklch, var(--ar-blue) 12%, transparent);
+  background: color-mix(in srgb, var(--ar-blue) 12%, transparent);
 }
 
 .site-title img {
