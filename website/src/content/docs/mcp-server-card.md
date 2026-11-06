@@ -1,6 +1,6 @@
 ---
 title: "MCP server cards"
-description: "The mcp-server-card emitter writes an MCP Server Card (SEP-2127) for each remote MCP server of your project."
+description: "Generate an MCP Server Card for each remote MCP server of your project."
 ---
 
 The `mcp-server-card` emitter writes an [MCP Server Card](https://modelcontextprotocol.io/seps/2127-mcp-server-cards)

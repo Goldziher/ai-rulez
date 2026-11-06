@@ -1,6 +1,6 @@
 ---
 title: "Forge client"
-description: "Some governance features ask GitHub a question: when was this tag released, who approved this pull request, who is in this team."
+description: "How ai-rulez asks GitHub for release dates, pull request approvals and team membership, and how to authenticate it."
 ---
 
 Some governance features ask GitHub a question: when was this tag released, who approved this pull request, who is in

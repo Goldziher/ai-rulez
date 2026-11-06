@@ -1,6 +1,6 @@
 ---
 title: "Signing"
-description: "A digest proves that bytes did not change; a signature says who produced them."
+description: "Sign the lock file, SBOM and plugin bundles with Sigstore or a key, and verify signatures against trusted identities."
 ---
 
 A digest proves that bytes did not change; a signature says who produced them. `ai-rulez sign --lock` signs the

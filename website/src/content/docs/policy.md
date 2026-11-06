@@ -1,6 +1,6 @@
 ---
 title: "Organization policy"
-description: "An organization policy is a floor a repository may raise but never lower."
+description: "An organization policy file sets validation, lock, approval, signing and MCP requirements a repository may tighten but never loosen."
 ---
 
 An organization policy is a floor a repository may raise but never lower. A security or platform team writes it once,

@@ -1,6 +1,6 @@
 ---
 title: "Session exposure and areas"
-description: "In a large repository, every session starts with the same context: the root instruction file, the unconditional rules, the listing of root skills and agents, and the MCP server names."
+description: "Measure and budget the context a Claude Code or Codex session loads at start, and keep area-specific terms out of it."
 ---
 
 In a large repository, every session starts with the same context: the root instruction file, the unconditional
