@@ -8,6 +8,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added
 
+- **`exposure` supports the Codex harness.** `ai-rulez exposure --harness codex` (or `[exposure] harness = "codex"`)
+  models Codex's start context instead of Claude Code's: the root `AGENTS.md` or `AGENTS.override.md` (one file per
+  directory, override first, each file capped at the 32 KiB `project_doc_max_bytes`), the `.agents/skills` listing with each
+  skill's path against Codex's 2% listing budget, and the MCP servers of `.codex/config.toml`. Claude-specific
+  artifacts do not count. The budget is its own key, `[exposure] codex_start_budget`, so one repository can gate both
+  harnesses; `AR9W3` follows `[exposure] harness` and its budget key, and `--plugins` other than `none` is an error
+  under codex. The other `exposure` subcommands stay on the Claude Code inventory ([#538](https://github.com/Goldziher/ai-rulez/issues/538)).
+- **`exposure` can count MCP tool schemas in the start budget.** `--mcp-server-tokens N` or
+  `[exposure] mcp_server_tokens = N` adds a fixed per-server estimate for each MCP server configured at start to
+  `start_tokens` and the budget check, reported on its own `mcp tool schemas` line and as `mcp_schemas` in the JSON and the by-kind breakdown. `AR9W3`
+  counts it too, and an explicit `--mcp-server-tokens 0` turns a configured estimate off. Off by default, so existing
+  numbers do not change
+  ([#539](https://github.com/Goldziher/ai-rulez/issues/539)).
 - An `[exposure]` area gains `exclude`, compound names that contain one of its terms without naming the area (an
   org `xberg-io` against the term `xberg`). An areas file gains `[[accept]]` tables (`term`, `path`, `reason`,
   optional `area`) that record known occurrences at session start; an entry that accepts nothing is reported as

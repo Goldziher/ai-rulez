@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -35,13 +36,17 @@ type exposureFlags struct {
 	plugins       string
 	harness       string
 	contextWindow int
-	asJSON        bool
-	withText      bool
+	// mcpServerTokens is --mcp-server-tokens; unless mcpServerTokensSet it defers to [exposure] mcp_server_tokens.
+	mcpServerTokens    int
+	mcpServerTokensSet bool
+	asJSON             bool
+	withText           bool
 }
 
 // exposureInput is what an exposure command reads: the inventory and, when one
 // is configured or given, the area map and where it came from.
 type exposureInput struct {
+	harness   string
 	inv       *exposure.Inventory
 	exp       *config.ExposureConfig
 	areas     *areas.Map
@@ -63,6 +68,10 @@ files, rules, skills, agents, MCP servers and plugins, when each one loads (at s
 only when the user runs it), and which area of the [exposure] area map it belongs to. The commands are
 offline, free and deterministic; see docs/exposure.md.
 
+--harness codex applies Codex's load model (AGENTS.md, .agents/skills, .codex/config.toml MCP servers) and checks
+[exposure] codex_start_budget. --mcp-server-tokens (or [exposure] mcp_server_tokens) adds an estimated tool schema
+cost per configured MCP server to the start tokens, on its own line; it is off by default.
+
 Without a subcommand, exposure prints the start-of-session report: the estimated tokens a session loads
 before it touches a file, by kind, the skill listing against Claude Code's listing budget (1% of
 --context-window at 4 characters per token, default [exposure] context_window, else 200000), the artifacts
@@ -77,7 +86,8 @@ none, enabled (the ones the root .claude/settings*.json enable; the default unle
 says otherwise) or all.
 
 Exit codes: 0 the report was printed, 1 the command could not run (bad flags, an invalid
-configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget; exposure leakage exits 2 on a
+configuration or area map), 2 (the report only) the start tokens exceed [exposure] start_budget
+(codex_start_budget under --harness codex); exposure leakage exits 2 on a
 violation or a stale acceptance.`,
 		Example: `  ai-rulez exposure
   ai-rulez exposure --plugins all --context-window 1000000 --format json
@@ -88,6 +98,7 @@ violation or a stale acceptance.`,
   ai-rulez exposure leakage --format json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			f.mcpServerTokensSet = cmd.Flags().Changed("mcp-server-tokens")
 			return fail(runExposureReport(cmd.Context(), cmd.OutOrStdout(), &f))
 		},
 	}
@@ -130,7 +141,8 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	pf.StringVar(&f.areasFile, "areas", "", "Area map file to use instead of the [exposure] table (the areas_file format)")
 	pf.StringVar(&f.plugins, "plugins", "", "Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled)")
 	group.Flags().IntVar(&f.contextWindow, "context-window", 0, "Model context window in tokens, for the skill listing budget (default: [exposure] context_window, else 200000)")
-	group.Flags().StringVar(&f.harness, "harness", config.ExposureHarnessClaude, "Harness whose load model applies; only claude")
+	group.Flags().StringVar(&f.harness, "harness", "", "Harness whose load model applies: claude or codex (default: [exposure] harness, else claude)")
+	group.Flags().IntVar(&f.mcpServerTokens, "mcp-server-tokens", 0, "Estimated tool schema tokens per configured MCP server, added to the start count (default: [exposure] mcp_server_tokens, else 0, which leaves MCP schemas out)")
 	addJSONFormat(group.Flags(), &f.asJSON, "")
 	addJSONFormat(inventory.Flags(), &f.asJSON, "")
 	addJSONFormat(areasCmd.Flags(), &f.asJSON, "")
@@ -139,16 +151,30 @@ by its plugin's directory. Diff the JSON against another classifier to compare t
 	return group
 }
 
-func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error {
-	if f.harness != config.ExposureHarnessClaude {
-		return oops.Errorf("unknown --harness %q (only %s)", f.harness, config.ExposureHarnessClaude)
+// checkExposureReportFlags rejects an unknown --harness and a negative --context-window or --mcp-server-tokens.
+func checkExposureReportFlags(f *exposureFlags) error {
+	if f.harness != "" && !slices.Contains(exposure.Harnesses(), f.harness) {
+		return oops.Errorf("unknown --harness %q (%s)", f.harness, "claude or codex")
 	}
 	if f.contextWindow < 0 {
 		return oops.Errorf("--context-window must not be negative, got %d", f.contextWindow)
 	}
-	in, err := loadExposure(ctx, f)
+	if f.mcpServerTokens < 0 {
+		return oops.Errorf("--mcp-server-tokens must not be negative, got %d", f.mcpServerTokens)
+	}
+	return nil
+}
+
+func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error {
+	if err := checkExposureReportFlags(f); err != nil {
+		return err
+	}
+	in, err := loadExposureFor(ctx, f, true)
 	if err != nil {
 		return err
+	}
+	if in.harness == config.ExposureHarnessCodex && f.plugins != "" && f.plugins != string(exposure.PluginsNone) {
+		return oops.Errorf("--plugins %s has no effect under the codex harness, which has no marketplace plugins; drop it or use --plugins none", f.plugins)
 	}
 	if in.areas != nil {
 		in.inv.Classify(in.areas)
@@ -157,11 +183,13 @@ func runExposureReport(ctx context.Context, w io.Writer, f *exposureFlags) error
 	if window == 0 {
 		window = in.exp.EffectiveContextWindow()
 	}
-	var budget int
-	if in.exp != nil {
-		budget = in.exp.StartBudget
+	mcpTokens := f.mcpServerTokens
+	if !f.mcpServerTokensSet && mcpTokens == 0 && in.exp != nil {
+		mcpTokens = in.exp.McpServerTokens
 	}
-	rep := exposure.NewReport(in.inv, exposure.ReportOptions{ContextWindow: window, StartBudget: budget})
+	rep := exposure.NewReport(in.inv, exposure.ReportOptions{
+		ContextWindow: window, StartBudget: in.exp.EffectiveStartBudget(in.harness), McpServerTokens: mcpTokens,
+	})
 	if f.asJSON {
 		err = jsondoc.Write(w, rep)
 	} else {
@@ -213,8 +241,14 @@ func runExposureAreas(ctx context.Context, w io.Writer, f *exposureFlags) error 
 }
 
 // loadExposure resolves the repository, the plugin mode and the area map, and
-// builds the inventory.
+// builds the Claude Code inventory (or the one --harness names).
 func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error) {
+	return loadExposureFor(ctx, f, false)
+}
+
+// loadExposureFor is loadExposure; with harnessFromConfig an unset --harness
+// falls back to [exposure] harness, which only the start-of-session report honors.
+func loadExposureFor(ctx context.Context, f *exposureFlags, harnessFromConfig bool) (*exposureInput, error) {
 	if f.plugins != "" && !exposure.PluginMode(f.plugins).Valid() {
 		return nil, oops.Errorf("unknown --plugins %q (use none, enabled or all)", f.plugins)
 	}
@@ -241,7 +275,14 @@ func loadExposure(ctx context.Context, f *exposureFlags) (*exposureInput, error)
 	if in.areas, in.areasFile, err = exposureMap(exp, base, root, f.areasFile, configFileOf(cfg)); err != nil {
 		return nil, err
 	}
-	if in.inv, err = exposure.Build(ctx, exposure.Options{Root: root, AreaBase: base, Plugins: mode}); err != nil {
+	in.harness = f.harness
+	if in.harness == "" {
+		in.harness = config.ExposureHarnessClaude
+		if harnessFromConfig {
+			in.harness = exp.EffectiveHarness()
+		}
+	}
+	if in.inv, err = exposure.Build(ctx, exposure.Options{Root: root, AreaBase: base, Plugins: mode, Harness: in.harness}); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	return in, nil
@@ -440,6 +481,22 @@ func writeInventoryText(w io.Writer, inv *exposure.Inventory, withAreas bool) er
 	return nil
 }
 
+// startBudgetLine is the verdict of the start budget and the key it was read from.
+func startBudgetLine(rep *exposure.Report) string {
+	verdict := "within"
+	switch {
+	case rep.StartTokens > rep.StartBudget:
+		verdict = fmt.Sprintf("OVER by %d:", rep.StartTokens-rep.StartBudget)
+	case len(rep.StartImportsUnmodeled) > 0:
+		verdict = "UNVERIFIED:"
+	}
+	key := "start_budget"
+	if rep.Harness == exposure.HarnessCodex {
+		key = "codex_start_budget"
+	}
+	return fmt.Sprintf("start budget: %s [exposure] %s %d", verdict, key, rep.StartBudget)
+}
+
 func writeReportText(w io.Writer, rep *exposure.Report) error {
 	start := rep.StartArtifacts()
 	l := rep.Listing
@@ -452,17 +509,13 @@ func writeReportText(w io.Writer, rep *exposure.Report) error {
 	}
 	lines := []string{fmt.Sprintf("start of session: %d %s, ~%d tokens", start, plural(start, "artifact"), rep.StartTokens)}
 	if rep.StartBudget > 0 {
-		verdict := "within"
-		switch {
-		case rep.StartTokens > rep.StartBudget:
-			verdict = fmt.Sprintf("OVER by %d:", rep.StartTokens-rep.StartBudget)
-		case len(rep.StartImportsUnmodeled) > 0:
-			verdict = "UNVERIFIED:"
-		}
-		lines = append(lines, fmt.Sprintf("start budget: %s [exposure] start_budget %d", verdict, rep.StartBudget))
+		lines = append(lines, startBudgetLine(rep))
 	}
 	for _, u := range rep.StartImportsUnmodeled {
 		lines = append(lines, fmt.Sprintf("unmodeled import: %s in %s: %s", u.Import, u.Artifact, u.Reason))
+	}
+	if m := rep.McpSchemas; m != nil {
+		lines = append(lines, fmt.Sprintf("mcp tool schemas (estimated): %d %s x %d = %d tokens, included in the start tokens", m.Servers, plural(m.Servers, "server"), m.TokensPerServer, m.Tokens))
 	}
 	lines = append(lines, listing, "start tokens by kind:")
 	lines = append(lines, countLines(rep.StartTokensByKind)...)

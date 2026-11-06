@@ -1125,7 +1125,8 @@ ai-rulez exposure leakage --format json
 | `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
 | `--context-window` | int | `0` | Model context window in tokens, for the skill listing budget (default: [exposure] context_window, else 200000) |
 | `--format` | string | `text` | Output format: text, json |
-| `--harness` | string | `claude` | Harness whose load model applies; only claude |
+| `--harness` | string |  | Harness whose load model applies: claude or codex (default: [exposure] harness, else claude) |
+| `--mcp-server-tokens` | int | `0` | Estimated tool schema tokens per configured MCP server, added to the start count (default: [exposure] mcp_server_tokens, else 0, which leaves MCP schemas out) |
 | `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
 | `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
 

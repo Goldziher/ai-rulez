@@ -50,7 +50,7 @@ func TestExposureLintSourceStartExposure(t *testing.T) {
 	src := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{ContextWindow: 1000}}, cache: &exposureCache{}}
 
 	// Act
-	start := src.StartExposure()
+	start := src.StartExposure(config.ExposureHarnessClaude)
 
 	// Assert
 	require.NotNil(t, start)
@@ -72,5 +72,21 @@ func TestExposureLintSourceStartExposure(t *testing.T) {
 func TestExposureLintSourceWithoutAnInventory(t *testing.T) {
 	src := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: t.TempDir(), Exposure: &config.ExposureConfig{Plugins: "some"}}}
 
-	assert.Nil(t, src.StartExposure())
+	assert.Nil(t, src.StartExposure(config.ExposureHarnessClaude))
+}
+
+func TestExposureLintSourceStartExposure_BuildsTheConfiguredHarnessInventory(t *testing.T) {
+	root := codexRepo(t, "harness = \"codex\"\n")
+	cfg := &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{Harness: config.ExposureHarnessCodex}}
+	codex := exposureLintSource{ctx: t.Context(), cfg: cfg, cache: &exposureCache{}}
+	claude := exposureLintSource{ctx: t.Context(), cfg: &config.Config{BaseDir: root, Exposure: &config.ExposureConfig{}}, cache: &exposureCache{}}
+
+	codexStart, claudeStart := codex.StartExposure(config.ExposureHarnessCodex), claude.StartExposure(config.ExposureHarnessClaude)
+
+	require.NotNil(t, codexStart)
+	require.NotNil(t, claudeStart)
+	assert.Greater(t, codexStart.StartTokens, claudeStart.StartTokens, "AGENTS.md is far larger than the short CLAUDE.md")
+	inv, err := codex.inventoryFor(codex.mode(), config.ExposureHarnessCodex)
+	require.NoError(t, err)
+	assert.Equal(t, config.ExposureHarnessCodex, inv.Harness)
 }
