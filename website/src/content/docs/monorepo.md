@@ -1,6 +1,6 @@
 ---
 title: "Monorepos and large projects"
-description: "A large repository needs each agent to see the instructions for the code it is working on, and not much more."
+description: "Generate and validate every nested .ai-rulez/ root of a monorepo with --recursive, and scope instructions to the code each agent works on."
 ---
 
 A large repository needs each agent to see the instructions for the code it is working on, and not much more.
