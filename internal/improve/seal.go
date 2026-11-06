@@ -16,7 +16,7 @@ import (
 // the repository. A report.json that was copied in, edited or produced by
 // anything but `improve run` on this machine carries no valid MAC and is not
 // applied. The MAC does not stop code running as the same user (the optimizer)
-// from reading the key; docs/improve.md says so.
+// from reading the key; https://goldziher.github.io/ai-rulez/improve/ says so.
 const ReportMACFile = "report.mac"
 
 const macDomain = "ai-rulez improve report v1\n"

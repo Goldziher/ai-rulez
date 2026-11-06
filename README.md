@@ -89,13 +89,13 @@ go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest    # Go (note th
 ```
 
 Or run it without installing: `npx ai-rulez@latest <command>` or `uvx ai-rulez <command>`. See
-[Installation](docs/installation.md) for platforms, shell completion and git hooks.
+[Installation](https://goldziher.github.io/ai-rulez/installation/) for platforms, shell completion and git hooks.
 
 ## Supported tools
 
 52 built-in presets, one per assistant, CLI agent or IDE integration. Combine any of them in `presets = [...]`;
-[Supported harnesses](docs/harnesses.md) shows which rules, skills, agents, commands, MCP servers, hooks and permissions
-each one receives. A tool that is not listed can be added as a [custom preset](docs/profiles.md).
+[Supported harnesses](https://goldziher.github.io/ai-rulez/harnesses/) shows which rules, skills, agents, commands, MCP servers, hooks and permissions
+each one receives. A tool that is not listed can be added as a [custom preset](https://goldziher.github.io/ai-rulez/profiles/).
 
 <details>
 <summary><strong>All 52 built-in presets</strong></summary>
@@ -161,14 +161,14 @@ each one receives. A tool that is not listed can be added as a [custom preset](d
 
 | Area | Commands | Docs |
 | ---- | -------- | ---- |
-| Author | `add`, `edit`, `show`, `list`, `remove`, `domain`, `profile`, `include`, `skill install` | [Configuration](docs/configuration.md), [Rules](docs/rules.md), [Skills](docs/skills.md), [Includes](docs/includes.md) |
-| Import | `init --from auto`, `convert`, `migrate v5` | [CLI](docs/cli.md), [Migrating to v5](docs/migration-v5.md) |
-| Generate | `generate`, `generate --user`, `generate --recursive`, `generate --watch`, `clean` | [Harnesses](docs/harnesses.md), [Hooks and settings](docs/settings.md), [Monorepo](docs/monorepo.md) |
-| Validate | `validate`, `scan`, `verifiers run`, `judge`, `review` | [Strict validation](docs/strict-validation.md), [Verifiers](docs/verifiers.md), [Judge](docs/judge.md) |
-| Govern | `lock`, `update`, `approve`, `sign`, `verify`, `sbom` | [Lock file](docs/lockfile.md), [Signing](docs/signing.md), [Policy](docs/policy.md) |
-| Bundle and publish | `generate --plugin`, `verify --plugin`, `publish` | [Plugins](docs/plugins.md), [Publish](docs/publish.md) |
-| Operate | `mcp --serve-skills`, `search`, `eval`, `tokens`, `cost`, `catalog`, `telemetry` | [MCP server](docs/mcp-server.md), [Evals](docs/evals.md) |
-| Embed | `pkg/airulez` | [Go API](docs/embedding.md) |
+| Author | `add`, `edit`, `show`, `list`, `remove`, `domain`, `profile`, `include`, `skill install` | [Configuration](https://goldziher.github.io/ai-rulez/configuration/), [Rules](https://goldziher.github.io/ai-rulez/rules/), [Skills](https://goldziher.github.io/ai-rulez/skills/), [Includes](https://goldziher.github.io/ai-rulez/includes/) |
+| Import | `init --from auto`, `convert`, `migrate v5` | [CLI](https://goldziher.github.io/ai-rulez/cli/), [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/) |
+| Generate | `generate`, `generate --user`, `generate --recursive`, `generate --watch`, `clean` | [Harnesses](https://goldziher.github.io/ai-rulez/harnesses/), [Hooks and settings](https://goldziher.github.io/ai-rulez/settings/), [Monorepo](https://goldziher.github.io/ai-rulez/monorepo/) |
+| Validate | `validate`, `scan`, `verifiers run`, `judge`, `review` | [Strict validation](https://goldziher.github.io/ai-rulez/strict-validation/), [Verifiers](https://goldziher.github.io/ai-rulez/verifiers/), [Judge](https://goldziher.github.io/ai-rulez/judge/) |
+| Govern | `lock`, `update`, `approve`, `sign`, `verify`, `sbom` | [Lock file](https://goldziher.github.io/ai-rulez/lockfile/), [Signing](https://goldziher.github.io/ai-rulez/signing/), [Policy](https://goldziher.github.io/ai-rulez/policy/) |
+| Bundle and publish | `generate --plugin`, `verify --plugin`, `publish` | [Plugins](https://goldziher.github.io/ai-rulez/plugins/), [Publish](https://goldziher.github.io/ai-rulez/publish/) |
+| Operate | `mcp --serve-skills`, `search`, `eval`, `tokens`, `cost`, `catalog`, `telemetry` | [MCP server](https://goldziher.github.io/ai-rulez/mcp-server/), [Evals](https://goldziher.github.io/ai-rulez/evals/) |
+| Embed | `pkg/airulez` | [Go API](https://goldziher.github.io/ai-rulez/embedding/) |
 
 `validate --strict` flags a defect, `--explain` describes it, and `generate --check` fails on drift:
 
@@ -198,7 +198,7 @@ In a monorepo, `generate --recursive` and `validate --recursive` process every n
 
 ai-rulez generates and validates AGENTS.md, Agent Skills, Agent Plugins, ARD, llms.txt, OKF (the format of
 `.ai-rulez/` itself), MCP server configuration and Server Cards, CycloneDX and SPDX SBOMs, and in-toto/DSSE
-attestations in Sigstore bundles. [Standards conformance](docs/standards.md) lists the versions, the conformance tests
+attestations in Sigstore bundles. [Standards conformance](https://goldziher.github.io/ai-rulez/standards/) lists the versions, the conformance tests
 and the known gaps.
 
 ## CI and git hooks
@@ -215,7 +215,7 @@ steps:
   - run: ai-rulez validate
 ```
 
-See [GitHub Actions](docs/github-actions.md) for the full workflow and the governance gate.
+See [GitHub Actions](https://goldziher.github.io/ai-rulez/github-actions/) for the full workflow and the governance gate.
 
 pre-commit or prek:
 
@@ -228,17 +228,17 @@ repos:
       - id: ai-rulez-validate
 ```
 
-See [GitHub Actions](docs/github-actions.md) for the governance gate and scheduled pin updates, and
-[Installation](docs/installation.md#git-hooks) for Lefthook, Poly and `init --setup-hooks`.
+See [GitHub Actions](https://goldziher.github.io/ai-rulez/github-actions/) for the governance gate and scheduled pin updates, and
+[Installation](https://goldziher.github.io/ai-rulez/installation/#git-hooks) for Lefthook, Poly and `init --setup-hooks`.
 
 ## Upgrading from 4.x
 
-Run `ai-rulez migrate v5 --dry-run`, then follow [Migrating to v5](docs/migration-v5.md).
+Run `ai-rulez migrate v5 --dry-run`, then follow [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
 
 ## Documentation
 
 Full documentation: [goldziher.github.io/ai-rulez](https://goldziher.github.io/ai-rulez/). Contributors: see
-[CONTRIBUTING.md](CONTRIBUTING.md) and [Architecture](docs/architecture.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) and [Architecture](https://goldziher.github.io/ai-rulez/architecture/).
 
 ## License
 

@@ -5,7 +5,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 )
 
-// Codes of the activation checks (docs/evals.md#activation-mode). They judge the
+// Codes of the activation checks (https://goldziher.github.io/ai-rulez/evals/#activation-mode). They judge the
 // activation record `ai-rulez eval run --mode activation` stores in
 // .ai-rulez/eval-results.json; both are off until a [lint.evals] threshold is set.
 const (

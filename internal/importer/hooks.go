@@ -463,7 +463,7 @@ func (b *rulesyncPlanner) importHooks(file string) {
 			}
 			if !known {
 				b.p.add(newFinding(StatusUnsupported, file, k+".hooks", "",
-					"hooks for "+k+" are not imported: ai-rulez renders hooks for claude, codex, cursor, gemini and copilot (and the settings-file harnesses of docs/settings.md) from one declaration"))
+					"hooks for "+k+" are not imported: ai-rulez renders hooks for claude, codex, cursor, gemini and copilot (and the settings-file harnesses of https://goldziher.github.io/ai-rulez/settings/) from one declaration"))
 				continue
 			}
 			hb.fromEventTable(hookSource{file: file, harness: tool.harness, events: tool.events}, scoped.Hooks, k+".hooks.")

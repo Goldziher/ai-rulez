@@ -1,6 +1,6 @@
 package lint
 
-// Codes of `ai-rulez verifiers run` (internal/verifiers, docs/verifiers.md).
+// Codes of `ai-rulez verifiers run` (internal/verifiers, https://goldziher.github.io/ai-rulez/verifiers/).
 // They are registered here so `validate --explain AR9H1` works and the
 // allocation of the AR9 blocks is checked in one place; `validate` emits them
 // only with --strict --verifiers. TestAllocatedBlocksCoverLiteralsInOtherPackages

@@ -1,0 +1,100 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "mise.toml"
+      - "mise.lock"
+      - ".lychee.toml"
+      - ".github/workflows/docs.yaml"
+      - "tests/conformance/llmstxt_test.go"
+      - "internal/llmstxt/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "mise.toml"
+      - "mise.lock"
+      - ".lychee.toml"
+      - ".github/workflows/docs.yaml"
+      - "tests/conformance/llmstxt_test.go"
+      - "internal/llmstxt/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: xberg-io/actions/setup-mise@v1
+        with:
+          install-args: node pnpm
+      - name: Install dependencies
+        working-directory: website
+        run: pnpm install --frozen-lockfile
+      - name: Build site
+        working-directory: website
+        run: pnpm run build
+
+      # The published llms.txt must follow the llms.txt format that ai-rulez itself validates.
+      - name: Set up Go
+        uses: ./.github/actions/go-toolchain
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
+      - name: Check llms.txt conformance
+        env:
+          DOCS_SITE_REQUIRED: "1"
+        run: go test ./tests/conformance -run TestPublishedDocsSiteLLMSTxtFollowsTheFormat -count=1 -v
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/dist
+      - name: Upload site for link checking
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: website/dist
+          retention-days: 1
+
+  lint-links:
+    name: Lint links
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      # The site is served under /ai-rulez/, so its root-relative links resolve below _site/ai-rulez.
+      - name: Download site artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: docs-site
+          path: _site/ai-rulez
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--config .lychee.toml --root-dir _site/ _site/"
+          fail: true
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, lint-links]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

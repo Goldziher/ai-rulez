@@ -12,7 +12,7 @@ import (
 	"github.com/samber/oops"
 )
 
-// Signing subjects and TLog modes of the [signing] table (docs/signing.md).
+// Signing subjects and TLog modes of the [signing] table (https://goldziher.github.io/ai-rulez/signing/).
 const (
 	// SigningSubjectLock is the lock attestation.
 	SigningSubjectLock = "lock"
@@ -26,7 +26,7 @@ const (
 	// skill must be pinned in a lock whose attestation verifies. It names no
 	// trust entries of its own; the lock's signers apply.
 	SigningSubjectServed = "served"
-	// SigningSubjectApproval is a signed approval (docs/approvals.md); only a
+	// SigningSubjectApproval is a signed approval (https://goldziher.github.io/ai-rulez/approvals/); only a
 	// [[signing.trust]] entry can name it.
 	SigningSubjectApproval = "approval"
 	// SigningTLogRequired, SigningTLogOptional and SigningTLogOff are the tlog modes.

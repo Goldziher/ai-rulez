@@ -13,7 +13,7 @@
 // everything the consumer hand-authored in the same file survives generate and
 // clean. Event names, handler fields and timeout units differ per harness; the
 // tables in this file were read from each vendor's hooks documentation (see
-// docs/settings.md for the sources and dates). A declaration a harness cannot
+// https://goldziher.github.io/ai-rulez/settings/ for the sources and dates). A declaration a harness cannot
 // express is skipped with a warning, never approximated.
 package settings
 

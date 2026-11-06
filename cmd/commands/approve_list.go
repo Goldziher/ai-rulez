@@ -76,7 +76,7 @@ func (e *approveEnv) list(out io.Writer) error {
 	}
 	if len(doc.Items) == 0 && len(doc.Orphans) == 0 {
 		if !e.policy.Active() {
-			_, err := fmt.Fprintln(out, "nothing needs approval: [governance] require_approval is not set (see docs/approvals.md)")
+			_, err := fmt.Fprintln(out, "nothing needs approval: [governance] require_approval is not set (see https://goldziher.github.io/ai-rulez/approvals/)")
 			return err
 		}
 		_, err := fmt.Fprintln(out, "no pinned content needs approval")

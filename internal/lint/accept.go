@@ -12,7 +12,7 @@ import (
 
 // CodeAcceptUnused is AR9I0, the [[lint.accept]] entry that accepted nothing.
 // AR9I is the lint configuration block of the allocation table in
-// docs/strict-validation.md.
+// https://goldziher.github.io/ai-rulez/strict-validation/.
 const CodeAcceptUnused = "AR9I0"
 
 // routeAccept names [[lint.accept]] in the AR740 finding of a refused attempt.

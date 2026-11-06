@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verify-attestation.schema.json",
   "title": "ai-rulez verify --attestation",
-  "description": "Output of `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock, or with --bundle, --skill or --sbom a plugin bundle, a published skill or an SBOM file (docs/signing.md).",
+  "description": "Output of `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock, or with --bundle, --skill or --sbom a plugin bundle, a published skill or an SBOM file (https://goldziher.github.io/ai-rulez/signing/).",
   "type": "object",
   "definitions": {
     "signer": {

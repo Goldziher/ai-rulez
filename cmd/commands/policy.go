@@ -131,7 +131,7 @@ func refusalsReported(ctx context.Context, cfg *config.Config, err error) (*conf
 // evaluates policy binds the same variables, so the flags mean the same everywhere.
 func registerPolicyFlags(set *pflag.FlagSet) {
 	set.StringVar(&policyFlag, "policy", "",
-		"Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md")
+		"Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see https://goldziher.github.io/ai-rulez/policy/")
 	set.StringVar(&policyDigestFlag, "policy-digest", "",
 		"The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741)")
 	set.BoolVar(&policyOfflineFlag, "policy-offline", false,
@@ -139,7 +139,7 @@ func registerPolicyFlags(set *pflag.FlagSet) {
 	set.StringVar(&policyMaxStaleFlag, "policy-max-stale", "",
 		"How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE)")
 	set.BoolVar(&discoverOrgFlag, "discover-org", false,
-		"Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md")
+		"Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see https://goldziher.github.io/ai-rulez/policy/")
 	set.BoolVar(&policyRequireSignedFlag, "policy-require-signed", false,
 		"Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1)")
 	set.StringSliceVar(&policySignerKeyFlag, "policy-signer-key", nil,

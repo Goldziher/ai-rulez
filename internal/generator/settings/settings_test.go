@@ -359,11 +359,11 @@ func TestUnsupportedDiagnostics(t *testing.T) {
 	assert.Empty(t, settings.UnsupportedDiagnostics(&config.Config{Presets: cfg.Presets}))
 }
 
-// TestDocsEventTable pins the event table of docs/settings.md to the renderer:
+// TestDocsEventTable pins the event table of website/src/content/docs/settings.md to the renderer:
 // "yes" cells are the harness's own name for the Claude Code event, "-" cells are
 // events it cannot express, and any other cell names the native event.
 func TestDocsEventTable(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "settings.md"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "website", "src", "content", "docs", "settings.md"))
 	require.NoError(t, err)
 	harnesses := []string{config.HarnessClaude, config.HarnessCodex, config.HarnessGemini, config.HarnessCursor, config.HarnessCopilot}
 
@@ -418,7 +418,7 @@ func TestDocsEventTable(t *testing.T) {
 	}
 	for _, harness := range harnesses[1:] {
 		for _, event := range settings.SupportedEvents(harness) {
-			assert.True(t, documented[event], "%s event %s is missing from docs/settings.md", harness, event)
+			assert.True(t, documented[event], "%s event %s is missing from website/src/content/docs/settings.md", harness, event)
 		}
 	}
 }

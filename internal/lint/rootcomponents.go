@@ -9,7 +9,7 @@ import (
 
 // CodeRootComponentShipped warns that a single-plugin bundle's root is the
 // repository root, so a component path the host loads by default ships to every
-// user even though it is not part of the plugin (docs/plugins.md).
+// user even though it is not part of the plugin (https://goldziher.github.io/ai-rulez/plugins/).
 const CodeRootComponentShipped = "AR9T0"
 
 // hostComponent is one path a host loads from a plugin root by default, the host

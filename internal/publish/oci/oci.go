@@ -30,7 +30,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
-// Media types of the artifact (docs/publish.md).
+// Media types of the artifact (https://goldziher.github.io/ai-rulez/publish/).
 const (
 	ArtifactType       = "application/vnd.ai-rulez.bundle.v1"
 	ConfigMediaType    = "application/vnd.ai-rulez.manifest.v1+json"

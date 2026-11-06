@@ -25,13 +25,13 @@ func checkLLM(_ context.Context, s *state) []Finding {
 	d := llm.Diagnose(res.Config, llm.Options{ConfigDir: s.cfg.ConfigDir})
 	var out []Finding
 	if len(res.Ignored) > 0 {
-		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning, Message: llm.IgnoredKeysMessage(res.Ignored), Hint: "see docs/llm.md, \"Trust rule\""})
+		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning, Message: llm.IgnoredKeysMessage(res.Ignored), Hint: "see https://goldziher.github.io/ai-rulez/llm/, \"Trust rule\""})
 	}
 	for _, p := range d.Problems {
-		out = append(out, Finding{Check: CheckLLM, Severity: SeverityError, Message: llm.CodeConfigInvalid + " " + p, Hint: "see docs/llm.md"})
+		out = append(out, Finding{Check: CheckLLM, Severity: SeverityError, Message: llm.CodeConfigInvalid + " " + p, Hint: "see https://goldziher.github.io/ai-rulez/llm/"})
 	}
 	for _, w := range d.Warnings {
-		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning, Message: w, Hint: "see docs/llm.md, \"Plain-http gateways\""})
+		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning, Message: w, Hint: "see https://goldziher.github.io/ai-rulez/llm/, \"Plain-http gateways\""})
 	}
 	if d.AllowNetwork && d.APIKeyEnv != "" && !d.APIKeySet {
 		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning,

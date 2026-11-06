@@ -97,7 +97,7 @@ func TestDeliveryFindings_LockEnforcementReportsUnpinnedSkills(t *testing.T) {
 }
 
 func TestDeliveryFindings_PresetWithoutSkillsNeedsNoStub(t *testing.T) {
-	// Arrange: gitlab-duo can call MCP but renders no skills (docs/harnesses.md).
+	// Arrange: gitlab-duo can call MCP but renders no skills (website/src/content/docs/harnesses.md).
 	cfg := deliveryProject(t, `["claude", "gitlab-duo"]`, "", servedSkillFiles)
 
 	// Act

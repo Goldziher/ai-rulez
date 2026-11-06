@@ -8,7 +8,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
-// Session exposure and areas (AR9W, docs/exposure.md). Every rule is inert unless the configuration has an
+// Session exposure and areas (AR9W, https://goldziher.github.io/ai-rulez/exposure/). Every rule is inert unless the configuration has an
 // [exposure] table, except AR9W4 (ar_exposure_gate.go), which reads only the item.
 const (
 	// AnalyzerExposure is the analyzer name of the session exposure and area codes.

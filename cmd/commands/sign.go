@@ -78,7 +78,7 @@ var SignCmd = &cobra.Command{
   ai-rulez sign --org-policy <file>    an organization policy file, written to
                                        <file>.sigstore.json, where the policy loader looks
                                        (--policy-signer-key / --policy-signer-identity, see
-                                       docs/policy.md); it is refused unless the file parses
+                                       https://goldziher.github.io/ai-rulez/policy/); it is refused unless the file parses
 
 The lock statement survives re-formatting of the TOML. All of them verify with
 "ai-rulez verify --attestation" (--bundle, --skill, --sbom) or cosign

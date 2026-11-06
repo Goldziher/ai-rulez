@@ -12,7 +12,7 @@ const (
 )
 
 // Scan records what an external scanner reported over the staged content at lock
-// time (docs/strict-validation.md, "External scanners"): which scanner, the
+// time (https://goldziher.github.io/ai-rulez/strict-validation/, "External scanners"): which scanner, the
 // digest of the content it scanned, and the outcome. It is a reviewer's aid, not
 // a pin: the records sit outside the tree digest, and `lock` writes them from the
 // scanner result cache without starting any program, so a scan that was never run

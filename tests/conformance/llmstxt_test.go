@@ -1,6 +1,8 @@
 package conformance
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -71,12 +73,23 @@ func TestGeneratedLLMSTxtFollowsTheFormat(t *testing.T) {
 	assert.True(t, utf8.ValidString(full))
 }
 
+// TestPublishedDocsSiteLLMSTxtFollowsTheFormat checks the llms.txt and llms-full.txt of the docs site,
+// which the site build writes to website/dist (`pnpm run build` in website/). The docs workflow runs
+// it after the build; without a build there is nothing to check.
 func TestPublishedDocsSiteLLMSTxtFollowsTheFormat(t *testing.T) {
-	index := string(repoFile(t, "docs/llms.txt"))
+	dist := filepath.Join(repoRoot, "website", "dist")
+	if _, err := os.Stat(filepath.Join(dist, "llms.txt")); err != nil {
+		// The docs workflow sets DOCS_SITE_REQUIRED so a moved build output fails instead of skipping.
+		require.Empty(t, os.Getenv("DOCS_SITE_REQUIRED"), "the docs site is not built at %s", dist)
+		t.Skip("the docs site is not built; run `pnpm run build` in website/ first")
+	}
+	index := string(repoFile(t, "website/dist/llms.txt"))
 	checkLLMSIndex(t, index)
 	checkLLMSFindings(t, index)
-	full := string(repoFile(t, "docs/llms-full.txt"))
-	assert.Regexp(t, llmsH1, strings.SplitN(full, "\n", 2)[0])
+	// llms-full.txt has no fixed format: the site writes a preamble line, then every page.
+	full := string(repoFile(t, "website/dist/llms-full.txt"))
+	assert.Regexp(t, `(?m)^# \S`, full, "llms-full.txt holds the pages' Markdown")
+	assert.True(t, utf8.ValidString(full))
 }
 
 func TestLLMSTxtCheckerRejectsMalformedIndexes(t *testing.T) {

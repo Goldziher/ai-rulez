@@ -38,8 +38,8 @@ updates:
     pull-request-branch-name:
       separator: "/"
 
-  - package-ecosystem: "pip"
-    directory: "/"
+  - package-ecosystem: "npm"
+    directory: "/website"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -49,7 +49,7 @@ updates:
       - "Goldziher"
     labels:
       - "dependencies"
-      - "python"
+      - "docs"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"

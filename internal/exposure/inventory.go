@@ -9,7 +9,7 @@
 // repository marketplace, and keeps the frontmatter parse status of each item
 // instead of reading a broken block as an absent one.
 //
-// The load model follows Claude Code 2.1.306 as measured; docs/exposure.md
+// The load model follows Claude Code 2.1.306 as measured; https://goldziher.github.io/ai-rulez/exposure/
 // describes it. A symlinked file is read
 // through its link, as Claude Code reads it, when the target is a regular file
 // inside the root; a target outside the root is not followed, and the artifact
@@ -76,7 +76,7 @@ import (
 const SchemaInventory = 1
 
 // BytesPerToken is the ratio behind EstimateTokens, the measured load model's
-// (see docs/exposure.md).
+// (see https://goldziher.github.io/ai-rulez/exposure/).
 const BytesPerToken = 3.9
 
 // EstimateTokens is the token estimate of a text of n UTF-8 bytes: n / 3.9

@@ -79,7 +79,7 @@ func (p *Plan) isolationLine() string {
 		case len(p.Opts.Egress) > 0:
 			net = "network allowed (egress declared)"
 		}
-		return fmt.Sprintf("  isolation:   %s sandbox: %s, %s; reads are not restricted, so the optimizer can still read your repository, the held-out cases and the report-signing key (see docs/improve.md)\n", p.isolation.Backend, writes, net)
+		return fmt.Sprintf("  isolation:   %s sandbox: %s, %s; reads are not restricted, so the optimizer can still read your repository, the held-out cases and the report-signing key (see https://goldziher.github.io/ai-rulez/improve/)\n", p.isolation.Backend, writes, net)
 	case p.isolation != nil && p.isolation.Mode != string(sandbox.ModeNone):
 		return "  isolation:   requested but unavailable: the optimizer runs unconfined\n"
 	}

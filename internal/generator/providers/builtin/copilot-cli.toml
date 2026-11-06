@@ -79,7 +79,7 @@ global_path = ".copilot/mcp-config.json"
 
 # User-scope layout: ~/.copilot.
 # Hooks: top-level [[hooks]] rendered in copilot-cli's native format, read from the
-# vendor documentation (see docs/settings.md). Copilot CLI loads every .github/hooks/*.json; the file is the one the copilot preset writes.
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Copilot CLI loads every .github/hooks/*.json; the file is the one the copilot preset writes.
 [[sidecars]]
 kind = "hooks"
 dialect = "copilot-cli"

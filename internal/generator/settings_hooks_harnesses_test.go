@@ -16,7 +16,7 @@ import (
 )
 
 // hookHarnessPresets are the presets whose [[hooks]] are rendered into a file of
-// their own (the settings-file harnesses of docs/settings.md), each with the
+// their own (the settings-file harnesses of website/src/content/docs/settings.md), each with the
 // project file it writes, the setting a consumer keeps beside the generated
 // hooks and a marker the hook must carry.
 var hookHarnessFiles = map[string]string{

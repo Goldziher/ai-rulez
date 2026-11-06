@@ -1,4 +1,4 @@
-// Package conformance proves the standards claims of docs/standards.md.
+// Package conformance proves the standards claims of website/src/content/docs/standards.md.
 //
 // Each test validates a document ai-rulez produces (a checked-in golden, or the
 // output of the freshly built CLI) against the standard's own schema, vendored

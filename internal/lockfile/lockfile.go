@@ -90,7 +90,7 @@ type Entry struct {
 
 // Item pins one authored item: a rule, skill, agent, command, context file,
 // hook, role or settings source. Digest is "sha256:<hex>" over its raw files
-// (scheme in docs/lockfile.md).
+// (scheme in https://goldziher.github.io/ai-rulez/lockfile/).
 type Item struct {
 	Kind   string `toml:"kind"`
 	ID     string `toml:"id"`

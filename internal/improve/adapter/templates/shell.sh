@@ -1,5 +1,5 @@
 #!/bin/sh
-# Template optimizer for `ai-rulez improve run <skill> --with ./optimize.sh` (protocol v1, docs/improve.md).
+# Template optimizer for `ai-rulez improve run <skill> --with ./optimize.sh` (protocol v1, https://goldziher.github.io/ai-rulez/improve/).
 # improve starts this script without a shell wrapper, in the run's workspace directory, with the request
 # on standard input and a scrubbed environment (PATH, locale and what you pass with --env-pass). It must
 # print one JSON response on standard output and may edit only <skill>/SKILL.md and <skill>/references/**.

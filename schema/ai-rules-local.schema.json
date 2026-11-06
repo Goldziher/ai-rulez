@@ -310,7 +310,7 @@
     },
     "ard": {
       "additionalProperties": false,
-      "description": "Agentic Resource Discovery manifest (ard.json, spec v0.91, a proposal). Identifiers are urn:air:<publisher>:<namespace>:<name>. Emitted by `ai-rulez publish --emit ard`; see docs/ard.md.",
+      "description": "Agentic Resource Discovery manifest (ard.json, spec v0.91, a proposal). Identifiers are urn:air:<publisher>:<namespace>:<name>. Emitted by `ai-rulez publish --emit ard`; see https://goldziher.github.io/ai-rulez/ard/.",
       "properties": {
         "base_url": {
           "description": "https URL the skill files (skills/<name>/SKILL.md, written next to ard.json) are served from. Without it skills point at the raw file of the release tag and plugins at the release archive.",
@@ -374,7 +374,7 @@
     },
     "catalog": {
       "additionalProperties": false,
-      "description": "Defaults for `ai-rulez catalog` and its static site (see docs/catalog.md). A command-line flag overrides each key.",
+      "description": "Defaults for `ai-rulez catalog` and its static site (see https://goldziher.github.io/ai-rulez/catalog/). A command-line flag overrides each key.",
       "properties": {
         "exclude_owners": {
           "description": "Leave owner names out of the catalog JSON and the site. Default false.",
@@ -727,7 +727,7 @@
       "type": "object"
     },
     "enabled_plugins": {
-      "description": "Plugins from marketplaces this project does not author, enabled for the Claude Code, Codex and OpenCode presets from one declaration: Claude Code gets extraKnownMarketplaces and enabledPlugins in .claude/settings.json, Codex a [plugins.\"<id>\"] table in .codex/config.toml, OpenCode its npm package in opencode.json. Only the entries written here are owned; the rest of each settings file is kept. An id also listed in claude.settings.disable_plugins, a marketplace named like the project's registered own [marketplace], and a directory marketplace in the user config are errors. See docs/plugins.md.",
+      "description": "Plugins from marketplaces this project does not author, enabled for the Claude Code, Codex and OpenCode presets from one declaration: Claude Code gets extraKnownMarketplaces and enabledPlugins in .claude/settings.json, Codex a [plugins.\"<id>\"] table in .codex/config.toml, OpenCode its npm package in opencode.json. Only the entries written here are owned; the rest of each settings file is kept. An id also listed in claude.settings.disable_plugins, a marketplace named like the project's registered own [marketplace], and a directory marketplace in the user config are errors. See https://goldziher.github.io/ai-rulez/plugins/.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -773,7 +773,7 @@
     },
     "exposure": {
       "additionalProperties": false,
-      "description": "Session exposure: what a session sees at start, and the area map that names which part of the repository an artifact belongs to. Keep the map inline (areas, skill_areas) or in areas_file, not both. Every key is optional; the rules that read the table are inert without it. See docs/exposure.md.",
+      "description": "Session exposure: what a session sees at start, and the area map that names which part of the repository an artifact belongs to. Keep the map inline (areas, skill_areas) or in areas_file, not both. Every key is optional; the rules that read the table are inert without it. See https://goldziher.github.io/ai-rulez/exposure/.",
       "properties": {
         "areas": {
           "description": "Inline area map.",
@@ -848,7 +848,7 @@
     },
     "governance": {
       "additionalProperties": false,
-      "description": "Which pinned content needs a recorded reviewer approval in ai-rulez.lock (see docs/approvals.md).",
+      "description": "Which pinned content needs a recorded reviewer approval in ai-rulez.lock (see https://goldziher.github.io/ai-rulez/approvals/).",
       "properties": {
         "approvers": {
           "description": "Allowlist of reviewer strings (exact match). Empty allows any reviewer. An @org/team entry is expanded through teams.",
@@ -1132,7 +1132,7 @@
     },
     "improve": {
       "additionalProperties": false,
-      "description": "Defaults of `ai-rulez improve run`: the held-out split, the acceptance gate, limits and the optimizer. A flag always wins. `optimizer` and `env_pass` take effect from a repository config only with --trust-repo-optimizer. See docs/improve.md.",
+      "description": "Defaults of `ai-rulez improve run`: the held-out split, the acceptance gate, limits and the optimizer. A flag always wins. `optimizer` and `env_pass` take effect from a repository config only with --trust-repo-optimizer. See https://goldziher.github.io/ai-rulez/improve/.",
       "properties": {
         "env_pass": {
           "description": "Environment variable names forwarded to the optimizer. From a repository config only with --trust-repo-optimizer.",
@@ -1211,7 +1211,7 @@
         "additionalProperties": false,
         "properties": {
           "format": {
-            "description": "Read the source as an Open Knowledge Format bundle (a directory or git repository; path selects the bundle directory) and convert it to rules, context and skills at load time. See docs/okf.md.",
+            "description": "Read the source as an Open Knowledge Format bundle (a directory or git repository; path selects the bundle directory) and convert it to rules, context and skills at load time. See https://goldziher.github.io/ai-rulez/okf/.",
             "enum": ["okf"],
             "type": "string"
           },
@@ -1241,7 +1241,7 @@
             "type": "string"
           },
           "min_release_age": {
-            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "pattern": "^(0|[0-9]+[hdw])$",
             "type": "string"
           },
@@ -1270,7 +1270,7 @@
             "type": "string"
           },
           "version": {
-            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "type": "string"
           }
         },
@@ -1280,7 +1280,7 @@
       "type": "array"
     },
     "installed_marketplaces": {
-      "description": "Plugin marketplaces the project reads: a Claude Code (.claude-plugin/marketplace.json), Codex (.agents/plugins/marketplace.json) or Cursor (.cursor-plugin/marketplace.json) index in a repository, a local directory or at an https URL. An [[installed_plugins]] entry installs a plugin from one. See docs/installed-plugins.md.",
+      "description": "Plugin marketplaces the project reads: a Claude Code (.claude-plugin/marketplace.json), Codex (.agents/plugins/marketplace.json) or Cursor (.cursor-plugin/marketplace.json) index in a repository, a local directory or at an https URL. An [[installed_plugins]] entry installs a plugin from one. See https://goldziher.github.io/ai-rulez/installed-plugins/.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -1325,7 +1325,7 @@
             "type": "string"
           },
           "version": {
-            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md.",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "type": "string"
           }
         },
@@ -1335,7 +1335,7 @@
       "type": "array"
     },
     "installed_plugins": {
-      "description": "Plugins whose skills, agents, commands, hooks and MCP servers the project imports, read through an installed marketplace or straight from a plugin repository or directory. Hooks stay off unless enable_hooks is set. See docs/installed-plugins.md.",
+      "description": "Plugins whose skills, agents, commands, hooks and MCP servers the project imports, read through an installed marketplace or straight from a plugin repository or directory. Hooks stay off unless enable_hooks is set. See https://goldziher.github.io/ai-rulez/installed-plugins/.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -1431,7 +1431,7 @@
             "type": "string"
           },
           "version": {
-            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See docs/lockfile.md.",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Repository sources only. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "type": "string"
           }
         },
@@ -1472,7 +1472,7 @@
             "type": "string"
           },
           "min_release_age": {
-            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "pattern": "^(0|[0-9]+[hdw])$",
             "type": "string"
           },
@@ -1527,7 +1527,7 @@
             "type": "string"
           },
           "version": {
-            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "type": "string"
           }
         },
@@ -1538,7 +1538,7 @@
     },
     "judge": {
       "additionalProperties": false,
-      "description": "Settings of `ai-rulez judge`: which categories run, how a run gates, what is attached to a unit, rubric skills, prompt extensions and quote-pinned suppressions. The keys marked \"User scope only\" are honoured from the user config file, the environment and flags only; a repository value is ignored and reported. See docs/judge.md.",
+      "description": "Settings of `ai-rulez judge`: which categories run, how a run gates, what is attached to a unit, rubric skills, prompt extensions and quote-pinned suppressions. The keys marked \"User scope only\" are honoured from the user config file, the environment and flags only; a repository value is ignored and reported. See https://goldziher.github.io/ai-rulez/judge/.",
       "properties": {
         "allow_llm": {
           "description": "User scope only. Agree to send content to the model's provider without --allow-llm.",
@@ -2500,7 +2500,7 @@
     },
     "lock": {
       "additionalProperties": false,
-      "description": "Content pinning in ai-rulez.lock (see docs/lockfile.md).",
+      "description": "Content pinning in ai-rulez.lock (see https://goldziher.github.io/ai-rulez/lockfile/).",
       "properties": {
         "enforce": {
           "description": "Defaults to true whenever ai-rulez.lock exists (set false to opt out). Report content drift as AR981/AR982 in `validate`, make `lock --check` fail on a lock without content pins, make `generate` refuse a remote include or installed skill the lock does not pin (AR010 becomes an error), and make the skills server (`mcp --serve-skills`) refuse a served skill whose digest is not the one recorded in ai-rulez.lock (kind served) or that the lock does not pin at all. Run `ai-rulez lock` to record the digests.",
@@ -2511,7 +2511,7 @@
           "type": "boolean"
         },
         "min_release_age": {
-          "description": "Default minimum release age (7d, 12h, 2w) for sources that use a version constraint and set no min_release_age of their own. Holds back tags younger than this (AR733). See docs/lockfile.md.",
+          "description": "Default minimum release age (7d, 12h, 2w) for sources that use a version constraint and set no min_release_age of their own. Holds back tags younger than this (AR733). See https://goldziher.github.io/ai-rulez/lockfile/.",
           "pattern": "^(0|[0-9]+[hdw])$",
           "type": "string"
         },
@@ -3106,7 +3106,7 @@
     },
     "permissions": {
       "additionalProperties": false,
-      "description": "Allow/ask/deny rules in Claude Code permission-rule syntax, owned rule by rule in .claude/settings.json and translated into the native permission format of the other harnesses that have one (see docs/permissions.md).",
+      "description": "Allow/ask/deny rules in Claude Code permission-rule syntax, owned rule by rule in .claude/settings.json and translated into the native permission format of the other harnesses that have one (see https://goldziher.github.io/ai-rulez/permissions/).",
       "properties": {
         "allow": {
           "$ref": "#/$defs/patternList"
@@ -3878,7 +3878,7 @@
     },
     "publish": {
       "additionalProperties": false,
-      "description": "What `ai-rulez publish` ships and its policy gates (see docs/publish.md). It has no credential keys: registries and forges authenticate through their own CLIs and environment.",
+      "description": "What `ai-rulez publish` ships and its policy gates (see https://goldziher.github.io/ai-rulez/publish/). It has no credential keys: registries and forges authenticate through their own CLIs and environment.",
       "properties": {
         "allow_dirty": {
           "description": "Publish from a tree with uncommitted changes (the manifest records dirty = true).",
@@ -4018,7 +4018,7 @@
     },
     "review": {
       "additionalProperties": false,
-      "description": "Settings of `ai-rulez review`: the rubric, what an item sends to a judge, exclusions, spend ceilings, the secret policy and the gate and fix settings. See docs/review.md.",
+      "description": "Settings of `ai-rulez review`: the rubric, what an item sends to a judge, exclusions, spend ceilings, the secret policy and the gate and fix settings. See https://goldziher.github.io/ai-rulez/review/.",
       "properties": {
         "allowed_hosts": {
           "description": "Hosts a judged run may send to (host or host:port; `provider-default` names the provider's own endpoint). Honoured only from the user config file; a repository value is ignored.",
@@ -4469,7 +4469,7 @@
     },
     "search": {
       "additionalProperties": false,
-      "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
+      "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See https://goldziher.github.io/ai-rulez/search/.",
       "properties": {
         "batch_size": {
           "description": "Texts per embedding call during `search index` (default 64); lower it for a provider that caps or rate-limits batches.",
@@ -4639,7 +4639,7 @@
     },
     "signing": {
       "additionalProperties": false,
-      "description": "Who may sign ai-rulez.lock and how fresh the signature must be (see docs/signing.md). Nothing is enforced unless require names a subject.",
+      "description": "Who may sign ai-rulez.lock and how fresh the signature must be (see https://goldziher.github.io/ai-rulez/signing/). Nothing is enforced unless require names a subject.",
       "properties": {
         "attestation": {
           "description": "Lock bundle path relative to the config directory. Default ai-rulez.lock.sigstore.json.",
@@ -4734,7 +4734,7 @@
                 "type": "string"
               },
               "subject": {
-                "description": "What the signer may vouch for: the lock, a bundle, a skill, an SBOM or signed approvals (docs/approvals.md). Default lock.",
+                "description": "What the signer may vouch for: the lock, a bundle, a skill, an SBOM or signed approvals (https://goldziher.github.io/ai-rulez/approvals/). Default lock.",
                 "enum": ["lock", "bundle", "skill", "sbom", "approval"],
                 "type": "string"
               },
@@ -4806,7 +4806,7 @@
             "type": "integer"
           },
           "min_release_age": {
-            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "pattern": "^(0|[0-9]+[hdw])$",
             "type": "string"
           },
@@ -4842,7 +4842,7 @@
             "type": "string"
           },
           "version": {
-            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See https://goldziher.github.io/ai-rulez/lockfile/.",
             "type": "string"
           }
         },
@@ -4878,7 +4878,7 @@
     },
     "telemetry": {
       "additionalProperties": false,
-      "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",
+      "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See https://goldziher.github.io/ai-rulez/telemetry/.",
       "properties": {
         "allow_network": {
           "description": "Consent to OTLP export. Ignored in a repository config; honoured in the user config and AI_RULEZ_TELEMETRY_ALLOW_NETWORK. Default false.",

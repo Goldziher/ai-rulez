@@ -32,7 +32,7 @@ func ValidTelemetryProtocol(p string) bool {
 // which skills, rules, agents and context files a harness loaded. Everything is
 // off by default. Local JSONL recording needs only Enabled; network export also
 // needs AllowNetwork and an endpoint, and a repository config cannot grant
-// either (see internal/telemetry and docs/telemetry.md for the trust rule).
+// either (see internal/telemetry and https://goldziher.github.io/ai-rulez/telemetry/ for the trust rule).
 type TelemetryConfig struct {
 	// Enabled is a pointer so the user config can say false explicitly: an
 	// explicit user-scope false beats a repository's true.

@@ -125,7 +125,7 @@ func joinClass(in *RankInput, id string, record *SkillRecord) (kind string, coun
 }
 
 // Rank recommends, per skill, whether to rewrite, prune, review or keep it. The
-// rules are fixed and documented in docs/evals.md:
+// rules are fixed and documented in https://goldziher.github.io/ai-rulez/evals/:
 //
 //	rewrite  the recorded pass rate, trigger precision or recall is below its floor,
 //	         the ablation delta is negative, the skill changed after its last passing

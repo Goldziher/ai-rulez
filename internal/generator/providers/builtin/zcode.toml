@@ -64,7 +64,7 @@ dialect = "zcode"
 global_path = ".zcode/cli/config.json"
 
 # Hooks: top-level [[hooks]] rendered in zcode's native format, read from the
-# vendor documentation (see docs/settings.md). ZCode runs only user-level hooks (hooks.events of the user config.json).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). ZCode runs only user-level hooks (hooks.events of the user config.json).
 [[sidecars]]
 kind = "hooks"
 dialect = "zcode"

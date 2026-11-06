@@ -14,9 +14,6 @@ sed -i '' 's/var version = ".*"/var version = "'"$version"'"/' cmd/ai-rulez/main
 # npm release wrapper
 sed -i '' 's/"version": ".*"/"version": "'"$version"'"/' release/npm/package.json
 
-# pyproject.toml
-sed -i '' 's/^version = ".*"/version = "'"$version"'"/' pyproject.toml
-
 # PyPI wrapper __version__
 sed -i '' 's/__version__ = ".*"/__version__ = "'"$version"'"/' release/pypi/__init__.py
 sed -i '' 's/__version__ = ".*"/__version__ = "'"$version"'"/' release/pypi/ai_rulez/__init__.py
@@ -35,21 +32,20 @@ sed -i '' 's/rev: v[0-9][0-9.]*/rev: v'"$version"'/' README.md
 sed -i '' 's/revision = "v[0-9][0-9.]*"/revision = "v'"$version"'"/g' README.md
 
 # Poly hook catalog + docs: pinned ai-rulez versions (npx/uvx) and revisions
-for f in poly-hooks.toml docs/poly-hooks.md; do
+for f in poly-hooks.toml website/src/content/docs/poly-hooks.md; do
   sed -i '' 's/ai-rulez@[0-9][0-9.]*/ai-rulez@'"$version"'/g' "$f"
   sed -i '' 's/ai-rulez==[0-9][0-9.]*/ai-rulez=='"$version"'/g' "$f"
 done
-sed -i '' 's/revision = "v[0-9][0-9.]*"/revision = "v'"$version"'"/g' docs/poly-hooks.md
+sed -i '' 's/revision = "v[0-9][0-9.]*"/revision = "v'"$version"'"/g' website/src/content/docs/poly-hooks.md
 
 echo "Done. Updated version to ${version} in:"
 echo "  - cmd/commands/root.go"
 echo "  - cmd/ai-rulez/main.go"
 echo "  - release/npm/package.json"
-echo "  - pyproject.toml"
 echo "  - release/pypi/__init__.py"
 echo "  - release/pypi/ai_rulez/__init__.py"
 echo "  - internal/hooks/setup.go"
 echo "  - scripts/pre-commit/run-ai-rulez.sh"
 echo "  - README.md"
 echo "  - poly-hooks.toml"
-echo "  - docs/poly-hooks.md"
+echo "  - website/src/content/docs/poly-hooks.md"

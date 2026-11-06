@@ -21,7 +21,7 @@ x-ai-rulez:
 - Separate `.ai-rulez/mcp.yaml`, `mcp.toml` and `mcp.json` files are no longer read; declare servers as `[[mcp_servers]]`.
 - MCP server definitions are project-level config entries. Domain content does not currently define or override MCP servers.
 - The MCP server exposes read, CRUD, generate, and validate operations for assistants. With `source = "agents"` and `agents_md_split = true`, the context tools address one `##` section of the root `AGENTS.md` as an item.
-- Remote servers (an HTTP `url`) can be published as MCP Server Cards with `publish --emit mcp-server-card` (`internal/mcpcard`, `docs/mcp-server-card.md`); stdio servers are skipped and header and environment values are never written.
+- Remote servers (an HTTP `url`) can be published as MCP Server Cards with `publish --emit mcp-server-card` (`internal/mcpcard`, `website/src/content/docs/mcp-server-card.md`); stdio servers are skipped and header and environment values are never written.
 
 Typical setup:
 

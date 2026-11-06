@@ -66,7 +66,7 @@ dialect = "grok"
 global_path = ".grok/config.toml"
 
 # Hooks: top-level [[hooks]] rendered in grok's native format, read from the
-# vendor documentation (see docs/settings.md). Grok reads every .grok/hooks/*.json (Claude-style groups, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Grok reads every .grok/hooks/*.json (Claude-style groups, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "grok"

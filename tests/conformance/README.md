@@ -1,6 +1,6 @@
 # Conformance tests
 
-This package backs the claims of [docs/standards.md](../../docs/standards.md). Each test validates a document ai-rulez
+This package backs the claims of [website/src/content/docs/standards.md](../../website/src/content/docs/standards.md). Each test validates a document ai-rulez
 produces, either a checked-in golden or the output of the CLI built from the working tree, against the standard's own
 schema. The schemas are vendored under `schemas/` and pinned by SHA-256 in `schemas_test.go`. The tests never use the
 network; the only external step is the refresh below, done by hand.
@@ -32,7 +32,7 @@ The product embeds its own copies of the Agent Plugins, ARD and CycloneDX/SPDX s
 
 1. Fetch the new file from the upstream source in the table, into the directory named there. Keep the file byte for byte;
    do not reformat it.
-2. Update the commit or version in the table above, in `docs/standards.md`, and in the owning package
+2. Update the commit or version in the table above, in `website/src/content/docs/standards.md`, and in the owning package
    (`SchemaSourceCommit` in `internal/agentplugins/schema.go`, `SchemaCommit` and `SchemaSHA256` in `internal/ard/schema.go`, `SpecCommit` in `internal/mcpcard/mcpcard.go`).
 3. Copy the file over the product's embedded copy, then run `shasum -a 256` on it and update the digest in
    `schemas_test.go` and in the owning package's own pin test.

@@ -37,7 +37,7 @@ const (
 	ImproveDefaultMaxHoldoutEvals = 3
 )
 
-// ImproveConfig is the [improve] table: defaults of `ai-rulez improve run` (docs/improve.md). A flag always
+// ImproveConfig is the [improve] table: defaults of `ai-rulez improve run` (https://goldziher.github.io/ai-rulez/improve/). A flag always
 // wins. optimizer and env_pass choose a command and the environment it receives, so a repository config
 // is honored for them only with --trust-repo-optimizer; the thresholds apply from any config.
 //

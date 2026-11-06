@@ -1,7 +1,7 @@
 # Harness trap table: files a harness silently ignores. Each row is data, not
 # code: a closed predicate vocabulary (see traps.go), provenance (source, an
 # anchor quote copied from the vendor page, verified_on) and a fix hint.
-# A row must not ship without a quote and a date. docs/harness-traps.md is
+# A row must not ship without a quote and a date. website/src/content/docs/harness-traps.md is
 # generated from this table (go test checks it for drift).
 schema = 1
 

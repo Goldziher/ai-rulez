@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Codes of the SBOM findings (the AR75x block of docs/strict-validation.md).
+// Codes of the SBOM findings (the AR75x block of https://goldziher.github.io/ai-rulez/strict-validation/).
 // They are reported by `ai-rulez sbom`; the registry in internal/lint lists them.
 const (
 	CodeUnpinned      = "AR750"

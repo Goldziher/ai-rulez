@@ -11,7 +11,7 @@ import (
 )
 
 // PolicyViolation is one place where the repository configuration tried to
-// loosen an organization policy (docs/policy.md). The policy package fills it;
+// loosen an organization policy (https://goldziher.github.io/ai-rulez/policy/). The policy package fills it;
 // the lint package reports it as AR740-AR745.
 type PolicyViolation struct {
 	// Code is the rule code (AR740 ... AR745).

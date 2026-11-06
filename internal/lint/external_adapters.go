@@ -11,7 +11,7 @@ import (
 
 // Adapters turn the JSON a non-SARIF scanner prints into findings. They are
 // selected with format = "adapter:<name>", version-pinned by the profile that
-// names them (the shape each expects is documented in docs/strict-validation.md),
+// names them (the shape each expects is documented in https://goldziher.github.io/ai-rulez/strict-validation/),
 // and as strict as the SARIF reader: a document of another shape is an error
 // (AR9E3), never an empty clean result.
 

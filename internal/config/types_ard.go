@@ -10,7 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
 )
 
-// ARDConfig is the [ard] table (docs/ard.md): who publishes the Agentic Resource
+// ARDConfig is the [ard] table (https://goldziher.github.io/ai-rulez/ard/): who publishes the Agentic Resource
 // Discovery manifest and under which namespace. Identifiers are
 // urn:air:<publisher>:<namespace>:<name>.
 type ARDConfig struct {

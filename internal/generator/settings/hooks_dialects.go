@@ -9,7 +9,7 @@ import (
 
 // handlerShape names the handler fields of a harness rendered through the
 // generic path. Every harness in dialectSpecs was read from its vendor's hooks
-// documentation; the source and date of each are in docs/settings.md and the
+// documentation; the source and date of each are in https://goldziher.github.io/ai-rulez/settings/ and the
 // comment above its entry.
 type handlerShape struct {
 	// typed writes "type": "command" first.

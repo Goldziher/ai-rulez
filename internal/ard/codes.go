@@ -2,7 +2,7 @@ package ard
 
 // Rule codes under which ai-rulez reports findings (validate --strict, publish).
 // They are registered, with explanations, in internal/lint and documented in
-// docs/strict-validation.md; the block is AR9S.
+// https://goldziher.github.io/ai-rulez/strict-validation/; the block is AR9S.
 const (
 	CodeSchema      = "AR9S0"
 	CodeIdentifier  = "AR9S1"

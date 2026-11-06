@@ -218,7 +218,7 @@
             }
           },
           "approval": {
-            "description": "Reviewer-approval state (docs/approvals.md). null unless [governance] require_approval selects the item or ai-rulez.lock records an approval of its current digest.",
+            "description": "Reviewer-approval state (https://goldziher.github.io/ai-rulez/approvals/). null unless [governance] require_approval selects the item or ai-rulez.lock records an approval of its current digest.",
             "oneOf": [
               { "type": "null" },
               {

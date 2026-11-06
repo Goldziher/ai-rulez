@@ -9,7 +9,7 @@
 // pre-tool call on exit code 2. Only the adapter between the harness's event API
 // and that runtime differs per flavor. Event names, tool names and file
 // locations were read from each vendor's plugin documentation and source (see
-// docs/settings.md for the sources and dates).
+// https://goldziher.github.io/ai-rulez/settings/ for the sources and dates).
 package hookplugins
 
 import (

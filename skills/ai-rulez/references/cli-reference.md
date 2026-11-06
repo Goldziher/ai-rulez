@@ -92,7 +92,7 @@ Verify signatures and provenance: `--attestation`, `--approvals`, `--self`, `--p
 
 ### `ai-rulez export okf` / `import okf` / `okf validate`
 
-Open Knowledge Format (OKF v0.2) support, see `docs/okf.md`.
+Open Knowledge Format (OKF v0.2) support, see `https://goldziher.github.io/ai-rulez/okf/`.
 
 - `ai-rulez export okf [--output-dir <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — create a deterministic OKF bundle in `okf.dir` (default `<project-root>/docs/okf/`); `--check` writes nothing and exits 2 on drift
 - `ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain <d>] [--dry-run] [--force]` — convert a bundle into `.ai-rulez/` sources; never overwrites without `--force`, scans imported text (AR001-AR011) first

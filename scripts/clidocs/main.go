@@ -1,6 +1,6 @@
 // Command clidocs generates the command reference of the docs from the Cobra
-// command tree: docs/cli-reference.md in full, and the command index between the
-// markers in docs/cli.md. --check fails when either differs from the tree.
+// command tree: website/src/content/docs/cli-reference.md in full, and the command index between the
+// markers in website/src/content/docs/cli.md. --check fails when either differs from the tree.
 //
 //	go run ./scripts/clidocs           # write both
 //	go run ./scripts/clidocs --check   # exit 1 if stale
@@ -24,7 +24,7 @@ func main() {
 }
 
 func run() error {
-	docsDir := flag.String("docs", "docs", "docs source directory")
+	docsDir := flag.String("docs", filepath.Join("website", "src", "content", "docs"), "docs content directory")
 	check := flag.Bool("check", false, "verify the files instead of writing them")
 	flag.Parse()
 

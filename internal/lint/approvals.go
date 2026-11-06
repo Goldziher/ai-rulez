@@ -2,7 +2,7 @@ package lint
 
 import "path/filepath"
 
-// Codes of reviewer approvals (docs/approvals.md). The commands compute the
+// Codes of reviewer approvals (https://goldziher.github.io/ai-rulez/approvals/). The commands compute the
 // status of every pinned item from [governance] and the [[approval]] records of
 // ai-rulez.lock (internal/approval) and pass the failures in with WithApprovals,
 // because this package must not import the lock machinery. The same codes are

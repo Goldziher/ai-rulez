@@ -249,7 +249,7 @@ var baseRuleDocs = map[string]RuleDoc{
 	},
 }
 
-// anchorFor returns the heading anchor of a rule in docs/strict-validation.md.
+// anchorFor returns the heading anchor of a rule in https://goldziher.github.io/ai-rulez/strict-validation/.
 func anchorFor(r RuleInfo) string {
 	return slugify(r.Code + " " + r.Name)
 }
@@ -321,7 +321,7 @@ const (
 )
 
 // RuleReferenceMarkdown renders the per-rule reference section of
-// docs/strict-validation.md: one heading per rule, which is the anchor target
+// https://goldziher.github.io/ai-rulez/strict-validation/: one heading per rule, which is the anchor target
 // of every SARIF helpUri and `--explain` link.
 func RuleReferenceMarkdown() string {
 	var sb strings.Builder

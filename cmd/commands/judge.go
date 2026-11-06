@@ -121,7 +121,7 @@ the 200 a real run takes, and exits 1 with a warning when it exceeds --max-cost.
 
 Exit codes: 0 every unit passed; 1 the run could not complete (refused, capped, model failure, nothing to
 judge, or a unit only partly reviewed without --allow-partial); 2 a unit met --fail-on or was withheld for
-secrets. Under an organization policy that forbids model use, only --estimate runs. See docs/judge.md.`,
+secrets. Under an organization policy that forbids model use, only --estimate runs. See https://goldziher.github.io/ai-rulez/judge/.`,
 		Example: `  ai-rulez judge --estimate
   ai-rulez judge --allow-llm
   ai-rulez judge .claude/skills/deploy --allow-llm --fail-on security:medium,governance:high

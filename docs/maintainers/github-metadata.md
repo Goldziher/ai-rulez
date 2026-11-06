@@ -42,7 +42,7 @@ GitHub allows at most 20 topics; this uses all 20.
 ## Release notes template
 
 Keep a Changelog sections stay in `CHANGELOG.md`; the GitHub release carries this shorter form. Replace the
-placeholders, and take the standards table from [docs/standards.md](../standards.md) so the pinned versions are the ones
+placeholders, and take the standards table from [the standards page](https://goldziher.github.io/ai-rulez/standards/) so the pinned versions are the ones
 the release was tested against.
 
 ```markdown
@@ -65,7 +65,7 @@ One sentence on what this release changes for a user.
 
 ### Breaking changes
 
-- None. (Or: the change and the line of `ai-rulez migrate` that handles it; see docs/migration-v5.md.)
+- None. (Or: the change and the line of `ai-rulez migrate` that handles it; see website/src/content/docs/migration-v5.md.)
 
 ### Upgrade
 

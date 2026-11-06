@@ -30,7 +30,7 @@ const exitImproveNoCandidate = 2
 const improveKindSkill = "skill"
 
 // improveExperimental is printed once per invocation.
-const improveExperimental = "warning: `ai-rulez improve` is experimental: flags, the optimizer protocol and report.json may change before it is stable (docs/improve.md)"
+const improveExperimental = "warning: `ai-rulez improve` is experimental: flags, the optimizer protocol and report.json may change before it is stable (https://goldziher.github.io/ai-rulez/improve/)"
 
 var improveFlags struct {
 	with              string
@@ -91,7 +91,7 @@ var improveRunCmd = &cobra.Command{
 	Long: `EXPERIMENTAL. Run an external optimizer (--with) on a throwaway copy of an authored skill and
 accept its candidate only if a held-out eval set improves without regressions.
 
-The optimizer speaks a small JSON protocol on standard input and output (docs/improve.md). It gets
+The optimizer speaks a small JSON protocol on standard input and output (https://goldziher.github.io/ai-rulez/improve/). It gets
 the train cases only; cases tagged "holdout" (or a deterministic --holdout-fraction split when none
 is tagged) never leave ai-rulez. A candidate is accepted when held-out pass rate gains at least
 --min-gain with at most --max-regressions held-out cases flipping to fail, trigger precision and

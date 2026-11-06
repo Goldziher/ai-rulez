@@ -12,7 +12,7 @@ import (
 )
 
 // Codes of the activation checks that read the eval cases themselves, not a
-// recorded result (docs/evals.md#activation-mode).
+// recorded result (https://goldziher.github.io/ai-rulez/evals/#activation-mode).
 const (
 	CodeActivationPolicyConflict = "AR9A3"
 	CodeActivationPromptNames    = "AR9A4"

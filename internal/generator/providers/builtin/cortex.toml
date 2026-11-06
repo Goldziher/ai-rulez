@@ -50,7 +50,7 @@ drop_bare_aliases = true
 field = "model"
 
 # Hooks: top-level [[hooks]] rendered in cortex's native format, read from the
-# vendor documentation (see docs/settings.md). Cortex Code reads `hooks` from settings.json; the user level is the dedicated hooks.json.
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Cortex Code reads `hooks` from settings.json; the user level is the dedicated hooks.json.
 [[sidecars]]
 kind = "hooks"
 dialect = "cortex"

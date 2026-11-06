@@ -5,7 +5,7 @@
 // and OKF includes (DigestDir) and of served skills, plus one digest over the
 // whole set. It is the only hashing scheme in the lock.
 //
-// The scheme is specified in docs/lockfile.md and frozen by the test vectors in
+// The scheme is specified in https://goldziher.github.io/ai-rulez/lockfile/ and frozen by the test vectors in
 // hash_test.go. In short, every digest is a SHA-256 over length-prefixed fields
 // that start with a domain-separation label ("ai-rulez/<kind>/v1"), files are
 // hashed from the bytes on disk (never from the frontmatter-stripped content the

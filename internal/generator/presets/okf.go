@@ -15,7 +15,7 @@ import (
 // sync with the sources. The bundle is committed documentation, so it is never
 // gitignored, and every file is written verbatim: a generated-by banner would
 // break the frontmatter that OKF requires at the start of each concept.
-// See docs/okf.md.
+// See https://goldziher.github.io/ai-rulez/okf/.
 
 // OKFPresetGenerator writes the OKF bundle.
 type OKFPresetGenerator struct{}

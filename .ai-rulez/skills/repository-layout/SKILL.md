@@ -23,11 +23,11 @@ x-ai-rulez:
 ### Multi-runtime Wrappers
 
 - `release/npm` and `release/pypi`: JavaScript and Python entry points backed by the Go binary.
-- `package.json` and `pyproject.toml`: publish metadata for npm and PyPI wrappers.
+- `release/npm/package.json` and `release/pypi/setup.py`: publish metadata for the npm and PyPI wrappers.
 - Homebrew distribution is managed via a tap outside this repository.
 
 ### Documentation & Tooling
 
-- `docs/`, `site/`, and `zensical.toml`: user-facing documentation and site generation.
+- `website/`: the documentation site (Astro Starlight); `docs/`: maintainer guides and README media.
 - `schema/`: JSON schemas for configuration and MCP files.
 - `tests/`: fixtures, integration, e2e, and platform coverage.

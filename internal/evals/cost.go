@@ -54,7 +54,7 @@ const (
 // in under the assumptions; high assumes a larger context, a tool loop that
 // re-reads the skill and fixtures (toolLoopFactor times the tokens beyond the
 // harness overhead) and a longer answer. They are initial defaults, documented in
-// docs/evals.md, and the estimate tests pin them.
+// https://goldziher.github.io/ai-rulez/evals/, and the estimate tests pin them.
 const (
 	lowInputFactor   = 0.8
 	lowOutputFactor  = 0.5

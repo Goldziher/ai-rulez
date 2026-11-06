@@ -6,8 +6,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 )
 
-// Codes of the telemetry checks (see docs/telemetry.md). AR9K is the telemetry
-// block of the allocation table in docs/strict-validation.md.
+// Codes of the telemetry checks (see https://goldziher.github.io/ai-rulez/telemetry/). AR9K is the telemetry
+// block of the allocation table in https://goldziher.github.io/ai-rulez/strict-validation/.
 const (
 	CodeTelemetryConfigInvalid = "AR9K0"
 	CodeTelemetryKeyIgnored    = "AR9K1"

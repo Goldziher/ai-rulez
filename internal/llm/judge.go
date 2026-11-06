@@ -75,7 +75,7 @@ type JudgeOptions struct {
 
 // Judge grades transcript against rubric with structured output and returns
 // the score and rationale. Temperature is 0. The transcript is sent to the
-// configured model; see docs/llm.md for what that means for data egress. It
+// configured model; see https://goldziher.github.io/ai-rulez/llm/ for what that means for data egress. It
 // refuses, before any call, when the rubric or transcript contains
 // secret-looking text; use JudgeWith to redact and send instead.
 func Judge(ctx context.Context, c Client, rubric, transcript string) (Verdict, error) {

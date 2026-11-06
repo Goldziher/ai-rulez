@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-report.v1.schema.json",
   "title": "ai-rulez exposure report",
-  "description": "Output of `ai-rulez exposure --format json`: what a Claude Code or Codex session started at the repository root loads before it touches a file, the skill listing against Claude Code's listing budget, and what waits on demand or for the user. An artifact of phase unknown counts as start in start_tokens, start_tokens_by_kind and listing. See docs/exposure.md.",
+  "description": "Output of `ai-rulez exposure --format json`: what a Claude Code or Codex session started at the repository root loads before it touches a file, the skill listing against Claude Code's listing budget, and what waits on demand or for the user. An artifact of phase unknown counts as start in start_tokens, start_tokens_by_kind and listing. See https://goldziher.github.io/ai-rulez/exposure/.",
   "type": "object",
   "required": [
     "schema_version",

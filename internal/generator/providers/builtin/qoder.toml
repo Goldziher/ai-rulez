@@ -87,7 +87,7 @@ emit_when = "has_mcp_json_entries"
 global_path = ".qoder/settings.json"
 
 # Hooks: top-level [[hooks]] rendered in qoder's native format, read from the
-# vendor documentation (see docs/settings.md). Qoder CLI reads `hooks` from settings.json (Claude-style groups, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Qoder CLI reads `hooks` from settings.json (Claude-style groups, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "qoder"

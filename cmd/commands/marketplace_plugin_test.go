@@ -532,7 +532,7 @@ func TestMarketplaceAndPluginUpdateRepinToTheNewUpstreamCommit(t *testing.T) {
 	assert.Equal(t, oldMarket, afterPluginMarket, "and leaves the marketplace pin")
 	require.NoError(t, marketErr)
 	assert.Equal(t, newMarket, afterMarketMarket, "marketplace update moves the marketplace pin")
-	// The content pins of the plugin's skills are not recomputed by a per-kind update (docs/lockfile.md): the check says so until a full lock.
+	// The content pins of the plugin's skills are not recomputed by a per-kind update (website/src/content/docs/lockfile.md): the check says so until a full lock.
 	assert.Equal(t, exitDrift, checkLockAt(""), "content pins still describe the old plugin")
 	require.Equal(t, 0, writeLockAt("", "", nil), "full lock")
 	assert.Equal(t, 0, checkLockAt(""), "a full lock settles it")

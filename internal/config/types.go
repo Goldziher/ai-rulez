@@ -43,11 +43,11 @@ type Config struct {
 	InstalledSkills  []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
 	// InstalledMarketplaces and InstalledPlugins import the content of Claude
 	// Code, Codex, Cursor and Gemini plugins, read through plugin marketplaces
-	// or straight from a repository (see docs/installed-plugins.md).
+	// or straight from a repository (see https://goldziher.github.io/ai-rulez/installed-plugins/).
 	InstalledMarketplaces []InstalledMarketplaceConfig `yaml:"installed_marketplaces,omitempty" json:"installed_marketplaces,omitempty" toml:"installed_marketplaces,omitempty"` //nolint:tagliatelle
 	InstalledPlugins      []InstalledPluginConfig      `yaml:"installed_plugins,omitempty" json:"installed_plugins,omitempty" toml:"installed_plugins,omitempty"`                //nolint:tagliatelle
 	// EnabledPlugins switches on plugins from other marketplaces for the Claude
-	// Code, Codex and OpenCode presets (see docs/plugins.md).
+	// Code, Codex and OpenCode presets (see https://goldziher.github.io/ai-rulez/plugins/).
 	EnabledPlugins []EnabledPlugin `yaml:"enabled_plugins,omitempty" json:"enabled_plugins,omitempty" toml:"enabled_plugins,omitempty"` //nolint:tagliatelle
 	Header         *HeaderConfig   `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
 	Defaults       *DefaultsConfig `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
@@ -126,13 +126,13 @@ type Config struct {
 	Telemetry *TelemetryConfig `yaml:"telemetry,omitempty" json:"telemetry,omitempty" toml:"telemetry,omitempty"`
 	// Review configures `ai-rulez review` (rubric, content mode, exclusions, spend ceilings).
 	Review *ReviewConfig `yaml:"review,omitempty" json:"review,omitempty" toml:"review,omitempty"`
-	// Judge configures `ai-rulez judge` (categories, gating, attached conventions, rubric skills, prompts, suppressions); docs/judge.md.
+	// Judge configures `ai-rulez judge` (categories, gating, attached conventions, rubric skills, prompts, suppressions); https://goldziher.github.io/ai-rulez/judge/.
 	Judge *JudgeConfig `yaml:"judge,omitempty" json:"judge,omitempty" toml:"judge,omitempty"`
 	// Improve configures `ai-rulez improve run` defaults: gate thresholds, the optimizer and its isolation (types_improve.go).
 	Improve *ImproveConfig `yaml:"improve,omitempty" json:"improve,omitempty" toml:"improve,omitempty"`
 	// Exposure configures the session exposure report and the area map (types_exposure.go).
 	Exposure *ExposureConfig `yaml:"exposure,omitempty" json:"exposure,omitempty" toml:"exposure,omitempty"`
-	// Search configures `ai-rulez search` and find_skill ranking: lexical by default, optionally hybrid with embeddings (docs/search.md).
+	// Search configures `ai-rulez search` and find_skill ranking: lexical by default, optionally hybrid with embeddings (https://goldziher.github.io/ai-rulez/search/).
 	Search *skillsearch.Config `yaml:"search,omitempty" json:"search,omitempty" toml:"search,omitempty"`
 	// Verifiers declares deterministic repo checks run by `ai-rulez verifiers run`.
 	Verifiers []VerifierConfig `yaml:"verifiers,omitempty" json:"verifiers,omitempty" toml:"verifiers,omitempty"`
@@ -162,7 +162,7 @@ type Config struct {
 	// SessionStart configures the built-in SessionStart hook that regenerates outputs in a remote session.
 	SessionStart *SessionStartConfig `yaml:"session_start,omitempty" json:"session_start,omitempty" toml:"session_start,omitempty"`
 	// Permissions declares allow/ask/deny rules for .claude/settings.json and, translated,
-	// for every harness with a native permission surface (docs/permissions.md).
+	// for every harness with a native permission surface (https://goldziher.github.io/ai-rulez/permissions/).
 	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
 
 	// Runtime fields (populated during load)
@@ -182,7 +182,7 @@ type Config struct {
 	NestedRoot bool `yaml:"-" json:"-" toml:"-"`
 
 	// PolicyOutcome is what the organization policy clamped and reported at load
-	// time (docs/policy.md); nil when no policy is in force.
+	// time (https://goldziher.github.io/ai-rulez/policy/); nil when no policy is in force.
 	PolicyOutcome *PolicyOutcome `yaml:"-" json:"-" toml:"-"`
 
 	// Run is the state of the generation in progress; nil outside one.
@@ -1288,7 +1288,7 @@ type IncludeConfig struct {
 	MinReleaseAge string `yaml:"min_release_age,omitempty" json:"min_release_age,omitempty" toml:"min_release_age,omitempty"` //nolint:tagliatelle
 }
 
-// IncludeFormatOKF reads an include as an OKF bundle (see docs/okf.md).
+// IncludeFormatOKF reads an include as an OKF bundle (see https://goldziher.github.io/ai-rulez/okf/).
 const IncludeFormatOKF = "okf"
 
 // InstalledSkillConfig represents a named skill to install from an external source

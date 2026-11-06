@@ -12,7 +12,6 @@ RULES = (
     ("cmd/commands/root.go", r'(?m)^(\s*Version\s*=\s*")[^"]+(")', "semver", True),
     ("cmd/ai-rulez/main.go", r'(?m)^(var version = ")[^"]+(")', "semver", True),
     ("release/npm/package.json", r'(?m)^(\s*"version": ")[^"]+(")', "semver", True),
-    ("pyproject.toml", r'(?m)^(version = ")[^"]+(")', "python", True),
     ("release/pypi/__init__.py", r'(?m)^(__version__ = ")[^"]+(")', "python", True),
     ("release/pypi/ai_rulez/__init__.py", r'(?m)^(__version__ = ")[^"]+(")', "python", True),
     ("internal/hooks/setup.go", r'(?m)^(\s*officialPreCommitRev\s*=\s*"v)[^"]+(")', "semver", True),
@@ -21,13 +20,13 @@ RULES = (
     ("README.md", rf'(revision = "v){PINNED_RELEASE}(")', "semver", False),
     ("poly-hooks.toml", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
     ("poly-hooks.toml", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
-    ("docs/poly-hooks.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
-    ("docs/poly-hooks.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
-    ("docs/poly-hooks.md", rf'(revision = "v){PINNED_RELEASE}(")', "semver", False),
-    ("docs/installation.md", rf"(ai-rulez version ){PINNED_RELEASE}()", "semver", False),
-    ("docs/installation.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
-    ("docs/installation.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
-    ("docs/installation.md", rf"(rev: v){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/poly-hooks.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/poly-hooks.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
+    ("website/src/content/docs/poly-hooks.md", rf'(revision = "v){PINNED_RELEASE}(")', "semver", False),
+    ("website/src/content/docs/installation.md", rf"(ai-rulez version ){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/installation.md", rf"(ai-rulez@){PINNED_RELEASE}()", "semver", False),
+    ("website/src/content/docs/installation.md", rf"(ai-rulez==){PINNED_RELEASE}()", "python", False),
+    ("website/src/content/docs/installation.md", rf"(rev: v){PINNED_RELEASE}()", "semver", False),
 )
 
 

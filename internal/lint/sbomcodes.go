@@ -2,8 +2,8 @@ package lint
 
 import "path/filepath"
 
-// Codes of the SBOM findings (internal/sbom, docs/sbom.md). AR75x is the SBOM
-// block of the allocation table in docs/strict-validation.md. `ai-rulez sbom`
+// Codes of the SBOM findings (internal/sbom, https://goldziher.github.io/ai-rulez/sbom/). AR75x is the SBOM
+// block of the allocation table in https://goldziher.github.io/ai-rulez/strict-validation/. `ai-rulez sbom`
 // reports them (AR750 and AR751 with --strict-pins, AR752 with --require-lock,
 // AR753 with --check); the registry lists them so the codes, names and
 // documentation stay in one place.

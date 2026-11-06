@@ -18,7 +18,6 @@ import (
 	_ "github.com/Goldziher/ai-rulez/v5/internal/crud"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/importer"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/improve"
-	_ "github.com/Goldziher/ai-rulez/v5/internal/llmstxt"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/migrate"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/review"
 )
@@ -38,9 +37,6 @@ func reviewSplit(raw string) (meta map[string]any, body string)
 //go:linkname improveSplit github.com/Goldziher/ai-rulez/v5/internal/improve.splitFrontmatter
 func improveSplit(data []byte) (fm map[string]any, body string, ok bool)
 
-//go:linkname llmstxtSplit github.com/Goldziher/ai-rulez/v5/internal/llmstxt.splitFrontmatter
-func llmstxtSplit(src string) (meta map[string]string, body string)
-
 type split struct {
 	has  bool
 	body string
@@ -59,7 +55,6 @@ var splitters = []struct {
 	}},
 	{"review", func(s string) split { _, b := reviewSplit(s); return split{b != s, b} }},
 	{"improve", func(s string) split { _, b, h := improveSplit([]byte(s)); return split{h, b} }},
-	{"llmstxt", func(s string) split { _, b := llmstxtSplit(s); return split{b != s, b} }},
 }
 
 // isFence is the one definition every splitter now shares (internal/frontmatter):
@@ -121,9 +116,9 @@ func TestBOMAndCarriageReturnHandling(t *testing.T) {
 		input string
 		want  map[string]bool // frontmatter found, per splitter
 	}{
-		{"bom", "\ufeff---\nk: v\n---\nb", map[string]bool{"importer": true, "crud": true, "migrate": true, "okf": true, "review": true, "improve": true, "llmstxt": true}},
-		{"crlf", "---\r\nk: v\r\n---\r\nb", map[string]bool{"importer": true, "crud": true, "migrate": true, "okf": true, "review": true, "improve": true, "llmstxt": true}},
-		{"lone cr", "---\rk: v\r---\rb", map[string]bool{"importer": true, "crud": false, "migrate": false, "okf": false, "review": false, "improve": false, "llmstxt": false}},
+		{"bom", "\ufeff---\nk: v\n---\nb", map[string]bool{"importer": true, "crud": true, "migrate": true, "okf": true, "review": true, "improve": true}},
+		{"crlf", "---\r\nk: v\r\n---\r\nb", map[string]bool{"importer": true, "crud": true, "migrate": true, "okf": true, "review": true, "improve": true}},
+		{"lone cr", "---\rk: v\r---\rb", map[string]bool{"importer": true, "crud": false, "migrate": false, "okf": false, "review": false, "improve": false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

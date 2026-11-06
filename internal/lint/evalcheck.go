@@ -9,7 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 )
 
-// Codes of the eval runner checks (see docs/evals.md).
+// Codes of the eval runner checks (see https://goldziher.github.io/ai-rulez/evals/).
 const (
 	CodeEvalCaseInvalid    = "AR996"
 	CodeEvalStale          = "AR997"

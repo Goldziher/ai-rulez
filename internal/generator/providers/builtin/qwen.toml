@@ -106,7 +106,7 @@ global_path = ".qwen/settings.json"
 
 # User-scope layout: everything lives under ~/.qwen.
 # Hooks: top-level [[hooks]] rendered in qwen's native format, read from the
-# vendor documentation (see docs/settings.md). Qwen Code reads `hooks` from settings.json (Claude-style groups, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Qwen Code reads `hooks` from settings.json (Claude-style groups, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "qwen"

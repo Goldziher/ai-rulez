@@ -2,7 +2,7 @@
 // source (GitHub and GitHub Enterprise): release and tag dates, commit dates,
 // pull request reviews, CODEOWNERS and team membership.
 //
-// Two features rest on it: `min_release_age` (docs/lockfile.md) reads the
+// Two features rest on it: `min_release_age` (https://goldziher.github.io/ai-rulez/lockfile/) reads the
 // forge's publish time of a tag, which a committer cannot forge, and approvals
 // (internal/approval) read reviews, CODEOWNERS and team membership. Client is
 // the interface they depend on; HTTPClient implements it for GitHub, Fake is an

@@ -13,12 +13,12 @@ import (
 
 // The command reference of the docs is generated from the command tree
 // (`mise run docs:cli`). A command, flag, default, example or description that
-// changes without regenerating the docs fails here, so docs/cli-reference.md and
-// the command index of docs/cli.md cannot drift from the binary.
+// changes without regenerating the docs fails here, so website/src/content/docs/cli-reference.md and
+// the command index of website/src/content/docs/cli.md cannot drift from the binary.
 func TestGeneratedCLIDocsMatchTheCommandTree(t *testing.T) {
 	// Arrange
 	root := CommandTree()
-	docs := filepath.Join("..", "..", "docs")
+	docs := filepath.Join("..", "..", "website", "src", "content", "docs")
 	cliPage, err := os.ReadFile(filepath.Join(docs, "cli.md"))
 	require.NoError(t, err)
 	reference, err := os.ReadFile(filepath.Join(docs, "cli-reference.md"))
@@ -29,6 +29,6 @@ func TestGeneratedCLIDocsMatchTheCommandTree(t *testing.T) {
 
 	// Assert
 	require.NoError(t, applyErr)
-	assert.Equal(t, wantCLI, string(cliPage), "the command index of docs/cli.md is stale: run `mise run docs:cli`")
-	assert.Equal(t, clidocs.Reference(root), string(reference), "docs/cli-reference.md is stale: run `mise run docs:cli`")
+	assert.Equal(t, wantCLI, string(cliPage), "the command index of website/src/content/docs/cli.md is stale: run `mise run docs:cli`")
+	assert.Equal(t, clidocs.Reference(root), string(reference), "website/src/content/docs/cli-reference.md is stale: run `mise run docs:cli`")
 }

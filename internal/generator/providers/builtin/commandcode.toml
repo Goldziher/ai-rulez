@@ -64,7 +64,7 @@ emit_when = "has_mcp_json_entries"
 global_path = ".commandcode/mcp.json"
 
 # Hooks: top-level [[hooks]] rendered in commandcode's native format, read from the
-# vendor documentation (see docs/settings.md). Command Code reads `hooks` from settings.json (four events, seconds).
+# vendor documentation (see https://goldziher.github.io/ai-rulez/settings/). Command Code reads `hooks` from settings.json (four events, seconds).
 [[sidecars]]
 kind = "hooks"
 dialect = "commandcode"

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/exposure-inventory.v1.schema.json",
   "title": "ai-rulez exposure inventory",
-  "description": "Output of `ai-rulez exposure inventory --format json`: every native Claude Code artifact of the repository, when a session started at its root sees it, and the root project settings that shaped the listing. See docs/exposure.md.",
+  "description": "Output of `ai-rulez exposure inventory --format json`: every native Claude Code artifact of the repository, when a session started at its root sees it, and the root project settings that shaped the listing. See https://goldziher.github.io/ai-rulez/exposure/.",
   "type": "object",
   "required": ["schema_version", "harness", "root", "settings", "plugins", "artifacts", "problems"],
   "additionalProperties": false,

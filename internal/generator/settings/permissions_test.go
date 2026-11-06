@@ -433,10 +433,10 @@ func TestUnsupportedDiagnosticsNamePresetsWithoutEnforcedPermissions(t *testing.
 	}
 }
 
-// TestDocsPermissionsTable pins the harness table of docs/permissions.md to the
+// TestDocsPermissionsTable pins the harness table of website/src/content/docs/permissions.md to the
 // translators: every harness listed is translated, and every translated harness is listed.
 func TestDocsPermissionsTable(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "permissions.md"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "website", "src", "content", "docs", "permissions.md"))
 	require.NoError(t, err)
 
 	var listed []string

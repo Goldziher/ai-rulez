@@ -74,7 +74,7 @@ rule-linked verifier that run only when you opt in: command (--allow-exec) and l
 
 Larger sets, rule-linked verifiers (failures name the rule or skill they enforce), the
 paired predicate and all/any/not combinators live in .ai-rulez/verifiers/*.toml
-(see docs/verifiers.md).`,
+(see https://goldziher.github.io/ai-rulez/verifiers/).`,
 }
 
 // VerifiersRunCmd evaluates the verifiers.

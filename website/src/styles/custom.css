@@ -1,0 +1,88 @@
+/* AI-Rulez brand theme: the sky blue of the logo, with the banner's magenta and cyan as highlights. */
+:root {
+  --sl-color-accent-low: #0c2a44;
+  --sl-color-accent: #2b9fe6;
+  --sl-color-accent-high: #bfe6ff;
+
+  --sl-color-white: #f2f6fb;
+  --sl-color-gray-1: #dfe7f0;
+  --sl-color-gray-2: #b0bccb;
+  --sl-color-gray-3: #7c8a9d;
+  --sl-color-gray-4: #4d5a6c;
+  --sl-color-gray-5: #2f3a4a;
+  --sl-color-gray-6: #18202d;
+  --sl-color-black: #070a12;
+
+  --ar-magenta: #ff2bd6;
+  --ar-blue: #2b9fe6;
+  --ar-cyan: #91ddff;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #d6ecfb;
+  --sl-color-accent: #1478b8;
+  --sl-color-accent-high: #0b3352;
+
+  --sl-color-white: #0d1420;
+  --sl-color-gray-1: #1c2533;
+  --sl-color-gray-2: #333e4e;
+  --sl-color-gray-3: #576375;
+  --sl-color-gray-4: #8693a5;
+  --sl-color-gray-5: #c4ccd8;
+  --sl-color-gray-6: #e8edf3;
+  --sl-color-gray-7: #f4f7fa;
+  --sl-color-black: #ffffff;
+}
+
+[data-has-hero] .page {
+  background:
+    radial-gradient(60ch 40ch at 15% -10%, color-mix(in oklch, var(--ar-magenta) 12%, transparent), transparent 70%),
+    radial-gradient(50ch 32ch at 88% -6%, color-mix(in oklch, var(--ar-blue) 16%, transparent), transparent 70%);
+}
+
+.hero .stack a[data-variant="primary"] {
+  background: linear-gradient(120deg, var(--ar-magenta), var(--ar-blue) 60%, var(--ar-cyan));
+  border: none;
+  color: #fff;
+  box-shadow: 0 8px 30px -12px color-mix(in oklch, var(--ar-blue) 80%, transparent);
+}
+
+.hero .stack a[data-variant="primary"]:hover {
+  filter: brightness(1.08);
+}
+
+.card {
+  background: color-mix(in oklch, var(--sl-color-gray-6) 60%, transparent);
+  border: 1px solid var(--sl-color-gray-5);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+.card:hover {
+  border-color: color-mix(in oklch, var(--ar-blue) 60%, var(--sl-color-gray-5));
+  transform: translateY(-2px);
+}
+.card .icon {
+  color: var(--ar-blue);
+  background: color-mix(in oklch, var(--ar-blue) 12%, transparent);
+}
+
+.site-title img {
+  height: 2rem;
+  width: auto;
+  border-radius: 50%;
+}
+
+.hero > img,
+.hero .hero-html {
+  max-width: 220px;
+  margin-inline: auto;
+  border-radius: 50%;
+}
+
+.sl-markdown-content table {
+  font-size: var(--sl-text-sm);
+}
+.sl-markdown-content th {
+  color: var(--sl-color-white);
+}

@@ -13,7 +13,7 @@ import (
 )
 
 // GovernanceConfig is the [governance] table: which pinned content needs a
-// recorded reviewer approval in ai-rulez.lock (docs/approvals.md). Without
+// recorded reviewer approval in ai-rulez.lock (https://goldziher.github.io/ai-rulez/approvals/). Without
 // require_approval nothing needs approval.
 type GovernanceConfig struct {
 	// RequireApproval selects the content that needs approval: "remote" (includes,
@@ -45,7 +45,7 @@ type GovernanceConfig struct {
 	Enforce bool `yaml:"enforce,omitempty" json:"enforce,omitempty" toml:"enforce,omitempty"`
 
 	// PolicyFloor holds the require_approval selectors an organization policy
-	// imposes (docs/policy.md). Runtime only: the policy sets it, never the file.
+	// imposes (https://goldziher.github.io/ai-rulez/policy/). Runtime only: the policy sets it, never the file.
 	// Unlike RequireApproval it is not narrowed by Exempt.
 	PolicyFloor []string `yaml:"-" json:"-" toml:"-"`
 }

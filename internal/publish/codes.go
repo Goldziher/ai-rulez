@@ -7,7 +7,7 @@ package publish
 
 import "fmt"
 
-// Codes of the publish report (docs/publish.md). They are registered in
+// Codes of the publish report (https://goldziher.github.io/ai-rulez/publish/). They are registered in
 // internal/lint so `validate --explain AR9N0` works; `validate` never emits them.
 const (
 	// CodePreflight: a preflight gate (strict validation, lock check, plugin verification) failed.

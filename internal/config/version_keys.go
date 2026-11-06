@@ -82,7 +82,7 @@ func requestedRef(ref string, v VersionSpec) string {
 	return ref
 }
 
-// codeConstraintInvalid is rule AR731 (docs/strict-validation.md).
+// codeConstraintInvalid is rule AR731 (https://goldziher.github.io/ai-rulez/strict-validation/).
 const codeConstraintInvalid = "AR731"
 
 // validateVersionKeys checks the version, tag_prefix and include_prerelease keys

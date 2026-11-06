@@ -31,7 +31,7 @@ var LLMCmd = &cobra.Command{
   ai-rulez llm doctor      print the liter-llm version, model, endpoint host, network gate and cache
   ai-rulez llm estimate    estimate tokens and cost of sending a file, without calling anything
 
-ai-rulez never calls a model unless [llm] allow_network = true. See docs/llm.md.`,
+ai-rulez never calls a model unless [llm] allow_network = true. See https://goldziher.github.io/ai-rulez/llm/.`,
 }
 
 var llmDoctorCmd = &cobra.Command{

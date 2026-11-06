@@ -20,7 +20,7 @@ var RubricCmd = &cobra.Command{
 	Short: "List, show and lint review rubrics",
 	Long: `Inspect the rubrics "ai-rulez review" scores against: the embedded builtin:skill-quality
 and the ones under .ai-rulez/rubrics/<id>/ (rubric.toml, optional system.md, golden/*.golden.yaml
-and calibration.json). See docs/review.md.`,
+and calibration.json). See https://goldziher.github.io/ai-rulez/review/.`,
 }
 
 var rubricFormat string

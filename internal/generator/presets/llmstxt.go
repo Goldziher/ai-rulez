@@ -15,7 +15,7 @@ import (
 // an index of the project's rules, context and skills with one line per item,
 // and optionally llms-full.txt with the full text. Both files are committed
 // documentation written verbatim: a generated-by banner would sit in front of
-// the H1 that the format requires first. See docs/llms-txt.md.
+// the H1 that the format requires first. See https://goldziher.github.io/ai-rulez/llms-txt/.
 
 const (
 	// LLMsTxtFileName is the index file.
