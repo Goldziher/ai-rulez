@@ -568,8 +568,8 @@ func realPath(p string) string {
 }
 
 // withNativeArtifacts adds the Claude Code context files a git listing leaves out.
-// Generated CLAUDE.md, AGENTS.md and .claude/ are usually gitignored, yet the
-// session loads them: git decides what is committed, not what is exposed (#522).
+// Generated CLAUDE.md, AGENTS.md, .claude/ and the root .mcp.json can be
+// gitignored even though the session loads them (#522, #546).
 // A file already listed is kept once.
 func withNativeArtifacts(root string, files []string) []string {
 	seen := make(map[string]bool, len(files)+8)
@@ -582,7 +582,7 @@ func withNativeArtifacts(root string, files []string) []string {
 			seen[rel] = true
 		}
 	}
-	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md", mcpFileName} {
 		if info, err := os.Stat(filepath.Join(root, name)); err == nil && info.Mode().IsRegular() {
 			add(name)
 		}
