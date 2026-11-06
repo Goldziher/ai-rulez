@@ -37,9 +37,10 @@ version = "5.0"
 name = "acme"
 presets = ["claude", "cursor", "codex"]
 
-default = "api"
+default = "root"                 # the root files carry no domain
 
 [profiles]
+root = []
 api = ["api"]
 web = ["web"]
 
@@ -53,7 +54,8 @@ profile = "web"
 presets = ["claude", "cursor"]
 ```
 
-`ai-rulez generate` writes:
+A scope renders only the domains the root output does not already contain, so the root profile selects none: a root
+profile that included `api` would leave `packages/api` with nothing to write. `ai-rulez generate` writes:
 
 ```text
 AGENTS.md                                  # root: security

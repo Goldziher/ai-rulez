@@ -135,7 +135,7 @@ The search:
 - honours `.gitignore` inside a git repository;
 - stops at a directory with its own `.agents/ai-rulez.toml`, `.ai-rulez/config.toml` or
   `.config/ai-rulez/config.toml`, which is a separate project (`generate --recursive` handles it);
-- goes at most eight directories deep and warns when it stops early;
+- goes at most eight directories deep, and warns when it stops after reading 100000 entries;
 - leaves out generated files, empty files and files that only point at another (`@AGENTS.md`).
 
 When two directories produce the same slug (`a-b/` and `a b/`), each gets a short hash of its path
