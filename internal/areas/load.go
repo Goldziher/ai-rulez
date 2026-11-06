@@ -23,6 +23,15 @@ const MaxFileBytes = 4 << 20
 type fileDoc struct {
 	Area       []config.ExposureArea `toml:"area"`
 	SkillAreas map[string]string     `toml:"skill_areas"`
+	Accept     []fileAccept          `toml:"accept"`
+}
+
+// fileAccept is one [[accept]] table of an areas file.
+type fileAccept struct {
+	Term   string `toml:"term"`
+	Area   string `toml:"area"`
+	Path   string `toml:"path"`
+	Reason string `toml:"reason"`
 }
 
 // Load returns the area map an [exposure] table configures: the inline [[exposure.areas]] and
@@ -80,8 +89,12 @@ func LoadFile(path string) (*Map, []Problem) {
 	if err := dec.Decode(&doc); err != nil {
 		return nil, decodeProblems(path, err)
 	}
-	m, problems := New(doc.Area, doc.SkillAreas)
 	lines := strings.Split(string(data), "\n")
+	accepts := make([]Accept, len(doc.Accept))
+	for i, a := range doc.Accept {
+		accepts[i] = Accept{Term: a.Term, Area: a.Area, Path: a.Path, Reason: a.Reason, Line: acceptLine(lines, i+1, "")}
+	}
+	m, problems := NewWithAccepts(doc.Area, doc.SkillAreas, accepts)
 	for i := range problems {
 		problems[i].File = path
 		problems[i].Line = max(problems[i].LineIn(lines), 1)
@@ -114,6 +127,8 @@ func decodeProblems(path string, err error) []Problem {
 // entry is not found. A line inside a multi-line string is never read as a table header.
 func (p Problem) LineIn(lines []string) int {
 	switch {
+	case p.accept > 0:
+		return acceptLine(lines, p.accept, p.field)
 	case p.area > 0:
 		return areaLine(lines, p.area, p.field, p.needle)
 	case p.skill != "":

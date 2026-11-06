@@ -2,6 +2,7 @@ package exposure
 
 import (
 	"fmt"
+	"path"
 	"slices"
 	"strings"
 	"unicode"
@@ -49,6 +50,12 @@ type Leak struct {
 	Excerpt string `json:"excerpt"`
 	// Reason is the reason of the acceptance of an accepted leak.
 	Reason string `json:"reason"`
+	// ImportedBy are the paths of the start-of-session artifacts that import Path with `@path`, in inventory
+	// order, for a leak in an imported file; empty otherwise.
+	ImportedBy []string `json:"imported_by,omitempty"`
+	// ImportChain is every file the leak depends on: the importing artifacts and everything they import. It
+	// is not printed; `--changed` keeps the leak when any of them changed.
+	ImportChain []string `json:"-"`
 }
 
 // Message is the finding message of the leak. It is a public contract: a
@@ -86,13 +93,32 @@ type Unchecked struct {
 	Reason string `json:"reason"`
 }
 
-// UncheckedArtifacts lists the artifacts of start that were kept unread, in order.
+// UncheckedArtifacts lists, in order, the artifacts of start that were kept unread and the files they import
+// that were not read: an import over the read limit, or one the inventory does not follow (an absolute or
+// home path, one outside the root, an unreadable target). An imported file is listed under the importing
+// artifact's kind and name, with its path as written for the latter.
 func UncheckedArtifacts(start []Artifact) []Unchecked {
 	var out []Unchecked
+	seen := map[Unchecked]bool{}
+	add := func(u Unchecked) {
+		if !seen[u] {
+			seen[u] = true
+			out = append(out, u)
+		}
+	}
 	for i := range start {
 		a := &start[i]
 		if reason := a.UnreadReason(); reason != "" {
-			out = append(out, Unchecked{Path: a.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: reason})
+			add(Unchecked{Path: a.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: reason})
+			continue
+		}
+		for _, im := range a.Imports {
+			if im.Text == "" && im.TextBytes > 0 {
+				add(Unchecked{Path: im.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: "imported by " + a.Path + ": the file is over the read limit"})
+			}
+		}
+		for _, p := range a.ImportProblems {
+			add(Unchecked{Path: p.Path, Kind: a.Kind, Name: a.QualifiedName, Reason: "imported by " + a.Path + ": " + p.Reason})
 		}
 	}
 	return out
@@ -125,27 +151,119 @@ func StartInputs() []string {
 //
 // A nil map finds nothing.
 func Leaks(start []Artifact, m *areas.Map) []Leak {
+	leaks, _ := CheckLeaks(start, m)
+	return leaks
+}
+
+// CheckLeaks is Leaks with the recorded acceptances of the area map applied: a leak an [[accept]] entry covers
+// stays in the result with the entry's reason in Reason. stale are the entries that accepted nothing.
+//
+// The text of each file a start-of-session CLAUDE.md or rule imports with `@path` is scanned as the text the
+// session loads, on the lines of the imported file and reported against its path, once per file; a file that is
+// itself a start-of-session artifact is scanned as that artifact.
+func CheckLeaks(start []Artifact, m *areas.Map) (leaks []Leak, stale []areas.Accept) {
+	return CheckLeaksFrom(start, m, "")
+}
+
+// CheckLeaksFrom is CheckLeaks for an inventory of the directory rel (slash separated, "" for the project root)
+// below the project root: the leak paths are relative to that directory, while the acceptances of the area map
+// are relative to the project root, so they are matched against the path under rel.
+func CheckLeaksFrom(start []Artifact, m *areas.Map, rel string) (leaks []Leak, stale []areas.Accept) {
 	if m == nil {
-		return nil
+		return nil, nil
 	}
-	var out []Leak
+	artifacts := map[string]bool{}
+	for i := range start {
+		artifacts[start[i].Path] = true
+	}
+	importers := importerIndex(start, artifacts)
+	scanned := map[string]bool{}
 	for i := range start {
 		a := &start[i]
-		out = append(out, violations(a, m)...)
-		out = append(out, warnings(a, m)...)
+		leaks = append(leaks, violations(a, m)...)
+		for _, im := range a.Imports {
+			if im.Text == "" || artifacts[im.Path] || scanned[im.Path] {
+				continue
+			}
+			scanned[im.Path] = true
+			found := importViolations(a, &im, m)
+			by, chain := importerPaths(start, importers[im.Path])
+			for j := range found {
+				found[j].ImportedBy, found[j].ImportChain = by, chain
+			}
+			leaks = append(leaks, found...)
+		}
+		leaks = append(leaks, warnings(a, m)...)
 	}
-	return out
+	used := map[int]bool{}
+	for i := range leaks {
+		if acc, ok := m.Accepting(leaks[i].Area, leaks[i].Term, path.Join(rel, leaks[i].Path)); ok {
+			leaks[i].Reason = acc.Reason
+			used[acc.Index] = true
+		}
+	}
+	for _, acc := range m.Accepts() {
+		if !used[acc.Index] {
+			stale = append(stale, acc)
+		}
+	}
+	return leaks, stale
+}
+
+// importerIndex maps each imported file that is scanned as imported text (not itself a start-of-session
+// artifact) to the indexes of the artifacts of start that import it.
+func importerIndex(start []Artifact, artifacts map[string]bool) map[string][]int {
+	importers := map[string][]int{}
+	for i := range start {
+		for _, im := range start[i].Imports {
+			if im.Text != "" && !artifacts[im.Path] {
+				importers[im.Path] = append(importers[im.Path], i)
+			}
+		}
+	}
+	return importers
+}
+
+// importerPaths are the paths of the artifacts at the given indexes of start, and with them every file those
+// artifacts import: what a leak found through them depends on.
+func importerPaths(start []Artifact, idx []int) (by, chain []string) {
+	seen := map[string]bool{}
+	add := func(p string) {
+		if !seen[p] {
+			seen[p] = true
+			chain = append(chain, p)
+		}
+	}
+	for _, i := range idx {
+		by = append(by, start[i].Path)
+		add(start[i].Path)
+		for _, im := range start[i].Imports {
+			add(im.Path)
+		}
+	}
+	return by, chain
 }
 
 func violations(a *Artifact, m *areas.Map) []Leak {
+	return lineViolations(a, a.Path, a.Text, a.LineOffset, m)
+}
+
+// importViolations scans the text of a file the artifact imports; its lines are the file's own.
+func importViolations(a *Artifact, im *Import, m *areas.Map) []Leak {
+	return lineViolations(a, im.Path, im.Text, 0, m)
+}
+
+func lineViolations(a *Artifact, filePath, text string, offset int, m *areas.Map) []Leak {
 	var out []Leak
-	for i, line := range splitLines(a.Text) {
+	for i, line := range splitLines(text) {
 		if strings.TrimFunc(line, pyIsSpace) == "" {
 			continue
 		}
 		for _, match := range m.Find(line) {
 			if !match.Ambiguous && !m.IsShared(match.Area) {
-				out = append(out, leak(LeakViolation, match.Area, match.Term, a, a.LineOffset+i+1, line))
+				l := leak(LeakViolation, match.Area, match.Term, a, offset+i+1, line)
+				l.Path = filePath
+				out = append(out, l)
 			}
 		}
 	}

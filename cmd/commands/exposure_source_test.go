@@ -25,6 +25,7 @@ func TestExposureLintOptions(t *testing.T) {
 		{"every analyzer", withTable, nil, 1},
 		{"the exposure analyzer", withTable, []string{lint.AnalyzerExposure}, 1},
 		{"the plugin analyzer, for AR964", withTable, []string{lint.AnalyzerPlugin}, 1},
+		{"the config analyzer, for AR9I0 of the areas file", withTable, []string{lint.AnalyzerConfig}, 1},
 		{"another analyzer", withTable, []string{lint.AnalyzerTraps}, 0},
 	}
 	for _, tt := range tests {

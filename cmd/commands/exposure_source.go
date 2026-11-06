@@ -4,11 +4,13 @@ import (
 	"context"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/areas"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/exposure"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
@@ -44,9 +46,10 @@ type exposureInvKey struct {
 }
 
 // exposureLintOptions hands the exposure rules the project's session exposure when it has an [exposure] table.
-// The plugin analyzer reads it too: AR964 claude-skill-listing-total is one of its rows.
+// The plugin analyzer reads it too: AR964 claude-skill-listing-total is one of its rows, and the config analyzer
+// reports AR9I0 for a stale [[accept]] of the areas file.
 func exposureLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option {
-	if cfg == nil || cfg.Exposure == nil || !lint.AnalyzerSelected(sel, lint.AnalyzerExposure, lint.AnalyzerPlugin) {
+	if cfg == nil || cfg.Exposure == nil || !lint.AnalyzerSelected(sel, lint.AnalyzerExposure, lint.AnalyzerPlugin, lint.AnalyzerConfig) {
 		return nil
 	}
 	return []lint.Option{lint.WithExposure(exposureLintSource{ctx: ctx, cfg: cfg, cache: &exposureCache{}})}
@@ -163,13 +166,18 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	}
 	start := inv.Start()
 	out := lint.ExposureLeakage{Checked: len(start), AreasFile: file}
-	leaks := exposure.Leaks(start, m)
+	leaks, stale := exposure.CheckLeaksFrom(start, m, s.rootBelowBase())
 	for i := range leaks {
 		l := &leaks[i]
 		out.Leaks = append(out.Leaks, lint.ExposureLeak{
 			Ambiguous: l.Severity == exposure.LeakWarning, Area: l.Area, Term: l.Term, Kind: string(l.Kind), Name: l.Name,
-			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(),
+			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Message: l.Message(), AcceptReason: l.Reason, ImportedBy: l.ImportedBy, ImportChain: l.ImportChain,
 		})
+	}
+	if s.judgesAcceptances() {
+		for _, a := range stale {
+			out.StaleAccepts = append(out.StaleAccepts, lint.ExposureStaleAccept{Index: a.Index, Term: a.Term, Path: a.Path, Line: a.Line})
+		}
 	}
 	for _, u := range exposure.UncheckedArtifacts(start) {
 		out.Unchecked = append(out.Unchecked, lint.ExposureUnchecked{Path: u.Path, Kind: string(u.Kind), Name: u.Name, Reason: u.Reason})
@@ -185,6 +193,36 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 		out.UnknownSkills = append(out.UnknownSkills, lint.ExposureSkillArea{Skill: key, Area: skillAreas[key]})
 	}
 	return out, true
+}
+
+// rootBelowBase is the inventory's directory relative to the project root, slash separated: "" for the root
+// itself or a directory outside it, whose paths no acceptance can name.
+func (s exposureLintSource) rootBelowBase() string {
+	root, err := s.inventoryRoot()
+	if err != nil {
+		return ""
+	}
+	base, err := s.base()
+	if err != nil {
+		return ""
+	}
+	rel := rootRelative(base, root)
+	if filepath.IsAbs(filepath.FromSlash(rel)) || rel == "." || strings.HasPrefix(rel, "../") {
+		return ""
+	}
+	return rel
+}
+
+// judgesAcceptances reports whether the inventory covers the project root. The paths of the acceptances of an
+// areas file are relative to it, so one that accepts nothing in an inventory of a subdirectory (--root) says
+// nothing.
+func (s exposureLintSource) judgesAcceptances() bool {
+	root, err := s.inventoryRoot()
+	if err != nil {
+		return false
+	}
+	base, err := s.base()
+	return err == nil && gitutil.Resolve(root) == gitutil.Resolve(base)
 }
 
 // Inputs implements lint.ExposureSource: the absolute paths of the files besides the artifacts that decide
