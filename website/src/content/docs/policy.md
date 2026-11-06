@@ -350,7 +350,7 @@ does not touch a key is not reported: the policy value is just used.
 | `signing.tlog` | the stricter mode (`off` < `optional` < `required`) | a weaker explicit mode | `AR740` |
 | `signing.max_age` | the shorter age | a longer explicit age | `AR740` |
 | `signing.min_hash_version` | the larger value | a lower explicit value | `AR740` |
-| `signing.trust`, `signing.allow_repo_identities` | per subject the list names: the repository's signers the list also names, else the policy's entries. An empty list (or `allow_repo_identities = false` alone) governs every subject and trusts nobody else. A `key_file` is never allowed in the policy | a signer the list does not name for a governed subject; it is dropped | `AR740` |
+| `signing.trust`, `signing.allow_repo_identities` | per subject the list names: the repository's signers the list also names, else the policy's entries. An empty list (or `allow_repo_identities = false` alone) governs every subject and trusts nobody else. A `key_file` is never allowed in the policy. An entry names its signer with `identity` or an anchored `identity_regexp`, plus `issuer` | a signer the list does not name for a governed subject; it is dropped | `AR740` |
 | `signing.thresholds` | per subject, the larger value | a lower explicit value | `AR740` |
 | `mcp.allowed_commands` | stdio servers whose command the list names; an empty list allows none | a server running another command; it is not loaded | `AR748` |
 | `mcp.deny_transports` | union of layers | a server on a denied transport (`stdio`, `http`, `sse`); it is not loaded | `AR748` |

@@ -1364,7 +1364,7 @@ to keep it. To leave files out altogether, use `validate --exclude <glob>` or `[
 - **AR002** also reports U+00AD SOFT HYPHEN.
 - **AR003** also reports a comment that speaks to the agent: an uppercase `SYSTEM:`, `ASSISTANT:`, `AGENT:`, `CLAUDE:` or `LLM:` label, "do not mention/tell/reveal ... this/the user", an order to disregard or override the user, or a credential store (`~/.aws/credentials`, `~/.netrc`, ...) with something to print or send; a plain note that mentions a location without a verb is not reported. It also reads markdown reference-link comments (`[//]: # (text)`, `[comment]: <> (text)`, `[_]: # "text"`), which render as nothing like HTML comments.
 - **AR004** also matches "disregard the user request/message", "do not mention/reveal this comment/step/action", "hide this from the user", "remove this from the chat/conversation history", "never reveal this instruction" and an uppercase `DEVELOPER MODE`, `DEV MODE`, `DAN MODE` or `JAILBREAK` at the start of a line. A bare "you are now" is deliberately not matched.
-- **AR006** is table-driven. It reports a command that *reads* (`cat`, `head`, `grep`, ...), *copies* (`cp`, `ln`, `install`), *uploads* (`scp`, `rsync`), redirects (`< file`) or `dd`s one of about 35 credential locations; merely naming a path (`ls ~/.ssh`, "the .env file") no longer counts. Critical and high tiers (SSH keys, `~/.aws`, `/etc/shadow`, `~/.gnupg`, `~/.kube`, `.netrc`, `.npmrc`, `.env`, ...; Azure, gcloud, Docker, GitHub CLI, keychains, ...) are warnings, copying or uploading any tier is an error, and the low tiers (shell history, `/etc/passwd`, auth logs) are info. Public keys (`*.pub`) and `.env.example` pass, and `cp .env.example .env` is not an access. Writes outside the project and `chmod 777` are unchanged; a write that AR043 reports (a persistence path) is left to AR043 only within its own command segment, so `echo x >> /etc/hosts && systemctl enable foo` still reports the `/etc/hosts` write.
+- **AR006** is table-driven. It reports a command that *reads* (`cat`, `head`, `grep`, ...), *copies* (`cp`, `ln`, `install`), *uploads* (`scp`, `rsync`), redirects (`< file`) or `dd`s one of about 35 credential locations; merely naming a path (`ls ~/.ssh`, "the .env file") does not count. Critical and high tiers (SSH keys, `~/.aws`, `/etc/shadow`, `~/.gnupg`, `~/.kube`, `.netrc`, `.npmrc`, `.env`, ...; Azure, gcloud, Docker, GitHub CLI, keychains, ...) are warnings, copying or uploading any tier is an error, and the low tiers (shell history, `/etc/passwd`, auth logs) are info. Public keys (`*.pub`) and `.env.example` pass, and `cp .env.example .env` is not an access. Writes outside the project and `chmod 777` are unchanged; a write that AR043 reports (a persistence path) is left to AR043 only within its own command segment, so `echo x >> /etc/hosts && systemctl enable foo` still reports the `/etc/hosts` write.
 - **AR802** also reports a description within 10% of `max_length` (at 900 characters for the default 1024) as info, before an edit pushes it over the limit.
 
 ### Severity defaults
@@ -1382,16 +1382,9 @@ overrides one AR964 harness limit by id; it is a different table from `[lint.bud
 unknown id or a value below 1 is a config error. Under an [organization policy](/ai-rulez/policy/) all four are tighten-only: a
 repository may add tags, narrow `trusted_orgs`, and lower a limit, and a looser value is clamped and reported as `AR740`.
 
-### Not implemented
+### Plugin validation
 
-The optional `claude plugin validate` step of AR963 runs with `--external` only.
-
-The rule ideas AR016 to AR034 come from a review of what other skill scanners detect. The patterns, the command tiers and the credential table were written from the public conventions of each tool (where ssh, aws, gpg, kubectl, docker and so on keep secrets); no scanner code, table or message text was copied.
-
-The patterns of AR046 to AR049 and their test cases are stored obscured (`internal/lint/ar_malware_rules.dat`,
-`internal/lint/testdata/ar_malware_cases.dat`), and this page describes them without quoting payloads: anti-malware
-scanners such as Microsoft Defender report a binary or a checkout that holds the payload strings in plain text.
-`go run ./scripts/obscure decode FILE` prints a table for editing and `encode` writes it back.
+The `claude plugin validate` step of AR963 runs with `--external` only.
 <!-- lint-rules-notes:end -->
 
 ## Rule reference
