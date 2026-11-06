@@ -27,7 +27,9 @@ type exposureLintSource struct {
 	areas     *areas.Map
 	areasFile string
 	plugins   exposure.PluginMode
-	cache     *exposureCache
+	// harness replaces [exposure] harness (`exposure leakage --harness`); "" follows the table.
+	harness string
+	cache   *exposureCache
 }
 
 // exposureCache holds the inventories an exposureLintSource built, by plugin mode and harness, for the rules of one run.
@@ -112,10 +114,19 @@ func (s exposureLintSource) mode() exposure.PluginMode {
 	return exposure.PluginMode(s.cfg.Exposure.EffectivePlugins())
 }
 
-// inventory builds the inventory of the source's directory in mode, once per mode when the source has a cache.
-// The path claims of the area map read the scopes relative to the project root.
+// effectiveHarness is the harness whose load model the leakage checks apply: --harness, else [exposure] harness,
+// else claude.
+func (s exposureLintSource) effectiveHarness() string {
+	if s.harness != "" {
+		return s.harness
+	}
+	return s.cfg.Exposure.EffectiveHarness()
+}
+
+// inventory builds the inventory of the source's directory in mode for the effective harness, once per mode when
+// the source has a cache. The path claims of the area map read the scopes relative to the project root.
 func (s exposureLintSource) inventory(mode exposure.PluginMode) (*exposure.Inventory, error) {
-	return s.inventoryFor(mode, config.ExposureHarnessClaude)
+	return s.inventoryFor(mode, s.effectiveHarness())
 }
 
 // inventoryFor is inventory for a harness's load model.
@@ -151,8 +162,9 @@ func (s exposureLintSource) inventoryFor(mode exposure.PluginMode, harness strin
 
 // Leakage implements lint.ExposureSource: the leaks of the start-of-session artifacts (exposure.Leaks over
 // Inventory.Start, which fails closed), the start-of-session artifacts kept unread, whose text no rule can
-// check, and the skill_areas keys that name no skill. A key that misses under the plugin mode is looked up
-// again among the skills of every marketplace plugin, so a plugin that is not enabled still places its skills.
+// check, and the skill_areas keys that name no skill, all of the effective harness's inventory. A key that misses
+// under the plugin mode is looked up again among the skills of every marketplace plugin, so a plugin that is not
+// enabled still places its skills; Codex has no marketplace plugins, so there is nothing to look up again.
 func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	m, file := s.areaMap()
 	if m == nil {
@@ -184,7 +196,7 @@ func (s exposureLintSource) Leakage() (lint.ExposureLeakage, bool) {
 	}
 	skillAreas := m.SkillAreas()
 	unknown := exposure.UnknownSkillAreas(skillAreas, inv)
-	if len(unknown) > 0 && mode != exposure.PluginsAll {
+	if len(unknown) > 0 && mode != exposure.PluginsAll && inv.Harness != config.ExposureHarnessCodex {
 		if all, err := s.inventory(exposure.PluginsAll); err == nil {
 			unknown = exposure.UnknownSkillAreas(skillAreas, all)
 		}
@@ -312,7 +324,7 @@ func (s exposureLintSource) Collisions(minScore float64) []lint.ExposureCollisio
 	if m == nil {
 		return nil
 	}
-	inv, err := s.inventory(s.mode())
+	inv, err := s.inventoryFor(s.mode(), config.ExposureHarnessClaude)
 	if err != nil {
 		logger.Warn("Skipped the session exposure collision checks", "error", err)
 		return nil

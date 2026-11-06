@@ -1218,12 +1218,14 @@ Examples:
 ```bash
 ai-rulez exposure leakage
 ai-rulez exposure leakage --root services/billing
+ai-rulez exposure leakage --harness codex
 ai-rulez exposure leakage --areas tools/context/areas.toml --format json
 ```
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--format` | string | `text` | Output format: text, json |
+| `--harness` | string |  | Harness whose load model applies: claude or codex (default: [exposure] harness, else claude) |
 | `--areas` | string |  | Area map file to use instead of the [exposure] table (the areas_file format) |
 | `--plugins` | string |  | Marketplace plugins whose skills are listed: none, enabled or all (default: [exposure] plugins, else enabled) |
 | `--root` | string |  | Repository root to inspect (default: the project root, else the working directory) |
