@@ -24,14 +24,14 @@ agents, commands, hooks, permissions and MCP servers in one source of truth, `.a
 author -> generate -> bundle -> lint/validate -> govern -> publish. The source can also be the open standards themselves:
 `source = "agents"` reads the root `AGENTS.md` (and nested ones) and `.agents/`.
 
-- Author: `.ai-rulez/` markdown and `config.toml` (an OKF bundle), or `AGENTS.md` plus `.agents/` with the configuration in `.agents/ai-rulez.toml` (`website/src/content/docs/agents-source.md`); `agents_md_split = true` reads `AGENTS.md` as one item per `##` heading.
+- Author: `.ai-rulez/` markdown and `config.toml` (an OKF bundle), or `AGENTS.md` plus `.agents/` with the configuration in `.agents/ai-rulez.toml` (`agents-source.md`); `agents_md_split = true` reads `AGENTS.md` as one item per `##` heading.
 - Generate: native files for 52 built-in harness presets, including Claude Code, Cursor, Codex, Copilot, Gemini CLI,
-  OpenCode, Devin, and Kilo (`website/src/content/docs/harnesses.md` has the per-preset feature matrix). With the agents source, `AGENTS.md` and `.agents/` are read and never written.
+  OpenCode, Devin, and Kilo (`harnesses.md` has the per-preset feature matrix). With the agents source, `AGENTS.md` and `.agents/` are read and never written.
 - Bundle and publish: plugin bundles and marketplace indexes (`generate --plugin`, from `[plugin]` or several `[[plugins_authoring]]` / `[[marketplaces_authoring]]` definitions), Agent Plugins, ARD manifests, MCP Server Cards and OKF bundles (`export okf`, `publish --emit`).
-- Validate: `validate`, `scan` and `okf validate` with stable `AR` codes and each standard's own schema or rules. `validate` needs no config: without one it lints the files that follow a convention, and `--path`, `--glob` and `--outputs` widen what it checks. `judge` reviews agent configuration with models (verified quotes, an adjudicator, repo-aware governance), also without config. `exposure` checks what a Claude Code session loads at start (`website/src/content/docs/exposure.md`).
+- Validate: `validate`, `scan` and `okf validate` with stable `AR` codes and each standard's own schema or rules. `validate` needs no config: without one it lints the files that follow a convention, and `--path`, `--glob` and `--outputs` widen what it checks. `judge` reviews agent configuration with models (verified quotes, an adjudicator, repo-aware governance), also without config. `exposure` checks what a Claude Code or Codex session loads at start (`exposure.md`).
 - Govern: `ai-rulez.lock`, approvals, Sigstore signing, organization policy and SBOM.
 - CI: the root `action.yml` is a composite GitHub Action that installs a sha256-verified binary (`uses: Goldziher/ai-rulez@<ref>`).
-- Standards named as supported must be generated, validated and conformance-tested; `website/src/content/docs/standards.md` carries the
+- Standards named as supported must be generated, validated and conformance-tested; `standards.md` carries the
   pinned spec versions and test status, and the README marks unimplemented ones "planned". Do not claim conformance
   ahead of the matching implementation and test.
 
@@ -49,14 +49,7 @@ Key concepts:
 - `[[roles]]` select a slice of the content (`generate --role`); `delivery = "served"` skills are served on demand by `ai-rulez mcp --serve-skills` instead of written to the harness trees.
 - `validate` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks; `sbom`, `catalog`, `tokens` and `cost` report what the configuration contains and costs.
 - Monorepos: `--recursive` runs `generate`, `generate --check` and `validate` over every nested root concurrently, with ordered output and one managed `.gitignore` block when `gitignore = true`.
-- v5 behaviour: the Go module is `github.com/Goldziher/ai-rulez/v5`; `http://` and `git://` remotes are rejected and the git token goes only to allowlisted hosts; a committed config cannot point outside the project; content symlinks must resolve inside the project; Claude MCP servers are written only to `.mcp.json`; exit codes are `0` ok, `1` could not run, `2` findings or drift, `3` unpinned served skills (`lock`).
-- Removed or renamed presets: `windsurf` is `devin`; `continue-dev` is gone.
-
-Typical workflow:
-
-1. Update `.ai-rulez/` sources (config, rules, context, skills, agents, checks, domains).
-2. Run `ai-rulez generate` (optionally `--profile`, `--dry-run` or `--watch`).
-3. Commit `.ai-rulez/` and generated outputs together.
+- v5 behaviour: the Go module is `github.com/Goldziher/ai-rulez/v5`; `http://` and `git://` remotes are rejected and the git token goes only to allowlisted hosts; a committed config cannot point outside the project; content symlinks must resolve inside the project; Claude MCP servers are written only to `.mcp.json`.
 
 Migration:
 

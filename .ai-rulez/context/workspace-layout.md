@@ -37,4 +37,4 @@ Key directories:
 Convenience:
 
 - `bin/ai-rulez` is a local build used for running `generate`, `validate`, and other commands in development.
-- `website/src/content/docs/architecture.md` describes the pipeline and has the full package map.
+- Docs pages are cited below by file name, e.g. `harnesses.md` is `website/src/content/docs/harnesses.md`.

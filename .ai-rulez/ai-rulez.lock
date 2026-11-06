@@ -2,9 +2,9 @@
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
 
 version = 1
-ai_rulez_version = '5.10.0'
+ai_rulez_version = '5.11.1'
 scope = 'all'
-tree = 'sha256:4c0c8f337bd077b0b5e9fe940522f567c31896026c0bd3367c94bf3d72921dcd'
+tree = 'sha256:ef141902289ec82da980a662829c377a23603691a7b1fece899c0bf7d8baaa74'
 
 [[served]]
 name = 'build'
@@ -220,13 +220,13 @@ digest = 'sha256:2ea295eab8c29fe6b916437ab8f1a0801f37ea58b330f240e89411610b76e19
 kind = 'context'
 id = 'cli-and-crud'
 path = 'context/cli-and-crud.md'
-digest = 'sha256:bd8e2a3b428a8cb07155892e56d4a2deef6c2ef59633e394d9fbf40eae78e60d'
+digest = 'sha256:175aa64f78af05f5493e96a72a265867e55043b2fdecc54a2f61b4a4c5e7ceea'
 
 [[item]]
 kind = 'context'
 id = 'generation-pipeline'
 path = 'context/generation-pipeline.md'
-digest = 'sha256:d13adf798cac8fcad479b43754d4f67526b405efe2792e045e0f62928876e06e'
+digest = 'sha256:bc09175875a9999912c96b691e99da0b1161c0b0854d2e5efdb87952cd74de6a'
 
 [[item]]
 kind = 'context'
@@ -238,7 +238,7 @@ digest = 'sha256:1093dd57cdf711746da2b611cc0253e618937663ef23515a46b2eb5963760b4
 kind = 'context'
 id = 'mcp-integrations'
 path = 'context/mcp-integrations.md'
-digest = 'sha256:47b03b68ccc6457142c1074eccd87a27fa78af7a3cbb423594cd202e788d1aa6'
+digest = 'sha256:f4ea2618f1b250bd06de192cc79e291e8a77c5581d5fb71384a490254b48f6c4'
 
 [[item]]
 kind = 'context'
@@ -262,7 +262,7 @@ digest = 'sha256:5370a8f308ef918a788248f470f6e60e5d0eeaa4e502a5aa8c072e11bede7ac
 kind = 'context'
 id = 'skills-and-agents'
 path = 'context/skills-and-agents.md'
-digest = 'sha256:c80fea29ea9372a0f853b6baafc4ef6e15444d693e3a2e09a1ed8c5bd2508f7c'
+digest = 'sha256:9f2089dfcc5c47cfd1565a141e59fc8ad0d0bbfcdfadcf408837b32b28a8d569'
 
 [[item]]
 kind = 'context'
@@ -274,13 +274,13 @@ digest = 'sha256:c2b596e2dc61fe6f3b3678102e4fb4a358dd9c790cfb0d861d290d04c23071e
 kind = 'context'
 id = 'tool-overview'
 path = 'context/tool-overview.md'
-digest = 'sha256:789f065124c9cfae627ac1136cb9b0347f7355817bc4c859c459f40752837fc0'
+digest = 'sha256:37eda5b28ebe3cecd607cd11944f8b4c36d1d1079f2c4759d7d1cd946bb31832'
 
 [[item]]
 kind = 'context'
 id = 'workspace-layout'
 path = 'context/workspace-layout.md'
-digest = 'sha256:b0732725aeab5c59ccfb94af9ef4c77a843eaa04f620babf33ace7b56e07e117'
+digest = 'sha256:95aa98fad7a6b0100014203c4df6722407dc57ab7712be92687d92b879844922'
 
 [[item]]
 kind = 'rule'
