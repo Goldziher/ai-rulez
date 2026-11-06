@@ -33,10 +33,19 @@ type matcher struct {
 	index   map[string][]TermMatch
 	roots   map[string]bool
 	maxRoot int
+	// excluders hold, per area with an exclude list, what re-checks that area's matches without the excluded
+	// compounds.
+	excluders map[string]excluder
+}
+
+// excluder re-checks the matches of one area on a text with its excluded compounds blanked out.
+type excluder struct {
+	compounds [][]rune
+	terms     *matcher
 }
 
 func newMatcher(areas []Area) *matcher {
-	m := &matcher{byFirst: map[rune][]int{}, index: map[string][]TermMatch{}, roots: map[string]bool{}}
+	m := &matcher{byFirst: map[rune][]int{}, index: map[string][]TermMatch{}, roots: map[string]bool{}, excluders: map[string]excluder{}}
 	var order []string
 	add := func(area, word string, ambiguous bool) {
 		if _, ok := m.index[word]; !ok {
@@ -51,6 +60,13 @@ func newMatcher(areas []Area) *matcher {
 		}
 		for _, t := range a.Ambiguous {
 			add(a.Name, t, true)
+		}
+		if len(a.Exclude) > 0 {
+			ex := excluder{terms: newMatcher([]Area{{Name: a.Name, Terms: a.Terms, Ambiguous: a.Ambiguous}})}
+			for _, e := range a.Exclude {
+				ex.compounds = append(ex.compounds, []rune(e))
+			}
+			m.excluders[a.Name] = ex
 		}
 		for _, p := range a.Paths {
 			root, _, _ := strings.Cut(strings.TrimPrefix(p, excludePrefix), "/")
@@ -83,8 +99,67 @@ func (m *Map) Find(text string) []TermMatch {
 	if m == nil || len(m.matcher.terms) == 0 {
 		return nil
 	}
-	return m.matcher.find(m.matcher.stripPathLiterals(text))
+	text = m.matcher.stripPathLiterals(text)
+	return m.matcher.withoutExcluded(text, m.matcher.find(text))
 }
+
+// withoutExcluded drops the matches of an area whose word occurs only inside one of the area's excluded
+// compounds.
+func (m *matcher) withoutExcluded(text string, matches []TermMatch) []TermMatch {
+	if len(m.excluders) == 0 {
+		return matches
+	}
+	remaining := map[string]map[string]bool{}
+	out := matches[:0:0]
+	for _, tm := range matches {
+		ex, ok := m.excluders[tm.Area]
+		if !ok {
+			out = append(out, tm)
+			continue
+		}
+		words, done := remaining[tm.Area]
+		if !done {
+			words = map[string]bool{}
+			for _, f := range ex.terms.find(blankCompounds(text, ex.compounds)) {
+				words[f.Term] = true
+			}
+			remaining[tm.Area] = words
+		}
+		if words[tm.Term] {
+			out = append(out, tm)
+		}
+	}
+	return out
+}
+
+// blankCompounds replaces every case-insensitive occurrence of a compound with spaces, longest compound first,
+// where the characters around it do not continue a name (a letter, digit, hyphen or underscore): "xberg-iox"
+// and "my-xberg-io" are other names than "xberg-io".
+func blankCompounds(text string, compounds [][]rune) string {
+	sorted := slices.Clone(compounds)
+	slices.SortStableFunc(sorted, func(a, b []rune) int { return len(b) - len(a) })
+	runes := []rune(text)
+	for i := 0; i < len(runes); i++ {
+		if i > 0 && joinsName(runes[i-1]) {
+			continue
+		}
+		for _, c := range sorted {
+			end := i + len(c)
+			if end > len(runes) || !matchesFold(c, runes[i:end]) || (end < len(runes) && joinsName(runes[end])) {
+				continue
+			}
+			for k := range c {
+				runes[i+k] = ' '
+			}
+			i = end - 1
+			break
+		}
+	}
+	return string(runes)
+}
+
+// joinsName reports whether r continues a hyphenated or snake-case name.
+func joinsName(r rune) bool { return pyIsAlnumFold(r) || r == '-' || r == '_' }
 
 // StripPathLiterals blanks out repository path literals (a path claim's first segment followed by "/"):
 // naming a location is not naming an area.

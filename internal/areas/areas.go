@@ -43,8 +43,10 @@ type Area struct {
 	Paths       []string
 	Terms       []string
 	Ambiguous   []string
-	Shared      bool
-	Declare     string
+	// Exclude are compound names holding a term that do not name the area, lowercased, unique and sorted.
+	Exclude []string
+	Shared  bool
+	Declare string
 }
 
 // TermMatch is one area word found in a text.
@@ -78,6 +80,8 @@ type Problem struct {
 	needle string
 	// skill is the [skill_areas] key the problem is about.
 	skill string
+	// accept is the 1-based [[accept]] table the problem is in, 0 for none.
+	accept int
 }
 
 // Map is a validated area map. Its methods are safe for concurrent use; a nil *Map has no areas and classifies
@@ -85,12 +89,18 @@ type Problem struct {
 type Map struct {
 	areas      []Area
 	skillAreas map[string]string
+	accepts    []Accept
 	matcher    *matcher
 }
 
 // New validates and normalizes an area map. It returns the map, or nil and every problem found; a map with
 // problems is never returned, so the rules that read it stay quiet until it is fixed.
 func New(defs []config.ExposureArea, skillAreas map[string]string) (*Map, []Problem) {
+	return NewWithAccepts(defs, skillAreas, nil)
+}
+
+// NewWithAccepts is New with the recorded acceptances of an areas file.
+func NewWithAccepts(defs []config.ExposureArea, skillAreas map[string]string, accepts []Accept) (*Map, []Problem) {
 	areas := make([]Area, 0, len(defs))
 	var problems []Problem
 	seen := map[string]bool{}
@@ -112,10 +122,12 @@ func New(defs []config.ExposureArea, skillAreas map[string]string) (*Map, []Prob
 			problems = append(problems, Problem{Message: fmt.Sprintf("skill_areas assigns %q to %q, which names no area", skill, area), skill: skill})
 		}
 	}
+	accepted, acceptProblems := normalizeAccepts(accepts, seen)
+	problems = append(problems, acceptProblems...)
 	if len(problems) > 0 {
 		return nil, problems
 	}
-	m := &Map{areas: areas, skillAreas: copyMap(skillAreas)}
+	m := &Map{areas: areas, skillAreas: copyMap(skillAreas), accepts: accepted}
 	m.matcher = newMatcher(areas)
 	return m, nil
 }
@@ -127,6 +139,7 @@ func normalizeArea(index int, def *config.ExposureArea) (Area, []Problem) {
 		Owner:       def.Owner,
 		Paths:       slices.Clone(def.Paths),
 		Terms:       normalizeTerms(def.Terms),
+		Exclude:     normalizeTerms(def.Exclude),
 		Shared:      def.Shared,
 		Declare:     def.Declare,
 	}
@@ -154,6 +167,15 @@ func normalizeArea(index int, def *config.ExposureArea) (Area, []Problem) {
 	for _, p := range def.Paths {
 		if why := badPath(p); why != "" {
 			add(keyPaths, quoted(p), "area %q path %q %s", def.Name, p, why)
+		}
+	}
+	for _, e := range area.Exclude {
+		words := slices.Concat(area.Terms, area.Ambiguous)
+		switch {
+		case slices.Contains(words, e):
+			add(keyExclude, quoted(e), "area %q exclude %q is a term or ambiguous word of the area itself, so it would disable it; an exclude must be a longer compound", def.Name, e)
+		case len(newMatcher([]Area{{Name: def.Name, Terms: area.Terms, Ambiguous: area.Ambiguous}}).find(e)) == 0:
+			add(keyExclude, quoted(e), "area %q exclude %q contains none of the terms or ambiguous words of the area as a whole word, so it excludes nothing", def.Name, e)
 		}
 	}
 	if why := badDeclare(def.Declare); why != "" {
@@ -240,6 +262,7 @@ const (
 	keyName    = "name"
 	keyPaths   = "paths"
 	keyDeclare = "declare"
+	keyExclude = "exclude"
 )
 
 func quoted(s string) string { return `"` + s + `"` }
@@ -285,5 +308,6 @@ func (m *Map) SkillAreas() map[string]string {
 func (a *Area) clone() Area {
 	out := *a
 	out.Paths, out.Terms, out.Ambiguous = slices.Clone(a.Paths), slices.Clone(a.Terms), slices.Clone(a.Ambiguous)
+	out.Exclude = slices.Clone(a.Exclude)
 	return out
 }

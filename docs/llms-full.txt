@@ -11463,7 +11463,8 @@ reason = "the skill runs git and gh; narrowing would break step 3"
   in the file whose message contains `match` is accepted, so pick a specific one.
 - An accepted finding does not count toward the exit code or a ratchet. The JSON report keeps it with
   `"accepted": true` and the reason as `accept_reason`; `--update-baseline` does not write it.
-- An entry that accepts nothing is reported as `AR9I0` (`accept-unused`, warning) on `config.toml`, unless the run
+- An entry that accepts nothing is reported as `AR9I0` (`accept-unused`, warning) on `config.toml` (a stale
+  `[[accept]]` of an areas file on that file), unless the run
   could not have produced the finding (the rule is off, its analyzer was not selected, or the run linted only named
   files that do not match).
 
@@ -16050,6 +16051,7 @@ Keys of an area:
 | `paths` | array of strings | Directories the area claims, relative to the repository root (see [Path claims](#path-claims)) |
 | `terms` | array of strings | Words that name the area (see [Term matching](#term-matching)) |
 | `ambiguous` | array of strings | Words the area shares with others (`account`, `query`); they never decide an area on their own |
+| `exclude` | array of strings | Compound names that contain a term or ambiguous word and do not name the area (`xberg-io` for the term `xberg`); ignored case-insensitively, for this area only, when no longer name surrounds them. Each must contain, and be longer than, a word of the area |
 | `shared` | boolean | Repository-wide tooling: its terms classify artifacts but are allowed at session start |
 | `owner` | string | Free text, reported as is |
 | `description` | string | Free text, reported as is |
@@ -16080,9 +16082,24 @@ paths = ["tools"]
 shared = true
 terms = ["terraform"]
 
+[[area]]
+name = "xberg"
+terms = ["xberg"]
+exclude = ["xberg-io"]             # the org name contains the term and does not name the area
+
+[[accept]]                         # a known, accepted occurrence at session start (areas file only)
+term = "xberg"
+path = "docs/overview.md"          # a path, a glob, or "dir/**"
+reason = "the overview names the product"
+
 [skill_areas]
 account-lookup = "billing"
 ```
+
+`[[accept]]` (areas file only; inline, use `[[lint.accept]]`) records a known occurrence of an area word at session
+start: `term`, `path` (relative to the project root, a path or glob as in `[[lint.accept]]`), a required `reason` and
+optionally `area`. A leak it covers is reported as accepted. An entry that covers no leak is `AR9I0` on its line in
+the areas file and fails `exposure leakage`; under `--root` the entries are matched but not judged stale.
 
 #### Matching
 
@@ -16237,7 +16254,9 @@ of the repository uses.
 The `AR9W0` and `AR9W1` findings of `validate` (see [Area term leakage](#area-term-leakage)), each marked
 `violation`, `warning` or `accepted`, plus the `[[lint.accept]]` entries for those rules that accepted nothing.
 `[lint.severity]`, `ignore_paths`, `[[lint.ignore_rules]]` and inline ignore comments apply; a baseline does not.
-A start-of-session file that could not be read is listed as `unchecked`; it is not a finding. JSON:
+A start-of-session file that could not be read, or a file it imports with `@path` that could not be read, is listed
+as `unchecked`; it is not a finding. A finding in an imported file has the `path` of that file and `imported_by`, the
+start-of-session artifacts that import it; its `kind` and `name` are those of the first importer. JSON:
 [`schema/exposure-leakage.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/exposure-leakage.v1.schema.json).
 
 #### Area term leakage
@@ -16252,8 +16271,8 @@ the enabled plugin names and, with `plugins = "enabled"` or `"all"`, the listing
 | `AR9W1` `exposure-area-term-ambiguous` | warning | A skill or agent listing that names no term at all but some ambiguous words; the area is every area that uses the word, joined by `/` (`billing/search`) |
 | `AR9W6` `exposure-skill-area-unknown` | warning | A `skill_areas` key that names no skill of the inventory, on its line in the areas file or the configuration |
 
-Text that a `CLAUDE.md` pulls in with an `@path` import (such as the `@AGENTS.md` that `generate` writes) counts toward
-start tokens, but is not checked for terms.
+Text that a `CLAUDE.md` or rule pulls in with an `@path` import (such as the `@AGENTS.md` that `generate` writes, up to
+five levels) is checked too: a finding is reported on the imported file and its own line, once per file.
 
 The message of `AR9W0` and `AR9W1` is stable, so an acceptance can match on it:
 
@@ -16345,6 +16364,8 @@ files that shape the session changed: the areas file, the configuration, `.claud
 - `AR9W3` and the `AR964` listing total sit on the configuration and are kept when any start-of-session artifact
   changed.
 - `AR9W2` sits on the first listing of a pair and is kept when either listing changed.
+- A leak in an imported file is also kept when any file on its import chain changed.
+- `AR9I0` for a stale `[[accept]]` sits on the areas file and is kept only when a file that shapes the session changed.
 
 #### Rule codes
 
@@ -16360,7 +16381,9 @@ files that shape the session changed: the areas file, the configuration, `.claud
 
 `AR9W5` covers a duplicate, reserved or non-kebab area name, a bad path claim (absolute, trailing slash, empty, `.` or
 `..` segment, `*` other than at the end), a `skill_areas` value that names no area, an `areas_file` that is missing,
-outside the project or has an unknown key, both `areas_file` and inline areas, and invalid scalar keys.
+outside the project or has an unknown key, both `areas_file` and inline areas, invalid scalar keys, an `exclude`
+entry that does not contain a longer form of a word of its area, and an `[[accept]]` with an empty `term`, `reason` or
+`path`, a `..` path segment, a malformed glob or an `area` that names no area.
 
 Every rule's entry, with examples, is in the [rule reference](strict-validation.md#rule-reference).
 

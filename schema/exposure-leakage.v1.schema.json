@@ -67,14 +67,20 @@
           },
           "reason": {
             "type": "string",
-            "description": "The reason of the [[lint.accept]] entry of an accepted finding, else empty."
+            "description": "The reason of the [[lint.accept]] or [[accept]] entry of an accepted finding, else empty."
+          },
+          "imported_by": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "description": "For a finding in a file start-of-session CLAUDE.md files or rules import with @path, the paths of those artifacts in inventory order; absent otherwise."
           }
         }
       }
     },
     "unchecked": {
       "type": "array",
-      "description": "The start-of-session artifacts kept unread (over the read limit, or a symlink to outside the root), in inventory order: they load in every session, but no leak in them can be found. They are not findings and do not change the exit code.",
+      "description": "The start-of-session artifacts, and the files they import with @path, kept unread (over the read limit, a symlink to outside the root, an absolute, home or outside-the-root import), in inventory order: they load in every session, but no leak in them can be found. For an import, path is the imported file (as written when it was not followed) and kind and name are the importing artifact's. They are not findings and do not change the exit code.",
       "items": {
         "type": "object",
         "required": ["path", "kind", "name", "reason"],

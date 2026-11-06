@@ -27,15 +27,19 @@ func newExposureLeakageCmd(f *exposureFlags) *cobra.Command {
 the root CLAUDE.md, unconditional root rules, the skill and agent listing lines, the MCP server names and
 the enabled plugin names (AR9W0, a violation), outside repository path literals, and each listed skill or
 agent that names only ambiguous words (AR9W1, a warning). An artifact whose phase is unknown counts as
-start of session. A start-of-session artifact whose file could not be read (over the read limit, a
-symlink to outside the root) is listed as unchecked: it is not a finding, and no leak in it can be found.
+start of session. The text of each file such a CLAUDE.md or rule imports with @path is scanned too, and a leak
+in it is reported against the imported file (imported_by names the importer). A start-of-session artifact
+or imported file that could not be read (over the read limit, a symlink to outside the root, an absolute,
+home or outside-the-root import) is listed as unchecked: it is not a finding, and no leak in it can be found.
 
 --root inspects that directory as a session started there sees it, with the configuration and area map
 of the project; the paths are relative to --root.
 
 The findings are those of ` + "`ai-rulez validate`" + `, accepted by the same [[lint.accept]] entries: an accepted
 finding is listed with the entry's reason, and an entry for AR9W0 or AR9W1 that accepts nothing is a stale
-acceptance (AR9I0). A [[lint.accept]] match is a substring of the message
+acceptance (AR9I0). The areas file may also record known occurrences in [[accept]] tables (term, path, reason,
+optional area); the path is read as a [[lint.accept]] path is and relative to the project root, also under
+--root. A [[lint.accept]] match is a substring of the message
 ` + "`<kind> \"<name>\" at session start names term \"<term>\" of area \"<area>\"`" + `.
 
 --format json prints schema/exposure-leakage.v1.schema.json. Exit codes: 0 no violation and no stale
@@ -149,7 +153,7 @@ func leakageReport(res *lint.LeakageResult) *exposure.LeakageReport {
 		}
 		out.Findings = append(out.Findings, exposure.Leak{
 			Severity: sev, Code: l.Code, Area: l.Area, Term: l.Term, Kind: exposure.Kind(l.Kind), Name: l.Name,
-			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Reason: l.Reason,
+			Path: l.Path, Scope: l.Scope, Line: l.Line, Excerpt: l.Excerpt, Reason: l.Reason, ImportedBy: l.ImportedBy,
 		})
 	}
 	return out
