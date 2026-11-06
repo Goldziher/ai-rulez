@@ -99,7 +99,7 @@ Review the diff for injection, leaked secrets and unsafe deserialization.
 | `extends` | Append this agent to a lower-precedence agent of that name; see [Extending agents](#extending-agents). |
 | `priority`, `targets` | Ordering and output selection, as for rules ([Targets](/ai-rulez/rules/#targets)). |
 
-The `claude` preset also passes Claude Code's subagent keys through with their YAML types: `disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`; other presets ignore them. For OpenCode, `hidden` is written as a boolean and `temperature` and `top_p` as numbers. `validate` reports a key no tool reads as `AR303`, and also reports `extends` and the `<preset>_model` keys even though they work: list them in [`[lint] allowed_keys`](/ai-rulez/strict-validation/) to silence it.
+The `claude` preset also passes Claude Code's subagent keys through with their YAML types: `disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`; other presets ignore them. For OpenCode, `hidden` is written as a boolean and `temperature` and `top_p` as numbers. `validate` reports a key no tool reads as `AR303`; list a custom key in [`[lint] allowed_keys`](/ai-rulez/strict-validation/) to silence it.
 
 ### Commands
 
