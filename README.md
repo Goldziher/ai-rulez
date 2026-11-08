@@ -195,6 +195,57 @@ In a monorepo, `generate --recursive` and `validate --recursive` process every n
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/monorepo.gif" alt="ai-rulez generate --recursive over two nested roots, recursive validation, and a token budget check" width="780" />
 </p>
 
+## How it compares
+
+Static checks of `ai-rulez scan` against other open-source skill scanners, on a public dataset we did not write:
+
+<!-- skillbench:start -->
+
+1384 skills (839 malicious, 545 benign) from the MaliciousSkillBench source-disjoint `test` partition, static, text-only, no LLM. Scored on each tool's own verdict; intervals are 95% clustered bootstrap.
+
+| Tool | Version | Recall | False-positive rate | Precision | F1 |
+| ---- | ------- | ------ | ------------------- | --------- | -- |
+| ai-rulez | 5.11.1 | 0.195 (0.139-0.271) | 0.338 (0.297-0.378) | 0.471 | 0.276 (0.210-0.354) |
+| skill-scanner | 2.3.2 | 0.077 (0.044-0.125) | 0.040 (0.025-0.058) | 0.747 | 0.140 (0.082-0.216) |
+| skillspector | 2.13.4 | 0.113 (0.073-0.167) | 0.194 (0.161-0.228) | 0.473 | 0.183 (0.124-0.254) |
+
+<!-- skillbench:end -->
+
+That table is the last held-out read, of release 5.11.1. Unreleased changes are measured only on the `dev` partition,
+which rule changes are tuned on, so expect lower numbers on held-out sources. `ai-rulez-threat` is
+`scan --fail-on threat`, the gate to compare with the other scanners; `ai-rulez` is `--fail-on warning`:
+
+<!-- skillbench-dev:start -->
+
+8213 skills (6523 malicious, 1690 benign) from the MaliciousSkillBench source-disjoint `dev` partition, static, text-only, no LLM. Scored on each tool's own verdict; intervals are 95% clustered bootstrap.
+
+| Tool | Version | Recall | False-positive rate | Precision | F1 |
+| ---- | ------- | ------ | ------------------- | --------- | -- |
+| ai-rulez-threat | unreleased | 0.225 (0.209-0.242) | 0.007 (0.004-0.011) | 0.992 | 0.367 (0.345-0.389) |
+| ai-rulez | unreleased | 0.437 (0.420-0.454) | 0.074 (0.062-0.087) | 0.958 | 0.600 (0.584-0.616) |
+| skill-scanner | 2.3.2 | 0.312 (0.298-0.326) | 0.008 (0.004-0.013) | 0.993 | 0.475 (0.459-0.491) |
+| skillspector | 2.13.4 | 0.323 (0.307-0.340) | 0.155 (0.138-0.173) | 0.889 | 0.474 (0.456-0.493) |
+
+<!-- skillbench-dev:end -->
+
+And on real, widely used skills, where every flag is a false alarm:
+
+<!-- skillbench-clean:start -->
+
+563 real skills from the `clean` track, all treated as benign, static, text-only, no LLM. A flag is a false alarm.
+
+| Tool | Version | Skills flagged | Share flagged |
+| ---- | ------- | -------------- | ------------- |
+| ai-rulez-threat | unreleased | 12 of 563 | 2.1% (1.1-3.4) |
+| ai-rulez | unreleased | 53 of 563 | 9.4% (7.1-11.9) |
+| skill-scanner | 2.3.2 | 26 of 563 | 4.6% (3.0-6.4) |
+| skillspector | 2.13.4 | 167 of 563 | 29.7% (25.9-33.4) |
+
+<!-- skillbench-clean:end -->
+
+Every number is reproducible with one command. See [Scanner benchmark](https://goldziher.github.io/ai-rulez/benchmarks/)
+for the protocol and its limits.
+
 ## Standards
 
 ai-rulez generates and validates AGENTS.md, Agent Skills, Agent Plugins, ARD, llms.txt, OKF (the format of

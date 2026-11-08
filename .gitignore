@@ -60,6 +60,8 @@ coverage.*
 /vendor/
 go.work
 go.work.sum
+!/tools/go.work
+!/tools/go.work.sum
 .cache/
 
 

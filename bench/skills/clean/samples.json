@@ -1,0 +1,3953 @@
+{
+ "track": "clean",
+ "population_sha256": "76ce72b7904d0a08b2b008c0e09546242a9f134d812cfbb93a0daa08995ba473",
+ "dropped": {
+  "text_withheld": 0,
+  "split_excluded": 0,
+  "overlaps_test": 0,
+  "other_partition": 0
+ },
+ "samples": [
+  {
+   "id": "anthropics__skills__skills__academy-guide",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__academy-guide"
+  },
+  {
+   "id": "anthropics__skills__skills__algorithmic-art",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__algorithmic-art"
+  },
+  {
+   "id": "anthropics__skills__skills__brand-guidelines",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__brand-guidelines"
+  },
+  {
+   "id": "anthropics__skills__skills__canvas-design",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__canvas-design"
+  },
+  {
+   "id": "anthropics__skills__skills__claude-api",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__claude-api"
+  },
+  {
+   "id": "anthropics__skills__skills__discernment-nudge",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__discernment-nudge"
+  },
+  {
+   "id": "anthropics__skills__skills__doc-coauthoring",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__doc-coauthoring"
+  },
+  {
+   "id": "anthropics__skills__skills__docx",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__docx"
+  },
+  {
+   "id": "anthropics__skills__skills__frontend-design",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__frontend-design"
+  },
+  {
+   "id": "anthropics__skills__skills__internal-comms",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__internal-comms"
+  },
+  {
+   "id": "anthropics__skills__skills__mcp-builder",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__mcp-builder"
+  },
+  {
+   "id": "anthropics__skills__skills__pdf",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__pdf"
+  },
+  {
+   "id": "anthropics__skills__skills__pptx",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__pptx"
+  },
+  {
+   "id": "anthropics__skills__skills__skill-creator",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__skill-creator"
+  },
+  {
+   "id": "anthropics__skills__skills__slack-gif-creator",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__slack-gif-creator"
+  },
+  {
+   "id": "anthropics__skills__skills__theme-factory",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__theme-factory"
+  },
+  {
+   "id": "anthropics__skills__skills__web-artifacts-builder",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__web-artifacts-builder"
+  },
+  {
+   "id": "anthropics__skills__skills__webapp-testing",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__webapp-testing"
+  },
+  {
+   "id": "anthropics__skills__skills__xlsx",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__skills__xlsx"
+  },
+  {
+   "id": "anthropics__skills__template",
+   "malicious": false,
+   "source": "anthropics/skills",
+   "evidence": "vendor",
+   "cluster": "anthropics__skills__template"
+  },
+  {
+   "id": "github__awesome-copilot__.github__skills__agentic-workflows",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__.github__skills__agentic-workflows"
+  },
+  {
+   "id": "github__awesome-copilot__.github__skills__code-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__.github__skills__code-review"
+  },
+  {
+   "id": "github__awesome-copilot__.github__skills__create-canvas-extension",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__.github__skills__create-canvas-extension"
+  },
+  {
+   "id": "github__awesome-copilot__skills__acquire-codebase-knowledge",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__acquire-codebase-knowledge"
+  },
+  {
+   "id": "github__awesome-copilot__skills__acreadiness-assess",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__acreadiness-assess"
+  },
+  {
+   "id": "github__awesome-copilot__skills__acreadiness-generate-instructions",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__acreadiness-generate-instructions"
+  },
+  {
+   "id": "github__awesome-copilot__skills__acreadiness-policy",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__acreadiness-policy"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ad-campaign-analyzer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ad-campaign-analyzer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__add-educational-comments",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__add-educational-comments"
+  },
+  {
+   "id": "github__awesome-copilot__skills__adobe-illustrator-integrations",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__adobe-illustrator-integrations"
+  },
+  {
+   "id": "github__awesome-copilot__skills__adobe-illustrator-scripting",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__adobe-illustrator-scripting"
+  },
+  {
+   "id": "github__awesome-copilot__skills__agent-architecture",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__agent-architecture"
+  },
+  {
+   "id": "github__awesome-copilot__skills__agent-governance",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__agent-governance"
+  },
+  {
+   "id": "github__awesome-copilot__skills__agent-owasp-compliance",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__agent-owasp-compliance"
+  },
+  {
+   "id": "github__awesome-copilot__skills__agent-skill-stack",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__agent-skill-stack"
+  },
+  {
+   "id": "github__awesome-copilot__skills__agent-supply-chain",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__agent-supply-chain"
+  },
+  {
+   "id": "github__awesome-copilot__skills__agentic-eval",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__agentic-eval"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ai-prompt-engineering-safety-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ai-prompt-engineering-safety-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ai-ready",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ai-ready"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ai-team-orchestration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ai-team-orchestration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__anti-ui-slop",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__anti-ui-slop"
+  },
+  {
+   "id": "github__awesome-copilot__skills__api-breaking-change-detector",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__api-breaking-change-detector"
+  },
+  {
+   "id": "github__awesome-copilot__skills__appinsights-instrumentation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__appinsights-instrumentation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__apple-appstore-reviewer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__apple-appstore-reviewer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arch-linux-triage",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arch-linux-triage"
+  },
+  {
+   "id": "github__awesome-copilot__skills__architecture-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__architecture-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arduino-azure-iot-edge-integration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arduino-azure-iot-edge-integration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-ai-provider-integration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-ai-provider-integration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-annotation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-annotation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-dataset",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-dataset"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-evaluator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-evaluator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-experiment",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-experiment"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-instrumentation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-instrumentation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-link",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-link"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-prompt-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-prompt-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__arize-trace",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__arize-trace"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aspire",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aspire"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aspnet-minimal-api-openapi",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aspnet-minimal-api-openapi"
+  },
+  {
+   "id": "github__awesome-copilot__skills__audit-integrity",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__audit-integrity"
+  },
+  {
+   "id": "github__awesome-copilot__skills__automate-this",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__automate-this"
+  },
+  {
+   "id": "github__awesome-copilot__skills__autoresearch",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__autoresearch"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aws-cdk-python-setup",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aws-cdk-python-setup"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aws-cloudwatch-investigation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aws-cloudwatch-investigation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aws-cost-optimize",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aws-cost-optimize"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aws-resource-health-diagnose",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aws-resource-health-diagnose"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aws-resource-query",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aws-resource-query"
+  },
+  {
+   "id": "github__awesome-copilot__skills__aws-well-architected-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__aws-well-architected-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__az-cost-optimize",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__az-cost-optimize"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-architecture-autopilot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-architecture-autopilot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-container-registry-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-container-registry-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-deployment-preflight",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-deployment-preflight"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-developer-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-developer-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-devops-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-devops-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-logic-apps-standard-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-logic-apps-standard-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-pricing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-pricing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-resource-health-diagnose",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-resource-health-diagnose"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-resource-visualizer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-resource-visualizer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-role-selector",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-role-selector"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-smart-city-iot-solution-builder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-smart-city-iot-solution-builder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-static-web-apps",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-static-web-apps"
+  },
+  {
+   "id": "github__awesome-copilot__skills__azure-well-architected-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__azure-well-architected-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__batch-files",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__batch-files"
+  },
+  {
+   "id": "github__awesome-copilot__skills__batch-script-progress",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__batch-script-progress"
+  },
+  {
+   "id": "github__awesome-copilot__skills__bench-read",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__bench-read"
+  },
+  {
+   "id": "github__awesome-copilot__skills__bigquery-pipeline-audit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__bigquery-pipeline-audit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__boost-prompt",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__boost-prompt"
+  },
+  {
+   "id": "github__awesome-copilot__skills__brag-sheet",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__brag-sheet"
+  },
+  {
+   "id": "github__awesome-copilot__skills__breakdown-epic-arch",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__breakdown-epic-arch"
+  },
+  {
+   "id": "github__awesome-copilot__skills__breakdown-epic-pm",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__breakdown-epic-pm"
+  },
+  {
+   "id": "github__awesome-copilot__skills__breakdown-feature-implementation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__breakdown-feature-implementation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__breakdown-feature-prd",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__breakdown-feature-prd"
+  },
+  {
+   "id": "github__awesome-copilot__skills__breakdown-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__breakdown-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__breakdown-test",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__breakdown-test"
+  },
+  {
+   "id": "github__awesome-copilot__skills__bug-receipt",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__bug-receipt"
+  },
+  {
+   "id": "github__awesome-copilot__skills__bug-reproduction-brief",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__bug-reproduction-brief"
+  },
+  {
+   "id": "github__awesome-copilot__skills__build-evidence-map",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__build-evidence-map"
+  },
+  {
+   "id": "github__awesome-copilot__skills__caption-qa",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__caption-qa"
+  },
+  {
+   "id": "github__awesome-copilot__skills__centos-linux-triage",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__centos-linux-triage"
+  },
+  {
+   "id": "github__awesome-copilot__skills__chrome-devtools",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__chrome-devtools"
+  },
+  {
+   "id": "github__awesome-copilot__skills__cli-mastery",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__cli-mastery"
+  },
+  {
+   "id": "github__awesome-copilot__skills__cloud-design-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__cloud-design-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__code-exemplars-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__code-exemplars-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__code-tour",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__code-tour"
+  },
+  {
+   "id": "github__awesome-copilot__skills__codebase-memory-mcp",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__codebase-memory-mcp"
+  },
+  {
+   "id": "github__awesome-copilot__skills__codeql",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__codeql"
+  },
+  {
+   "id": "github__awesome-copilot__skills__comment-code-generate-a-tutorial",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__comment-code-generate-a-tutorial"
+  },
+  {
+   "id": "github__awesome-copilot__skills__commit-message-storyteller",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__commit-message-storyteller"
+  },
+  {
+   "id": "github__awesome-copilot__skills__competitor-ad-intelligence",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__competitor-ad-intelligence"
+  },
+  {
+   "id": "github__awesome-copilot__skills__containerize-aspnet-framework",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__containerize-aspnet-framework"
+  },
+  {
+   "id": "github__awesome-copilot__skills__containerize-aspnetcore",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__containerize-aspnetcore"
+  },
+  {
+   "id": "github__awesome-copilot__skills__content-management-systems",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__content-management-systems"
+  },
+  {
+   "id": "github__awesome-copilot__skills__context-map",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__context-map"
+  },
+  {
+   "id": "github__awesome-copilot__skills__conventional-branch",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__conventional-branch"
+  },
+  {
+   "id": "github__awesome-copilot__skills__conventional-commit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__conventional-commit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__convert-excel-to-md",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__convert-excel-to-md"
+  },
+  {
+   "id": "github__awesome-copilot__skills__convert-pdf-to-md",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__convert-pdf-to-md"
+  },
+  {
+   "id": "github__awesome-copilot__skills__convert-plaintext-to-md",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__convert-plaintext-to-md"
+  },
+  {
+   "id": "github__awesome-copilot__skills__convert-word-to-md",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__convert-word-to-md"
+  },
+  {
+   "id": "github__awesome-copilot__skills__copilot-cli-quickstart",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__copilot-cli-quickstart"
+  },
+  {
+   "id": "github__awesome-copilot__skills__copilot-instructions-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__copilot-instructions-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__copilot-pr-autopilot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__copilot-pr-autopilot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__copilot-sdk",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__copilot-sdk"
+  },
+  {
+   "id": "github__awesome-copilot__skills__copilot-spaces",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__copilot-spaces"
+  },
+  {
+   "id": "github__awesome-copilot__skills__copilot-usage-metrics",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__copilot-usage-metrics"
+  },
+  {
+   "id": "github__awesome-copilot__skills__cosmosdb-datamodeling",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__cosmosdb-datamodeling"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-agentsmd",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-agentsmd"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-architectural-decision-record",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-architectural-decision-record"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-github-action-workflow-specification",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-github-action-workflow-specification"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-github-issue-feature-from-specification",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-github-issue-feature-from-specification"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-github-issues-feature-from-implementation-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-github-issues-feature-from-implementation-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-github-issues-for-unmet-specification-requirements",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-github-issues-for-unmet-specification-requirements"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-implementation-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-implementation-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-llms",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-llms"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-quarkus-project",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-quarkus-project"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-readme",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-readme"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-specification",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-specification"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-spring-boot-java-project",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-spring-boot-java-project"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-spring-boot-kotlin-project",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-spring-boot-kotlin-project"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-technical-spike",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-technical-spike"
+  },
+  {
+   "id": "github__awesome-copilot__skills__create-tldr-page",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__create-tldr-page"
+  },
+  {
+   "id": "github__awesome-copilot__skills__creating-oracle-to-postgres-master-migration-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__creating-oracle-to-postgres-master-migration-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__creating-oracle-to-postgres-migration-bug-report",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__creating-oracle-to-postgres-migration-bug-report"
+  },
+  {
+   "id": "github__awesome-copilot__skills__creating-oracle-to-postgres-migration-integration-tests",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__creating-oracle-to-postgres-migration-integration-tests"
+  },
+  {
+   "id": "github__awesome-copilot__skills__csharp-async",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__csharp-async"
+  },
+  {
+   "id": "github__awesome-copilot__skills__csharp-docs",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__csharp-docs"
+  },
+  {
+   "id": "github__awesome-copilot__skills__csharp-mstest",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__csharp-mstest"
+  },
+  {
+   "id": "github__awesome-copilot__skills__csharp-nunit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__csharp-nunit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__csharp-tunit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__csharp-tunit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__csharp-xunit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__csharp-xunit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__cypress-flake-fixer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__cypress-flake-fixer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__d365-solution-blueprint",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__d365-solution-blueprint"
+  },
+  {
+   "id": "github__awesome-copilot__skills__daily-focus-board",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__daily-focus-board"
+  },
+  {
+   "id": "github__awesome-copilot__skills__daily-prep",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__daily-prep"
+  },
+  {
+   "id": "github__awesome-copilot__skills__data-breach-blast-radius",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__data-breach-blast-radius"
+  },
+  {
+   "id": "github__awesome-copilot__skills__datanalysis-credit-risk",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__datanalysis-credit-risk"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dataverse-python-advanced-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dataverse-python-advanced-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dataverse-python-production-code",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dataverse-python-production-code"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dataverse-python-quickstart",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dataverse-python-quickstart"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dataverse-python-usecase-builder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dataverse-python-usecase-builder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__debian-linux-triage",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__debian-linux-triage"
+  },
+  {
+   "id": "github__awesome-copilot__skills__declarative-agents",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__declarative-agents"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dependabot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dependabot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__desk-journal",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__desk-journal"
+  },
+  {
+   "id": "github__awesome-copilot__skills__desk-open",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__desk-open"
+  },
+  {
+   "id": "github__awesome-copilot__skills__devops-rollout-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__devops-rollout-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__diagnose",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__diagnose"
+  },
+  {
+   "id": "github__awesome-copilot__skills__diagnose-ci-gate",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__diagnose-ci-gate"
+  },
+  {
+   "id": "github__awesome-copilot__skills__doc-and-modernize",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__doc-and-modernize"
+  },
+  {
+   "id": "github__awesome-copilot__skills__docs-sync-audit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__docs-sync-audit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__documentation-writer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__documentation-writer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dotnet-best-practices",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dotnet-best-practices"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dotnet-design-pattern-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dotnet-design-pattern-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dotnet-mcp-builder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dotnet-mcp-builder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dotnet-timezone",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dotnet-timezone"
+  },
+  {
+   "id": "github__awesome-copilot__skills__dotnet-upgrade",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__dotnet-upgrade"
+  },
+  {
+   "id": "github__awesome-copilot__skills__doublecheck",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__doublecheck"
+  },
+  {
+   "id": "github__awesome-copilot__skills__draw-io-diagram-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__draw-io-diagram-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__drawio",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__drawio"
+  },
+  {
+   "id": "github__awesome-copilot__skills__editorconfig",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__editorconfig"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ef-core",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ef-core"
+  },
+  {
+   "id": "github__awesome-copilot__skills__efcore-d2-db-diagram",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__efcore-d2-db-diagram"
+  },
+  {
+   "id": "github__awesome-copilot__skills__em-dash",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__em-dash"
+  },
+  {
+   "id": "github__awesome-copilot__skills__email-drafter",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__email-drafter"
+  },
+  {
+   "id": "github__awesome-copilot__skills__embedding-anisotropy-check",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__embedding-anisotropy-check"
+  },
+  {
+   "id": "github__awesome-copilot__skills__entra-agent-user",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__entra-agent-user"
+  },
+  {
+   "id": "github__awesome-copilot__skills__eval-driven-dev",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__eval-driven-dev"
+  },
+  {
+   "id": "github__awesome-copilot__skills__exam-ready",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__exam-ready"
+  },
+  {
+   "id": "github__awesome-copilot__skills__excalidraw-diagram-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__excalidraw-diagram-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__eyeball",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__eyeball"
+  },
+  {
+   "id": "github__awesome-copilot__skills__fabric-lakehouse",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__fabric-lakehouse"
+  },
+  {
+   "id": "github__awesome-copilot__skills__fedora-linux-triage",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__fedora-linux-triage"
+  },
+  {
+   "id": "github__awesome-copilot__skills__finalize-agent-prompt",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__finalize-agent-prompt"
+  },
+  {
+   "id": "github__awesome-copilot__skills__finnish-humanizer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__finnish-humanizer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__first-ask",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__first-ask"
+  },
+  {
+   "id": "github__awesome-copilot__skills__flowstudio-power-automate-build",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__flowstudio-power-automate-build"
+  },
+  {
+   "id": "github__awesome-copilot__skills__flowstudio-power-automate-debug",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__flowstudio-power-automate-debug"
+  },
+  {
+   "id": "github__awesome-copilot__skills__flowstudio-power-automate-governance",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__flowstudio-power-automate-governance"
+  },
+  {
+   "id": "github__awesome-copilot__skills__flowstudio-power-automate-mcp",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__flowstudio-power-automate-mcp"
+  },
+  {
+   "id": "github__awesome-copilot__skills__flowstudio-power-automate-monitoring",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__flowstudio-power-automate-monitoring"
+  },
+  {
+   "id": "github__awesome-copilot__skills__fluentui-blazor",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__fluentui-blazor"
+  },
+  {
+   "id": "github__awesome-copilot__skills__folder-structure-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__folder-structure-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__foundry-agent-sync",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__foundry-agent-sync"
+  },
+  {
+   "id": "github__awesome-copilot__skills__foundry-agentic-loop",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__foundry-agentic-loop"
+  },
+  {
+   "id": "github__awesome-copilot__skills__foundry-hosted-agent-copilotkit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__foundry-hosted-agent-copilotkit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__freecad-scripts",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__freecad-scripts"
+  },
+  {
+   "id": "github__awesome-copilot__skills__from-the-other-side-anitta",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__from-the-other-side-anitta"
+  },
+  {
+   "id": "github__awesome-copilot__skills__from-the-other-side-quinn",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__from-the-other-side-quinn"
+  },
+  {
+   "id": "github__awesome-copilot__skills__from-the-other-side-vega",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__from-the-other-side-vega"
+  },
+  {
+   "id": "github__awesome-copilot__skills__from-the-other-side-wiggins",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__from-the-other-side-wiggins"
+  },
+  {
+   "id": "github__awesome-copilot__skills__game-engine",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__game-engine"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gdpr-compliant",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gdpr-compliant"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gem-devops-guidelines",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gem-devops-guidelines"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gen-specs-as-issues",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gen-specs-as-issues"
+  },
+  {
+   "id": "github__awesome-copilot__skills__generate-custom-instructions-from-codebase",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__generate-custom-instructions-from-codebase"
+  },
+  {
+   "id": "github__awesome-copilot__skills__generate-image",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__generate-image"
+  },
+  {
+   "id": "github__awesome-copilot__skills__geofeed-tuner",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__geofeed-tuner"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gh-attach",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gh-attach"
+  },
+  {
+   "id": "github__awesome-copilot__skills__git-commit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__git-commit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__git-flow-branch-creator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__git-flow-branch-creator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-actions-efficiency",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-actions-efficiency"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-actions-hardening",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-actions-hardening"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-actions-runtime-upgrade-conventions",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-actions-runtime-upgrade-conventions"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-codespaces-efficiency",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-codespaces-efficiency"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-copilot-starter",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-copilot-starter"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-issues",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-issues"
+  },
+  {
+   "id": "github__awesome-copilot__skills__github-release",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__github-release"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gitmoji",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gitmoji"
+  },
+  {
+   "id": "github__awesome-copilot__skills__globestudio",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__globestudio"
+  },
+  {
+   "id": "github__awesome-copilot__skills__go-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__go-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gsap-framer-scroll-animation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gsap-framer-scroll-animation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-0-to-1-launch",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-0-to-1-launch"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-ai-gtm",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-ai-gtm"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-board-and-investor-communication",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-board-and-investor-communication"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-developer-ecosystem",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-developer-ecosystem"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-enterprise-account-planning",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-enterprise-account-planning"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-enterprise-onboarding",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-enterprise-onboarding"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-operating-cadence",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-operating-cadence"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-partnership-architecture",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-partnership-architecture"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-positioning-strategy",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-positioning-strategy"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-product-led-growth",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-product-led-growth"
+  },
+  {
+   "id": "github__awesome-copilot__skills__gtm-technical-product-pricing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__gtm-technical-product-pricing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__harness-engineering",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__harness-engineering"
+  },
+  {
+   "id": "github__awesome-copilot__skills__image-annotations",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__image-annotations"
+  },
+  {
+   "id": "github__awesome-copilot__skills__image-manipulation-image-magick",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__image-manipulation-image-magick"
+  },
+  {
+   "id": "github__awesome-copilot__skills__impediment-prioritization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__impediment-prioritization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__import-infrastructure-as-code",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__import-infrastructure-as-code"
+  },
+  {
+   "id": "github__awesome-copilot__skills__incident-postmortem",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__incident-postmortem"
+  },
+  {
+   "id": "github__awesome-copilot__skills__integrate-context-matic",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__integrate-context-matic"
+  },
+  {
+   "id": "github__awesome-copilot__skills__issue-fields-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__issue-fields-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-add-graalvm-native-image-support",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-add-graalvm-native-image-support"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-debugging",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-debugging"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-development",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-development"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-diagnostics",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-diagnostics"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-docs",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-docs"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-helidon",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-helidon"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-hibernate-jpa",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-hibernate-jpa"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-junit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-junit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-refactoring-extract-method",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-refactoring-extract-method"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-refactoring-remove-parameter",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-refactoring-remove-parameter"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-springboot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-springboot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-testcontainers",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-testcontainers"
+  },
+  {
+   "id": "github__awesome-copilot__skills__java-upgrade",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__java-upgrade"
+  },
+  {
+   "id": "github__awesome-copilot__skills__javascript-typescript-jest",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__javascript-typescript-jest"
+  },
+  {
+   "id": "github__awesome-copilot__skills__javax-to-jakarta-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__javax-to-jakarta-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__kotlin-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__kotlin-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__kotlin-springboot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__kotlin-springboot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__landing-page-conversion-audit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__landing-page-conversion-audit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__latchshot-page-capture",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__latchshot-page-capture"
+  },
+  {
+   "id": "github__awesome-copilot__skills__lean-comments",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__lean-comments"
+  },
+  {
+   "id": "github__awesome-copilot__skills__legacy-circuit-mockups",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__legacy-circuit-mockups"
+  },
+  {
+   "id": "github__awesome-copilot__skills__lightweight-charts-react-components",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__lightweight-charts-react-components"
+  },
+  {
+   "id": "github__awesome-copilot__skills__linkedin-post-formatter",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__linkedin-post-formatter"
+  },
+  {
+   "id": "github__awesome-copilot__skills__lsp-setup",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__lsp-setup"
+  },
+  {
+   "id": "github__awesome-copilot__skills__macos-golden-gate-design",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__macos-golden-gate-design"
+  },
+  {
+   "id": "github__awesome-copilot__skills__make-blog-post",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__make-blog-post"
+  },
+  {
+   "id": "github__awesome-copilot__skills__make-repo-contribution",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__make-repo-contribution"
+  },
+  {
+   "id": "github__awesome-copilot__skills__markdown-to-html",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__markdown-to-html"
+  },
+  {
+   "id": "github__awesome-copilot__skills__markdown-to-word-mermaid",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__markdown-to-word-mermaid"
+  },
+  {
+   "id": "github__awesome-copilot__skills__markstream-install",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__markstream-install"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-copilot-studio-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-copilot-studio-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-create-adaptive-cards",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-create-adaptive-cards"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-create-declarative-agent",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-create-declarative-agent"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-deploy-manage-agents",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-deploy-manage-agents"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-implementation-security-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-implementation-security-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-release-qa",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-release-qa"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mcp-security-audit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mcp-security-audit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__md-to-docx",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__md-to-docx"
+  },
+  {
+   "id": "github__awesome-copilot__skills__meeting-minutes",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__meeting-minutes"
+  },
+  {
+   "id": "github__awesome-copilot__skills__memory-merger",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__memory-merger"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mentoring-juniors",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mentoring-juniors"
+  },
+  {
+   "id": "github__awesome-copilot__skills__microsoft-agent-framework",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__microsoft-agent-framework"
+  },
+  {
+   "id": "github__awesome-copilot__skills__microsoft-code-reference",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__microsoft-code-reference"
+  },
+  {
+   "id": "github__awesome-copilot__skills__microsoft-docs",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__microsoft-docs"
+  },
+  {
+   "id": "github__awesome-copilot__skills__microsoft-skill-creator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__microsoft-skill-creator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__microsoft-store-publisher",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__microsoft-store-publisher"
+  },
+  {
+   "id": "github__awesome-copilot__skills__migrating-oracle-to-postgres-data-access-code",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__migrating-oracle-to-postgres-data-access-code"
+  },
+  {
+   "id": "github__awesome-copilot__skills__migrating-oracle-to-postgres-stored-procedures",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__migrating-oracle-to-postgres-stored-procedures"
+  },
+  {
+   "id": "github__awesome-copilot__skills__minecraft-plugin-development",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__minecraft-plugin-development"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mini-context-graph",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mini-context-graph"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mkdocs-translations",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mkdocs-translations"
+  },
+  {
+   "id": "github__awesome-copilot__skills__msgraph-sdk",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__msgraph-sdk"
+  },
+  {
+   "id": "github__awesome-copilot__skills__msstore-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__msstore-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__multi-stage-dockerfile",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__multi-stage-dockerfile"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mvvm-toolkit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mvvm-toolkit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mvvm-toolkit-di",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mvvm-toolkit-di"
+  },
+  {
+   "id": "github__awesome-copilot__skills__mvvm-toolkit-messenger",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__mvvm-toolkit-messenger"
+  },
+  {
+   "id": "github__awesome-copilot__skills__namecheap",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__namecheap"
+  },
+  {
+   "id": "github__awesome-copilot__skills__nano-banana-pro-openrouter",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__nano-banana-pro-openrouter"
+  },
+  {
+   "id": "github__awesome-copilot__skills__napkin",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__napkin"
+  },
+  {
+   "id": "github__awesome-copilot__skills__next-intl-add-language",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__next-intl-add-language"
+  },
+  {
+   "id": "github__awesome-copilot__skills__noob-mode",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__noob-mode"
+  },
+  {
+   "id": "github__awesome-copilot__skills__npm-trusted-publishing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__npm-trusted-publishing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__nuget-manager",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__nuget-manager"
+  },
+  {
+   "id": "github__awesome-copilot__skills__onboard-context-matic",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__onboard-context-matic"
+  },
+  {
+   "id": "github__awesome-copilot__skills__oo-component-documentation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__oo-component-documentation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__openapi-to-application-code",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__openapi-to-application-code"
+  },
+  {
+   "id": "github__awesome-copilot__skills__openapi-to-application-java-spring-boot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__openapi-to-application-java-spring-boot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__optimize-simplicite-logs",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__optimize-simplicite-logs"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pdftk-server",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pdftk-server"
+  },
+  {
+   "id": "github__awesome-copilot__skills__penpot-uiux-design",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__penpot-uiux-design"
+  },
+  {
+   "id": "github__awesome-copilot__skills__performance-review-writer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__performance-review-writer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pester-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pester-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pester-should-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pester-should-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__phoenix-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__phoenix-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__phoenix-evals",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__phoenix-evals"
+  },
+  {
+   "id": "github__awesome-copilot__skills__phoenix-tracing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__phoenix-tracing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__php-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__php-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pinecone-rag",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pinecone-rag"
+  },
+  {
+   "id": "github__awesome-copilot__skills__planning-oracle-to-postgres-migration-integration-testing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__planning-oracle-to-postgres-migration-integration-testing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__plantuml-ascii",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__plantuml-ascii"
+  },
+  {
+   "id": "github__awesome-copilot__skills__playwright-automation-fill-in-form",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__playwright-automation-fill-in-form"
+  },
+  {
+   "id": "github__awesome-copilot__skills__playwright-explore-website",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__playwright-explore-website"
+  },
+  {
+   "id": "github__awesome-copilot__skills__playwright-generate-test",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__playwright-generate-test"
+  },
+  {
+   "id": "github__awesome-copilot__skills__poka-yoke",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__poka-yoke"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ponder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ponder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__postgresql-code-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__postgresql-code-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__postgresql-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__postgresql-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-apps-code-app-scaffold",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-apps-code-app-scaffold"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-bi-dax-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-bi-dax-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-bi-model-design-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-bi-model-design-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-bi-performance-troubleshooting",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-bi-performance-troubleshooting"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-bi-report-design-consultation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-bi-report-design-consultation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-platform-architect",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-platform-architect"
+  },
+  {
+   "id": "github__awesome-copilot__skills__power-platform-mcp-connector-suite",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__power-platform-mcp-connector-suite"
+  },
+  {
+   "id": "github__awesome-copilot__skills__powerbi-modeling",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__powerbi-modeling"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pr-address-feedback",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pr-address-feedback"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pr-artifact-explorer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pr-artifact-explorer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pr-dashboard",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pr-dashboard"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pr-screenshots",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pr-screenshots"
+  },
+  {
+   "id": "github__awesome-copilot__skills__prd",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__prd"
+  },
+  {
+   "id": "github__awesome-copilot__skills__premium-frontend-ui",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__premium-frontend-ui"
+  },
+  {
+   "id": "github__awesome-copilot__skills__project-workflow-analysis-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__project-workflow-analysis-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__prompt-optimizer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__prompt-optimizer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__protobuf-grpc-api-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__protobuf-grpc-api-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__publish-to-pages",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__publish-to-pages"
+  },
+  {
+   "id": "github__awesome-copilot__skills__pytest-coverage",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__pytest-coverage"
+  },
+  {
+   "id": "github__awesome-copilot__skills__python-azure-iot-edge-modules",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__python-azure-iot-edge-modules"
+  },
+  {
+   "id": "github__awesome-copilot__skills__python-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__python-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__python-pypi-package-builder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__python-pypi-package-builder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-clients-sdk",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-clients-sdk"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-deployment-options",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-deployment-options"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-model-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-model-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-monitoring",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-monitoring"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-monitoring__debugging",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-monitoring__debugging"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-monitoring__setup",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-monitoring__setup"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-performance-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-performance-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-performance-optimization__indexing-performance-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-performance-optimization__indexing-performance-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-performance-optimization__memory-usage-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-performance-optimization__memory-usage-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-performance-optimization__search-speed-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-performance-optimization__search-speed-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__minimize-latency",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__minimize-latency"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__horizontal-scaling",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__horizontal-scaling"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__sliding-time-window",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__sliding-time-window"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__tenant-scaling",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__tenant-scaling"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__vertical-scaling",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-data-volume__vertical-scaling"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-qps",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-qps"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-scaling__scaling-query-volume",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-scaling__scaling-query-volume"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-search-quality",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-search-quality"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-search-quality__diagnosis",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-search-quality__diagnosis"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-search-quality__search-strategies",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-search-quality__search-strategies"
+  },
+  {
+   "id": "github__awesome-copilot__skills__qdrant-version-upgrade",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__qdrant-version-upgrade"
+  },
+  {
+   "id": "github__awesome-copilot__skills__quality-playbook",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__quality-playbook"
+  },
+  {
+   "id": "github__awesome-copilot__skills__quarkus-application-development",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__quarkus-application-development"
+  },
+  {
+   "id": "github__awesome-copilot__skills__quarkus-dev-services-and-testing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__quarkus-dev-services-and-testing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__quarkus-native-and-container",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__quarkus-native-and-container"
+  },
+  {
+   "id": "github__awesome-copilot__skills__quasi-coder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__quasi-coder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react-audit-grep-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react-audit-grep-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react-container-presentation-component",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react-container-presentation-component"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react18-batching-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react18-batching-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react18-dep-compatibility",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react18-dep-compatibility"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react18-enzyme-to-rtl",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react18-enzyme-to-rtl"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react18-legacy-context",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react18-legacy-context"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react18-lifecycle-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react18-lifecycle-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react18-string-refs",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react18-string-refs"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react19-concurrent-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react19-concurrent-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react19-source-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react19-source-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__react19-test-patterns",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__react19-test-patterns"
+  },
+  {
+   "id": "github__awesome-copilot__skills__readme-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__readme-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__rebase-current-branch",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__rebase-current-branch"
+  },
+  {
+   "id": "github__awesome-copilot__skills__refactor",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__refactor"
+  },
+  {
+   "id": "github__awesome-copilot__skills__refactor-method-complexity-reduce",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__refactor-method-complexity-reduce"
+  },
+  {
+   "id": "github__awesome-copilot__skills__refactor-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__refactor-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__remember",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__remember"
+  },
+  {
+   "id": "github__awesome-copilot__skills__remember-interactive-programming",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__remember-interactive-programming"
+  },
+  {
+   "id": "github__awesome-copilot__skills__repo-standardizer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__repo-standardizer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__repo-story-time",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__repo-story-time"
+  },
+  {
+   "id": "github__awesome-copilot__skills__resemble-detect",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__resemble-detect"
+  },
+  {
+   "id": "github__awesome-copilot__skills__resx-source-generator-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__resx-source-generator-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__review-and-refactor",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__review-and-refactor"
+  },
+  {
+   "id": "github__awesome-copilot__skills__reviewing-oracle-to-postgres-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__reviewing-oracle-to-postgres-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__rhino3d-scripts",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__rhino3d-scripts"
+  },
+  {
+   "id": "github__awesome-copilot__skills__roslyn-analyzers",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__roslyn-analyzers"
+  },
+  {
+   "id": "github__awesome-copilot__skills__roundup",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__roundup"
+  },
+  {
+   "id": "github__awesome-copilot__skills__roundup-setup",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__roundup-setup"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ruby-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ruby-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ruff-recursive-fix",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ruff-recursive-fix"
+  },
+  {
+   "id": "github__awesome-copilot__skills__rust-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__rust-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__salesforce-apex-quality",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__salesforce-apex-quality"
+  },
+  {
+   "id": "github__awesome-copilot__skills__salesforce-component-standards",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__salesforce-component-standards"
+  },
+  {
+   "id": "github__awesome-copilot__skills__salesforce-flow-design",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__salesforce-flow-design"
+  },
+  {
+   "id": "github__awesome-copilot__skills__sandbox-npm-install",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__sandbox-npm-install"
+  },
+  {
+   "id": "github__awesome-copilot__skills__scaffolding-oracle-to-postgres-migration-test-project",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__scaffolding-oracle-to-postgres-migration-test-project"
+  },
+  {
+   "id": "github__awesome-copilot__skills__scoutqa-test",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__scoutqa-test"
+  },
+  {
+   "id": "github__awesome-copilot__skills__screen-recording",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__screen-recording"
+  },
+  {
+   "id": "github__awesome-copilot__skills__secret-scanning",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__secret-scanning"
+  },
+  {
+   "id": "github__awesome-copilot__skills__security-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__security-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__semantic-kernel",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__semantic-kernel"
+  },
+  {
+   "id": "github__awesome-copilot__skills__server-side-conversion-tracking",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__server-side-conversion-tracking"
+  },
+  {
+   "id": "github__awesome-copilot__skills__setup-my-iq",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__setup-my-iq"
+  },
+  {
+   "id": "github__awesome-copilot__skills__shopify-review-triage",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__shopify-review-triage"
+  },
+  {
+   "id": "github__awesome-copilot__skills__shuffle-json-data",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__shuffle-json-data"
+  },
+  {
+   "id": "github__awesome-copilot__skills__signal-write",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__signal-write"
+  },
+  {
+   "id": "github__awesome-copilot__skills__slang-shader-engineer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__slang-shader-engineer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__snowflake-semanticview",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__snowflake-semanticview"
+  },
+  {
+   "id": "github__awesome-copilot__skills__speak-summary",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__speak-summary"
+  },
+  {
+   "id": "github__awesome-copilot__skills__sponsor-finder",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__sponsor-finder"
+  },
+  {
+   "id": "github__awesome-copilot__skills__spring-boot-4-migration",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__spring-boot-4-migration"
+  },
+  {
+   "id": "github__awesome-copilot__skills__spring-boot-testing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__spring-boot-testing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__spring-observability",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__spring-observability"
+  },
+  {
+   "id": "github__awesome-copilot__skills__spring-security",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__spring-security"
+  },
+  {
+   "id": "github__awesome-copilot__skills__sql-code-review",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__sql-code-review"
+  },
+  {
+   "id": "github__awesome-copilot__skills__sql-object-impact-analysis",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__sql-object-impact-analysis"
+  },
+  {
+   "id": "github__awesome-copilot__skills__sql-optimization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__sql-optimization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__sql-server-table-reconciliation",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__sql-server-table-reconciliation"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ssma-console",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ssma-console"
+  },
+  {
+   "id": "github__awesome-copilot__skills__steno-mode",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__steno-mode"
+  },
+  {
+   "id": "github__awesome-copilot__skills__structured-autonomy-generate",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__structured-autonomy-generate"
+  },
+  {
+   "id": "github__awesome-copilot__skills__structured-autonomy-implement",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__structured-autonomy-implement"
+  },
+  {
+   "id": "github__awesome-copilot__skills__structured-autonomy-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__structured-autonomy-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__suggest-awesome-github-copilot-agents",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__suggest-awesome-github-copilot-agents"
+  },
+  {
+   "id": "github__awesome-copilot__skills__suggest-awesome-github-copilot-instructions",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__suggest-awesome-github-copilot-instructions"
+  },
+  {
+   "id": "github__awesome-copilot__skills__suggest-awesome-github-copilot-skills",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__suggest-awesome-github-copilot-skills"
+  },
+  {
+   "id": "github__awesome-copilot__skills__swift-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__swift-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__system-commandline-cli",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__system-commandline-cli"
+  },
+  {
+   "id": "github__awesome-copilot__skills__technical-job-search",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__technical-job-search"
+  },
+  {
+   "id": "github__awesome-copilot__skills__technology-stack-blueprint-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__technology-stack-blueprint-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__terraform-azurerm-set-diff-analyzer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__terraform-azurerm-set-diff-analyzer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__test-gap-audit",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__test-gap-audit"
+  },
+  {
+   "id": "github__awesome-copilot__skills__threat-model-analyst",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__threat-model-analyst"
+  },
+  {
+   "id": "github__awesome-copilot__skills__tiny-stepping",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__tiny-stepping"
+  },
+  {
+   "id": "github__awesome-copilot__skills__tldr-prompt",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__tldr-prompt"
+  },
+  {
+   "id": "github__awesome-copilot__skills__tm7-threat-model",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__tm7-threat-model"
+  },
+  {
+   "id": "github__awesome-copilot__skills__transloadit-media-processing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__transloadit-media-processing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__tugboat",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__tugboat"
+  },
+  {
+   "id": "github__awesome-copilot__skills__typescript-mcp-server-generator",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__typescript-mcp-server-generator"
+  },
+  {
+   "id": "github__awesome-copilot__skills__typespec-api-operations",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__typespec-api-operations"
+  },
+  {
+   "id": "github__awesome-copilot__skills__typespec-create-agent",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__typespec-create-agent"
+  },
+  {
+   "id": "github__awesome-copilot__skills__typespec-create-api-plugin",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__typespec-create-api-plugin"
+  },
+  {
+   "id": "github__awesome-copilot__skills__ui-screenshots",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__ui-screenshots"
+  },
+  {
+   "id": "github__awesome-copilot__skills__unit-test-vue-pinia",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__unit-test-vue-pinia"
+  },
+  {
+   "id": "github__awesome-copilot__skills__update-avm-modules-in-bicep",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__update-avm-modules-in-bicep"
+  },
+  {
+   "id": "github__awesome-copilot__skills__update-implementation-plan",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__update-implementation-plan"
+  },
+  {
+   "id": "github__awesome-copilot__skills__update-llms",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__update-llms"
+  },
+  {
+   "id": "github__awesome-copilot__skills__update-markdown-file-index",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__update-markdown-file-index"
+  },
+  {
+   "id": "github__awesome-copilot__skills__update-specification",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__update-specification"
+  },
+  {
+   "id": "github__awesome-copilot__skills__upstash-redis",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__upstash-redis"
+  },
+  {
+   "id": "github__awesome-copilot__skills__v-development",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__v-development"
+  },
+  {
+   "id": "github__awesome-copilot__skills__vardoger-analyze",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__vardoger-analyze"
+  },
+  {
+   "id": "github__awesome-copilot__skills__vcpkg",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__vcpkg"
+  },
+  {
+   "id": "github__awesome-copilot__skills__verify-agent-action",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__verify-agent-action"
+  },
+  {
+   "id": "github__awesome-copilot__skills__vscode-ext-commands",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__vscode-ext-commands"
+  },
+  {
+   "id": "github__awesome-copilot__skills__vscode-ext-localization",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__vscode-ext-localization"
+  },
+  {
+   "id": "github__awesome-copilot__skills__web-design-reviewer",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__web-design-reviewer"
+  },
+  {
+   "id": "github__awesome-copilot__skills__webapp-testing",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__webapp-testing"
+  },
+  {
+   "id": "github__awesome-copilot__skills__webmcpify",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__webmcpify"
+  },
+  {
+   "id": "github__awesome-copilot__skills__what-context-needed",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__what-context-needed"
+  },
+  {
+   "id": "github__awesome-copilot__skills__winmd-api-search",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__winmd-api-search"
+  },
+  {
+   "id": "github__awesome-copilot__skills__winui3-migration-guide",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__winui3-migration-guide"
+  },
+  {
+   "id": "github__awesome-copilot__skills__workiq-copilot",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__workiq-copilot"
+  },
+  {
+   "id": "github__awesome-copilot__skills__workshop-create",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__workshop-create"
+  },
+  {
+   "id": "github__awesome-copilot__skills__write-coding-standards-from-file",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__write-coding-standards-from-file"
+  },
+  {
+   "id": "github__awesome-copilot__skills__x-twitter-scraper",
+   "malicious": false,
+   "source": "github/awesome-copilot",
+   "evidence": "vendor",
+   "cluster": "github__awesome-copilot__skills__x-twitter-scraper"
+  },
+  {
+   "id": "obra__superpowers__skills__brainstorming",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__brainstorming"
+  },
+  {
+   "id": "obra__superpowers__skills__diagnosing-superpowers",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__diagnosing-superpowers"
+  },
+  {
+   "id": "obra__superpowers__skills__dispatching-parallel-agents",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__dispatching-parallel-agents"
+  },
+  {
+   "id": "obra__superpowers__skills__executing-plans",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__executing-plans"
+  },
+  {
+   "id": "obra__superpowers__skills__finishing-a-development-branch",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__finishing-a-development-branch"
+  },
+  {
+   "id": "obra__superpowers__skills__receiving-code-review",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__receiving-code-review"
+  },
+  {
+   "id": "obra__superpowers__skills__requesting-code-review",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__requesting-code-review"
+  },
+  {
+   "id": "obra__superpowers__skills__subagent-driven-development",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__subagent-driven-development"
+  },
+  {
+   "id": "obra__superpowers__skills__systematic-debugging",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__systematic-debugging"
+  },
+  {
+   "id": "obra__superpowers__skills__test-driven-development",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__test-driven-development"
+  },
+  {
+   "id": "obra__superpowers__skills__using-git-worktrees",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__using-git-worktrees"
+  },
+  {
+   "id": "obra__superpowers__skills__using-superpowers",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__using-superpowers"
+  },
+  {
+   "id": "obra__superpowers__skills__verification-before-completion",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__verification-before-completion"
+  },
+  {
+   "id": "obra__superpowers__skills__writing-plans",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__writing-plans"
+  },
+  {
+   "id": "obra__superpowers__skills__writing-skills",
+   "malicious": false,
+   "source": "obra/superpowers",
+   "evidence": "vendor",
+   "cluster": "obra__superpowers__skills__writing-skills"
+  },
+  {
+   "id": "openai__skills__skills__.curated__aspnet-core",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__aspnet-core"
+  },
+  {
+   "id": "openai__skills__skills__.curated__chatgpt-apps",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__chatgpt-apps"
+  },
+  {
+   "id": "openai__skills__skills__.curated__cli-creator",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__cli-creator"
+  },
+  {
+   "id": "openai__skills__skills__.curated__cloudflare-deploy",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__cloudflare-deploy"
+  },
+  {
+   "id": "openai__skills__skills__.curated__define-goal",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__define-goal"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-code-connect-components",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-code-connect-components"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-create-design-system-rules",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-create-design-system-rules"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-create-new-file",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-create-new-file"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-generate-design",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-generate-design"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-generate-library",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-generate-library"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-implement-design",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-implement-design"
+  },
+  {
+   "id": "openai__skills__skills__.curated__figma-use",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__figma-use"
+  },
+  {
+   "id": "openai__skills__skills__.curated__gh-address-comments",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__gh-address-comments"
+  },
+  {
+   "id": "openai__skills__skills__.curated__gh-fix-ci",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__gh-fix-ci"
+  },
+  {
+   "id": "openai__skills__skills__.curated__hatch-pet",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__hatch-pet"
+  },
+  {
+   "id": "openai__skills__skills__.curated__jupyter-notebook",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__jupyter-notebook"
+  },
+  {
+   "id": "openai__skills__skills__.curated__linear",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__linear"
+  },
+  {
+   "id": "openai__skills__skills__.curated__migrate-to-codex",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__migrate-to-codex"
+  },
+  {
+   "id": "openai__skills__skills__.curated__netlify-deploy",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__netlify-deploy"
+  },
+  {
+   "id": "openai__skills__skills__.curated__notion-knowledge-capture",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__notion-knowledge-capture"
+  },
+  {
+   "id": "openai__skills__skills__.curated__notion-meeting-intelligence",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__notion-meeting-intelligence"
+  },
+  {
+   "id": "openai__skills__skills__.curated__notion-research-documentation",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__notion-research-documentation"
+  },
+  {
+   "id": "openai__skills__skills__.curated__notion-spec-to-implementation",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__notion-spec-to-implementation"
+  },
+  {
+   "id": "openai__skills__skills__.curated__openai-docs",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__openai-docs"
+  },
+  {
+   "id": "openai__skills__skills__.curated__pdf",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__pdf"
+  },
+  {
+   "id": "openai__skills__skills__.curated__playwright",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__playwright"
+  },
+  {
+   "id": "openai__skills__skills__.curated__playwright-interactive",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__playwright-interactive"
+  },
+  {
+   "id": "openai__skills__skills__.curated__render-deploy",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__render-deploy"
+  },
+  {
+   "id": "openai__skills__skills__.curated__screenshot",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__screenshot"
+  },
+  {
+   "id": "openai__skills__skills__.curated__security-best-practices",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__security-best-practices"
+  },
+  {
+   "id": "openai__skills__skills__.curated__security-ownership-map",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__security-ownership-map"
+  },
+  {
+   "id": "openai__skills__skills__.curated__security-threat-model",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__security-threat-model"
+  },
+  {
+   "id": "openai__skills__skills__.curated__sentry",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__sentry"
+  },
+  {
+   "id": "openai__skills__skills__.curated__speech",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__speech"
+  },
+  {
+   "id": "openai__skills__skills__.curated__transcribe",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__transcribe"
+  },
+  {
+   "id": "openai__skills__skills__.curated__vercel-deploy",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__vercel-deploy"
+  },
+  {
+   "id": "openai__skills__skills__.curated__winui-app",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__winui-app"
+  },
+  {
+   "id": "openai__skills__skills__.curated__yeet",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.curated__yeet"
+  },
+  {
+   "id": "openai__skills__skills__.system__imagegen",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.system__imagegen"
+  },
+  {
+   "id": "openai__skills__skills__.system__openai-docs",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.system__openai-docs"
+  },
+  {
+   "id": "openai__skills__skills__.system__plugin-creator",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.system__plugin-creator"
+  },
+  {
+   "id": "openai__skills__skills__.system__skill-creator",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.system__skill-creator"
+  },
+  {
+   "id": "openai__skills__skills__.system__skill-installer",
+   "malicious": false,
+   "source": "openai/skills",
+   "evidence": "vendor",
+   "cluster": "openai__skills__skills__.system__skill-installer"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__composition-patterns",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__composition-patterns"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__deploy-to-vercel",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__deploy-to-vercel"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__react-best-practices",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__react-best-practices"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__react-native-skills",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__react-native-skills"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__react-view-transitions",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__react-view-transitions"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__vercel-cli-with-tokens",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__vercel-cli-with-tokens"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__vercel-optimize",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__vercel-optimize"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__web-design-guidelines",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__web-design-guidelines"
+  },
+  {
+   "id": "vercel-labs__agent-skills__skills__writing-guidelines",
+   "malicious": false,
+   "source": "vercel-labs/agent-skills",
+   "evidence": "vendor",
+   "cluster": "vercel-labs__agent-skills__skills__writing-guidelines"
+  }
+ ]
+}

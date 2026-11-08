@@ -93,6 +93,7 @@ const sidebar = [
       { label: "Improve (experimental)", slug: "improve" },
       { label: "Review", slug: "review" },
       { label: "Judge", slug: "judge" },
+      { label: "Scanner benchmark", slug: "benchmarks" },
       { label: "LLM access", slug: "llm" },
       { label: "Performance", slug: "performance" },
     ],
