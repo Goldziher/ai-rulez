@@ -1,2 +1,5 @@
-baseline = "v1.15.0"
+baseline = "v1.16.0"
 task_sets = ["governance", "governance-check"]
+
+[file_overrides]
+"tools/skillbench/Dockerfile" = "the benchmark's scanners stop at Python 3.13: yara-python, which SkillSpector needs, ships wheels only up to 3.13, and onnxruntime, which skill-scanner needs, only up to 3.14"

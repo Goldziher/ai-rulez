@@ -30,7 +30,7 @@ Resolve the revision, commit the lock and install the Git shims:
 
 ```bash
 poly hooks update
-git add poly.toml poly-hooks.lock
+git add poly.toml poly.lock
 poly hooks install
 ```
 
@@ -73,7 +73,7 @@ Do not add `--allow-local-drift` to a hook. See [Local configuration](/ai-rulez/
 ## Sources
 
 A Git source needs an explicit `revision` and a non-empty `hooks` list. An unknown hook ID is an error, and hooks added
-to a later catalog never run unless you select them. Hook runs use the commit locked in `poly-hooks.lock`; run
+to a later catalog never run unless you select them. Hook runs use the commit locked in `poly.lock`; run
 `poly hooks update` after you change `revision`.
 
 For hook development, use a local checkout instead of `git` and `revision`:

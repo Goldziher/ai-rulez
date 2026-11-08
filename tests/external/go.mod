@@ -6,7 +6,7 @@ require github.com/Goldziher/ai-rulez/v5 v5.0.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/dlclark/regexp2/v2 v2.12.0 // indirect
+	github.com/dlclark/regexp2/v2 v2.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
@@ -27,13 +27,13 @@ require (
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f // indirect
 	github.com/teekennedy/goldmark-markdown v0.5.1 // indirect
 	github.com/tiktoken-go/tokenizer v0.10.0 // indirect
-	github.com/xberg-io/liter-llm/packages/go/v2 v2.6.0 // indirect
+	github.com/xberg-io/liter-llm/packages/go/v2 v2.7.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/goldmark v1.8.7 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
