@@ -32,7 +32,7 @@ const (
 func registerArExec(s *ruleSet) {
 	MarkExampleAware(CodePersistence, CodeUnsafeDeserialize, CodeMetadataSSRF)
 	s.addRules(
-		RuleInfo{CodePersistence, "persistence-mechanism", SeverityWarning, "a command or script installs something that outlives the session: a crontab, a launchd job, a systemd unit, an init or autostart entry, a scheduled task, a login item (warning), or an append to a shell startup file (info)"},
+		RuleInfo{CodePersistence, "persistence-mechanism", SeverityWarning, "a command or script installs something that outlives the session: a crontab, a launchd job, a systemd unit, an init or autostart entry, a scheduled task, a login item, an authorized_keys entry or a git hook (warning), or an append to a shell startup file (info, or warning when what is written downloads or decodes code)"},
 		RuleInfo{CodeUnsafeDeserialize, "unsafe-deserialization", SeverityWarning, "code deserializes data with a loader that can run code: pickle, marshal, jsonpickle, yaml.load without a safe loader, torch.load without weights_only=True, PHP unserialize, Ruby Marshal, Java ObjectInputStream, node-serialize"},
 		RuleInfo{CodeMetadataSSRF, "internal-endpoint-request", SeverityWarning, "a command or script requests a cloud metadata endpoint (169.254.169.254, metadata.google.internal, fd00:ec2::254), or an administration port of a local service (info)"},
 	)
@@ -132,13 +132,21 @@ var persistRules = sync.OnceValue(func() []persistRule {
 		{regexp.MustCompile(`(?i)\breg(?:\.exe)?\s+add\s+\S*\\CurrentVersion\\Run(?:Once)?\b`), "adds a Run key", SeverityWarning},
 		{regexp.MustCompile(`(?i)\bmake\s+(?:new\s+)?login\s+item\b`), "adds a login item", SeverityWarning},
 		{writeTo(jobPathPat), "writes a scheduler or autostart entry", SeverityWarning},
+		{writeTo(`\.ssh/authorized_keys`), "adds a key to authorized_keys", SeverityWarning},
+		{writeTo(`\.git/hooks/`), "writes a git hook", SeverityWarning},
 		{regexp.MustCompile(`(?:>>?\s*|\btee\s+(?:-\S+\s+)*|\bsed\s+-i\S*\s+(?:\S+\s+)*?|\b(?:cp|mv|ln)\s+(?:-\S+\s+)*\S+\s+)["']?` + rcFilePat +
 			`|\bopen\(\s*(?:os\.path\.expanduser\(\s*)?["']` + rcFilePat + `["']\s*\)?\s*,\s*["'][aw]`), "modifies a shell startup file", SeverityInfo},
 	}
 })
 
+// startupPayloadRe is a download or decode inside what is written to a shell startup file. A PATH entry
+// or an alias stays at info.
+var startupPayloadRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`\b(?:curl|wget|nc|ncat)\s|\bbase64\b`)
+})
+
 var persistStems = sync.OnceValue(func() *stemIndex {
-	return newStemIndex([]string{"cron", "launch", "systemd", "systemctl", "chkconfig", "update-rc", "schtasks", "scheduledtask", "currentversion", "login item", "init.d", "rc.local", "autostart", "bashrc", "zshrc", "profile", "zshenv", "zlogin", "cshrc", "xinitrc", "xsessionrc", "config.fish", "bash_login", "/environment"})
+	return newStemIndex([]string{"cron", "launch", "systemd", "systemctl", "chkconfig", "update-rc", "schtasks", "scheduledtask", "currentversion", "login item", "init.d", "rc.local", "autostart", "bashrc", "zshrc", "profile", "zshenv", "zlogin", "cshrc", "xinitrc", "xsessionrc", "config.fish", "bash_login", "/environment", "authorized_keys", ".git/hooks"})
 })
 
 func scanPersistence(r *runner, t *scanText) {
@@ -151,6 +159,10 @@ func scanPersistence(r *runner, t *scanText) {
 				continue
 			}
 			if rule, seg := firstPersistence(frag); seg != "" {
+				if rule.sev == SeverityInfo && startupPayloadRe().MatchString(frag) {
+					r.addSev(SeverityWarning, CodePersistence, t.abs, l.No, "a shell startup file that downloads or decodes code (%q); it runs again in every new shell", shortSegment(seg))
+					continue
+				}
 				r.addSev(rule.sev, CodePersistence, t.abs, l.No, "%s (%q); a skill should not leave anything running or loaded after the session", rule.what, shortSegment(seg))
 				break
 			}

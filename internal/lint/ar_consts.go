@@ -70,9 +70,12 @@ const (
 	toolPipx   = "pipx"
 	toolPython = "python"
 
-	shellBash = "bash"
-	shellZsh  = "zsh"
-	cmdTime   = "time"
+	shellBash       = "bash"
+	shellPowerShell = "powershell"
+	langNode        = "node"
+	langPython3     = "python3"
+	shellZsh        = "zsh"
+	cmdTime         = "time"
 
 	osWindows      = "windows"
 	transportStdio = "stdio"

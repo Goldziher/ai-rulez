@@ -41,6 +41,8 @@ import (
 // completion_test.go checks every fixed value against the flag's help text.
 const completionSpec = `
 enum  fail-on          = error warning info none
+enum  fail-on@validate = error warning info threat none
+enum  fail-on@scan     = error warning info threat none
 enum  fail-on@convert  = approximated dropped needs-action unsupported
 enum  fail-on@judge    = security:high governance:high quality:none
 enum  severity         = low medium high critical

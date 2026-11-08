@@ -169,10 +169,7 @@ type junitProblem struct {
 // finding at or above failOn is a failure; a lower one, or one accepted by the
 // baseline, is reported as skipped so it stays visible without failing the job.
 func WriteJUnit(w io.Writer, c Combined, failOn string) error {
-	threshold, ok := ParseSeverity(failOn)
-	if !ok || threshold == SeverityOff {
-		threshold = SeverityError
-	}
+	fails := failsGate(failOn)
 	byRoot := map[string]*junitSuite{}
 	var order []string
 	for _, r := range c.Roots {
@@ -202,7 +199,7 @@ func WriteJUnit(w io.Writer, c Combined, failOn string) error {
 			problem.Message = "accepted by baseline: " + f.Message
 			tc.Skipped = problem
 			suite.Skipped++
-		case f.failsAt(threshold):
+		case fails(f):
 			tc.Failure = problem
 			suite.Failures++
 		default:

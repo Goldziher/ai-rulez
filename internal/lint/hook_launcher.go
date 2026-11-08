@@ -25,7 +25,7 @@ var hookLaunchers = map[string]launcher{
 	shellZsh:   shellLauncher,
 	"dash":     shellLauncher,
 	toolPython: {inline: set("-c", "-m"), withArg: set("-W", "-X", "-Q")},
-	"node":     {inline: set("-e", "-p", "--eval", "--print"), withArg: set("-r", "--require", "--import", "--loader", "--experimental-loader", "--input-type")},
+	langNode:   {inline: set("-e", "-p", "--eval", "--print"), withArg: set("-r", "--require", "--import", "--loader", "--experimental-loader", "--input-type")},
 	"ruby":     {inline: set("-e"), withArg: set("-r", "-I", "-C"), evalCluster: true},
 	"perl":     {inline: set("-e", "-E"), withArg: set("-I", "-M", "-m"), evalCluster: true},
 }
@@ -51,7 +51,7 @@ func interpreterOf(word string) string {
 	if m := versionedInterpRe().FindStringSubmatch(base); m != nil {
 		base = m[1]
 	}
-	if base == "python3" {
+	if base == langPython3 {
 		base = toolPython
 	}
 	if _, ok := hookLaunchers[base]; ok {

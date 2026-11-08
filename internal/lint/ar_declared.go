@@ -13,7 +13,7 @@ const CodeUndeclaredCapability = "AR058"
 
 func registerArDeclared(s *ruleSet) {
 	s.addRules(
-		RuleInfo{CodeUndeclaredCapability, "undeclared-capability", SeverityInfo, "a skill that lists allowed-tools runs shell, network or file-mutating commands (in its instructions or scripts) that no allowed-tools entry covers; one finding per command"},
+		RuleInfo{CodeUndeclaredCapability, "undeclared-capability", SeverityWarning, "a skill that lists allowed-tools runs shell, network or file-mutating commands (in its instructions or scripts) that no allowed-tools entry covers; one finding per command"},
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodeUndeclaredCapability: {
@@ -110,7 +110,7 @@ func (r *runner) reportUndeclared(it *item, line int, g toolGrants, p capProfile
 		if p.cmds[cmd] == tierRead || proseCommandWords()[cmd] || g.covers(cmd) {
 			continue
 		}
-		r.addSev(SeverityInfo, CodeUndeclaredCapability, it.abs, line, "%s runs %s, which no allowed-tools entry covers; add Bash(%s:*) or remove the command",
+		r.add(CodeUndeclaredCapability, it.abs, line, "%s runs %s, which no allowed-tools entry covers; add Bash(%s:*) or remove the command",
 			itemID(it.kind, it.cf), cmd, cmd)
 	}
 }

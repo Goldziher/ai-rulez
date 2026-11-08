@@ -26,7 +26,7 @@ func registerArExfil(s *ruleSet) {
 		RuleInfo{CodeImageExfil, "markdown-image-exfil", SeverityWarning, "a markdown image URL carries a query string; rendering it in an agent UI sends the query to the host"},
 		RuleInfo{CodeEscapeObfuscated, "escape-sequence-obfuscation", SeverityInfo, "four or more consecutive \\xNN or \\uNNNN escapes hide a string from a reviewer"},
 		RuleInfo{CodeInsecureHTTP, "insecure-transport", SeverityWarning, "a plain http:// URL (not loopback or private) is fetched by a command, used by an MCP server, or is the source of an include"},
-		RuleInfo{CodeRawIPURL, "raw-ip-url", SeverityInfo, "a URL points at a public IPv4 address instead of a host name"},
+		RuleInfo{CodeRawIPURL, "raw-ip-url", SeverityWarning, "a URL points at a public IPv4 address instead of a host name"},
 		RuleInfo{CodeDataURILink, "data-uri-link", SeverityWarning, "a markdown link or image target starts with data: or javascript:"},
 	)
 	s.addTextScan(scanExfilCommands, AnalyzerSecurity)

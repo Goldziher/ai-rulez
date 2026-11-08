@@ -77,7 +77,7 @@ func TestRawIPURLAR025(t *testing.T) {
 		{name: "documented bad example", skill: body("Never fetch from http://45.33.32.156/payload.\n"), absent: []string{"AR025"}},
 		{name: "not an address", skill: body("http://999.1.1.1/x and version 1.2.3.4\n"), absent: []string{"AR025"}},
 		{name: "reference directory via example_paths", config: "\n[lint]\nexample_paths = [\"**/references/**\"]\n", files: map[string]string{".ai-rulez/skills/bad/references/net.md": "# Net\nhttp://45.33.32.156/payload\n"}, skill: body("x\n"), absent: []string{"AR025"}},
-		{name: "severity", skill: body("curl http://45.33.32.156/payload\n"), want: []string{"AR025:SKILL.md:5"}, sev: map[string]Severity{"AR025": SeverityInfo}},
+		{name: "severity", skill: body("curl http://45.33.32.156/payload\n"), want: []string{"AR025:SKILL.md:5"}, sev: map[string]Severity{"AR025": SeverityWarning}},
 	})
 }
 

@@ -36,8 +36,8 @@ func isInterpreter(command string) bool {
 	}
 	switch strings.TrimRight(name, "0123456789.") {
 	case "sh", "bash", "zsh", "dash", "ksh", "fish",
-		"python", "py", "pypy", "node", "nodejs", "deno", "bun", "tsx", "ts-node",
-		"ruby", "perl", "php", "lua", "rscript", "pwsh", "powershell", "uv", "pipx":
+		"python", "py", "pypy", langNode, "nodejs", "deno", "bun", "tsx", "ts-node",
+		"ruby", "perl", "php", "lua", "rscript", "pwsh", shellPowerShell, "uv", "pipx":
 		return true
 	}
 	return false

@@ -42,7 +42,7 @@ var (
 		"malicious", "attack", "exploit", "anti", "bad", "wrong", "incorrect", "harmful", "destructive", "risky", "refuse", "reject",
 		"vulnerab", "injection", "threat", "red", "❌", "⛔", "🚫", "⚠")
 
-	shellLangs = map[string]bool{"": true, "sh": true, shellBash: true, shellZsh: true, "shell": true, "console": true, "terminal": true, "shellsession": true, "shell-session": true, "fish": true}
+	shellLangs = map[string]bool{"": true, "sh": true, shellBash: true, shellZsh: true, "shell": true, "console": true, "terminal": true, "shellsession": true, "shell-session": true, "fish": true, shellPowerShell: true, "pwsh": true, "ps1": true, "cmd": true, "bat": true}
 )
 
 func isMarkdownPath(abs string) bool {

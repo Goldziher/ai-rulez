@@ -3163,7 +3163,7 @@ ai-rulez scan --path vendor/skills
 | `--dry-run` / `-n` | bool |  | With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing |
 | `--exclude` | string list |  | Leave the files matching this glob (relative to the project root, for example "x/src/public/skills/**") out of the files found by convention, --path and --glob; works without a configuration. Findings in the configured content tree are dropped with [lint] ignore_paths in config.toml (repeatable) |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
-| `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
+| `--fail-on` | string |  | What exits 2: a severity (error, the default, warning, info), threat, or none |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
 | `--glob` | string list |  | Also lint the files matching this glob, relative to the project root (repeatable, for example "catalog/**/*.json"). A matched file that is not linted is named on stderr as "<file>: not linted (<reason>)" and in the JSON report's notices, and a glob that matches nothing warns |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile) |
@@ -4072,7 +4072,7 @@ ai-rulez validate --outputs
 | `--exclude` | string list |  | Leave the files matching this glob (relative to the project root, for example "x/src/public/skills/**") out of the files found by convention, --path and --glob; works without a configuration. Findings in the configured content tree are dropped with [lint] ignore_paths in config.toml (repeatable) |
 | `--explain` | string |  | Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit |
 | `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
-| `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
+| `--fail-on` | string |  | What exits 2: a severity (error, the default, warning, info), threat, or none |
 | `--fix` | bool |  | Apply the safe automatic fixes to authored sources: executable bits (AR502, AR503, AR505), frontmatter key renames (AR303), quoted booleans (AR304), unclosed code fences (AR806) and missing final newlines (AR807). Harness trap fixes (AR9C7 and project AR9CA key-misspelled rows) also rewrite a misspelled frontmatter key in hand-written harness files outside .ai-rulez/. Never touches generated outputs or security findings |
 | `--fix-unsafe` | bool |  | Also apply fixes that can change meaning: skill name normalization (AR804). Implies --fix |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |

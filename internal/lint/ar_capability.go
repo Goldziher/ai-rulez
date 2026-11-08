@@ -211,7 +211,7 @@ func (r *runner) reportProfile(ci capItem) {
 	case c[tierDestructive] > 0 && c[tierNetwork] > 0:
 		r.add(CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs destructive and network commands together (%s); split them or confirm the combination is intended", ci.id, ci.p.describe())
 	case c[tierInterp] > 0 && c[tierNetwork] > 0:
-		r.addSev(SeverityInfo, CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs an interpreter and network commands (%s); code it generates could reach the network", ci.id, ci.p.describe())
+		r.add(CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs an interpreter and network commands (%s); code it generates could reach the network", ci.id, ci.p.describe())
 	case c[tierNetwork] > r.maxNetwork():
 		r.addSev(SeverityInfo, CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs %d network commands (%s), more than %d", ci.id, c[tierNetwork], ci.p.describe(), r.maxNetwork())
 	}
