@@ -1326,7 +1326,7 @@
 {"id":"github__awesome-copilot__skills__fluentui-blazor","tool":"skill-scanner","flagged":false,"max_severity":"info","rules":["MANIFEST_MISSING_LICENSE"],"findings":1}
 {"id":"github__awesome-copilot__skills__folder-structure-blueprint-generator","tool":"skill-scanner","flagged":false,"max_severity":"info","rules":["MANIFEST_MISSING_LICENSE"],"findings":1}
 {"id":"github__awesome-copilot__skills__foundry-agent-sync","tool":"skill-scanner","flagged":false,"max_severity":"info","rules":["MANIFEST_MISSING_LICENSE"],"findings":1}
-{"id":"github__awesome-copilot__skills__foundry-agentic-loop","tool":"skill-scanner","flagged":true,"max_severity":"critical","rules":["COMMAND_INJECTION_EVAL","COMMAND_INJECTION_JS_CHILD_PROCESS","HIDDEN_DATA_FILE","MANIFEST_MISSING_LICENSE","TOOL_ABUSE_UNDECLARED_NETWORK"],"findings":18}
+{"id":"github__awesome-copilot__skills__foundry-agentic-loop","tool":"skill-scanner","flagged":true,"max_severity":"critical","rules":["COMMAND_INJECTION_EVAL","COMMAND_INJECTION_JS_CHILD_PROCESS","HIDDEN_DATA_FILE","LAZY_LOAD_DEEP_NESTING","MANIFEST_MISSING_LICENSE","TOOL_ABUSE_UNDECLARED_NETWORK"],"findings":19}
 {"id":"github__awesome-copilot__skills__foundry-hosted-agent-copilotkit","tool":"skill-scanner","flagged":false,"max_severity":"info","rules":["MANIFEST_MISSING_LICENSE"],"findings":1}
 {"id":"github__awesome-copilot__skills__freecad-scripts","tool":"skill-scanner","flagged":false,"max_severity":"info","rules":["MANIFEST_MISSING_LICENSE"],"findings":1}
 {"id":"github__awesome-copilot__skills__from-the-other-side-anitta","tool":"skill-scanner","flagged":false,"max_severity":"info","rules":["MANIFEST_MISSING_LICENSE"],"findings":1}

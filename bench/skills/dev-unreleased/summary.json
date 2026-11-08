@@ -647,28 +647,28 @@
       "tool": "skillspector",
       "version": "2.13.4",
       "counts": {
-        "tp": 2109,
-        "fn": 4414,
+        "tp": 2104,
+        "fn": 4419,
         "fp": 262,
         "tn": 1428
       },
       "rates": {
-        "recall": 0.323317491951556,
+        "recall": 0.32255097347846085,
         "fpr": 0.15502958579881657,
-        "precision": 0.8894981020666386,
-        "f1": 0.47425230492466836
+        "precision": 0.8892645815722738,
+        "f1": 0.47339408257396776
       },
       "recall_ci95": {
-        "low": 0.3070951715572116,
-        "high": 0.3400772200772201
+        "low": 0.30633747444566756,
+        "high": 0.3393658159319412
       },
       "fpr_ci95": {
         "low": 0.13772807533843437,
         "high": 0.17253731343283582
       },
       "f1_ci95": {
-        "low": 0.4558074965293845,
-        "high": 0.49286184933011196
+        "low": 0.4549925654809562,
+        "high": 0.49203384243489723
       },
       "errors": {
         "timeout": 1
@@ -701,8 +701,8 @@
       },
       "by_source": {
         "SRC001": {
-          "tp": 1222,
-          "fn": 2168,
+          "tp": 1220,
+          "fn": 2170,
           "fp": 0,
           "tn": 0
         },
@@ -737,8 +737,8 @@
           "tn": 2
         },
         "SRC010": {
-          "tp": 749,
-          "fn": 2029,
+          "tp": 746,
+          "fn": 2032,
           "fp": 259,
           "tn": 1384
         },
@@ -751,14 +751,14 @@
       },
       "by_evidence": {
         "constructed": {
-          "tp": 758,
-          "fn": 2072,
+          "tp": 755,
+          "fn": 2075,
           "fp": 31,
           "tn": 124
         },
         "human+runtime": {
-          "tp": 1337,
-          "fn": 2236,
+          "tp": 1335,
+          "fn": 2238,
           "fp": 0,
           "tn": 0
         },
@@ -873,9 +873,9 @@
     {
       "a": "ai-rulez-threat",
       "b": "skillspector",
-      "only_a_correct": 566,
-      "only_b_correct": 958,
-      "mcnemar_exact_p": 7.384854085317026e-24
+      "only_a_correct": 567,
+      "only_b_correct": 954,
+      "mcnemar_exact_p": 2.4897803956808075e-23
     },
     {
       "a": "ai-rulez",
@@ -887,16 +887,16 @@
     {
       "a": "ai-rulez",
       "b": "skillspector",
-      "only_a_correct": 1618,
-      "only_b_correct": 739,
-      "mcnemar_exact_p": 7.616812654535313e-75
+      "only_a_correct": 1620,
+      "only_b_correct": 736,
+      "mcnemar_exact_p": 9.861335821381907e-76
     },
     {
       "a": "skill-scanner",
       "b": "skillspector",
       "only_a_correct": 1198,
-      "only_b_correct": 1024,
-      "mcnemar_exact_p": 0.0002408596729892981
+      "only_b_correct": 1019,
+      "mcnemar_exact_p": 0.00015539349983363217
     }
   ]
 }
