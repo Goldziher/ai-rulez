@@ -1,0 +1,758 @@
+{
+  "protocol_sha256": "7469e9dd48d7bc72d129a13d996cf426b514bb4ae7d69978ade99611cc16ade4",
+  "claim": "static, text-only, no LLM",
+  "dataset": "MaliciousSkillBench",
+  "revision": "d4b42ce5766a6e0359c987cf59c1007cb3795a90",
+  "track": "clean",
+  "population_sha256": "76ce72b7904d0a08b2b008c0e09546242a9f134d812cfbb93a0daa08995ba473",
+  "samples": 563,
+  "malicious": 0,
+  "benign": 563,
+  "runs": 1,
+  "dropped": {
+    "text_withheld": 0,
+    "split_excluded": 0,
+    "overlaps_test": 0,
+    "other_partition": 0
+  },
+  "tools": [
+    {
+      "tool": "ai-rulez-threat",
+      "version": "unreleased",
+      "counts": {
+        "tp": 0,
+        "fn": 0,
+        "fp": 12,
+        "tn": 551
+      },
+      "rates": {
+        "recall": 0,
+        "fpr": 0.021314387211367674,
+        "precision": 0,
+        "f1": 0
+      },
+      "recall_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "fpr_ci95": {
+        "low": 0.010657193605683837,
+        "high": 0.03374777975133215
+      },
+      "f1_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0,
+          "fpr": 0.015985790408525755,
+          "precision": 0,
+          "f1": 0
+        },
+        "low": {
+          "recall": 0,
+          "fpr": 0.0941385435168739,
+          "precision": 0,
+          "f1": 0
+        },
+        "medium": {
+          "recall": 0,
+          "fpr": 0.0941385435168739,
+          "precision": 0,
+          "f1": 0
+        }
+      },
+      "by_source": {
+        "anthropics/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 1,
+          "tn": 19
+        },
+        "github/awesome-copilot": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 7,
+          "tn": 468
+        },
+        "obra/superpowers": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 0,
+          "tn": 15
+        },
+        "openai/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 4,
+          "tn": 40
+        },
+        "vercel-labs/agent-skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 0,
+          "tn": 9
+        }
+      },
+      "by_evidence": {
+        "vendor": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 12,
+          "tn": 551
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "AR021",
+          "samples": 12,
+          "malicious": 0
+        },
+        {
+          "rule": "AR005",
+          "samples": 9,
+          "malicious": 0
+        },
+        {
+          "rule": "AR054",
+          "samples": 8,
+          "malicious": 0
+        },
+        {
+          "rule": "AR030",
+          "samples": 7,
+          "malicious": 0
+        },
+        {
+          "rule": "AR004",
+          "samples": 6,
+          "malicious": 0
+        },
+        {
+          "rule": "AR034",
+          "samples": 5,
+          "malicious": 0
+        },
+        {
+          "rule": "AR009",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "AR019",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "AR060",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "AR006",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "AR007",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "AR023",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "AR014",
+          "samples": 2,
+          "malicious": 0
+        },
+        {
+          "rule": "AR041",
+          "samples": 2,
+          "malicious": 0
+        },
+        {
+          "rule": "AR043",
+          "samples": 2,
+          "malicious": 0
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "ai-rulez",
+      "version": "unreleased",
+      "counts": {
+        "tp": 0,
+        "fn": 0,
+        "fp": 53,
+        "tn": 510
+      },
+      "rates": {
+        "recall": 0,
+        "fpr": 0.0941385435168739,
+        "precision": 0,
+        "f1": 0
+      },
+      "recall_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "fpr_ci95": {
+        "low": 0.07104795737122557,
+        "high": 0.11900532859680284
+      },
+      "f1_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0,
+          "fpr": 0.015985790408525755,
+          "precision": 0,
+          "f1": 0
+        },
+        "low": {
+          "recall": 0,
+          "fpr": 0.0941385435168739,
+          "precision": 0,
+          "f1": 0
+        },
+        "medium": {
+          "recall": 0,
+          "fpr": 0.0941385435168739,
+          "precision": 0,
+          "f1": 0
+        }
+      },
+      "by_source": {
+        "anthropics/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 3,
+          "tn": 17
+        },
+        "github/awesome-copilot": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 39,
+          "tn": 436
+        },
+        "obra/superpowers": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 0,
+          "tn": 15
+        },
+        "openai/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 9,
+          "tn": 35
+        },
+        "vercel-labs/agent-skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 2,
+          "tn": 7
+        }
+      },
+      "by_evidence": {
+        "vendor": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 53,
+          "tn": 510
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "AR021",
+          "samples": 12,
+          "malicious": 0
+        },
+        {
+          "rule": "AR005",
+          "samples": 9,
+          "malicious": 0
+        },
+        {
+          "rule": "AR054",
+          "samples": 8,
+          "malicious": 0
+        },
+        {
+          "rule": "AR030",
+          "samples": 7,
+          "malicious": 0
+        },
+        {
+          "rule": "AR004",
+          "samples": 6,
+          "malicious": 0
+        },
+        {
+          "rule": "AR034",
+          "samples": 5,
+          "malicious": 0
+        },
+        {
+          "rule": "AR009",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "AR019",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "AR060",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "AR006",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "AR007",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "AR023",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "AR014",
+          "samples": 2,
+          "malicious": 0
+        },
+        {
+          "rule": "AR041",
+          "samples": 2,
+          "malicious": 0
+        },
+        {
+          "rule": "AR043",
+          "samples": 2,
+          "malicious": 0
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "skill-scanner",
+      "version": "2.3.2",
+      "counts": {
+        "tp": 0,
+        "fn": 0,
+        "fp": 26,
+        "tn": 537
+      },
+      "rates": {
+        "recall": 0,
+        "fpr": 0.046181172291296625,
+        "precision": 0,
+        "f1": 0
+      },
+      "recall_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "fpr_ci95": {
+        "low": 0.03019538188277087,
+        "high": 0.06394316163410302
+      },
+      "f1_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0.02486678507992895,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0,
+          "fpr": 0.046181172291296625,
+          "precision": 0,
+          "f1": 0
+        },
+        "low": {
+          "recall": 0,
+          "fpr": 0.08880994671403197,
+          "precision": 0,
+          "f1": 0
+        },
+        "medium": {
+          "recall": 0,
+          "fpr": 0.06394316163410302,
+          "precision": 0,
+          "f1": 0
+        }
+      },
+      "by_source": {
+        "anthropics/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 5,
+          "tn": 15
+        },
+        "github/awesome-copilot": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 14,
+          "tn": 461
+        },
+        "obra/superpowers": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 2,
+          "tn": 13
+        },
+        "openai/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 4,
+          "tn": 40
+        },
+        "vercel-labs/agent-skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 1,
+          "tn": 8
+        }
+      },
+      "by_evidence": {
+        "vendor": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 26,
+          "tn": 537
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "MANIFEST_MISSING_LICENSE",
+          "samples": 480,
+          "malicious": 0
+        },
+        {
+          "rule": "UNDECLARED_NETWORK_DESTINATION",
+          "samples": 12,
+          "malicious": 0
+        },
+        {
+          "rule": "COMMAND_INJECTION_JS_CHILD_PROCESS",
+          "samples": 9,
+          "malicious": 0
+        },
+        {
+          "rule": "SUPPLY_CHAIN_UNPINNED_DEPENDENCY",
+          "samples": 8,
+          "malicious": 0
+        },
+        {
+          "rule": "DATA_EXFIL_JS_FS_ACCESS",
+          "samples": 6,
+          "malicious": 0
+        },
+        {
+          "rule": "FILE_MAGIC_MISMATCH",
+          "samples": 5,
+          "malicious": 0
+        },
+        {
+          "rule": "DATA_EXFIL_JS_NETWORK",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "PIPELINE_TAINT_FLOW",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "TOOL_ABUSE_UNDECLARED_NETWORK",
+          "samples": 4,
+          "malicious": 0
+        },
+        {
+          "rule": "COMMAND_INJECTION_EVAL",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "CORRELATED_NETWORK_EXECUTION_FLOW",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "DATA_EXFIL_ENV_VARS",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "DATA_EXFIL_NETWORK_REQUESTS",
+          "samples": 3,
+          "malicious": 0
+        },
+        {
+          "rule": "COMMAND_INJECTION_OS_SYSTEM",
+          "samples": 2,
+          "malicious": 0
+        },
+        {
+          "rule": "CORRELATED_SENSITIVE_NETWORK_FLOW",
+          "samples": 2,
+          "malicious": 0
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "skillspector",
+      "version": "2.13.4",
+      "counts": {
+        "tp": 0,
+        "fn": 0,
+        "fp": 167,
+        "tn": 396
+      },
+      "rates": {
+        "recall": 0,
+        "fpr": 0.2966252220248668,
+        "precision": 0,
+        "f1": 0
+      },
+      "recall_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "fpr_ci95": {
+        "low": 0.25932504440497334,
+        "high": 0.3339253996447602
+      },
+      "f1_ci95": {
+        "low": 0,
+        "high": 0
+      },
+      "errors": {
+        "timeout": 1
+      },
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0.0053285968028419185,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0,
+          "fpr": 0.2682060390763766,
+          "precision": 0,
+          "f1": 0
+        },
+        "low": {
+          "recall": 0,
+          "fpr": 0.46536412078152756,
+          "precision": 0,
+          "f1": 0
+        },
+        "medium": {
+          "recall": 0,
+          "fpr": 0.4547069271758437,
+          "precision": 0,
+          "f1": 0
+        }
+      },
+      "by_source": {
+        "anthropics/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 11,
+          "tn": 9
+        },
+        "github/awesome-copilot": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 114,
+          "tn": 361
+        },
+        "obra/superpowers": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 8,
+          "tn": 7
+        },
+        "openai/skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 30,
+          "tn": 14
+        },
+        "vercel-labs/agent-skills": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 4,
+          "tn": 5
+        }
+      },
+      "by_evidence": {
+        "vendor": {
+          "tp": 0,
+          "fn": 0,
+          "fp": 167,
+          "tn": 396
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "Autonomous Decision Making",
+          "samples": 74,
+          "malicious": 0
+        },
+        {
+          "rule": "Incomplete referenced artifact analysis",
+          "samples": 60,
+          "malicious": 0
+        },
+        {
+          "rule": "LP3",
+          "samples": 59,
+          "malicious": 0
+        },
+        {
+          "rule": "Session Persistence",
+          "samples": 42,
+          "malicious": 0
+        },
+        {
+          "rule": "RP1",
+          "samples": 40,
+          "malicious": 0
+        },
+        {
+          "rule": "Credential Access",
+          "samples": 36,
+          "malicious": 0
+        },
+        {
+          "rule": "Tool Parameter Abuse",
+          "samples": 29,
+          "malicious": 0
+        },
+        {
+          "rule": "External Transmission",
+          "samples": 27,
+          "malicious": 0
+        },
+        {
+          "rule": "Sudo/Root Execution",
+          "samples": 23,
+          "malicious": 0
+        },
+        {
+          "rule": "subprocess module call",
+          "samples": 20,
+          "malicious": 0
+        },
+        {
+          "rule": "Scope Creep",
+          "samples": 19,
+          "malicious": 0
+        },
+        {
+          "rule": "Skill Enumeration",
+          "samples": 17,
+          "malicious": 0
+        },
+        {
+          "rule": "Anti-Refusal Statement",
+          "samples": 16,
+          "malicious": 0
+        },
+        {
+          "rule": "Chaining Abuse",
+          "samples": 12,
+          "malicious": 0
+        },
+        {
+          "rule": "Self-Modification",
+          "samples": 11,
+          "malicious": 0
+        }
+      ],
+      "unstable_samples": 0
+    }
+  ],
+  "paired": [
+    {
+      "a": "ai-rulez-threat",
+      "b": "ai-rulez",
+      "only_a_correct": 41,
+      "only_b_correct": 0,
+      "mcnemar_exact_p": 9.094947017729282e-13
+    },
+    {
+      "a": "ai-rulez-threat",
+      "b": "skill-scanner",
+      "only_a_correct": 22,
+      "only_b_correct": 8,
+      "mcnemar_exact_p": 0.016124801710247993
+    },
+    {
+      "a": "ai-rulez-threat",
+      "b": "skillspector",
+      "only_a_correct": 156,
+      "only_b_correct": 1,
+      "mcnemar_exact_p": 1.729727791900946e-45
+    },
+    {
+      "a": "ai-rulez",
+      "b": "skill-scanner",
+      "only_a_correct": 19,
+      "only_b_correct": 46,
+      "mcnemar_exact_p": 0.0010900838044475788
+    },
+    {
+      "a": "ai-rulez",
+      "b": "skillspector",
+      "only_a_correct": 137,
+      "only_b_correct": 23,
+      "mcnemar_exact_p": 5.962579138116539e-21
+    },
+    {
+      "a": "skill-scanner",
+      "b": "skillspector",
+      "only_a_correct": 146,
+      "only_b_correct": 5,
+      "mcnemar_exact_p": 4.4368320596084555e-37
+    }
+  ]
+}

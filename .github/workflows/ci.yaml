@@ -51,6 +51,27 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run --timeout=180m
 
+      - name: Run golangci-lint on tools/skillbench
+        working-directory: tools/skillbench
+        run: golangci-lint run --timeout=180m
+
+  skillbench:
+    name: skillbench
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: ./.github/actions/go-toolchain
+
+      - name: Test the benchmark tool
+        run: mise run bench:skills:test
+
+      - name: Published benchmark tables match the committed results
+        run: mise run bench:skills:check
+
   tidy:
     name: go mod tidy
     runs-on: ubuntu-latest
@@ -66,6 +87,7 @@ jobs:
         run: |
           go mod tidy -diff
           (cd tests/external && go mod tidy -diff)
+          (cd tools/skillbench && go mod tidy -diff)
 
   public-api:
     name: Public API (pkg/airulez)
@@ -327,6 +349,10 @@ jobs:
 
       - name: Run govulncheck
         run: mise run audit:go
+
+      - name: Run govulncheck on tools/skillbench
+        working-directory: tools/skillbench
+        run: govulncheck ./...
 
   benchmarks:
     name: Benchmarks

@@ -1,0 +1,81 @@
+# The frozen benchmark protocol. Every result records the sha256 of this file, so a change here is a
+# different benchmark. See website/src/content/docs/benchmarks.md for what each decision means.
+
+version = 2
+claim = "static, text-only, no LLM"
+repetitions = 3
+holdout_read_budget = 3
+
+[dataset]
+name = "MaliciousSkillBench"
+repo = "ProtectSkills/MaliciousSkillBench"
+revision = "d4b42ce5766a6e0359c987cf59c1007cb3795a90"
+# Rows of the source-disjoint test split, the partition Cisco's skill-scanner release gate pins.
+holdout_sources = ["SRC009", "SRC011", "SRC012"]
+
+[[dataset.files]]
+path = "primary.parquet"
+sha256 = "1d6382017f259bde0b699d402318f3c03f16b2e8ed2363a346b77a5465f06a06"
+
+[[dataset.files]]
+path = "splits/source_disjoint.parquet"
+sha256 = "9fae37c53b6ad47070d118e9bc4cdafd82c416a68b7e74847b4e0dd9d66bd276"
+
+[tracks.test]
+malicious = 839
+benign = 545
+holdout = true
+
+[tracks.full]
+malicious = 7500
+benign = 2235
+holdout = true
+
+[tracks.dev]
+# Train and validation rows, minus any row whose family or hash also appears in test.
+holdout = false
+
+[scoring]
+bootstrap_resamples = 10000
+bootstrap_seed = 20261106
+severity_sweep = ["low", "medium", "high", "critical"]
+
+# ai-rulez has two rows from one binary (version 2): `ai-rulez-threat` exits 2 on a threat finding
+# (`scan --fail-on threat`), the headline; `ai-rulez` exits 2 on any warning (`--fail-on warning`), as in
+# version 1. A release without the threat gate has only the second row.
+[scanners.ai-rulez]
+release = "5.11.1"
+
+[scanners.skill-scanner]
+release = "2.3.2"
+
+[scanners.skillspector]
+release = "2.13.4"
+
+# Real, widely used skills, all treated as benign: any verdict of "flagged" is a false alarm. Pinned by
+# commit; `population_sha256` covers every file of every skill.
+[tracks.clean]
+holdout = false
+
+[clean]
+population_sha256 = "76ce72b7904d0a08b2b008c0e09546242a9f134d812cfbb93a0daa08995ba473"
+
+[[clean.repos]]
+repo = "anthropics/skills"
+commit = "ca45fc496a3436251f191354091d557da31c15b5"
+
+[[clean.repos]]
+repo = "vercel-labs/agent-skills"
+commit = "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62"
+
+[[clean.repos]]
+repo = "obra/superpowers"
+commit = "22f0b463e7a5e579904dd6211a520321035526f7"
+
+[[clean.repos]]
+repo = "openai/skills"
+commit = "49f948faa9258a0c61caceaf225e179651397431"
+
+[[clean.repos]]
+repo = "github/awesome-copilot"
+commit = "797337f33f73e35d08d82f840e21c4b8c4932d88"

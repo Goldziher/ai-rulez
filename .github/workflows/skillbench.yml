@@ -1,0 +1,125 @@
+name: skillbench
+
+# Benchmarks the static skill scanners on the pinned MaliciousSkillBench, in the pinned image, with no
+# network. Samples are malicious text: they stay in the job that scans them and are never uploaded,
+# and no job holds a secret or a write token. A pull request touching the benchmark runs a small dev
+# sample. The test and full tracks read the holdout: log each read in bench/skills/HOLDOUT.md first.
+# See website/src/content/docs/benchmarks.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Population
+        type: choice
+        options: [dev, test, full]
+        default: dev
+      every:
+        description: Keep one sample in N (dev only)
+        type: string
+        default: "1"
+      repetitions:
+        description: Repetitions per machine
+        type: string
+        default: "3"
+      ai_rulez_version:
+        description: ai-rulez release to measure (default the protocol's)
+        type: string
+        default: ""
+      allow_holdout:
+        description: Read the holdout (test and full tracks)
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - ".github/workflows/skillbench.yml"
+      - "tools/skillbench/**"
+
+concurrency:
+  group: skillbench-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  TRACK: ${{ inputs.track || 'dev' }}
+  EVERY: ${{ inputs.every || '100' }}
+  REPS: ${{ inputs.repetitions || '1' }}
+  AI_RULEZ_VERSION: ${{ inputs.ai_rulez_version }}
+  ALLOW_HOLDOUT: ${{ inputs.allow_holdout && '1' || '' }}
+  SHARDS: "4"
+
+jobs:
+  scan:
+    name: Scan ${{ matrix.os }} shard ${{ matrix.shard }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        shard: [0, 1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/go-toolchain
+
+      - name: Scan
+        env:
+          PHASE: scan
+          SHARD: ${{ matrix.shard }}
+          WORK: ${{ runner.temp }}/skillbench
+        run: bash tools/skillbench/bench.sh
+
+      - name: Upload the verdicts
+        uses: actions/upload-artifact@v7
+        with:
+          name: verdicts-${{ matrix.os }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/skillbench/runs
+          if-no-files-found: error
+
+  score:
+    name: Score
+    needs: scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/go-toolchain
+
+      - name: Download the verdicts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: verdicts-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/skillbench/runs
+
+      - name: Score
+        env:
+          PHASE: score
+          WORK: ${{ runner.temp }}/skillbench
+          OUT: ${{ runner.temp }}/skillbench/out
+        run: |
+          bash tools/skillbench/bench.sh | tee "$RUNNER_TEMP/table.md"
+          cat "$RUNNER_TEMP/table.md" >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the results
+        uses: actions/upload-artifact@v7
+        with:
+          name: skillbench-results
+          path: ${{ runner.temp }}/skillbench/out
+          if-no-files-found: error
+          retention-days: 90

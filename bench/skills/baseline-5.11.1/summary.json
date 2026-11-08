@@ -1,0 +1,544 @@
+{
+  "protocol_sha256": "ed6e3dc10d242023712240e8503a265301dda8be4edb214e3957ac432e5b217e",
+  "claim": "static, text-only, no LLM",
+  "dataset": "MaliciousSkillBench",
+  "revision": "d4b42ce5766a6e0359c987cf59c1007cb3795a90",
+  "track": "test",
+  "population_sha256": "3de5dac55b4230355e564694aa23dfc41081ea06f8776ce9b1b3e1dc5ba8a1dd",
+  "samples": 1384,
+  "malicious": 839,
+  "benign": 545,
+  "runs": 3,
+  "dropped": {
+    "text_withheld": 5,
+    "split_excluded": 8,
+    "overlaps_test": 0,
+    "other_partition": 8343
+  },
+  "tools": [
+    {
+      "tool": "ai-rulez",
+      "version": "5.11.1",
+      "counts": {
+        "tp": 164,
+        "fn": 675,
+        "fp": 184,
+        "tn": 361
+      },
+      "rates": {
+        "recall": 0.19547079856972585,
+        "fpr": 0.3376146788990826,
+        "precision": 0.47126436781609193,
+        "f1": 0.2763268744734625
+      },
+      "recall_ci95": {
+        "low": 0.13906581740976645,
+        "high": 0.2712456344586729
+      },
+      "fpr_ci95": {
+        "low": 0.2974910394265233,
+        "high": 0.3775322283609576
+      },
+      "f1_ci95": {
+        "low": 0.20995228357191548,
+        "high": 0.35405872193436955
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0.03098927294398093,
+          "fpr": 0.07889908256880734,
+          "precision": 0.37681159420289856,
+          "f1": 0.05726872246696035
+        },
+        "low": {
+          "recall": 0.19547079856972585,
+          "fpr": 0.3376146788990826,
+          "precision": 0.47126436781609193,
+          "f1": 0.2763268744734625
+        },
+        "medium": {
+          "recall": 0.19547079856972585,
+          "fpr": 0.3376146788990826,
+          "precision": 0.47126436781609193,
+          "f1": 0.2763268744734625
+        }
+      },
+      "by_source": {
+        "SRC009": {
+          "tp": 63,
+          "fn": 665,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC011": {
+          "tp": 11,
+          "fn": 10,
+          "fp": 94,
+          "tn": 361
+        },
+        "SRC012": {
+          "tp": 90,
+          "fn": 0,
+          "fp": 90,
+          "tn": 0
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 160,
+          "fn": 672,
+          "fp": 90,
+          "tn": 9
+        },
+        "static": {
+          "tp": 4,
+          "fn": 3,
+          "fp": 94,
+          "tn": 352
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "AR003",
+          "samples": 180,
+          "malicious": 90
+        },
+        {
+          "rule": "AR006",
+          "samples": 62,
+          "malicious": 58
+        },
+        {
+          "rule": "AR005",
+          "samples": 54,
+          "malicious": 15
+        },
+        {
+          "rule": "AR030",
+          "samples": 40,
+          "malicious": 6
+        },
+        {
+          "rule": "AR021",
+          "samples": 35,
+          "malicious": 2
+        },
+        {
+          "rule": "AR014",
+          "samples": 24,
+          "malicious": 6
+        },
+        {
+          "rule": "AR007",
+          "samples": 20,
+          "malicious": 3
+        },
+        {
+          "rule": "AR043",
+          "samples": 18,
+          "malicious": 17
+        },
+        {
+          "rule": "AR024",
+          "samples": 13,
+          "malicious": 13
+        },
+        {
+          "rule": "AR058",
+          "samples": 12,
+          "malicious": 0
+        },
+        {
+          "rule": "AR019",
+          "samples": 9,
+          "malicious": 1
+        },
+        {
+          "rule": "AR048",
+          "samples": 7,
+          "malicious": 7
+        },
+        {
+          "rule": "AR047",
+          "samples": 4,
+          "malicious": 4
+        },
+        {
+          "rule": "AR001",
+          "samples": 3,
+          "malicious": 1
+        },
+        {
+          "rule": "AR002",
+          "samples": 3,
+          "malicious": 2
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "skill-scanner",
+      "version": "2.3.2",
+      "counts": {
+        "tp": 65,
+        "fn": 774,
+        "fp": 22,
+        "tn": 523
+      },
+      "rates": {
+        "recall": 0.07747318235995232,
+        "fpr": 0.04036697247706422,
+        "precision": 0.7471264367816092,
+        "f1": 0.14038876889848811
+      },
+      "recall_ci95": {
+        "low": 0.04375,
+        "high": 0.12483574244415244
+      },
+      "fpr_ci95": {
+        "low": 0.024574669187145556,
+        "high": 0.05755395683453238
+      },
+      "f1_ci95": {
+        "low": 0.08190224570673713,
+        "high": 0.21621621621621623
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0.014302741358760428,
+          "fpr": 0,
+          "precision": 1,
+          "f1": 0.028202115158636895
+        },
+        "high": {
+          "recall": 0.07747318235995232,
+          "fpr": 0.04036697247706422,
+          "precision": 0.7471264367816092,
+          "f1": 0.14038876889848811
+        },
+        "low": {
+          "recall": 0.08462455303933254,
+          "fpr": 0.06422018348623854,
+          "precision": 0.6698113207547169,
+          "f1": 0.15026455026455027
+        },
+        "medium": {
+          "recall": 0.07985697258641239,
+          "fpr": 0.04220183486238532,
+          "precision": 0.7444444444444445,
+          "f1": 0.1442411194833154
+        }
+      },
+      "by_source": {
+        "SRC009": {
+          "tp": 19,
+          "fn": 709,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC011": {
+          "tp": 8,
+          "fn": 13,
+          "fp": 22,
+          "tn": 433
+        },
+        "SRC012": {
+          "tp": 38,
+          "fn": 52,
+          "fp": 0,
+          "tn": 90
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 61,
+          "fn": 771,
+          "fp": 0,
+          "tn": 99
+        },
+        "static": {
+          "tp": 4,
+          "fn": 3,
+          "fp": 22,
+          "tn": 424
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "MANIFEST_MISSING_LICENSE",
+          "samples": 962,
+          "malicious": 492
+        },
+        {
+          "rule": "MANIFEST_INVALID_NAME",
+          "samples": 28,
+          "malicious": 14
+        },
+        {
+          "rule": "CORRELATED_SENSITIVE_NETWORK_FLOW",
+          "samples": 24,
+          "malicious": 22
+        },
+        {
+          "rule": "PIPELINE_TAINT_FLOW",
+          "samples": 24,
+          "malicious": 12
+        },
+        {
+          "rule": "ACTIVE_DYNAMIC_EXECUTION",
+          "samples": 22,
+          "malicious": 18
+        },
+        {
+          "rule": "CORRELATED_NETWORK_EXECUTION_FLOW",
+          "samples": 20,
+          "malicious": 7
+        },
+        {
+          "rule": "SOCIAL_ENG_VAGUE_DESCRIPTION",
+          "samples": 15,
+          "malicious": 4
+        },
+        {
+          "rule": "COMPOUND_FIND_EXEC",
+          "samples": 6,
+          "malicious": 6
+        },
+        {
+          "rule": "YARA_tool_chaining_abuse_generic",
+          "samples": 5,
+          "malicious": 4
+        },
+        {
+          "rule": "YARA_SUSP_Lnx_EncodedShell_DecodeExec_Sep26",
+          "samples": 3,
+          "malicious": 3
+        },
+        {
+          "rule": "ACTIVE_REMOTE_ACQUIRE_EXECUTE",
+          "samples": 2,
+          "malicious": 1
+        },
+        {
+          "rule": "YARA_coercive_injection_generic",
+          "samples": 2,
+          "malicious": 2
+        },
+        {
+          "rule": "ACTIVE_SENSITIVE_EXFILTRATION",
+          "samples": 1,
+          "malicious": 0
+        },
+        {
+          "rule": "ASCII_SMUGGLING_TAG_BLOCK",
+          "samples": 1,
+          "malicious": 1
+        },
+        {
+          "rule": "GLOB_HIDDEN_FILE_TARGETING",
+          "samples": 1,
+          "malicious": 1
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "skillspector",
+      "version": "2.13.4",
+      "counts": {
+        "tp": 95,
+        "fn": 744,
+        "fp": 106,
+        "tn": 439
+      },
+      "rates": {
+        "recall": 0.11323003575685339,
+        "fpr": 0.1944954128440367,
+        "precision": 0.472636815920398,
+        "f1": 0.1826923076923077
+      },
+      "recall_ci95": {
+        "low": 0.07345225603357818,
+        "high": 0.16666666666666666
+      },
+      "fpr_ci95": {
+        "low": 0.1614678899082569,
+        "high": 0.22847100175746923
+      },
+      "f1_ci95": {
+        "low": 0.12366737739872068,
+        "high": 0.2536231884057971
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0.0059594755661501785,
+          "fpr": 0,
+          "precision": 1,
+          "f1": 0.011848341232227486
+        },
+        "high": {
+          "recall": 0.11799761620977355,
+          "fpr": 0.14678899082568808,
+          "precision": 0.553072625698324,
+          "f1": 0.1944990176817289
+        },
+        "low": {
+          "recall": 0.31585220500595945,
+          "fpr": 0.44220183486238535,
+          "precision": 0.5237154150197628,
+          "f1": 0.3940520446096654
+        },
+        "medium": {
+          "recall": 0.31585220500595945,
+          "fpr": 0.42385321100917434,
+          "precision": 0.5342741935483871,
+          "f1": 0.39700374531835203
+        }
+      },
+      "by_source": {
+        "SRC009": {
+          "tp": 41,
+          "fn": 687,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC011": {
+          "tp": 14,
+          "fn": 7,
+          "fp": 106,
+          "tn": 349
+        },
+        "SRC012": {
+          "tp": 40,
+          "fn": 50,
+          "fp": 0,
+          "tn": 90
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 90,
+          "fn": 742,
+          "fp": 0,
+          "tn": 99
+        },
+        "static": {
+          "tp": 5,
+          "fn": 2,
+          "fp": 106,
+          "tn": 340
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "External Transmission",
+          "samples": 112,
+          "malicious": 64
+        },
+        {
+          "rule": "RP1",
+          "samples": 89,
+          "malicious": 0
+        },
+        {
+          "rule": "Sudo/Root Execution",
+          "samples": 65,
+          "malicious": 58
+        },
+        {
+          "rule": "Behavior Manipulation",
+          "samples": 59,
+          "malicious": 57
+        },
+        {
+          "rule": "Session Persistence",
+          "samples": 56,
+          "malicious": 31
+        },
+        {
+          "rule": "Credential Access",
+          "samples": 46,
+          "malicious": 16
+        },
+        {
+          "rule": "Tool Parameter Abuse",
+          "samples": 37,
+          "malicious": 27
+        },
+        {
+          "rule": "Autonomous Decision Making",
+          "samples": 34,
+          "malicious": 7
+        },
+        {
+          "rule": "External Script Fetching",
+          "samples": 27,
+          "malicious": 9
+        },
+        {
+          "rule": "Chaining Abuse",
+          "samples": 21,
+          "malicious": 9
+        },
+        {
+          "rule": "Inline Program Reads Download as Data",
+          "samples": 18,
+          "malicious": 0
+        },
+        {
+          "rule": "Env Variable Harvesting",
+          "samples": 12,
+          "malicious": 10
+        },
+        {
+          "rule": "Self-Modification",
+          "samples": 12,
+          "malicious": 10
+        },
+        {
+          "rule": "YARA rule 'backdoor_persistence': Backdoor persistence with malicious payloads (shell commands, SSH key injection, hidden root users) [malware]",
+          "samples": 12,
+          "malicious": 12
+        },
+        {
+          "rule": "AE4",
+          "samples": 9,
+          "malicious": 6
+        }
+      ],
+      "unstable_samples": 0
+    }
+  ],
+  "paired": [
+    {
+      "a": "ai-rulez",
+      "b": "skill-scanner",
+      "only_a_correct": 122,
+      "only_b_correct": 185,
+      "mcnemar_exact_p": 0.0003855844059318695
+    },
+    {
+      "a": "ai-rulez",
+      "b": "skillspector",
+      "only_a_correct": 167,
+      "only_b_correct": 176,
+      "mcnemar_exact_p": 0.6658332919701492
+    },
+    {
+      "a": "skill-scanner",
+      "b": "skillspector",
+      "only_a_correct": 123,
+      "only_b_correct": 69,
+      "mcnemar_exact_p": 0.00011897923026908729
+    }
+  ]
+}

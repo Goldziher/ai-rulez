@@ -19,6 +19,25 @@ updates:
     pull-request-branch-name:
       separator: "/"
 
+  - package-ecosystem: "gomod"
+    directory: "/tools/skillbench"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Goldziher"
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
   - package-ecosystem: "npm"
     directory: "/release/npm"
     schedule:

@@ -1,0 +1,902 @@
+{
+  "protocol_sha256": "7469e9dd48d7bc72d129a13d996cf426b514bb4ae7d69978ade99611cc16ade4",
+  "claim": "static, text-only, no LLM",
+  "dataset": "MaliciousSkillBench",
+  "revision": "d4b42ce5766a6e0359c987cf59c1007cb3795a90",
+  "track": "dev",
+  "population_sha256": "39ee9fd7d17799ef21c95ab3ff5b7dd5da44ca20e3b59b8ac67d1b8160edf0a2",
+  "samples": 8213,
+  "malicious": 6523,
+  "benign": 1690,
+  "runs": 1,
+  "dropped": {
+    "text_withheld": 5,
+    "split_excluded": 8,
+    "overlaps_test": 130,
+    "other_partition": 1384
+  },
+  "tools": [
+    {
+      "tool": "ai-rulez-threat",
+      "version": "unreleased",
+      "counts": {
+        "tp": 1467,
+        "fn": 5056,
+        "fp": 12,
+        "tn": 1678
+      },
+      "rates": {
+        "recall": 0.22489652000613214,
+        "fpr": 0.007100591715976331,
+        "precision": 0.9918864097363083,
+        "f1": 0.36665833541614595
+      },
+      "recall_ci95": {
+        "low": 0.20859824402058735,
+        "high": 0.24201120702710888
+      },
+      "fpr_ci95": {
+        "low": 0.003510825043885313,
+        "high": 0.011384062312762133
+      },
+      "f1_ci95": {
+        "low": 0.344616950878086,
+        "high": 0.3892173090565145
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0.13122796259389852,
+          "fpr": 0.005917159763313609,
+          "precision": 0.9884526558891455,
+          "f1": 0.2316957639734741
+        },
+        "low": {
+          "recall": 0.43706883335888397,
+          "fpr": 0.07396449704142012,
+          "precision": 0.957997311827957,
+          "f1": 0.6002737130224235
+        },
+        "medium": {
+          "recall": 0.43706883335888397,
+          "fpr": 0.07396449704142012,
+          "precision": 0.957997311827957,
+          "f1": 0.6002737130224235
+        }
+      },
+      "by_source": {
+        "SRC001": {
+          "tp": 920,
+          "fn": 2470,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC002": {
+          "tp": 89,
+          "fn": 61,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC004": {
+          "tp": 4,
+          "fn": 29,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC005": {
+          "tp": 4,
+          "fn": 26,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC006": {
+          "tp": 3,
+          "fn": 81,
+          "fp": 1,
+          "tn": 44
+        },
+        "SRC008": {
+          "tp": 0,
+          "fn": 1,
+          "fp": 0,
+          "tn": 2
+        },
+        "SRC010": {
+          "tp": 447,
+          "fn": 2331,
+          "fp": 11,
+          "tn": 1632
+        },
+        "SRC013": {
+          "tp": 0,
+          "fn": 57,
+          "fp": 0,
+          "tn": 0
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 446,
+          "fn": 2384,
+          "fp": 1,
+          "tn": 154
+        },
+        "human+runtime": {
+          "tp": 1013,
+          "fn": 2560,
+          "fp": 0,
+          "tn": 0
+        },
+        "runtime": {
+          "tp": 3,
+          "fn": 81,
+          "fp": 1,
+          "tn": 44
+        },
+        "static": {
+          "tp": 5,
+          "fn": 31,
+          "fp": 10,
+          "tn": 1480
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "AR007",
+          "samples": 958,
+          "malicious": 936
+        },
+        {
+          "rule": "AR060",
+          "samples": 873,
+          "malicious": 864
+        },
+        {
+          "rule": "AR030",
+          "samples": 695,
+          "malicious": 646
+        },
+        {
+          "rule": "AR005",
+          "samples": 633,
+          "malicious": 630
+        },
+        {
+          "rule": "AR059",
+          "samples": 208,
+          "malicious": 208
+        },
+        {
+          "rule": "AR002",
+          "samples": 200,
+          "malicious": 198
+        },
+        {
+          "rule": "AR058",
+          "samples": 181,
+          "malicious": 173
+        },
+        {
+          "rule": "AR006",
+          "samples": 164,
+          "malicious": 148
+        },
+        {
+          "rule": "AR025",
+          "samples": 153,
+          "malicious": 152
+        },
+        {
+          "rule": "AR003",
+          "samples": 150,
+          "malicious": 150
+        },
+        {
+          "rule": "AR014",
+          "samples": 144,
+          "malicious": 100
+        },
+        {
+          "rule": "AR019",
+          "samples": 127,
+          "malicious": 92
+        },
+        {
+          "rule": "AR004",
+          "samples": 123,
+          "malicious": 121
+        },
+        {
+          "rule": "AR043",
+          "samples": 116,
+          "malicious": 110
+        },
+        {
+          "rule": "AR061",
+          "samples": 116,
+          "malicious": 116
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "ai-rulez",
+      "version": "unreleased",
+      "counts": {
+        "tp": 2851,
+        "fn": 3672,
+        "fp": 125,
+        "tn": 1565
+      },
+      "rates": {
+        "recall": 0.43706883335888397,
+        "fpr": 0.07396449704142012,
+        "precision": 0.957997311827957,
+        "f1": 0.6002737130224235
+      },
+      "recall_ci95": {
+        "low": 0.4204363169714469,
+        "high": 0.4537051068343688
+      },
+      "fpr_ci95": {
+        "low": 0.06182472989195678,
+        "high": 0.08687943262411348
+      },
+      "f1_ci95": {
+        "low": 0.5840166174702088,
+        "high": 0.6161078031964901
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0,
+          "fpr": 0,
+          "precision": 0,
+          "f1": 0
+        },
+        "high": {
+          "recall": 0.13122796259389852,
+          "fpr": 0.005917159763313609,
+          "precision": 0.9884526558891455,
+          "f1": 0.2316957639734741
+        },
+        "low": {
+          "recall": 0.43706883335888397,
+          "fpr": 0.07396449704142012,
+          "precision": 0.957997311827957,
+          "f1": 0.6002737130224235
+        },
+        "medium": {
+          "recall": 0.43706883335888397,
+          "fpr": 0.07396449704142012,
+          "precision": 0.957997311827957,
+          "f1": 0.6002737130224235
+        }
+      },
+      "by_source": {
+        "SRC001": {
+          "tp": 1859,
+          "fn": 1531,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC002": {
+          "tp": 100,
+          "fn": 50,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC004": {
+          "tp": 7,
+          "fn": 26,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC005": {
+          "tp": 9,
+          "fn": 21,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC006": {
+          "tp": 5,
+          "fn": 79,
+          "fp": 1,
+          "tn": 44
+        },
+        "SRC008": {
+          "tp": 0,
+          "fn": 1,
+          "fp": 0,
+          "tn": 2
+        },
+        "SRC010": {
+          "tp": 870,
+          "fn": 1908,
+          "fp": 124,
+          "tn": 1519
+        },
+        "SRC013": {
+          "tp": 1,
+          "fn": 56,
+          "fp": 0,
+          "tn": 0
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 868,
+          "fn": 1962,
+          "fp": 18,
+          "tn": 137
+        },
+        "human+runtime": {
+          "tp": 1966,
+          "fn": 1607,
+          "fp": 0,
+          "tn": 0
+        },
+        "runtime": {
+          "tp": 5,
+          "fn": 79,
+          "fp": 1,
+          "tn": 44
+        },
+        "static": {
+          "tp": 12,
+          "fn": 24,
+          "fp": 106,
+          "tn": 1384
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "AR007",
+          "samples": 958,
+          "malicious": 936
+        },
+        {
+          "rule": "AR060",
+          "samples": 873,
+          "malicious": 864
+        },
+        {
+          "rule": "AR030",
+          "samples": 695,
+          "malicious": 646
+        },
+        {
+          "rule": "AR005",
+          "samples": 633,
+          "malicious": 630
+        },
+        {
+          "rule": "AR059",
+          "samples": 208,
+          "malicious": 208
+        },
+        {
+          "rule": "AR002",
+          "samples": 200,
+          "malicious": 198
+        },
+        {
+          "rule": "AR058",
+          "samples": 181,
+          "malicious": 173
+        },
+        {
+          "rule": "AR006",
+          "samples": 164,
+          "malicious": 148
+        },
+        {
+          "rule": "AR025",
+          "samples": 153,
+          "malicious": 152
+        },
+        {
+          "rule": "AR003",
+          "samples": 150,
+          "malicious": 150
+        },
+        {
+          "rule": "AR014",
+          "samples": 144,
+          "malicious": 100
+        },
+        {
+          "rule": "AR019",
+          "samples": 127,
+          "malicious": 92
+        },
+        {
+          "rule": "AR004",
+          "samples": 123,
+          "malicious": 121
+        },
+        {
+          "rule": "AR043",
+          "samples": 116,
+          "malicious": 110
+        },
+        {
+          "rule": "AR061",
+          "samples": 116,
+          "malicious": 116
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "skill-scanner",
+      "version": "2.3.2",
+      "counts": {
+        "tp": 2035,
+        "fn": 4488,
+        "fp": 14,
+        "tn": 1676
+      },
+      "rates": {
+        "recall": 0.31197301854974707,
+        "fpr": 0.008284023668639054,
+        "precision": 0.9931673987310884,
+        "f1": 0.47480167988800753
+      },
+      "recall_ci95": {
+        "low": 0.29818012132524496,
+        "high": 0.3259925558312655
+      },
+      "fpr_ci95": {
+        "low": 0.0041592394533571005,
+        "high": 0.012941176470588235
+      },
+      "f1_ci95": {
+        "low": 0.4586316160075109,
+        "high": 0.49095547309833026
+      },
+      "errors": {},
+      "severity_sweep": {
+        "critical": {
+          "recall": 0.038019316265522,
+          "fpr": 0.0017751479289940828,
+          "precision": 0.9880478087649402,
+          "f1": 0.07322113965160909
+        },
+        "high": {
+          "recall": 0.31197301854974707,
+          "fpr": 0.008284023668639054,
+          "precision": 0.9931673987310884,
+          "f1": 0.47480167988800753
+        },
+        "low": {
+          "recall": 0.34324697225203127,
+          "fpr": 0.03727810650887574,
+          "precision": 0.972632493483927,
+          "f1": 0.5074220963172804
+        },
+        "medium": {
+          "recall": 0.31473248505288975,
+          "fpr": 0.010059171597633136,
+          "precision": 0.9917874396135266,
+          "f1": 0.47783079250552773
+        }
+      },
+      "by_source": {
+        "SRC001": {
+          "tp": 943,
+          "fn": 2447,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC002": {
+          "tp": 89,
+          "fn": 61,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC004": {
+          "tp": 2,
+          "fn": 31,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC005": {
+          "tp": 1,
+          "fn": 29,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC006": {
+          "tp": 0,
+          "fn": 84,
+          "fp": 1,
+          "tn": 44
+        },
+        "SRC008": {
+          "tp": 0,
+          "fn": 1,
+          "fp": 0,
+          "tn": 2
+        },
+        "SRC010": {
+          "tp": 998,
+          "fn": 1780,
+          "fp": 13,
+          "tn": 1630
+        },
+        "SRC013": {
+          "tp": 2,
+          "fn": 55,
+          "fp": 0,
+          "tn": 0
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 998,
+          "fn": 1832,
+          "fp": 3,
+          "tn": 152
+        },
+        "human+runtime": {
+          "tp": 1034,
+          "fn": 2539,
+          "fp": 0,
+          "tn": 0
+        },
+        "runtime": {
+          "tp": 0,
+          "fn": 84,
+          "fp": 1,
+          "tn": 44
+        },
+        "static": {
+          "tp": 3,
+          "fn": 33,
+          "fp": 10,
+          "tn": 1480
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "MANIFEST_MISSING_LICENSE",
+          "samples": 6954,
+          "malicious": 5413
+        },
+        {
+          "rule": "MANDATORY_AUTOMATIC_HELPER_EXECUTION",
+          "samples": 736,
+          "malicious": 736
+        },
+        {
+          "rule": "MANIFEST_INVALID_NAME",
+          "samples": 642,
+          "malicious": 543
+        },
+        {
+          "rule": "PIPELINE_TAINT_FLOW",
+          "samples": 485,
+          "malicious": 484
+        },
+        {
+          "rule": "CORRELATED_NETWORK_EXECUTION_FLOW",
+          "samples": 368,
+          "malicious": 367
+        },
+        {
+          "rule": "ACTIVE_DYNAMIC_EXECUTION",
+          "samples": 250,
+          "malicious": 250
+        },
+        {
+          "rule": "SOCIAL_ENG_VAGUE_DESCRIPTION",
+          "samples": 174,
+          "malicious": 149
+        },
+        {
+          "rule": "ACTIVE_HIDDEN_HTML_INSTRUCTION",
+          "samples": 147,
+          "malicious": 147
+        },
+        {
+          "rule": "ACTIVE_REMOTE_ACQUIRE_EXECUTE",
+          "samples": 147,
+          "malicious": 147
+        },
+        {
+          "rule": "YARA_SUSP_Lnx_EncodedShell_DecodeExec_Sep26",
+          "samples": 129,
+          "malicious": 129
+        },
+        {
+          "rule": "SUPPLY_CHAIN_UNPINNED_DEPENDENCY",
+          "samples": 87,
+          "malicious": 85
+        },
+        {
+          "rule": "CORRELATED_OBFUSCATION_EXECUTION_FLOW",
+          "samples": 85,
+          "malicious": 85
+        },
+        {
+          "rule": "ACTIVE_OS_PERSISTENCE_DIRECTIVE",
+          "samples": 74,
+          "malicious": 74
+        },
+        {
+          "rule": "YARA_command_injection_generic",
+          "samples": 74,
+          "malicious": 74
+        },
+        {
+          "rule": "YARA_SUSP_Multi_RawIP_DownloadExec_Sep26",
+          "samples": 70,
+          "malicious": 70
+        }
+      ],
+      "unstable_samples": 0
+    },
+    {
+      "tool": "skillspector",
+      "version": "2.13.4",
+      "counts": {
+        "tp": 2109,
+        "fn": 4414,
+        "fp": 262,
+        "tn": 1428
+      },
+      "rates": {
+        "recall": 0.323317491951556,
+        "fpr": 0.15502958579881657,
+        "precision": 0.8894981020666386,
+        "f1": 0.47425230492466836
+      },
+      "recall_ci95": {
+        "low": 0.3070951715572116,
+        "high": 0.3400772200772201
+      },
+      "fpr_ci95": {
+        "low": 0.13772807533843437,
+        "high": 0.17253731343283582
+      },
+      "f1_ci95": {
+        "low": 0.4558074965293845,
+        "high": 0.49286184933011196
+      },
+      "errors": {
+        "timeout": 1
+      },
+      "severity_sweep": {
+        "critical": {
+          "recall": 0.01441054729418979,
+          "fpr": 0,
+          "precision": 1,
+          "f1": 0.028411666918543146
+        },
+        "high": {
+          "recall": 0.2972558638663192,
+          "fpr": 0.10177514792899409,
+          "precision": 0.9185220274751302,
+          "f1": 0.4491545054435951
+        },
+        "low": {
+          "recall": 0.5330369461904032,
+          "fpr": 0.2869822485207101,
+          "precision": 0.8775870772337203,
+          "f1": 0.6632331902718169
+        },
+        "medium": {
+          "recall": 0.5138739843630231,
+          "fpr": 0.28106508875739644,
+          "precision": 0.87588189182127,
+          "f1": 0.6477294685990338
+        }
+      },
+      "by_source": {
+        "SRC001": {
+          "tp": 1222,
+          "fn": 2168,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC002": {
+          "tp": 106,
+          "fn": 44,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC004": {
+          "tp": 9,
+          "fn": 24,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC005": {
+          "tp": 4,
+          "fn": 26,
+          "fp": 0,
+          "tn": 0
+        },
+        "SRC006": {
+          "tp": 8,
+          "fn": 76,
+          "fp": 3,
+          "tn": 42
+        },
+        "SRC008": {
+          "tp": 0,
+          "fn": 1,
+          "fp": 0,
+          "tn": 2
+        },
+        "SRC010": {
+          "tp": 749,
+          "fn": 2029,
+          "fp": 259,
+          "tn": 1384
+        },
+        "SRC013": {
+          "tp": 11,
+          "fn": 46,
+          "fp": 0,
+          "tn": 0
+        }
+      },
+      "by_evidence": {
+        "constructed": {
+          "tp": 758,
+          "fn": 2072,
+          "fp": 31,
+          "tn": 124
+        },
+        "human+runtime": {
+          "tp": 1337,
+          "fn": 2236,
+          "fp": 0,
+          "tn": 0
+        },
+        "runtime": {
+          "tp": 8,
+          "fn": 76,
+          "fp": 3,
+          "tn": 42
+        },
+        "static": {
+          "tp": 6,
+          "fn": 30,
+          "fp": 228,
+          "tn": 1262
+        }
+      },
+      "top_rules": [
+        {
+          "rule": "External Transmission",
+          "samples": 882,
+          "malicious": 794
+        },
+        {
+          "rule": "Session Persistence",
+          "samples": 621,
+          "malicious": 487
+        },
+        {
+          "rule": "Chaining Abuse",
+          "samples": 501,
+          "malicious": 498
+        },
+        {
+          "rule": "Autonomous Decision Making",
+          "samples": 451,
+          "malicious": 406
+        },
+        {
+          "rule": "External Script Fetching",
+          "samples": 419,
+          "malicious": 416
+        },
+        {
+          "rule": "Hidden Instructions",
+          "samples": 398,
+          "malicious": 397
+        },
+        {
+          "rule": "Credential Access",
+          "samples": 381,
+          "malicious": 355
+        },
+        {
+          "rule": "Unrestricted Tool Access",
+          "samples": 352,
+          "malicious": 348
+        },
+        {
+          "rule": "RP1",
+          "samples": 320,
+          "malicious": 271
+        },
+        {
+          "rule": "YARA rule 'agent_skill_mcp_tool_poisoning_metadata': MCP/tool metadata poisoning indicators in tool schemas or skill manifests [agent_skills]",
+          "samples": 305,
+          "malicious": 297
+        },
+        {
+          "rule": "Sudo/Root Execution",
+          "samples": 285,
+          "malicious": 263
+        },
+        {
+          "rule": "Tool Parameter Abuse",
+          "samples": 252,
+          "malicious": 230
+        },
+        {
+          "rule": "Scope Creep",
+          "samples": 214,
+          "malicious": 203
+        },
+        {
+          "rule": "Anti-Refusal Statement",
+          "samples": 191,
+          "malicious": 166
+        },
+        {
+          "rule": "Obfuscated Code",
+          "samples": 130,
+          "malicious": 130
+        }
+      ],
+      "unstable_samples": 0
+    }
+  ],
+  "paired": [
+    {
+      "a": "ai-rulez-threat",
+      "b": "ai-rulez",
+      "only_a_correct": 113,
+      "only_b_correct": 1384,
+      "mcnemar_exact_p": 1.8364121407206577e-278
+    },
+    {
+      "a": "ai-rulez-threat",
+      "b": "skill-scanner",
+      "only_a_correct": 490,
+      "only_b_correct": 1056,
+      "mcnemar_exact_p": 7.069465903001717e-48
+    },
+    {
+      "a": "ai-rulez-threat",
+      "b": "skillspector",
+      "only_a_correct": 566,
+      "only_b_correct": 958,
+      "mcnemar_exact_p": 7.384854085317026e-24
+    },
+    {
+      "a": "ai-rulez",
+      "b": "skill-scanner",
+      "only_a_correct": 1566,
+      "only_b_correct": 861,
+      "mcnemar_exact_p": 5.722501512305e-47
+    },
+    {
+      "a": "ai-rulez",
+      "b": "skillspector",
+      "only_a_correct": 1618,
+      "only_b_correct": 739,
+      "mcnemar_exact_p": 7.616812654535313e-75
+    },
+    {
+      "a": "skill-scanner",
+      "b": "skillspector",
+      "only_a_correct": 1198,
+      "only_b_correct": 1024,
+      "mcnemar_exact_p": 0.0002408596729892981
+    }
+  ]
+}

@@ -139,7 +139,7 @@ linters:
       # the packages that are the process boundary
       # (ambient, runner) or CLI-only by design (agents, watch, logger, telemetry), tests and
       # fixtures are exempt.
-      - path: '^(cmd/|bench/|tests/|scripts/testshard/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/|internal/signing/sigstore/fakesigstore/)|_test\.go$'
+      - path: '^(cmd/|bench/|tests/|tools/skillbench/|scripts/testshard/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/|internal/signing/sigstore/fakesigstore/)|_test\.go$'
         linters:
           - forbidigo
 

@@ -1,0 +1,13 @@
+# The Python scanners of the benchmark, locked with hashes in uv.lock. Kept apart from the repository's
+# Python, which mise pins for other work.
+[project]
+name = "skillbench-scanners"
+version = "0"
+requires-python = "==3.13.*"
+dependencies = ["cisco-ai-skill-scanner==2.3.2", "skillspector"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+skillspector = { git = "https://github.com/NVIDIA/SkillSpector.git", rev = "54824463814a0be01360792523ec7245a69190fc" }

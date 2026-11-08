@@ -194,6 +194,21 @@ shell = "bash -euo pipefail -c"
 description = "Run the offline half of the judge benchmark: the verifier and the convention attachment on the corpus, no model"
 run = "go test ./bench/judge/... -count=1"
 
+[tasks."bench:skills"]
+shell = "bash -euo pipefail -c"
+description = "Benchmark the static skill scanners on the pinned MaliciousSkillBench in the pinned image, no network. Needs Docker. Defaults to the dev track; TRACK=test ALLOW_HOLDOUT=1 reads the holdout, which must be logged in bench/skills/HOLDOUT.md. See tools/skillbench/bench.sh"
+run = "bash tools/skillbench/bench.sh"
+
+[tasks."bench:skills:test"]
+shell = "bash -euo pipefail -c"
+description = "Test the skillbench tool: no samples, no scanners, no network"
+run = "cd tools/skillbench && go vet ./... && go test ./... -count=1"
+
+[tasks."bench:skills:check"]
+shell = "bash -euo pipefail -c"
+description = "Fail if the benchmark tables in README and docs differ from the committed results"
+run = "bash tools/skillbench/check.sh"
+
 [tasks."test:benchmark"]
 shell = "bash -euo pipefail -c"
 description = "Run Go benchmarks (small and medium synthetic projects)"

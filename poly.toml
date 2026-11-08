@@ -71,6 +71,7 @@ lint = { exclude = [
   "**/uv.lock",
   "dist/**",
   "bench/judge/corpus/**",
+  "bench/skills/**",
   "website/dist/**",
   "website/node_modules/**",
   "website/.astro/**",
@@ -93,6 +94,7 @@ fmt = { exclude = [
   "**/uv.lock",
   "dist/**",
   "bench/judge/corpus/**",
+  "bench/skills/**",
   "website/dist/**",
   "website/node_modules/**",
   "website/.astro/**",
@@ -106,6 +108,8 @@ fmt = { exclude = [
 commit = { stages = ["commit-msg"] }
 file_safety = { exclude = [
   "**/*.lock",
+  # Competitor verdicts, by sample digest: hours of scanning to rebuild, no skill text.
+  "bench/skills/cache/**",
   ".mise/locks/**/aube-lock.yaml",
   "**/*.svg",
   "**/Cargo.lock",
