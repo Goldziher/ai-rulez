@@ -113,7 +113,8 @@ func awaitIndexWatch(t *testing.T, root string, session *sdkmcp.ClientSession) {
 		writeFile(t, root, probe+"/AGENTS.md", fmt.Sprintf("# probe %d\n", tick))
 		return contextCount(t, session, probe) == 1
 	})
-	require.NoError(t, os.RemoveAll(filepath.Join(root, probe)))
+	// The index may still hold the probe open, and Windows refuses to delete an open file: retry.
+	eventually(t, "the probe file is removed", func() bool { return os.RemoveAll(filepath.Join(root, probe)) == nil })
 	eventually(t, "the watcher sees the probe go", func() bool { return contextCount(t, session, probe) == 0 })
 }
 
