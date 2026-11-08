@@ -16,14 +16,14 @@ uv = "0.13.7"
 actionlint = "1.7.12"
 "pipx:build" = "1.6.1"
 node = "26.13.0"
-pnpm = "12.16.1"
-"github:Goldziher/poly" = "0.32.5"
+pnpm = "12.18.0"
+"github:Goldziher/poly" = "0.33.1"
 "github:Goldziher/adrlint" = "0.4.1"
 golangci-lint = "2.15.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
-"go:golang.org/x/exp/cmd/gorelease" = "v0.0.0-20261014143641-f0251eb4aa3e"
-"go:golang.org/x/vuln/cmd/govulncheck" = "v1.9.0"
+"go:golang.org/x/exp/cmd/gorelease" = "v0.0.0-20261106192419-47ce03d25ef0"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
 "go:golang.org/x/perf/cmd/benchstat" = "v0.0.0-20261009192801-be2c69fb417e"
 
 [tools.bats]
@@ -56,13 +56,20 @@ run = "govulncheck ./..."
 
 [tasks."update"]
 shell = "bash -euo pipefail -c"
-description = "Update Go modules and the docs site dependencies"
-run = ["go get -u all", "go mod tidy", "pnpm --dir website update"]
+description = "Update every dependency within its declared range: the Go modules, the npm packages and the benchmark's scanner lock"
+run = [
+  "go get -u all && go mod tidy",
+  "cd tests/external && go get -u all && go mod tidy",
+  "cd tools/skillbench && GOWORK=off go get -u all && GOWORK=off go mod tidy",
+  "pnpm --dir website update",
+  "pnpm --dir release/npm update",
+  "UV_PYTHON_DOWNLOADS=automatic uv lock --upgrade --directory tools/skillbench/scanners --python 3.13",
+]
 
 [tasks."upgrade"]
 shell = "bash -euo pipefail -c"
-description = "Upgrade all dependencies to latest then update"
-run = { task = "update" }
+description = "Move the npm ranges to the latest majors, then update everything"
+run = ["pnpm --dir website update --latest", { task = "update" }]
 
 [tasks."set-version"]
 shell = "bash -euo pipefail -c"

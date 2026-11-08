@@ -98,39 +98,39 @@ url = "https://github.com/Goldziher/adrlint/releases/download/v0.4.1/adrlint-x86
 url_api = "https://api.github.com/repos/Goldziher/adrlint/releases/assets/694609927"
 
 [[tools."github:Goldziher/poly"]]
-version = "0.32.5"
+version = "0.33.1"
 backend = "github:Goldziher/poly"
-specifiers = ["0.32.5"]
+specifiers = ["0.33.1"]
 
 [tools."github:Goldziher/poly"."platforms.linux-arm64"]
-checksum = "sha256:68dba781ee81ab40023e22c3ee605c6e9e39dc1e44e152e735e354f7d999df51"
+checksum = "sha256:ca98da5823d219c5b7302cdfdc23ba32cc9d4d4be74c4a0f9436fc2901a49a2a"
 checksum_source = "mise-versions"
-url = "https://github.com/Goldziher/poly/releases/download/v0.32.5/poly-0.32.5-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/710082727"
+url = "https://github.com/Goldziher/poly/releases/download/v0.33.1/poly-0.33.1-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/714406223"
 
 [tools."github:Goldziher/poly"."platforms.linux-x64"]
-checksum = "sha256:38ce40aedfead50c4a0422bf7f3c003106415a5650edb3c985ee714363a2bd1f"
+checksum = "sha256:00162fbc6b754be29ce65c0423a35beaa359c04dfc85d98b6f1b91a47920b361"
 checksum_source = "mise-versions"
-url = "https://github.com/Goldziher/poly/releases/download/v0.32.5/poly-0.32.5-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/710102938"
+url = "https://github.com/Goldziher/poly/releases/download/v0.33.1/poly-0.33.1-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/714438077"
 
 [tools."github:Goldziher/poly"."platforms.macos-arm64"]
-checksum = "sha256:1307954e499e2663f81670a8a332d08b7be640593eddd0d3deae24af1b77aa15"
+checksum = "sha256:32de10e289b25e2b28ff9d408d3fba1cfd93a1eedd2a6eab44395495408be611"
 checksum_source = "mise-versions"
-url = "https://github.com/Goldziher/poly/releases/download/v0.32.5/poly-0.32.5-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/710740659"
+url = "https://github.com/Goldziher/poly/releases/download/v0.33.1/poly-0.33.1-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/714414492"
 
 [tools."github:Goldziher/poly"."platforms.macos-x64"]
-checksum = "sha256:bfef1965c90a36cede4ae9df6815e2d3e0cb776e696e24802041883980691cef"
+checksum = "sha256:18841835ecc36d2b4873fd4607fc2456f847baa544744cd93147817464db7944"
 checksum_source = "mise-versions"
-url = "https://github.com/Goldziher/poly/releases/download/v0.32.5/poly-0.32.5-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/710352757"
+url = "https://github.com/Goldziher/poly/releases/download/v0.33.1/poly-0.33.1-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/714432370"
 
 [tools."github:Goldziher/poly"."platforms.windows-x64"]
-checksum = "sha256:dfd3fdd5f1fc86e8c5c65ca905ee4dbe59629b26b5e26d911706893172354d35"
+checksum = "sha256:37e488c56b9018192c4186e2b8e83dfda663ffe77e82dac11db6349564aa7020"
 checksum_source = "mise-versions"
-url = "https://github.com/Goldziher/poly/releases/download/v0.32.5/poly-0.32.5-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/710153787"
+url = "https://github.com/Goldziher/poly/releases/download/v0.33.1/poly-0.33.1-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/714419681"
 
 [[tools.go]]
 version = "1.27.3"
@@ -158,9 +158,9 @@ checksum = "sha256:f26081f438319757f8a1b46d7d0b2c5ec7583d4038e485e0aa725cfde7885
 url = "https://dl.google.com/go/go1.27.3.windows-amd64.zip"
 
 [[tools."go:golang.org/x/exp/cmd/gorelease"]]
-version = "0.0.0-20261014143641-f0251eb4aa3e"
+version = "0.0.0-20261106192419-47ce03d25ef0"
 backend = "go:golang.org/x/exp/cmd/gorelease"
-specifiers = ["v0.0.0-20261014143641-f0251eb4aa3e"]
+specifiers = ["v0.0.0-20261106192419-47ce03d25ef0"]
 
 [[tools."go:golang.org/x/perf/cmd/benchstat"]]
 version = "0.0.0-20261009192801-be2c69fb417e"
@@ -170,7 +170,7 @@ specifiers = ["v0.0.0-20261009192801-be2c69fb417e"]
 [[tools."go:golang.org/x/vuln/cmd/govulncheck"]]
 version = "1.9.0"
 backend = "go:golang.org/x/vuln/cmd/govulncheck"
-specifiers = ["v1.9.0"]
+specifiers = ["1.9.0"]
 
 [[tools.golangci-lint]]
 version = "2.15.0"
@@ -248,38 +248,38 @@ specifiers = ["1.6.1"]
 uv = { path = ".mise/locks/pipx-build/1.6.1", digest = "sha256:45059e37f83234bdb1684de2542cd4ec10ea47dba8816468a25295ee8a851402" }
 
 [[tools.pnpm]]
-version = "12.16.1"
+version = "12.18.0"
 backend = "aqua:pnpm/pnpm"
-specifiers = ["12.16.1"]
+specifiers = ["12.18.0"]
 
 [tools.pnpm."platforms.linux-arm64"]
-checksum = "sha256:f5847699e5d528f8f8e9bcfb385e58cb9fba7482af1b1aa7b70737be42277f81"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916052"
+checksum = "sha256:700bd1aa4028465b80e62b7c5bec8455be60bbafaf53a3262a4ab8e2057712ac"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505548"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-x64"]
-checksum = "sha256:565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916059"
+checksum = "sha256:3726060e236c0db3e7124c0a5af123c840ba0cb76682149b63ea0baf290017c2"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505542"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.macos-arm64"]
-checksum = "sha256:6661212a6ec725634b0d3268e5bc9408e3152506dab5997891e38fa1ef22bf9c"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916062"
+checksum = "sha256:9b647f634d7e8f23162c9d3d1d0e0950d1152402ca0f4c331583ed7c75cd3706"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505537"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.macos-x64"]
-checksum = "sha256:f2c52f20f631a31011a6e33e3812d136db89c4a5c1d23123b92cbe62ecec82a6"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-darwin-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916060"
+checksum = "sha256:34cc90fbaa060c458b587fbdb1f3f9477e97e3fd3f8e9ffb2d43ca45c0c9b005"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505550"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.windows-x64"]
-checksum = "sha256:253cd5caa8cdf3859a92995bdf1819d3b433690157616cc372af00d22eb0c6a4"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-win32-x64.zip"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916063"
+checksum = "sha256:dfe2123affd2ed4be280ba7ab4678c0fae130b4936fabefa9b1675b60514ef7c"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-win32-x64.zip"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505547"
 provenance = "github-attestations"
 
 [[tools.python]]
