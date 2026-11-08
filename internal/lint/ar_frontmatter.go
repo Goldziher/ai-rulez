@@ -38,7 +38,7 @@ var (
 	contextValues        = []string{"fork"}
 	permissionModeValues = []string{"default", "acceptEdits", "auto", "dontAsk", "bypassPermissions", "plan"}
 	memoryValues         = []string{"user", "project", "local"}
-	shellValues          = []string{shellBash, "powershell"}
+	shellValues          = []string{shellBash, shellPowerShell}
 	isolationValues      = []string{"worktree"}
 	colorValues          = []string{"red", "blue", "green", "yellow", "purple", "orange", "pink", "cyan"}
 	modelAliases         = []string{"sonnet", "opus", "haiku", "inherit", "default", "best", "opusplan", "sonnet[1m]", "opus[1m]"}

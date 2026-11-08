@@ -116,24 +116,34 @@ func (r *Report) Counts() map[Severity]int {
 	return out
 }
 
-// Failed reports whether any finding is at least as severe as failOn.
+// Failed reports whether any finding fails the run: one at least as severe as failOn, or for
+// FailOnThreat, a threat.
 func Failed(findings []Finding, failOn string) bool {
 	if failOn == "none" {
 		return false
+	}
+	fails := failsGate(failOn)
+	for i := range findings {
+		if findings[i].IsAccepted() {
+			continue
+		}
+		if fails(&findings[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// failsGate returns the test for one finding. An unknown or off threshold means error.
+func failsGate(failOn string) func(*Finding) bool {
+	if failOn == FailOnThreat {
+		return (*Finding).IsThreat
 	}
 	threshold, ok := ParseSeverity(failOn)
 	if !ok || threshold == SeverityOff {
 		threshold = SeverityError
 	}
-	for i := range findings {
-		if findings[i].IsAccepted() {
-			continue
-		}
-		if findings[i].failsAt(threshold) {
-			return true
-		}
-	}
-	return false
+	return func(f *Finding) bool { return f.failsAt(threshold) }
 }
 
 type item struct {

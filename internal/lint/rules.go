@@ -128,7 +128,7 @@ var baseRegistry = []RuleInfo{
 	{CodeHiddenCharacters, "hidden-characters", SeverityError, "zero-width, bidirectional-control or Unicode tag characters hide text from a reviewer"},
 	{CodeCommentInstruction, "html-comment-instruction", SeverityWarning, "an HTML comment carries imperative or injection-style text the reader will not see"},
 	{CodeInjectionPhrase, "prompt-injection-phrase", SeverityWarning, "text tries to override earlier instructions or hide actions from the user"},
-	{CodeShellExec, "risky-shell-exec", SeverityError, "a download piped to a shell, eval of dynamic text, or a decoded payload executed"},
+	{CodeShellExec, "risky-shell-exec", SeverityError, "a download piped to a shell or run by a later command, including from a variable or a Python or JavaScript block; eval of dynamic text; a decoded payload executed"},
 	{CodeShellAccess, "risky-shell-access", SeverityWarning, "a command reads a credential location or writes outside the project"},
 	{CodeToolBreadth, "tool-breadth", SeverityWarning, "allowed-tools grants an unrestricted tool such as Bash(*)"},
 	{CodeOutboundHost, "outbound-host", SeverityWarning, "a URL points to a host outside lint.security.allowed_hosts (checked only when the list is set)"},

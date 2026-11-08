@@ -100,9 +100,9 @@ func checkFlagValues() error {
 		return err
 	}
 	switch validateFailOn {
-	case "", failOnError, failOnWarning, failOnInfo, valueNone:
+	case "", failOnError, failOnWarning, failOnInfo, valueNone, lint.FailOnThreat:
 	default:
-		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
+		return oops.Errorf("unknown --fail-on %q (use error, warning, info, threat or none)", validateFailOn)
 	}
 	known := lint.AnalyzerNames()
 	for _, a := range validateAnalyzers {

@@ -44,6 +44,7 @@ func TestLazyTablesBuild(t *testing.T) {
 		"npmUniverse":         func() any { return npmUniverse() },
 		"packageJSONSections": func() any { return packageJSONSections() },
 		"persistRules":        func() any { return persistRules() },
+		"defenseOffRules":     func() any { return defenseOffRules() },
 		"persistStems":        func() any { return persistStems() },
 		"phishingFormRe":      func() any { return phishingFormRe() },
 		"proseCommandWords":   func() any { return proseCommandWords() },

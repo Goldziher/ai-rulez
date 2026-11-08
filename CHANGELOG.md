@@ -6,6 +6,40 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`AR059 collector-host`, `AR060 coerced-execution`, `AR061 permission-weakening` and `AR062 defense-disabled`.**
+  `validate` and `scan` report request collectors, tunnels and anonymous paste services; prose that tells the agent to
+  fetch a URL and run or follow it (a mandatory step with no URL is info); `chmod 777`, setuid bits and edits of sudoers
+  or the system password files; and commands that turn off quarantine, Gatekeeper, SIP, SELinux, Defender or the firewall.
+- **More block-level shapes in `AR005` and `AR043`.** `AR005` follows a download through a variable, through a network
+  response in a Python or JavaScript fence, and through Windows download tools (`Invoke-WebRequest -OutFile`, `certutil`,
+  `bitsadmin`). `AR043` reports writes to `authorized_keys` and `.git/hooks`, and raises a shell startup file write that
+  itself downloads or decodes code to warning. PowerShell, `pwsh` and `cmd` fences now count as shell blocks.
+- **`tools/skillbench` and the [Scanner benchmark](https://goldziher.github.io/ai-rulez/benchmarks/).** A reproducible
+  comparison of `ai-rulez scan`, Cisco skill-scanner and SkillSpector on the pinned public MaliciousSkillBench dataset,
+  in a pinned image with no network, with a manual `skillbench` workflow, committed results in `bench/skills/` and a
+  logged holdout.
+
+- **`--fail-on threat`.** `validate` and `scan` can gate on what a skill does to its user rather than on a severity: an
+  attack shape or an instruction to the agent fails the run; a capability or a style, such as `allowed-tools` naming
+  `Bash`, an unpinned package or a plain HTTP link, stays reported and does not. Existing `--fail-on` values are
+  unchanged. See [Validation](https://goldziher.github.io/ai-rulez/strict-validation/).
+- `AR005 risky-shell-exec` follows a download across a shell block: a file fetched by `curl` or `wget` and run by a later
+  command is the same pipe to a shell written on two lines. A checksum or signature check between them clears it.
+- **Verdict cache for `tools/skillbench`.** Competitor verdicts are kept per version in `bench/skills/cache/`, keyed by
+  tool, version, adapter, environment and sample content, and `tools/skillbench/iterate.sh` scores a local build against
+  them without Docker.
+- **Two ai-rulez rows in the benchmark (protocol version 2).** `ai-rulez-threat` scores `scan --fail-on threat` and is
+  the row to compare with the other scanners; `ai-rulez` keeps `--fail-on warning`. Both come from one binary on the
+  same samples. A release without the threat gate reports only the second row.
+
+### Changed
+
+- `AR025 raw-ip-url` and `AR058 undeclared-capability` default to warning, and `AR030 capability-profile-risk` reports a
+  skill that runs an interpreter and network commands as a warning; all three were info. `AR047 cryptominer` reports a
+  bare miner program name as a warning. A repository that gates on warnings may see new findings.
+
 ## [5.11.1] - 2026-11-06
 
 ### Fixed

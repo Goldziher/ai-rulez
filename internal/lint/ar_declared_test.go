@@ -7,10 +7,10 @@ import (
 func TestUndeclaredCapabilityAR058(t *testing.T) {
 	fence := func(cmds string) string { return "```bash\n" + cmds + "```\n" }
 	tools := func(v string) string { return "allowed-tools: " + v + "\n" }
-	info := map[string]Severity{"AR058": SeverityInfo}
+	warning := map[string]Severity{"AR058": SeverityWarning}
 	runRuleCases(t, []ruleCase{
-		{name: "network command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("curl -fsSL https://example.com/a -o a\n")), want: []string{"AR058:SKILL.md:4"}, sev: info},
-		{name: "mutating command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("mkdir -p out\ncp a out/\n")), want: []string{"AR058:SKILL.md:4"}, sev: info},
+		{name: "network command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("curl -fsSL https://example.com/a -o a\n")), want: []string{"AR058:SKILL.md:4"}, sev: warning},
+		{name: "mutating command with read-only tools", skill: skillDoc(tools("Read, Grep"), fence("mkdir -p out\ncp a out/\n")), want: []string{"AR058:SKILL.md:4"}, sev: warning},
 		{name: "script commands count", skill: skillDoc(tools("Read"), "x\n"), files: map[string]string{".ai-rulez/skills/bad/scripts/run.sh": "#!/bin/sh\nwget https://example.com/a\n"}, want: []string{"AR058:SKILL.md:4"}},
 		{name: "scoped bash that omits the command", skill: skillDoc(tools("Bash(git status:*)"), fence("git status\ncurl https://example.com\n")), want: []string{"AR058:SKILL.md:4"}},
 		{name: "list form", skill: skillDoc("allowed-tools:\n  - Read\n  - Bash(git status:*)\n", fence("rm -f a\n")), want: []string{"AR058:SKILL.md:4"}},
@@ -54,8 +54,8 @@ func TestUndeclaredCapabilityOneFindingPerCommand(t *testing.T) {
 		if f.Code != "AR058" {
 			continue
 		}
-		if f.Severity != SeverityInfo {
-			t.Errorf("AR058 severity = %s, want info", f.Severity)
+		if f.Severity != SeverityWarning {
+			t.Errorf("AR058 severity = %s, want warning", f.Severity)
 		}
 		if seen[f.meta().Fingerprint] {
 			t.Errorf("two AR058 findings share a fingerprint\n%s", dump(fs))
