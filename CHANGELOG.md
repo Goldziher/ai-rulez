@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.12.0] - 2026-11-09
+
 ### Added
 
 - **`AR059 collector-host`, `AR060 coerced-execution`, `AR061 permission-weakening` and `AR062 defense-disabled`.**
@@ -20,7 +22,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   comparison of `ai-rulez scan`, Cisco skill-scanner and SkillSpector on the pinned public MaliciousSkillBench dataset,
   in a pinned image with no network, with a manual `skillbench` workflow, committed results in `bench/skills/` and a
   logged holdout.
-
 - **`--fail-on threat`.** `validate` and `scan` can gate on what a skill does to its user rather than on a severity: an
   attack shape or an instruction to the agent fails the run; a capability or a style, such as `allowed-tools` naming
   `Bash`, an unpinned package or a plain HTTP link, stays reported and does not. Existing `--fail-on` values are
@@ -39,6 +40,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - `AR025 raw-ip-url` and `AR058 undeclared-capability` default to warning, and `AR030 capability-profile-risk` reports a
   skill that runs an interpreter and network commands as a warning; all three were info. `AR047 cryptominer` reports a
   bare miner program name as a warning. A repository that gates on warnings may see new findings.
+- Toolchains follow the xberg-io baseline v1.16.0 (Go, Python 3.15.2, pnpm 12, poly 0.33 with `poly.lock` in place
+  of `poly-hooks.lock`), and `mise run upgrade` updates every module and lockfile, including the benchmark's.
+
+### Security
+
+- Updated `github.com/klauspost/compress` to 1.20.3 and the benchmark scanners' `filelock` to 4.2.9, closing open
+  Dependabot alerts. `govulncheck` reports nothing reachable.
 
 ## [5.11.1] - 2026-11-06
 
