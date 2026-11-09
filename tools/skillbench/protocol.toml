@@ -44,7 +44,7 @@ severity_sweep = ["low", "medium", "high", "critical"]
 # (`scan --fail-on threat`), the headline; `ai-rulez` exits 2 on any warning (`--fail-on warning`), as in
 # version 1. A release without the threat gate has only the second row.
 [scanners.ai-rulez]
-release = "5.11.1"
+release = "5.12.0"
 
 [scanners.skill-scanner]
 release = "2.3.2"

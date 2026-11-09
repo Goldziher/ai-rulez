@@ -8,6 +8,7 @@ family or hash with test, so rule changes cannot learn from it.
 | - | ---- | -------- | --- | ------ |
 | 1 | 2026-11-06 | 5.11.1 | Baseline, frozen before any rule change | `bench/skills/baseline-5.11.1/` |
 | 2 | 2026-11-06 | 5.11.1 plus `AR059`-`AR061` and the severity changes (unreleased) | Measure the rules tuned on dev | `bench/skills/candidate/` |
+| 3 | 2026-11-09 | 5.12.0 (released) | Last read: the release with `AR059`-`AR062`, the threat gate and protocol version 2 | `bench/skills/release-5.12.0/` |
 
 ## Results so far
 
@@ -16,4 +17,4 @@ family or hash with test, so rule changes cannot learn from it.
   from 0.338 to 0.499 and the rate from 0.062 to 0.079, so the gain did not carry over to held-out sources. A native
   build of 5.11.1 reproduced the released binary's verdicts byte for byte, so the difference is the rules.
 
-One read is left. Per-rule results of test are not to be used for tuning.
+No reads are left. Per-rule results of test are not to be used for tuning.
