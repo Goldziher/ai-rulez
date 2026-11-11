@@ -15,7 +15,7 @@ poly (polylint) is a single-binary, multi-language linter and formatter. It bund
 ### Commands
 
 - Lint: `poly lint .`
-- Check formatting (dry-run): `poly fmt --check .`
+- Check formatting (dry-run): `poly fmt .`
 - Apply formatting: `poly fmt --fix .`
 
 ### Configuration
@@ -26,4 +26,4 @@ Per-repo `poly.toml`. Cache dir `.polylint/` (gitignored).
 
 `poly lint` exits non-zero only on error-severity findings; warnings don't fail CI.
 
-Run `poly fmt --check .` and `poly lint .` after changes to verify compliance.
+Run `poly fmt .` and `poly lint .` after changes to verify compliance.
