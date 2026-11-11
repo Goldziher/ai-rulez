@@ -16,6 +16,6 @@ x-ai-rulez:
 
 Run all linters and formatters using poly.
 
-1. Run `poly fmt --check .` and `poly lint .`
+1. Run `poly fmt .` and `poly lint .`
 2. If issues are found, fix them automatically where possible (`poly fmt --fix .`)
 3. Report any issues that require manual intervention

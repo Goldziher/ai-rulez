@@ -2,9 +2,9 @@
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
 
 version = 1
-ai_rulez_version = '5.11.1'
+ai_rulez_version = '5.12.0'
 scope = 'all'
-tree = 'sha256:ef141902289ec82da980a662829c377a23603691a7b1fece899c0bf7d8baaa74'
+tree = 'sha256:5c7b20ad880eecf0fdcbdcf9066ad5ede0bb27169cd2b4483c450ca86070c86f'
 
 [[served]]
 name = 'build'
@@ -88,7 +88,7 @@ digest = 'sha256:5cb87728d1449fadda6d8557501fcc0823509c60a37058ce4d2dda123296f67
 name = 'lint'
 source = ''
 commit = ''
-digest = 'sha256:a974b5b04626f29512a0f7104b1f3dca490d61b96e1e91073f77cfe5f9921e8a'
+digest = 'sha256:e1c93b2f61e3f0e9b1d119b218f575922f9d0f0aa675364643752f877039ba47'
 
 [[served]]
 name = 'mcp-integrations'
@@ -196,7 +196,7 @@ digest = 'sha256:5c0c22014bd2c75f23223deb1b63e350240b0cf6b1b867d6df6d80f1a0e9b68
 kind = 'command'
 id = 'lint'
 path = 'commands/lint.md'
-digest = 'sha256:13c1197eccdb78489e83c6f1a60b85eeca9d06d02db4262278b2c4a9956e3741'
+digest = 'sha256:d8711370307af28e07b62b6819c0ad6446832cc0b74cc6ffb513b8db3409448e'
 
 [[item]]
 kind = 'command'
@@ -244,7 +244,7 @@ digest = 'sha256:f4ea2618f1b250bd06de192cc79e291e8a77c5581d5fb71384a490254b48f6c
 kind = 'context'
 id = 'poly'
 path = 'context/poly.md'
-digest = 'sha256:20e62c5792273155a02d0db150432893769edfa3d87ec35305485b1a1507f21c'
+digest = 'sha256:b359c777dd20564f20f54ec2305cb85117fc90276bec9fbf22e569aeb3f3eef0'
 
 [[item]]
 kind = 'context'
@@ -268,7 +268,7 @@ digest = 'sha256:9f2089dfcc5c47cfd1565a141e59fc8ad0d0bbfcdfadcf408837b32b28a8d56
 kind = 'context'
 id = 'testing-and-quality'
 path = 'context/testing-and-quality.md'
-digest = 'sha256:c2b596e2dc61fe6f3b3678102e4fb4a358dd9c790cfb0d861d290d04c23071ef'
+digest = 'sha256:1f9fc7fa7959655094a65b7871bd4ae0c72d7e24cc0b9ceae86c13a926b39f85'
 
 [[item]]
 kind = 'context'
