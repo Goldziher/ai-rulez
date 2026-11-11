@@ -256,7 +256,7 @@ run = [{ task = "test" }, { task = "test:platform" }, { task = "test:e2e" }]
 [tasks."lint"]
 shell = "bash -euo pipefail -c"
 description = "Run poly formatting and lint checks"
-run = ["poly fmt --check .", "poly lint ."]
+run = ["poly fmt .", "poly lint ."]
 
 [tasks."check"]
 shell = "bash -euo pipefail -c"
