@@ -95,7 +95,7 @@ mise run test
 mise run test:e2e
 
 # Run the checks CI runs, before committing
-mise run lint       # poly fmt --check + poly lint
+mise run lint       # poly fmt + poly lint
 mise run check      # go vet + golangci-lint
 mise run test:all   # unit + platform + e2e
 ```
