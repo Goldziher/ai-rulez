@@ -196,12 +196,38 @@ func runRest(ctx context.Context, o options, packages []string, out io.Writer) e
 	fmt.Fprintf(out, "testshard: ordinary go test on %d remaining packages (cache enabled)\n", len(packages)) //nolint:errcheck // progress
 	ctx, stop := context.WithTimeout(ctx, o.buildTimeout+2*o.timeout+time.Minute)
 	defer stop()
-	cmd := command(ctx, "", "go", append([]string{"test", "-timeout", o.timeout.String()}, packages...)...)
+	args := []string{"test", "-timeout", o.timeout.String()}
+	var log *os.File
+	if o.logDir != "" {
+		var err error
+		log, err = openRemainingTestLog(o.logDir, out)
+		if err != nil {
+			return err
+		}
+		args = append(args, "-json")
+	}
+	cmd := command(ctx, "", "go", append(args, packages...)...)
 	cmd.Stdout, cmd.Stderr = out, out
-	if err := cmd.Run(); err != nil {
+	if log != nil {
+		cmd.Stdout = log
+	}
+	err := cmd.Run()
+	if log != nil {
+		err = errors.Join(err, log.Close())
+	}
+	if err != nil {
 		return fmt.Errorf("remaining packages: %w", err)
 	}
 	return nil
+}
+
+func openRemainingTestLog(dir string, out io.Writer) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	path := filepath.Join(dir, "remaining-tests.jsonl")
+	fmt.Fprintf(out, "testshard: remaining package events: %s\n", path) //nolint:errcheck // progress
+	return os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 }
 
 func prepareTarget(ctx context.Context, o options, pkg goPackage, out io.Writer) (binary string, groups [][]string, cleanup func(), prepErr error) {
