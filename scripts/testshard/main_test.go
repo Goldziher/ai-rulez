@@ -142,8 +142,8 @@ func TestOptionsRejectInvalidArguments(t *testing.T) {
 			t.Fatalf("accepted invalid arguments %q", args)
 		}
 	}
-	o, err := parseOptions([]string{"-shards", "2", "-timeout", "10m", "./cmd/...", "./internal/..."})
-	if err != nil || o.shards != 2 || o.timeout != 10*time.Minute || o.target != "./cmd/commands" || len(o.patterns) != 2 {
+	o, err := parseOptions([]string{"-shards", "2", "-timeout", "10m", "-rest-timeout", "15m", "./cmd/...", "./internal/..."})
+	if err != nil || o.shards != 2 || o.timeout != 10*time.Minute || o.restTimeout != 15*time.Minute || o.target != "./cmd/commands" || len(o.patterns) != 2 {
 		t.Fatalf("options = %+v, %v", o, err)
 	}
 	if o.logDir != "" {
@@ -262,13 +262,14 @@ func TestPackageResultsCombinesPartialLinesAndOmitsIndividualResults(t *testing.
 	chunks := []string{
 		`{"Action":"pass","Package":"example/pkg","Test":"TestOne"}` + "\n" + `{"Action":"fa`,
 		`il","Package":"example/pkg","Elapsed":1}` + "\n",
+		`{"Action":"build-fail","ImportPath":"example/dependency"}` + "\n",
 	}
 	for _, chunk := range chunks {
 		if _, err := writer.Write([]byte(chunk)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if want := "testshard: fail example/pkg (1.00s)\n"; out.String() != want {
+	if want := "testshard: fail example/pkg (1.00s)\ntestshard: build-fail example/dependency (0.00s)\n"; out.String() != want {
 		t.Fatalf("package console output = %q, want %q", out.String(), want)
 	}
 	if want := strings.Join(chunks, ""); log.String() != want {
