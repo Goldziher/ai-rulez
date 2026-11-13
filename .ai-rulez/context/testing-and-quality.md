@@ -27,4 +27,4 @@ Suggested commands:
 
 - `go test ./...`
 - `./bin/ai-rulez validate` (or `ai-rulez validate` if installed)
-- Docs changes: `go run ./scripts/clidocs --check`, `mise run docs:build` (the site must build), `go test ./tests/...`, then `poly fmt --check .` and `poly lint .`.
+- Docs changes: `go run ./scripts/clidocs --check`, `mise run docs:build` (the site must build), `go test ./tests/...`, then `poly fmt .` and `poly lint .`.

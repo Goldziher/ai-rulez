@@ -289,7 +289,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.12.0
+          version: 5.12.1
       - uses: actions/cache@v4                    # keep the first-seen history between runs
         with:
           path: ~/.cache/ai-rulez/observed-tags.toml

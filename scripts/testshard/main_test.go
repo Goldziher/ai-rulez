@@ -142,8 +142,8 @@ func TestOptionsRejectInvalidArguments(t *testing.T) {
 			t.Fatalf("accepted invalid arguments %q", args)
 		}
 	}
-	o, err := parseOptions([]string{"-shards", "2", "-timeout", "10m", "./cmd/...", "./internal/..."})
-	if err != nil || o.shards != 2 || o.timeout != 10*time.Minute || o.target != "./cmd/commands" || len(o.patterns) != 2 {
+	o, err := parseOptions([]string{"-shards", "2", "-timeout", "10m", "-rest-timeout", "15m", "./cmd/...", "./internal/..."})
+	if err != nil || o.shards != 2 || o.timeout != 10*time.Minute || o.restTimeout != 15*time.Minute || o.target != "./cmd/commands" || len(o.patterns) != 2 {
 		t.Fatalf("options = %+v, %v", o, err)
 	}
 	if o.logDir != "" {
@@ -165,6 +165,25 @@ func TestPackageSelectionPreservesEveryRequestedPackageOnce(t *testing.T) {
 	}
 	if _, _, err := selectPackages([]goPackage{target, target}, nil); err == nil {
 		t.Fatal("accepted multiple sharding targets")
+	}
+}
+
+func TestRemainingPackagesRetainTestEvents(t *testing.T) {
+	o := options{timeout: time.Minute, buildTimeout: time.Minute, logDir: t.TempDir()}
+	var out bytes.Buffer
+	packages := []string{"github.com/Goldziher/ai-rulez/v5/internal/diag"}
+	if err := runRest(t.Context(), o, packages, &lockedWriter{w: &out}); err != nil {
+		t.Fatalf("remaining tests failed: %v\n%s", err, &out)
+	}
+	if !strings.Contains(out.String(), "pass github.com/Goldziher/ai-rulez/v5/internal/diag") {
+		t.Fatalf("missing package result on the console: %s", &out)
+	}
+	data, err := os.ReadFile(filepath.Join(o.logDir, "remaining-tests.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte(`"Action":"run"`)) || !bytes.Contains(data, []byte(`"Test":"TestCollector"`)) {
+		t.Fatalf("missing test events for internal/diag: %s", data)
 	}
 }
 
@@ -235,4 +254,25 @@ func TestShardChildWait(t *testing.T) {
 		t.Skip("subprocess helper")
 	}
 	time.Sleep(10 * time.Second)
+}
+
+func TestPackageResultsCombinesPartialLinesAndOmitsIndividualResults(t *testing.T) {
+	var out, log bytes.Buffer
+	writer := packageResults{out: &out, log: &log}
+	chunks := []string{
+		`{"Action":"pass","Package":"example/pkg","Test":"TestOne"}` + "\n" + `{"Action":"fa`,
+		`il","Package":"example/pkg","Elapsed":1}` + "\n",
+		`{"Action":"build-fail","ImportPath":"example/dependency"}` + "\n",
+	}
+	for _, chunk := range chunks {
+		if _, err := writer.Write([]byte(chunk)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if want := "testshard: fail example/pkg (1.00s)\ntestshard: build-fail example/dependency (0.00s)\n"; out.String() != want {
+		t.Fatalf("package console output = %q, want %q", out.String(), want)
+	}
+	if want := strings.Join(chunks, ""); log.String() != want {
+		t.Fatalf("event log = %q, want %q", log.String(), want)
+	}
 }
