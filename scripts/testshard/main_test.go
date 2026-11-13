@@ -168,6 +168,22 @@ func TestPackageSelectionPreservesEveryRequestedPackageOnce(t *testing.T) {
 	}
 }
 
+func TestRemainingPackagesRetainTestEvents(t *testing.T) {
+	o := options{timeout: time.Minute, buildTimeout: time.Minute, logDir: t.TempDir()}
+	var out bytes.Buffer
+	packages := []string{"github.com/Goldziher/ai-rulez/v5/internal/diag"}
+	if err := runRest(t.Context(), o, packages, &out); err != nil {
+		t.Fatalf("remaining tests failed: %v\n%s", err, &out)
+	}
+	data, err := os.ReadFile(filepath.Join(o.logDir, "remaining-tests.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte(`"Action":"run"`)) || !bytes.Contains(data, []byte(`"Test":"TestCollector"`)) {
+		t.Fatalf("missing test events for internal/diag: %s", data)
+	}
+}
+
 func TestRunGroupsRunsAllPartitionsAndPropagatesFailure(t *testing.T) {
 	t.Setenv("AI_RULEZ_TESTSHARD_HELPER", "1")
 	exe, err := os.Executable()
