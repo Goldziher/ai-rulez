@@ -1,5 +1,9 @@
 baseline = "v1.16.0"
 task_sets = ["governance", "governance-check"]
 
+[overrides.go]
+version = "1.27.4"
+reason = "Go 1.27.4 fixes GO-2026-6859, which govulncheck reports as reachable."
+
 [file_overrides]
 "tools/skillbench/Dockerfile" = "the benchmark's scanners stop at Python 3.13: yara-python, which SkillSpector needs, ships wheels only up to 3.13, and onnxruntime, which skill-scanner needs, only up to 3.14"
