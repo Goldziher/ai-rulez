@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "5.12.0",
+  "version": "5.12.1",
   "description": "Author, generate, validate and govern rules, skills, plugins and MCP configuration for 52 AI coding assistants from one .ai-rulez/ source. Lock, sign and SBOM your agent configuration, review it with verified model evidence, and publish plugin bundles. CLI, MCP server and Go API.",
   "keywords": [
     "ai-rules",

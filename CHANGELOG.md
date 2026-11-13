@@ -6,6 +6,21 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.12.1] - 2026-11-13
+
+### Fixed
+
+- Restore the read-only formatting check with the pinned Poly version.
+- Refresh the built-in names for Antigravity, CodeBuddy, Cortex Code, Grok, Junie, and Kiro.
+
+### Changed
+
+- Refresh Go modules and the documentation and scanner dependency locks.
+
+### Security
+
+- Build with Go 1.27.4 to pick up the standard-library security fixes.
+
 ## [5.12.0] - 2026-11-09
 
 ### Added

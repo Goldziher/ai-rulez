@@ -366,7 +366,7 @@ jobs:
       - run: git fetch origin "pull/${{ github.event.pull_request.number }}/head"
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.12.0
+          version: 5.12.1
       - name: Record the approvals of the merged pull request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

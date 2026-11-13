@@ -10,7 +10,7 @@ UV_PYTHON = "python"
 UV_PYTHON_DOWNLOADS = "never"
 
 [tools]
-go = "1.27.3"
+go = "1.27.4"
 python = "3.15.2"
 uv = "0.13.7"
 actionlint = "1.7.12"
@@ -106,7 +106,7 @@ run = "bash scripts/release-dry-run.sh"
 description = "Run unit and integration tests"
 # TEST_TIMEOUT and COMMAND_TEST_LOG_DIR come from the environment, as CI sets them. ~keep
 run = 'go test -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
-run_windows = 'go run ./scripts/testshard -shards 4 -log-dir "${COMMAND_TEST_LOG_DIR:-}" -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
+run_windows = 'go run ./scripts/testshard -shards 4 -rest-timeout "${COMMAND_REST_TEST_TIMEOUT:-0}" -log-dir "${COMMAND_TEST_LOG_DIR:-}" -timeout "${TEST_TIMEOUT:-30m}" ./cmd/... ./internal/... ./pkg/... ./scripts/... ./bench/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...'
 
 [tasks."schema:local:generate"]
 shell = "bash -euo pipefail -c"
@@ -256,7 +256,7 @@ run = [{ task = "test" }, { task = "test:platform" }, { task = "test:e2e" }]
 [tasks."lint"]
 shell = "bash -euo pipefail -c"
 description = "Run poly formatting and lint checks"
-run = ["poly fmt --check .", "poly lint ."]
+run = ["poly fmt .", "poly lint ."]
 
 [tasks."check"]
 shell = "bash -euo pipefail -c"

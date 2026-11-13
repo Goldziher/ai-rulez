@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.12.0
+          version: 5.12.1
       - run: ai-rulez generate --check
       - run: ai-rulez validate --strict
       - run: ai-rulez lock --check
@@ -104,7 +104,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez/check@v5
         with:
-          version: 5.12.0
+          version: 5.12.1
           expected-config-count: "2"   # the root and one module
           plugin: "true"
 ```
@@ -166,7 +166,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez/update@v5
         with:
-          version: 5.12.0
+          version: 5.12.1
 ```
 
 The action:
@@ -248,7 +248,7 @@ steps:
       fetch-depth: 2                 # history for --changed=HEAD~1
   - uses: Goldziher/ai-rulez@v5
     with:
-      version: 5.12.0
+      version: 5.12.1
       llm-provider: openai
       llm-model: gpt-4o-mini
       llm-api-key-env: OPENAI_API_KEY
@@ -272,7 +272,7 @@ request; it must run in a repository with an ai-rulez configuration.
 ```yaml
 - uses: Goldziher/ai-rulez@v5
   with:
-    version: 5.12.0
+    version: 5.12.1
 - name: Inspect LLM configuration
   env:
     AI_RULEZ_LLM_PROVIDER: openai

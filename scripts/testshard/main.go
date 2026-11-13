@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,7 @@ const maxPatternBytes = 24000 // Leave room below Windows' 32767-character comma
 type options struct {
 	shards                int
 	timeout, buildTimeout time.Duration
+	restTimeout           time.Duration
 	logDir, target        string
 	patterns              []string
 }
@@ -48,6 +50,7 @@ func parseOptions(args []string) (options, error) {
 	f.SetOutput(io.Discard)
 	f.IntVar(&o.shards, "shards", 4, "number of separate test processes (1-64)")
 	f.DurationVar(&o.timeout, "timeout", 45*time.Minute, "timeout of each test partition")
+	f.DurationVar(&o.restTimeout, "rest-timeout", 0, "overall timeout for the remaining packages (zero derives it from the other timeouts)")
 	f.DurationVar(&o.buildTimeout, "build-timeout", 30*time.Minute, "timeout for package discovery and compilation")
 	f.StringVar(&o.logDir, "log-dir", "", "directory to retain per-shard logs (default: temporary logs cleaned after the run)")
 	f.StringVar(&o.target, "package", "./cmd/commands", "package to split; the remaining packages run through ordinary go test")
@@ -63,8 +66,8 @@ func parseOptions(args []string) (options, error) {
 			return o, fmt.Errorf("invalid package pattern %q", p)
 		}
 	}
-	if o.shards < 1 || o.shards > 64 || o.timeout <= 0 || o.buildTimeout <= 0 || (o.logDir != "" && strings.TrimSpace(o.logDir) == "") {
-		return o, fmt.Errorf("shards must be 1-64, timeouts positive, and log-dir empty or a path")
+	if o.shards < 1 || o.shards > 64 || o.timeout <= 0 || o.buildTimeout <= 0 || o.restTimeout < 0 || (o.logDir != "" && strings.TrimSpace(o.logDir) == "") {
+		return o, fmt.Errorf("shards must be 1-64, timeouts positive (rest-timeout may be zero), and log-dir empty or a path")
 	}
 	return o, nil
 }
@@ -194,14 +197,81 @@ func run(ctx context.Context, o options, out io.Writer) error {
 
 func runRest(ctx context.Context, o options, packages []string, out io.Writer) error {
 	fmt.Fprintf(out, "testshard: ordinary go test on %d remaining packages (cache enabled)\n", len(packages)) //nolint:errcheck // progress
-	ctx, stop := context.WithTimeout(ctx, o.buildTimeout+2*o.timeout+time.Minute)
+	budget := o.restTimeout
+	if budget == 0 {
+		budget = o.buildTimeout + 2*o.timeout + time.Minute
+	}
+	ctx, stop := context.WithTimeout(ctx, budget)
 	defer stop()
-	cmd := command(ctx, "", "go", append([]string{"test", "-timeout", o.timeout.String()}, packages...)...)
+	args := []string{"test", "-timeout", o.timeout.String()}
+	var log *os.File
+	if o.logDir != "" {
+		var err error
+		log, err = openRemainingTestLog(o.logDir, out)
+		if err != nil {
+			return err
+		}
+		args = append(args, "-json")
+	}
+	cmd := command(ctx, "", "go", append(args, packages...)...)
 	cmd.Stdout, cmd.Stderr = out, out
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("remaining packages: %w", err)
+	if log != nil {
+		cmd.Stdout = &packageResults{out: out, log: log}
+	}
+	err := cmd.Run()
+	if log != nil {
+		err = errors.Join(err, log.Close())
+	}
+	if err != nil {
+		return fmt.Errorf("remaining packages: %w", errors.Join(err, ctx.Err()))
 	}
 	return nil
+}
+
+func openRemainingTestLog(dir string, out io.Writer) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	path := filepath.Join(dir, "remaining-tests.jsonl")
+	fmt.Fprintf(out, "testshard: remaining package events: %s\n", path) //nolint:errcheck // progress
+	return os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+}
+
+// Go writes JSON lines, but exec can deliver partial lines in separate writes.
+type packageResults struct {
+	out     io.Writer
+	log     io.Writer
+	pending bytes.Buffer
+}
+
+func (w *packageResults) Write(data []byte) (int, error) {
+	if _, err := w.log.Write(data); err != nil {
+		return 0, err
+	}
+	n, _ := w.pending.Write(data)
+	for end := bytes.IndexByte(w.pending.Bytes(), '\n'); end >= 0; end = bytes.IndexByte(w.pending.Bytes(), '\n') {
+		line := w.pending.Next(end + 1)
+		var event struct {
+			Action, Package, Test, ImportPath string
+			Elapsed                           float64
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			if _, err := w.out.Write(line); err != nil {
+				return n, err
+			}
+			continue
+		}
+		if event.Test == "" && terminalPackageAction(event.Action) {
+			if _, err := fmt.Fprintf(w.out, "testshard: %s %s (%.2fs)\n", event.Action, cmp.Or(event.Package, event.ImportPath), event.Elapsed); err != nil {
+				return n, err
+			}
+		}
+	}
+	return n, nil
+}
+
+func terminalPackageAction(action string) bool {
+	return action == "pass" || action == "fail" || action == "skip" || action == "build-fail"
 }
 
 func prepareTarget(ctx context.Context, o options, pkg goPackage, out io.Writer) (binary string, groups [][]string, cleanup func(), prepErr error) {

@@ -227,7 +227,9 @@ jobs:
 
       - name: Run all tests (unit + platform)
         env:
-          TEST_TIMEOUT: 180m
+          # Leave time to report a Go timeout and upload the Windows package event log.
+          TEST_TIMEOUT: ${{ runner.os == 'Windows' && '90m' || '180m' }}
+          COMMAND_REST_TEST_TIMEOUT: 105m
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: mise run test
 
@@ -452,7 +454,9 @@ jobs:
 
       - name: Run all test suites (unit + platform + e2e)
         env:
-          TEST_TIMEOUT: 180m
+          # Leave time to report a Go timeout and upload the Windows package event log.
+          TEST_TIMEOUT: ${{ runner.os == 'Windows' && '90m' || '180m' }}
+          COMMAND_REST_TEST_TIMEOUT: 105m
           COMMAND_TEST_LOG_DIR: ${{ runner.temp }}/command-test-shards
         run: mise run test:all
 
