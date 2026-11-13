@@ -209,7 +209,7 @@ func runRest(ctx context.Context, o options, packages []string, out io.Writer) e
 	cmd := command(ctx, "", "go", append(args, packages...)...)
 	cmd.Stdout, cmd.Stderr = out, out
 	if log != nil {
-		cmd.Stdout = log
+		cmd.Stdout = &packageResults{out: out, log: log}
 	}
 	err := cmd.Run()
 	if log != nil {
@@ -228,6 +228,43 @@ func openRemainingTestLog(dir string, out io.Writer) (*os.File, error) {
 	path := filepath.Join(dir, "remaining-tests.jsonl")
 	fmt.Fprintf(out, "testshard: remaining package events: %s\n", path) //nolint:errcheck // progress
 	return os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+}
+
+// Go writes JSON lines, but exec can deliver partial lines in separate writes.
+type packageResults struct {
+	out     io.Writer
+	log     io.Writer
+	pending bytes.Buffer
+}
+
+func (w *packageResults) Write(data []byte) (int, error) {
+	if _, err := w.log.Write(data); err != nil {
+		return 0, err
+	}
+	n, _ := w.pending.Write(data)
+	for end := bytes.IndexByte(w.pending.Bytes(), '\n'); end >= 0; end = bytes.IndexByte(w.pending.Bytes(), '\n') {
+		line := w.pending.Next(end + 1)
+		var event struct {
+			Action, Package, Test string
+			Elapsed               float64
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			if _, err := w.out.Write(line); err != nil {
+				return n, err
+			}
+			continue
+		}
+		if event.Test == "" && terminalPackageAction(event.Action) {
+			if _, err := fmt.Fprintf(w.out, "testshard: %s %s (%.2fs)\n", event.Action, event.Package, event.Elapsed); err != nil {
+				return n, err
+			}
+		}
+	}
+	return n, nil
+}
+
+func terminalPackageAction(action string) bool {
+	return action == "pass" || action == "fail" || action == "skip" || action == "build-fail"
 }
 
 func prepareTarget(ctx context.Context, o options, pkg goPackage, out io.Writer) (binary string, groups [][]string, cleanup func(), prepErr error) {
