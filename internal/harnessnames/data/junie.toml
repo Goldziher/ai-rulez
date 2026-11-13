@@ -1,7 +1,7 @@
 schema = 1
 preset = "junie"
 harness_version = "Junie CLI release 3844.1 (docs built 2026-10-15)"
-verified_on = "2026-11-05"
+verified_on = "2026-11-13"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://junie.jetbrains.com/docs/slash-commands.html"
-verified_on = "2026-11-05"
+verified_on = "2026-11-13"
 
 [[group]]
 kind = "command"
@@ -24,6 +24,8 @@ names = [
   "brave",
   "commands",
   "compress",
+  "context",
+  "continue",
   "copy",
   "debug",
   "demo",
@@ -38,7 +40,6 @@ names = [
   "link",
   "local",
   "logs",
-  "loops",
   "mcp",
   "model",
   "new",
@@ -54,6 +55,7 @@ names = [
   "settings",
   "skills",
   "stats",
+  "teleport",
   "themes",
   "title",
   "update",
@@ -64,9 +66,6 @@ aliases = { "compress" = [
   "compact",
 ], "logs" = [
   "export-logs",
-], "loops" = [
-  "cron-jobs",
-  "crons",
 ], "pull-request" = [
   "pr",
 ], "stats" = [
