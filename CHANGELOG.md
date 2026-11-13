@@ -11,7 +11,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - Restore the read-only formatting check with the pinned Poly version.
-- Refresh the built-in Cortex skill names from Snowflake's documentation.
+- Refresh the built-in names for Antigravity, CodeBuddy, Cortex Code, Grok, Junie, and Kiro.
 
 ### Changed
 
