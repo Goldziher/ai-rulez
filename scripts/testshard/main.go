@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,7 @@ const maxPatternBytes = 24000 // Leave room below Windows' 32767-character comma
 type options struct {
 	shards                int
 	timeout, buildTimeout time.Duration
+	restTimeout           time.Duration
 	logDir, target        string
 	patterns              []string
 }
@@ -48,6 +50,7 @@ func parseOptions(args []string) (options, error) {
 	f.SetOutput(io.Discard)
 	f.IntVar(&o.shards, "shards", 4, "number of separate test processes (1-64)")
 	f.DurationVar(&o.timeout, "timeout", 45*time.Minute, "timeout of each test partition")
+	f.DurationVar(&o.restTimeout, "rest-timeout", 0, "overall timeout for the remaining packages (zero derives it from the other timeouts)")
 	f.DurationVar(&o.buildTimeout, "build-timeout", 30*time.Minute, "timeout for package discovery and compilation")
 	f.StringVar(&o.logDir, "log-dir", "", "directory to retain per-shard logs (default: temporary logs cleaned after the run)")
 	f.StringVar(&o.target, "package", "./cmd/commands", "package to split; the remaining packages run through ordinary go test")
@@ -63,8 +66,8 @@ func parseOptions(args []string) (options, error) {
 			return o, fmt.Errorf("invalid package pattern %q", p)
 		}
 	}
-	if o.shards < 1 || o.shards > 64 || o.timeout <= 0 || o.buildTimeout <= 0 || (o.logDir != "" && strings.TrimSpace(o.logDir) == "") {
-		return o, fmt.Errorf("shards must be 1-64, timeouts positive, and log-dir empty or a path")
+	if o.shards < 1 || o.shards > 64 || o.timeout <= 0 || o.buildTimeout <= 0 || o.restTimeout < 0 || (o.logDir != "" && strings.TrimSpace(o.logDir) == "") {
+		return o, fmt.Errorf("shards must be 1-64, timeouts positive (rest-timeout may be zero), and log-dir empty or a path")
 	}
 	return o, nil
 }
@@ -194,7 +197,11 @@ func run(ctx context.Context, o options, out io.Writer) error {
 
 func runRest(ctx context.Context, o options, packages []string, out io.Writer) error {
 	fmt.Fprintf(out, "testshard: ordinary go test on %d remaining packages (cache enabled)\n", len(packages)) //nolint:errcheck // progress
-	ctx, stop := context.WithTimeout(ctx, o.buildTimeout+2*o.timeout+time.Minute)
+	budget := o.restTimeout
+	if budget == 0 {
+		budget = o.buildTimeout + 2*o.timeout + time.Minute
+	}
+	ctx, stop := context.WithTimeout(ctx, budget)
 	defer stop()
 	args := []string{"test", "-timeout", o.timeout.String()}
 	var log *os.File
@@ -216,7 +223,7 @@ func runRest(ctx context.Context, o options, packages []string, out io.Writer) e
 		err = errors.Join(err, log.Close())
 	}
 	if err != nil {
-		return fmt.Errorf("remaining packages: %w", err)
+		return fmt.Errorf("remaining packages: %w", errors.Join(err, ctx.Err()))
 	}
 	return nil
 }
@@ -245,8 +252,8 @@ func (w *packageResults) Write(data []byte) (int, error) {
 	for end := bytes.IndexByte(w.pending.Bytes(), '\n'); end >= 0; end = bytes.IndexByte(w.pending.Bytes(), '\n') {
 		line := w.pending.Next(end + 1)
 		var event struct {
-			Action, Package, Test string
-			Elapsed               float64
+			Action, Package, Test, ImportPath string
+			Elapsed                           float64
 		}
 		if err := json.Unmarshal(line, &event); err != nil {
 			if _, err := w.out.Write(line); err != nil {
@@ -255,7 +262,7 @@ func (w *packageResults) Write(data []byte) (int, error) {
 			continue
 		}
 		if event.Test == "" && terminalPackageAction(event.Action) {
-			if _, err := fmt.Fprintf(w.out, "testshard: %s %s (%.2fs)\n", event.Action, event.Package, event.Elapsed); err != nil {
+			if _, err := fmt.Fprintf(w.out, "testshard: %s %s (%.2fs)\n", event.Action, cmp.Or(event.Package, event.ImportPath), event.Elapsed); err != nil {
 				return n, err
 			}
 		}
