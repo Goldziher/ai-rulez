@@ -172,8 +172,11 @@ func TestRemainingPackagesRetainTestEvents(t *testing.T) {
 	o := options{timeout: time.Minute, buildTimeout: time.Minute, logDir: t.TempDir()}
 	var out bytes.Buffer
 	packages := []string{"github.com/Goldziher/ai-rulez/v5/internal/diag"}
-	if err := runRest(t.Context(), o, packages, &out); err != nil {
+	if err := runRest(t.Context(), o, packages, &lockedWriter{w: &out}); err != nil {
 		t.Fatalf("remaining tests failed: %v\n%s", err, &out)
+	}
+	if !strings.Contains(out.String(), "pass github.com/Goldziher/ai-rulez/v5/internal/diag") {
+		t.Fatalf("missing package result on the console: %s", &out)
 	}
 	data, err := os.ReadFile(filepath.Join(o.logDir, "remaining-tests.jsonl"))
 	if err != nil {
@@ -251,4 +254,24 @@ func TestShardChildWait(t *testing.T) {
 		t.Skip("subprocess helper")
 	}
 	time.Sleep(10 * time.Second)
+}
+
+func TestPackageResultsCombinesPartialLinesAndOmitsIndividualResults(t *testing.T) {
+	var out, log bytes.Buffer
+	writer := packageResults{out: &out, log: &log}
+	chunks := []string{
+		`{"Action":"pass","Package":"example/pkg","Test":"TestOne"}` + "\n" + `{"Action":"fa`,
+		`il","Package":"example/pkg","Elapsed":1}` + "\n",
+	}
+	for _, chunk := range chunks {
+		if _, err := writer.Write([]byte(chunk)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if want := "testshard: fail example/pkg (1.00s)\n"; out.String() != want {
+		t.Fatalf("package console output = %q, want %q", out.String(), want)
+	}
+	if want := strings.Join(chunks, ""); log.String() != want {
+		t.Fatalf("event log = %q, want %q", log.String(), want)
+	}
 }
