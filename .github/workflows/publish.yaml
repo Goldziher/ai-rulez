@@ -106,7 +106,13 @@ jobs:
             echo "::error::tag $tag is not vX.Y.Z or vX.Y.Z-rc.N"
             exit 1
           fi
-          python_version="$(echo "$version" | sed 's/-rc\.//g; s/-rc/rc/')"
+          python_version="$(echo "$version" | sed -E 's/-rc\.([0-9]+)$/rc\1/')"
+          # A bad conversion once published 5.13.01 as a stable 5.13.1: the Python version must be the
+          # PEP 440 form of the tag and must equal what the committed wrapper reports.
+          if ! [[ "$python_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "::error::python version $python_version is not X.Y.Z or X.Y.ZrcN"
+            exit 1
+          fi
           prerelease=false
           case "$version" in *-rc.*) prerelease=true ;; esac
 
