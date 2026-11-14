@@ -231,7 +231,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4471 fbcaf70f2b4d071277b622e8c6ae3bb08f2f9dbb0805ed30fd060d0fe5e90145
+.ai-rulez/.generated-manifest.local.json file 0644 4471 8cd1b0eaa528a76815554dc5e85aef7ee5b7bbcae3bfaa2b5615408718a87594
 >>>>
 {
   "version": "1",
@@ -245,7 +245,7 @@ policy:
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "fbf1b302fed2880597bd1ae19420e8af73393af4fac1ae1c955ab6282c1b48e6"
+          "eb6bb5e0509bdc4956062e2cc02a168b5fdbc6f0eefa6b29c1e6312ade536b19"
         ]
       },
       {
@@ -322,8 +322,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "2402e03be0d9b3729a454a5c02598c57faf247feda8f694a8578845e2681bbeb",
-          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa"
+          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
+          "a84a71173b1e44c51064e227504f67bc952c5eb339c54626f56f02f2b4f088e7"
         ]
       },
       {
@@ -365,13 +365,13 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "d3e1e615c73a7e312244fcd6d6c71ceadc105780e39e139f2f9a7a88fb5bba14",
+    ".claude/settings.json": "65856711e8bb1a3333061cdb868e95605fb01dad7b246b7f6cd701b43046a60f",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
-    ".codex/hooks.json": "a963237a12b343cb54fb50c4caa92648ba9cbecf4bf2a736964cc4d210a19aab",
+    ".codex/hooks.json": "ece03630c55fb3426c1a99c0b90ac1abfd4a68a4f782a6d0f90a5f5cd53aeb7f",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c"
   }
 }
