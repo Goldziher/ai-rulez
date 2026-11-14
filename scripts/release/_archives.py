@@ -133,13 +133,32 @@ def _locate(root: Path, os_name: str, arch: str) -> Extracted:
     return found
 
 
-def extract_all(archives: Path, version: str, work: Path) -> dict[tuple[str, str], Extracted]:
-    """Verify every archive against checksums.txt, then extract each into work/<os>_<arch>."""
+def parse_only(only: str | None) -> tuple[tuple[str, str], ...]:
+    """Targets selected by a comma-separated `--only os_arch` list; every target when unset."""
+    if not only:
+        return TARGETS
+    chosen = []
+    for token in only.split(","):
+        target = tuple(token.strip().split("_", 1))
+        if target not in TARGETS:
+            raise ArchiveError(f"unknown target {token!r}: expected one of {', '.join('_'.join(t) for t in TARGETS)}")
+        if target not in chosen:
+            chosen.append(target)
+    return tuple(chosen)
+
+
+def extract_all(
+    archives: Path, version: str, work: Path, targets: tuple[tuple[str, str], ...] = TARGETS
+) -> dict[tuple[str, str], Extracted]:
+    """Verify every archive against checksums.txt, then extract each into work/<os>_<arch>.
+
+    `targets` narrows the expected set for local rehearsals; the release workflow always uses all of them.
+    """
     check_version(version)
     if not archives.is_dir():
         raise ArchiveError(f"archives directory {archives} does not exist")
     sums = parse_checksums(archives / "checksums.txt")
-    expected = {archive_name(version, o, a): (o, a) for o, a in TARGETS}
+    expected = {archive_name(version, o, a): (o, a) for o, a in targets}
     present = {p.name for p in archives.iterdir() if p.name.endswith(ARCHIVE_SUFFIXES)}
     missing = sorted(set(expected) - present)
     if missing:

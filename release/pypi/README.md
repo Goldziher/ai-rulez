@@ -25,10 +25,11 @@ Or run it without installing:
 uvx ai-rulez init acme
 ```
 
-The package is a thin launcher for the `ai-rulez` Go binary and installs the `ai-rulez` command. On the first run it
-downloads the binary for your platform (Linux and macOS on amd64 and arm64, Windows on amd64) from the GitHub release
-that matches the package version, verifies its SHA-256 checksum and caches it in `~/.cache/ai-rulez`. It is
-re-downloaded when the package version changes.
+The package installs the `ai-rulez` command. Platform wheels (Linux and macOS on amd64 and arm64, Windows on amd64)
+carry the `ai-rulez` Go binary, so installing needs no access beyond PyPI. Where no wheel matches, pip installs the
+source distribution and the launcher downloads the binary from the GitHub release that matches the package version on
+the first run, verifies its SHA-256 checksum and caches it in `~/.cache/ai-rulez`. Linux binaries need glibc; Alpine
+(musl) is not supported.
 
 ## Quickstart
 

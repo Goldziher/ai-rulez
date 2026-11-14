@@ -109,8 +109,9 @@ push), and the same ref identity is carried.
 
 `windows/arm64` is not supported. Archive names and `checksums.txt` are unchanged from the GoReleaser era. The archive
 root holds `ai-rulez`/`ai-rulez.exe`, `README.md` and `LICENSE` as before, plus `THIRD_PARTY_NOTICES.md` and
-`LICENSES/`, which are new. The npm and PyPI wrappers extract only the binary (and on Windows any `.dll` beside it), so
-they and the Homebrew formula work as before; both wrappers still fail closed when `checksums.txt` or the archive's
+`LICENSES/`, which are new. `scripts/release/package_npm.py` and `scripts/release/package_wheels.py` wrap these archives into the npm platform
+packages and PyPI wheels (see [Registry packages](#registry-packages)); the wrappers' fallback download extracts only
+the binary (and on Windows any `.dll` beside it). Everything still fails closed when `checksums.txt` or the archive's
 entry is missing or does not match.
 
 The darwin builds set `MACOSX_DEPLOYMENT_TARGET=14.0` (`scripts/package-release.sh`): without it the minimum macOS
@@ -171,12 +172,31 @@ the Windows build and smoke tests again before its release is considered verifie
 ## Dry run
 
 ```bash
-scripts/release-dry-run.sh            # builds the host platform's archive with VERSION=0.0.0-dryrun
+scripts/release-dry-run.sh            # builds the host platform's archive with VERSION=0.0.0-rc.0
 ```
 
 It runs the real `package-release.sh`, builds twice to check reproducibility, writes a `checksums.txt` in the format the
 wrappers parse, extracts the archive, runs the binary, checks the archive layout and that no shared liter-llm library
-is needed, and renders the Homebrew formula.
+is needed, and renders the Homebrew formula. It then builds the host's wheel and npm platform package from the archive,
+installs both into clean environments with the proxy pointed at a dead address and an empty home directory, and runs
+the installed binary.
+
+## Registry packages
+
+The `publish_npm` and `publish_pypi` jobs download the finalized release's archives and `checksums.txt`, verify every
+archive against it, and wrap the binaries (the bytes the provenance job attested) without rebuilding them:
+
+- npm: five `@ai-rulez/{linux-x64,linux-arm64,darwin-x64,darwin-arm64,win32-x64}` packages, then the root `ai-rulez`
+  package with exact-version `optionalDependencies`. The root is published last, so a failed run never leaves a root
+  whose dependencies are missing. A rerun skips the platform packages that already exist.
+- PyPI: five platform wheels (`macosx_14_0_*`, `win_amd64`, `manylinux_2_<N>_*` with N taken from the highest glibc
+  symbol in the binary) next to the sdist and the pure wheel, uploaded with `skip-existing`.
+
+Both packagers take `--only os_arch` for local rehearsals. The release workflow never passes it.
+
+One-time setup for a new platform package: publish a placeholder version once with `npm publish --access public --tag
+placeholder`, then add the repository `Goldziher/ai-rulez` and workflow `publish.yaml` as its trusted publisher on
+npmjs.com. Each release adds about 175 MB of wheels to the PyPI project, which counts against its size limit.
 
 ## Rerunning
 

@@ -61,12 +61,12 @@ def package_one(item: _archives.Extracted, version: str, base: dict, out: Path) 
     return name
 
 
-def package_all(archives: Path, version: str, out: Path) -> list[str]:
+def package_all(archives: Path, version: str, out: Path, targets=_archives.TARGETS) -> list[str]:
     base = json.loads((REPO_ROOT / "release/npm/package.json").read_text(encoding="utf-8"))
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="ai-rulez-npm-") as work:
-        extracted = _archives.extract_all(archives, version, Path(work))
-        names = [package_one(extracted[target], version, base, out) for target in _archives.TARGETS]
+        extracted = _archives.extract_all(archives, version, Path(work), targets)
+        names = [package_one(extracted[target], version, base, out) for target in targets]
     root_dir = out / "root"
     root_dir.mkdir()
     root = dict(base, version=version)
@@ -80,9 +80,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--archives", type=Path, required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--only", help="comma-separated os_arch targets, for local rehearsals only")
     args = parser.parse_args(argv)
     try:
-        names = package_all(args.archives, args.version, args.out)
+        names = package_all(args.archives, args.version, args.out, _archives.parse_only(args.only))
     except _archives.ArchiveError as error:
         print(f"package_npm: {error}", file=sys.stderr)
         return 1

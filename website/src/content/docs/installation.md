@@ -31,8 +31,9 @@ npm install -g ai-rulez
 pnpm add -g ai-rulez
 ```
 
-Requires Node.js 22 or newer. The package downloads the binary for your platform on first run and checks it
-against the release checksums.
+Requires Node.js 22 or newer. The binary for your platform comes from the npm registry as an optional
+`@ai-rulez/<os>-<cpu>` dependency. If that dependency is missing, the launcher downloads the binary on first run and
+checks it against the release checksums.
 
 **pip / pipx**
 
@@ -42,7 +43,8 @@ pipx install ai-rulez
 pip install ai-rulez
 ```
 
-Requires Python 3.11 or newer.
+Requires Python 3.11 or newer. Platform wheels carry the binary; without a matching wheel the launcher downloads it
+on first run and checks it against the release checksums.
 
 **uv**
 

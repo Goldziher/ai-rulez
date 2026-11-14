@@ -169,11 +169,11 @@ def build_wheel(item: _archives.Extracted, version: str, out: Path) -> Path:
     return wheel
 
 
-def package_all(archives: Path, version: str, out: Path) -> list[Path]:
+def package_all(archives: Path, version: str, out: Path, targets=_archives.TARGETS) -> list[Path]:
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="ai-rulez-wheel-") as work:
-        extracted = _archives.extract_all(archives, version, Path(work))
-        return [build_wheel(extracted[target], version, out) for target in _archives.TARGETS]
+        extracted = _archives.extract_all(archives, version, Path(work), targets)
+        return [build_wheel(extracted[target], version, out) for target in targets]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -181,9 +181,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--archives", type=Path, required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--only", help="comma-separated os_arch targets, for local rehearsals only")
     args = parser.parse_args(argv)
     try:
-        wheels = package_all(args.archives, args.version, args.out)
+        wheels = package_all(args.archives, args.version, args.out, _archives.parse_only(args.only))
     except _archives.ArchiveError as error:
         print(f"package_wheels: {error}", file=sys.stderr)
         return 1
