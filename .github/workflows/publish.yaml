@@ -622,7 +622,7 @@ jobs:
           # whose optional dependencies are missing, and a rerun skips what is already published.
           for dir in npm-packages/*-*; do
             name="$(node -p "require('./$dir/package.json').name")"
-            if pnpm view "$name@$version" version >/dev/null 2>&1; then
+            if [ -n "$(pnpm view "$name@$version" version 2>/dev/null)" ]; then
               echo "$name@$version is already published"
               continue
             fi
@@ -678,7 +678,10 @@ jobs:
       # Platform wheels wrap the attested release binaries after checking them against checksums.txt.
       # The job has no pypi_exists gate: that flag turns true after a partial upload and would skip the
       # missing files, while skip-existing below makes a rerun upload only what is absent.
+      # A rerun on a tag from before the packagers existed has no script to run; those releases already
+      # carry their PyPI files, and skip-existing covers the rest.
       - name: Download the release archives
+        if: ${{ hashFiles('scripts/release/package_wheels.py') != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -689,6 +692,7 @@ jobs:
             --pattern 'ai-rulez_*.tar.gz' --pattern 'ai-rulez_*.zip' --pattern checksums.txt
 
       - name: Build the platform wheels
+        if: ${{ hashFiles('scripts/release/package_wheels.py') != '' }}
         env:
           RELEASE_VERSION: ${{ needs.meta.outputs.version }}
         run: python3 -I scripts/release/package_wheels.py --archives dist --version "$RELEASE_VERSION" --out release/pypi/dist

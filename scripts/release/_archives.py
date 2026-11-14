@@ -38,7 +38,7 @@ class Extracted:
 
 
 def check_version(version: str) -> str:
-    if not VERSION_RE.match(version):
+    if not VERSION_RE.fullmatch(version):
         raise ArchiveError(f"invalid version {version!r}: expected X.Y.Z or X.Y.Z-rc.N")
     return version
 
@@ -58,7 +58,9 @@ def parse_checksums(path: Path) -> dict[str, str]:
         match = re.fullmatch(r"([0-9a-fA-F]{64}) [ *]?(\S.*)", line)
         if not match:
             raise ArchiveError(f"checksums.txt line {number} is not in sha256sum format")
-        sums[match.group(2)] = match.group(1).lower()
+        digest = match.group(1).lower()
+        if sums.setdefault(match.group(2), digest) != digest:
+            raise ArchiveError(f"checksums.txt lists {match.group(2)} twice with different digests")
     return sums
 
 

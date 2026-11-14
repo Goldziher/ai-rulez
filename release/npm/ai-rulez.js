@@ -25,6 +25,14 @@ function runBinary(binaryPath, args) {
 async function main() {
   const args = process.argv.slice(2);
 
+  if (isMusl()) {
+    console.error(
+      "ai-rulez ships glibc-only Linux binaries; no musl (Alpine) build exists. " +
+        "Use a glibc-based image or build from source: https://github.com/Goldziher/ai-rulez",
+    );
+    process.exit(1);
+  }
+
   const bundled = resolveBundledBinary();
   if (bundled) {
     runBinary(bundled, args);
@@ -43,14 +51,6 @@ async function main() {
   if (fs.existsSync(binaryPath)) {
     runBinary(binaryPath, args);
     return;
-  }
-
-  if (isMusl()) {
-    console.error(
-      "ai-rulez ships glibc-only Linux binaries; no musl (Alpine) build exists. " +
-        "Use a glibc-based image or build from source: https://github.com/Goldziher/ai-rulez",
-    );
-    process.exit(1);
   }
 
   console.log(
