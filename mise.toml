@@ -82,6 +82,11 @@ shell = "bash -euo pipefail -c"
 description = "Verify portable release-version synchronization with offline fixtures"
 run = "python3 -I scripts/mise/test_set_version.py"
 
+[tasks."test:release-packaging"]
+shell = "bash -euo pipefail -c"
+description = "Verify the npm and wheel packagers with offline fixture archives"
+run = "python3 -I -m unittest discover -s scripts/release -p 'test_*.py'"
+
 [tasks."setup:llm"]
 shell = "bash -euo pipefail -c"
 description = "Download, sha256-verify and cache the static liter-llm library; prints the CGO_LDFLAGS export (needs the network once)"
