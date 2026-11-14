@@ -199,6 +199,23 @@ class ArchiveVerification(Base):
             handle.write(b"tamper")
         self.expect(f"checksum mismatch for {name}")
 
+    def test_conflicting_duplicate_checksum_entry(self) -> None:
+        make_archives(self.archives)
+        name = _archives.archive_name(VERSION, "linux", "amd64")
+        sums = self.archives / "checksums.txt"
+        sums.write_text(sums.read_text() + f"{'0' * 64}  {name}\n")
+        self.expect(f"checksums.txt lists {name} twice with different digests")
+
+    def test_identical_duplicate_checksum_entry_is_accepted(self) -> None:
+        make_archives(self.archives)
+        sums = self.archives / "checksums.txt"
+        sums.write_text(sums.read_text() + sums.read_text().splitlines()[0] + "\n")
+        self.assertEqual(len(package_npm.package_all(self.archives, VERSION, self.out)), 5)
+
+    def test_version_with_trailing_newline_is_rejected(self) -> None:
+        with self.assertRaisesRegex(_archives.ArchiveError, "invalid version"):
+            _archives.check_version(VERSION + "\n")
+
     def test_missing_checksums_file(self) -> None:
         make_archives(self.archives)
         (self.archives / "checksums.txt").unlink()
