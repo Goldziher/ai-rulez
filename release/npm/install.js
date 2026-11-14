@@ -99,6 +99,60 @@ function getPlatform() {
   };
 }
 
+const BUNDLED_PACKAGES = {
+  "linux-x64": "@ai-rulez/linux-x64",
+  "linux-arm64": "@ai-rulez/linux-arm64",
+  "darwin-x64": "@ai-rulez/darwin-x64",
+  "darwin-arm64": "@ai-rulez/darwin-arm64",
+  "win32-x64": "@ai-rulez/win32-x64",
+};
+
+function bundledPackageName(platform, arch) {
+  return BUNDLED_PACKAGES[`${platform}-${arch}`] || null;
+}
+
+function resolveBundledBinary({
+  platform = process.platform,
+  arch = process.arch,
+  resolve = require.resolve,
+} = {}) {
+  const pkg = bundledPackageName(platform, arch);
+  if (!pkg) {
+    return null;
+  }
+  let pkgJson;
+  try {
+    pkgJson = resolve(`${pkg}/package.json`);
+  } catch {
+    return null;
+  }
+  const binary = path.join(
+    path.dirname(pkgJson),
+    "bin",
+    platform === "win32" ? "ai-rulez.exe" : "ai-rulez",
+  );
+  return fs.existsSync(binary) ? binary : null;
+}
+
+function isMusl({
+  platform = process.platform,
+  report = () => process.report?.getReport?.(),
+  exists = fs.existsSync,
+} = {}) {
+  if (platform !== "linux") {
+    return false;
+  }
+  try {
+    const r = report();
+    if (r?.header) {
+      return r.header.glibcVersionRuntime === undefined;
+    }
+  } catch {
+    // fall through to the Alpine marker
+  }
+  return exists("/etc/alpine-release");
+}
+
 function getBinaryName(platform) {
   return platform === "windows" ? "ai-rulez-bin.exe" : "ai-rulez-bin";
 }
@@ -521,6 +575,9 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     getPlatform,
     getBinaryName,
+    bundledPackageName,
+    resolveBundledBinary,
+    isMusl,
     getPackagedBinaryCandidates,
     usePackagedBinaryIfAvailable,
     downloadBinary,

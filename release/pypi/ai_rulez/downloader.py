@@ -6,6 +6,7 @@ import tarfile
 import zipfile
 import subprocess
 import hashlib
+import re
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
@@ -38,15 +39,31 @@ def get_platform():
     return mapped_platform, mapped_arch
 
 
-def get_binary_url(version):
+_PEP440_RC = re.compile(r"^(\d+\.\d+\.\d+)rc(\d+)$")
+
+
+def release_version(pep440):
+    """Map a PEP 440 version to the release tag form (5.1.0rc1 -> 5.1.0-rc.1)."""
+    match = _PEP440_RC.match(pep440)
+    if match:
+        return f"{match.group(1)}-rc.{match.group(2)}"
+    return pep440
+
+
+def get_archive_name(version):
     platform_name, arch = get_platform()
     archive_format = "zip" if platform_name == "windows" else "tar.gz"
-    archive_name = f"ai-rulez_{version}_{platform_name}_{arch}.{archive_format}"
-    return f"https://github.com/Goldziher/ai-rulez/releases/download/v{version}/{archive_name}"
+    return f"ai-rulez_{release_version(version)}_{platform_name}_{arch}.{archive_format}"
+
+
+def get_binary_url(version):
+    tag = release_version(version)
+    return f"https://github.com/Goldziher/ai-rulez/releases/download/v{tag}/{get_archive_name(version)}"
 
 
 def get_checksums_url(version):
-    return f"https://github.com/Goldziher/ai-rulez/releases/download/v{version}/checksums.txt"
+    tag = release_version(version)
+    return f"https://github.com/Goldziher/ai-rulez/releases/download/v{tag}/checksums.txt"
 
 
 def calculate_sha256(file_path):
@@ -230,11 +247,8 @@ def download_and_verify_binary(url, dest_path, version):
                 print(f"Successfully downloaded {actual_size} bytes", file=sys.stderr)
 
                 # Verify before anything is extracted from the archive.
-                platform_name, arch = get_platform()
-                archive_format = "zip" if platform_name == "windows" else "tar.gz"
-                archive_name = (
-                    f"ai-rulez_{version}_{platform_name}_{arch}.{archive_format}"
-                )
+                platform_name, _ = get_platform()
+                archive_name = get_archive_name(version)
                 print("Verifying archive checksum...", file=sys.stderr)
                 verify_archive_checksum(checksums_content, archive_name, tmp_file_path)
                 print("✓ Checksum verified", file=sys.stderr)
@@ -426,7 +440,7 @@ def ensure_binary():
         print(f"Failed to setup ai-rulez binary: {e}", file=sys.stderr)
         print("You can manually download the binary from:", file=sys.stderr)
         print(
-            f"https://github.com/Goldziher/ai-rulez/releases/tag/v{__version__}",
+            f"https://github.com/Goldziher/ai-rulez/releases/tag/v{release_version(__version__)}",
             file=sys.stderr,
         )
         sys.exit(1)

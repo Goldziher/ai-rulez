@@ -6,6 +6,9 @@ const path = require("node:path");
 
 const {
   getBinaryName,
+  bundledPackageName,
+  resolveBundledBinary,
+  isMusl,
   getPackagedBinaryCandidates,
   downloadBinary,
   proxyFor,
@@ -159,4 +162,112 @@ test("downloadBinary tunnels through HTTPS_PROXY with CONNECT", async () => {
     proxy.close();
     fs.rmSync(dest, { force: true });
   }
+});
+
+function fakeBundledPackage(binaryName) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-rulez-bundled-"));
+  fs.mkdirSync(path.join(root, "bin"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), "{}");
+  if (binaryName) fs.writeFileSync(path.join(root, "bin", binaryName), "");
+  return root;
+}
+
+test("resolveBundledBinary returns the binary of the resolved platform package", () => {
+  const root = fakeBundledPackage("ai-rulez");
+  try {
+    let requested;
+    const result = resolveBundledBinary({
+      platform: "linux",
+      arch: "x64",
+      resolve: (id) => {
+        requested = id;
+        return path.join(root, "package.json");
+      },
+    });
+    assert.equal(requested, "@ai-rulez/linux-x64/package.json");
+    assert.equal(result, path.join(root, "bin", "ai-rulez"));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("resolveBundledBinary uses .exe on win32", () => {
+  const root = fakeBundledPackage("ai-rulez.exe");
+  try {
+    const result = resolveBundledBinary({
+      platform: "win32",
+      arch: "x64",
+      resolve: () => path.join(root, "package.json"),
+    });
+    assert.equal(result, path.join(root, "bin", "ai-rulez.exe"));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("resolveBundledBinary returns null when the package is not installed", () => {
+  const result = resolveBundledBinary({
+    platform: "linux",
+    arch: "x64",
+    resolve: () => {
+      const err = new Error("Cannot find module");
+      err.code = "MODULE_NOT_FOUND";
+      throw err;
+    },
+  });
+  assert.equal(result, null);
+});
+
+test("resolveBundledBinary returns null when the package lacks the binary", () => {
+  const root = fakeBundledPackage(null);
+  try {
+    const result = resolveBundledBinary({
+      platform: "darwin",
+      arch: "arm64",
+      resolve: () => path.join(root, "package.json"),
+    });
+    assert.equal(result, null);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("resolveBundledBinary returns null for unsupported platform or arch", () => {
+  const resolve = () => {
+    throw new Error("resolve must not be called");
+  };
+  for (const [platform, arch] of [
+    ["freebsd", "x64"],
+    ["linux", "ia32"],
+    ["win32", "arm64"],
+    ["linux", "riscv64"],
+  ]) {
+    assert.equal(resolveBundledBinary({ platform, arch, resolve }), null, `${platform}-${arch}`);
+  }
+});
+
+test("bundledPackageName maps every supported platform and arch", () => {
+  assert.equal(bundledPackageName("linux", "x64"), "@ai-rulez/linux-x64");
+  assert.equal(bundledPackageName("linux", "arm64"), "@ai-rulez/linux-arm64");
+  assert.equal(bundledPackageName("darwin", "x64"), "@ai-rulez/darwin-x64");
+  assert.equal(bundledPackageName("darwin", "arm64"), "@ai-rulez/darwin-arm64");
+  assert.equal(bundledPackageName("win32", "x64"), "@ai-rulez/win32-x64");
+});
+
+test("isMusl detects musl through the node report", () => {
+  assert.equal(isMusl({ platform: "linux", report: () => ({ header: {} }) }), true);
+  assert.equal(
+    isMusl({ platform: "linux", report: () => ({ header: { glibcVersionRuntime: "2.35" } }) }),
+    false,
+  );
+});
+
+test("isMusl falls back to the Alpine marker when no report is available", () => {
+  const noReport = () => undefined;
+  assert.equal(isMusl({ platform: "linux", report: noReport, exists: () => true }), true);
+  assert.equal(isMusl({ platform: "linux", report: noReport, exists: () => false }), false);
+});
+
+test("isMusl is false off linux", () => {
+  assert.equal(isMusl({ platform: "darwin", report: () => ({ header: {} }), exists: () => true }), false);
 });
