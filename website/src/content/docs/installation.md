@@ -64,6 +64,20 @@ uvx ai-rulez generate
 Pin a version (`npx ai-rulez@5.12.2`, `uvx --from ai-rulez==5.12.2 ai-rulez`) when a script or hook must not change
 behavior between releases.
 
+## Restricted-network agents
+
+Sandboxed agent environments, such as Codex cloud environments, often have network access only during a setup phase.
+Installed releases that download their binary on first run fail in the agent phase if github.com is blocked. Install
+ai-rulez in the setup phase instead and call `ai-rulez` directly afterwards:
+
+```bash
+npm install --global ai-rulez@5.12.2   # pin the version you want
+ai-rulez --version                     # fetches the binary now, while the network is open
+```
+
+Set those commands as the environment's setup script. Avoid `npx ai-rulez@latest` in the agent phase: it resolves the
+newest version at run time, and a version newer than the one you installed has to be downloaded again.
+
 ## Go
 
 ```bash
