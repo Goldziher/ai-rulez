@@ -196,6 +196,12 @@ jobs:
       - name: Verify version synchronization
         run: mise run test:version-sync
 
+      - name: Verify the npm and wheel packagers
+        run: mise run test:release-packaging
+
+      - name: Verify the PyPI launcher
+        run: mise run test:pypi-wrapper
+
       - name: Check benchmark reporter offline controls
         run: mise run test:benchstat
 

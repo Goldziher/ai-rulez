@@ -128,6 +128,25 @@ class NpmPackaging(Base):
             self.assertTrue((self.out / directory / "LICENSES" / "MIT.txt").is_file())
             self.assertIn(os_name, (self.out / directory / "README.md").read_text())
 
+    def test_only_packages_the_selected_target(self) -> None:
+        make_archives(self.archives)
+        keep = _archives.archive_name(VERSION, "linux", "amd64")
+        for path in self.archives.glob("ai-rulez_*"):
+            if path.name != keep:
+                path.unlink()
+        names = package_npm.package_all(self.archives, VERSION, self.out, _archives.parse_only("linux_amd64"))
+        self.assertEqual(names, ["@ai-rulez/linux-x64"])
+        self.assertEqual(sorted(p.name for p in self.out.iterdir()), ["linux-x64", "root"])
+
+    def test_only_still_rejects_an_unselected_archive(self) -> None:
+        make_archives(self.archives)
+        with self.assertRaisesRegex(_archives.ArchiveError, "unexpected extra archive"):
+            package_npm.package_all(self.archives, VERSION, self.out, _archives.parse_only("linux_amd64"))
+
+    def test_only_rejects_unknown_target(self) -> None:
+        with self.assertRaisesRegex(_archives.ArchiveError, "unknown target 'plan9_amd64'"):
+            _archives.parse_only("plan9_amd64")
+
     def test_root_optional_dependencies_are_exact(self) -> None:
         self.run_npm()
         raw = (self.out / "root" / "package.json").read_text()

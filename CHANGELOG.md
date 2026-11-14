@@ -6,6 +6,21 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- The npm and PyPI packages now carry the binary. Five `@ai-rulez/<os>-<cpu>` npm packages (optional dependencies of
+  `ai-rulez`) and five platform wheels (`manylinux`, `macosx_14_0` and `win_amd64`) are built from the release
+  archives after their checksums are verified, so `npx ai-rulez` and `uvx ai-rulez` no longer need access to GitHub.
+  The checksum-verified GitHub download remains as the fallback. Linux musl (Alpine) now reports that no musl build
+  exists instead of trying the download.
+- `scripts/codex-setup.sh` and an installation section for sandboxed agent environments that only have network access
+  during setup.
+
+### Fixed
+
+- The PyPI launcher built release URLs from the PEP 440 version, so pre-release installs requested `5.1.0rc1` instead
+  of the `5.1.0-rc.1` tag.
+
 ## [5.12.2] - 2026-11-14
 
 ### Fixed

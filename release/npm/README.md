@@ -25,9 +25,11 @@ Or run it without installing:
 npx ai-rulez@latest init acme
 ```
 
-The package is a thin launcher for the `ai-rulez` Go binary. On the first run it downloads the binary for your platform
-(Linux and macOS on amd64 and arm64, Windows on amd64) from the matching GitHub release, verifies its SHA-256 checksum,
-and stores it inside the package. Later runs start it directly.
+The package is a thin launcher for the `ai-rulez` Go binary. The binary for your platform (Linux and macOS on amd64
+and arm64, Windows on amd64) arrives from the npm registry as an optional `@ai-rulez/<os>-<cpu>` dependency, so
+installing needs no access beyond the registry. If that dependency is missing, for example after `--omit=optional`, the
+launcher downloads the binary from the matching GitHub release on the first run and verifies its SHA-256 checksum.
+Linux binaries need glibc; Alpine (musl) is not supported.
 
 ## Quickstart
 

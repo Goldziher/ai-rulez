@@ -226,7 +226,7 @@ The npm package supports an **offline mode**: if platform-specific binaries are 
 
 | Scenario         | `bin/` directory  | Behavior                             |
 | ---------------- | ----------------- | ------------------------------------ |
-| Public npm       | Empty             | Downloads from GitHub Releases       |
+| Public npm       | Empty             | Uses the `@ai-rulez/<os>-<cpu>` package; downloads from GitHub Releases only as a fallback |
 | Private registry | Contains binaries | Uses local binaries, no network call |
 
 ### Build and Publish

@@ -87,6 +87,11 @@ shell = "bash -euo pipefail -c"
 description = "Verify the npm and wheel packagers with offline fixture archives"
 run = "python3 -I -m unittest discover -s scripts/release -p 'test_*.py'"
 
+[tasks."test:pypi-wrapper"]
+shell = "bash -euo pipefail -c"
+description = "Verify the PyPI launcher and downloader with offline unit tests"
+run = "cd release/pypi && python3 -I -m unittest discover -s tests"
+
 [tasks."setup:llm"]
 shell = "bash -euo pipefail -c"
 description = "Download, sha256-verify and cache the static liter-llm library; prints the CGO_LDFLAGS export (needs the network once)"
