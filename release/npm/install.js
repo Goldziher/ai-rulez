@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");
 const http = require("node:http");
+const tls = require("node:tls");
 const crypto = require("node:crypto");
 const { exec, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
@@ -135,12 +136,69 @@ function usePackagedBinaryIfAvailable(os, arch, binaryName, binDir) {
   return false;
 }
 
+function proxyFor(targetUrl, env = process.env) {
+  const target = new URL(targetUrl);
+  const raw =
+    target.protocol === "https:"
+      ? env.HTTPS_PROXY || env.https_proxy || env.ALL_PROXY || env.all_proxy
+      : env.HTTP_PROXY || env.http_proxy || env.ALL_PROXY || env.all_proxy;
+  if (!raw) return null;
+
+  const noProxy = (env.NO_PROXY || env.no_proxy || "").split(",").map((e) => e.trim().toLowerCase());
+  const host = target.hostname.toLowerCase();
+  for (const entry of noProxy) {
+    if (!entry) continue;
+    if (entry === "*") return null;
+    const suffix = entry.replace(/^\*?\./, "");
+    if (host === suffix || host.endsWith(`.${suffix}`)) return null;
+  }
+
+  const proxy = new URL(raw.includes("://") ? raw : `http://${raw}`);
+  return proxy.protocol === "http:" ? proxy : null;
+}
+
+// Node's https module ignores HTTPS_PROXY, so sandboxes that only allow egress
+// through a proxy (Codex, corporate networks) see ECONNREFUSED. Tunnel with CONNECT.
+function createProxyAgent(proxy) {
+  const agent = new https.Agent();
+  agent.createConnection = (options, callback) => {
+    const port = options.port || 443;
+    const headers = { Host: `${options.host}:${port}` };
+    if (proxy.username) {
+      const credentials = `${decodeURIComponent(proxy.username)}:${decodeURIComponent(proxy.password)}`;
+      headers["Proxy-Authorization"] = `Basic ${Buffer.from(credentials).toString("base64")}`;
+    }
+    const connectRequest = http.request({
+      host: proxy.hostname,
+      port: proxy.port || 80,
+      method: "CONNECT",
+      path: `${options.host}:${port}`,
+      headers,
+    });
+    connectRequest.once("connect", (res, socket) => {
+      if (res.statusCode !== 200) {
+        socket.destroy();
+        callback(new Error(`Proxy CONNECT to ${options.host}:${port} failed: HTTP ${res.statusCode}`));
+        return;
+      }
+      callback(null, tls.connect({ socket, servername: options.servername || options.host }));
+    });
+    connectRequest.once("error", callback);
+    connectRequest.end();
+  };
+  return agent;
+}
+
 async function downloadBinary(url, dest, retryCount = 0) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     const protocol = url.startsWith("https") ? https : http;
 
-    const request = protocol.get(url, { timeout: DOWNLOAD_TIMEOUT }, (response) => {
+    const proxy = protocol === https ? proxyFor(url) : null;
+    const requestOptions = { timeout: DOWNLOAD_TIMEOUT };
+    if (proxy) requestOptions.agent = createProxyAgent(proxy);
+
+    const request = protocol.get(url, requestOptions, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
         file.close();
         try {
@@ -466,6 +524,8 @@ if (typeof module !== "undefined" && module.exports) {
     getPackagedBinaryCandidates,
     usePackagedBinaryIfAvailable,
     downloadBinary,
+    proxyFor,
+    createProxyAgent,
     extractArchive,
     calculateSHA256,
     getExpectedChecksum,
