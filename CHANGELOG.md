@@ -6,6 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.12.2] - 2026-11-14
+
+### Fixed
+
+- The npm installer now downloads `checksums.txt` and the release archive through `HTTPS_PROXY`, `https_proxy` or
+  `ALL_PROXY` (honouring `NO_PROXY`), so installs no longer fail with `ECONNREFUSED` in proxy-only sandboxes such as
+  Codex. Checksum verification still fails closed.
+
 ## [5.12.1] - 2026-11-13
 
 ### Fixed

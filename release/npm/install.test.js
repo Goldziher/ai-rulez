@@ -7,6 +7,8 @@ const path = require("node:path");
 const {
   getBinaryName,
   getPackagedBinaryCandidates,
+  downloadBinary,
+  proxyFor,
   usePackagedBinaryIfAvailable,
   verifyArchiveChecksum,
 } = require("./install");
@@ -125,4 +127,36 @@ test("verifyArchiveChecksum rejects a mismatching digest", async () => {
   await withArchive(`${"0".repeat(64)}  ${archiveName}\n`, async (archive, sums) => {
     await assert.rejects(verifyArchiveChecksum(archive, sums, archiveName), /Checksum verification failed/);
   });
+});
+
+test("proxyFor honours HTTPS_PROXY and NO_PROXY", () => {
+  const url = "https://github.com/Goldziher/ai-rulez/releases/download/v1/checksums.txt";
+  assert.equal(proxyFor(url, {}), null);
+  assert.equal(proxyFor(url, { HTTPS_PROXY: "http://proxy.local:3128" }).host, "proxy.local:3128");
+  assert.equal(proxyFor(url, { https_proxy: "proxy.local:3128" }).host, "proxy.local:3128");
+  assert.equal(proxyFor(url, { HTTPS_PROXY: "http://p:1", NO_PROXY: "foo.com,.github.com" }), null);
+  assert.equal(proxyFor(url, { HTTPS_PROXY: "http://p:1", NO_PROXY: "*" }), null);
+});
+
+test("downloadBinary tunnels through HTTPS_PROXY with CONNECT", async () => {
+  const http = require("node:http");
+  const seen = [];
+  const proxy = http.createServer();
+  proxy.on("connect", (req, socket) => {
+    seen.push(req.url);
+    socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
+  });
+  await new Promise((r) => proxy.listen(0, "127.0.0.1", r));
+  const saved = process.env.HTTPS_PROXY;
+  process.env.HTTPS_PROXY = `http://127.0.0.1:${proxy.address().port}`;
+  const dest = path.join(os.tmpdir(), `ai-rulez-proxy-${process.pid}`);
+  try {
+    await assert.rejects(downloadBinary("https://example.invalid/x.txt", dest, 99), /Proxy CONNECT .* HTTP 403/);
+    assert.deepEqual(seen, ["example.invalid:443"]);
+  } finally {
+    if (saved === undefined) delete process.env.HTTPS_PROXY;
+    else process.env.HTTPS_PROXY = saved;
+    proxy.close();
+    fs.rmSync(dest, { force: true });
+  }
 });
