@@ -45,7 +45,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-.ai-rulez/.generated-manifest.local.json file 0644 13405 b2ba899568845183d73e04d30b4a1a95451bad301d9840315758f88e635aea7a
+.ai-rulez/.generated-manifest.local.json file 0644 13405 6650a33663404cb8d9e38fe3ff2b8dd85116a35fa0c614876dcf93be0096dce4
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -224,8 +224,8 @@ runtime claude — 15 files
     agent file overhead (2)                                      32
     skill resources (2)                                          16
     per-file provenance hashes (11)                             474
-  unmodeled                                                     617
-    sidecar documents                                           617
+  unmodeled                                                     621
+    sidecar documents                                           621
 
 runtime codex — 10 files
   always loaded                                                 475
@@ -242,8 +242,8 @@ runtime codex — 10 files
     skill bodies (4)                                             73
     agent bodies (2)                                             56
     per-file provenance hashes (3)                              145
-  unmodeled                                                     280
-    sidecar documents (2)                                       280
+  unmodeled                                                     284
+    sidecar documents (2)                                       284
 
 runtime gemini — 4 files
   always loaded                                                 290
@@ -257,8 +257,8 @@ runtime gemini — 4 files
   on demand                                                     127
     agent bodies (2)                                             35
     per-file provenance hashes (2)                               92
-  unmodeled                                                     389
-    sidecar documents                                           389
+  unmodeled                                                     393
+    sidecar documents                                           393
 
 runtime cursor — 20 files
   always loaded                                                 237
@@ -278,8 +278,8 @@ runtime cursor — 20 files
     agent bodies (2)                                             40
     skill resources (2)                                          16
     per-file provenance hashes (11)                             505
-  unmodeled                                                     697
-    sidecar documents (4)                                       643
+  unmodeled                                                     701
+    sidecar documents (4)                                       647
     unclassified outputs                                         54
 
 runtime copilot — 14 files
@@ -297,8 +297,8 @@ runtime copilot — 14 files
     agent bodies (2)                                             40
     skill resources (2)                                          16
     per-file provenance hashes (9)                              407
-  unmodeled                                                     520
-    sidecar documents (3)                                       382
+  unmodeled                                                     524
+    sidecar documents (3)                                       386
     unclassified outputs                                        138
 
 runtime opencode — 10 files
@@ -1082,7 +1082,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-.ai-rulez/.generated-manifest.local.json file 0644 13405 b2ba899568845183d73e04d30b4a1a95451bad301d9840315758f88e635aea7a
+.ai-rulez/.generated-manifest.local.json file 0644 13405 6650a33663404cb8d9e38fe3ff2b8dd85116a35fa0c614876dcf93be0096dce4
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
