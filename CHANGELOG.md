@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.13.2] - 2026-11-14
+
 ### Added
 
 - The npm and PyPI packages now carry the binary. Five `@ai-rulez/<os>-<cpu>` npm packages (optional dependencies of
@@ -18,6 +20,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- The publish workflow turned `5.13.0-rc.1` into the Python version `5.13.01`, so the 5.13.0 release candidate
+  uploaded a stray stable 5.13.1 sdist and pure wheel to PyPI. 5.13.0 and 5.13.1 were never released; 5.13.2 is the
+  first stable release with registry-delivered binaries.
 - The PyPI launcher built release URLs from the PEP 440 version, so pre-release installs requested `5.1.0rc1` instead
   of the `5.1.0-rc.1` tag.
 
