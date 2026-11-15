@@ -1,10 +1,9 @@
 ---
 title: "Installation"
-description: "ai-rulez is a single binary, distributed through Homebrew, npm, PyPI and Go."
+description: "Install ai-rulez through Homebrew, Scoop, npm, PyPI or Go."
 ---
 
-`ai-rulez` is a single binary, distributed through Homebrew, npm, PyPI and Go. Install it with the package manager you
-already use, or run it without installing.
+Install `ai-rulez` through Homebrew, Scoop, npm, PyPI or Go. You can also run it without installing.
 
 ```bash
 brew install goldziher/tap/ai-rulez
@@ -21,6 +20,13 @@ ai-rulez version 5.13.2
 
 ```bash
 brew install goldziher/tap/ai-rulez
+```
+
+**Scoop (Windows x64)**
+
+```powershell
+scoop bucket add goldziher https://github.com/Goldziher/scoop-bucket
+scoop install goldziher/ai-rulez
 ```
 
 **npm**

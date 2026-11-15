@@ -3,7 +3,7 @@ name: Publish Packages
 # ai-rulez links the liter-llm native library through cgo, so every platform archive is built natively
 # on its own runner (no cross-compiling). Flow:
 #   meta -> create_release (DRAFT) -> build (one job per platform) -> checksums -> provenance
-#        -> finalize_release (promote the draft) -> publish_npm / publish_pypi / publish_homebrew
+#        -> finalize_release (promote the draft) -> publish_npm / publish_pypi / publish_homebrew / publish_scoop
 #        -> update_action_tag (move the major tag, e.g. v5, only after successful stable distribution)
 # Every stage is idempotent: a rerun for the same tag redoes only what is missing. See
 # docs/maintainers/release.md.
@@ -751,6 +751,62 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           VERSION: ${{ needs.meta.outputs.version }}
         run: bash scripts/update-homebrew-formula.sh "$VERSION" dist/checksums.txt --push
+
+  publish_scoop:
+    name: Publish Scoop manifest
+    needs: [meta, finalize_release]
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.meta.result == 'success' &&
+        needs.meta.outputs.prerelease == 'false' &&
+        (needs.finalize_release.result == 'success' ||
+         (needs.finalize_release.result == 'skipped' && needs.meta.outputs.release_exists == 'true' &&
+          needs.meta.outputs.release_draft == 'false'))
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: publish-scoop
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+          persist-credentials: false
+
+      - name: Download published checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist --pattern checksums.txt
+
+      - name: Checkout Scoop bucket
+        uses: actions/checkout@v7
+        with:
+          repository: Goldziher/scoop-bucket
+          ref: main
+          path: scoop-bucket
+          token: ${{ secrets.HOMEBREW_TOKEN || secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Update bucket manifest
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/update-scoop-manifest.py "$VERSION" dist/checksums.txt scoop-bucket/bucket/ai-rulez.json
+          git -C scoop-bucket add bucket/ai-rulez.json
+          if git -C scoop-bucket diff --cached --quiet; then
+            exit 0
+          fi
+          git -C scoop-bucket -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Update ai-rulez to v${VERSION}"
+          git -C scoop-bucket pull --rebase origin main
+          git -C scoop-bucket push origin HEAD:main
 
   update_action_tag:
     name: Advance the major GitHub Action tag

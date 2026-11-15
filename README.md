@@ -89,6 +89,13 @@ pipx install ai-rulez                                              # PyPI (Pytho
 go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest    # Go (note the /v5)
 ```
 
+On Windows x64, install with Scoop:
+
+```powershell
+scoop bucket add goldziher https://github.com/Goldziher/scoop-bucket
+scoop install goldziher/ai-rulez
+```
+
 Or run it without installing: `npx ai-rulez@latest <command>` or `uvx ai-rulez <command>`. See
 [Installation](https://goldziher.github.io/ai-rulez/installation/) for platforms, shell completion and git hooks.
 

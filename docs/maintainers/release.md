@@ -43,9 +43,18 @@ The workflow does the rest:
 | `provenance`      | SLSA provenance over every binary and archive; uploads one `<archive>.sigstore.json` per archive.         |
 | `finalize_release`| Promotes the draft only when archives, `checksums.txt` and provenance are all attached.                   |
 | `publish_npm` / `publish_pypi` / `publish_homebrew` | Publish after the release is public. Homebrew is skipped for `-rc.N`.            |
-| `update_action_tag` | After all distribution jobs succeed or intentionally skip, move the floating major action tag (`v5` for a 5.x release) to the published stable release commit. |
+| `publish_scoop` | Updates the Windows x64 manifest in `Goldziher/scoop-bucket` from the public stable release checksum. |
+| `update_action_tag` | After npm, PyPI, and Homebrew succeed or intentionally skip, move the floating major action tag (`v5` for a 5.x release) to the published stable release commit. |
 
 A failed platform build therefore leaves a hidden draft, never a live release with missing binaries.
+
+### Scoop bucket
+
+The Scoop job uses `HOMEBREW_TOKEN` when configured and falls back to
+`HOMEBREW_TAP_GITHUB_TOKEN`. The credential needs Contents write access to
+`Goldziher/scoop-bucket`. The job runs independently of the floating Action tag.
+Rerun the job to recover from a failed bucket push. The updater preserves a bucket
+manifest that already points at a newer stable release.
 
 ### Floating action tag
 
