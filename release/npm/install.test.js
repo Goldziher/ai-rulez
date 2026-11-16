@@ -380,6 +380,18 @@ test("Windows launcher preserves exit status and stops the process tree with the
     assert.equal(normal.stderr.trim(), 'in "quotes"');
   });
 
+  await t.test("only the npm launch enrolls the CLI in its process job", () => {
+    const direct = spawnSync(bin, ["owner"], { encoding: "utf8", timeout: 5000 });
+    assert.equal(direct.error, undefined);
+    assert.equal(direct.status, 0, direct.stderr);
+    assert.equal(direct.stdout.trim(), "false");
+
+    const wrapped = spawnSync(process.execPath, [launcher, "owner"], { encoding: "utf8", timeout: 5000 });
+    assert.equal(wrapped.error, undefined);
+    assert.equal(wrapped.status, 0, wrapped.stderr);
+    assert.equal(wrapped.stdout.trim(), "true");
+  });
+
   await t.test("allows an explicitly detached process to outlive normal completion", () => {
     const result = spawnSync(process.execPath, [launcher, "breakaway"], { encoding: "utf8", timeout: 5000 });
     assert.equal(result.error, undefined);

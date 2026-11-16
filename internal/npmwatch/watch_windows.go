@@ -4,6 +4,7 @@ package npmwatch
 
 import (
 	"strconv"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/samber/oops"
@@ -11,6 +12,12 @@ import (
 )
 
 const wrapperLostExitCode = 1
+
+// Once assigned, the current process remains in its job until it exits.
+var ownsJob atomic.Bool
+
+// OwnsJob reports whether Start placed the CLI in its npm wrapper job.
+func OwnsJob() bool { return ownsJob.Load() }
 
 // Start watches the wrapper and attaches the CLI to a job before it can spawn
 // children. An inherited marker for a different parent is ignored.
@@ -30,6 +37,9 @@ func Start(expectedParent string, parentPID int) error {
 	}
 
 	job := attachJob()
+	if job != 0 {
+		ownsJob.Store(true)
+	}
 	go watchParent(parent, job)
 	return nil
 }
