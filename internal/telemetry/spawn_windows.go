@@ -3,6 +3,7 @@
 package telemetry
 
 import (
+	"os"
 	"os/exec"
 	"syscall"
 
@@ -13,7 +14,7 @@ import (
 
 // detach lets the opt-in background flush survive the npm launcher's job.
 func detach(cmd *exec.Cmd) bool {
-	if !npmwatch.OwnsJob() {
+	if os.Getenv(npmwatch.ParentEnvironment) != npmwatch.JobMarker(os.Getpid()) {
 		return false
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_BREAKAWAY_FROM_JOB}

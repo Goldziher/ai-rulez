@@ -17,5 +17,12 @@ func watchNPMParent() error {
 	if err := os.Unsetenv(npmwatch.ParentEnvironment); err != nil {
 		return oops.Wrapf(err, "clear npm wrapper process marker")
 	}
-	return npmwatch.Start(parent, os.Getppid())
+	inJob, err := npmwatch.Start(parent, os.Getppid())
+	if err != nil || !inJob {
+		return err
+	}
+	if err := os.Setenv(npmwatch.ParentEnvironment, npmwatch.JobMarker(os.Getpid())); err != nil {
+		return oops.Wrapf(err, "mark CLI as enrolled in the npm wrapper job")
+	}
+	return nil
 }

@@ -4,7 +4,6 @@ package npmwatch
 
 import (
 	"strconv"
-	"sync/atomic"
 	"unsafe"
 
 	"github.com/samber/oops"
@@ -13,35 +12,30 @@ import (
 
 const wrapperLostExitCode = 1
 
-// Once assigned, the current process remains in its job until it exits.
-var ownsJob atomic.Bool
-
-// OwnsJob reports whether Start placed the CLI in its npm wrapper job.
-func OwnsJob() bool { return ownsJob.Load() }
+// JobMarker records which CLI process was assigned to its npm job.
+func JobMarker(pid int) string { return "job:" + strconv.Itoa(pid) }
 
 // Start watches the wrapper and attaches the CLI to a job before it can spawn
-// children. An inherited marker for a different parent is ignored.
-func Start(expectedParent string, parentPID int) error {
+// children. It reports whether job assignment succeeded. An inherited marker
+// for a different parent is ignored.
+func Start(expectedParent string, parentPID int) (inJob bool, err error) {
 	if expectedParent == "" || parentPID <= 0 || expectedParent != strconv.Itoa(parentPID) {
-		return nil
+		return false, nil
 	}
 
 	pid := uint32(parentPID) //nolint:gosec // Windows PIDs are DWORD values.
 	parent, err := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
-		return oops.Wrapf(err, "open npm wrapper process")
+		return false, oops.Wrapf(err, "open npm wrapper process")
 	}
 	if err := verifyParent(parent); err != nil {
 		_ = windows.CloseHandle(parent) //nolint:errcheck // the startup check has already failed.
-		return err
+		return false, err
 	}
 
 	job := attachJob()
-	if job != 0 {
-		ownsJob.Store(true)
-	}
 	go watchParent(parent, job)
-	return nil
+	return job != 0, nil
 }
 
 // verifyParent checks that the process had already started when the CLI was

@@ -15,12 +15,13 @@ import (
 )
 
 func main() {
-	if err := npmwatch.Start(os.Getenv(npmwatch.ParentEnvironment), os.Getppid()); err != nil {
+	inJob, err := npmwatch.Start(os.Getenv(npmwatch.ParentEnvironment), os.Getppid())
+	if err != nil {
 		panic(err)
 	}
 	switch os.Args[1] {
 	case "owner":
-		fmt.Fprintln(os.Stdout, npmwatch.OwnsJob())
+		fmt.Fprintln(os.Stdout, inJob)
 	case "status":
 		fmt.Fprintln(os.Stdout, os.Args[2])
 		fmt.Fprintln(os.Stderr, os.Args[3])
@@ -32,7 +33,7 @@ func main() {
 		}
 		child := exec.Command(exe, "child")
 		if os.Args[1] == "breakaway" {
-			if !npmwatch.OwnsJob() {
+			if !inJob {
 				panic("npm job is required for the breakaway fixture")
 			}
 			child.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_BREAKAWAY_FROM_JOB}
