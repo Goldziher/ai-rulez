@@ -35,6 +35,48 @@ func TestReadItemReturnsTheSectionAsWritten(t *testing.T) {
 	}
 }
 
+func TestSplitSectionOperationsKeepAdjacentCommonMarkHeadings(t *testing.T) {
+	const atx = "   ##\tStyle ###\r\n\r\nTabs.  \r\n\r\n"
+	const setext = "Checks\r\n------\r\nKeep this."
+	const setup = "## Setup\r\n\r\nRun it.\r\n\r\n"
+	base, path := writeAgentsMD(t, "\ufeff"+setup+atx+setext, 0o600)
+
+	got, err := ReadItem(base, "agents-style", true, nil)
+	require.NoError(t, err)
+	assert.Equal(t, atx, got)
+	got, err = ReadItem(base, "agents-checks", true, nil)
+	require.NoError(t, err)
+	assert.Equal(t, setext, got)
+
+	require.NoError(t, UpdateItem(base, "agents-setup", "## Setup\n\nRun twice.\n\n", true, nil))
+	updated, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "\ufeff## Setup\r\n\r\nRun twice.\r\n\r\n"+atx+setext, string(updated))
+
+	const edited = "Checks\r\n------\r\nKeep this too."
+	require.NoError(t, UpdateItem(base, "agents-checks", "Checks\n------\nKeep this too.\n", true, nil))
+	updated, err = os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "\ufeff## Setup\r\n\r\nRun twice.\r\n\r\n"+atx+edited, string(updated))
+
+	require.NoError(t, RemoveItem(base, "agents-style", true, nil))
+	removed, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "\ufeff## Setup\r\n\r\nRun twice.\r\n\r\n"+edited, string(removed))
+}
+
+func TestUpdateItemRejectsJoiningTheNextSetextHeading(t *testing.T) {
+	const text = "## Setup\n\nRun it.\n\nChecks\n------\nKeep this.\n"
+	base, path := writeAgentsMD(t, text, 0o600)
+
+	err := UpdateItem(base, "agents-setup", "## Setup\n\nRun twice.\n", true, nil)
+
+	require.ErrorContains(t, err, "would not stay one section")
+	got, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, text, string(got))
+}
+
 func TestReadItemWithoutSplitIsTheWholeFileAndUnknownNamesFail(t *testing.T) {
 	// Arrange
 	base, _ := writeAgentsMD(t, sectionsText, 0o644)

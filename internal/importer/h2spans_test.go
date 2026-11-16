@@ -23,6 +23,31 @@ func TestH2SpansMatchTheItemsOfASplitRead(t *testing.T) {
 		{"heading in a fence", "## A\n\n```\n## B\n```\n", []H2Span{{Header: "A", Start: 0, End: 6}}},
 		{"heading without a body", "## A\n## B\nb\n", []H2Span{{Header: "A", Start: 0, End: 1}, {Header: "B", Start: 1, End: 4}}},
 		{"third level heading does not split", "## A\n\n### B\n", []H2Span{{Header: "A", Start: 0, End: 4}}},
+		{
+			"indented ATX with a tab and closing hashes",
+			"## A\na\n   ##\tB ###\nb\n",
+			[]H2Span{{Header: "A", Start: 0, End: 2}, {Header: "B", Start: 2, End: 5}},
+		},
+		{
+			"setext H2 with a multiline title",
+			"## A\na\n\nSecond\nsection\n-------\nb\n",
+			[]H2Span{{Header: "A", Start: 0, End: 3}, {Header: "Second section", Start: 3, End: 8}},
+		},
+		{
+			"headings in indented code, HTML, fences and blockquotes",
+			"## A\n\n    ## code\n\n<!--\n## html\n-->\n\n~~~\n   ## fence\n~~~\n\n> ## quote\n## B\n",
+			[]H2Span{{Header: "A", Start: 0, End: 13}, {Header: "B", Start: 13, End: 15}},
+		},
+		{
+			"empty ATX headings still mark boundaries",
+			"## A\na\n##\n## ###",
+			[]H2Span{{Header: "A", Start: 0, End: 2}, {Start: 2, End: 3}, {Start: 3, End: 4}},
+		},
+		{
+			"frontmatter delimiter is not a Setext underline",
+			"---\r\ntitle: Demo\r\n---\r\n## A\r\n",
+			[]H2Span{{Start: 0, End: 3}, {Header: "A", Start: 3, End: 5}},
+		},
 		{"leading BOM", "\ufeff## A\n\na\n## B\nb\n", []H2Span{{Header: "A", Start: 0, End: 3}, {Header: "B", Start: 3, End: 6}}},
 		{"CRLF", "# T\r\n\r\n## A\r\n\r\na\r\n", []H2Span{{Header: "", Start: 0, End: 2}, {Header: "A", Start: 2, End: 6}}},
 	}
