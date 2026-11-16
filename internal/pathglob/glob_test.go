@@ -35,3 +35,18 @@ func TestMatcherPreservesLiteralPaths(t *testing.T) {
 		})
 	}
 }
+
+func TestBraceExpansionUsesWholeResultBudget(t *testing.T) {
+	t.Parallel()
+
+	remaining := 2
+	got := expandBraces("docs/{guide,faq}.md", &remaining, 0)
+	if len(got) != 2 || got[0] != "docs/guide.md" || got[1] != "docs/faq.md" || remaining != 0 {
+		t.Fatalf("got %v and %d slots left, want both alternatives and no slots", got, remaining)
+	}
+
+	remaining = 1
+	if got := expandBraces("docs/{guide,faq}.md", &remaining, 0); got != nil {
+		t.Fatalf("got partial result %v, want no matches", got)
+	}
+}
