@@ -840,7 +840,7 @@ Generation keys:
 | `self_server_version` | string | `latest` | Version or dist-tag the npx launch pins. Exclusive with `self_server_command`. |
 | `self_server_launcher` | `npx`, `binary-then-npx` | `npx` | `binary-then-npx` runs an installed `ai-rulez` from `PATH` and falls back to npx, through a `sh -c` script. Exclusive with `self_server_command`. |
 | `self_server_command` | array | none | Executable and arguments replacing the npx launch, such as `["ai-rulez", "mcp"]`. `--serve-skills` is appended when skills are served, except to a `sh -c` command, where you put it in the script. |
-| `skills_instructions` | boolean | `true` | While skills are served, add an "Unlisted skills" section to instruction files telling the agent to call `find_skill`, then `load_skill`. |
+| `skills_instructions` | boolean | `true` | While skills are served, add an "Unlisted skills" section to supported instruction files. The default asks the agent to search on repository tasks and skip unrelated requests. An explicit tool allowlist must include `find_skill` and `load_skill` for the default section to appear. |
 | `skills_instructions_text` | string | none | Replaces that section. `{{server}}` is the serving MCP server, `{{skills_dir}}` the skills folder relative to the instruction file. |
 
 The other `[mcp]` keys are defaults of `ai-rulez mcp`, read when the server starts, with the matching flag winning: `serve_skills`, `discover_skills`, `exclude`, `index_cache`, `read_only`, `tools`, `authoring`, `allow`, `deny`, `serve_user_invoked_skills`, `daemon`, `daemon_idle_timeout`, `no_watch`. They are documented in [Settings in the configuration](/ai-rulez/mcp-server/#settings-in-the-configuration).
@@ -1055,7 +1055,7 @@ include = ["review-*"]
 
 ### `[delivery.stub]`
 
-When skills are served, `generate` writes a `dynamic-skills` stub skill that tells the agent to call `find_skill` and `load_skill`. Its description is listed in every session.
+When skills are served, `generate` writes a `dynamic-skills` stub skill that tells the agent to call `find_skill` and `load_skill`. The harness can list its description at session start and load the body when the skill is invoked. Configure the separate **Unlisted skills** section in generated project instructions with [`[mcp] skills_instructions`](#mcp).
 
 ```toml
 [delivery.stub]

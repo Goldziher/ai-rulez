@@ -102,6 +102,18 @@ and scopes; `git` lists files with `git ls-files`, `walk` is the fallback outsid
 Listing grows with the number of files (about 36 ms for `git ls-files` on 20,000 files); reading items costs about 20
 to 35 microseconds each.
 
+## End-to-end skill discovery
+
+The server timings above measure indexing and query execution. To measure the model's decision to search and the
+cost of loading and applying a skill, see the [paired Claude Code and Codex pilot](https://github.com/Goldziher/ai-rulez/blob/main/bench/skill-discovery/results/2026-11-16.md).
+The pilot uses a synthetic catalog and reports startup input, task input, time to the first skill-body read and
+task completion. Each case used one matched pair. The MCP arms used either a bare server or its generated discovery
+stub in isolation.
+
+The [Claude Code follow-up](https://github.com/Goldziher/ai-rulez/blob/main/bench/skill-discovery/results/claude-discovery-ablation.md)
+tests generated project instructions in the same synthetic setting. It records tool search, skill selection,
+skill loading and task completion separately.
+
 ## Model-backed commands
 
 `judge`, `review --semantic`, `eval run` and `improve` are bound by the model provider, not by ai-rulez. Their cost and

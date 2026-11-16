@@ -192,8 +192,9 @@ each one receives. A tool that is not listed can be added as a [custom preset](h
 
 Claude Code and Codex discover native skills through their names and descriptions, then load skill bodies on demand.
 In repositories with nested skill directories, metadata from multiple scopes can accumulate as a session moves between them.
-MCP delivery replaces the served catalog's native metadata with a discovery stub and MCP tool definitions. The assistant
-must search to find those skills. [Compare delivery options](https://goldziher.github.io/ai-rulez/mcp-server/#choosing-the-delivery).
+MCP delivery keeps served skills out of the native catalog. For Claude Code, generated project guidance tells Claude
+when to search for served skills using the task and repository path. Skill selection still depends on the model and client
+settings. [Compare delivery options](https://goldziher.github.io/ai-rulez/mcp-server/#choosing-the-delivery).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/skills-mcp.gif" alt="ai-rulez tokens before and after serving skills over MCP, then find_skill and load_skill" width="780" />
