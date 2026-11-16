@@ -34,6 +34,7 @@ MARKERS = {
     "parcel-return-code": "RETURN-FELDSPAR-82",
     **{f"station-inspection-{i:03}": f"STATION-OPAL-{i:03}" for i in range(1, 127)},
 }
+CLAUDE_ROOT = Path("CLAUDE.md")
 WORKSHEETS = ("services/amber/dispatch.txt", "services/cobalt/dispatch.txt")
 
 
@@ -250,18 +251,35 @@ def setup_mcp(root, catalog, binary, codex_home, workspace):
     return cfg
 
 
-def build_stub(binary, root):
+def build_stub(binary, root, standalone=False):
     authored = root / ".ai-rulez"
     placeholder = authored / "skills/example/SKILL.md"
     placeholder.parent.mkdir(parents=True)
     placeholder.write_text("---\ndescription: Placeholder to generate the discovery stub.\n---\n\n# Example\n")
+    root_mode = "agents_md = false\n" if standalone else ""
     (authored / "config.toml").write_text(
         'version = "5.0"\nname = "skill-discovery-benchmark"\npresets = ["claude", "codex"]\n'
-        '[skills]\ndelivery = "served"\n'
+        + root_mode
+        + '[skills]\ndelivery = "served"\n'
         '[[mcp_servers]]\nname = "skills"\ncommand = "ai-rulez"\nargs = ["mcp", "--serve-skills"]\n'
     )
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
     subprocess.run([binary, "generate", "--yes"], cwd=root, check=True, stdout=sys.stderr)
+
+
+def install_delivery_fixture(args, native, workspace):
+    generated = args.output / "stub-source"
+    stub = LAYOUTS[native] / "dynamic-skills/SKILL.md"
+    (workspace / stub).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(generated / stub, workspace / stub)
+    match args.claude_discovery:
+        case "root":
+            shutil.copy2(generated / CLAUDE_ROOT, workspace / CLAUDE_ROOT)
+        case "shared-root":
+            shutil.copy2(generated / CLAUDE_ROOT, workspace / CLAUDE_ROOT)
+            shutil.copy2(generated / "AGENTS.md", workspace / "AGENTS.md")
+        case "rule":
+            shutil.copy2(args.claude_rule, workspace / CLAUDE_ROOT)
 
 
 def record_attempt(args, base, case, task, arm, directory):
@@ -273,9 +291,7 @@ def record_attempt(args, base, case, task, arm, directory):
     fixture = "mcp-workspace" if arm == "mcp" or control else native
     shutil.copytree(case / fixture, workspace, ignore=shutil.ignore_patterns(".git"))
     if args.mcp_stub and arm == "mcp":
-        stub = LAYOUTS[native] / "dynamic-skills/SKILL.md"
-        (workspace / stub).parent.mkdir(parents=True)
-        shutil.copy2(args.output / "stub-source" / stub, workspace / stub)
+        install_delivery_fixture(args, native, workspace)
     subprocess.run(["git", "init", "-q"], cwd=workspace, check=True)
     if arm == "mcp":
         if control:
@@ -286,6 +302,10 @@ def record_attempt(args, base, case, task, arm, directory):
     auth_home = tempfile.TemporaryDirectory(prefix="skillbench-codex-") if args.harness == "codex" else nullcontext()
     with auth_home as codex_home:
         env = {**os.environ, "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"}
+        if args.claude_discovery in {"default-stub", "shared-root"}:
+            env.pop("ENABLE_TOOL_SEARCH", None)
+        elif args.claude_discovery:
+            env["ENABLE_TOOL_SEARCH"] = "false" if arm == "mcp" and args.claude_discovery == "upfront" else "true"
         if codex_home:
             shutil.copy2(args.auth_file, Path(codex_home) / "auth.json")
             env["CODEX_HOME"] = codex_home
@@ -342,13 +362,23 @@ def main():
         action="store_true",
         help="use the generated dynamic-skills stub in MCP arms",
     )
+    parser.add_argument(
+        "--claude-discovery", choices=["default-stub", "stub", "upfront", "root", "shared-root", "rule"]
+    )
+    parser.add_argument("--claude-rule", type=Path, help="Claude root instruction to use with --claude-discovery rule")
     parser.add_argument("--auth-file", type=Path, default=Path.home() / ".codex/auth.json")
     args = parser.parse_args()
+    if args.claude_discovery and args.harness != "claude":
+        parser.error("--claude-discovery requires the claude harness")
+    if (args.claude_discovery == "rule") != (args.claude_rule is not None):
+        parser.error("--claude-discovery rule and --claude-rule require each other")
+    args.mcp_stub = args.mcp_stub or bool(args.claude_discovery)
     args.binary, args.output = args.binary.resolve(), args.output.resolve()
     args.model = args.model or MODELS[args.harness]
     args.output.mkdir(mode=0o700)
     if args.mcp_stub:
-        build_stub(args.binary, args.output / "stub-source")
+        standalone = args.claude_discovery not in {None, "shared-root"}
+        build_stub(args.binary, args.output / "stub-source", standalone=standalone)
     fixture = args.output / "fixture"
     generate(fixture)
     manifest = json.loads((fixture / "tasks.json").read_text())
@@ -366,6 +396,7 @@ def main():
         "invocation": sys.argv,
         "cache_policy": "service defaults, fresh local session, no cache reset",
         "mcp_stub": args.mcp_stub,
+        "claude_discovery": args.claude_discovery,
     }
     (args.output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     attribution = [

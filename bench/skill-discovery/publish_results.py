@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from run import score
+from run import WORKSHEETS, score
 
 
 def usage(source, harness):
@@ -47,13 +47,43 @@ def read_events(path):
         yield event["elapsed_s"], event["event"]
 
 
-def public_record(run, log, record):
-    result = score(
-        record["harness"],
-        list(read_events(log.with_suffix("") / record["trace"])),
-        record,
-        record["exit_code"],
-        record["timed_out"],
+def claude_discovery_metrics(events):
+    actions, results = [], []
+    for _, event in events:
+        content = event.get("message", {}).get("content", [])
+        if not isinstance(content, list):
+            continue
+        if event.get("type") == "assistant":
+            actions.extend(block for block in content if block.get("type") == "tool_use")
+        if event.get("type") == "user":
+            results.extend(block for block in content if block.get("type") == "tool_result")
+
+    lookup = "mcp__skills__find_skill"
+    load = "mcp__skills__load_skill"
+    mcp_ids = {action["id"] for action in actions if action.get("name") in {lookup, load}}
+    lookup_paths = [action.get("input", {}).get("path") for action in actions if action.get("name") == lookup]
+    return {
+        "mcp_search_calls": len(lookup_paths),
+        "mcp_load_calls": sum(action.get("name") == load for action in actions),
+        "mcp_tool_errors": sum(
+            bool(result.get("is_error")) and result.get("tool_use_id") in mcp_ids for result in results
+        ),
+        "mcp_lookup_worksheet_paths": sorted(path for path in WORKSHEETS if path in lookup_paths),
+        "tool_search_calls": sum(action.get("name") == "ToolSearch" for action in actions),
+        "stub_invocations": sum(
+            action.get("name") == "Skill" and action.get("input", {}).get("skill") == "dynamic-skills"
+            for action in actions
+        ),
+    }
+
+
+def public_record(run, log, record, binary_sha):
+    events = list(read_events(log.with_suffix("") / record["trace"]))
+    result = score(record["harness"], events, record, record["exit_code"], record["timed_out"])
+    instrumentation = (
+        {"ai_rulez_sha256": binary_sha, **claude_discovery_metrics(events)}
+        if run.startswith("claude-discovery-")
+        else {}
     )
     return {
         "series": run,
@@ -87,6 +117,7 @@ def public_record(run, log, record):
                 "external_catalog_read_attempt",
             )
         },
+        **instrumentation,
         "visible_fixture_skill_count": None
         if result["visible_fixture_skills"] is None
         else len(result["visible_fixture_skills"]),
@@ -107,9 +138,16 @@ def main():
     args = parser.parse_args()
     for log in args.logs:
         metadata = json.loads((log.with_suffix("") / "metadata.json").read_text())
-        series = "generated-stub" if metadata.get("mcp_stub") else "bare-mcp"
+        variant = metadata.get("claude_discovery")
+        series = (
+            f"claude-discovery-{variant}" if variant else "generated-stub" if metadata.get("mcp_stub") else "bare-mcp"
+        )
         for line in log.read_text().splitlines():
-            print(json.dumps(public_record(series, log, json.loads(line)), separators=(",", ":")))
+            print(
+                json.dumps(
+                    public_record(series, log, json.loads(line), metadata.get("ai_rulez_sha256")), separators=(",", ":")
+                )
+            )
 
 
 if __name__ == "__main__":
