@@ -272,7 +272,7 @@ steps:
   - uses: actions/checkout@v7
   - uses: Goldziher/ai-rulez@v5
     with:
-      version: 5.13.2
+      version: 5.13.3
   - run: ai-rulez generate --check
   - run: ai-rulez validate
 ```
@@ -284,7 +284,7 @@ pre-commit or prek:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v5.13.2
+    rev: v5.13.3
     hooks:
       - id: ai-rulez-recursive
       - id: ai-rulez-validate

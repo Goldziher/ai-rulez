@@ -6,6 +6,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.13.3] - 2026-11-16
+
+### Added
+
+- Stable Windows releases are published to the Scoop bucket.
+
+### Fixed
+
+- Editing or removing split-mode `AGENTS.md` sections preserves adjacent sections.
+- Path globs match Unicode literals and limit brace expansion.
+- The npm wrapper keeps installer messages off stdout and forwards termination signals to the CLI on POSIX.
+- Release-age settings are checked against the configured limit before duration conversion.
+
+### Documentation
+
+- Explain how native skill metadata and MCP-served discovery affect context and skill selection.
+
 ## [5.13.2] - 2026-11-14
 
 ### Added

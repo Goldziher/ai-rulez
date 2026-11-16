@@ -16,6 +16,19 @@ import (
 // utf8BOM is the byte order mark some editors write at the start of a file.
 const utf8BOM = "\ufeff"
 
+// section is one split AGENTS.md item located in the file as it is now.
+type section struct {
+	path  string
+	mode  os.FileMode
+	data  []byte // the file as read
+	bom   string // a leading BOM, put back at the start of what is written
+	text  string // data without the BOM
+	lines []string
+	spans []importer.H2Span
+	span  importer.H2Span
+	index int
+}
+
 // ItemNames lists the context items the root AGENTS.md of the project at base
 // yields, named as Read names them: one item, or one per H2 heading with split.
 // taken holds the names of the files under .agents/context (an item never
@@ -142,19 +155,6 @@ func newSectionLines(content, eol string, last, endsWithNewline bool) []string {
 		}
 	}
 	return body
-}
-
-// section is one split AGENTS.md item located in the file as it is now.
-type section struct {
-	path  string
-	mode  os.FileMode
-	data  []byte // the file as read
-	bom   string // a leading BOM, put back at the start of what is written
-	text  string // data without the BOM
-	lines []string
-	spans []importer.H2Span
-	span  importer.H2Span
-	index int
 }
 
 // sectionText is the text of the section: its lines, each ended by the newline

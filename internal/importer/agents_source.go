@@ -124,9 +124,11 @@ func sourceLine(starts []int, offset int) int {
 	return i - 1
 }
 
-func headingDetails(heading *ast.Heading, source []byte, offset int, starts []int, line string, start int) (string, int) {
+func headingDetails(
+	heading *ast.Heading, source []byte, offset int, starts []int, line string, start int,
+) (header string, bodyStart int) {
 	parts := make([]string, 0, heading.Lines().Len())
-	bodyStart := start + 1
+	bodyStart = start + 1
 	for i := 0; i < heading.Lines().Len(); i++ {
 		segment := heading.Lines().At(i)
 		parts = append(parts, strings.TrimSpace(string(segment.Value(source))))
