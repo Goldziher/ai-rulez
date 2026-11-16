@@ -1,7 +1,8 @@
 # End-to-end skill discovery benchmark
 
 This experiment compares native skill discovery and filesystem reads with ai-rulez MCP discovery and loading in fresh
-Claude Code and Codex sessions. The fixture is synthetic. No model runs or results are included.
+Claude Code and Codex sessions. The fixture is synthetic. See the [first pilot results](results/2026-11-16.md) and
+[sanitized per-turn measurements](results/2026-11-16.jsonl).
 
 ## Fixture
 
