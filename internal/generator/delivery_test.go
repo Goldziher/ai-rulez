@@ -79,6 +79,37 @@ func TestGenerate_ServedSkillsLeaveStaticTrees(t *testing.T) {
 	assert.NotContains(t, string(core), "delivery", "delivery steers ai-rulez and is not written into frontmatter")
 }
 
+func TestGenerate_ClaudeServedSkillInstructions(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		agentsMD bool
+		file     string
+	}{
+		{"Claude root", false, "CLAUDE.md"},
+		{"shared root", true, "AGENTS.md"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			root := deliveryProject(t)
+			cfg, err := config.LoadConfig(context.Background(), root)
+			require.NoError(t, err)
+			cfg.AgentsMD = tt.agentsMD
+			require.NoError(t, NewGenerator(cfg).Generate(""))
+
+			body, err := os.ReadFile(filepath.Join(root, tt.file))
+			require.NoError(t, err)
+			assert.Contains(t, string(body), "Before answering a repository-specific question")
+			assert.Contains(t, string(body), "repository-relative `path` when known")
+			assert.Contains(t, string(body), "Skip this lookup for unrelated questions.")
+			if tt.agentsMD {
+				shim, err := os.ReadFile(filepath.Join(root, "CLAUDE.md"))
+				require.NoError(t, err)
+				assert.Contains(t, string(shim), "@AGENTS.md")
+				assert.NotContains(t, string(shim), "## Unlisted skills")
+			}
+		})
+	}
+}
+
 func TestGenerate_StubAppearsOncePerTree(t *testing.T) {
 	root := deliveryProject(t)
 	cfg, err := config.LoadConfig(context.Background(), root)

@@ -1250,6 +1250,7 @@ switches are environment-only. Booleans accept `1`/`true` and `0`/`false`.
 | `AI_RULEZ_HOME` | | Extra directory `improve pr` lets its worktree commands write |
 | `AI_RULEZ_TODAY` | | Pin "today" (`YYYY-MM-DD`) for baseline expiry, for reproducible runs |
 | `AI_RULEZ_EVAL_DATE` | `eval run --date` | Date recorded in eval results |
+| `AI_RULEZ_NPM_PARENT_PID` | | Internal process-lifetime marker managed by the Windows npm launcher. Leave it unset when running ai-rulez directly. |
 
 **Organization policy** ([Organization policy](/ai-rulez/policy/))
 

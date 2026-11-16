@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -49,10 +50,64 @@ func (c *Config) SkillsInstructionsFor(preset string) (text string, show bool) {
 	if custom := strings.TrimSpace(c.mcpSkillsInstructionsText()); custom != "" {
 		return expandTemplateVars(custom, map[string]string{varServer: server, varSkillsDir: dir}), true
 	}
+	if !c.skillSearchToolsAvailable(server) {
+		return "", false
+	}
 	return fmt.Sprintf("## Unlisted skills\n\n"+
-		"Some skills are served over MCP and are not listed in this session. "+
-		"Call `find_skill` with a short description of the task, then `load_skill` with the chosen name, "+
-		"on the `%s` MCP server. If that server is unavailable, read `%s/<name>/SKILL.md` instead.", server, dir), true
+		"Before answering a repository-specific question or working on a repository path, "+
+		"search for relevant guidance with `find_skill` on the `%s` MCP server. "+
+		"Build the query from the requested operation. Read a referenced file if needed to resolve ambiguity. "+
+		"Base the operation on the request and file contents. "+
+		"Pass a short description as `task` and the repository-relative `path` when known. "+
+		"Search before concluding that the repository has no guidance. "+
+		"Inspect the match description before calling `load_skill`. "+
+		"Load a skill only if it covers the specific operation requested at that path. "+
+		"A matching path alone is insufficient. "+
+		"If all matches cover other workflows, continue without a skill. "+
+		"Skip this lookup for unrelated questions. "+
+		"In Claude Code, if the tools are deferred, use `ToolSearch` to select them. "+
+		"If the server is unavailable, read `%s/<name>/SKILL.md` when the skill is known.", server, dir), true
+}
+
+// skillSearchToolsAvailable checks explicit tool allowlists for the named
+// launch. An absent list leaves the serving tool surface at its defaults.
+func (c *Config) skillSearchToolsAvailable(server string) bool {
+	var tools, args []string
+	if c.MCP != nil {
+		tools = c.MCP.Tools
+		if server == SelfMCPServerName && len(c.MCP.SelfServerCommand) > 0 {
+			args = c.MCP.SelfServerCommand[1:]
+		}
+	}
+	if entry := c.MCPServers[server]; entry != nil {
+		args = entry.Args
+	}
+	if override, ok := explicitTools(args); ok {
+		tools = override
+	}
+	return len(tools) == 0 || (slices.Contains(tools, "find_skill") && slices.Contains(tools, "load_skill"))
+}
+
+// explicitTools recognizes the two native --tools launch syntaxes. The first
+// occurrence overrides the configured allowlist; repeats append entries.
+func explicitTools(args []string) (tools []string, seen bool) {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			break
+		}
+		if arg == "--tools" && i+1 < len(args) {
+			i++
+			arg = "--tools=" + args[i]
+		}
+		if value, ok := strings.CutPrefix(arg, "--tools="); ok {
+			seen = true
+			if value != "" {
+				tools = append(tools, strings.Split(value, ",")...)
+			}
+		}
+	}
+	return tools, seen
 }
 
 func (c *Config) mcpSkillsInstructionsText() string {

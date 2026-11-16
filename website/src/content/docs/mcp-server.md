@@ -680,9 +680,9 @@ name and description, then load the body when a skill is used. In a monorepo, me
 through nested scopes. Which skills are visible depends on the harness, version, directory layout and metadata budget.
 Use [`ai-rulez exposure`](/ai-rulez/exposure/) to estimate startup exposure for a supported harness.
 
-MCP delivery keeps served skill metadata out of the native catalog on supported harnesses. It adds the discovery stub
-and MCP tool definitions, then incurs search and load costs when the assistant uses the tools. A skill can be missed if
-the assistant skips discovery.
+MCP delivery keeps served skill metadata out of the native catalog on supported harnesses. A session gets a discovery
+stub and access to the MCP tools. Searching and loading a match adds tool calls, and the assistant can still miss a
+served skill if it skips discovery.
 
 1. **`delivery`** decides per skill: written to the harness skill trees (`static`), served over MCP (`served`), or
    both.
@@ -726,8 +726,8 @@ those are served; `--include-static` adds the rest.
 | `served` | Domain skills used in some sessions: billing, migrations, a vendor API, incident response. The bulk of a large catalog. |
 | `both` | A skill that ships `scripts/` or `assets/` the agent runs by relative path, or one that must stay visible to one harness while others find it by search |
 
-- **The model must choose to search.** A served skill is invisible until the agent calls `find_skill`. Write
-  `description` and `triggers` in the words a user would use, and keep must-not-miss skills `static`.
+- **The model chooses when to search.** Write `description` and `triggers` in the words a user would use, and keep
+  must-not-miss skills `static`.
 - **Always-loaded content cannot rely on a served skill.** `AR990` warns when a rule or static skill names one.
 - **Bundled files need `both`.** A served skill's `scripts/` and `assets/` are never written to disk, so a relative
   path into them resolves to nothing (`AR9R0`). `references/` are readable over MCP either way.
@@ -736,12 +736,44 @@ those are served; `--include-static` adds the rest.
   `served` nobody can run it (`AR9R2`); combined with `both`, a rule that points at it by name leaves the model declining
   (`AR9R1`). Use `both` with a file-path pointer, drop the flag, or set `[mcp] serve_user_invoked_skills = true`.
 
+### Discovery in Claude Code
+
+The `dynamic-skills` stub exposes its description through Claude Code's native skill listing. Its body becomes
+available when Claude invokes it. Claude Code can also defer MCP tool definitions until it searches for them.
+With the Claude preset, the generated **Unlisted skills** section puts the discovery trigger in Claude's project
+instructions. It may live in the shared `AGENTS.md` that Claude imports from `CLAUDE.md`.
+[Claude Code skills](https://code.claude.com/docs/en/skills) ·
+[Claude Code MCP tool search](https://code.claude.com/docs/en/mcp#scale-with-mcp-tool-search)
+
+The default guidance asks Claude to call `find_skill` before answering a repository-specific question or working
+on a repository path, and to skip discovery on unrelated requests. It tells Claude to pass the task and the
+repository-relative path when known, and use `ToolSearch` if the MCP tools are deferred. Claude should check the
+match descriptions and call `load_skill` only for a skill that covers the requested operation at that path.
+
+After updating ai-rulez, run `ai-rulez generate` and start a new Claude Code session with project instructions
+enabled. Open `/mcp` to check that the serving server is connected and exposes `find_skill` and `load_skill`.
+Ask a repository-specific question and check the resulting tool calls. If Claude skips the lookup, ask it to
+search the serving MCP server explicitly. Client access controls and model decisions still affect tool use.
+
+If you maintain the project instructions by hand, add equivalent guidance to the instructions Claude reads at
+startup. For example, with [the agents source](/ai-rulez/agents-source/), put this in your authored `AGENTS.md`
+and make sure Claude loads it.
+
+> Before answering a repository-specific question or working on a repository path, search for relevant guidance
+> with `find_skill` on the serving MCP server. Pass the task and repository-relative path when known. Use
+> `ToolSearch` if the tools are deferred. Check the result descriptions and call `load_skill` for a match that
+> covers the specific operation. Skip discovery for unrelated requests.
+
 ### What generate does
 
 - A `served` skill is not written to any preset's skill tree; `static` and `both` skills are.
 - When any skill is `served` or `both`, or a `[[skill_sources]]` entry exists, the `dynamic-skills` stub is added to
   every preset whose harness can call MCP tools (in `.agents/skills` when `agents_md` is on). An authored skill named
   `dynamic-skills` replaces the stub. [`[delivery.stub]`](/ai-rulez/configuration/#deliverystub) customises its text.
+- Generated project instructions for supported presets can also include an **Unlisted skills** section.
+  The default section requires both `find_skill` and `load_skill` when the server uses an explicit tool allowlist.
+  Set `[mcp] skills_instructions = false` to omit the section or set `skills_instructions_text` to replace it.
+  [Generation settings](/ai-rulez/configuration/#mcp)
 - A preset whose harness cannot call MCP (for example `cline` or `rovodev`) keeps served skills as static files and
   gets no stub, with a warning (`AR992`). Skills of `[[skill_sources]]` never reach such a preset. See
   [Installed skills vs skill sources](/ai-rulez/installed-skills/#installed-skills-vs-skill-sources).

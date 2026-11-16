@@ -2,7 +2,13 @@
 
 This experiment compares native skill discovery and filesystem reads with ai-rulez MCP discovery and loading in fresh
 Claude Code and Codex sessions. The fixture is synthetic. See the [first pilot results](results/2026-11-16.md) and
-[sanitized per-turn measurements](results/2026-11-16.jsonl).
+[sanitized per-turn measurements](results/2026-11-16.jsonl). The [Claude discovery follow-up](results/claude-discovery-ablation.md)
+checks the effect of tool deferral and the generated project instructions.
+
+For a Claude Code run with the generated delivery integration, use `run.py --claude-discovery shared-root`.
+It includes the generated `CLAUDE.md` import and `AGENTS.md` discovery section alongside the stub. Use
+`--claude-discovery root` to measure the standalone `CLAUDE.md` layout with tool search enabled.
+The historical `--mcp-stub` option reproduces the reduced stub-only setup.
 
 ## Fixture
 
