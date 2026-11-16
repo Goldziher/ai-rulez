@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -137,10 +138,18 @@ func (p *Pipeline) spawnFlush() error {
 	if p.ConfigDirName != "" {
 		args = append(args, "--config-dir", p.ConfigDirName)
 	}
-	cmd := exec.Command(exe, args...) //nolint:gosec // our own binary
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
-	detach(cmd)
-	if err := cmd.Start(); err != nil {
+	newCommand := func() *exec.Cmd {
+		return exec.Command(exe, args...) //nolint:gosec // our own binary
+	}
+	cmd := newCommand()
+	canRetryWithoutDetach := detach(cmd)
+	err = cmd.Start()
+	if canRetryWithoutDetach && errors.Is(err, os.ErrPermission) {
+		// A host's job can prohibit breakaway. Use the usual inherited job there.
+		cmd = newCommand()
+		err = cmd.Start()
+	}
+	if err != nil {
 		return err
 	}
 	return cmd.Process.Release()

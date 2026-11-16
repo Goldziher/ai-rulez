@@ -5,6 +5,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn, spawnSync } = require("node:child_process");
 const { once } = require("node:events");
+const { createInterface } = require("node:readline");
+const { setTimeout: delay } = require("node:timers/promises");
 
 const {
   getPlatform,
@@ -275,13 +277,18 @@ test("isMusl is false off linux", () => {
   assert.equal(isMusl({ platform: "darwin", report: () => ({ header: {} }), exists: () => true }), false);
 });
 
-function launcherFixture(t, binaryName, source) {
+function launcherDir(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-rulez-launcher-test-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   for (const file of ["ai-rulez.js", "install.js"]) {
     fs.copyFileSync(path.join(__dirname, file), path.join(dir, file));
   }
   fs.mkdirSync(path.join(dir, "bin"));
+  return dir;
+}
+
+function launcherFixture(t, binaryName, source) {
+  const dir = launcherDir(t);
   const binaryPath = path.join(dir, "bin", binaryName);
   fs.writeFileSync(binaryPath, `#!${process.execPath}\n${source}\n`, { mode: 0o755 });
   return path.join(dir, "ai-rulez.js");
@@ -334,3 +341,97 @@ for (const [signal, handler, expectedCode] of [
     },
   );
 }
+
+function processIsRunning(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error.code === "ESRCH") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+test("Windows launcher preserves exit status and stops the process tree with the wrapper", {
+  skip: process.platform !== "win32",
+  timeout: 180_000,
+}, async (t) => {
+  const dir = launcherDir(t);
+  const launcher = path.join(dir, "ai-rulez.js");
+  const bin = path.join(dir, "bin", getBinaryName("windows"));
+  const compiled = spawnSync("go", ["build", "-o", bin, "./release/npm/testdata/windows"], {
+    cwd: path.resolve(__dirname, "../.."),
+    encoding: "utf8",
+    timeout: 120_000,
+  });
+  assert.equal(compiled.error, undefined);
+  assert.equal(compiled.status, 0, compiled.stderr);
+
+  await t.test("forwards arguments and keeps stdout, stderr and the child exit code", () => {
+    const normal = spawnSync(process.execPath, [launcher, "status", "out with spaces", 'in "quotes"'], {
+      encoding: "utf8",
+      timeout: 5000,
+    });
+    assert.equal(normal.error, undefined);
+    assert.equal(normal.status, 23, normal.stderr);
+    assert.equal(normal.stdout.trim(), "out with spaces");
+    assert.equal(normal.stderr.trim(), 'in "quotes"');
+  });
+
+  await t.test("only the npm launch enrolls the CLI in its process job", () => {
+    const direct = spawnSync(bin, ["owner"], { encoding: "utf8", timeout: 5000 });
+    assert.equal(direct.error, undefined);
+    assert.equal(direct.status, 0, direct.stderr);
+    assert.equal(direct.stdout.trim(), "false");
+
+    const wrapped = spawnSync(process.execPath, [launcher, "owner"], { encoding: "utf8", timeout: 5000 });
+    assert.equal(wrapped.error, undefined);
+    assert.equal(wrapped.status, 0, wrapped.stderr);
+    assert.equal(wrapped.stdout.trim(), "true");
+  });
+
+  await t.test("allows an explicitly detached process to outlive normal completion", () => {
+    const result = spawnSync(process.execPath, [launcher, "breakaway"], { encoding: "utf8", timeout: 5000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr);
+    const [, child] = result.stdout.trim().split(/\s+/u).map(Number);
+    assert.ok(Number.isInteger(child) && child > 0);
+    assert.ok(processIsRunning(child));
+    process.kill(child, "SIGKILL");
+  });
+
+  await t.test("stops the CLI and grandchild on wrapper-only termination", { timeout: 10_000 }, async (subtest) => {
+    const wrapper = spawn(process.execPath, [launcher, "wait"], { stdio: ["ignore", "pipe", "inherit"] });
+    subtest.after(() => wrapper.kill("SIGKILL"));
+    const exited = once(wrapper, "exit");
+    const lines = createInterface({ input: wrapper.stdout });
+    const line = await Promise.race([
+      once(lines, "line").then(([value]) => value),
+      exited.then(() => assert.fail("wrapper exited before the process tree was ready")),
+    ]);
+    const pids = line.split(/\s+/u).map(Number);
+    try {
+      assert.equal(pids.length, 2);
+      for (const pid of pids) {
+        assert.ok(Number.isInteger(pid) && pid > 0 && processIsRunning(pid));
+      }
+
+      assert.equal(wrapper.kill("SIGKILL"), true);
+      await exited;
+
+      const deadline = Date.now() + 4000;
+      while (pids.some(processIsRunning) && Date.now() < deadline) {
+        await delay(50);
+      }
+      assert.deepEqual(pids.map(processIsRunning), [false, false]);
+    } finally {
+      for (const pid of pids.filter((pid) => Number.isInteger(pid) && pid > 0)) {
+        if (processIsRunning(pid)) {
+          process.kill(pid, "SIGKILL");
+        }
+      }
+    }
+  });
+});

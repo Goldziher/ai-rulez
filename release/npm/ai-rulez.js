@@ -6,7 +6,11 @@ const fs = require("node:fs");
 const { getPlatform, getBinaryName, resolveBundledBinary, isMusl } = require("./install");
 
 function runBinary(binaryPath, args) {
-  const child = spawn(binaryPath, args, { stdio: "inherit" });
+  const options = { stdio: "inherit" };
+  if (process.platform === "win32") {
+    options.env = { ...process.env, AI_RULEZ_NPM_PARENT_PID: String(process.pid) };
+  }
+  const child = spawn(binaryPath, args, options);
 
   // Windows process termination bypasses JavaScript signal handlers.
   if (process.platform !== "win32") {

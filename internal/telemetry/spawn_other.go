@@ -1,7 +1,7 @@
-//go:build !unix
+//go:build !unix && !windows
 
 package telemetry
 
 import "os/exec"
 
-func detach(*exec.Cmd) {}
+func detach(*exec.Cmd) bool { return false }
