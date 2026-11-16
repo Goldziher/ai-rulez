@@ -55,7 +55,10 @@ empty of MCP servers. Do a smoke run for each harness setup and archive the exac
 Preserve the harness's discovery defaults, including deferred tool schemas where applicable.
 
 Replay the task prompts verbatim from `tasks.json`. Do not name a skill or tell the agent which discovery interface
-to use. Discovery behavior is part of the measurement. Run 20 fresh pairs per harness, catalog size, layout and
+to use. For `sibling-walk`, start fresh, then send both turns in the same session. In this arm, replace the
+single-shot persistence flags with isolated session storage and resume by session ID for turn two. Verify
+the session ID stays the same and that both worksheet paths were visited. Record metadata counts, model
+usage, and body loads separately at each turn. Discovery behavior is part of the measurement. Run 20 fresh pairs per harness, catalog size, layout and
 applicable task. Alternate arm order per pair and run serially. Apply the same 180-second session timeout and retain
 all attempts. Keep startup-attribution runs separate and use the same no-skill prompt, `Reply exactly READY.`
 Fix the cache policy before running and report cached and uncached tokens separately wherever the provider exposes them.

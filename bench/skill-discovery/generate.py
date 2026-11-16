@@ -79,6 +79,22 @@ def task_manifest() -> dict:
                 "expected_skill": TARGET_NAME,
             },
             {
+                "id": "sibling-walk",
+                "layouts": ["flat", "nested"],
+                "turns": [
+                    {
+                        "prompt": f"{request_code.format(TASK_FILE.as_posix())} {missing}",
+                        "expected_answer": TARGET_MARKER,
+                        "expected_skill": TARGET_NAME,
+                    },
+                    {
+                        "prompt": f"What is the parcel return code for {SIBLING_FILE.as_posix()}? {missing}",
+                        "expected_answer": SIBLING_MARKER,
+                        "expected_skill": "parcel-return-code",
+                    },
+                ],
+            },
+            {
                 "id": "wrong-scope",
                 "layouts": ["nested"],
                 "prompt": f"{request_code.format(SIBLING_FILE.as_posix())} {missing}",
