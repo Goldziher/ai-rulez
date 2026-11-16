@@ -24,11 +24,11 @@ func ParseAge(s string) (time.Duration, error) {
 	if unit == 0 {
 		return 0, oops.Errorf("%q is not an age: use a whole number with h, d or w (for example 7d)", s)
 	}
-	n, err := strconv.ParseUint(s[:len(s)-1], 10, 32)
-	if err != nil {
+	n, err := strconv.ParseInt(s[:len(s)-1], 10, 32)
+	if err != nil || s[0] == '+' || s[0] == '-' {
 		return 0, oops.Errorf("%q is not an age: use a whole number with h, d or w (for example 7d)", s)
 	}
-	if n > uint64(MaxAge/unit) {
+	if time.Duration(n) > MaxAge/unit {
 		return 0, oops.Errorf("%q is longer than the %d day limit", s, int(MaxAge/(24*time.Hour)))
 	}
 	return time.Duration(n) * unit, nil

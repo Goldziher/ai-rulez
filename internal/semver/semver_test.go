@@ -252,6 +252,8 @@ func TestParseAge(t *testing.T) {
 		{in: "7", invalid: true},
 		{in: "d", invalid: true},
 		{in: "-1d", invalid: true},
+		{in: "-0d", invalid: true},
+		{in: "+1d", invalid: true},
 		{in: "1.5d", invalid: true},
 		{in: "7 days", invalid: true},
 		{in: "90m", invalid: true},
