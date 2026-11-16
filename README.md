@@ -190,7 +190,10 @@ each one receives. A tool that is not listed can be added as a [custom preset](h
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/plugin-drift.gif" alt="ai-rulez verify --plugin reporting changed and extra files in a plugin bundle, then generate --plugin restoring it" width="820" />
 </p>
 
-Skills served over MCP cost no context until an assistant asks for them:
+Claude Code and Codex discover native skills through their names and descriptions, then load skill bodies on demand.
+In repositories with nested skill directories, metadata from multiple scopes can accumulate as a session moves between them.
+MCP delivery replaces the served catalog's native metadata with a discovery stub and MCP tool definitions. The assistant
+must search to find those skills. [Compare delivery options](https://goldziher.github.io/ai-rulez/mcp-server/#choosing-the-delivery).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/skills-mcp.gif" alt="ai-rulez tokens before and after serving skills over MCP, then find_skill and load_skill" width="780" />
