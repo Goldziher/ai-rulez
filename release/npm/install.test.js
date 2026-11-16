@@ -380,6 +380,16 @@ test("Windows launcher preserves exit status and stops the process tree with the
     assert.equal(normal.stderr.trim(), 'in "quotes"');
   });
 
+  await t.test("allows an explicitly detached process to outlive normal completion", () => {
+    const result = spawnSync(process.execPath, [launcher, "breakaway"], { encoding: "utf8", timeout: 5000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr);
+    const [, child] = result.stdout.trim().split(/\s+/u).map(Number);
+    assert.ok(Number.isInteger(child) && child > 0);
+    assert.ok(processIsRunning(child));
+    process.kill(child, "SIGKILL");
+  });
+
   await t.test("stops the CLI and grandchild on wrapper-only termination", { timeout: 10_000 }, async (subtest) => {
     const wrapper = spawn(process.execPath, [launcher, "wait"], { stdio: ["ignore", "pipe", "inherit"] });
     subtest.after(() => wrapper.kill("SIGKILL"));
