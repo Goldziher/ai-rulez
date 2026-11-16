@@ -25,6 +25,16 @@ func TestSkillsInstructions(t *testing.T) {
 		text, ok := servingConfig(nil, "claude").SkillsInstructions()
 		assert.True(t, ok)
 		assert.Contains(t, text, "## Unlisted skills")
+		assert.Contains(t, text, "Before answering a repository-specific question")
+		assert.Contains(t, text, "repository-relative `path` when known")
+		assert.Contains(t, text, "before concluding that the repository has no guidance")
+		assert.Contains(t, text, "Build the query from the requested operation")
+		assert.Contains(t, text, "Read a referenced file if needed to resolve ambiguity.")
+		assert.Contains(t, text, "Base the operation on the request and file contents.")
+		assert.Contains(t, text, "covers the specific operation requested at that path")
+		assert.Contains(t, text, "If all matches cover other workflows, continue without a skill.")
+		assert.Contains(t, text, "Skip this lookup for unrelated questions.")
+		assert.Contains(t, text, "`ToolSearch`")
 		assert.Contains(t, text, "`find_skill`")
 		assert.Contains(t, text, "`load_skill`")
 		assert.Contains(t, text, "`ai-rulez` MCP server")
@@ -61,6 +71,30 @@ func TestSkillsInstructions(t *testing.T) {
 		_, ok := servingConfig(nil, "cline").SkillsInstructions()
 		assert.False(t, ok)
 	})
+}
+
+func TestSkillsInstructionsRespectsToolAllowlist(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		tools []string
+		args  []string
+		want  bool
+	}{
+		{"default tools", nil, nil, true},
+		{"config omits load", []string{"find_skill"}, nil, false},
+		{"config includes both", []string{"find_skill", "load_skill"}, nil, true},
+		{"launcher omits find", nil, []string{"--tools=load_skill"}, false},
+		{"launcher overrides config", []string{"find_skill"}, []string{"--tools", "find_skill", "--tools=load_skill"}, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := servingConfig(&MCPConfig{Tools: tt.tools}, "claude")
+			cfg.MCPServers = map[string]*MCPServer{
+				"skills": {Name: "skills", Command: "ai-rulez", Args: append([]string{"mcp", "--serve-skills"}, tt.args...)},
+			}
+			_, shown := cfg.SkillsInstructions()
+			assert.Equal(t, tt.want, shown)
+		})
+	}
 }
 
 func TestValidateSkillsInstructions(t *testing.T) {
