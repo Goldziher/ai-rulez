@@ -28,9 +28,8 @@ func ParseAge(s string) (time.Duration, error) {
 	if err != nil {
 		return 0, oops.Errorf("%q is not an age: use a whole number with h, d or w (for example 7d)", s)
 	}
-	d := time.Duration(n) * unit
-	if d > MaxAge {
+	if n > uint64(MaxAge/unit) {
 		return 0, oops.Errorf("%q is longer than the %d day limit", s, int(MaxAge/(24*time.Hour)))
 	}
-	return d, nil
+	return time.Duration(n) * unit, nil
 }
