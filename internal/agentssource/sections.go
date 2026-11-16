@@ -100,12 +100,23 @@ func updateItem(base, name, content string, split bool, taken map[string]bool, b
 	merged := append(append(append([]string{}, lines[:sec.span.Start]...), body...), lines[sec.span.End:]...)
 	text := strings.Join(merged, "\n")
 	spans, err := importer.H2Spans(text)
-	if err != nil || len(spans) != len(sec.spans) || spans[sec.index].Header != sec.span.Header {
+	if err != nil || !sec.keepsSection(spans, len(body)) {
 		return oops.With("path", sec.path).With("name", name).
-			Hint("Send the whole section: its \"## \" heading line unchanged, then its text, and no other \"## \" heading.").
+			Hint("Send the whole section: its heading unchanged, then its text, and no other level-two heading.").
 			Errorf("the new content would not stay one section of %s", config.AgentsMDFilename)
 	}
 	return replaceUnchanged(sec.path, sec.data, []byte(sec.bom+text), sec.mode, "updated", beforeReplace)
+}
+
+// keepsSection also checks the replacement's boundaries: a Setext underline
+// in the next section can absorb trailing replacement text into its heading.
+func (s *section) keepsSection(spans []importer.H2Span, replacementLines int) bool {
+	if len(spans) != len(s.spans) {
+		return false
+	}
+	want := s.span
+	want.End = want.Start + replacementLines
+	return spans[s.index] == want
 }
 
 // newSectionLines splits the new content of a section into the file lines that

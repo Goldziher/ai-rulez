@@ -3,7 +3,13 @@ package importer
 import (
 	"errors"
 	"io/fs"
+	"slices"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	mdtext "github.com/yuin/goldmark/text"
 )
 
 // agentsMDFile is the root instruction file the "agents" source reads.
@@ -42,56 +48,98 @@ func ReadAgentsMD(fsys fs.FS, opt Options) AgentsMD {
 }
 
 // H2Span is one section of a Markdown text: the lines [Start, End) of the text
-// split at "\n". A section starts at its "## " heading; the text before the
-// first heading is a section too (Header ""), unless it is blank.
+// split at "\n". A section starts at a top-level H2; nonblank text before the
+// first H2 is a section too (Header "").
 type H2Span struct {
 	Header     string
 	Start, End int
 }
 
 // H2Spans locates the sections ReadAgentsMD yields with SplitHeadings, in the
-// same order, as line ranges of the text as written. A heading inside a code
-// fence does not start a section. A leading BOM is ignored (the read strips
-// it), CRLF lines are as good as LF ones, and a bare CR, which the read treats
-// as a line break but the line ranges cannot address, is an error.
+// same order, as line ranges of the text as written. A leading BOM is ignored,
+// CRLF lines are accepted, and a bare CR is an error because the line ranges
+// cannot address it.
 func H2Spans(text string) ([]H2Span, error) {
 	text = strings.TrimPrefix(text, "\ufeff")
 	if strings.Contains(strings.ReplaceAll(text, "\r\n", ""), "\r") {
 		return nil, bareCRError()
 	}
-	lines := strings.Split(text, "\n")
 	var spans []H2Span
-	cur := H2Span{}
-	blank := true
-	var fenceChar byte
-	fenceLen := 0
-	flush := func(end int) {
-		cur.End = end
-		if cur.Header != "" || !blank {
-			spans = append(spans, cur)
+	for _, section := range locateH2Sections(text) {
+		spans = append(spans, section.H2Span)
+	}
+	return spans, nil
+}
+
+type locatedH2Section struct {
+	H2Span
+	bodyStart int // line after the heading; equal to Start for a preamble
+}
+
+func locateH2Sections(text string) []locatedH2Section {
+	lines := strings.Split(text, "\n")
+	starts := make([]int, len(lines))
+	for i := 1; i < len(lines); i++ {
+		starts[i] = starts[i-1] + len(lines[i-1]) + 1
+	}
+	offset := 0
+	if first, ok := frontmatter.ClosingLine(text); ok {
+		if first < len(starts) {
+			offset = starts[first]
+		} else {
+			offset = len(text)
 		}
 	}
-	for i, line := range lines {
-		if ch, n, rest, ok := fenceLine(line); ok {
-			switch {
-			case fenceLen == 0:
-				fenceChar, fenceLen = ch, n
-			case ch == fenceChar && n >= fenceLen && strings.TrimSpace(rest) == "":
-				fenceLen = 0
-			}
-		}
-		if fenceLen == 0 && strings.HasPrefix(line, "## ") {
-			flush(i)
-			cur = H2Span{Header: strings.TrimSpace(strings.TrimPrefix(line, "## ")), Start: i}
-			blank = true
+	source := []byte(text[offset:])
+	doc := goldmark.DefaultParser().Parse(mdtext.NewReader(source))
+	var sections []locatedH2Section
+	for child := doc.FirstChild(); child != nil; child = child.NextSibling() {
+		heading, ok := child.(*ast.Heading)
+		if !ok || heading.Level != 2 {
 			continue
 		}
-		if strings.TrimSpace(line) != "" {
-			blank = false
+		start := sourceLine(starts, heading.Pos()+offset)
+		if len(sections) == 0 && strings.TrimSpace(text[:starts[start]]) != "" {
+			sections = append(sections, locatedH2Section{H2Span: H2Span{End: start}})
 		}
+		if len(sections) > 0 {
+			sections[len(sections)-1].End = start
+		}
+		header, bodyStart := headingDetails(heading, source, offset, starts, lines[start], start)
+		sections = append(sections, locatedH2Section{H2Span{Header: header, Start: start}, bodyStart})
 	}
-	flush(len(lines))
-	return spans, nil
+	if len(sections) > 0 {
+		sections[len(sections)-1].End = len(lines)
+	} else if strings.TrimSpace(text) != "" {
+		sections = append(sections, locatedH2Section{H2Span: H2Span{End: len(lines)}})
+	}
+	return sections
+}
+
+func sourceLine(starts []int, offset int) int {
+	i, exact := slices.BinarySearch(starts, offset)
+	if exact {
+		return i
+	}
+	return i - 1
+}
+
+func headingDetails(heading *ast.Heading, source []byte, offset int, starts []int, line string, start int) (string, int) {
+	parts := make([]string, 0, heading.Lines().Len())
+	bodyStart := start + 1
+	for i := 0; i < heading.Lines().Len(); i++ {
+		segment := heading.Lines().At(i)
+		parts = append(parts, strings.TrimSpace(string(segment.Value(source))))
+		bodyStart = sourceLine(starts, segment.Start+offset) + 1
+	}
+	// A Setext H2's AST stores its title lines but leaves out the underline.
+	// An ATX H2 begins with two hashes followed by whitespace or end of line.
+	line = strings.TrimLeft(line, " ")
+	after, atx := strings.CutPrefix(line, "##")
+	if !atx || (after != "" && !strings.ContainsRune(" \t\r\n", rune(after[0]))) {
+		bodyStart++
+	}
+	return strings.Join(parts, " "), bodyStart
 }
 
 func bareCRError() error {
