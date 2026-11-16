@@ -8,6 +8,13 @@ const { getPlatform, getBinaryName, resolveBundledBinary, isMusl } = require("./
 function runBinary(binaryPath, args) {
   const child = spawn(binaryPath, args, { stdio: "inherit" });
 
+  // Windows process termination bypasses JavaScript signal handlers.
+  if (process.platform !== "win32") {
+    for (const signal of ["SIGHUP", "SIGINT", "SIGTERM"]) {
+      process.on(signal, () => child.kill(signal));
+    }
+  }
+
   child.on("error", (error) => {
     console.error(`Failed to run ai-rulez: ${error.message}`);
     process.exit(1);
@@ -53,7 +60,7 @@ async function main() {
     return;
   }
 
-  console.log(
+  console.error(
     "First run detected - downloading ai-rulez binary...\n   This will only happen once and takes a few seconds.\n",
   );
   const { install } = require("./install");

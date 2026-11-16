@@ -5,6 +5,7 @@ package pathglob
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // Matcher matches slash-separated repo-relative paths against one glob.
@@ -25,7 +26,11 @@ func New(pattern string) (Matcher, bool) {
 		p += "**"
 	}
 	var alts []string
-	for _, expanded := range ExpandBraces(p) {
+	expandedPatterns := ExpandBraces(p)
+	if len(expandedPatterns) == 0 {
+		return Matcher{}, false
+	}
+	for _, expanded := range expandedPatterns {
 		alts = append(alts, globBody(expanded))
 	}
 	re, err := regexp.Compile("^(?:" + strings.Join(alts, "|") + ")$")
@@ -98,17 +103,33 @@ func globBody(p string) string {
 			sb.WriteString("[" + strings.ReplaceAll(class, `\`, `\\`) + "]")
 			i += end
 		default:
-			sb.WriteString(regexp.QuoteMeta(string(c)))
+			_, width := utf8.DecodeRuneInString(p[i:])
+			sb.WriteString(regexp.QuoteMeta(p[i : i+width]))
+			i += width - 1
 		}
 	}
 	sb.WriteString("(?:/.*)?")
 	return sb.String()
 }
 
-// ExpandBraces expands the first {a,b} group recursively.
+const (
+	maxBraceDepth      = 32
+	maxBraceExpansions = 1024
+)
+
+// ExpandBraces expands {a,b} alternatives. It returns nil if the expansion exceeds its limits.
 func ExpandBraces(p string) []string {
+	remaining := maxBraceExpansions
+	return expandBraces(p, &remaining, 0)
+}
+
+func expandBraces(p string, remaining *int, level int) []string {
+	if *remaining == 0 || level > maxBraceDepth {
+		return nil
+	}
 	open := strings.IndexByte(p, '{')
 	if open < 0 {
+		*remaining--
 		return []string{p}
 	}
 	depth := 0
@@ -133,13 +154,18 @@ func ExpandBraces(p string) []string {
 		}
 	}
 	if closeIdx < 0 {
+		*remaining--
 		return []string{p}
 	}
 	prefix, suffix := p[:open], p[closeIdx+1:]
 	var out []string
 	start := open + 1
 	for _, cut := range append(cuts, closeIdx) {
-		for _, tail := range ExpandBraces(p[start:cut] + suffix) {
+		tails := expandBraces(p[start:cut]+suffix, remaining, level+1)
+		if len(tails) == 0 {
+			return nil
+		}
+		for _, tail := range tails {
 			out = append(out, prefix+tail)
 		}
 		start = cut + 1

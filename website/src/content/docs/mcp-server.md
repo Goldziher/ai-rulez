@@ -675,9 +675,14 @@ every request. Set `[mcp] authoring = true` to add the read-only authoring tools
 
 ## Dynamic skill loading
 
-With static generation every skill's name and description is listed in every session; measure what that costs with
-`ai-rulez tokens`. Dynamic skill loading serves the skills you choose over MCP instead, so the agent pays for one only when it
-asks:
+Claude Code and Codex use progressive disclosure for native skills. They discover skills from metadata such as the
+name and description, then load the body when a skill is used. In a monorepo, metadata can accumulate as a session moves
+through nested scopes. Which skills are visible depends on the harness, version, directory layout and metadata budget.
+Use [`ai-rulez exposure`](/ai-rulez/exposure/) to estimate startup exposure for a supported harness.
+
+MCP delivery keeps served skill metadata out of the native catalog on supported harnesses. It adds the discovery stub
+and MCP tool definitions, then incurs search and load costs when the assistant uses the tools. A skill can be missed if
+the assistant skips discovery.
 
 1. **`delivery`** decides per skill: written to the harness skill trees (`static`), served over MCP (`served`), or
    both.

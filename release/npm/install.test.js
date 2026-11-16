@@ -3,8 +3,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { spawn, spawnSync } = require("node:child_process");
+const { once } = require("node:events");
 
 const {
+  getPlatform,
   getBinaryName,
   bundledPackageName,
   resolveBundledBinary,
@@ -271,3 +274,63 @@ test("isMusl falls back to the Alpine marker when no report is available", () =>
 test("isMusl is false off linux", () => {
   assert.equal(isMusl({ platform: "darwin", report: () => ({ header: {} }), exists: () => true }), false);
 });
+
+function launcherFixture(t, binaryName, source) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-rulez-launcher-test-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  for (const file of ["ai-rulez.js", "install.js"]) {
+    fs.copyFileSync(path.join(__dirname, file), path.join(dir, file));
+  }
+  fs.mkdirSync(path.join(dir, "bin"));
+  const binaryPath = path.join(dir, "bin", binaryName);
+  fs.writeFileSync(binaryPath, `#!${process.execPath}\n${source}\n`, { mode: 0o755 });
+  return path.join(dir, "ai-rulez.js");
+}
+
+test("cold launcher reserves stdout for the native command", { skip: process.platform === "win32" }, (t) => {
+  const { os: platform, arch } = getPlatform();
+  const [candidate] = getPackagedBinaryCandidates(platform, arch);
+  const launcher = launcherFixture(t, candidate, 'console.log(JSON.stringify({ result: "ok" }));');
+  const result = spawnSync(process.execPath, [launcher], { encoding: "utf8", timeout: 5000 });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, '{"result":"ok"}\n');
+  assert.match(result.stderr, /First run detected/u);
+  assert.match(result.stderr, /Using packaged binary/u);
+});
+
+for (const [signal, handler, expectedCode] of [
+  ["SIGHUP", "", 128 + os.constants.signals.SIGHUP],
+  ["SIGTERM", "", 128 + os.constants.signals.SIGTERM],
+  ["SIGINT", 'process.on("SIGINT", () => process.exit(23));', 23],
+]) {
+  test(
+    `launcher forwards wrapper-only ${signal} and preserves child status`,
+    {
+      skip: process.platform === "win32",
+      timeout: 7000,
+    },
+    async (t) => {
+      const launcher = launcherFixture(
+        t,
+        getBinaryName(process.platform),
+        `
+      ${handler}
+      console.log(process.pid);
+      setTimeout(() => process.exit(0), 3000);
+    `,
+      );
+      const wrapper = spawn(process.execPath, [launcher], { stdio: ["ignore", "pipe", "inherit"] });
+      t.after(() => wrapper.kill("SIGKILL"));
+      const closed = once(wrapper, "close");
+      const [chunk] = await once(wrapper.stdout, "data");
+      const pid = Number(chunk.toString().trim());
+      assert.ok(Number.isInteger(pid) && pid > 0);
+      assert.equal(wrapper.kill(signal), true);
+
+      assert.deepEqual(await closed, [expectedCode, null]);
+      assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+    },
+  );
+}

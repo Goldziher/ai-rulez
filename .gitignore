@@ -192,3 +192,11 @@ poly.local.toml
 # --- Docs site --- #
 /website/dist/
 /website/.astro/
+
+# Legacy local build outputs
+/ai_rules
+/airules-linux-arm64
+/build/npm/*.tgz
+/release-test/
+/testing/e2e/cli/ai-rulez-e2e-test
+/testing/e2e/testutil/ai-rulez-test

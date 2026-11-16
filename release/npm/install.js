@@ -183,7 +183,7 @@ function usePackagedBinaryIfAvailable(os, arch, binaryName, binDir) {
       fs.chmodSync(binaryPath, 0o755);
     }
 
-    console.log(`Using packaged binary for ${os}/${arch} (${candidateName})`);
+    console.error(`Using packaged binary for ${os}/${arch} (${candidateName})`);
     return true;
   }
 
@@ -270,7 +270,7 @@ async function downloadBinary(url, dest, retryCount = 0) {
         const error = new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`);
 
         if (retryCount < MAX_RETRIES) {
-          console.log(
+          console.error(
             `Download failed, retrying in ${RETRY_DELAY / 1000}s... (${retryCount + 1}/${MAX_RETRIES})`,
           );
           setTimeout(() => {
@@ -301,7 +301,7 @@ async function downloadBinary(url, dest, retryCount = 0) {
           reject(new Error("Downloaded file is empty"));
           return;
         }
-        console.log(`Downloaded ${downloadedBytes} bytes`);
+        console.error(`Downloaded ${downloadedBytes} bytes`);
         resolve();
       });
 
@@ -322,7 +322,7 @@ async function downloadBinary(url, dest, retryCount = 0) {
       } catch {}
 
       if (retryCount < MAX_RETRIES) {
-        console.log(
+        console.error(
           `Download timeout, retrying in ${RETRY_DELAY / 1000}s... (${retryCount + 1}/${MAX_RETRIES})`,
         );
         setTimeout(() => {
@@ -343,7 +343,7 @@ async function downloadBinary(url, dest, retryCount = 0) {
       } catch {}
 
       if (retryCount < MAX_RETRIES) {
-        console.log(
+        console.error(
           `Download error, retrying in ${RETRY_DELAY / 1000}s... (${retryCount + 1}/${MAX_RETRIES})`,
         );
         setTimeout(() => {
@@ -459,11 +459,11 @@ async function install(isPostInstall = false) {
     const downloadUrl = `https://github.com/${REPO_NAME}/releases/download/v${version}/${archiveName}`;
     const checksumUrl = `https://github.com/${REPO_NAME}/releases/download/v${version}/checksums.txt`;
 
-    console.log(`Downloading ai-rulez ${version} for ${os}/${arch}...`);
-    console.log(`URL: ${downloadUrl}`);
+    console.error(`Downloading ai-rulez ${version} for ${os}/${arch}...`);
+    console.error(`URL: ${downloadUrl}`);
     const archivePath = path.join(__dirname, archiveName);
 
-    console.log("Downloading checksums...");
+    console.error("Downloading checksums...");
     const checksumPath = path.join(__dirname, "checksums.txt");
     try {
       await downloadBinary(checksumUrl, checksumPath);
@@ -473,15 +473,15 @@ async function install(isPostInstall = false) {
 
     await downloadBinary(downloadUrl, archivePath);
 
-    console.log("Verifying checksum...");
+    console.error("Verifying checksum...");
     try {
       await verifyArchiveChecksum(archivePath, checksumPath, archiveName);
     } finally {
       fs.rmSync(checksumPath, { force: true });
     }
-    console.log("✓ Checksum verified");
+    console.error("✓ Checksum verified");
 
-    console.log("Extracting binary...");
+    console.error("Extracting binary...");
 
     const tempExtractDir = path.join(__dirname, ".extract-temp");
     if (fs.existsSync(tempExtractDir)) {
@@ -547,7 +547,7 @@ async function install(isPostInstall = false) {
 
     fs.unlinkSync(archivePath);
 
-    console.log(`✅ ai-rulez ${version} installed successfully for ${os}/${arch}!`);
+    console.error(`✅ ai-rulez ${version} installed successfully for ${os}/${arch}!`);
 
     if (DEBUG) {
       console.error(`[install.js] Installation complete`);

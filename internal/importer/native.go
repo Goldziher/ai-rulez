@@ -240,16 +240,13 @@ func (n nativeImporter) importRootFile(p *Plan, r *reader, file string, opt Opti
 	}
 	for _, sec := range splitH2(text) {
 		secName := name
-		if sec.header != "" {
+		if sec.headed {
 			hdr, _ := safeName(sec.header)
 			secName = name + "-" + hdr
 		}
 		body := sec.body
-		if sec.header != "" {
-			body = "## " + sec.header + "\n\n" + sec.body
-		}
-		if strings.TrimSpace(sec.body) == "" && sec.header == "" {
-			continue
+		if sec.headed {
+			body = strings.TrimRight("## "+sec.header, " ") + "\n\n" + sec.body
 		}
 		p.Items = append(p.Items, Item{Kind: KindContext, Name: secName, Sources: []string{file}, Main: ensureNewline(body)})
 	}
@@ -267,61 +264,19 @@ func (nativeImporter) nestRootKeys(p *Plan, file, text string) string {
 	return out
 }
 
-type h2Section struct{ header, body string }
-
-// splitH2 splits Markdown at "## " headings outside code fences. The text
-// before the first heading is its own section with an empty header. A fence
-// opens with three or more backticks or tildes (indented at most three spaces)
-// and closes only with the same character, at least as long, and no info string.
-func splitH2(text string) []h2Section {
-	var out []h2Section
-	cur := h2Section{}
-	var b strings.Builder
-	var fenceChar byte
-	fenceLen := 0
-	flush := func() {
-		cur.body = strings.TrimSpace(b.String())
-		b.Reset()
-		if cur.header != "" || cur.body != "" {
-			out = append(out, cur)
-		}
-	}
-	for _, line := range strings.Split(text, "\n") {
-		if ch, n, rest, ok := fenceLine(line); ok {
-			switch {
-			case fenceLen == 0:
-				fenceChar, fenceLen = ch, n
-			case ch == fenceChar && n >= fenceLen && strings.TrimSpace(rest) == "":
-				fenceLen = 0
-			}
-		}
-		if fenceLen == 0 && strings.HasPrefix(line, "## ") {
-			flush()
-			cur = h2Section{header: strings.TrimSpace(strings.TrimPrefix(line, "## "))}
-			continue
-		}
-		b.WriteString(line)
-		b.WriteString("\n")
-	}
-	flush()
-	return out
+type h2Section struct {
+	header, body string
+	headed       bool
 }
 
-// fenceLine parses a code fence marker line: its character, length and the text
-// after the run of marker characters.
-func fenceLine(line string) (ch byte, n int, rest string, ok bool) {
-	trimmed := strings.TrimLeft(line, " ")
-	if len(line)-len(trimmed) > 3 || trimmed == "" || (trimmed[0] != '`' && trimmed[0] != '~') {
-		return 0, 0, "", false
+func splitH2(text string) []h2Section {
+	var out []h2Section
+	lines := strings.Split(text, "\n")
+	for _, section := range locateH2Sections(text) {
+		body := strings.TrimSpace(strings.Join(lines[section.bodyStart:section.End], "\n"))
+		out = append(out, h2Section{section.Header, body, section.bodyStart > section.Start})
 	}
-	ch = trimmed[0]
-	for n < len(trimmed) && trimmed[n] == ch {
-		n++
-	}
-	if n < 3 {
-		return 0, 0, "", false
-	}
-	return ch, n, trimmed[n:], true
+	return out
 }
 
 func normalizeText(s string) string {
