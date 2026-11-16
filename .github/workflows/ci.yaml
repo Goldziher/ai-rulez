@@ -26,6 +26,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Reject tracked release artifacts
+        shell: bash
+        run: |
+          artifacts=$(git ls-files -- bin/ dist/ build/npm/ release-test/ \
+            ai-rulez ai-rulez-test ai_rules airules-linux-arm64 \
+            testing/e2e/cli/ai-rulez-e2e-test testing/e2e/testutil/ai-rulez-test)
+          if [[ -n "$artifacts" ]]; then
+            printf 'Remove generated release artifacts from Git:\n%s\n' "$artifacts"
+            exit 1
+          fi
+
       - name: Check mise.toml against the xberg-io/toolchains baseline
         uses: xberg-io/actions/check-toolchain@v1
 
