@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.13.4] - 2026-11-16
+
+### Fixed
+
+- Give agents a concrete trigger to look up served skills before proceeding without repository guidance.
+- Stop the Windows CLI process tree when the npm wrapper is terminated.
+
+### Documentation
+
+- Clarify when Claude Code searches for MCP-served skills and publish the discovery follow-up benchmark.
+
 ## [5.13.3] - 2026-11-16
 
 ### Added

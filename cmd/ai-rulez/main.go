@@ -10,7 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
-var version = "5.13.3"
+var version = "5.13.4"
 
 func main() {
 	os.Exit(run())
