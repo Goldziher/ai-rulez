@@ -71,8 +71,9 @@ were left at their defaults. Separate variants overlapped on one macOS arm64 hos
 It provides no guarantee for other prompts, models, or catalogs.
 
 The released binary was AI-Rulez v5.13.3. Both revision binaries were built from base commit
-`0bcd71cc7f42db57f07793c79aad9ddc3982faec` with discovery instruction changes. The final source is
-`4dc77ea3`. The initial revision was an intermediate build used to diagnose the resumed-turn failure.
+`0bcd71cc7f42db57f07793c79aad9ddc3982faec` with discovery instruction changes. The final
+discovery instructions ship in v5.13.4. Use that release binary to reproduce the final guidance. The initial
+revision was an intermediate build used to diagnose the resumed-turn failure.
 
 | Binary | SHA-256 |
 | --- | --- |
