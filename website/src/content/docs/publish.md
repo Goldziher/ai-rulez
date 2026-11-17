@@ -408,6 +408,78 @@ An OCI reference is pulled into a temporary directory first; `verify` prints the
 you named a tag. Each file, and the archive's total uncompressed size, is capped at 512 MiB. Exit status: 0 verified,
 1 unreadable, 2 mismatch.
 
+### Install a verified release
+
+The steps above verify a release the publisher built. This is the consumer side: what to download, how to check it,
+and where ai-rulez's job ends and the runtime installer's begins. The recipe uses Claude Code, one of the default
+runtimes; the verification half is identical for every runtime.
+
+**1. Download the release artifacts.** From the release page (`gh release download v1.2.0 --repo acme/acme-tools`
+fetches them all): the archive `acme-tools-1.2.0.tar.gz`, `acme-tools-1.2.0.manifest.json`, `ai-rulez.lock` and
+`SHA256SUMS` — into one directory, nothing else.
+
+**2. Verify.**
+
+```sh
+ai-rulez publish verify ./acme-tools-1.2.0
+# verified acme-tools 1.2.0: 4 files match SHA256SUMS, the manifest and the archive (signature: none)
+```
+
+Every `SHA256SUMS` entry is checked, no unlisted file may be present, the manifest is checked against the archive
+(every file, size and digest), and the archive's own runtime manifest must carry the same `name` and `version`.
+
+**What failure looks like.** A directory that cannot be read at all exits 1. A tampered artifact — a checksum that
+no longer matches `SHA256SUMS`, an archive whose bytes differ from the manifest, a manifest that drifted from the
+lock, a file that is missing or one that was added — exits 2 with `AR9N5` and names the file. Do not install a
+release that fails any of these.
+
+**3. Authenticity, when it matters.** The check above proves the files match each other; it cannot prove who
+published them. `SHA256SUMS` downloaded from the same release only detects corruption in transit. For authenticity,
+the publisher signs the release and ships `<name>-<version>.tar.gz.sigstore.json` alongside the other artifacts.
+Download it too, then verify against the publisher's public key — pinned out-of-band (the publisher's repository
+`main` branch, a keyed cosign setup, or a release you already trust), never from the release page itself:
+
+```sh
+ai-rulez publish verify ./acme-tools-1.2.0 --key cosign.pub
+# verified acme-tools 1.2.0: ... (signature: verified)
+# signer: key <key id>
+```
+
+Naming a key implies `--require-signature`: an unsigned release, a stripped signature bundle, or one that does not
+verify against that key is a hard failure (exit 2, `AR9N7`). Without `--key` a signed release is reported as
+`signature: unverified` and still exits 0 — the signature is present but nobody vouched for it. Decide yourself
+whether that is acceptable for the plugin you are about to run.
+
+**4. Install.** ai-rulez stops here: it verifies, it does not install. This recipe assumes the
+publisher ships a marketplace manifest — the archive carries `.claude-plugin/marketplace.json`
+when the `[plugin]` block sets `marketplace = true` (or declares a `[marketplace]`); the
+manifest's file list names it, so you can check before you rely on it. Extract the verified
+archive into a directory and register that directory, so the bytes the runtime reads are the
+bytes you verified:
+
+```sh
+mkdir -p vendor/acme-market
+tar -xzf acme-tools-1.2.0.tar.gz -C vendor/acme-market
+claude plugin marketplace add ./vendor/acme-market
+claude plugin install acme-tools@acme-market
+```
+
+The names come from the bundle: `acme-tools` is the plugin name (the `[plugin]` block, echoed by
+the release manifest), `acme-market` is the marketplace `name` in the extracted
+`.claude-plugin/marketplace.json`, and the manifest's entry for the plugin points at `./`. The
+`marketplace add` step registers the local directory; `plugin install` copies the verified
+plugin into Claude Code and manages updates from there — that copy is the runtime installer's,
+not ai-rulez's.
+
+Do **not** register the GitHub repository as a fallback: `claude plugin marketplace add
+acme/acme-tools` fetches the repository's current `main` branch, which is different bytes from
+the archive you just verified. If a release ships no marketplace manifest, install the verified
+bundle as a local source instead: extract it, then import it with ai-rulez's own
+[installed plugins](/ai-rulez/installed-plugins/) — `ai-rulez marketplace add acme --source
+./vendor/acme-market` and `ai-rulez plugin install acme-tools --from acme`, or an
+`[[installed_plugins]]` entry in your project. Re-run steps 1–2 with every new release before
+updating.
+
 ## Exit codes and errors
 
 `publish` exits 0 when done, 1 when the run could not complete, and 2 when a gate failed. `--format json` prints the
