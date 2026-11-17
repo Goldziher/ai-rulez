@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -281,7 +282,7 @@ func TestSetupRefusesAnUnignoredCopyTarget(t *testing.T) {
 func TestSetupRefusesASymlinkedExtra(t *testing.T) {
 	f := newFixture(t)
 	write(t, filepath.Join(f.src, "real.md"), "# real\n")
-	require.NoError(t, os.Symlink("real.md", filepath.Join(f.src, "link.local.md")))
+	testutil.SymlinkOrSkip(t, "real.md", filepath.Join(f.src, "link.local.md"))
 	// The managed block ignores the link's path, but a symlink is never carried.
 	gitRun(t, f.linked, "config", "core.symlinks", "true")
 
