@@ -149,5 +149,17 @@ func worktreeGenerateStep(ctx context.Context, projectDir string, dryRun bool) (
 	if r.Status != runner.StatusOK {
 		return nil, fmt.Errorf("`ai-rulez generate` failed in the destination (%s, exit %d): %s", r.Status, r.ExitCode, improve.Sanitize(string(r.Stderr)+string(r.Stdout), 600))
 	}
-	return strings.Split(strings.TrimRight(string(r.Stdout), "\n"), "\n"), nil
+	return nonEmptyLines(string(r.Stdout)), nil
+}
+
+// nonEmptyLines splits stdout into its non-blank lines: generate's progress
+// lines go to stderr, and an empty stdout must not yield one empty plan line.
+func nonEmptyLines(out string) []string {
+	var lines []string
+	for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		if strings.TrimSpace(line) != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }
