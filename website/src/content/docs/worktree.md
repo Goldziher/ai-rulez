@@ -74,9 +74,8 @@ want; nothing else travels.
 ## JSON output
 
 `--format json` prints one document following
-[`schema/worktree-provision.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/worktree-provision.schema.json):
-what was carried (`copies`), the generate step's lines (`plan`), and `conflicts` when the run
-refused.
+`schema/worktree-provision.schema.json` (in this repository, published with the release): what was
+carried (`copies`), the generate step's lines (`plan`), and `conflicts` when the run refused.
 
 ## Agents
 
