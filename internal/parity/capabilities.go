@@ -107,9 +107,6 @@ func authoringCapabilities() []Capability {
 			ID: "worktree-setup", Kind: Paired, CLI: []string{"worktree setup"}, Tool: "worktree_setup",
 			Flags: []FlagPair{{Flag: "dry-run", Arg: "dry_run"}, {Flag: "copy-local", Arg: "copy_local"},
 				{Flag: "copy-extra", Arg: "copy_extra"}},
-			CLIFlags: []Exclusion{
-				{Names: []string{"format"}, Reason: "the tool result is the JSON document"},
-			},
 			ToolArgs: []Exclusion{
 				{Names: []string{"destination"}, Reason: "the CLI takes the destination as a positional argument"},
 			},
