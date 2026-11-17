@@ -193,9 +193,9 @@ func TestTokenReport_RootSectionsSplitPerRuleAndContext(t *testing.T) {
 	assert.Positive(t, findChild(t, context, "layout").Tokens)
 
 	assert.Equal(t,
-		[]string{"header", "title", "description", "rules_inline", "context_inline",
+		[]string{"header", "title", "description", "rules_inline", "context_inline", "skills_instructions",
 			"provenance hashes and section boundaries"},
-		childLabels(root), "children follow the DSL section order so the report reads like the file")
+		childLabels(root), "children follow the DSL section order so the report reads like the file; the last section carries the served-skills and worktree guidance")
 }
 
 // TestTokenReport_DefaultSplitMovesRulesOutOfRootFile checks that with the
@@ -229,8 +229,10 @@ func TestTokenReport_AgentsRosterIsItsOwnSection(t *testing.T) {
 	assert.Equal(t, BucketAlways, roster.Bucket)
 
 	labels := childLabels(root)
-	assert.Equal(t, "agents_delegation", labels[len(labels)-2],
-		"the roster renders after rules and context, ahead of the provenance residual")
+	assert.Equal(t, "agents_delegation", labels[len(labels)-3],
+		"the roster renders after rules and context, ahead of the guidance section and the provenance residual")
+	assert.Equal(t, "skills_instructions", labels[len(labels)-2],
+		"the last content section carries the served-skills and worktree guidance")
 }
 
 // TestAgentsRosterExclusion proves that the "## Agents" roster can already be

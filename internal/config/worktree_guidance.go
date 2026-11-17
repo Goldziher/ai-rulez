@@ -11,10 +11,12 @@ import (
 // linked worktree, or the create command when the agent owns creation.
 // Carrying machine-local files is explicit consent, never a default.
 //
-// The instruction is independent of served skills and identical across root
-// files several presets write. When the configuration's server registers the
-// worktree_setup tool, the wording prefers the tool at runtime and names the
-// CLI command as the fallback; otherwise it is CLI-only.
+// The instruction is independent of served skills and of the preset list, and
+// identical across root files several presets write. When the configuration's
+// server registers the worktree_setup tool, the wording prefers the tool at
+// runtime ("when it is exposed") and names the CLI command as the fallback; a
+// runtime that cannot call MCP reads the fallback. Otherwise the wording is
+// CLI-only.
 func (c *Config) WorktreeGuidance() (text string, show bool) {
 	if c == nil {
 		return "", false
@@ -23,7 +25,7 @@ func (c *Config) WorktreeGuidance() (text string, show bool) {
 		"After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, " +
 		"or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. " +
 		"Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default."
-	if c.HasSelfServer() && c.hasMCPPreset() && c.selfServerExposesWorktreeSetup() {
+	if c.HasSelfServer() && c.selfServerExposesWorktreeSetup() {
 		base += fmt.Sprintf(" At runtime prefer the `worktree_setup` tool on the %#q MCP server when it is exposed; the CLI command is the fallback.", c.skillsServerName())
 	}
 	return base, true

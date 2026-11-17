@@ -39,6 +39,8 @@ var directGitTestAllowList = map[string]bool{
 	"internal/includes/skill_source_test.go":            true,
 	"internal/lint/lint_test.go":                        true,
 	"internal/mcp/serve_build_test.go":                  true,
+	"internal/mcp/tools_worktree_test.go":               true,
+	"internal/worktreeprovision/provision_test.go":      true,
 	"internal/okfbridge/source_test.go":                 true,
 }
 

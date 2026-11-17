@@ -17,7 +17,7 @@ func TestWorktreeGuidanceToolGate(t *testing.T) {
 		namesTools bool
 	}{
 		{"default server exposes it", nil, true, true},
-		{"no mcp preset, CLI wording", nil, false, false},
+		{"no mcp preset: the sentence self-qualifies, so the wording stays", nil, false, true},
 		{"read-only server does not", &MCPConfig{ReadOnly: &on}, true, false},
 		{"allowlist without the tool does not", &MCPConfig{Tools: []string{"read_rule"}}, true, false},
 		{"allowlist with the tool does", &MCPConfig{Tools: []string{"read_rule", "worktree_setup"}}, true, true},

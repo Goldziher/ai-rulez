@@ -6,22 +6,22 @@
     "estimate": false
   },
   "headline_preset": "claude",
-  "headline_always": 569,
+  "headline_always": 676,
   "headline_listing": 203,
-  "headline_always_legacy": 387,
-  "always_loaded": 569,
+  "headline_always_legacy": 494,
+  "always_loaded": 676,
   "listing_entry_overhead": 27,
   "runtimes": [
     {
       "preset": "claude",
       "files": 10,
-      "always": 569,
+      "always": 676,
       "conditional": 0,
       "on_demand": 1120,
       "unmodeled": 369,
       "listing": 203,
       "listed_items": 5,
-      "always_legacy": 387,
+      "always_legacy": 494,
       "conditional_legacy": 47,
       "detailed": true,
       "root_files": 1,
@@ -29,7 +29,7 @@
         {
           "label": "CLAUDE.md",
           "bucket": "always",
-          "tokens": 218,
+          "tokens": 325,
           "artifacts": 1,
           "children": [
             {
@@ -65,9 +65,15 @@
               ]
             },
             {
+              "label": "skills_instructions",
+              "bucket": "always",
+              "tokens": 114,
+              "artifacts": 1
+            },
+            {
               "label": "provenance hashes and section boundaries",
               "bucket": "always",
-              "tokens": 99,
+              "tokens": 92,
               "artifacts": 1
             }
           ]
@@ -232,7 +238,7 @@
   "domains": [
     {
       "name": "(root)",
-      "always": 339,
+      "always": 453,
       "conditional": 0,
       "on_demand": 394
     },
