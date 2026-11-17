@@ -134,7 +134,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/agents/ dir 0755
 .github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-.github/copilot-instructions.md file 0644 627 5be176ce0987ac1f8bdfaabe285222fac4fdd0e6e3c81bca9fbb2dd0bb4eedb0
+.github/copilot-instructions.md file 0644 1101 5fff3484a9d7c517537c30fcdc746a9f74513e8e0f9dd297b56cf065a933453a
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755
@@ -175,9 +175,9 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .vscode/ dir 0755
 .vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
-AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
-GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
+AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
+GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
 opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
@@ -191,15 +191,16 @@ Token surface — profile "default"
 Tokenizer: cl100k_base (approximate)
 
 runtime claude — 15 files
-  always loaded                                                 483
-    CLAUDE.md                                                   154
+  always loaded                                                 605
+    CLAUDE.md                                                   276
       header                                                     85
       title                                                       3
       description                                                 4
       context_inline (2)                                         14
         overview                                                  7
         architecture                                              7
-      provenance hashes and section boundaries                   48
+      skills_instructions                                       114
+      provenance hashes and section boundaries                   56
     provider rule files (4)                                     140
     skill listing (2)                                            65
       names (2)                                                   4
@@ -228,10 +229,10 @@ runtime claude — 15 files
     sidecar documents                                           617
 
 runtime codex — 10 files
-  always loaded                                                 475
-    AGENTS.md                                                   225
-      header                                                    183
-      provenance hashes and section boundaries                   42
+  always loaded                                                 591
+    AGENTS.md                                                   341
+      header                                                    297
+      provenance hashes and section boundaries                   44
     provider rule files                                          83
     skill listing (4)                                           167
       names (4)                                                   6
@@ -246,10 +247,10 @@ runtime codex — 10 files
     sidecar documents (2)                                       280
 
 runtime gemini — 4 files
-  always loaded                                                 290
-    GEMINI.md                                                   225
-      header                                                    183
-      provenance hashes and section boundaries                   42
+  always loaded                                                 406
+    GEMINI.md                                                   341
+      header                                                    297
+      provenance hashes and section boundaries                   44
     skill listing (2)                                            65
       names (2)                                                   4
       descriptions (2)                                            7
@@ -291,15 +292,15 @@ runtime copilot — 14 files
       per-entry framing (estimate) (2)                           54
   conditional                                                    53
     path-scoped rule files                                       53
-  on demand                                                     584
+  on demand                                                     596
     skill bodies (2)                                             94
     command bodies (2)                                           27
     agent bodies (2)                                             40
     skill resources (2)                                          16
-    per-file provenance hashes (9)                              407
-  unmodeled                                                     520
+    per-file provenance hashes (9)                              419
+  unmodeled                                                     634
     sidecar documents (3)                                       382
-    unclassified outputs                                        138
+    unclassified outputs                                        252
 
 runtime opencode — 10 files
   always loaded                                                  65
@@ -317,12 +318,12 @@ runtime opencode — 10 files
     sidecar documents                                           291
     unclassified outputs                                      2,452
 
-Headline always-loaded surface: 483 tokens (claude, the largest single runtime)
-  of which item listing (estimate): 189 tokens; pre-listing model reported 308
+Headline always-loaded surface: 605 tokens (claude, the largest single runtime)
+  of which item listing (estimate): 189 tokens; pre-listing model reported 430
 
 Per domain:
   domain                             always  conditional    on demand
-  (root)                                435           56          203
+  (root)                                549           56          203
 
 Scope and caveats:
   - Counts are approximations. Claude's tokenizer is not published; this report uses cl100k_base
@@ -382,20 +383,20 @@ exit: 0
 --- stdout
 Context cost - profile "default", target claude (cl100k_base, approximate)
 
-  always loaded         483 tokens
+  always loaded         605 tokens
   conditional            56 tokens
   on demand             677 tokens
 
 Top always-loaded items (estimate from sources):
-        33    7%  skill deployer
-        32    7%  skill reviewer
-        31    6%  agent architect
-        31    6%  command build
-        31    6%  command ship
-        30    6%  agent tester
+        33    5%  skill deployer
+        32    5%  skill reviewer
+        31    5%  agent architect
+        31    5%  command build
+        31    5%  command ship
+        30    5%  agent tester
         11    2%  rule targeted
-         8    2%  rule always
-         8    2%  rule auto
+         8    1%  rule always
+         8    1%  rule auto
          7    1%  context architecture
 
 Top on-demand items (estimate from sources):
@@ -1171,7 +1172,7 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .github/agents/ dir 0755
 .github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-.github/copilot-instructions.md file 0644 627 5be176ce0987ac1f8bdfaabe285222fac4fdd0e6e3c81bca9fbb2dd0bb4eedb0
+.github/copilot-instructions.md file 0644 1101 5fff3484a9d7c517537c30fcdc746a9f74513e8e0f9dd297b56cf065a933453a
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755
@@ -1212,9 +1213,9 @@ info      session-start  the SessionStart hook tries, in order: ai-rulez session
 .vscode/ dir 0755
 .vscode/mcp.json file 0600 548 d3eba5564d7bc37dbf71a2da8ccb9f39339416128db75a4a09797ded75641c8e
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
-AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
-GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
+AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
+GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
 opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

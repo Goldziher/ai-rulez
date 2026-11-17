@@ -171,6 +171,7 @@ before a command has a report prints the error document instead; see [JSON contr
 | `schema/cost-report.schema.json` | 1 | `cost --format json` |
 | `schema/cache-status.schema.json` | 1 | `cache status --format json`: where the index cache is, its size and entry counts |
 | `schema/cache-clear.schema.json` | 1 | `cache clear --format json`: the cache directories removed |
+| `schema/worktree-provision.schema.json` | 1 | `worktree create` and `worktree setup` with `--format json`: what was carried into the linked worktree |
 | `schema/error-document.schema.json` | 1 | What a `--format json` command prints when it fails before it has a report |
 
 ### Lock, approvals and signing

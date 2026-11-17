@@ -75,7 +75,7 @@ description: "Helps"
 # Helper
 <<<<
 .claude/ dir 0755
-.claude/CLAUDE.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
+.claude/CLAUDE.md file 0644 725 78b44037673561d4c2ce3dbee47acc54632799ce122659042aa32f4526347b18
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -86,7 +86,7 @@ NEVER edit this file - modify .config/ai-rulez/ content instead
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:dcb73d5134222f64ab4de4be753a6460b7645d90cc3d20ca04f20b0e73dc5f31
+Content-Hash: blake3:0704f897bfb5db14dc9de9ae6f9a1a651520634047f30146a89620878c5584fb
 -->
 
 # me
@@ -96,6 +96,10 @@ Content-Hash: blake3:dcb73d5134222f64ab4de4be753a6460b7645d90cc3d20ca04f20b0e73d
 ### me
 
 Personal context.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .claude/agents/ dir 0755
 .claude/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
@@ -182,7 +186,7 @@ name: helper
 # Helper
 <<<<
 .codex/ dir 0755
-.codex/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
+.codex/AGENTS.md file 0644 804 270e42342990af6f3bc9dc48252014c408f226a47991c12576747b529d563b7d
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -193,7 +197,7 @@ NEVER edit this file - modify .config/ai-rulez/ content instead
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:9ed615740de587e36c29c83e3859d647837a9937dee2e834a02642d87db5639b
+Content-Hash: blake3:01c492a570c1fa204cdf425b0bdd8b5af167c25735e52cd85391a0d12ae82c7e
 -->
 
 # me
@@ -215,6 +219,10 @@ Backend rule.
 ### me
 
 Personal context.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .codex/agents/ dir 0755
 .codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
@@ -542,7 +550,7 @@ description: Helps
 # Helper
 <<<<
 .config/opencode/ dir 0755
-.config/opencode/AGENTS.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
+.config/opencode/AGENTS.md file 0644 804 270e42342990af6f3bc9dc48252014c408f226a47991c12576747b529d563b7d
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -553,7 +561,7 @@ NEVER edit this file - modify .config/ai-rulez/ content instead
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:9ed615740de587e36c29c83e3859d647837a9937dee2e834a02642d87db5639b
+Content-Hash: blake3:01c492a570c1fa204cdf425b0bdd8b5af167c25735e52cd85391a0d12ae82c7e
 -->
 
 # me
@@ -575,6 +583,10 @@ Backend rule.
 ### me
 
 Personal context.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .config/opencode/agents/ dir 0755
 .config/opencode/agents/buddy.md file 0644 134 81ae320b25c504b95e130059b3a32a3ae4cff078f93dd97cc607adc182d19508
@@ -914,7 +926,7 @@ name: buddy
 
 # Buddy
 <<<<
-.copilot/copilot-instructions.md file 0644 377 213010770ce507f946fedd019c8ba672c82817782cb8fd362059ff33553edfb9
+.copilot/copilot-instructions.md file 0644 725 78b44037673561d4c2ce3dbee47acc54632799ce122659042aa32f4526347b18
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -925,7 +937,7 @@ NEVER edit this file - modify .config/ai-rulez/ content instead
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:dcb73d5134222f64ab4de4be753a6460b7645d90cc3d20ca04f20b0e73dc5f31
+Content-Hash: blake3:0704f897bfb5db14dc9de9ae6f9a1a651520634047f30146a89620878c5584fb
 -->
 
 # me
@@ -935,6 +947,10 @@ Content-Hash: blake3:dcb73d5134222f64ab4de4be753a6460b7645d90cc3d20ca04f20b0e73d
 ### me
 
 Personal context.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .copilot/hooks/ dir 0755
 .copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
@@ -1031,7 +1047,7 @@ name: buddy
 }
 <<<<
 .gemini/ dir 0755
-.gemini/GEMINI.md file 0644 456 bb3715ee8280cb5a8d20c5654f76422b5a7ddecab6710176345b26fc77ec0fa9
+.gemini/GEMINI.md file 0644 804 270e42342990af6f3bc9dc48252014c408f226a47991c12576747b529d563b7d
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1042,7 +1058,7 @@ NEVER edit this file - modify .config/ai-rulez/ content instead
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:9ed615740de587e36c29c83e3859d647837a9937dee2e834a02642d87db5639b
+Content-Hash: blake3:01c492a570c1fa204cdf425b0bdd8b5af167c25735e52cd85391a0d12ae82c7e
 -->
 
 # me
@@ -1064,6 +1080,10 @@ Backend rule.
 ### me
 
 Personal context.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .gemini/agents/ dir 0755
 .gemini/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c

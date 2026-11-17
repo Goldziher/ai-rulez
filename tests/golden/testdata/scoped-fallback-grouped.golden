@@ -1040,7 +1040,7 @@ prefix_rule(
   }
 }
 <<<<
-AGENTS.md file 0644 731 2b9d40380940bd0ddfa191b5ca465bb41a3a307a2014b4ae8d77735ca7fdcdf6
+AGENTS.md file 0644 1205 a0dc7f61af95e84bdf0726a79fe545da9408b1238428070eecf0af0fdb888f76
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1052,7 +1052,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:929e1a4680dd96306dec9ab80dbf6742013acc5465f9af6dbb929de90509e94f
+Content-Hash: blake3:ee35a9ff3fa1677c0699448d6f2e202326950fda262c3bac98c8cbd603f13342
 -->
 
 # golden
@@ -1092,6 +1092,10 @@ The project overview.
 ### architecture
 
 Layers and boundaries.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
 <<<<
 CLAUDE.md file 0644 377 685c755d39e586ad53da9856dfd9bb0f3dd6d9e158b61626af407a8ba0d1b1a8
 >>>>

@@ -9,17 +9,24 @@ import (
 
 // WriteSkillsInstructions appends the "how to load served skills" section to a
 // root instruction file when the project serves skills (see
-// config.Config.SkillsInstructions). rootFile is the file being written: one
-// several presets share (AGENTS.md) renders the same section whichever preset
-// writes it last, so it is not decided by preset.
+// config.Config.SkillsInstructions), and then the one short worktree
+// instruction (config.Config.WorktreeGuidance). The two share this call site
+// and the shared-root routing, but the guidance's decision is its own: with
+// served skills off it still renders, and its text never depends on the
+// preset. rootFile is the file being written: one several presets share
+// (AGENTS.md) renders identically whichever preset writes it last. The
+// authored AGENTS.md of the "agents" source is never written, so no call site
+// reaches it.
 func WriteSkillsInstructions(builder *strings.Builder, cfg *config.Config, preset, rootFile string) {
 	if rulefiles.SharedRootFile(rootFile) {
 		preset = ""
 	}
-	text, ok := cfg.SkillsInstructionsFor(preset)
-	if !ok {
-		return
+	if text, ok := cfg.SkillsInstructionsFor(preset); ok {
+		builder.WriteString(text)
+		builder.WriteString("\n\n")
 	}
-	builder.WriteString(text)
-	builder.WriteString("\n\n")
+	if text, ok := cfg.WorktreeGuidance(); ok {
+		builder.WriteString(text)
+		builder.WriteString("\n\n")
+	}
 }

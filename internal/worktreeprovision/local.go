@@ -346,12 +346,12 @@ func writePlan(out io.Writer, w *worktrees, res *Result) {
 		verb = "Would provision"
 	}
 	if len(res.Copies) > 0 {
-		fmt.Fprintf(out, "%s %s from %s\n", verb, relTo(w.top, w.dst), relTo(w.top, w.src)) //nolint:errcheck // a plan line
+		fmt.Fprintf(out, "%s %s from %s\n", verb, w.dst, w.src) //nolint:errcheck // a plan line
 		for _, e := range res.Copies {
 			fmt.Fprintf(out, "  %s %s\n", e.Action, e.Destination) //nolint:errcheck // a plan line
 		}
 	} else {
-		fmt.Fprintf(out, "%s %s (no machine-local inputs to carry)\n", verb, relTo(w.top, w.dst)) //nolint:errcheck // a plan line
+		fmt.Fprintf(out, "%s %s (no machine-local inputs to carry)\n", verb, w.dst) //nolint:errcheck // a plan line
 	}
 	for _, line := range res.Plan {
 		fmt.Fprintln(out, line) //nolint:errcheck // a plan line

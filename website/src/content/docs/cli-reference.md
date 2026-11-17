@@ -4355,3 +4355,64 @@ ai-rulez version --format json
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--format` | string | `text` | Output format: text, json |
+
+## `ai-rulez worktree`
+
+Provision linked worktrees with this checkout's AI-Rulez configuration
+
+```text
+ai-rulez worktree [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez worktree create ../.worktrees/billing/fix-mcp --branch fix-mcp
+ai-rulez worktree setup ../.worktrees/billing/fix-mcp --copy-local --dry-run
+```
+
+## `ai-rulez worktree create`
+
+Create a linked worktree on a new branch and provision it
+
+```text
+ai-rulez worktree create <destination> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez worktree create ../.worktrees/billing/fix-mcp --branch fix-mcp
+ai-rulez worktree create ../.worktrees/billing/fix-mcp --branch fix-mcp --start-ref main --copy-local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--branch` | string |  | Branch the linked worktree checks out (must be new) |
+| `--copy-extra` | string list |  | An extra source-relative file or directory to carry, on top of the allowlist; it must be ignored and untracked in the destination; repeatable |
+| `--copy-local` | bool |  | Carry the machine-local inputs: config.local.toml, .ai-rulez/local/ and the hand-authored CLAUDE.local.md, AGENTS.local.md, AGENTS.override.md, GEMINI.local.md and .claude/settings.local.json that exist in the source |
+| `--dry-run` / `-n` | bool |  | Plan the run and write nothing |
+| `--format` | string | `text` | Output format: text, json |
+| `--start-ref` | string |  | Branch or commit the worktree starts from (default: the source checkout's HEAD) |
+
+## `ai-rulez worktree setup`
+
+Provision an existing linked worktree
+
+```text
+ai-rulez worktree setup <destination> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez worktree setup ../.worktrees/billing/fix-mcp
+ai-rulez worktree setup ../.worktrees/billing/fix-mcp --copy-local --copy-extra notes.local.md --dry-run
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--copy-extra` | string list |  | An extra source-relative file or directory to carry, on top of the allowlist; it must be ignored and untracked in the destination; repeatable |
+| `--copy-local` | bool |  | Carry the machine-local inputs: config.local.toml, .ai-rulez/local/ and the hand-authored CLAUDE.local.md, AGENTS.local.md, AGENTS.override.md, GEMINI.local.md and .claude/settings.local.json that exist in the source |
+| `--dry-run` / `-n` | bool |  | Plan the run and write nothing |
+| `--format` | string | `text` | Output format: text, json |

@@ -305,6 +305,12 @@ func (c *Config) SessionStartContext(failure string) string {
 	}
 	parts = append(parts, body)
 	if c.sessionStartPromptText() == "" {
+		if text, show := c.WorktreeBriefing(); show {
+			// The briefing carries the instruction, not the heading: it is one
+			// line, and the byte cap keeps the briefing small. Session start
+			// never runs a worktree command; it only says how to.
+			parts = append(parts, text)
+		}
 		if c.HasSelfServer() {
 			parts = append(parts, fmt.Sprintf("The %#q MCP server offers tools to create, update, validate and generate this configuration.", server))
 		}

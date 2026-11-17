@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/worktree-provision.schema.json",
+  "title": "ai-rulez worktree provision",
+  "description": "Output of `ai-rulez worktree create|setup --format json`: what the run carried into the destination worktree and whether generation ran. Paths are relative to the source and destination checkouts; no file content is reported.",
+  "type": "object",
+  "required": ["schema_version", "source", "destination", "copies"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "source": {
+      "type": "string",
+      "description": "Absolute path of the source checkout the run provisioned from."
+    },
+    "destination": {
+      "type": "string",
+      "description": "Absolute path of the linked worktree the run provisioned."
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "True when the run planned and wrote nothing."
+    },
+    "copies": {
+      "type": "array",
+      "description": "The machine-local files carried (or planned, in a dry run), sorted by destination-relative path.",
+      "items": {
+        "type": "object",
+        "required": ["source", "destination", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Path relative to the source checkout."
+          },
+          "destination": {
+            "type": "string",
+            "description": "Path relative to the destination worktree."
+          },
+          "action": {
+            "type": "string",
+            "enum": ["copy", "identical"],
+            "description": "copy wrote the file; identical left the destination's same bytes alone."
+          }
+        }
+      }
+    },
+    "generated": {
+      "type": "boolean",
+      "description": "True when the destination's outputs were regenerated (always false for a dry run)."
+    },
+    "plan": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The generate step's lines: its plan in a dry run, its output in a real run."
+    },
+    "conflicts": {
+      "type": "array",
+      "description": "Present when the run refused: destination files that differ from what the source would carry. Nothing was written.",
+      "items": {
+        "type": "object",
+        "required": ["source", "destination", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["conflict"]
+          }
+        }
+      }
+    }
+  }
+}
