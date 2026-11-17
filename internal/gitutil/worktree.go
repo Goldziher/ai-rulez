@@ -99,6 +99,64 @@ func (g Git) WorktreePrune(ctx context.Context, repo string) error {
 	return err
 }
 
+// WorktreeInfo is one worktree of `git worktree list --porcelain`. Branch is empty
+// for a detached HEAD.
+type WorktreeInfo struct {
+	Path     string
+	Head     string
+	Branch   string
+	Detached bool
+	Bare     bool
+}
+
+// WorktreesContext lists the registered worktrees of the repository at dir, each
+// with its resolved absolute path.
+func (g Git) WorktreesContext(ctx context.Context, dir string) ([]WorktreeInfo, error) {
+	out, err := g.Output(ctx, dir, "worktree", "list", "--porcelain")
+	if err != nil {
+		return nil, err
+	}
+	var infos []WorktreeInfo
+	var cur *WorktreeInfo
+	flush := func() {
+		if cur != nil {
+			infos = append(infos, *cur)
+			cur = nil
+		}
+	}
+	for _, line := range strings.Split(out, "\n") {
+		switch {
+		case line == "":
+			flush()
+		case strings.HasPrefix(line, "worktree "):
+			flush()
+			cur = &WorktreeInfo{Path: Resolve(strings.TrimPrefix(line, "worktree "))}
+		case cur == nil:
+			return nil, fmt.Errorf("git worktree list: unexpected line %q", line)
+		case strings.HasPrefix(line, "HEAD "):
+			cur.Head = strings.TrimPrefix(line, "HEAD ")
+		case line == "detached":
+			cur.Detached = true
+		case line == "bare":
+			cur.Bare = true
+		case strings.HasPrefix(line, "branch "):
+			cur.Branch = strings.TrimPrefix(strings.TrimPrefix(line, "branch "), "refs/heads/")
+		}
+	}
+	flush()
+	return infos, nil
+}
+
+// CommonDirContext resolves the git common directory of dir: the .git directory
+// a linked worktree shares with its siblings.
+func (g Git) CommonDirContext(ctx context.Context, dir string) (string, error) {
+	p := g.gitPath(ctx, dir, "--git-common-dir")
+	if p == "" {
+		return "", fmt.Errorf("git rev-parse --git-common-dir: %s is not inside a git repository", dir)
+	}
+	return p, nil
+}
+
 // BranchDelete force-deletes a local branch (one the caller created and abandoned).
 func (g Git) BranchDelete(ctx context.Context, repo, branch string) error {
 	if err := CheckArg("branch", branch); err != nil {
