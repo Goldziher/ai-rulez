@@ -450,19 +450,35 @@ verify against that key is a hard failure (exit 2, `AR9N7`). Without `--key` a s
 `signature: unverified` and still exits 0 — the signature is present but nobody vouched for it. Decide yourself
 whether that is acceptable for the plugin you are about to run.
 
-**4. Install.** ai-rulez stops here: it verifies, it does not install. Extract the verified archive into a
-marketplace checkout and hand it to the runtime installer:
+**4. Install.** ai-rulez stops here: it verifies, it does not install. This recipe assumes the
+publisher ships a marketplace manifest — the archive carries `.claude-plugin/marketplace.json`
+when the `[plugin]` block sets `marketplace = true` (or declares a `[marketplace]`); the
+manifest's file list names it, so you can check before you rely on it. Extract the verified
+archive into a directory and register that directory, so the bytes the runtime reads are the
+bytes you verified:
 
 ```sh
+mkdir -p vendor/acme-market
 tar -xzf acme-tools-1.2.0.tar.gz -C vendor/acme-market
 claude plugin marketplace add ./vendor/acme-market
+claude plugin install acme-tools@acme-market
 ```
 
-The bundle carries `.claude-plugin/marketplace.json` when the publisher enabled `marketplace = true` for the
-`claude` runtime, which is what the command above reads; without it, add the release repository instead
-(`claude plugin marketplace add acme/acme-tools`) and verify that copy the same way. From here the runtime owns
-installation and updates — it reads the plugin manifest and manages its own cache. Re-run steps 1–2 with every new
-release before updating.
+The names come from the bundle: `acme-tools` is the plugin name (the `[plugin]` block, echoed by
+the release manifest), `acme-market` is the marketplace `name` in the extracted
+`.claude-plugin/marketplace.json`, and the manifest's entry for the plugin points at `./`. The
+`marketplace add` step registers the local directory; `plugin install` copies the verified
+plugin into Claude Code and manages updates from there — that copy is the runtime installer's,
+not ai-rulez's.
+
+Do **not** register the GitHub repository as a fallback: `claude plugin marketplace add
+acme/acme-tools` fetches the repository's current `main` branch, which is different bytes from
+the archive you just verified. If a release ships no marketplace manifest, install the verified
+bundle as a local source instead: extract it, then import it with ai-rulez's own
+[installed plugins](/ai-rulez/installed-plugins/) — `ai-rulez marketplace add acme --source
+./vendor/acme-market` and `ai-rulez plugin install acme-tools --from acme`, or an
+`[[installed_plugins]]` entry in your project. Re-run steps 1–2 with every new release before
+updating.
 
 ## Exit codes and errors
 
