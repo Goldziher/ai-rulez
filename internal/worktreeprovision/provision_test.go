@@ -605,7 +605,7 @@ func TestSetupMapsANestedSourceProjectIntoTheWorktree(t *testing.T) {
 	gitRun(t, root, "worktree", "add", "-q", linked, "-b", "feature")
 
 	res, err := Setup(context.Background(), &Options{
-		Source: proj, Destination: linked, CopyLocal: true, Generate: f_generate,
+		Source: proj, Destination: linked, CopyLocal: true, Generate: noopGenerate,
 	})
 
 	require.NoError(t, err)
@@ -617,7 +617,7 @@ func TestSetupMapsANestedSourceProjectIntoTheWorktree(t *testing.T) {
 }
 
 // f_generate is a generate stub the nested-project test shares.
-func f_generate(_ context.Context, _ string, _ bool) ([]string, error) { return nil, nil }
+func noopGenerate(_ context.Context, _ string, _ bool) ([]string, error) { return nil, nil }
 
 func TestSetupRefusesADestinationWithoutTheNestedProject(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
@@ -637,7 +637,7 @@ func TestSetupRefusesADestinationWithoutTheNestedProject(t *testing.T) {
 	gitRun(t, root, "worktree", "add", "-q", linked, "--detach", "HEAD~1")
 
 	_, err := Setup(context.Background(), &Options{
-		Source: proj, Destination: linked, Generate: f_generate,
+		Source: proj, Destination: linked, Generate: noopGenerate,
 	})
 
 	require.Error(t, err)
