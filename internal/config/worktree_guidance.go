@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -12,21 +11,17 @@ import (
 // Carrying machine-local files is explicit consent, never a default.
 //
 // The instruction is independent of served skills and identical across root
-// files several presets write. When the configuration can call MCP through
-// the ai-rulez server, it prefers the worktree_setup tool and names the CLI
-// command as the fallback; otherwise it is CLI-only.
+// files several presets write. The wording here is CLI-only; the MCP tool's
+// change adds the worktree_setup preference where the tool is actually
+// registered ([mcp] tools allowlist and read_only respected).
 func (c *Config) WorktreeGuidance() (text string, show bool) {
 	if c == nil {
 		return "", false
 	}
-	base := "## Worktrees\n\n" +
+	return "## Worktrees\n\n" +
 		"After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, " +
 		"or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. " +
-		"Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default."
-	if c.HasSelfServer() && c.hasMCPPreset() {
-		base += fmt.Sprintf(" At runtime prefer the `worktree_setup` tool on the %#q MCP server when it is exposed; the CLI command is the fallback.", c.skillsServerName())
-	}
-	return base, true
+		"Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.", true
 }
 
 // ShowWorktreeGuidance reports whether a generated root file the preset names

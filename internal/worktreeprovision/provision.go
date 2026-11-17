@@ -84,7 +84,9 @@ const (
 // Create provisions a linked worktree that does not exist yet: it makes the
 // worktree at Destination on a new branch started from startRef (the source
 // checkout's HEAD when empty), then provisions it like Setup. It refuses an
-// existing branch or a destination that git cannot create.
+// existing branch or a destination that git cannot create. A dry run writes
+// nothing: no branch, no worktree, no registration — it checks what it can
+// without mutation and reports what it would carry.
 func Create(ctx context.Context, opts *Options, branch, startRef string) (*Result, error) {
 	if err := validateBranchName(branch); err != nil {
 		return nil, err
@@ -93,6 +95,9 @@ func Create(ctx context.Context, opts *Options, branch, startRef string) (*Resul
 	if err != nil {
 		return nil, err
 	}
+	if opts.DryRun {
+		return dryRunCreate(ctx, w, opts, branch, startRef)
+	}
 	if err := addWorktree(ctx, w, branch, startRef); err != nil {
 		return nil, err
 	}
@@ -100,6 +105,43 @@ func Create(ctx context.Context, opts *Options, branch, startRef string) (*Resul
 		return nil, err
 	}
 	return provision(ctx, w, opts)
+}
+
+// dryRunCreate checks a create without mutating anything: the branch must be
+// new, the start point a commit, and the destination path free. The planned
+// copies are checked against the repository's ignore rules; the generate step
+// is not previewed, because the destination checkout does not exist yet.
+func dryRunCreate(ctx context.Context, w *worktrees, opts *Options, branch, startRef string) (*Result, error) {
+	if startRef == "" {
+		startRef = "HEAD"
+	}
+	if _, err := w.git.CommitOf(ctx, w.top, startRef); err != nil {
+		return nil, oops.Hint("pass a branch or commit that exists in this repository").
+			Errorf("the start point %q is not a commit of this repository: %v", startRef, err)
+	}
+	if w.git.BranchExists(ctx, w.top, branch) {
+		return nil, oops.Hint("choose another name, or delete the branch first").
+			Errorf("the branch %s already exists", branch)
+	}
+	if _, err := os.Lstat(w.dst); err == nil {
+		return nil, oops.Hint("the destination path must be free; git would refuse to create the worktree").
+			Errorf("the destination %s already exists", w.dst)
+	}
+	w.dstState = w.srcState
+	w.checkDir = w.top
+	files, err := planCopies(ctx, w, opts)
+	if err != nil {
+		return nil, err
+	}
+	res := &Result{Source: w.src, Destination: projectAt(w.dst, w.relProject), DryRun: true, Copies: []CopyEntry{}}
+	for _, f := range files {
+		res.Copies = append(res.Copies, CopyEntry{Source: f.rel, Destination: f.rel, Action: actionCopy})
+	}
+	res.Plan = []string{"Dry run: the branch " + branch + " and the worktree are not created; " +
+		"run without --dry-run to create and provision them. The generate step is not previewed, " +
+		"because the destination checkout does not exist yet."}
+	writePlan(opts.Out, w, res)
+	return res, nil
 }
 
 // validateBranchName refuses a branch name git would take as an option, and
@@ -155,11 +197,19 @@ func Setup(ctx context.Context, opts *Options) (*Result, error) {
 // relative to their project roots, which is the only thing a provisioning run
 // needs from a layout: where the overlay and the local content tree live.
 type worktrees struct {
-	git      gitutil.Git
-	top      string
-	src, dst string
-	srcState StateDirs
-	dstState StateDirs
+	git gitutil.Git
+	top string
+	// src is the source project; dst is the linked worktree root, dstProj the
+	// project inside it (the same repository-relative path src has below top).
+	src, dst, dstProj string
+	relProject        string
+	srcState          StateDirs
+	dstState          StateDirs
+	// checkDir is the directory the destination ignore rules are checked in:
+	// the destination when it exists, the repository top for a dry-run create
+	// (whose destination checkout does not exist yet; the branch carries the
+	// same committed rules).
+	checkDir string
 }
 
 // StateDirs is the part of a project's layout provisioning reads: where the
@@ -226,12 +276,23 @@ func resolveSource(ctx context.Context, opts *Options) (*worktrees, error) {
 		return nil, oops.Hint("linked worktrees live in a git repository; run this inside one").
 			Errorf("%s is not inside a git repository", src)
 	}
+	// A project may sit below the repository top (a monorepo); the
+	// destination's project is the worktree's copy of that path.
+	relProject := gitutil.RepoRelative(top, src)
+	if relProject == "." {
+		relProject = ""
+	}
+	if relProject != "" && strings.Contains(relProject, "..") {
+		return nil, oops.Hint("the source project must live inside the repository that owns the linked worktrees").
+			Errorf("the source project %s is not inside the repository %s", src, top)
+	}
 	srcState, err := stateDirsOf(src)
 	if err != nil {
 		return nil, oops.Hint("run this from a checkout whose configuration is committed, or point --source at it").
 			Errorf("the source %s holds no AI-Rulez configuration", src)
 	}
-	return &worktrees{git: g, top: top, src: src, dst: dst, srcState: srcState}, nil
+	return &worktrees{git: g, top: top, src: src, dst: dst, dstProj: projectAt(dst, relProject),
+		relProject: relProject, srcState: srcState}, nil
 }
 
 // checkDestinationWorktree validates the destination once it exists: it must
@@ -270,13 +331,23 @@ func checkDestinationWorktree(ctx context.Context, w *worktrees) error {
 		return oops.Hint("git registered the worktree but its directory is missing: remove it and create it again").
 			Errorf("read the destination: %v", err)
 	}
-	dstState, err := stateDirsOf(w.dst)
+	dstState, err := stateDirsOf(w.dstProj)
 	if err != nil {
 		return oops.Hint("a worktree inherits the tracked configuration from its branch; commit the configuration first").
-			Errorf("the destination %s holds no AI-Rulez configuration", w.dst)
+			Errorf("the destination holds no AI-Rulez configuration at %s", projectAt(w.dst, w.relProject))
 	}
 	w.dstState = dstState
 	return nil
+}
+
+// projectAt is the project directory of the linked worktree: the worktree
+// root itself, or the worktree's copy of the source project's path below the
+// repository top.
+func projectAt(dst, relProject string) string {
+	if relProject == "" {
+		return dst
+	}
+	return filepath.Join(dst, filepath.FromSlash(relProject))
 }
 
 // sameDir reports whether two paths are the same directory once resolved.
