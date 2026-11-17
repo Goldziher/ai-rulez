@@ -69,7 +69,7 @@ type Result struct {
 	Source      string      `json:"source"`
 	Destination string      `json:"destination"`
 	DryRun      bool        `json:"dry_run,omitempty"`
-	Copies      []CopyEntry `json:"copies,omitempty"`
+	Copies      []CopyEntry `json:"copies"`
 	Generated   bool        `json:"generated,omitempty"`
 	Plan        []string    `json:"plan,omitempty"`
 	Conflicts   []CopyEntry `json:"conflicts,omitempty"`
