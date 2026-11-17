@@ -19,6 +19,8 @@ import (
 // may fetch remote includes, but it never calls a model.
 const worktreeGenerateTimeout = 30 * time.Minute
 
+// worktreeFlags are the flags both worktree commands share; the constructor
+// holds the one instance.
 type worktreeFlags struct {
 	format    string
 	branch    string
@@ -28,13 +30,17 @@ type worktreeFlags struct {
 	dryRun    bool
 }
 
-// worktreeCommandFlags are the flags both worktree commands share.
-var worktreeCommandFlags worktreeFlags
+// newWorktreeCmd builds the worktree command tree with its flags bound to one
+// flags instance the RunE closures capture.
+func newWorktreeCmd() *cobra.Command {
+	flags := &worktreeFlags{}
 
-var worktreeCmd = &cobra.Command{
-	Use:   "worktree",
-	Short: "Provision linked worktrees with this checkout's AI-Rulez configuration",
-	Long: `Carry a checkout's AI-Rulez setup into a linked git worktree.
+	var create, setup *cobra.Command
+
+	worktree := &cobra.Command{
+		Use:   "worktree",
+		Short: "Provision linked worktrees with this checkout's AI-Rulez configuration",
+		Long: `Carry a checkout's AI-Rulez setup into a linked git worktree.
 
 A fresh linked worktree inherits the tracked configuration from its branch, but the machine-local
 overlay (.ai-rulez/config.local.toml), the local content tree (.ai-rulez/local/) and the
@@ -49,47 +55,61 @@ manifests, cached artifacts and rendered credentials are never copied, and no fi
 printed. Copied files get owner-only permissions and are never followed through a symlink.
 
 A failure reports a retryable state and leaves the worktree and its branch intact.`,
-}
+	}
 
-var worktreeCreateCmd = &cobra.Command{
-	Use:   "create <destination>",
-	Short: "Create a linked worktree on a new branch and provision it",
-	Long: `Create a linked git worktree at <destination> on a new branch and provision it.
+	create = &cobra.Command{
+		Use:   "create <destination>",
+		Short: "Create a linked worktree on a new branch and provision it",
+		Long: `Create a linked git worktree at <destination> on a new branch and provision it.
 
 The branch starts from --start-ref (default: the source checkout's HEAD). The destination must
 not exist and the branch must be new. Run it from the source checkout; see worktree --help for
 what provisioning carries.`,
-	Args:              cobra.ExactArgs(1),
-	DisableAutoGenTag: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runWorktreeProvision(cmd, args[0], func(ctx context.Context, opts *worktreeprovision.Options) (*worktreeprovision.Result, error) {
-			return worktreeprovision.Create(ctx, opts, worktreeCommandFlags.branch, worktreeCommandFlags.startRef)
-		})
-	},
-}
+		Args:              cobra.ExactArgs(1),
+		DisableAutoGenTag: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWorktreeProvision(cmd, flags, args[0], func(ctx context.Context, opts *worktreeprovision.Options) (*worktreeprovision.Result, error) {
+				return worktreeprovision.Create(ctx, opts, flags.branch, flags.startRef)
+			})
+		},
+	}
+	create.Flags().StringVar(&flags.branch, "branch", "", "Branch the linked worktree checks out (must be new)")
+	create.Flags().StringVar(&flags.startRef, "start-ref", "", "Branch or commit the worktree starts from (default: the source checkout's HEAD)")
+	_ = create.MarkFlagRequired("branch") //nolint:errcheck // the flag exists
 
-var worktreeSetupCmd = &cobra.Command{
-	Use:   "setup <destination>",
-	Short: "Provision an existing linked worktree",
-	Long: `Provision a linked worktree that git or your host already created.
+	setup = &cobra.Command{
+		Use:   "setup <destination>",
+		Short: "Provision an existing linked worktree",
+		Long: `Provision a linked worktree that git or your host already created.
 
 The destination must be a registered linked worktree of the same repository. Run it from the
 source checkout; see worktree --help for what provisioning carries.`,
-	Args:              cobra.ExactArgs(1),
-	DisableAutoGenTag: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runWorktreeProvision(cmd, args[0], worktreeprovision.Setup)
-	},
+		Args:              cobra.ExactArgs(1),
+		DisableAutoGenTag: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWorktreeProvision(cmd, flags, args[0], worktreeprovision.Setup)
+		},
+	}
+
+	for _, cmd := range []*cobra.Command{create, setup} {
+		f := cmd.Flags()
+		f.BoolVar(&flags.copyLocal, "copy-local", false, "Carry the machine-local inputs: config.local.toml, .ai-rulez/local/ and the hand-authored CLAUDE.local.md, AGENTS.local.md, AGENTS.override.md, GEMINI.local.md and .claude/settings.local.json that exist in the source")
+		f.StringArrayVar(&flags.copyExtra, "copy-extra", nil, "An extra source-relative file or directory to carry, on top of the allowlist; it must be ignored and untracked in the destination; repeatable")
+		f.BoolVarP(&flags.dryRun, "dry-run", "n", false, "Plan the run and write nothing")
+		addFormatFlag(f, &flags.format, "", formatText, formatText, formatJSON)
+	}
+	worktree.AddCommand(create, setup)
+	return worktree
 }
 
 // runWorktreeProvision wires the flags, the generate step and the output
 // format around one provisioning call.
-func runWorktreeProvision(cmd *cobra.Command, destination string, run func(ctx context.Context, opts *worktreeprovision.Options) (*worktreeprovision.Result, error)) error {
+func runWorktreeProvision(cmd *cobra.Command, flags *worktreeFlags, destination string, run func(ctx context.Context, opts *worktreeprovision.Options) (*worktreeprovision.Result, error)) error {
 	ctx := commandContext(cmd)
-	if err := checkFormatFlag(worktreeCommandFlags.format); err != nil {
+	if err := checkFormatFlag(flags.format); err != nil {
 		return err
 	}
-	asJSON := worktreeCommandFlags.format == formatJSON
+	asJSON := flags.format == formatJSON
 	out := cmd.OutOrStdout()
 	if asJSON {
 		out = cmd.ErrOrStderr() // stdout carries the result document only
@@ -97,9 +117,9 @@ func runWorktreeProvision(cmd *cobra.Command, destination string, run func(ctx c
 	opts := &worktreeprovision.Options{
 		Source:      ".",
 		Destination: destination,
-		CopyLocal:   worktreeCommandFlags.copyLocal,
-		CopyExtra:   worktreeCommandFlags.copyExtra,
-		DryRun:      worktreeCommandFlags.dryRun,
+		CopyLocal:   flags.copyLocal,
+		CopyExtra:   flags.copyExtra,
+		DryRun:      flags.dryRun,
 		Out:         out,
 		Generate:    worktreeGenerateStep,
 	}
@@ -130,24 +150,4 @@ func worktreeGenerateStep(ctx context.Context, projectDir string, dryRun bool) (
 		return nil, fmt.Errorf("`ai-rulez generate` failed in the destination (%s, exit %d): %s", r.Status, r.ExitCode, improve.Sanitize(string(r.Stderr)+string(r.Stdout), 600))
 	}
 	return strings.Split(strings.TrimRight(string(r.Stdout), "\n"), "\n"), nil
-}
-
-func init() {
-	f := worktreeCreateCmd.Flags()
-	f.StringVar(&worktreeCommandFlags.branch, "branch", "", "Branch the linked worktree checks out (must be new)")
-	f.StringVar(&worktreeCommandFlags.startRef, "start-ref", "", "Branch or commit the worktree starts from (default: the source checkout's HEAD)")
-	_ = worktreeCreateCmd.MarkFlagRequired("branch") //nolint:errcheck // the flag exists
-	addWorktreeSharedFlags(worktreeCreateCmd)
-	addWorktreeSharedFlags(worktreeSetupCmd)
-	addFormatFlag(worktreeCreateCmd.Flags(), &worktreeCommandFlags.format, "", formatText, formatText, formatJSON)
-	addFormatFlag(worktreeSetupCmd.Flags(), &worktreeCommandFlags.format, "", formatText, formatText, formatJSON)
-	RootCmd.AddCommand(worktreeCmd)
-	worktreeCmd.AddCommand(worktreeCreateCmd, worktreeSetupCmd)
-}
-
-func addWorktreeSharedFlags(cmd *cobra.Command) {
-	f := cmd.Flags()
-	f.BoolVar(&worktreeCommandFlags.copyLocal, "copy-local", false, "Carry the machine-local inputs: config.local.toml, .ai-rulez/local/ and the hand-authored CLAUDE.local.md, AGENTS.local.md, AGENTS.override.md, GEMINI.local.md and .claude/settings.local.json that exist in the source")
-	f.StringArrayVar(&worktreeCommandFlags.copyExtra, "copy-extra", nil, "An extra source-relative file or directory to carry, on top of the allowlist; it must be ignored and untracked in the destination; repeatable")
-	f.BoolVarP(&worktreeCommandFlags.dryRun, "dry-run", "n", false, "Plan the run and write nothing")
 }
