@@ -185,13 +185,15 @@ func TestConfigValidateSessionStart(t *testing.T) {
 	}
 }
 
+func sessionStartServingCfg() *Config {
+	cfg := claudeConfig(nil)
+	cfg.Presets = []Preset{{BuiltIn: "claude"}}
+	cfg.ConfigDirName = ".ai-rulez"
+	return cfg
+}
+
 func TestSessionStartContext(t *testing.T) {
-	serving := func() *Config {
-		cfg := claudeConfig(nil)
-		cfg.Presets = []Preset{{BuiltIn: "claude"}}
-		cfg.ConfigDirName = ".ai-rulez"
-		return cfg
-	}
+	serving := sessionStartServingCfg
 	t.Run("default text names the source dir", func(t *testing.T) {
 		got := serving().SessionStartContext("")
 
@@ -251,6 +253,59 @@ func TestSessionStartContext(t *testing.T) {
 	})
 	t.Run("deterministic", func(t *testing.T) {
 		assert.Equal(t, serving().SessionStartContext("x"), serving().SessionStartContext("x"))
+	})
+}
+
+func TestSessionStartContextAgentsSource(t *testing.T) {
+	serving := sessionStartServingCfg
+	t.Run("describes AGENTS.md and .agents as authored", func(t *testing.T) {
+		cfg := serving()
+		cfg.Source = SourceAgents
+
+		got := cfg.SessionStartContext("")
+
+		assert.Contains(t, got, "AGENTS.md")
+		assert.Contains(t, got, "`.agents/`")
+		assert.Contains(t, got, "never rewritten")
+		assert.NotContains(t, got, "are generated from the sources in")
+		assert.NotContains(t, got, "AGENTS.md and CLAUDE.md are generated", "AGENTS.md is authored, not generated")
+	})
+	t.Run("the config elsewhere reads the same briefing", func(t *testing.T) {
+		layout := serving()
+		layout.AgentsLayout = true
+		layout.ConfigDirName = ".agents"
+		outside := serving()
+		outside.Source = SourceAgents
+		outside.ConfigDirName = ".config/ai-rulez"
+
+		assert.Equal(t, layout.SessionStartContext(""), outside.SessionStartContext(""))
+	})
+	t.Run("keeps the MCP sentence and served-skills section", func(t *testing.T) {
+		cfg := serving()
+		cfg.Source = SourceAgents
+		cfg.SkillSources = []SkillSourceConfig{{Name: "vendor", URL: "vendor-skills"}}
+
+		got := cfg.SessionStartContext("")
+
+		assert.Contains(t, got, "MCP server")
+		assert.Contains(t, got, "## Unlisted skills")
+	})
+	t.Run("keeps prompt_text and the failure line", func(t *testing.T) {
+		cfg := serving()
+		cfg.Source = SourceAgents
+		cfg.SessionStart = &SessionStartConfig{PromptText: "Use {{server}}."}
+
+		assert.Equal(t, "Use ai-rulez.\n\nThe `ai-rulez generate` run at session start failed (boom), so generated files may be out of date.", cfg.SessionStartContext("boom"))
+	})
+	t.Run("keeps the byte cap", func(t *testing.T) {
+		cfg := serving()
+		cfg.Source = SourceAgents
+		cfg.SessionStart = &SessionStartConfig{PromptText: strings.Repeat("é", 5000)}
+
+		got := cfg.SessionStartContext("")
+
+		assert.LessOrEqual(t, len(got), SessionStartContextLimit)
+		assert.True(t, strings.HasSuffix(got, "é"))
 	})
 }
 

@@ -292,12 +292,19 @@ func (c *Config) SessionStartContext(failure string) string {
 	var parts []string
 	server := c.skillsServerName()
 	dir := c.skillsInstructionsDirName()
+	var body string
 	if text := strings.TrimSpace(c.sessionStartPromptText()); text != "" {
-		parts = append(parts, expandTemplateVars(text, map[string]string{varServer: server}))
+		body = expandTemplateVars(text, map[string]string{varServer: server})
+	} else if c.UsesAgentsSource() {
+		body = "ai-rulez manages this repository's agent configuration. The root AGENTS.md and `.agents/` are the authored sources: they are read, never rewritten, and a change belongs in them. " +
+			"The files `ai-rulez generate` writes elsewhere — the harness folders and their instruction files — are generated from that source, and an edit to a generated file is overwritten."
 	} else {
-		parts = append(parts, fmt.Sprintf("ai-rulez manages this repository's agent configuration. The rules, skills, agents and commands "+
+		body = fmt.Sprintf("ai-rulez manages this repository's agent configuration. The rules, skills, agents and commands "+
 			"in the harness folders, AGENTS.md and CLAUDE.md are generated from the sources in `%s/`; a change belongs in the "+
-			"source, then `ai-rulez generate` renders it, and an edit to a generated file is overwritten.", dir))
+			"source, then `ai-rulez generate` renders it, and an edit to a generated file is overwritten.", dir)
+	}
+	parts = append(parts, body)
+	if c.sessionStartPromptText() == "" {
 		if c.HasSelfServer() {
 			parts = append(parts, fmt.Sprintf("The %#q MCP server offers tools to create, update, validate and generate this configuration.", server))
 		}
