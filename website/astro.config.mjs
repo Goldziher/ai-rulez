@@ -30,6 +30,7 @@ const sidebar = [
       { label: ".agents as a source", slug: "agents-source" },
       { label: "Config without a .ai-rulez folder", slug: "config-without-folder" },
       { label: "Local configuration", slug: "local-overrides" },
+      { label: "Worktree provisioning", slug: "worktree" },
       { label: "Catalog", slug: "catalog" },
       { label: "Monorepos", slug: "monorepo" },
     ],
