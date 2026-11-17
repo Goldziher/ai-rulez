@@ -234,3 +234,24 @@ func cwd(t *testing.T) string {
 	require.NoError(t, err)
 	return dir
 }
+
+func TestWorktreeDestinationGeneratorStaysOffline(t *testing.T) {
+	f := newWorktreeFixture(t)
+	// The destination's configuration carries a remote include that nothing
+	// ever cached, on an unroutable address. Online fetching would fail the
+	// run (an unresolved include is refused unless the run is explicitly
+	// offline); a provisioning run resolves includes from the local cache
+	// only, so it succeeds without reaching the network.
+	worktreeWrite(t, filepath.Join(f.linked, ".ai-rulez/config.toml"),
+		"version = \"5.0\"\nname = \"t\"\ngitignore = false\nsession_start = { generate = false }\npresets = [\"claude\"]\n"+
+			"[[includes]]\nname = \"remote\"\nsource = \"https://127.0.0.1:1/none\"\n")
+	worktreeGitRun(t, f.linked, "add", ".ai-rulez/config.toml")
+	worktreeGitRun(t, f.linked, "commit", "-q", "-m", "remote include")
+
+	session := worktreeSession(t, f)
+	res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": f.linked, "dry_run": false})
+	require.False(t, res.IsError, textOfResult(t, res))
+	text := textOfResult(t, res)
+	assert.Contains(t, text, "generated", "the run succeeded without fetching")
+	assert.NotContains(t, text, "Always run the tests", "no generated file content is reported")
+}

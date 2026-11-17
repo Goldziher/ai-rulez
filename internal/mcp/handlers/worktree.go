@@ -69,7 +69,9 @@ func WorktreeSetupHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	if res.Generated {
 		payload["generated"] = true
 	}
-	payload["copies"] = worktreeCopies(res.Copies)
+	if copies := worktreeCopies(res.Copies); len(copies) > 0 {
+		payload["copies"] = copies
+	}
 	if len(res.Conflicts) > 0 {
 		payload["conflicts"] = worktreeCopies(res.Conflicts)
 	}
@@ -103,7 +105,10 @@ func worktreeMessage(res *worktreeprovision.Result) string {
 // for the destination checkout and without this server's tool request (the
 // destination has its own configuration and its own lock policy).
 func generateWorktreeOutputs(ctx context.Context, projectDir string, dryRun bool) ([]string, error) {
-	cfg, err := project.Load(ctx, projectDir,
+	// The destination resolves includes from the local cache only: the source
+	// checkout already fetched them, and a provisioning run does not reach the
+	// network on the caller's behalf.
+	cfg, err := project.Load(config.WithOfflineIncludes(ctx), projectDir,
 		config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true, Offline: true}))
 	if err != nil {
 		return nil, oops.Wrapf(err, "load the destination configuration")
