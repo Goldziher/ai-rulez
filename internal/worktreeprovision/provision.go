@@ -279,12 +279,12 @@ func resolveSource(ctx context.Context, opts *Options) (*worktrees, error) {
 	// A project may sit below the repository top (a monorepo); the
 	// destination's project is the worktree's copy of that path.
 	relProject := gitutil.RepoRelative(top, src)
-	if relProject == "." {
-		relProject = ""
-	}
-	if relProject != "" && strings.Contains(relProject, "..") {
+	if relProject == "" {
 		return nil, oops.Hint("the source project must live inside the repository that owns the linked worktrees").
 			Errorf("the source project %s is not inside the repository %s", src, top)
+	}
+	if relProject == "." {
+		relProject = ""
 	}
 	srcState, err := stateDirsOf(src)
 	if err != nil {
@@ -330,6 +330,9 @@ func checkDestinationWorktree(ctx context.Context, w *worktrees) error {
 	if _, err := os.Lstat(w.dst); err != nil {
 		return oops.Hint("git registered the worktree but its directory is missing: remove it and create it again").
 			Errorf("read the destination: %v", err)
+	}
+	if err := checkCopyDir(w.dst, w.dstProj); err != nil {
+		return oops.Wrapf(err, "inspect the destination project directory")
 	}
 	dstState, err := stateDirsOf(w.dstProj)
 	if err != nil {

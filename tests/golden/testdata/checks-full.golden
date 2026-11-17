@@ -348,7 +348,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14301 4a3028c230fb08acb8ff2778154c00a54144ecc8e6bc3d4586f2ce1219ba3ab3
+.ai-rulez/.generated-manifest.local.json file 0644 14301 9fa75c1426e82d4263d9636562bc64550f6d8b46afa687621d6ad735b1a4adcb
 >>>>
 {
   "version": "1",
@@ -469,7 +469,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "c6149b9597bb25a97da780de5ecdd4ac3c2b54c5cfd7f0b339c863f22ac016b1"
+          "cb93f578d62230bf004ab3797fec81eca5d7b4e64f1deece365169c37db75b44"
         ]
       },
       {
@@ -511,7 +511,7 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "ae9c07128d8ed65c14e43f55a5f0a06ae0db0a1f5147cc8c705c0de4b51b3a29",
+          "54a819143667928f34f8ece3fef72e7b4eff12b4a54dcbc0a1ef60bbb6ef0a4d",
           "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
         ]
       },
@@ -798,9 +798,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "760122bd6b452f1e65d86a5da03db4918367f0450b67d014ff99532c5831ccc1",
+    ".cursor/hooks.json": "e6194f0269637a51fdf90ca445e44491bf780318b1b1d608d09c0732ac9a5753",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".factory/hooks.json": "fa817deec3000c6c94615a1aa390b69b4cc02002c80e9b06086aa17625e7baeb",
+    ".factory/hooks.json": "0c02628b406b5e3a7e41da8bf20d68136873860f94c677675ade2758513471d8",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -2932,7 +2932,7 @@ name: tester
 
 Test first.
 <<<<
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -2944,7 +2944,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -2991,7 +2991,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 QWEN.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 >>>>

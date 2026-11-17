@@ -16,6 +16,16 @@ import (
 // worktree_setup tool, the wording prefers the tool at runtime and names the
 // CLI command as the fallback; otherwise it is CLI-only.
 func (c *Config) WorktreeGuidance() (text string, show bool) {
+	return c.worktreeGuidance(c != nil && c.hasMCPPreset())
+}
+
+// WorktreeGuidanceFor renders guidance for a dedicated root file. An empty
+// preset denotes a shared root and keeps the text independent of its writers.
+func (c *Config) WorktreeGuidanceFor(preset string) (text string, show bool) {
+	return c.worktreeGuidance(preset != "" && HarnessSupportsMCP(preset))
+}
+
+func (c *Config) worktreeGuidance(supportsMCP bool) (text string, show bool) {
 	if c == nil {
 		return "", false
 	}
@@ -23,7 +33,7 @@ func (c *Config) WorktreeGuidance() (text string, show bool) {
 		"After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, " +
 		"or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. " +
 		"Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default."
-	if c.HasSelfServer() && c.hasMCPPreset() && c.selfServerExposesWorktreeSetup() {
+	if supportsMCP && c.HasSelfServer() && c.selfServerExposesWorktreeSetup() {
 		base += fmt.Sprintf(" At runtime prefer the `worktree_setup` tool on the %#q MCP server when it is exposed; the CLI command is the fallback.", c.skillsServerName())
 	}
 	return base, true
@@ -49,15 +59,6 @@ func (c *Config) selfServerExposesWorktreeSetup() bool {
 		}
 	}
 	return false
-}
-
-// ShowWorktreeGuidance reports whether a generated root file the preset names
-// may carry the worktree guidance. The authored AGENTS.md of the "agents"
-// source is never written, so it never carries the guidance from here; a
-// generated harness file that is actually loaded (for example the CLAUDE.md
-// shim) still does.
-func (c *Config) ShowWorktreeGuidance() bool {
-	return c != nil
 }
 
 // WorktreeBriefing is the worktree guidance as one line for the default

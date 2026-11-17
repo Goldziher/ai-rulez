@@ -16,9 +16,7 @@ import (
 )
 
 // timestampProject writes a project emitting both root instruction files —
-// CLAUDE.md (claude) and AGENTS.md (codex) — from one rule. The two renders are
-// byte-identical by construction: the minimal header carries no per-output field,
-// and both files inline the same rule.
+// CLAUDE.md (claude) and AGENTS.md (codex) — from one rule.
 func timestampProject(t *testing.T, header string) string {
 	t.Helper()
 
@@ -76,7 +74,7 @@ func TestGenerator_OutputIsReproducibleAcrossRuns(t *testing.T) {
 func TestGenerator_SiblingRootFilesAgree(t *testing.T) {
 	t.Parallel()
 
-	tempDir := timestampProject(t, "")
+	tempDir := timestampProject(t, "[mcp]\nread_only = true\n")
 	generateProfile(t, tempDir, "default")
 
 	claude := readFile(t, filepath.Join(tempDir, "CLAUDE.md"))

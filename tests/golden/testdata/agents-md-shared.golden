@@ -43,7 +43,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3484 b77285a1750b3cdcdd6c7f9e0ea2fec98192523e2f32dfcd97d7466e7d2fd67e
-.ai-rulez/.generated-manifest.local.json file 0644 10984 b96e6c7e5ac9839a0328e0bb12dab0a70776c60fd56ab3c0f5fc3ed7a584ac7e
+.ai-rulez/.generated-manifest.local.json file 0644 10984 a7f223c1ce8263bbd229bf38f8f1e6341233e040fb05449ff4b9a321b6cfed8f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -133,7 +133,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .opencode/commands/ship.md file 0644 140 8302239666a0f1ea2a3ef65733af690c3df05de9f0c780c8a4b05bc18039a238
 .opencode/plugins/ dir 0755
 .opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
-AGENTS.md file 0644 1306 4e01b48b3409527a54d6fd2f1a9e0990ef290062cac65e00c241d7b543d40ede
+AGENTS.md file 0644 1180 bf7536b68869eac0e499fb8f57e10a727e3d8e2f46567e2ab14618aa8a7d96cf
 CLAUDE.md file 0644 377 685c755d39e586ad53da9856dfd9bb0f3dd6d9e158b61626af407a8ba0d1b1a8
 opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
@@ -419,7 +419,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 11225 47e385504fdef89bab10272a46ae83b32fa2bed1f1efa2aac5080f8303e0febc
+.ai-rulez/.generated-manifest.local.json file 0644 11225 090f44752cd1d03d033ed4c7568637e16485d400e8bf6bb547fd0a96f011acfd
 >>>>
 {
   "version": "1",
@@ -432,8 +432,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "203d65f3fdc003fd9d89ea76012c48b61b27a4257e31cb48ee5c04bb47de2f62",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "cec967613caf39eebf5101bcaecd2d30c55345730d35790522d217bd178dce58"
         ]
       },
       {
@@ -511,7 +511,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "7153925c102e40466269a927cbf18f4fe0cb30fd88613bfd6ab750a768187d17"
+          "bd3744b6f3a7d0b8eb2313783d56ea193095d3b8d603f6a6e52cfee4330d43f5"
         ]
       },
       {
@@ -569,7 +569,7 @@ policy:
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "c6149b9597bb25a97da780de5ecdd4ac3c2b54c5cfd7f0b339c863f22ac016b1"
+          "cb93f578d62230bf004ab3797fec81eca5d7b4e64f1deece365169c37db75b44"
         ]
       },
       {
@@ -641,7 +641,7 @@ policy:
         ],
         "elementSums": [
           "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "4c8da38840dc7eac33bc5c7523f05ef76e8cba3d0d736a5465baf24d0050e627"
+          "5fafced4b36ee55db6a40ba55f5dc78c514afe495d6e2cbe7d3c9115d8788e6d"
         ]
       },
       {
@@ -786,20 +786,20 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "2282d3dd33daa2024678425f74f4594115adda28ec708cc7fcdf65a41ff945e1",
+    ".claude/settings.json": "179a18d3fa3d564ea247a5733362d0ce77a2c179c0a3fc1640f084b2a47481d5",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5622eb2adeeff9df6ab88f56f285db9f390f923958051105b68a4e90a142d15c",
-    ".codex/hooks.json": "d027b1a88abc71edc3214a2c1967f6d652efdac0ac89af949d0220da93ee4a8f",
+    ".codex/hooks.json": "2e9de4c388ac8e0afaf36eee8b7811898877c9a7bf3c7874fd4eac3acc33b7e2",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "760122bd6b452f1e65d86a5da03db4918367f0450b67d014ff99532c5831ccc1",
+    ".cursor/hooks.json": "e6194f0269637a51fdf90ca445e44491bf780318b1b1d608d09c0732ac9a5753",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".gemini/settings.json": "89c0d188c174f0e592c7b1f7a74bb3925c6b45f3e63975c78d8f9ed462b35daa",
+    ".gemini/settings.json": "1fd92c07493c988870f3323c93ad88e5f43f19ffa0d849b306a0591c080ef0ae",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -2190,7 +2190,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -2202,7 +2202,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -2249,7 +2249,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 >>>>
@@ -2284,7 +2284,7 @@ Layers and boundaries.
 
 After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
 <<<<
-GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+GEMINI.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -2296,7 +2296,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -2343,7 +2343,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 >>>>

@@ -19,7 +19,7 @@ INFO  Generation complete files=6
 .codex/ dir 0755
 .codex/config.toml file 0644 201 185e2dd67014e6b711c4bcfd75a33e1d2303312307a8290acad6d490cc3884f6
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-AGENTS.md file 0644 938 d4054431292377a481d0dd23b01de61ba1bb5ae571bc226e614d7742a3d5f660
+AGENTS.md file 0644 812 377c3839c61698ee8c7859f125d27d41963251eb71d493ff5f6e3e67d6731c3d
 CLAUDE.md file 0644 393 8390d8224793730200b94db85fdbf4dca65ce454a4efcbc0bd6485f2cdcc2472
 opencode.json file 0644 313 52c7c251954012b7ef054b901a7ad26875f95455b166618ad92c088ed47b614c
 --- home tree
@@ -230,7 +230,7 @@ command = "npx"
   }
 }
 <<<<
-AGENTS.md file 0644 938 d4054431292377a481d0dd23b01de61ba1bb5ae571bc226e614d7742a3d5f660
+AGENTS.md file 0644 812 377c3839c61698ee8c7859f125d27d41963251eb71d493ff5f6e3e67d6731c3d
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -242,7 +242,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:2e39c39b850af163051841662be0ff7d983e096d22f2798cc388b2db4098861c
+Content-Hash: blake3:c932f303ea41d8214a5eabef61c9a46c31667f95fd98a7743c0b384e13e21efc
 -->
 
 # golden-enabled-plugins
@@ -257,7 +257,7 @@ Keep it simple.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 CLAUDE.md file 0644 393 8390d8224793730200b94db85fdbf4dca65ce454a4efcbc0bd6485f2cdcc2472
 >>>>

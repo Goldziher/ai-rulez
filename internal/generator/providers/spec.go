@@ -330,6 +330,8 @@ const (
 	// SectionRootSkillsInstructions is not accepted in a spec either: the
 	// renderer appends it to every root file when skills are served.
 	SectionRootSkillsInstructions = "skills_instructions"
+	// SectionRootWorktreeGuidance is appended by the renderer.
+	SectionRootWorktreeGuidance = "worktree_guidance"
 
 	// outputs.<type>.body.sections
 	SectionBodyFrontmatter     = "frontmatter"

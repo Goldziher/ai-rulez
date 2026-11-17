@@ -48,6 +48,7 @@ func TestWorktreeGuidanceRendering(t *testing.T) {
 		agentsMD, ok := readGuidanceFile(t, root, "AGENTS.md")
 		require.True(t, ok)
 		assert.Equal(t, 1, strings.Count(agentsMD, "## Worktrees"), "one section in the shared file")
+		assert.NotContains(t, agentsMD, "worktree_setup", "shared instructions work across MCP and CLI-only harnesses")
 		claudeMD, ok := readGuidanceFile(t, root, "CLAUDE.md")
 		require.True(t, ok)
 		assert.NotContains(t, claudeMD, "## Worktrees", "the shim imports the shared file; the section must not repeat")

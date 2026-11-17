@@ -6,6 +6,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.14.0] - 2026-11-17
+
+### Added
+
+- Create or provision linked Git worktrees with the worktree CLI. Carry checkout-local configuration and authored assistant overrides with explicit opt-in.
+- Provision host-created worktrees through the authoring MCP server. Generated instructions explain when to use the CLI or MCP tool.
+
+### Fixed
+
+- Generate outputs in the matching nested project and keep generated artifacts out of worktree-local copies.
+- Describe the authored `AGENTS.md` correctly in the startup briefing for agents-source projects.
+- Refresh the built-in command and skill names for Copilot and Cortex Code.
+
+### Documentation
+
+- Show how to verify and install a published Claude Code plugin bundle.
+
 ## [5.13.4] - 2026-11-16
 
 ### Fixed

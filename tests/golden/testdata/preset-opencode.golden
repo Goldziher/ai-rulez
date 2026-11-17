@@ -63,7 +63,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 opencode.json file 0644 963 5e371a5466de0600ab48afafde12759058930f89bc5b0e106a224d1cfc21a21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

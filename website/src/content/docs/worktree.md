@@ -74,14 +74,18 @@ want; nothing else travels.
 ## JSON output
 
 `--format json` prints one document following
-`schema/worktree-provision.schema.json` (in this repository, published with the release): what was
-carried (`copies`), the generate step's lines (`plan`), and `conflicts` when the run refused.
+`schema/worktree-provision.schema.json` on success. It reports the planned or completed copies
+(`copies`) and any generation preview (`plan`). A refused run exits with an error that names the
+conflicting paths.
 
 ## Agents
 
-The generated root instructions carry a short worktree section: after git or the host creates a
-linked worktree, run `worktree setup` from the source checkout — or `worktree create` when the
-agent owns creation — and prefer the `worktree_setup` MCP tool when the client exposes it. The
-default session-start briefing says the same in one line. For `source = "agents"` projects, the
-authored `AGENTS.md` is preserved; the guidance lands in a generated file the harness actually
-loads (the `CLAUDE.md` shim for Claude Code), or place it by hand where no such file exists.
+The generated root instructions tell agents to run `worktree setup` from the source checkout
+after Git or the host creates a worktree, or `worktree create` when the agent owns creation.
+Dedicated instructions for MCP-capable harnesses and the default session-start briefing can also
+name `worktree_setup`. Shared `AGENTS.md` uses the CLI wording, and the authoring MCP server
+advertises the tool to connected clients when it is registered.
+
+For `source = "agents"` projects, generation preserves the authored `AGENTS.md`. Claude Code's
+generated `CLAUDE.md` shim can carry the guidance. Where the harness loads only authored
+instructions, add the guidance to those files.

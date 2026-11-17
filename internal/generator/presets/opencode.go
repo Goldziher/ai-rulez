@@ -527,7 +527,7 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
-	WriteSkillsInstructions(&builder, cfg, opencodePresetName, agentsMDFile)
+	WriteRootGuidance(&builder, cfg, opencodePresetName, agentsMDFile)
 
 	// Skills are generated to .opencode/skills/ directory, not inlined
 

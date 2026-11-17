@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,7 +101,7 @@ func wtGit(t *testing.T, dir string, args ...string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+	cmd := gitutil.CommandNoContext(dir, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 }
