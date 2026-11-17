@@ -51,7 +51,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 311 bd4583bb3693409dabd6b4d8cc62cda583f3037260f1a1591598813745c3540f
 .gitlab/ dir 0755
 .gitlab/duo/ dir 0755
-.gitlab/duo/chat-rules.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
+.gitlab/duo/chat-rules.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
 .gitlab/duo/hooks.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
 .gitlab/duo/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
 .gitlab/duo/mr-review-instructions.yaml file 0644 155 dcb98b6b78eb935ccd09ffb91a4f54775cbfc9a67b175432b6f1320cba7417d5

@@ -78,9 +78,21 @@ func TestWorktreeGuidanceRendering(t *testing.T) {
 		assert.False(t, ok, "agents_md off writes no shared AGENTS.md")
 	})
 
-	t.Run("the wording is CLI-only; the MCP preference comes with the tool itself", func(t *testing.T) {
+	t.Run("MCP-capable configs prefer the tool and name the CLI fallback", func(t *testing.T) {
 		root := t.TempDir()
 		worktreeGuidanceProject(t, root, `"claude"`, "agents_md = false\n")
+		cfg, err := config.LoadConfig(context.Background(), root)
+		require.NoError(t, err)
+		require.NoError(t, NewGenerator(cfg).Generate(""))
+		claudeMD, ok := readGuidanceFile(t, root, "CLAUDE.md")
+		require.True(t, ok)
+		assert.Contains(t, claudeMD, "worktree_setup")
+		assert.Contains(t, claudeMD, "the CLI command is the fallback")
+	})
+
+	t.Run("CLI-only configurations get the CLI-only wording", func(t *testing.T) {
+		root := t.TempDir()
+		worktreeGuidanceProject(t, root, `"claude"`, "agents_md = false\n[mcp]\nself_server = false\n")
 		cfg, err := config.LoadConfig(context.Background(), root)
 		require.NoError(t, err)
 		require.NoError(t, NewGenerator(cfg).Generate(""))

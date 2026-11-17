@@ -86,7 +86,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 .gitignore file 0644 412 811082c7b6c162b8a23ccfda7ffec4fde1fd8a2d8d737387728a17049625ba62
 .mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-CLAUDE.md file 0644 838 b19ee9dcb92ec3276e750cef309aacb937b80ab68c87627d87f832d2279610f1
+CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 docs/ dir 0755
 docs/llms.txt file 0644 985 238c74aefc193365fbbc2c5d2f22afe1facd86a94ea02e898df4cd482c6eee46
 scripts/ dir 0755
@@ -804,7 +804,7 @@ Cut a release.
   }
 }
 <<<<
-CLAUDE.md file 0644 838 b19ee9dcb92ec3276e750cef309aacb937b80ab68c87627d87f832d2279610f1
+CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -816,7 +816,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:440d22cab84f1510c51f5b34241a75c1ac0ca3925d07ffd85779ccf541e5a7f1
+Content-Hash: blake3:7a3d007d2466d4ab2df4c9a81272bae9f94a29e43ef57f0e0c92c181215d0f2d
 -->
 
 # golden
@@ -835,7 +835,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
 <<<<
 docs/ dir 0755
 docs/llms.txt file 0644 985 238c74aefc193365fbbc2c5d2f22afe1facd86a94ea02e898df4cd482c6eee46

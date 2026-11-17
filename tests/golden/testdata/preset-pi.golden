@@ -64,7 +64,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .pi/prompts/ dir 0755
 .pi/prompts/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 .pi/prompts/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
-AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
+AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

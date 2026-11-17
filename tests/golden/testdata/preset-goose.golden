@@ -63,7 +63,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .goose/agents/ dir 0755
 .goose/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .goose/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-.goosehints file 0644 1148 8c9560c02a36af159cdba820ef34a9098e011f45126c6fe6066607447227f51c
+.goosehints file 0644 1274 f6990e14bdc2ab30f5dad93ee15ddb076d7c3d9c47e671cc8d02238b829e8b12
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
