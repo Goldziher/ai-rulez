@@ -165,6 +165,7 @@ func init() {
 	RootCmd.AddCommand(newExposureCmd())
 	RootCmd.AddCommand(EvalCmd)
 	RootCmd.AddCommand(ImproveCmd)
+	RootCmd.AddCommand(newWorktreeCmd())
 	RootCmd.AddCommand(LocalCmd)
 	RootCmd.AddCommand(OKFCmd)
 	RootCmd.AddCommand(ExportCmd)

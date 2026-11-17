@@ -209,6 +209,9 @@ func (s *Server) composeInstructions() string {
 	return strings.TrimSpace(strings.Join(slices.DeleteFunc(parts, func(p string) bool { return p == "" }), " "))
 }
 
+// toolWorktreeSetup is the name of the worktree provisioning tool.
+const toolWorktreeSetup = "worktree_setup"
+
 // authoringInstructions describes the authoring tools that are registered.
 func (s *Server) authoringInstructions() string {
 	if s.noProject {
@@ -229,6 +232,10 @@ func (s *Server) authoringInstructions() string {
 		parts = append(parts, "Use read/list tools to inspect state and validate_config to check the configuration.")
 	} else if s.hasAnyReader() {
 		parts = append(parts, "Use read/list tools to inspect state.")
+	}
+	if s.has(toolWorktreeSetup) {
+		parts = append(parts, "After git or your host creates a linked worktree, worktree_setup provisions it "+
+			"from this checkout (dry run by default); branch creation stays with git or the CLI.")
 	}
 	parts = append(parts, "Never edit generated files directly.")
 	return strings.Join(parts, " ")

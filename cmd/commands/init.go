@@ -475,6 +475,7 @@ Use this skill when working in a project that is managed by AI-Rulez.
 - ai-rulez add|remove|list rule|context|skill|agent — manage content files.
 - ai-rulez validate — ensure config and tree structure are sound.
 - ai-rulez generate [--profile <name>] — render tool presets after edits.
+- ai-rulez worktree create|setup — provision a linked worktree from this checkout (after git or the host creates one, run setup; local copies are opt-in with --copy-local).
 - ai-rulez migrate v5 — rewrite a 4.x configuration for v5.
 
 ## Guidelines

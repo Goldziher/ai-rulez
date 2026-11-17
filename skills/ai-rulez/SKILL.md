@@ -84,6 +84,7 @@ ai-rulez lock                           # govern: pin includes, skills and conte
 ai-rulez sign --lock                    # govern: Sigstore attestation of the lock
 ai-rulez sbom -o ai-bom.cdx.json        # govern: CycloneDX SBOM
 ai-rulez publish --dry-run              # publish: preview release artifacts
+ai-rulez worktree create|setup          # worktree: provision a linked worktree from this checkout (--copy-local is opt-in)
 ```
 
 Supported and planned standards, with pinned versions and test status, are in

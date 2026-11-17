@@ -49,7 +49,7 @@ func TestEveryToolCarriesMetadata(t *testing.T) {
 	authoring := listAllTools(t, NewServer("test"))
 	serving := listAllTools(t, NewSkillServerWith("test", loadCatalog(t), ServeOptions{}))
 	tools := append(append([]*sdkmcp.Tool{}, authoring...), serving...)
-	require.Len(t, tools, 77, "tool count changed: update the metadata expectations deliberately")
+	require.Len(t, tools, 78, "tool count changed: update the metadata expectations deliberately")
 
 	for _, tool := range tools {
 		t.Run(tool.Name, func(t *testing.T) {

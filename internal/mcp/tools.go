@@ -230,6 +230,12 @@ func (s *Server) registerCRUDDomainTools() {
 		description: "List all domains in the .ai-rulez directory",
 		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
 	}, handlers.ListDomainsHandler)
+
+	addTool[worktreeSetupIn](s, toolSpec{
+		name: "worktree_setup", title: "Setup Worktree",
+		description: "Provision a linked git worktree that git or the host already created: regenerate its outputs from its own committed configuration and, with explicit consent (--copy_local), carry this checkout's machine-local inputs. dry_run defaults to true when omitted; pass false to write. Refuses a destination that is not a registered linked worktree of the same repository, tracked or unignored copy targets, and destination files that differ; reports paths, never file contents. Branch creation stays with git or the CLI (ai-rulez worktree create).",
+		annotations: idempotentAnnotations(), output: worktreeSetupOut{},
+	}, handlers.WorktreeSetupHandler)
 }
 
 // registerCRUDRuleTools adds the rule tools.

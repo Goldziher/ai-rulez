@@ -103,6 +103,14 @@ func authoringCapabilities() []Capability {
 			ID: "config-update", Kind: MCPOnly, Tool: "update_config",
 			Reason: "the command line edits config.toml directly or through `local set`; a tool client needs a typed edit that keeps comments and ordering",
 		},
+		{
+			ID: "worktree-setup", Kind: Paired, CLI: []string{"worktree setup"}, Tool: "worktree_setup",
+			Flags: []FlagPair{{Flag: "dry-run", Arg: "dry_run"}, {Flag: "copy-local", Arg: "copy_local"},
+				{Flag: "copy-extra", Arg: "copy_extra"}},
+			ToolArgs: []Exclusion{
+				{Names: []string{"destination"}, Reason: "the CLI takes the destination as a positional argument"},
+			},
+		},
 	}
 }
 
@@ -449,6 +457,7 @@ func cliOnlyCapabilities() []Capability {
 			"convert", "migrate *"),
 		only("okf-export-import", "write a whole bundle or import a foreign one into the tree", "export okf", "import okf"),
 		only("publish", "builds and signs distribution artifacts and may push them", "publish *"),
+		only("worktree-create", "creates a branch and a linked worktree; an agent leaves branch creation to git or its host and provisions the result with worktree_setup", "worktree create"),
 		only("eval-improve", "run models and harness subprocesses and spend money", "eval *", "improve *"),
 		only("review", "spends model tokens in its default mode; no tool exposes its offline heuristics", "review *", "rubric *"),
 		only("telemetry", "consent and network egress of usage data", "telemetry *"),

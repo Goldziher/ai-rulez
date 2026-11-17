@@ -17,7 +17,7 @@ a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
 a/.claude/settings.json file 0644 1013 1b66076b791611d89dca7b618b35a94690b52eb942deee0c986a94043773da95
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
+a/CLAUDE.md file 0644 843 39bb8f7939faa3574c7b3af5fd69ad5e3d06471e574a1edc47f01623de85ef59
 b/ dir 0755
 b/c/ dir 0755
 b/c/.ai-rulez/ dir 0755
@@ -33,7 +33,7 @@ b/c/.cursor/mcp.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
 b/c/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-b/c/AGENTS.md file 0644 392 4022e4075caa2b94fdca0d8ddd4d4ac729dda5130e35bbc57d4daae58d3e33c7
+b/c/AGENTS.md file 0644 868 8c78971640c264bbff9ad4ffca55eb50eb126d1381462fd99904187e2048a29b
 --- home tree
 (no change)
 
@@ -54,7 +54,7 @@ a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
 a/.claude/settings.json file 0644 1013 1b66076b791611d89dca7b618b35a94690b52eb942deee0c986a94043773da95
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
+a/CLAUDE.md file 0644 843 39bb8f7939faa3574c7b3af5fd69ad5e3d06471e574a1edc47f01623de85ef59
 b/ dir 0755
 b/c/ dir 0755
 b/c/.ai-rulez/ dir 0755
@@ -70,6 +70,6 @@ b/c/.cursor/mcp.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
 b/c/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-b/c/AGENTS.md file 0644 392 4022e4075caa2b94fdca0d8ddd4d4ac729dda5130e35bbc57d4daae58d3e33c7
+b/c/AGENTS.md file 0644 868 8c78971640c264bbff9ad4ffca55eb50eb126d1381462fd99904187e2048a29b
 --- home tree
 (no change)
