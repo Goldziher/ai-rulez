@@ -60,6 +60,28 @@ type contextEntry struct {
 	Path    string `json:"path" jsonschema:"Path of the file"`
 }
 
+// worktreeCopyOut is one carried (or planned, or conflicting) file of
+// worktree_setup: paths are relative to the source and destination checkouts
+// and no content is reported.
+type worktreeCopyOut struct {
+	Source      string `json:"source" jsonschema:"Path relative to the source checkout"`
+	Destination string `json:"destination" jsonschema:"Path relative to the destination worktree"`
+	Action      string `json:"action" jsonschema:"copy wrote the file, identical left the destination's same bytes alone, conflict refused the run before any write"`
+}
+
+// worktreeSetupOut is the result of worktree_setup.
+type worktreeSetupOut struct {
+	opBase
+	Source      string            `json:"source" jsonschema:"Absolute path of the source checkout the run provisioned from"`
+	Destination string            `json:"destination" jsonschema:"Absolute path of the linked worktree the run provisioned"`
+	DryRun      bool              `json:"dry_run,omitempty" jsonschema:"True when the run planned and wrote nothing"`
+	Copies      []worktreeCopyOut `json:"copies,omitempty" jsonschema:"The machine-local files carried (or planned), sorted by destination-relative path"`
+	Generated   bool              `json:"generated,omitempty" jsonschema:"True when the destination's outputs were regenerated (always false for a dry run)"`
+	Plan        []string          `json:"plan,omitempty" jsonschema:"The generate step's lines: its plan in a dry run, its output in a real run"`
+	Conflicts   []worktreeCopyOut `json:"conflicts,omitempty" jsonschema:"Present when the run refused: destination files that differ from what the source would carry; nothing was written"`
+	Message     string            `json:"message,omitempty" jsonschema:"Human-readable summary"`
+}
+
 // configOut is the result of read_config and update_config.
 type configOut struct {
 	opBase

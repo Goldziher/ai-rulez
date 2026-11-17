@@ -309,6 +309,7 @@ code. The tables below are generated from the source.
 | `verifiers list` | `list_verifiers` | authoring |  |
 | `verifiers run` | `run_verifiers` | authoring |  |
 | `version` | `get_version` | authoring |  |
+| `worktree setup` | `worktree_setup` | authoring |  |
 
 **Only on the command line**, deliberately. These write trust, spend money, use the network or credentials, prompt, or run for the length of a process.
 
@@ -350,7 +351,7 @@ code. The tables below are generated from the source.
 | `telemetry *` | consent and network egress of usage data |
 | `verifiers calibrate`, `verifiers explain`, `verifiers suggest`, `verifiers test` | calibrate, suggest and test run models or programs; explain prints the help text of a verifier |
 | `verify` | verifies signatures, attestations and downloaded artifacts with the signing backend; the drift half is generate_outputs check and doctor |
-| `worktree *` | provisions linked worktrees: it copies machine-local files between checkouts on explicit consent and runs generate as a subprocess of the CLI; the MCP equivalent lands with worktree_setup |
+| `worktree create` | creates a branch and a linked worktree; an agent leaves branch creation to git or its host and provisions the result with worktree_setup |
 
 **Only on MCP**, deliberately.
 
