@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -139,13 +140,15 @@ func TestSetupCarriesTheLocalInputs(t *testing.T) {
 		require.NoError(t, err, rel)
 		assert.NotEmpty(t, data)
 	}
-	// Owner-only permissions on everything the run copied.
-	info, err := os.Stat(filepath.Join(f.linked, ".ai-rulez/config.local.toml"))
-	require.NoError(t, err)
-	assert.Equal(t, fs.FileMode(0o600), info.Mode().Perm())
-	dirInfo, err := os.Stat(filepath.Join(f.linked, ".ai-rulez/local/rules"))
-	require.NoError(t, err)
-	assert.Equal(t, fs.FileMode(0o700), dirInfo.Mode().Perm())
+	// Windows reports synthetic mode bits.
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(filepath.Join(f.linked, ".ai-rulez/config.local.toml"))
+		require.NoError(t, err)
+		assert.Equal(t, fs.FileMode(0o600), info.Mode().Perm())
+		dirInfo, err := os.Stat(filepath.Join(f.linked, ".ai-rulez/local/rules"))
+		require.NoError(t, err)
+		assert.Equal(t, fs.FileMode(0o700), dirInfo.Mode().Perm())
+	}
 }
 
 func TestSetupWithoutConsentCarriesNothing(t *testing.T) {
@@ -646,7 +649,7 @@ func TestSetupRefusesADestinationWithoutTheNestedProject(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "services/billing")
+	assert.Contains(t, err.Error(), filepath.Join("services", "billing"))
 }
 
 func TestSetupRefusesSourceSymlinkAncestor(t *testing.T) {
