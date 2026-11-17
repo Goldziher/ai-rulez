@@ -449,6 +449,8 @@ func cliOnlyCapabilities() []Capability {
 			"convert", "migrate *"),
 		only("okf-export-import", "write a whole bundle or import a foreign one into the tree", "export okf", "import okf"),
 		only("publish", "builds and signs distribution artifacts and may push them", "publish *"),
+		only("worktree", "provisions linked worktrees: it copies machine-local files between checkouts on explicit consent and runs generate as a subprocess of the CLI; the MCP equivalent lands with worktree_setup",
+			"worktree *"),
 		only("eval-improve", "run models and harness subprocesses and spend money", "eval *", "improve *"),
 		only("review", "spends model tokens in its default mode; no tool exposes its offline heuristics", "review *", "rubric *"),
 		only("telemetry", "consent and network egress of usage data", "telemetry *"),

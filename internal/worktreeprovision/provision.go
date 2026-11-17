@@ -64,7 +64,7 @@ type CopyEntry struct {
 
 // Result says what a provisioning run did or would do. Paths are relative to
 // the source and destination checkouts, so no absolute path and no file
-// content leaves the machine.
+// content leaves the machine. The JSON form is schema/worktree-provision.schema.json.
 type Result struct {
 	Source      string      `json:"source"`
 	Destination string      `json:"destination"`

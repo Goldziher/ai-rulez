@@ -48,7 +48,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .github/agents/ dir 0755
 .github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-.github/copilot-instructions.md file 0644 627 5be176ce0987ac1f8bdfaabe285222fac4fdd0e6e3c81bca9fbb2dd0bb4eedb0
+.github/copilot-instructions.md file 0644 1101 5fff3484a9d7c517537c30fcdc746a9f74513e8e0f9dd297b56cf065a933453a
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755

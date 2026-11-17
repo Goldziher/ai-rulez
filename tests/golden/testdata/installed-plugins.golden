@@ -50,7 +50,7 @@ INFO  Generation complete files=19
 .cursor/commands/ship.md file 0644 52 932bc3c3611af3335f135b9ceba7d64761b0ed8df7cc2ade3887000fcf8a1eab
 .cursor/mcp.json file 0644 335 3d4061eb472e387f2b50a428d901fed7d85ab2673ec1483ad676e6f310ed50ac
 .mcp.json file 0644 403 449107476ea8ceaa93e26353d9ada94163ddf8c2f0015780eb18a7eb2d69672a
-AGENTS.md file 0644 448 005e0df39648f70646b036b45784dd02573aa4bc3f29b6be2f259e817ec38f93
+AGENTS.md file 0644 922 5117174ee67e5330126f031d9771ab5facc697c580f9c7913460792ecdea3aad
 CLAUDE.md file 0644 385 a5339d809644df61225e26f170d180f3c38c12076884484abd15cfc9198aba1b
 vendor/ dir 0755
 vendor/codex-tools/ dir 0755
@@ -101,11 +101,11 @@ exit: 0
 locked cx-explain  sha256:da2274bc5725a9b90071753fdd75d16664d4364241a37f21f469ae7d1e1b1359
 locked review  sha256:0d6f9272076d9c27dd09b5275cc070dbdd8d2cae05ff4600c1d3264d66d8644d
 locked ship  sha256:11de52708075fa27b49e1fa46f2cafafdeffe66a07734211511f82475240350b
-pinned 4 item(s) and 18 output(s), tree sha256:dbcb05c00e11550a603829ff0d9094a1e0cb7c688ed8373ece500e71cde8ffd4
+pinned 4 item(s) and 18 output(s), tree sha256:3dd65cc12c3e0341ef9038bfa9afd771174a7cfa2c0e2754023f88e2ac32f792
 --- stderr
 INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 --- project tree
-+ .ai-rulez/ai-rulez.lock file 0600 3799 7617fcf8159842b72a68aa555d41d438869bdf2af80a05ccbbfa76a8ca74bb44
++ .ai-rulez/ai-rulez.lock file 0600 3799 b06a7b683988d646fc8fbf64b66e6bb25449357bf2a8376152f7c16b8555e95f
 --- home tree
 (no change)
 
@@ -397,7 +397,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/ai-rulez.lock file 0600 3799 7617fcf8159842b72a68aa555d41d438869bdf2af80a05ccbbfa76a8ca74bb44
+.ai-rulez/ai-rulez.lock file 0600 3799 b06a7b683988d646fc8fbf64b66e6bb25449357bf2a8376152f7c16b8555e95f
 >>>>
 # ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
@@ -406,7 +406,7 @@ version = 1
 ai_rulez_version = '$VERSION'
 scope = 'all'
 outputs_pinned = true
-tree = 'sha256:dbcb05c00e11550a603829ff0d9094a1e0cb7c688ed8373ece500e71cde8ffd4'
+tree = 'sha256:3dd65cc12c3e0341ef9038bfa9afd771174a7cfa2c0e2754023f88e2ac32f792'
 
 [[served]]
 name = 'cx-explain'
@@ -515,7 +515,7 @@ digest = 'sha256:63a589e20f8464622e704b15ffe0adef0f538b185eff5aadc13b619c14c3be5
 
 [[output]]
 path = 'AGENTS.md'
-digest = 'sha256:8a7a1968f9b43cfa281a086d863f6e15ed44cfd05dff03cf6a858af58fb5cbd6'
+digest = 'sha256:23553d503671e5ae87a31bc1775c3dcc914adb0a3bbcd6eeaee8d6c07ca6074e'
 
 [[output]]
 path = 'CLAUDE.md'
@@ -749,7 +749,7 @@ Ship $ARGUMENTS.
   }
 }
 <<<<
-AGENTS.md file 0644 448 005e0df39648f70646b036b45784dd02573aa4bc3f29b6be2f259e817ec38f93
+AGENTS.md file 0644 922 5117174ee67e5330126f031d9771ab5facc697c580f9c7913460792ecdea3aad
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -761,7 +761,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:31fd2858defa4e7296c304346fc42f988e9d70ce8fc58ea2632cbddfb8a41ec1
+Content-Hash: blake3:c277acc879e2523a38db549b5c27dae9d6afadb4b00438e04dcacc96201d33e2
 -->
 
 # golden-plugins
@@ -773,6 +773,10 @@ Content-Hash: blake3:31fd2858defa4e7296c304346fc42f988e9d70ce8fc58ea2632cbddfb8a
 **Priority:** high
 
 Keep it simple.
+
+## Worktrees
+
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
 <<<<
 CLAUDE.md file 0644 385 a5339d809644df61225e26f170d180f3c38c12076884484abd15cfc9198aba1b
 >>>>

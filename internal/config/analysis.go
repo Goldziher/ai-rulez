@@ -85,6 +85,10 @@ const (
 	// PartKindRootSkillsInstructions is the section telling an agent how to load
 	// served skills; it is written by the renderer, not declared in a spec.
 	PartKindRootSkillsInstructions PartKind = "skills_instructions"
+	// PartKindRootWorktreeGuidance is the one short worktree instruction; it is
+	// written by the renderer, not declared in a spec, and shares the
+	// skills-instructions routing rules.
+	PartKindRootWorktreeGuidance PartKind = "worktree_guidance"
 )
 
 // Part kinds for a per-item (skill / agent / command) file.

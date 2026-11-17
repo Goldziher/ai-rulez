@@ -1041,6 +1041,16 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		start := recorder.mark(&b)
 		presets.WriteSkillsInstructions(&b, cfg, g.Spec.Name, rootRelPath)
 		recorder.section(config.PartKindRootSkillsInstructions, SectionRootSkillsInstructions, "", start, &b)
+	} else if cfg.UsesAgentsSource() && cfg.ShowWorktreeGuidance() {
+		// The shim imports the authored AGENTS.md, which carries no generated
+		// guidance; the shim is the loaded generated file, so it carries the
+		// instruction itself.
+		start := recorder.mark(&b)
+		if text, ok := cfg.WorktreeGuidance(); ok {
+			b.WriteString(text)
+			b.WriteString("\n\n")
+		}
+		recorder.section(config.PartKindRootWorktreeGuidance, "worktree_guidance", "", start, &b)
 	}
 
 	rendered := b.String()
@@ -1064,8 +1074,7 @@ func (g *Generator) warnEmptyRootFile(cfg *config.Config) {
 	)
 }
 
-func countContent(content *config.ContentTree, plan *rulesPlan) (rules, agents int) {
-	// Count the rules the root file inlines, after deduplication and routing, so
+func countContent(content *config.ContentTree, plan *rulesPlan) (rules, agents int) { // Count the rules the root file inlines, after deduplication and routing, so
 	// the header reflects what is actually rendered.
 	rules = plan.ruleCount()
 	// Count agents after dedup + extends resolution so the header matches what

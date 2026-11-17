@@ -183,7 +183,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .github/agents/helper.agent.md file 0644 145 a05e291bca4e263ce308383033e43e9baba24e5b5ea3fb585b2e5d74c72001bc
 .github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-.github/copilot-instructions.md file 0644 627 5be176ce0987ac1f8bdfaabe285222fac4fdd0e6e3c81bca9fbb2dd0bb4eedb0
+.github/copilot-instructions.md file 0644 1101 5fff3484a9d7c517537c30fcdc746a9f74513e8e0f9dd297b56cf065a933453a
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755
@@ -264,12 +264,12 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .vscode/mcp.json file 0600 698 69abfa76345ce8b800cfebc033992a553005cb82c8f82ea53ff7a139535f22fb
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
-AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
-AGENTS.override.md file 0644 1166 fb8051321a48d855ac56b59e4891b501d6029a20bdd329b76034d90336a9f1f9
+AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.override.md file 0644 1640 98ab040b45b8f57144de90faec51dae095d6ba59f70ddd03b4f73330eb39f242
 CLAUDE.local.md file 0644 415 71759bed64dc5f1674339c7a5ab7d4c318124aea36c6626b815b2a8b0693fa2c
-CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
+CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 GEMINI.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
-GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
+GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0600 915 c18268664298f582eed44cd5947f66d6f4961874cc2f6994059f3f52bd0ae259
 opencode.json file 0600 1130 9aeafb8ecfdea117223ded62c65089373be9963c49c16ee8f43a3fd61e856460

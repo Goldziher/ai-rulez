@@ -23,5 +23,8 @@ func InitAgentsMD(projectName string) string {
 		projectName = "project"
 	}
 	return "# " + projectName + "\n\nInstructions for AI coding agents working in this repository.\n\n" +
-		"## Conventions\n\n- Describe the build, test and lint commands here.\n- Describe the code style the agents must follow.\n"
+		"## Conventions\n\n- Describe the build, test and lint commands here.\n- Describe the code style the agents must follow.\n\n" +
+		"## Worktrees\n\n" +
+		"- After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from the main checkout to provision it.\n" +
+		"- Carrying machine-local files into the worktree is opt-in with `--copy-local`.\n"
 }

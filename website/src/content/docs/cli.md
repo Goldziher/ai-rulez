@@ -1497,5 +1497,8 @@ Every command in the binary. Flags, defaults and examples of each are in the [Co
 | `ai-rulez verifiers test` | Run the self-test examples of the verifiers offline |
 | `ai-rulez verify` | Verify attestations, approvals and plugin provenance |
 | `ai-rulez version` | Print the version number of ai-rulez |
+| `ai-rulez worktree` | Provision linked worktrees with this checkout's AI-Rulez configuration |
+| `ai-rulez worktree create` | Create a linked worktree on a new branch and provision it |
+| `ai-rulez worktree setup` | Provision an existing linked worktree |
 
 <!-- END GENERATED: command-index -->

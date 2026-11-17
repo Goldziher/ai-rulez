@@ -540,6 +540,15 @@ const helpExampleSpec = `
 ## version
   ai-rulez version
   ai-rulez version --format json
+## worktree
+  ai-rulez worktree create ../.worktrees/billing/fix-mcp --branch fix-mcp
+  ai-rulez worktree setup ../.worktrees/billing/fix-mcp --copy-local --dry-run
+## worktree create
+  ai-rulez worktree create ../.worktrees/billing/fix-mcp --branch fix-mcp
+  ai-rulez worktree create ../.worktrees/billing/fix-mcp --branch fix-mcp --start-ref main --copy-local
+## worktree setup
+  ai-rulez worktree setup ../.worktrees/billing/fix-mcp
+  ai-rulez worktree setup ../.worktrees/billing/fix-mcp --copy-local --copy-extra notes.local.md --dry-run
 ## llm
   ai-rulez llm doctor
   ai-rulez llm estimate prompt.md

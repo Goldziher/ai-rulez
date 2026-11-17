@@ -350,6 +350,7 @@ code. The tables below are generated from the source.
 | `telemetry *` | consent and network egress of usage data |
 | `verifiers calibrate`, `verifiers explain`, `verifiers suggest`, `verifiers test` | calibrate, suggest and test run models or programs; explain prints the help text of a verifier |
 | `verify` | verifies signatures, attestations and downloaded artifacts with the signing backend; the drift half is generate_outputs check and doctor |
+| `worktree *` | provisions linked worktrees: it copies machine-local files between checkouts on explicit consent and runs generate as a subprocess of the CLI; the MCP equivalent lands with worktree_setup |
 
 **Only on MCP**, deliberately.
 
