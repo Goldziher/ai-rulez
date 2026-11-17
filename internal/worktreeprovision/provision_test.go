@@ -436,3 +436,210 @@ func TestSetupRefusesAMissingGenerateStep(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no generate step")
 }
+
+func TestCreateDryRunMutatesNothing(t *testing.T) {
+	f := newFixture(t)
+	dest := filepath.Join(f.root, "planned")
+	g := gitutil.Git{}
+	ctx := context.Background()
+
+	opts := f.opts(t, true)
+	opts.Destination = dest
+	opts.CopyLocal = true
+	write(t, filepath.Join(f.src, "CLAUDE.local.md"), "# local\n")
+	res, err := Create(ctx, opts, "planned-branch", "")
+
+	require.NoError(t, err)
+	assert.True(t, res.DryRun)
+	assert.Empty(t, f.generateCalls, "a dry run does not generate")
+	assert.False(t, g.BranchExists(ctx, f.src, "planned-branch"), "no branch is created")
+	_, err = os.Stat(dest)
+	assert.True(t, os.IsNotExist(err), "no worktree directory is created")
+	infos, err := g.WorktreesContext(ctx, f.src)
+	require.NoError(t, err)
+	for _, info := range infos {
+		assert.NotEqual(t, dest, info.Path, "no worktree is registered")
+	}
+}
+
+func TestCreateDryRunStillChecksTheBranchAndStartRef(t *testing.T) {
+	f := newFixture(t)
+	dest := filepath.Join(f.root, "planned")
+
+	opts := f.opts(t, true)
+	opts.Destination = dest
+	_, err := Create(context.Background(), opts, "feature", "")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists", "the branch check runs without mutation")
+
+	opts2 := f.opts(t, true)
+	opts2.Destination = dest
+	_, err = Create(context.Background(), opts2, "planned", "no-such-ref")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not a commit")
+}
+
+func TestSetupDryRunNamesTheGeneratePreviewLimit(t *testing.T) {
+	f := newFixture(t)
+	write(t, filepath.Join(f.src, ".ai-rulez/config.local.toml"), "# overlay\n")
+	write(t, filepath.Join(f.src, "CLAUDE.local.md"), "# local\n")
+
+	opts := f.opts(t, true)
+	opts.CopyLocal = true
+	res, err := Setup(context.Background(), opts)
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, res.Plan)
+	found := false
+	for _, line := range res.Plan {
+		if strings.Contains(line, "machine-local") && strings.Contains(line, "not yet carried") {
+			found = true
+		}
+	}
+	assert.True(t, found, "the dry run names the overlay limitation: %v", res.Plan)
+}
+
+// generatedLocalMD is a generated local file: a leading banner comment, the
+// shape genmark detects without needing a verifiable hash in the test.
+func generatedLocalMD(name, body string) string {
+	return "<!--\n" +
+		"\U0001F916 AI-RULEZ :: GENERATED FILE — DO NOT EDIT\n" +
+		"Project: t\n" +
+		"Source: .ai-rulez/config.toml\n" +
+		"NEVER edit this file - modify .ai-rulez/ content instead\n" +
+		"-->\n\n" + body
+}
+
+func TestSetupSkipsGeneratedAllowlistFiles(t *testing.T) {
+	f := newFixture(t)
+	write(t, filepath.Join(f.src, "CLAUDE.local.md"), generatedLocalMD("CLAUDE.local.md", "# generated\n"))
+	write(t, filepath.Join(f.src, "AGENTS.local.md"), "# authored\n")
+	write(t, filepath.Join(f.linked, ".gitignore"), strings.Join([]string{
+		"# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)",
+		".ai-rulez/config.local.toml", ".ai-rulez/local/", "CLAUDE.local.md",
+		"AGENTS.local.md", "# END ai-rulez\n",
+	}, "\n"))
+	gitRun(t, f.linked, "add", ".gitignore")
+	gitRun(t, f.linked, "commit", "-q", "-m", "ignore the local files")
+
+	opts := f.opts(t, false)
+	opts.CopyLocal = true
+	res, err := Setup(context.Background(), opts)
+
+	require.NoError(t, err)
+	got := map[string]string{}
+	for _, e := range res.Copies {
+		got[e.Destination] = e.Action
+	}
+	assert.NotContains(t, got, "CLAUDE.local.md", "a generated file is regenerated, not copied")
+	assert.Equal(t, ActionCopy, got["AGENTS.local.md"], "an authored file is carried")
+	assert.NoFileExists(t, filepath.Join(f.linked, "CLAUDE.local.md"))
+}
+
+func TestSetupRefusesAGeneratedExtra(t *testing.T) {
+	f := newFixture(t)
+	write(t, filepath.Join(f.src, "carry-me.local.md"), generatedLocalMD("carry-me.local.md", "# generated\n"))
+	// The destination is what the ignore check consults, so the rule is
+	// committed on the branch the linked worktree holds.
+	write(t, filepath.Join(f.linked, ".gitignore"), strings.Join([]string{
+		"# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)",
+		".ai-rulez/config.local.toml", ".ai-rulez/local/", "CLAUDE.local.md",
+		"carry-me.local.md", "# END ai-rulez\n",
+	}, "\n"))
+	gitRun(t, f.linked, "add", ".gitignore")
+	gitRun(t, f.linked, "commit", "-q", "-m", "ignore carry-me")
+
+	_, err := Setup(context.Background(), &Options{
+		Source: f.src, Destination: f.linked, Generate: f.generate,
+		CopyExtra: []string{"carry-me.local.md"},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "generated")
+}
+
+func TestSetupDedupesOverlappingExtras(t *testing.T) {
+	f := newFixture(t)
+	write(t, filepath.Join(f.src, "notes.local.md"), "# notes\n")
+	write(t, filepath.Join(f.src, "extra.d/extra.local.md"), "# extra\n")
+	// The destination is what the ignore check consults, so the rule is
+	// committed on the branch the linked worktree holds.
+	write(t, filepath.Join(f.linked, ".gitignore"), strings.Join([]string{
+		"# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)",
+		".ai-rulez/config.local.toml", ".ai-rulez/local/", "CLAUDE.local.md",
+		"notes.local.md", "extra.d/", "# END ai-rulez\n",
+	}, "\n"))
+	gitRun(t, f.linked, "add", ".gitignore")
+	gitRun(t, f.linked, "commit", "-q", "-m", "ignore extras")
+
+	opts := &Options{
+		Source: f.src, Destination: f.linked, Generate: f.generate,
+		// The directory and the file it contains overlap; the plan dedupes.
+		CopyExtra: []string{"notes.local.md", "extra.d", "extra.d/extra.local.md"},
+	}
+	_, err := Setup(context.Background(), opts)
+
+	require.NoError(t, err)
+}
+
+func TestSetupMapsANestedSourceProjectIntoTheWorktree(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := t.TempDir()
+	// The project lives in services/billing below the repository top.
+	proj := filepath.Join(root, "services", "billing")
+	write(t, filepath.Join(proj, ".ai-rulez/config.toml"),
+		"version = \"5.0\"\nname = \"nested\"\ngitignore = false\npresets = [\"claude\"]\n")
+	write(t, filepath.Join(proj, "services-billing.gitignore"),
+		"# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)\n.ai-rulez/config.local.toml\n.ai-rulez/local/\nCLAUDE.local.md\n# END ai-rulez\n")
+	require.NoError(t, os.Rename(filepath.Join(proj, "services-billing.gitignore"), filepath.Join(proj, ".gitignore")))
+	write(t, filepath.Join(proj, "CLAUDE.local.md"), "# local\n")
+	gitRun(t, root, "init", "-q")
+	gitRun(t, root, "commit", "-q", "--allow-empty", "-m", "init")
+	gitRun(t, root, "add", "services/billing/.ai-rulez/config.toml", "services/billing/.gitignore")
+	gitRun(t, root, "commit", "-q", "-m", "config")
+	linked := filepath.Join(root, "linked")
+	gitRun(t, root, "worktree", "add", "-q", linked, "-b", "feature")
+
+	res, err := Setup(context.Background(), &Options{
+		Source: proj, Destination: linked, CopyLocal: true, Generate: f_generate,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(linked, "services", "billing"), res.Destination,
+		"the destination project is the worktree's copy of the nested project")
+	data, err := os.ReadFile(filepath.Join(linked, "services", "billing", "CLAUDE.local.md"))
+	require.NoError(t, err)
+	assert.Equal(t, "# local\n", string(data))
+}
+
+// f_generate is a generate stub the nested-project test shares.
+func f_generate(_ context.Context, _ string, _ bool) ([]string, error) { return nil, nil }
+
+func TestSetupRefusesADestinationWithoutTheNestedProject(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := t.TempDir()
+	proj := filepath.Join(root, "services", "billing")
+	write(t, filepath.Join(proj, ".ai-rulez/config.toml"),
+		"version = \"5.0\"\nname = \"nested\"\ngitignore = false\npresets = [\"claude\"]\n")
+	gitRun(t, root, "init", "-q")
+	gitRun(t, root, "commit", "-q", "--allow-empty", "-m", "init")
+	// The configuration is committed only in the project subtree of a LATER
+	// commit; the worktree checks out the init commit without it.
+	gitRun(t, root, "add", "services/billing/.ai-rulez/config.toml")
+	gitRun(t, root, "commit", "-q", "-m", "config")
+	linked := filepath.Join(root, "linked")
+	gitRun(t, root, "worktree", "add", "-q", linked, "--detach", "HEAD~1")
+
+	_, err := Setup(context.Background(), &Options{
+		Source: proj, Destination: linked, Generate: f_generate,
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "services/billing")
+}

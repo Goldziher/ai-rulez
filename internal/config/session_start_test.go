@@ -202,8 +202,7 @@ func TestSessionStartContext(t *testing.T) {
 			"renders it, and an edit to a generated file is overwritten.\n\n"+
 			"After git or your host creates a linked worktree, run `ai-rulez worktree setup` with the worktree's path from this checkout to provision it, "+
 			"or `ai-rulez worktree create` with the path and a new `--branch` when you create the worktree yourself. "+
-			"Carrying machine-local files into the worktree is opt-in with --copy-local; consent is explicit, never a default. "+
-			"At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.\n\n"+
+			"Carrying machine-local files into the worktree is opt-in with --copy-local; consent is explicit, never a default.\n\n"+
 			"The `ai-rulez` MCP server offers tools to create, update, validate and generate this configuration.", got)
 	})
 	t.Run("no MCP sentence when the self server is off", func(t *testing.T) {

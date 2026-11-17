@@ -117,8 +117,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .gitignore file 0644 795 85df2f5fee3b43264cc7420eaf6c988b09b50d24f52060039812b586f5cab66b
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
-AGENTS.md file 0644 1682 ec223f5cb3f81e04ac6d941ee494178d69b2ce1610002da4562dc315b900d6a7
-CLAUDE.md file 0644 1383 3b0d0b949048f3fd94b5a343af8e704c02e850e5418073967c86eb7aae612c49
+AGENTS.md file 0644 1556 0bf403801f1bef4e79656e41aac6e279faa8887dd52bd5fdb237c9ac183bfee7
+CLAUDE.md file 0644 1257 8d1731576cdb10a1279dff2d6928762ac8e833a4f0c220dff5d5178917325955
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -1442,7 +1442,7 @@ Use strict mode.
   }
 }
 <<<<
-AGENTS.md file 0644 1682 ec223f5cb3f81e04ac6d941ee494178d69b2ce1610002da4562dc315b900d6a7
+AGENTS.md file 0644 1556 0bf403801f1bef4e79656e41aac6e279faa8887dd52bd5fdb237c9ac183bfee7
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1464,7 +1464,7 @@ AI AGENT INSTRUCTIONS:
 ✓ COMMIT: both .ai-rulez/ and generated files
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -1511,9 +1511,9 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
-CLAUDE.md file 0644 1383 3b0d0b949048f3fd94b5a343af8e704c02e850e5418073967c86eb7aae612c49
+CLAUDE.md file 0644 1257 8d1731576cdb10a1279dff2d6928762ac8e833a4f0c220dff5d5178917325955
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1535,7 +1535,7 @@ AI AGENT INSTRUCTIONS:
 ✓ COMMIT: both .ai-rulez/ and generated files
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:7a3d007d2466d4ab2df4c9a81272bae9f94a29e43ef57f0e0c92c181215d0f2d
+Content-Hash: blake3:440d22cab84f1510c51f5b34241a75c1ac0ca3925d07ffd85779ccf541e5a7f1
 -->
 
 # golden
@@ -1554,7 +1554,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
