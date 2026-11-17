@@ -83,7 +83,7 @@ func TestWorktreeSetupTool(t *testing.T) {
 		f := newWorktreeFixture(t)
 		session := worktreeSession(t, f)
 
-		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": f.linked})
+		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": f.linked, "dry_run": false})
 		require.False(t, res.IsError, textOfResult(t, res))
 		doc := structured(t, res)
 
@@ -130,7 +130,7 @@ func TestWorktreeSetupTool(t *testing.T) {
 		worktreeWrite(t, filepath.Join(f.src, "CLAUDE.local.md"), "# local\n")
 		session := worktreeSession(t, f)
 
-		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": f.linked, "copy_local": true})
+		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": f.linked, "copy_local": true, "dry_run": false})
 		require.False(t, res.IsError, textOfResult(t, res))
 		doc := structured(t, res)
 
@@ -179,4 +179,58 @@ func TestWorktreeSetupTool(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unknown tool", "the tool is not registered on a read-only server")
 	})
+}
+
+func TestWorktreeSetupDryRunSemantics(t *testing.T) {
+	t.Run("an omitted dry_run plans instead of writing", func(t *testing.T) {
+		f := newWorktreeFixture(t)
+		worktreeWrite(t, filepath.Join(f.src, "CLAUDE.local.md"), "# local\n")
+		session := worktreeSession(t, f)
+
+		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": f.linked, "copy_local": true})
+		require.False(t, res.IsError, textOfResult(t, res))
+		doc := structured(t, res)
+
+		assert.Equal(t, true, doc["dry_run"], "an omitted dry_run plans")
+		assert.NoFileExists(t, filepath.Join(f.linked, "CLAUDE.local.md"))
+	})
+
+	t.Run("an explicit dry_run false writes", func(t *testing.T) {
+		f := newWorktreeFixture(t)
+		worktreeWrite(t, filepath.Join(f.src, "CLAUDE.local.md"), "# local\n")
+		session := worktreeSession(t, f)
+
+		res := call(t, session, "worktree_setup", map[string]any{
+			"working_directory": f.src, "destination": f.linked, "copy_local": true, "dry_run": false,
+		})
+		require.False(t, res.IsError, textOfResult(t, res))
+		doc := structured(t, res)
+
+		_, planned := doc["dry_run"]
+		assert.False(t, planned, "a real run does not advertise dry_run")
+		assert.FileExists(t, filepath.Join(f.linked, "CLAUDE.local.md"))
+	})
+
+	t.Run("a relative destination resolves beside the source checkout", func(t *testing.T) {
+		f := newWorktreeFixture(t)
+		session := worktreeSession(t, f)
+		// cwd of the test process is the package directory, not the fixture;
+		// a relative destination must not land beside it.
+		rel, err := filepath.Rel(cwd(t), f.linked)
+		require.NoError(t, err)
+
+		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": rel, "dry_run": false})
+		require.False(t, res.IsError, textOfResult(t, res))
+		doc := structured(t, res)
+		assert.Equal(t, absPath(t, f.linked), doc["destination"])
+		assert.FileExists(t, filepath.Join(f.linked, "CLAUDE.md"))
+	})
+}
+
+// cwd is the test process's working directory, which is never the fixture.
+func cwd(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+	return dir
 }

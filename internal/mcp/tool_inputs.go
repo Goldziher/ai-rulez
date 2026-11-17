@@ -161,7 +161,7 @@ type worktreeSetupIn struct {
 	// Destination is the linked worktree to provision: a registered linked
 	// worktree of the same repository, which git or the agent's host created.
 	Destination string   `json:"destination" jsonschema:"Path of the linked worktree to provision (git or the host must have created it; branch creation stays with git or the CLI)"`
-	DryRun      bool     `json:"dry_run,omitempty" jsonschema:"Plan the run and write nothing"`
+	DryRun      bool     `json:"dry_run,omitempty" jsonschema:"Plan the run and write nothing; defaults to true when omitted, so a caller that does not name the flag gets a plan — pass false explicitly to write"`
 	CopyLocal   bool     `json:"copy_local,omitempty" jsonschema:"Explicit consent to carry the machine-local inputs (config.local.toml, .ai-rulez/local/ and the hand-authored .local/.override files) that exist in this checkout"`
 	CopyExtra   []string `json:"copy_extra,omitempty" jsonschema:"Extra source-relative files or directories to carry on top of the allowlist, one per entry; each must be ignored and untracked in the destination"`
 	workDirArg

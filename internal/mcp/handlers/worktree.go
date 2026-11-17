@@ -13,11 +13,15 @@ import (
 	"github.com/samber/oops"
 )
 
-// WorktreeSetup provisions a linked worktree the agent's host or git already
-// created: it regenerates the destination's outputs from the destination's own
-// committed configuration and, with explicit consent, carries the source
-// checkout's machine-local inputs. Branch creation stays with git or the CLI;
-// this tool never creates a worktree or a branch.
+// WorktreeSetupHandler provisions a linked worktree the agent's host or git
+// already created: it regenerates the destination's outputs from the
+// destination's own committed configuration and, with explicit consent,
+// carries the source checkout's machine-local inputs. Branch creation stays
+// with git or the CLI; this tool never creates a worktree or a branch.
+//
+// dry_run defaults to true when the caller omits it: a tool client that does
+// not name the flag gets a plan, not a write. Only an explicit
+// `dry_run: false` runs the real provisioning.
 //
 // The service refuses a destination that is not a registered linked worktree
 // of the same repository, a copy target git tracks or does not ignore there,
@@ -28,12 +32,23 @@ func WorktreeSetupHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	if err != nil {
 		return ToolError(oops.Wrapf(err, "resolve the source checkout"))
 	}
+	destination := request.GetString("destination", "")
+	if destination != "" && !filepath.IsAbs(destination) {
+		// A relative destination names a path beside the source checkout, the
+		// way the CLI resolves it from its working directory — not beside the
+		// server process's cwd, which is not the caller's.
+		destination = filepath.Join(source, destination)
+	}
+	dryRun, specified := request.arguments["dry_run"].(bool)
+	if !specified {
+		dryRun = true // omitted means plan: a write needs an explicit false
+	}
 	opts := &worktreeprovision.Options{
 		Source:      source,
-		Destination: request.GetString("destination", ""),
+		Destination: destination,
 		CopyLocal:   request.GetBool("copy_local", false),
 		CopyExtra:   request.GetStringSlice("copy_extra", nil),
-		DryRun:      request.GetBool("dry_run", false),
+		DryRun:      dryRun,
 		Generate:    generateWorktreeOutputs,
 	}
 	res, err := worktreeprovision.Setup(ctx, opts)
