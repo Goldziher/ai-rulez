@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -55,6 +56,54 @@ files = { "db/1.sql" = "-- down\n" }
 changed = ["db/1.sql"]
 expect = "pass"
 `
+
+// runWorktreeCases runs the worktree JSON contracts: the commands need a git
+// repository whose managed block ignores the machine-local inputs. runAll
+// executes each case with --format json and validates it against the schema;
+// reportProject builds the generated project the commands provision from.
+func runWorktreeCases(
+	t *testing.T,
+	env *isoEnv,
+	contracts map[string]string,
+	runAll func(root string, cases []reportCase),
+	reportProject func(t *testing.T, env *isoEnv, extraConfig string) string,
+) {
+	t.Helper()
+	if _, ok := contracts["worktree create"]; !ok {
+		return
+	}
+	wt := reportProject(t, env, "")
+	writeTree(t, wt, map[string]string{
+		".gitignore": "# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)\n" +
+			".ai-rulez/config.local.toml\n.ai-rulez/local/\nCLAUDE.local.md\n# END ai-rulez\n",
+	})
+	wtGit(t, wt, "init", "-q")
+	wtGit(t, wt, "commit", "-q", "--allow-empty", "-m", "init")
+	wtGit(t, wt, "add", ".ai-rulez/config.toml", ".gitignore")
+	wtGit(t, wt, "commit", "-q", "-m", "config")
+	// One temp dir per destination: t.TempDir() makes a new directory per
+	// call, so the worktree the fixture creates and the path the command
+	// provisions must be the same one.
+	createdWt := filepath.Join(t.TempDir(), "created")
+	setupWt := filepath.Join(t.TempDir(), "setup-me")
+	wtGit(t, wt, "worktree", "add", "-q", setupWt, "-b", "setup-me")
+	runAll(wt, []reportCase{
+		{"worktree create", []string{"worktree", "create", createdWt, "--branch", "created-branch"}, 0},
+		{"worktree setup", []string{"worktree", "setup", setupWt}, 0},
+	})
+}
+
+// wtGit runs one git command in the worktree fixture; the test owns the
+// repository setup the provisioning service verifies against.
+func wtGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+}
 
 // reportProject is a generated and locked project with a role and a verifier.
 func reportProject(t *testing.T, env *isoEnv, extraConfig string) string {
@@ -164,6 +213,8 @@ func TestEveryJSONContractValidatesAgainstItsSchema(t *testing.T) {
 		{"publish verify", []string{"publish", "verify", "dist"}, 0},
 		{"publish emit", []string{"publish", "emit", "kiro-steering", "--experimental", "--output-dir", filepath.Join(t.TempDir(), "emit")}, 0},
 	})
+
+	runWorktreeCases(t, env, contracts, runAll, reportProject)
 
 	for _, c := range schema.JSONContracts {
 		assert.True(t, covered[c.Command], "%s has a schema but no test runs it", c.Command)

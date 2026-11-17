@@ -54,7 +54,8 @@ func provision(ctx context.Context, w *worktrees, opts *Options) (*Result, error
 	if err != nil {
 		return nil, err
 	}
-	res := &Result{Source: w.src, Destination: w.dst, DryRun: opts.DryRun}
+	// copies is always present in the JSON document, empty when nothing was carried.
+	res := &Result{Source: w.src, Destination: w.dst, DryRun: opts.DryRun, Copies: []CopyEntry{}}
 	blocked := conflicting(w, files)
 	if len(blocked) > 0 {
 		res.Conflicts = entries(blocked, actionConflict)
