@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/genmark"
 	"github.com/samber/oops"
 )
 
@@ -30,6 +29,7 @@ const (
 	agentsOverrideMD  = "AGENTS.override.md"
 	geminiLocalMD     = "GEMINI.local.md"
 	claudeSettingsRel = ".claude/settings.local.json"
+	manifestName      = ".generated-manifest.json"
 	localManifestName = ".generated-manifest.local.json"
 )
 
@@ -39,12 +39,12 @@ const (
 	actionIdentical = ActionIdentical
 )
 
-// copyFile is one regular file to carry, source and destination absolute. rel
+// copyFile is one regular file to carry, with an absolute destination. rel
 // is the destination-relative slash path, for the plan and the git checks; the
 // destination path mirrors it.
 type copyFile struct {
-	src, dst string
-	rel      string
+	dst string
+	rel string
 }
 
 // provision runs a resolved provisioning: plan the copies, check them, and
@@ -66,11 +66,11 @@ func provision(ctx context.Context, w *worktrees, opts *Options) (*Result, error
 	}
 	for _, f := range files {
 		action := actionCopy
-		if identical(f) {
+		if identical(w, f) {
 			action = actionIdentical
 		}
 		if !opts.DryRun && action == actionCopy {
-			if err := copyOne(f, w.dst); err != nil {
+			if err := copyOne(w, f); err != nil {
 				return res, oops.Hint("the run is retryable: fix the cause and run the command again; the worktree and its branch stay").
 					Errorf("carry %s: %v", f.rel, err)
 			}
@@ -103,7 +103,7 @@ func runGenerate(ctx context.Context, w *worktrees, opts *Options, res *Result) 
 		return oops.Hint("this is a bug in the caller, not in your configuration").
 			Errorf("no generate step was provided")
 	}
-	lines, err := opts.Generate(ctx, w.dst, opts.DryRun)
+	lines, err := opts.Generate(ctx, w.dstProj, opts.DryRun)
 	if err != nil {
 		return oops.Hint("the run is retryable: fix the cause and run the command again; the worktree and its branch stay").
 			Errorf("generate the destination outputs: %v", err)
@@ -128,16 +128,20 @@ func planCopies(ctx context.Context, w *worktrees, opts *Options) ([]copyFile, e
 			Errorf("the destination configuration layout differs: source state dir %s, destination %s",
 				relStateDir(w.src, w.srcState), relStateDir(w.dst, w.dstState))
 	}
+	owned, err := loadOwnedPaths(w)
+	if err != nil {
+		return nil, err
+	}
 	var files []copyFile
 	if opts.CopyLocal {
-		entries, err := collectAllowlist(w)
+		entries, err := collectAllowlist(w, owned)
 		if err != nil {
 			return nil, err
 		}
 		files = append(files, entries...)
 	}
 	for _, extra := range opts.CopyExtra {
-		collected, err := collectExtra(w, extra)
+		collected, err := collectExtra(w, extra, owned)
 		if err != nil {
 			return nil, err
 		}
@@ -170,9 +174,12 @@ func dedupeCopies(files []copyFile) []copyFile {
 // the source checkout. Missing entries are simply not carried; a generated
 // file (it carries the generated banner or hash) is not carried, because it
 // belongs to what the destination's generate run writes, not to the author.
-func collectAllowlist(w *worktrees) ([]copyFile, error) {
+func collectAllowlist(w *worktrees, owned ownedPaths) ([]copyFile, error) {
 	var files []copyFile
 	for _, target := range allowlisted(w.src, w.srcState) {
+		if err := checkCopyDir(w.src, filepath.Dir(target)); err != nil {
+			return nil, err
+		}
 		info, err := os.Lstat(target)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
@@ -186,7 +193,7 @@ func collectAllowlist(w *worktrees) ([]copyFile, error) {
 				Errorf("%s in the source is not what it should be (%s)", rel, kindOf(info))
 		}
 		if info.IsDir() {
-			sub, err := collectDir(w, target)
+			sub, err := collectDir(w, target, owned)
 			if err != nil {
 				return nil, err
 			}
@@ -197,7 +204,11 @@ func collectAllowlist(w *worktrees) ([]copyFile, error) {
 			return nil, oops.Hint("the allowlisted input must be a regular file").
 				Errorf("%s in the source is not a regular file", rel)
 		}
-		if generatedOutput(target) {
+		generated, err := owned.generated(w, target)
+		if err != nil {
+			return nil, err
+		}
+		if generated {
 			continue
 		}
 		files = append(files, plainFile(w, target))
@@ -225,12 +236,16 @@ func allowlisted(src string, layout StateDirs) []string {
 // project, exist, and be a regular file or directory, never a symlink. A
 // generated file is never carried — the caller named it, so the run refuses
 // and says so rather than silently skipping.
-func collectExtra(w *worktrees, extra string) ([]copyFile, error) {
-	if !filepath.IsLocal(filepath.Clean(extra)) || strings.TrimSpace(extra) == "" {
+func collectExtra(w *worktrees, extra string, owned ownedPaths) ([]copyFile, error) {
+	clean := filepath.Clean(extra)
+	if !filepath.IsLocal(clean) || clean == "." {
 		return nil, oops.Hint("name each extra as a repository-relative path, one per --copy-extra").
 			Errorf("the extra %q is not a relative path inside the project", extra)
 	}
-	src := filepath.Join(w.src, filepath.FromSlash(filepath.Clean(extra)))
+	src := filepath.Join(w.src, filepath.FromSlash(clean))
+	if err := checkCopyDir(w.src, filepath.Dir(src)); err != nil {
+		return nil, err
+	}
 	info, err := os.Lstat(src)
 	if err != nil {
 		return nil, oops.Hint("extras must exist in the source checkout").
@@ -241,13 +256,17 @@ func collectExtra(w *worktrees, extra string) ([]copyFile, error) {
 			Errorf("the extra %s is a symlink", extra)
 	}
 	if info.IsDir() {
-		return collectDir(w, src)
+		return collectDir(w, src, owned)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, oops.Hint("an extra must be a regular file or a directory").
 			Errorf("the extra %s is not a regular file", extra)
 	}
-	if generatedOutput(src) {
+	generated, err := owned.generated(w, src)
+	if err != nil {
+		return nil, err
+	}
+	if generated {
 		return nil, oops.Hint("generated outputs are regenerated by the destination's own generate run, never copied").
 			Errorf("the extra %s is a file ai-rulez generated", extra)
 	}
@@ -258,9 +277,15 @@ func collectExtra(w *worktrees, extra string) ([]copyFile, error) {
 // refusing a symlink on the way: a link could redirect the copy outside the
 // worktree. A generated file inside the directory is skipped: the
 // destination's own generate run writes it.
-func collectDir(w *worktrees, dir string) ([]copyFile, error) {
+func collectDir(w *worktrees, dir string, owned ownedPaths) ([]copyFile, error) {
+	root, err := os.OpenRoot(w.src)
+	if err != nil {
+		return nil, fmt.Errorf("open source worktree: %w", err)
+	}
+	defer root.Close() //nolint:errcheck // read-only directory handle
 	var files []copyFile
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(root.FS(), relTo(w.src, dir), func(rel string, d fs.DirEntry, err error) error {
+		path := filepath.Join(w.src, filepath.FromSlash(rel))
 		if err != nil {
 			return err
 		}
@@ -273,7 +298,11 @@ func collectDir(w *worktrees, dir string) ([]copyFile, error) {
 		if !d.Type().IsRegular() {
 			return fmt.Errorf("%s is not a regular file", relTo(w.src, path))
 		}
-		if generatedOutput(path) {
+		generated, err := owned.generated(w, path)
+		if err != nil {
+			return err
+		}
+		if generated {
 			return nil
 		}
 		files = append(files, plainFile(w, path))
@@ -290,7 +319,7 @@ func collectDir(w *worktrees, dir string) ([]copyFile, error) {
 // sides: the destination path mirrors the source path.
 func plainFile(w *worktrees, src string) copyFile {
 	rel := relTo(w.src, src)
-	return copyFile{src: src, dst: filepath.Join(w.dstProj, filepath.FromSlash(rel)), rel: rel}
+	return copyFile{dst: filepath.Join(w.dstProj, filepath.FromSlash(rel)), rel: rel}
 }
 
 // checkDestination refuses a copy target the destination's git tracks or does
@@ -306,6 +335,11 @@ func checkDestination(ctx context.Context, w *worktrees, files []copyFile) error
 	}
 	rels := make([]string, len(files))
 	for i, f := range files {
+		if w.checkDir == "" {
+			if err := checkCopyDir(w.dst, filepath.Dir(f.dst)); err != nil {
+				return err
+			}
+		}
 		rels[i] = prefix + f.rel
 	}
 	checkDir := w.checkDir
@@ -337,7 +371,7 @@ func checkDestination(ctx context.Context, w *worktrees, files []copyFile) error
 func conflicting(w *worktrees, files []copyFile) []copyFile {
 	var out []copyFile
 	for _, f := range files {
-		if identical(f) {
+		if identical(w, f) {
 			continue
 		}
 		if _, err := os.Lstat(f.dst); err == nil {
@@ -348,30 +382,15 @@ func conflicting(w *worktrees, files []copyFile) []copyFile {
 }
 
 // identical reports whether the destination already holds the same bytes.
-func identical(f copyFile) bool {
-	existing, err := os.ReadFile(f.dst) //nolint:gosec // the destination's own file
-	if err != nil {
-		return false // absent or unreadable: it is a copy or a copy error, not a match
-	}
-	want, err := os.ReadFile(f.src) //nolint:gosec // the source's own file
+func identical(w *worktrees, f copyFile) bool {
+	existing, err := readCopyFile(w.dst, relTo(w.dst, f.dst))
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(existing, want)
+	want, err := readCopyFile(w.src, f.rel)
+	return err == nil && bytes.Equal(existing, want)
 }
 
-// generatedOutput reports whether the file at path is generated: it carries
-// the generated banner or a verifiable Content-Hash. Generated outputs belong
-// to the destination's own generate run, never to a copy.
-func generatedOutput(path string) bool {
-	data, err := os.ReadFile(path) //nolint:gosec // the source's own file
-	if err != nil {
-		return false
-	}
-	return genmark.IsGeneratedOutput(path, data)
-}
-
-// kindOf names a FileInfo's kind for a refusal.
 func kindOf(info os.FileInfo) string {
 	switch {
 	case info.IsDir():
@@ -381,76 +400,6 @@ func kindOf(info os.FileInfo) string {
 	default:
 		return "a file"
 	}
-}
-
-// copyOne carries one regular file without replacing anything that already
-// exists: the content is written to a temporary file in the destination
-// directory and linked into place, so a file an edit of the destination
-// created between the plan and the copy is never overwritten. The link fails
-// when the destination appeared meanwhile; the run reports the conflict.
-func copyOne(f copyFile, root string) error {
-	if err := checkPlainParents(f.dst, root); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(f.dst), 0o700); err != nil {
-		return fmt.Errorf("create the directory: %w", err)
-	}
-	data, err := os.ReadFile(f.src) //nolint:gosec // the source's own file
-	if err != nil {
-		return fmt.Errorf("read: %w", err)
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(f.dst), ".ai-rulez-provision-*")
-	if err != nil {
-		return fmt.Errorf("create the temporary file: %w", err)
-	}
-	tmpName := tmp.Name()
-	defer func() { _ = os.Remove(tmpName) }() //nolint:errcheck // a temp file the copy either replaced or left
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close() //nolint:errcheck // the write error is reported
-		return fmt.Errorf("write the temporary file: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("write the temporary file: %w", err)
-	}
-	if err := os.Chmod(tmpName, 0o600); err != nil { //nolint:gosec // owner-only by policy
-		return fmt.Errorf("set the temporary file's permissions: %w", err)
-	}
-	if err := os.Link(tmpName, f.dst); err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			return fmt.Errorf("%s appeared while the run was copying: check it and re-run", f.rel)
-		}
-		return fmt.Errorf("link into place: %w", err)
-	}
-	return nil
-}
-
-// checkPlainParents refuses a destination whose parent chain holds a symlink:
-// a link between the plan and the copy could redirect the write outside the
-// worktree.
-func checkPlainParents(dst, root string) error {
-	// The worktree root itself was verified at resolve time; only the
-	// components below it are created by this run.
-	cur := filepath.Dir(dst)
-	root = filepath.Clean(root)
-	for cur != root {
-		info, err := os.Lstat(cur)
-		switch {
-		case os.IsNotExist(err):
-			// The parent does not exist yet; MkdirAll creates it inside the
-			// worktree, whose own path components were checked at resolve time.
-			return nil
-		case err != nil:
-			return fmt.Errorf("read %s: %w", cur, err)
-		case info.Mode()&os.ModeSymlink != 0:
-			return fmt.Errorf("%s is a symlink: the run does not write through links", cur)
-		}
-		parent := filepath.Dir(cur)
-		if parent == cur || parent == root {
-			return nil
-		}
-		cur = parent
-	}
-	return nil
 }
 
 func fileLines(files []copyFile) []string {

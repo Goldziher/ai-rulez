@@ -194,7 +194,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 8231 a5b498aab106de17517298ae2fc4a9471498dd706d1064053e5d1edffc39f4c6
+.ai-rulez/.generated-manifest.local.json file 0644 8231 5794570ab15c828a23e9032c83814a3bb15f9b6e2d2e361b6b529ea3d59a9cbc
 >>>>
 {
   "version": "1",
@@ -207,8 +207,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "203d65f3fdc003fd9d89ea76012c48b61b27a4257e31cb48ee5c04bb47de2f62",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "cec967613caf39eebf5101bcaecd2d30c55345730d35790522d217bd178dce58"
         ]
       },
       {
@@ -297,7 +297,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "c6149b9597bb25a97da780de5ecdd4ac3c2b54c5cfd7f0b339c863f22ac016b1"
+          "cb93f578d62230bf004ab3797fec81eca5d7b4e64f1deece365169c37db75b44"
         ]
       },
       {
@@ -441,16 +441,16 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "2282d3dd33daa2024678425f74f4594115adda28ec708cc7fcdf65a41ff945e1",
+    ".claude/settings.json": "179a18d3fa3d564ea247a5733362d0ce77a2c179c0a3fc1640f084b2a47481d5",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "760122bd6b452f1e65d86a5da03db4918367f0450b67d014ff99532c5831ccc1",
+    ".cursor/hooks.json": "e6194f0269637a51fdf90ca445e44491bf780318b1b1d608d09c0732ac9a5753",
     ".cursor/mcp.json": "d40e1abc4f521cf949ed1835903652f1cada2ae644ed20001237f583f2e4c5eb",
-    ".github/hooks/ai-rulez.json": "ff21583d9354919098e9b334695cd5c50e18d08cf537d8dab4c8e38e03637668",
+    ".github/hooks/ai-rulez.json": "66c9a4b3796d94379c54f85f01472472778cb799b38e842a70d478396bdd0409",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",
@@ -1122,7 +1122,7 @@ name: tester
 
 Test first.
 <<<<
-.github/copilot-instructions.md file 0644 1119 a4a61667f56cb016d20f2eb72002cdb170eb7d1b2947cae78d51be1b0aa4a1bf
+.github/copilot-instructions.md file 0644 993 e1d4c20b9a84f01f20e8f05b71f8ea104a01d358b22142c882bb0091334e17c9
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1134,7 +1134,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:1f6f354ce2143256d940eea60070b1eb43387b6d6689f59784d7528c7da10b03
+Content-Hash: blake3:1544eb2e51e588316754d549d9d8ce52d527f3d7ec18f69416450fe3e594dcee
 -->
 
 # golden
@@ -1169,7 +1169,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
@@ -1538,7 +1538,7 @@ echo review
   }
 }
 <<<<
-AGENTS.md file 0644 1200 a92c8b22cb47c3961de7277e886f8d2ddf61cb3af87188578bc206a6e5bb0ed8
+AGENTS.md file 0644 1074 9ae964dcaad503950076ec38af9930ac8edf700c7ace7648baa3e7f1b74ae7ae
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1550,7 +1550,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:0f2e3c21a93a48103a978186fc6f44e2d2b98c4658cae3b41eac2dc7fca012fe
+Content-Hash: blake3:b02bbd1423039fc01e2671a986f9c8f1131bcce8001f00b2d2db30312f009456
 -->
 
 # golden
@@ -1591,7 +1591,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 CLAUDE.md file 0644 1162 e6a0d388220ff4f79d699878a2823e925d406f77d0ec3d191d640dced60db742
 >>>>

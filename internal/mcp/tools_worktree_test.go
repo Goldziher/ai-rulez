@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ type worktreeFixture struct {
 
 func worktreeGitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+	cmd := gitutil.CommandNoContext(dir, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 }
@@ -216,23 +217,17 @@ func TestWorktreeSetupDryRunSemantics(t *testing.T) {
 		session := worktreeSession(t, f)
 		// cwd of the test process is the package directory, not the fixture;
 		// a relative destination must not land beside it.
-		rel, err := filepath.Rel(cwd(t), f.linked)
+		rel, err := filepath.Rel(f.src, f.linked)
 		require.NoError(t, err)
 
 		res := call(t, session, "worktree_setup", map[string]any{"working_directory": f.src, "destination": rel, "dry_run": false})
 		require.False(t, res.IsError, textOfResult(t, res))
 		doc := structured(t, res)
-		assert.Equal(t, absPath(t, f.linked), doc["destination"])
+		destination, ok := doc["destination"].(string)
+		require.True(t, ok)
+		assert.Equal(t, gitutil.Resolve(f.linked), gitutil.Resolve(destination))
 		assert.FileExists(t, filepath.Join(f.linked, "CLAUDE.md"))
 	})
-}
-
-// cwd is the test process's working directory, which is never the fixture.
-func cwd(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	require.NoError(t, err)
-	return dir
 }
 
 func TestWorktreeDestinationGeneratorStaysOffline(t *testing.T) {

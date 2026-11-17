@@ -67,7 +67,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .kilo/skills/reviewer/scripts/ dir 0755
 .kilo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
-AGENTS.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
+AGENTS.md file 0644 838 b19ee9dcb92ec3276e750cef309aacb937b80ab68c87627d87f832d2279610f1
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0644 748 3c332bbb9f8168f9b622e6404d0145ddb3a24ea6874458d40c487921b0eeb7fa
 scripts/ dir 0755

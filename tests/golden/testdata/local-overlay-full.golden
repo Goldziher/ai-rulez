@@ -327,7 +327,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 21842 c9313c4091cdabda3e1640a203196b615f9c4c1c78b5c344e6773fbd443ca951
+.ai-rulez/.generated-manifest.local.json file 0644 21842 5b2eb732e09e940cdeac315616e70a28186c18ec4fc9e9ee26e3d8f58dd81326
 >>>>
 {
   "version": "1",
@@ -416,8 +416,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "203d65f3fdc003fd9d89ea76012c48b61b27a4257e31cb48ee5c04bb47de2f62",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "cec967613caf39eebf5101bcaecd2d30c55345730d35790522d217bd178dce58"
         ]
       },
       {
@@ -503,7 +503,7 @@ policy:
         ],
         "elementSums": [
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
-          "7153925c102e40466269a927cbf18f4fe0cb30fd88613bfd6ab750a768187d17"
+          "bd3744b6f3a7d0b8eb2313783d56ea193095d3b8d603f6a6e52cfee4330d43f5"
         ]
       },
       {
@@ -561,7 +561,7 @@ policy:
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "c6149b9597bb25a97da780de5ecdd4ac3c2b54c5cfd7f0b339c863f22ac016b1"
+          "cb93f578d62230bf004ab3797fec81eca5d7b4e64f1deece365169c37db75b44"
         ]
       },
       {
@@ -656,7 +656,7 @@ policy:
         ],
         "elementSums": [
           "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
-          "4c8da38840dc7eac33bc5c7523f05ef76e8cba3d0d736a5465baf24d0050e627"
+          "5fafced4b36ee55db6a40ba55f5dc78c514afe495d6e2cbe7d3c9115d8788e6d"
         ],
         "local": true
       },
@@ -1010,23 +1010,23 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "2282d3dd33daa2024678425f74f4594115adda28ec708cc7fcdf65a41ff945e1",
+    ".claude/settings.json": "179a18d3fa3d564ea247a5733362d0ce77a2c179c0a3fc1640f084b2a47481d5",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/helper.toml": "2cd2537d532bb3ce063715d3dd4b80145e251a6a7149411d2ae0dfbc5f500ef2",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "6f0b3476c475df2da3584c8da39c8708e9cf0e5d61888c1a7b1ded4f803a2aed",
-    ".codex/hooks.json": "d027b1a88abc71edc3214a2c1967f6d652efdac0ac89af949d0220da93ee4a8f",
+    ".codex/hooks.json": "2e9de4c388ac8e0afaf36eee8b7811898877c9a7bf3c7874fd4eac3acc33b7e2",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/quick.md": "6da8934bdbd5f2a1c39f521bf3118d90a929b0e6cb49ae801b21ea21ae9febc1",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "760122bd6b452f1e65d86a5da03db4918367f0450b67d014ff99532c5831ccc1",
+    ".cursor/hooks.json": "e6194f0269637a51fdf90ca445e44491bf780318b1b1d608d09c0732ac9a5753",
     ".cursor/mcp.json": "428aac10059646f5cf50a6837dc670321494c4f9baf97df6996ccff653ae20db",
-    ".gemini/settings.json": "aeb002dbf8b44d567009b111f5502fabd373291e0cca5cca95ddcffbe133a634",
-    ".github/hooks/ai-rulez.json": "ff21583d9354919098e9b334695cd5c50e18d08cf537d8dab4c8e38e03637668",
+    ".gemini/settings.json": "f542db7aaae8603d6163e6194ced582a584b290baa603cddd91949bf17794d92",
+    ".github/hooks/ai-rulez.json": "66c9a4b3796d94379c54f85f01472472778cb799b38e842a70d478396bdd0409",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
@@ -2196,7 +2196,7 @@ name: tester
 
 Test first.
 <<<<
-.github/copilot-instructions.md file 0644 1101 5fff3484a9d7c517537c30fcdc746a9f74513e8e0f9dd297b56cf065a933453a
+.github/copilot-instructions.md file 0644 975 dc4480bb0d6455ee7b48b718779de4476ebcdabbca51a552ef08347fafe0dc01
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -2208,7 +2208,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:9a9f2cda26dbbae57f8b67f5eb12d5747b75e8ab3e0a28b3c767ee7fd7d158cc
+Content-Hash: blake3:cd4a237abf876a85701ab1ec470149792e7c9b69cd69fa9434394e2448dbe528
 -->
 
 # golden
@@ -2241,7 +2241,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
@@ -3545,7 +3545,7 @@ Local domain rule.
 
 Scratch notes.
 <<<<
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -3557,7 +3557,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -3604,9 +3604,9 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
-AGENTS.override.md file 0644 1640 98ab040b45b8f57144de90faec51dae095d6ba59f70ddd03b4f73330eb39f242
+AGENTS.override.md file 0644 1514 d36c4c47d380438cddffd611074cfc4b8bd9efe6a311303c5a85935a8581fe07
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -3618,7 +3618,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:9ad37a15b6e3a346ab4d4475eda0c436fffa87bc81ac8966a36a63b982a6554f
+Content-Hash: blake3:7a4de63feb38d23f58c30f978f6723455164c93ac6f1a6284c6ca8bd75cf7400
 -->
 
 <!--
@@ -3671,7 +3671,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 
 ## Rules
 
@@ -3790,7 +3790,7 @@ Local domain rule.
 
 Scratch notes.
 <<<<
-GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+GEMINI.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -3802,7 +3802,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -3849,7 +3849,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 >>>>

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ type generateCall struct {
 
 func gitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+	cmd := gitutil.CommandNoContext(dir, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 }
@@ -75,7 +76,7 @@ func newFixture(t *testing.T) *fixture {
 // gitOut runs git and returns its trimmed standard output.
 func gitOut(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+	cmd := gitutil.CommandNoContext(dir, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 	out, err := cmd.Output()
 	require.NoError(t, err, "git "+strings.Join(args, " "))
 	return strings.TrimSpace(string(out))
@@ -281,7 +282,7 @@ func TestSetupRefusesAnUnignoredCopyTarget(t *testing.T) {
 func TestSetupRefusesASymlinkedExtra(t *testing.T) {
 	f := newFixture(t)
 	write(t, filepath.Join(f.src, "real.md"), "# real\n")
-	require.NoError(t, os.Symlink("real.md", filepath.Join(f.src, "link.local.md")))
+	testutil.SymlinkOrSkip(t, "real.md", filepath.Join(f.src, "link.local.md"))
 	// The managed block ignores the link's path, but a symlink is never carried.
 	gitRun(t, f.linked, "config", "core.symlinks", "true")
 
@@ -604,8 +605,12 @@ func TestSetupMapsANestedSourceProjectIntoTheWorktree(t *testing.T) {
 	linked := filepath.Join(root, "linked")
 	gitRun(t, root, "worktree", "add", "-q", linked, "-b", "feature")
 
+	wantProject := filepath.Join(linked, "services", "billing")
 	res, err := Setup(context.Background(), &Options{
-		Source: proj, Destination: linked, CopyLocal: true, Generate: noopGenerate,
+		Source: proj, Destination: linked, CopyLocal: true, Generate: func(_ context.Context, projectDir string, _ bool) ([]string, error) {
+			assert.Equal(t, wantProject, projectDir)
+			return nil, nil
+		},
 	})
 
 	require.NoError(t, err)
@@ -642,4 +647,52 @@ func TestSetupRefusesADestinationWithoutTheNestedProject(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "services/billing")
+}
+
+func TestSetupRefusesSourceSymlinkAncestor(t *testing.T) {
+	f := newFixture(t)
+	outside := filepath.Join(f.root, "outside")
+	write(t, filepath.Join(outside, "settings.local.json"), "{}")
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(f.src, ".claude"))
+
+	opts := f.opts(t, false)
+	opts.CopyLocal = true
+	_, err := Setup(context.Background(), opts)
+
+	require.ErrorContains(t, err, "symlink")
+	assert.NoFileExists(t, filepath.Join(f.linked, ".claude/settings.local.json"))
+}
+
+func TestSetupRefusesDestinationSymlinkAncestorWithMissingChild(t *testing.T) {
+	f := newFixture(t)
+	outside := t.TempDir()
+	write(t, filepath.Join(f.src, "extra/sub/file.txt"), "local")
+	write(t, filepath.Join(f.linked, ".gitignore"), "extra/\n")
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(f.linked, "extra"))
+
+	opts := f.opts(t, false)
+	opts.CopyExtra = []string{"extra/sub/file.txt"}
+	_, err := Setup(context.Background(), opts)
+
+	require.ErrorContains(t, err, "symlink")
+	assert.NoFileExists(t, filepath.Join(outside, "sub/file.txt"))
+}
+
+func TestSetupRefusesOwnedExtra(t *testing.T) {
+	for _, extra := range []string{".ai-rulez/.generated-manifest.local.json", ".claude/settings.local.json"} {
+		t.Run(extra, func(t *testing.T) {
+			f := newFixture(t)
+			write(t, filepath.Join(f.src, ".claude/settings.local.json"), "{}")
+			write(t, filepath.Join(f.src, ".ai-rulez/.generated-manifest.local.json"),
+				`{"version":"1","files":[".claude/settings.local.json"]}`)
+			write(t, filepath.Join(f.linked, ".gitignore"), ".claude/settings.local.json\n.ai-rulez/.generated-manifest.local.json\n")
+
+			opts := f.opts(t, false)
+			opts.CopyExtra = []string{extra}
+			_, err := Setup(context.Background(), opts)
+
+			require.ErrorContains(t, err, "generated")
+			assert.NoFileExists(t, filepath.Join(f.linked, extra))
+		})
+	}
 }

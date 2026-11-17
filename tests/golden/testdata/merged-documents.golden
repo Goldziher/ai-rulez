@@ -41,7 +41,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3127 644a594adf8eaf40c4073ebdb7c18a42978b21a868c7ff88fbb58dcebc26fea5
-.ai-rulez/.generated-manifest.local.json file 0644 7976 41b9e9c2c3a98fb401ebf54944e5ebda4b5f0dd3ff6dd792c971b9eacb75eb94
+.ai-rulez/.generated-manifest.local.json file 0644 7976 0190d5469f38b112109e857e00ec04383c021d107a4a71d525b07a512000ddfc
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -129,9 +129,9 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
-GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+GEMINI.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 opencode.json file 0644 843 3cda0b28e550777bd832621de301802b70825837ccea023625301f56bf29a6a5
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
@@ -158,7 +158,7 @@ INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1845 ebeb41701c2b2ba1be19d068b1f0e4fd3c2c5f112bac90196599b4c33a355747
-~ .ai-rulez/.generated-manifest.local.json file 0644 4527 709a48961d0a1f75d9bff0c704c5da1d67127014e607acf65ed5674e9d24ad9e
+~ .ai-rulez/.generated-manifest.local.json file 0644 4527 f3fe8e57c7be024668225b926b92cbd4409d1a6c73e7fb4cfac5b622338546df
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
 ~ .gitignore file 0644 491 33dba552643c8c9d7071b8e916817a6519fea656ebedce0474f2932dcdcd8eb0
@@ -189,7 +189,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 - .gemini/agents/ dir 0755
 - .gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 - .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-- GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+- GEMINI.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 --- home tree
 (no change)
 
@@ -300,7 +300,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4527 709a48961d0a1f75d9bff0c704c5da1d67127014e607acf65ed5674e9d24ad9e
+.ai-rulez/.generated-manifest.local.json file 0644 4527 f3fe8e57c7be024668225b926b92cbd4409d1a6c73e7fb4cfac5b622338546df
 >>>>
 {
   "version": "1",
@@ -313,8 +313,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "PreToolUse"
         ],
         "elementSums": [
-          "203d65f3fdc003fd9d89ea76012c48b61b27a4257e31cb48ee5c04bb47de2f62",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "cec967613caf39eebf5101bcaecd2d30c55345730d35790522d217bd178dce58"
         ]
       },
       {
@@ -1355,7 +1355,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1367,7 +1367,7 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:61fec11231b21b4da449b7dacb4050cb7af7d4c906fd869771e2656ee6bbbe33
+Content-Hash: blake3:93cac978e752aecd7ba5d16c0999bc15dd8510da35c30f4f53d960bee9eaa14a
 -->
 
 # golden
@@ -1414,7 +1414,7 @@ Layers and boundaries.
 
 ## Worktrees
 
-After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default. At runtime prefer the `worktree_setup` tool on the `ai-rulez` MCP server when it is exposed; the CLI command is the fallback.
+After git or your host creates a linked worktree, run `ai-rulez worktree setup <path>` from this checkout to provision it, or `ai-rulez worktree create <path> --branch <branch>` when you create the worktree yourself. Carrying machine-local files into the worktree is opt-in with `--copy-local`; consent is explicit, never a default.
 <<<<
 CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 >>>>

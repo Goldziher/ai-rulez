@@ -1041,16 +1041,13 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		start := recorder.mark(&b)
 		presets.WriteSkillsInstructions(&b, cfg, g.Spec.Name, rootRelPath)
 		recorder.section(config.PartKindRootSkillsInstructions, SectionRootSkillsInstructions, "", start, &b)
-	} else if cfg.UsesAgentsSource() && cfg.ShowWorktreeGuidance() {
-		// The shim imports the authored AGENTS.md, which carries no generated
-		// guidance; the shim is the loaded generated file, so it carries the
-		// instruction itself.
+	}
+	// The shim imports the authored AGENTS.md for agents-source projects,
+	// which cannot carry generated guidance.
+	if !g.importsAgentsMD(cfg) || cfg.UsesAgentsSource() {
 		start := recorder.mark(&b)
-		if text, ok := cfg.WorktreeGuidance(); ok {
-			b.WriteString(text)
-			b.WriteString("\n\n")
-		}
-		recorder.section(config.PartKindRootWorktreeGuidance, "worktree_guidance", "", start, &b)
+		presets.WriteWorktreeGuidance(&b, cfg, g.Spec.Name, rootRelPath)
+		recorder.section(config.PartKindRootWorktreeGuidance, SectionRootWorktreeGuidance, "", start, &b)
 	}
 
 	rendered := b.String()

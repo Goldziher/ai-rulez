@@ -35,7 +35,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2246 2f6f5af9e3aebfbe70d0070f45a7bab123eff891e8dd5d0d5fb7dcef90cd02b7
-.ai-rulez/.generated-manifest.local.json file 0644 4842 5adbd347eb3a6c53ded8500137a9e86ff20583d4e384cf980566cd2f50459b88
+.ai-rulez/.generated-manifest.local.json file 0644 4842 8aa42d67cf651475ceb9fb4a57a2fcad44a213330bd5710d00d75d0b49807708
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -120,7 +120,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
 .gitignore file 0644 525 f866c0048d0c84f5d70c30c3780a188e992f82d2f76f4a10ea94b1f0a5c1310d
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
-AGENTS.md file 0644 1333 2f08be6db1420ede564f746981908969546a59a4680cf02a1cc222a67a74ee88
+AGENTS.md file 0644 1207 effd2df3e9693b157344829131a4d6f9ad9b823a7f1092dbb4a44a5d601d3525
 CLAUDE.md file 0644 992 7ffbb12002dd0464a293fbafa71e3a596625b2b6919fd35ccaa443e4ec7fde0e
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
@@ -146,13 +146,13 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 ~ .ai-rulez/.generated-manifest.json file 0644 2409 81ba9553b2b83c5493f1ece44c5f894cec172c2610c5e397b14a5ccf0e8e0020
-~ .ai-rulez/.generated-manifest.local.json file 0644 4961 da4affdc78ab9f57816aac68c0ae59a80b3eae9ebce64272336ed01e4d31a12a
+~ .ai-rulez/.generated-manifest.local.json file 0644 4961 6d9f6c8c02be62c632dc5155b574ffd8b35c63845040b644c72db9c621b2b751
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 ~ .claude/settings.json file 0644 1966 9f95020bf6c4879ab6fbec9a517192ef112e7aa8a14688d075a88529e3a1bf17
 + .claude/skills/storybook/ dir 0755
 + .claude/skills/storybook/SKILL.md file 0644 178 c09f47a388c3ac12f48f7c195654342ccda0157e1bc08c88cedaf3e2203871d4
 ~ .gitignore file 0644 548 0c3fbf18718d3c4f957a3e86cdd2ceb0db021ae93139e90383ce2827adbeeabd
-~ AGENTS.md file 0644 1387 869464bf39dd8b5e017fa9db411f63f4781d92603bb2f5d1785f4edf8ede8d14
+~ AGENTS.md file 0644 1261 9c50475fb20eba5e5f37983ee0175ae3af37de420b60a6b988cf434da1b541d9
 --- home tree
 (no change)
 
@@ -173,12 +173,12 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/deployer/ dir 0755
 + .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 ~ .ai-rulez/.generated-manifest.json file 0644 2160 02f5e5694659e64ff38bbb439c557b29669989f1b1a5a2b7b73c16e990a88873
-~ .ai-rulez/.generated-manifest.local.json file 0644 4567 93b384c59b975b19fb14d5e993da5f1900f38988055cf15e23013d3ef3f27393
+~ .ai-rulez/.generated-manifest.local.json file 0644 4567 0447d95aa97b3f5a58f4b99c0c6903b19f6310055ff7c1f6f9ca29333e8999d5
 ~ .claude/settings.json file 0644 1918 61c2026b31ea6b8b10b5038953105be5e09225d1581e4d78ddc3e0e80eac3e72
 + .claude/skills/deployer/ dir 0755
 + .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 ~ .gitignore file 0644 505 24e896906879cc44353d99311fd332803f7df441fa58b58988fba57d246e603c
-~ AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+~ AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 ~ CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 - .agents/skills/migrator/ dir 0755
 - .agents/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
@@ -410,7 +410,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2160 02f5e5694659e64ff38bbb439c557b29669989f1b1a5a2b7b73c16e990a88873
-.ai-rulez/.generated-manifest.local.json file 0644 4567 93b384c59b975b19fb14d5e993da5f1900f38988055cf15e23013d3ef3f27393
+.ai-rulez/.generated-manifest.local.json file 0644 4567 0447d95aa97b3f5a58f4b99c0c6903b19f6310055ff7c1f6f9ca29333e8999d5
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -492,7 +492,7 @@ WARN  [profiles] defines no `default` profile, so a run without --profile genera
 .codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
 .gitignore file 0644 505 24e896906879cc44353d99311fd332803f7df441fa58b58988fba57d246e603c
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

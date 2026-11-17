@@ -414,15 +414,19 @@ The steps above verify a release the publisher built. This is the consumer side:
 and where ai-rulez's job ends and the runtime installer's begins. The recipe uses Claude Code, one of the default
 runtimes; the verification half is identical for every runtime.
 
-**1. Download the release artifacts.** From the release page (`gh release download v1.2.0 --repo acme/acme-tools`
-fetches them all): the archive `acme-tools-1.2.0.tar.gz`, `acme-tools-1.2.0.manifest.json`, `ai-rulez.lock` and
-`SHA256SUMS` — into one directory, nothing else.
+**1. Download the release artifacts.** Put the archive, manifest, lock and checksums in one directory.
+
+```sh
+gh release download v1.2.0 --repo acme/acme-tools --dir acme-tools-1.2.0 \
+  --pattern acme-tools-1.2.0.tar.gz --pattern acme-tools-1.2.0.manifest.json \
+  --pattern ai-rulez.lock --pattern SHA256SUMS
+```
 
 **2. Verify.**
 
 ```sh
 ai-rulez publish verify ./acme-tools-1.2.0
-# verified acme-tools 1.2.0: 4 files match SHA256SUMS, the manifest and the archive (signature: none)
+# Example: verified acme-tools 1.2.0: ... (signature: none)
 ```
 
 Every `SHA256SUMS` entry is checked, no unlisted file may be present, the manifest is checked against the archive
@@ -436,7 +440,7 @@ release that fails any of these.
 **3. Authenticity, when it matters.** The check above proves the files match each other; it cannot prove who
 published them. `SHA256SUMS` downloaded from the same release only detects corruption in transit. For authenticity,
 the publisher signs the release and ships `<name>-<version>.tar.gz.sigstore.json` alongside the other artifacts.
-Download it too, then verify against the publisher's public key — pinned out-of-band (the publisher's repository
+Download it and any accompanying files listed in `SHA256SUMS` into the same directory, then verify against the publisher's public key — pinned out-of-band (the publisher's repository
 `main` branch, a keyed cosign setup, or a release you already trust), never from the release page itself:
 
 ```sh
@@ -451,15 +455,14 @@ verify against that key is a hard failure (exit 2, `AR9N7`). Without `--key` a s
 whether that is acceptable for the plugin you are about to run.
 
 **4. Install.** ai-rulez stops here: it verifies, it does not install. This recipe assumes the
-publisher ships a marketplace manifest — the archive carries `.claude-plugin/marketplace.json`
-when the `[plugin]` block sets `marketplace = true` (or declares a `[marketplace]`); the
-manifest's file list names it, so you can check before you rely on it. Extract the verified
+publisher ships a local marketplace manifest. Check that the release manifest lists
+`.claude-plugin/marketplace.json` before you proceed. Extract the verified
 archive into a directory and register that directory, so the bytes the runtime reads are the
 bytes you verified:
 
 ```sh
 mkdir -p vendor/acme-market
-tar -xzf acme-tools-1.2.0.tar.gz -C vendor/acme-market
+tar -xzf ./acme-tools-1.2.0/acme-tools-1.2.0.tar.gz -C vendor/acme-market
 claude plugin marketplace add ./vendor/acme-market
 claude plugin install acme-tools@acme-market
 ```
@@ -471,14 +474,8 @@ the release manifest), `acme-market` is the marketplace `name` in the extracted
 plugin into Claude Code and manages updates from there — that copy is the runtime installer's,
 not ai-rulez's.
 
-Do **not** register the GitHub repository as a fallback: `claude plugin marketplace add
-acme/acme-tools` fetches the repository's current `main` branch, which is different bytes from
-the archive you just verified. If a release ships no marketplace manifest, install the verified
-bundle as a local source instead: extract it, then import it with ai-rulez's own
-[installed plugins](/ai-rulez/installed-plugins/) — `ai-rulez marketplace add acme --source
-./vendor/acme-market` and `ai-rulez plugin install acme-tools --from acme`, or an
-`[[installed_plugins]]` entry in your project. Re-run steps 1–2 with every new release before
-updating.
+Register the extracted directory each time you install from a verified archive. A GitHub repository source
+fetches its own checkout. Re-run verification before updating to a new release.
 
 ## Exit codes and errors
 

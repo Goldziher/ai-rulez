@@ -61,7 +61,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 5350 c8b91589498f68d9768b11c8e2150c005922a7a8158ce203dad3a73e76529123
-.ai-rulez/.generated-manifest.local.json file 0644 20173 30659af22c885b9a89b38db9a5a6d73da02311aa89a1c745dba4d168eea514eb
+.ai-rulez/.generated-manifest.local.json file 0644 20173 3407f908187d6183d008fbce58b46f98705e6c40d3dd1cdc1a6c6b60bf9b125d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -183,7 +183,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .github/agents/helper.agent.md file 0644 145 a05e291bca4e263ce308383033e43e9baba24e5b5ea3fb585b2e5d74c72001bc
 .github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
-.github/copilot-instructions.md file 0644 1101 5fff3484a9d7c517537c30fcdc746a9f74513e8e0f9dd297b56cf065a933453a
+.github/copilot-instructions.md file 0644 975 dc4480bb0d6455ee7b48b718779de4476ebcdabbca51a552ef08347fafe0dc01
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755
@@ -264,12 +264,12 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .vscode/mcp.json file 0600 698 69abfa76345ce8b800cfebc033992a553005cb82c8f82ea53ff7a139535f22fb
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
 AGENTS.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
-AGENTS.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
-AGENTS.override.md file 0644 1640 98ab040b45b8f57144de90faec51dae095d6ba59f70ddd03b4f73330eb39f242
+AGENTS.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
+AGENTS.override.md file 0644 1514 d36c4c47d380438cddffd611074cfc4b8bd9efe6a311303c5a85935a8581fe07
 CLAUDE.local.md file 0644 415 71759bed64dc5f1674339c7a5ab7d4c318124aea36c6626b815b2a8b0693fa2c
 CLAUDE.md file 0644 964 33598c9f69f26bc2f73d58815ecb113eca3cec18c46d15b3f8c484adc8159c78
 GEMINI.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
-GEMINI.md file 0644 1263 74c7155ba7ce13205ff3c751f5e5fc5ce38fcbf3a6a9f07f02d3295ad06176f8
+GEMINI.md file 0644 1137 bedaee0a4925081debc379e562267e35d832611de19ce348eb3fe98a265dc139
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0600 915 c18268664298f582eed44cd5947f66d6f4961874cc2f6994059f3f52bd0ae259
 opencode.json file 0600 1130 9aeafb8ecfdea117223ded62c65089373be9963c49c16ee8f43a3fd61e856460
@@ -426,7 +426,7 @@ INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 4989 309c3da360e80c176d7d3199583462abdfb89fdfd0da1cb104dff126895ed235
-~ .ai-rulez/.generated-manifest.local.json file 0644 19598 573d01e89675e49cb42ba12a74d29a7a1fc74cec3c57de4ccc2b72d3488e2178
+~ .ai-rulez/.generated-manifest.local.json file 0644 19598 0bd85f94d888313952f9c13dff299a3fa1cb87a7e286b086267b4260eba35722
 --- home tree
 (no change)
 

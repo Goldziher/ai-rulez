@@ -14,7 +14,7 @@ import (
 
 func gitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+	cmd := CommandNoContext(dir, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 }
@@ -58,7 +58,7 @@ func TestWorktreesListsRegisteredWorktrees(t *testing.T) {
 	root := t.TempDir()
 	main := filepath.Join(root, "main")
 	require.NoError(t, os.MkdirAll(main, 0o755))
-	gitRun(t, main, "init", "-q")
+	gitRun(t, main, "init", "-q", "-b", "main")
 	require.NoError(t, os.WriteFile(filepath.Join(main, "f"), []byte("x"), 0o644))
 	gitRun(t, main, "add", "f")
 	gitRun(t, main, "commit", "-q", "-m", "init")
