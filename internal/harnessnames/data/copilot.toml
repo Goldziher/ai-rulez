@@ -1,7 +1,7 @@
 schema = 1
 preset = "copilot"
 harness_version = "docs-only (VS Code docs pages dated 10/14/2026)"
-verified_on = "2026-10-18"
+verified_on = "2026-11-17"
 completeness = "partial"
 severity = "warning"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = false
 [[source]]
 id = "s1"
 url = "https://code.visualstudio.com/docs/copilot/reference/copilot-vscode-features"
-verified_on = "2026-10-18"
+verified_on = "2026-11-17"
 
 [[source]]
 id = "s2"
@@ -27,37 +27,7 @@ kind = "command"
 source = "s1"
 user_collision = "unknown"
 match = "exact"
-names = [
-  "agents",
-  "clear",
-  "compact",
-  "create-agent",
-  "create-hook",
-  "create-instructions",
-  "create-prompt",
-  "create-skill",
-  "debug",
-  "doc",
-  "explain",
-  "fix",
-  "fork",
-  "help",
-  "hooks",
-  "init",
-  "instructions",
-  "models",
-  "new",
-  "newNotebook",
-  "plan",
-  "prompts",
-  "rename",
-  "sandbox",
-  "setupTests",
-  "skills",
-  "tests",
-  "tools",
-  "troubleshoot",
-]
+names = ["compact", "fork", "plan"]
 
 [[group]]
 kind = "command"
