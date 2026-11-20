@@ -92,11 +92,11 @@ func TestLocate_UserDirectoryIsKeyedByTheProjectRoot(t *testing.T) {
 
 func TestLocate_FallsBackToTheProjectWhenTheUserCacheIsNotWritable(t *testing.T) {
 	root, configDir := project(t)
-	home, err := ambient.OS().UserHomeDir()
-	require.NoError(t, err)
+	cacheRoot := os.Getenv("XDG_CACHE_HOME")
+	require.NotEmpty(t, cacheRoot, "the test isolation must name the user cache root")
 	// A file where the cache directory should be makes it impossible to create.
-	require.NoError(t, os.MkdirAll(home, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(home, ".cache"), []byte("x"), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Dir(cacheRoot), 0o755))
+	require.NoError(t, os.WriteFile(cacheRoot, []byte("x"), 0o600))
 
 	loc, err := Locate(context.Background(), opts(root, configDir, config.IndexCacheUser))
 

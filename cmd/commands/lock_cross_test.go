@@ -307,9 +307,9 @@ func TestLockCross_MovedOKFTagStaysPinnedAndACachePoisonIsCaught(t *testing.T) {
 	// is edited: the cache may hold one per commit, and their order on disk
 	// differs between systems.
 	var cached []string
-	home, err := os.UserHomeDir()
+	cacheRoot, err := config.CacheDir("includes")
 	require.NoError(t, err)
-	require.NoError(t, filepath.Walk(filepath.Join(home, ".cache", "ai-rulez", "includes"), func(p string, info os.FileInfo, err error) error {
+	require.NoError(t, filepath.Walk(cacheRoot, func(p string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() && filepath.Base(p) == "shared.md" && !strings.Contains(p, string(filepath.Separator)+".git"+string(filepath.Separator)) {
 			cached = append(cached, p)
 		}

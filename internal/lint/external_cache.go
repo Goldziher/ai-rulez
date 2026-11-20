@@ -68,9 +68,10 @@ func NewScanCache(dir, secretPath string) *ScanCache {
 }
 
 // UserScanCache places the cache in the user's directories for the project
-// whose configuration directory is configDir: ~/.cache/ai-rulez/scan/<project
-// hash> and the secret in the user config directory. It returns nil when there
-// is no home directory.
+// whose configuration directory is configDir: $XDG_CACHE_HOME/ai-rulez/scan/<project
+// hash> when XDG_CACHE_HOME is absolute, else ~/.cache/ai-rulez/scan/<project hash>,
+// and the secret in the user config directory. It returns nil when there is no
+// user cache root.
 func UserScanCache(log logger.Logger, configDir string) *ScanCache {
 	abs, err := filepath.Abs(configDir)
 	if err != nil {

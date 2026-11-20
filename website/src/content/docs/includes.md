@@ -242,8 +242,10 @@ commit and verify the digest. A branch or tag that is not locked is reported as 
 | `ai-rulez generate --frozen`   | use only the cache, never the network, and verify it against the lock     |
 | `ai-rulez generate --offline`  | use cached content; an include that cannot be resolved is skipped with a warning |
 
-Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash>/` (mode `0700`), one tree per URL, path,
-ref and pinned commit, so two checkouts that pin different commits never share a tree. See [Lock file](/ai-rulez/lockfile/).
+Remote includes are cached under `$XDG_CACHE_HOME/ai-rulez/includes/<name>-<hash>/` when `XDG_CACHE_HOME` is absolute,
+else `~/.cache/ai-rulez/includes/<name>-<hash>/` (mode `0700`), one tree per URL, path, ref and pinned commit, so two
+checkouts that pin different commits never share a tree. A read-only home directory is fine as long as
+`XDG_CACHE_HOME` names a writable directory. See [Lock file](/ai-rulez/lockfile/).
 
 ## Errors and safety
 

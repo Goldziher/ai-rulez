@@ -33,10 +33,11 @@ func userHome(env ambient.Env) string {
 }
 
 // CacheDirFor returns the response cache directory of the project whose
-// ai-rulez config directory is configDir: ~/.cache/ai-rulez/llm/<project hash>.
-// opts.CacheDir overrides it. It returns "" when the cache cannot be placed
-// (no config directory, or no home directory); there is no fallback to the
-// shared temp directory.
+// ai-rulez config directory is configDir:
+// $XDG_CACHE_HOME/ai-rulez/llm/<project hash> when XDG_CACHE_HOME is absolute,
+// else ~/.cache/ai-rulez/llm/<project hash>. opts.CacheDir overrides it. It
+// returns "" when the cache cannot be placed (no config directory, or no user
+// cache root); there is no fallback to the shared temp directory.
 func CacheDirFor(opts Options) string {
 	if opts.CacheDir != "" {
 		return opts.CacheDir
@@ -44,8 +45,8 @@ func CacheDirFor(opts Options) string {
 	if opts.ConfigDir == "" {
 		return ""
 	}
-	home := userHome(opts.Env)
-	if home == "" {
+	root := userCacheRoot(opts.Env)
+	if root == "" {
 		return ""
 	}
 	abs, err := filepath.Abs(opts.ConfigDir)
@@ -53,7 +54,20 @@ func CacheDirFor(opts Options) string {
 		abs = opts.ConfigDir
 	}
 	sum := sha256.Sum256([]byte(filepath.Clean(abs)))
-	return filepath.Join(home, ".cache", "ai-rulez", "llm", hex.EncodeToString(sum[:8]))
+	return filepath.Join(root, "llm", hex.EncodeToString(sum[:8]))
+}
+
+// userCacheRoot mirrors config.CacheDir: $XDG_CACHE_HOME/ai-rulez when
+// XDG_CACHE_HOME is absolute, else ~/.cache/ai-rulez, and "" without either.
+func userCacheRoot(env ambient.Env) string {
+	if xdg := ambient.Getenv(env, "XDG_CACHE_HOME"); xdg != "" && filepath.IsAbs(xdg) {
+		return filepath.Join(xdg, "ai-rulez")
+	}
+	home := userHome(env)
+	if home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".cache", "ai-rulez")
 }
 
 // secretPathFor returns the per-user cache secret path: opts.SecretPath, else
