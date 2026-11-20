@@ -48,7 +48,9 @@ func TestTelemetryPreview_ShowsWhatWouldBeSentWithoutExportOn(t *testing.T) {
 	assert.Contains(t, text, "fields withheld: ai_rulez.item.path, ai_rulez.session")
 	assert.Contains(t, text, "timestamps: the observation and metric times")
 	assert.Contains(t, text, "Nothing was sent.")
-	assert.NotContains(t, text, "5b1c", "a session hash is withheld by default")
+	// The event id is random 16-hex, so a short hex prefix is not a safe needle:
+	// assert the session attribute itself never appears outside the withheld list.
+	assert.NotContains(t, text, `"key":"ai_rulez.session"`, "a session hash is withheld by default")
 }
 
 func TestTelemetryPreview_LimitAndEmptyLog(t *testing.T) {
