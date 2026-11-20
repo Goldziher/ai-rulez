@@ -291,10 +291,17 @@ jobs:
       - uses: Goldziher/ai-rulez@v5
         with:
           version: 5.14.1
+      - name: Resolve the first-seen history path
+        id: first-seen
+        shell: bash
+        # The writer uses XDG_CACHE_HOME only when it is absolute.
+        run: |
+          root="${XDG_CACHE_HOME:-}"
+          [[ "$root" == /* ]] || root="$HOME/.cache"
+          echo "path=$root/ai-rulez/observed-tags.toml" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4                    # keep the first-seen history between runs
         with:
-          # The writer follows an absolute XDG_CACHE_HOME, else ~/.cache.
-          path: ${{ env.XDG_CACHE_HOME || '~/.cache' }}/ai-rulez/observed-tags.toml
+          path: ${{ steps.first-seen.outputs.path }}
           key: ai-rulez-observed-tags-${{ github.run_id }}
           restore-keys: ai-rulez-observed-tags-
       - name: Report outdated sources
