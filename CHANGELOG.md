@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.14.1] - 2026-11-19
+
+### Fixed
+
+- Honor an absolute `XDG_CACHE_HOME` for the user cache instead of always writing `~/.cache/ai-rulez`, so generating from locked Git includes works when the home directory is read-only.
+
 ## [5.14.0] - 2026-11-17
 
 ### Added
