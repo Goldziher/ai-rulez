@@ -15,6 +15,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("HOME", home)        //nolint:errcheck,gosec // test setup
 	os.Setenv("USERPROFILE", home) //nolint:errcheck,gosec // test setup
 	os.Unsetenv("XDG_CONFIG_HOME") //nolint:errcheck,gosec // test setup
+	os.Unsetenv("XDG_CACHE_HOME")  //nolint:errcheck,gosec // test setup
 	code := m.Run()
 	os.RemoveAll(home) //nolint:errcheck,gosec // test cleanup
 	os.Exit(code)

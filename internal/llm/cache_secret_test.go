@@ -12,15 +12,43 @@ func TestEnvOptionControlsHomeAndSecretLocations(t *testing.T) {
 	// Arrange
 	home := filepath.Join(t.TempDir(), "home")
 	xdg := filepath.Join(t.TempDir(), "xdg")
+	xdgCache := filepath.Join(t.TempDir(), "xdg-cache")
 	tests := []struct {
 		name       string
 		env        ambient.Env
 		wantSecret string
 		wantCache  string
 	}{
-		{"home only", ambient.MapEnv{Home: home}, filepath.Join(home, ".config", "ai-rulez", cacheSecretFile), filepath.Join(home, ".cache", "ai-rulez", "llm")},
-		{"xdg wins for the secret", ambient.MapEnv{Home: home, Vars: map[string]string{"XDG_CONFIG_HOME": xdg}}, filepath.Join(xdg, "ai-rulez", cacheSecretFile), filepath.Join(home, ".cache", "ai-rulez", "llm")},
-		{"no home", ambient.MapEnv{}, "", ""},
+		{
+			name:       "home only",
+			env:        ambient.MapEnv{Home: home},
+			wantSecret: filepath.Join(home, ".config", "ai-rulez", cacheSecretFile),
+			wantCache:  filepath.Join(home, ".cache", "ai-rulez", "llm"),
+		},
+		{
+			name:       "xdg wins for the secret",
+			env:        ambient.MapEnv{Home: home, Vars: map[string]string{"XDG_CONFIG_HOME": xdg}},
+			wantSecret: filepath.Join(xdg, "ai-rulez", cacheSecretFile),
+			wantCache:  filepath.Join(home, ".cache", "ai-rulez", "llm"),
+		},
+		{
+			name:       "xdg cache home wins for the cache",
+			env:        ambient.MapEnv{Home: home, Vars: map[string]string{"XDG_CACHE_HOME": xdgCache}},
+			wantSecret: filepath.Join(home, ".config", "ai-rulez", cacheSecretFile),
+			wantCache:  filepath.Join(xdgCache, "ai-rulez", "llm"),
+		},
+		{
+			name:       "xdg cache home works without a home directory",
+			env:        ambient.MapEnv{Vars: map[string]string{"XDG_CACHE_HOME": xdgCache}},
+			wantSecret: "",
+			wantCache:  filepath.Join(xdgCache, "ai-rulez", "llm"),
+		},
+		{
+			name:       "no home",
+			env:        ambient.MapEnv{},
+			wantSecret: "",
+			wantCache:  "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

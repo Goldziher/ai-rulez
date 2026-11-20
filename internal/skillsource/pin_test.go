@@ -72,6 +72,7 @@ func TestResolve_NoHomeMeansNoWorldWritableCacheFallback(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
 	t.Setenv("home", "")
+	t.Setenv("XDG_CACHE_HOME", "")
 	f := newFixture(t)
 	_, err := Resolve(context.Background(), Spec{Name: "t", URL: "git+" + f.url, Ref: "v1.0.0"}, Options{})
 	require.Error(t, err)

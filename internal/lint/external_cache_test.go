@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -316,6 +317,9 @@ func TestUserScanCacheIsOnePerProjectWhateverTheSpelling(t *testing.T) {
 	require.NotNil(t, byReal)
 	require.NotNil(t, byLink)
 	assert.Equal(t, byReal.dir, byLink.dir)
-	assert.Contains(t, byReal.dir, filepath.Join(".cache", "ai-rulez", "scan"))
+	cacheRoot, err := config.CacheDir("scan")
+	require.NoError(t, err)
+	assert.Equal(t, cacheRoot, filepath.Dir(byReal.dir),
+		"the scan cache is one directory per project under the user cache root")
 	assert.Contains(t, byReal.secretPath, filepath.Join("config", "ai-rulez", "scan-cache.key"))
 }

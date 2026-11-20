@@ -270,7 +270,8 @@ reviewable diff. Paste `ai-rulez lock --diff` into the pull request description.
 ### Scheduled outdated report
 
 A scheduled job reports sources that fall behind. It reads tags only and writes nothing. It also records every tag it
-sees in the machine's `first-seen` history (`~/.cache/ai-rulez/observed-tags.toml`), which a
+sees in the machine's `first-seen` history (`$XDG_CACHE_HOME/ai-rulez/observed-tags.toml` when `XDG_CACHE_HOME` is
+absolute, else `~/.cache/ai-rulez/observed-tags.toml`), which a
 [minimum release age](#minimum-release-age) can use. That history is local to the machine: on a hosted runner it is lost
 after the job unless you cache it, and it never helps a `lock` or `update` that runs on another machine.
 
@@ -289,10 +290,18 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.14.0
+          version: 5.14.1
+      - name: Resolve the first-seen history path
+        id: first-seen
+        shell: bash
+        # The writer uses XDG_CACHE_HOME only when it is absolute.
+        run: |
+          root="${XDG_CACHE_HOME:-}"
+          [[ "$root" == /* ]] || root="$HOME/.cache"
+          echo "path=$root/ai-rulez/observed-tags.toml" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4                    # keep the first-seen history between runs
         with:
-          path: ~/.cache/ai-rulez/observed-tags.toml
+          path: ${{ steps.first-seen.outputs.path }}
           key: ai-rulez-observed-tags-${{ github.run_id }}
           restore-keys: ai-rulez-observed-tags-
       - name: Report outdated sources
@@ -405,14 +414,14 @@ The release time comes from:
 | `min_release_age_source` | Release time | Notes |
 | --- | --- | --- |
 | `forge` | the publish time of the tag's GitHub release ([Forge client](/ai-rulez/forge/)) | a committer cannot forge it. When the release names a commit and the tag now points elsewhere, the time does not count. When the release names a branch, the time is the later of the publish time and the commit's first-seen time (no first-seen record: held back). A tag without a release has no time |
-| `first-seen` | when this machine first saw the tag at that commit (`~/.cache/ai-rulez/observed-tags.toml`) | a tag never seen before counts as released now, so it is held back. A tag that moves counts as new |
+| `first-seen` | when this machine first saw the tag at that commit (`$XDG_CACHE_HOME/ai-rulez/observed-tags.toml` when `XDG_CACHE_HOME` is absolute, else `~/.cache/ai-rulez/observed-tags.toml`) | a tag never seen before counts as released now, so it is held back. A tag that moves counts as new |
 | `commit` | the tagger or committer date | anyone who can push can forge it; protects against accidental adoption only |
 | `auto` (default) | `forge`, then `first-seen` | never falls back to `commit`; when the first-seen record cannot be read or written, it warns and holds the tag back |
 
 Every source fails closed: a tag whose time cannot be found is held back. With `auto` and a non-GitHub source, a new
 project cannot lock a range until the age passes, because every tag is "seen now". The first-seen history only helps
 on the machine that recorded it: run `lock --outdated` regularly on the same machine that later runs `lock` or `update`
-(a self-hosted runner, or a hosted runner that caches `~/.cache/ai-rulez/observed-tags.toml`), use `commit` if that is
+(a self-hosted runner, or a hosted runner that caches the `observed-tags.toml` path above), use `commit` if that is
 acceptable for the source, or pin a commit SHA.
 
 <a id="lock-outdated"></a>

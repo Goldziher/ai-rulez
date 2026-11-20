@@ -17,6 +17,10 @@ permissions:
 jobs:
   validate:
     uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1
+    with:
+      # Match the poly version mise.toml pins, rather than the workflow's default:
+      # 0.36's Linux build reformats files this repository has not adopted yet.
+      poly-version: v0.33.1
 
   toolchain:
     name: Toolchain baseline

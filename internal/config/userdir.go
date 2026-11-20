@@ -45,20 +45,27 @@ func UserConfigDir(getenv func(string) string, home string) string {
 	return filepath.Join(home, ".config", "ai-rulez")
 }
 
-// CacheDir is a directory below the user cache root, ~/.cache/ai-rulez/<parts...>.
-// It is the one place that decides where fetched includes, installed skills, skill
-// sources and remote documents are cached. There is no fallback to the shared
-// temp directory: a cache other users can write to could hold a tree they planted,
-// and an unlocked source trusts its cache. Without a home directory it errors.
+// CacheDir is a directory below the user cache root: $XDG_CACHE_HOME/ai-rulez/<parts...>
+// when XDG_CACHE_HOME is absolute, else ~/.cache/ai-rulez/<parts...>. It is the
+// one place that decides where fetched includes, installed skills, skill sources
+// and remote documents are cached. There is no fallback to the shared temp
+// directory: a cache other users can write to could hold a tree they planted, and
+// an unlocked source trusts its cache. Without an absolute XDG_CACHE_HOME or a
+// home directory it errors.
 func CacheDir(parts ...string) (string, error) { return CacheDirIn(nil, parts...) }
 
-// CacheDirIn is CacheDir with the home directory taken from env (nil: the real
-// one).
+// CacheDirIn is CacheDir with the environment and home directory taken from env
+// (nil: the real ones). A relative XDG_CACHE_HOME is ignored, as the XDG base
+// directory specification requires.
 func CacheDirIn(env ambient.Env, parts ...string) (string, error) {
+	if xdg := ambient.Getenv(env, "XDG_CACHE_HOME"); xdg != "" && filepath.IsAbs(xdg) {
+		return filepath.Join(append([]string{xdg, "ai-rulez"}, parts...)...), nil
+	}
 	home, err := ambient.OrOS(env).UserHomeDir()
 	if err != nil || home == "" {
-		return "", oops.Hint("Set HOME, or run from an account with a home directory").
-			Errorf("cannot place the ai-rulez cache: no home directory")
+		hint := "Set XDG_CACHE_HOME to an absolute directory or HOME, " +
+			"or run from an account with a home directory"
+		return "", oops.Hint(hint).Errorf("cannot place the ai-rulez cache: no cache directory")
 	}
 	return filepath.Join(append([]string{home, ".cache", "ai-rulez"}, parts...)...), nil
 }

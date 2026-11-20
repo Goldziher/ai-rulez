@@ -191,7 +191,8 @@ unencrypted, so prefer https, or a loopback tunnel (`ssh -L 8080:gateway.interna
 - **Prices** come from liter-llm's model catalog plus a few fixed entries (the `haiku`, `sonnet` and `opus` short names
   eval cases use, and the Claude families). A Bedrock id is reduced to the model it names before the lookup. Set
   `price_input_per_mtok` and `price_output_per_mtok` for any other model. Reported costs are estimates, not a bill.
-- **Cache.** Answers are cached in `~/.cache/ai-rulez/llm/<project hash>/`, outside the repository, keyed by the
+- **Cache.** Answers are cached in `$XDG_CACHE_HOME/ai-rulez/llm/<project hash>/` when `XDG_CACHE_HOME` is absolute,
+  else `~/.cache/ai-rulez/llm/<project hash>/`, outside the repository, keyed by the
   endpoint (provider, base URL, key variable name, never its value), the model, the request and the feature's prompt
   version. Every entry is authenticated with a per-user secret (`$XDG_CONFIG_HOME/ai-rulez/llm-cache.key`, mode 0600):
   a modified or planted entry is discarded, and a cache restored from another machine simply misses. A cache hit costs
