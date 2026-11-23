@@ -395,6 +395,22 @@ type CursorExtras struct {
 	// Marketplace also writes .cursor-plugin/marketplace.json for a
 	// single-plugin repository.
 	Marketplace bool `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
+	// HookRootFallback is the plugin root a hook command uses when Cursor does
+	// not export CURSOR_PLUGIN_ROOT to the hook process. Unset, it is ".", the
+	// session's working directory.
+	HookRootFallback string `yaml:"hook_root_fallback,omitempty" json:"hook_root_fallback,omitempty" toml:"hook_root_fallback,omitempty"` //nolint:tagliatelle
+}
+
+// DefaultCursorHookRootFallback is the plugin root a Cursor hook command falls
+// back to when [plugin.cursor] hook_root_fallback is unset.
+const DefaultCursorHookRootFallback = "."
+
+// HookRoot returns the resolved Cursor hook root fallback.
+func (c *CursorExtras) HookRoot() string {
+	if c == nil || c.HookRootFallback == "" {
+		return DefaultCursorHookRootFallback
+	}
+	return c.HookRootFallback
 }
 
 // GeminiExtras holds Gemini-extension-specific manifest fields.

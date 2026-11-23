@@ -602,8 +602,8 @@ func (c *Config) validateMarketplaceAuthoring() error {
 }
 
 // validatePluginRuntimeRules applies the per-runtime rules: Codex metadata, the
-// runtime list, the Codex layout and the Agent Plugins name grammar that every
-// runtime built on the standard shares.
+// runtime list, the Codex layout, the Cursor hook root fallback and the Agent
+// Plugins name grammar that every runtime built on the standard shares.
 func validatePluginRuntimeRules(p *PluginAuthoring) error {
 	if err := validateGeminiSettings(p); err != nil {
 		return err
@@ -617,6 +617,9 @@ func validatePluginRuntimeRules(p *PluginAuthoring) error {
 		return err
 	}
 	if err := validateCodexExtras(p); err != nil {
+		return err
+	}
+	if err := validateCursorExtras(p); err != nil {
 		return err
 	}
 	if p.Spec != "" && !agentplugins.SupportedSpec(p.Spec) {
@@ -645,6 +648,30 @@ func validateCodexExtras(p *PluginAuthoring) error {
 		With("value", p.Codex.Manifest).
 		Hint("Use legacy (default), root or both").
 		Errorf("plugin %q sets an unknown codex manifest layout %q", p.Name, p.Codex.Manifest)
+}
+
+// cursorHookRootFallback allowlists a [plugin.cursor] hook_root_fallback: path
+// characters and $NAME environment references. The value is spliced into
+// ${CURSOR_PLUGIN_ROOT:-<value>} inside a shell command, so whitespace, quotes,
+// braces, backslashes, command substitution and ~ (not expanded inside the
+// double-quoted script path) are rejected. The schema's pattern is the same.
+var cursorHookRootFallback = regexp.MustCompile(`^(?:[A-Za-z0-9._/@+,:=%-]|\$[A-Za-z_][A-Za-z0-9_]*)+$`)
+
+// validateCursorExtras rejects a [plugin.cursor] hook_root_fallback that cannot
+// be spliced into a hook command safely.
+func validateCursorExtras(p *PluginAuthoring) error {
+	if p.Cursor == nil || p.Cursor.HookRootFallback == "" {
+		return nil
+	}
+	value := p.Cursor.HookRootFallback
+	if cursorHookRootFallback.MatchString(value) {
+		return nil
+	}
+	return oops.
+		With("field", "plugin.cursor.hook_root_fallback").
+		With("value", value).
+		Hint("Use a path of letters, digits and ._/@+,:=%- with $NAME references, e.g. \"$HOME/.cursor/plugins/<name>\"; write $HOME instead of ~").
+		Errorf("plugin %q sets an invalid cursor hook_root_fallback %q", p.Name, value)
 }
 
 // emptyHookGroupWarnings reports the top-level [[hooks]] groups that declare no

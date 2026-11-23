@@ -3593,9 +3593,14 @@
         },
         "cursor": {
           "type": "object",
-          "description": "Cursor packaging switches. marketplace writes .cursor-plugin/marketplace.json for a single-plugin repository.",
+          "description": "Cursor packaging switches. marketplace writes .cursor-plugin/marketplace.json for a single-plugin repository. hook_root_fallback sets the plugin root a hook command uses when Cursor does not export CURSOR_PLUGIN_ROOT.",
           "properties": {
-            "marketplace": { "type": "boolean" }
+            "marketplace": { "type": "boolean" },
+            "hook_root_fallback": {
+              "type": "string",
+              "description": "Plugin root a Cursor hook command falls back to when CURSOR_PLUGIN_ROOT is unset: commands render as ${CURSOR_PLUGIN_ROOT:-<value>}/hooks/<script>. Default \".\", the session's working directory. Letters, digits, ._/@+,:=%- and $NAME references, e.g. \"$HOME/.cursor/plugins/<name>\"; use $HOME, not ~.",
+              "pattern": "^(?:[A-Za-z0-9._/@+,:=%-]|\\$[A-Za-z_][A-Za-z0-9_]*)+$"
+            }
           },
           "additionalProperties": false
         },

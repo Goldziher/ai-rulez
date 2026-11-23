@@ -130,6 +130,47 @@ func TestGolden_CursorHooksUseCursorRootVar(t *testing.T) {
 	assert.Equal(t, false, action["async"])
 }
 
+// TestGolden_CursorHooksUseConfiguredRootFallback renders the fixture with
+// [plugin.cursor] hook_root_fallback set: every Cursor hook command falls back
+// to the configured root, and the Claude rendering is unchanged.
+func TestGolden_CursorHooksUseConfiguredRootFallback(t *testing.T) {
+	cfg, err := config.LoadConfig(context.Background(), fixtureDir)
+	require.NoError(t, err)
+	cfg.Plugin.Cursor = &config.CursorExtras{HookRootFallback: "$HOME/.cursor/plugins/basemind"}
+	m, err := BuildManifest(cfg, cfg.Content)
+	require.NoError(t, err)
+	outDir := t.TempDir()
+	outs, err := Generate(m, outDir)
+	require.NoError(t, err)
+
+	byPath := outputsByPath(t, outs, outDir)
+	cursorDoc := parseJSON(t, byPath[".cursor-plugin/hooks/hooks.json"].RawContent)
+	commands := hookCommands(t, cursorDoc)
+	require.NotEmpty(t, commands)
+	for _, command := range commands {
+		assert.Contains(t, command, "${CURSOR_PLUGIN_ROOT:-$HOME/.cursor/plugins/basemind}/")
+		assert.NotContains(t, command, "${CURSOR_PLUGIN_ROOT:-.}")
+	}
+	claudeDoc := parseJSON(t, byPath["hooks/hooks.json"].RawContent)
+	for _, command := range hookCommands(t, claudeDoc) {
+		assert.NotContains(t, command, "CURSOR_PLUGIN_ROOT")
+	}
+}
+
+// hookCommands returns every command string in a rendered hooks.json document.
+func hookCommands(t *testing.T, doc map[string]any) []string {
+	t.Helper()
+	var commands []string
+	for _, groups := range doc["hooks"].(map[string]any) {
+		for _, group := range groups.([]any) {
+			for _, action := range group.(map[string]any)["hooks"].([]any) {
+				commands = append(commands, action.(map[string]any)["command"].(string))
+			}
+		}
+	}
+	return commands
+}
+
 // TestGolden_ClaudeHooksRootVarAndOmittedHandlerFields guards the rendered Claude
 // hooks.json: the plugin root variable is rewritten for the runtime, async always
 // serializes, and handler fields the fixture does not declare stay out of the

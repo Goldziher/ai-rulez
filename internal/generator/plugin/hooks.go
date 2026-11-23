@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	// rootVarCursorHook is Cursor's documented plugin-root variable for hook
-	// commands, with a shell fallback to the current directory.
-	rootVarCursorHook = "${CURSOR_PLUGIN_ROOT:-.}"
+	// rootVarCursorHookName is Cursor's documented plugin-root variable for hook
+	// commands; cursorHookRoot adds the shell fallback for when it is unset.
+	rootVarCursorHookName = "CURSOR_PLUGIN_ROOT"
 
 	// hooksDirName is the bundle directory that holds both hooks.json and every
 	// passed-through hook script. Scripts live next to hooks.json so the rendered
@@ -24,11 +24,18 @@ const (
 // root variable a runtime resolves for hooks. This differs from rewriteRoot (used
 // for MCP launch commands): hooks run in the runtime's hook context, where Cursor
 // exposes ${CURSOR_PLUGIN_ROOT} rather than a plugin-relative path.
-func rewriteHookRoot(s, runtime string) string {
+func rewriteHookRoot(s, runtime string, cursor *config.CursorExtras) string {
 	if runtime == config.PluginRuntimeCursor {
-		return strings.ReplaceAll(s, rootVarCanonical, rootVarCursorHook)
+		return strings.ReplaceAll(s, rootVarCanonical, cursorHookRoot(cursor))
 	}
 	return rewriteRoot(s, runtime)
+}
+
+// cursorHookRoot is the Cursor hook root: ${CURSOR_PLUGIN_ROOT} with the
+// [plugin.cursor] hook_root_fallback (default ".") for a hook process that
+// Cursor starts without the variable.
+func cursorHookRoot(cursor *config.CursorExtras) string {
+	return "${" + rootVarCursorHookName + ":-" + cursor.HookRoot() + "}"
 }
 
 // hookActionDoc is one action in a rendered hooks.json group. Async is emitted
@@ -60,7 +67,7 @@ type hookGroupDoc struct {
 // install path with a space would otherwise split the command (AR963). With args
 // the handler is exec form, where the command is a bare executable path and a
 // quote would be part of the file name.
-func hookCommand(action *config.HookAction, runtime string) string {
+func hookCommand(action *config.HookAction, runtime string, cursor *config.CursorExtras) string {
 	command := action.Command
 	if action.Script != "" {
 		command = rootVarCanonical + "/" + path.Join(hooksDirName, path.Base(filepath.ToSlash(action.Script)))
@@ -68,7 +75,7 @@ func hookCommand(action *config.HookAction, runtime string) string {
 			command = `"` + command + `"`
 		}
 	}
-	return rewriteHookRoot(command, runtime)
+	return rewriteHookRoot(command, runtime, cursor)
 }
 
 // hooksBlock builds the {event: [groups...]} map for a runtime, rewriting each
@@ -93,7 +100,7 @@ func hooksBlock(m *Manifest, runtime string) map[string][]hookGroupDoc {
 			}
 			actions = append(actions, hookActionDoc{
 				Type:          typ,
-				Command:       hookCommand(action, runtime),
+				Command:       hookCommand(action, runtime, m.Cursor),
 				Args:          action.Args,
 				Timeout:       action.Timeout,
 				Async:         action.Async,
