@@ -20,8 +20,8 @@ github.com/parquet-go/bitpack v1.1.0 h1:b80hfKZwIJ3Ku684xJSEj/9G0tywQPKOtmTV8si3
 github.com/parquet-go/bitpack v1.1.0/go.mod h1:XnVk9TH+O40eOOmvpAVZ7K2ocQFrQwysLMnc6M/8lgs=
 github.com/parquet-go/jsonlite v1.5.5 h1:TIqJ+b+mYoTvvEt1/ICS4fBacQO0xWwAbvtcrKjEcC8=
 github.com/parquet-go/jsonlite v1.5.5/go.mod h1:hN57TVzxtr04kaax5XwNgCCsh1KE7BT6dvY6X/zNH90=
-github.com/parquet-go/parquet-go v0.32.0 h1:NWDqTUHfrCS4cJP/Fj2HlxvqsrVedWG3sayMkf+znzM=
-github.com/parquet-go/parquet-go v0.32.0/go.mod h1:navtkAYr2LGoJVp141oXPlO/sxLvaOe3la2JEoD8+rg=
+github.com/parquet-go/parquet-go v0.32.1 h1:y4SRRrRa7fiz8LjShJAWIIuQp7U12M5kAxrloyhX2qE=
+github.com/parquet-go/parquet-go v0.32.1/go.mod h1:Emi5ai7YeTXZftimNQKSPqOTlaJTOcUgdsOQL8TcIbs=
 github.com/pierrec/lz4/v4 v4.1.33 h1:GjG1TJ1V4IzKP8L96muuuDNpTwd7D+l2ccXrjAbe014=
 github.com/pierrec/lz4/v4 v4.1.33/go.mod h1:7SE9MC2STkNtL4PIwGhjmyVwvILaGI9/COYQNBhKM/c=
 github.com/twpayne/go-geom v1.7.0 h1:zMHTHNlenoHAc2ZSiHFh7SMoG0Wdw8gF0orBnrBhfjE=

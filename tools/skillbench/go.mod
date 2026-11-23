@@ -4,7 +4,7 @@ go 1.27.2
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/parquet-go/parquet-go v0.32.0
+	github.com/parquet-go/parquet-go v0.32.1
 )
 
 require (
