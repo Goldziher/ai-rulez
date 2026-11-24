@@ -215,7 +215,16 @@ names = [
   "verify",
   "workflow-authoring",
 ]
-aliases = { "code-review" = ["review", "ship"], "doctor" = ["checkup"], "loop" = ["proactive"] }
+aliases = { "code-review" = [
+  "review",
+  "ship:review",
+], "doctor" = [
+  "checkup",
+], "loop" = [
+  "proactive",
+], "steward" = [
+  "ship:steward",
+] }
 
 [[group]]
 kind = "skill"

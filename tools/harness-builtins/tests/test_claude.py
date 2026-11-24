@@ -47,6 +47,21 @@ class ClaudeTest(unittest.TestCase):
         # Assert
         self.assertEqual(got["command"]["aliases"], {"bug": ["share"]})
 
+    def test_a_namespaced_alias_keeps_its_full_name_and_does_not_shadow_its_namespace_skill(self):
+        # Arrange
+        text = (
+            "| `/clear` | Clear the conversation |\n"
+            "| `/code-review [pr]` | **[Skill](/docs/en/skills#bundled-skills).** Review the diff |\n"
+            "| `/ship [pr]` | **[Skill](/docs/en/skills#bundled-skills).** Open a PR. Alias: `/ship:merge` |\n"
+            "| `/ship:review` | Alias for [`/code-review`](/docs/en/code-review-local) |\n"
+        )
+        # Act
+        got = self.ex.parse_commands(text)
+        # Assert
+        self.assertEqual(got["skill"]["names"], ["code-review", "ship"])
+        self.assertEqual(got["skill"]["aliases"]["code-review"], ["ship:review"])
+        self.assertEqual(got["skill"]["aliases"]["ship"], ["ship:merge"])
+
     def test_a_subcommand_row_does_not_change_the_kind_of_its_command(self):
         # Arrange
         text = (

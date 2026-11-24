@@ -54,6 +54,7 @@ func TestCursorHookRootFallback_SchemaAndValidateAgree(t *testing.T) {
 		{"/opt/demo;rm", false},
 		{"$1/demo", false},
 		{"/opt/$", false},
+		{"", true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.value, func(t *testing.T) {

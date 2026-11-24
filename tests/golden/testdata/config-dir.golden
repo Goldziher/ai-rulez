@@ -106,12 +106,12 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 (no change)
 
 ## step 2: ai-rulez validate
-exit: 0
+exit: 2
 --- stdout
 .config/ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
 .config/ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
 .config/ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
-.config/ai-rulez/commands/ship.md:1: warning AR808 reserved-name: command "ship" is an alias of the Claude Code built-in /code-review (preset claude): a skill replaces the built-in command but not its aliases, so /ship keeps running the built-in; rename it, or list "claude:ship" in lint.allow_overrides if that is intended
+.config/ai-rulez/commands/ship.md:1: error AR808 reserved-name: command "ship" shadows the Claude Code built-in /ship (preset claude); rename it, or list "claude:ship" in lint.allow_overrides if the override is intended
 .config/ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
 .config/ai-rulez/config.toml:1: info AR750 sbom-component-unpinned: mcp-server local-tool: the package has no version; pin it (for example name@1.2.3)
 .config/ai-rulez/config.toml:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
@@ -119,14 +119,14 @@ exit: 0
 .config/ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
 .cursor/mcp.json:11: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
 
-validation: 0 error(s), 9 warning(s), 1 info across 1 root(s)
+validation: 1 error(s), 8 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         2
   AR503 script-not-executable        1
   AR750 sbom-component-unpinned      1
   AR802 description-length           5
   AR808 reserved-name                1
-risk (advisory, never fails the run): high (score 73/100)
-  medium     16  .config/ai-rulez/commands/ship.md
+risk (advisory, never fails the run): critical (score 90/100)
+  high       33  .config/ai-rulez/commands/ship.md
   medium      9  .config/ai-rulez/config.toml
   medium      8  .config/ai-rulez/agents/architect.md
   medium      8  .config/ai-rulez/agents/tester.md
@@ -134,7 +134,6 @@ risk (advisory, never fails the run): high (score 73/100)
   ... and 3 more item(s)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.config/ai-rulez
-INFO  Configuration is valid path=$ROOT/.config/ai-rulez
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755

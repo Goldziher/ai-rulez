@@ -3,6 +3,7 @@ package lint
 import (
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -90,11 +91,32 @@ func downloadedFile(text string) string {
 	return ""
 }
 
-// atCommand reports whether a command word can start at pos: the start of the line or after a pipe,
-// a subshell, a background marker or a command substitution.
+// shellAssignmentRe matches a leading VAR=value word, which prefixes a command without starting it.
+var shellAssignmentRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=\S*$`)
+})
+
+// isCommandKeyword reports whether word is a shell word after which a new command starts.
+func isCommandKeyword(word string) bool {
+	return slices.Contains(strings.Fields("then else elif do if while until time ! {"), word)
+}
+
+// atCommand reports whether a command word can start at pos: the start of the line, after a pipe,
+// a subshell, a background marker, a command substitution, `;` or `&&`/`||`, or after leading VAR=value
+// assignments and control keywords (`then`, `else`, `do`, ...).
 func atCommand(text string, pos int) bool {
 	before := strings.TrimRight(strings.TrimRight(text[:pos], `"'`), " \t")
-	return before == "" || strings.ContainsAny(before[len(before)-1:], "|&(`")
+	for {
+		if before == "" || strings.ContainsAny(before[len(before)-1:], "|&(`;") {
+			return true
+		}
+		i := strings.LastIndexAny(before, " \t") + 1
+		word := before[i:]
+		if !isCommandKeyword(word) && !shellAssignmentRe().MatchString(word) {
+			return false
+		}
+		before = strings.TrimRight(before[:i], " \t")
+	}
 }
 
 // executes reports whether the line runs file: through an interpreter, or by its path in command

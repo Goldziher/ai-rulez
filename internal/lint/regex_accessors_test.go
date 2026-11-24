@@ -26,6 +26,7 @@ func TestRegexAccessorsCompile(t *testing.T) {
 		"downloaderRe":        downloaderRe,
 		"remoteURLRe":         remoteURLRe,
 		"runnerRe":            runnerRe,
+		"shellAssignmentRe":   shellAssignmentRe,
 		"shellCaptureRe":      shellCaptureRe,
 		"shellRunVarRe":       shellRunVarRe,
 		"shellPipeVarRe":      shellPipeVarRe,
