@@ -3,6 +3,7 @@ package lint
 import (
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -95,14 +96,10 @@ var shellAssignmentRe = sync.OnceValue(func() *regexp.Regexp {
 	return regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=\S*$`)
 })
 
-// commandKeywords are the shell words after which a new command starts.
-var commandKeywords = func() map[string]bool {
-	m := map[string]bool{}
-	for _, w := range strings.Fields("then else elif do if while until time ! {") {
-		m[w] = true
-	}
-	return m
-}()
+// isCommandKeyword reports whether word is a shell word after which a new command starts.
+func isCommandKeyword(word string) bool {
+	return slices.Contains(strings.Fields("then else elif do if while until time ! {"), word)
+}
 
 // atCommand reports whether a command word can start at pos: the start of the line, after a pipe,
 // a subshell, a background marker, a command substitution, `;` or `&&`/`||`, or after leading VAR=value
@@ -115,7 +112,7 @@ func atCommand(text string, pos int) bool {
 		}
 		i := strings.LastIndexAny(before, " \t") + 1
 		word := before[i:]
-		if !commandKeywords[word] && !shellAssignmentRe().MatchString(word) {
+		if !isCommandKeyword(word) && !shellAssignmentRe().MatchString(word) {
 			return false
 		}
 		before = strings.TrimRight(before[:i], " \t")
