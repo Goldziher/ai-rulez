@@ -128,7 +128,7 @@ each one receives. A tool that is not listed can be added as a [custom preset](h
 | `cortex` | [Snowflake Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/extensibility) |
 | `crush` | [Crush](https://github.com/charmbracelet/crush) |
 | `cursor` | [Cursor](https://cursor.com/docs) |
-| `deepagents` | [Deep Agents Code](https://docs.langchain.com/oss/deepagents/code) |
+| `deepagents` | [Deep Agents Code](https://docs.langchain.com/oss/python/deepagents/cli/overview) |
 | `devin` | [Devin CLI](https://docs.devin.ai/cli) |
 | `dsh` | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) |
 | `factory` | [Factory Droid](https://docs.factory.ai) |
