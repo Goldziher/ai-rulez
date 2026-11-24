@@ -201,7 +201,29 @@ func TestHookCommand_QuotesShellFormScriptOnly(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, hookCommand(&tc.action, tc.runtime))
+			assert.Equal(t, tc.want, hookCommand(&tc.action, tc.runtime, nil))
+		})
+	}
+}
+
+func TestHookCommand_CursorHookRootFallback(t *testing.T) {
+	tests := []struct {
+		name    string
+		action  config.HookAction
+		runtime string
+		cursor  *config.CursorExtras
+		want    string
+	}{
+		{"no cursor table falls back to the working directory", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeCursor, nil, `"${CURSOR_PLUGIN_ROOT:-.}/hooks/a.sh"`},
+		{"empty fallback keeps the default", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeCursor, &config.CursorExtras{Marketplace: true}, `"${CURSOR_PLUGIN_ROOT:-.}/hooks/a.sh"`},
+		{"configured fallback replaces the default", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeCursor, &config.CursorExtras{HookRootFallback: "$HOME/.cursor/plugins/basemind"}, `"${CURSOR_PLUGIN_ROOT:-$HOME/.cursor/plugins/basemind}/hooks/a.sh"`},
+		{"configured fallback in exec form stays bare", config.HookAction{Script: "scripts/a.sh", Args: []string{"x"}}, config.PluginRuntimeCursor, &config.CursorExtras{HookRootFallback: "/opt/basemind"}, "${CURSOR_PLUGIN_ROOT:-/opt/basemind}/hooks/a.sh"},
+		{"configured fallback rewrites a declared command", config.HookAction{Command: "${PLUGIN_ROOT}/bin/guard check"}, config.PluginRuntimeCursor, &config.CursorExtras{HookRootFallback: "/opt/basemind"}, "${CURSOR_PLUGIN_ROOT:-/opt/basemind}/bin/guard check"},
+		{"other runtimes ignore the cursor fallback", config.HookAction{Script: "scripts/a.sh"}, config.PluginRuntimeClaude, &config.CursorExtras{HookRootFallback: "/opt/basemind"}, `"${CLAUDE_PLUGIN_ROOT}/hooks/a.sh"`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, hookCommand(&tc.action, tc.runtime, tc.cursor))
 		})
 	}
 }

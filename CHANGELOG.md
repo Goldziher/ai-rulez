@@ -6,6 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[plugin.cursor] hook_root_fallback`.** Cursor hook commands render as `${CURSOR_PLUGIN_ROOT:-<value>}/hooks/<script>`
+  instead of always falling back to `.`, the session's working directory, so a plugin that ships hooks can keep `cursor`
+  in `runtimes` when Cursor starts a hook without `CURSOR_PLUGIN_ROOT`. Unset, the fallback stays `.`. The value takes
+  path characters and `$NAME` references such as `$HOME`; `validate` and `generate` reject quotes, braces, whitespace
+  and `~`. See [Plugins](https://goldziher.github.io/ai-rulez/plugins/#cursor).
+
 ## [5.14.1] - 2026-11-19
 
 ### Fixed

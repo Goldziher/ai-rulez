@@ -302,6 +302,11 @@ The Claude rendering of the first hook:
 
 A `SessionStart` hook has no declarative guard: a bootstrap script must check for itself whether its work is done.
 
+Cursor renders the same hook as `"${CURSOR_PLUGIN_ROOT:-.}/hooks/bootstrap.sh"`. When Cursor starts a hook without
+`CURSOR_PLUGIN_ROOT`, the `.` fallback is the session's working directory, so the hook finds its script only in a
+project that contains the plugin. Set [`[plugin.cursor] hook_root_fallback`](#cursor) to the directory the plugin is
+installed in.
+
 ## Shared resources across skills
 
 Skills in one plugin often link to the same reference docs or templates. `shared_resources` copies directories
@@ -357,9 +362,23 @@ or hooks, so they are not written.
 
 ### Cursor
 
-`[plugin.cursor] marketplace = true` also writes `.cursor-plugin/marketplace.json` for a single-plugin repository
-(`source` is `.`). For marketplaces with several plugins, set `[marketplace] cursor_index = true`. To publish a Cursor
-team marketplace, see the [`cursor-team-marketplace` emitter](/ai-rulez/publish/#emitters).
+| Key | Meaning |
+| --- | --- |
+| `[plugin.cursor] marketplace` | `true` also writes `.cursor-plugin/marketplace.json` for a single-plugin repository (`source` is `.`) |
+| `[plugin.cursor] hook_root_fallback` | The plugin root a hook command uses when Cursor does not export `CURSOR_PLUGIN_ROOT`: commands render as `${CURSOR_PLUGIN_ROOT:-<value>}/hooks/<script>`. Default `.`, the session's working directory |
+
+```toml
+[plugin.cursor]
+hook_root_fallback = "$HOME/.cursor/plugins/acme-tools"
+```
+
+`hook_root_fallback` takes letters, digits, `._/@+,:=%-` and `$NAME` environment references. Whitespace, quotes,
+braces, backslashes and `~` are rejected: the value is spliced into a shell command, and `~` is not expanded inside the
+quoted script path, so write `$HOME`. Domain plugins inherit the root plugin's value. MCP launch commands are not
+affected; they use plugin-relative paths.
+
+For marketplaces with several plugins, set `[marketplace] cursor_index = true`. To publish a Cursor team marketplace,
+see the [`cursor-team-marketplace` emitter](/ai-rulez/publish/#emitters).
 
 ### Gemini
 
