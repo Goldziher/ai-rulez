@@ -304,8 +304,8 @@ A `SessionStart` hook has no declarative guard: a bootstrap script must check fo
 
 Cursor renders the same hook as `"${CURSOR_PLUGIN_ROOT:-.}/hooks/bootstrap.sh"`. When Cursor starts a hook without
 `CURSOR_PLUGIN_ROOT`, the `.` fallback is the session's working directory, so the hook finds its script only in a
-project that contains the plugin. Set [`[plugin.cursor] hook_root_fallback`](#cursor) to the directory the plugin is
-installed in.
+project that contains the plugin. Set [`[plugin.cursor] hook_root_fallback`](#cursor) to the `.cursor-plugin` directory
+of the installed plugin, the directory that contains `hooks/`.
 
 ## Shared resources across skills
 
@@ -365,11 +365,11 @@ or hooks, so they are not written.
 | Key | Meaning |
 | --- | --- |
 | `[plugin.cursor] marketplace` | `true` also writes `.cursor-plugin/marketplace.json` for a single-plugin repository (`source` is `.`) |
-| `[plugin.cursor] hook_root_fallback` | The plugin root a hook command uses when Cursor does not export `CURSOR_PLUGIN_ROOT`: commands render as `${CURSOR_PLUGIN_ROOT:-<value>}/hooks/<script>`. Default `.`, the session's working directory |
+| `[plugin.cursor] hook_root_fallback` | The directory containing `hooks/` (the generated `.cursor-plugin` directory) that a hook command uses when Cursor does not export `CURSOR_PLUGIN_ROOT`: commands render as `${CURSOR_PLUGIN_ROOT:-<value>}/hooks/<script>`. Default `.`, the session's working directory |
 
 ```toml
 [plugin.cursor]
-hook_root_fallback = "$HOME/.cursor/plugins/acme-tools"
+hook_root_fallback = "$HOME/.cursor/plugins/acme-tools/.cursor-plugin"
 ```
 
 `hook_root_fallback` takes letters, digits, `._/@+,:=%-` and `$NAME` environment references. Whitespace, quotes,

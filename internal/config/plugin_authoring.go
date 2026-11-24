@@ -395,7 +395,7 @@ type CursorExtras struct {
 	// Marketplace also writes .cursor-plugin/marketplace.json for a
 	// single-plugin repository.
 	Marketplace bool `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
-	// HookRootFallback is the plugin root a hook command uses when Cursor does
+	// HookRootFallback is the directory containing hooks/ that a hook command uses when Cursor does
 	// not export CURSOR_PLUGIN_ROOT to the hook process. Unset, it is ".", the
 	// session's working directory.
 	HookRootFallback string `yaml:"hook_root_fallback,omitempty" json:"hook_root_fallback,omitempty" toml:"hook_root_fallback,omitempty"` //nolint:tagliatelle
