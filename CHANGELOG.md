@@ -8,6 +8,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **AR005 after shell prefixes.** A downloaded file run after a `VAR=value` prefix or a control keyword (`then`, `else`,
+  `do`, ...) is reported again.
 - **Empty `[plugin.cursor] hook_root_fallback`.** The JSON schemas now accept an explicit empty value, as `validate` and
   `generate` already did; it means the default `.`.
 
