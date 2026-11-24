@@ -5,7 +5,7 @@ import re
 COMMANDS = "https://code.claude.com/docs/en/commands.md"
 SUBAGENTS = "https://code.claude.com/docs/en/sub-agents.md"
 
-_LIST = r"((?:`/[a-z0-9-]+`(?:, | and |,)?)+)"
+_LIST = r"((?:`/[a-z0-9:-]+`(?:, | and |,)?)+)"
 
 
 def _cells(line: str) -> list[str]:
@@ -14,7 +14,7 @@ def _cells(line: str) -> list[str]:
 
 
 def _slashed(text: str) -> list[str]:
-    return re.findall(r"`/([a-z0-9-]+)`", text)
+    return re.findall(r"`/([a-z0-9:-]+)`", text)
 
 
 def _rows(text: str) -> list[tuple[str, str]]:
@@ -28,7 +28,7 @@ def _rows(text: str) -> list[tuple[str, str]]:
         if not line.startswith("| `/"):
             continue
         cells = _cells(line)
-        m = re.match(r"`/([a-z][a-z0-9-]*)( [a-z])?", cells[0])
+        m = re.match(r"`/([a-z][a-z0-9:-]*)( [a-z])?", cells[0])
         if not m or len(cells) < 2:
             raise ValueError(f"cannot read the command of {line[:80]!r}")
         rows.append((m.group(1), " | ".join(cells[1:]), m.group(2) is not None))
@@ -48,7 +48,7 @@ def parse_commands(text: str) -> dict:
     """
     kinds, owners, pointing = {}, {}, {}
     for name, purpose in _rows(text):
-        target = re.match(r"Alias (?:for|of) \[?`/([a-z0-9-]+)`", purpose)
+        target = re.match(r"Alias (?:for|of) \[?`/([a-z0-9:-]+)`", purpose)
         if target:
             pointing[name] = target.group(1)
             continue

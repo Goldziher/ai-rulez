@@ -106,17 +106,17 @@ exit: 2
 .ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
 .ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
 .ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
-.ai-rulez/commands/ship.md:1: warning AR808 reserved-name: command "ship" is an alias of the Claude Code built-in /code-review (preset claude): a skill replaces the built-in command but not its aliases, so /ship keeps running the built-in; rename it, or list "claude:ship" in lint.allow_overrides if that is intended
+.ai-rulez/commands/ship.md:1: error AR808 reserved-name: command "ship" shadows the Claude Code built-in /ship (preset claude); rename it, or list "claude:ship" in lint.allow_overrides if the override is intended
 .ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
 .ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
 .ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
 
-validation: 0 error(s), 7 warning(s), 0 info across 1 root(s)
+validation: 1 error(s), 6 warning(s), 0 info across 1 root(s)
   AR503 script-not-executable        1
   AR802 description-length           5
   AR808 reserved-name                1
-risk (advisory, never fails the run): high (score 56/100)
-  medium     16  .ai-rulez/commands/ship.md
+risk (advisory, never fails the run): high (score 73/100)
+  high       33  .ai-rulez/commands/ship.md
   medium      8  .ai-rulez/agents/architect.md
   medium      8  .ai-rulez/agents/tester.md
   medium      8  .ai-rulez/commands/build.md
