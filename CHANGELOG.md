@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [5.15.0] - 2026-11-24
+
 ### Added
 
 - **`[plugin.cursor] hook_root_fallback`.** Cursor hook commands render as `${CURSOR_PLUGIN_ROOT:-<value>}/hooks/<script>`
@@ -17,6 +19,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - `validate`: AR005 no longer flags a downloaded file that a later command only receives as a flag value or argument (`--schemafile /tmp/schema.json`). It fires when the file is run in command position or handed to an interpreter (#590).
+- Refresh the built-in command, skill and agent names for Claude Code, Copilot, Cortex Code, Devin, Factory, Junie, Qoder and ZCode (#598).
+
+### Changed
+
+- Update Go, website and skillbench dependencies, including liter-llm 2.7.4.
 
 ## [5.14.1] - 2026-11-19
 

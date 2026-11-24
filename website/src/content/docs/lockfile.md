@@ -290,7 +290,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Goldziher/ai-rulez@v5
         with:
-          version: 5.14.1
+          version: 5.15.0
       - name: Resolve the first-seen history path
         id: first-seen
         shell: bash
