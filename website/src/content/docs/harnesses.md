@@ -83,7 +83,7 @@ not harnesses: `mcp` (only the root `.mcp.json`), [`okf`](/ai-rulez/okf/) and [`
 | `cortex` | [Snowflake Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/extensibility) | - | yes | yes | - | - | yes | - | - | yes |
 | `crush` | [Crush](https://github.com/charmbracelet/crush) | - | yes | - | - | yes | yes | - | - | yes |
 | `cursor` | [Cursor](https://cursor.com/docs) | yes | yes | yes | yes | yes | yes | yes | yes | yes |
-| `deepagents` | [Deep Agents Code](https://docs.langchain.com/oss/deepagents/code) | - | yes | yes | - | yes | yes | - | - | yes |
+| `deepagents` | [Deep Agents Code](https://docs.langchain.com/oss/python/deepagents/cli/overview) | - | yes | yes | - | yes | yes | - | - | yes |
 | `devin` | [Devin CLI](https://docs.devin.ai/cli) | yes | yes | yes | yes | yes | yes | yes | - | yes |
 | `dsh` | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | - | yes | - | - | - | - | - | - | yes |
 | `factory` | [Factory Droid](https://docs.factory.ai) | - | yes | yes | yes | yes | yes | - | yes | yes |
