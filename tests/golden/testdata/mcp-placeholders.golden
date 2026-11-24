@@ -141,6 +141,7 @@ exit: 2
 .ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
 .ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
 .ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
+.ai-rulez/commands/ship.md:1: warning AR808 reserved-name: command "ship" is an alias of the Claude Code built-in /code-review (preset claude): a skill replaces the built-in command but not its aliases, so /ship keeps running the built-in; rename it, or list "claude:ship" in lint.allow_overrides if that is intended
 .ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
 .ai-rulez/config.toml:1: info AR750 sbom-component-unpinned: mcp-server local-tool: the package has no version; pin it (for example name@1.2.3)
 .ai-rulez/config.toml:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
@@ -153,18 +154,19 @@ exit: 2
 .mcp.json:19: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
 .mcp.json:25: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
 
-validation: 4 error(s), 9 warning(s), 1 info across 1 root(s)
+validation: 4 error(s), 10 warning(s), 1 info across 1 root(s)
   AR012 mcp-unpinned-package         3
   AR015 secret-in-env-or-header      4
   AR503 script-not-executable        1
   AR750 sbom-component-unpinned      1
   AR802 description-length           5
+  AR808 reserved-name                1
 risk (advisory, never fails the run): critical (score 100/100)
   high       58  .cursor/mcp.json
   high       58  .mcp.json
+  medium     16  .ai-rulez/commands/ship.md
   medium      9  .ai-rulez/config.toml
   medium      8  .ai-rulez/agents/architect.md
-  medium      8  .ai-rulez/agents/tester.md
   ... and 4 more item(s)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez

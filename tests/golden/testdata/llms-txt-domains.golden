@@ -112,6 +112,7 @@ exit: 2
 .ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
 .ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
 .ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
+.ai-rulez/commands/ship.md:1: warning AR808 reserved-name: command "ship" is an alias of the Claude Code built-in /code-review (preset claude): a skill replaces the built-in command but not its aliases, so /ship keeps running the built-in; rename it, or list "claude:ship" in lint.allow_overrides if that is intended
 .ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
 .ai-rulez/domains/backend/agents/dba.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
 .ai-rulez/domains/backend/skills/migrator/SKILL.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
@@ -121,17 +122,18 @@ exit: 2
 docs/llms.txt:23: warning AR9P4 llmstxt-optional-misplaced: the "Optional" section must come last so agents can drop it as a block
 docs/llms.txt:28: warning AR9P5 llmstxt-section-duplicate-or-empty: the section "Optional" repeats the one at line 23
 
-validation: 0 error(s), 11 warning(s), 0 info across 1 root(s)
+validation: 0 error(s), 12 warning(s), 0 info across 1 root(s)
   AR503 script-not-executable        1
   AR802 description-length           8
+  AR808 reserved-name                1
   AR9P4 llmstxt-optional-misplaced   1
   AR9P5 llmstxt-section-duplicate-or-empty 1
-risk (advisory, never fails the run): critical (score 88/100)
+risk (advisory, never fails the run): critical (score 96/100)
+  medium     16  .ai-rulez/commands/ship.md
   medium     16  docs/llms.txt
   medium      8  .ai-rulez/agents/architect.md
   medium      8  .ai-rulez/agents/tester.md
   medium      8  .ai-rulez/commands/build.md
-  medium      8  .ai-rulez/commands/ship.md
   ... and 5 more item(s)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
