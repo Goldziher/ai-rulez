@@ -435,6 +435,10 @@ func requireBrowser(t *testing.T) string {
 	if testing.Short() {
 		t.Skip("browser tests are skipped with -short")
 	}
+	if runtime.GOOS == "windows" {
+		// The pipe protocol hands Chrome fds 3 and 4 through exec.Cmd.ExtraFiles, which Go does not support on Windows.
+		t.Skip("the Chrome pipe client needs exec.Cmd.ExtraFiles, which Windows does not support")
+	}
 	skip := t.Skipf
 	if os.Getenv(requireBrowserEnv) != "" {
 		skip = t.Fatalf

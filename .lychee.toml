@@ -62,7 +62,7 @@ exclude_path = ["_site/ai-rulez/llms-full.txt", "_site/ai-rulez/llms-small.txt"]
 # Accept these HTTP status codes as valid. 429 and 503 are throttling responses
 # (github.com serves blob pages to the checker with intermittent 503s), not dead links.
 # 304 is a conditional-request "not modified" (code.visualstudio.com answers it), not a failure.
-accept = [200, 204, 301, 302, 304, 429, 503]
+accept = [200, 204, 206, 301, 302, 304, 429, 503]
 
 timeout = 30
 max_retries = 3
