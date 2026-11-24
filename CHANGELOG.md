@@ -14,6 +14,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   path characters and `$NAME` references such as `$HOME`; `validate` and `generate` reject quotes, braces, whitespace
   and `~`. See [Plugins](https://goldziher.github.io/ai-rulez/plugins/#cursor).
 
+### Fixed
+
+- `validate`: AR005 no longer flags a downloaded file that a later command only receives as a flag value or argument (`--schemafile /tmp/schema.json`). It fires when the file is run in command position or handed to an interpreter (#590).
+
 ## [5.14.1] - 2026-11-19
 
 ### Fixed

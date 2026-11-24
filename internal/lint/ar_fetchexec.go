@@ -90,17 +90,33 @@ func downloadedFile(text string) string {
 	return ""
 }
 
-// executes reports whether the line runs file: through an interpreter, or by its path.
+// atCommand reports whether a command word can start at pos: the start of the line or after a pipe,
+// a subshell, a background marker or a command substitution.
+func atCommand(text string, pos int) bool {
+	before := strings.TrimRight(strings.TrimRight(text[:pos], `"'`), " \t")
+	return before == "" || strings.ContainsAny(before[len(before)-1:], "|&(`")
+}
+
+// executes reports whether the line runs file: through an interpreter, or by its path in command
+// position. A path that is only an argument or a flag value (`--schemafile /tmp/x.json`) is data.
 func executes(text, file string) bool {
 	base := path.Base(file)
-	for _, m := range runnerRe().FindAllStringSubmatch(text, -1) {
-		arg := strings.TrimRight(m[1], `"'`)
+	for _, m := range runnerRe().FindAllStringSubmatchIndex(text, -1) {
+		arg := strings.TrimRight(text[m[2]:m[3]], `"'`)
 		if arg != file && arg != "./"+base {
 			continue
 		}
-		bare := strings.Fields(strings.TrimSpace(m[0]))
-		if strings.HasPrefix(arg, "./") || strings.HasPrefix(arg, "/") || strings.HasPrefix(arg, "~/") ||
-			strings.HasPrefix(arg, "$") || len(bare) > 1 {
+		matched := text[m[0]:m[1]]
+		if len(strings.Fields(matched)) > 1 {
+			start := m[0] + len(matched) - len(strings.TrimLeft(matched, " \t;&|("))
+			if atCommand(text, start) {
+				return true
+			}
+			continue
+		}
+		pathLike := strings.HasPrefix(arg, "./") || strings.HasPrefix(arg, "/") || strings.HasPrefix(arg, "~/") ||
+			strings.HasPrefix(arg, "$")
+		if pathLike && atCommand(text, m[2]) {
 			return true
 		}
 	}

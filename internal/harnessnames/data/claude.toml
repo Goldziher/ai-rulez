@@ -1,7 +1,7 @@
 schema = 1
 preset = "claude"
 harness_version = "2.1.302 (local binary); docs fetched 2026-10-18"
-verified_on = "2026-11-05"
+verified_on = "2026-11-24"
 completeness = "partial"
 severity = "error"
 invocation_spaces = [["command", "skill"], ["agent"]]
@@ -10,7 +10,7 @@ namespaced = true
 [[source]]
 id = "s1"
 url = "https://code.claude.com/docs/en/commands.md"
-verified_on = "2026-11-05"
+verified_on = "2026-11-24"
 
 [[source]]
 id = "s2"
@@ -20,7 +20,7 @@ verified_on = "2026-10-17"
 [[source]]
 id = "s3"
 url = "https://code.claude.com/docs/en/sub-agents.md"
-verified_on = "2026-11-05"
+verified_on = "2026-11-24"
 
 [[source]]
 id = "s4"
@@ -207,13 +207,15 @@ names = [
   "loop",
   "run",
   "run-skill-generator",
+  "ship",
   "simplify",
   "slides",
+  "steward",
   "update-config",
   "verify",
   "workflow-authoring",
 ]
-aliases = { "code-review" = ["review"], "doctor" = ["checkup"], "loop" = ["proactive"] }
+aliases = { "code-review" = ["review", "ship"], "doctor" = ["checkup"], "loop" = ["proactive"] }
 
 [[group]]
 kind = "skill"
@@ -235,7 +237,7 @@ kind = "agent"
 source = "s3"
 user_collision = "unknown"
 match = "exact"
-names = ["Plan", "claude", "claude-code-guide", "general-purpose", "statusline-setup"]
+names = ["Plan", "claude", "claude-code-guide", "general-purpose", "statusline-setup", "web-fetch"]
 
 [[group]]
 kind = "reserved"
